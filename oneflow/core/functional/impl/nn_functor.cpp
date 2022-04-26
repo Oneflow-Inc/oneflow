@@ -283,7 +283,7 @@ class TensorDotIntDimsFunctor {
         << ", but got " << dims;
     CHECK_LE_OR_RETURN(dims, b->ndim())
         << Error::RuntimeError() << "tensordot expects dims <= b.ndim which is " << b->ndim()
-        << z ", but got " << dims;
+        << ", but got " << dims;
     std::vector<int32_t> dot_dims_a(dims), dot_dims_b(dims);
     for (int32_t i = 0; i < dims; i++) {
       dot_dims_a[i] = a->ndim() - dims + i;
@@ -331,8 +331,18 @@ class TensorDotFunctor {
     }
     std::vector<bool> if_dot_dims_a(a->ndim(), false);
     std::vector<bool> if_dot_dims_b(b->ndim(), false);
-    for (const int32_t dim_idx : dims_a) if_dot_dims_a[dim_idx] = true;
-    for (const int32_t dim_idx : dims_b) if_dot_dims_b[dim_idx] = true;
+    for (const int32_t dim_idx : dims_a) {
+      CHECK_EQ_OR_RETURN(if_dot_dims_a[dim_idx], false)
+          << Error::RuntimeError() << "dim " << dim_idx
+          << " appears multiple times in the list of dims";
+      if_dot_dims_a[dim_idx] = true;
+    }
+    for (const int32_t dim_idx : dims_b) {
+      CHECK_EQ_OR_RETURN(if_dot_dims_b[dim_idx], false)
+          << Error::RuntimeError() << "dim " << dim_idx
+          << " appears multiple times in the list of dims";
+      if_dot_dims_b[dim_idx] = true;
+    }
 
     std::vector<int32_t> broadcast_dims_a, broadcast_dims_b;
     for (int64_t i = 0; i < dims_a.size(); i++) {
