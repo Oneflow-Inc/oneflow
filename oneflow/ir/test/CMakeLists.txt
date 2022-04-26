@@ -1,5 +1,6 @@
 llvm_canonicalize_cmake_booleans(
   WITH_MLIR_CUDA_CODEGEN
+  BUILD_CUDA
   )
 
 message(STATUS "LLVM_TOOLS_BINARY_DIR (used as LLVM_TOOLS_DIR): ${LLVM_TOOLS_BINARY_DIR}")
