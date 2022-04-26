@@ -12,6 +12,8 @@ include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Pass/PassBase.td"
 
+include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/OpBase.td"
 def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   let builders = [
     OpBuilder<(ins
