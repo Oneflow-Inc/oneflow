@@ -80,7 +80,7 @@ llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 # TODO: these two should be unnecessary
 llvm_config.with_environment(
     "LD_LIBRARY_PATH",
-    os.path.join(config.oneflow_obj_root, "third_party_install/protobuf"),
+    os.path.join(config.oneflow_obj_root, "third_party_install/protobuf/lib"),
     append_path=True,
 )
 llvm_config.with_environment(

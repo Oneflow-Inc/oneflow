@@ -903,7 +903,7 @@ class CrossEntropyFunctor {
     } else {
       kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
-    result = JUST(functional::Reshape(kernel_result->at(0), *target_shape));
+    result = JUST(functional::Reshape((*kernel_result)[0], *target_shape));
     if (reduction == "none") { return result; }
 
     result = JUST(functional::ReduceSum(result, {}, false));
@@ -1121,12 +1121,12 @@ class SparseSoftmaxCrossEntropyFunctor {
         *op_broadcast_sub_, {logits, broadcast_sub_input}, attrs));
     // op_exp_
     const auto& output_exp =
-        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {output_broadcast_sub->at(0)}, attrs));
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {(*output_broadcast_sub)[0]}, attrs));
     // op_reduce_sum_
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
     JUST(attrs.SetAttr<bool>("keepdims", true));
     const auto& output_reduce_sum =
-        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {output_exp->at(0)}, attrs));
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {(*output_exp)[0]}, attrs));
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
@@ -1137,11 +1137,11 @@ class SparseSoftmaxCrossEntropyFunctor {
     // op_broadcast_div_
     attrs.clear();
     const auto& predictions = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_broadcast_div_, {output_exp->at(0), broadcast_div_input1}, attrs));
+        *op_broadcast_div_, {(*output_exp)[0], broadcast_div_input1}, attrs));
     // op_sparse_cross_entropy_ms_
     JUST(attrs.SetAttr<int64_t>("depth", depth));
     const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_sparse_cross_entropy_ms_,
-                                                             {predictions->at(0), label}, attrs));
+                                                             {(*predictions)[0], label}, attrs));
     return output;
   }
 
@@ -1882,7 +1882,7 @@ class L2NormalizeFunctor {
 
     const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
-    return functional::Transpose(result->at(0), input_perm);
+    return functional::Transpose((*result)[0], input_perm);
   }
 
  private:
