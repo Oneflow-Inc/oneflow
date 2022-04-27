@@ -399,4 +399,30 @@ void LarsUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
 template struct LarsUpdateKernelUtil<DeviceType::kCPU, float, float>;
 template struct LarsUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
+template<typename T, typename G>
+struct FtrlUpdateKernelUtil<DeviceType::kCPU, T, G> {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power,
+                     float lambda1, float lambda2, float beta, float weight_decay,
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model, T* accumulate, T* z);
+};
+
+template<typename T, typename G>
+void FtrlUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power, float lambda1,
+    float lambda2, float beta, float weight_decay, float learning_rate_val,
+    const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
+    T* model, T* accumulate, T* z) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  for (int64_t i = 0; i != n; ++i) {
+    FtrlUpdateFunctor<T, G>()(model_diff + i, model + i, accumulate + i, z + i, scale, l1, l2,
+                              lr_power, lambda1, lambda2, beta, weight_decay, learning_rate_val);
+  }
+}
+
+template struct FtrlUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct FtrlUpdateKernelUtil<DeviceType::kCPU, double, double>;
+
 }  // namespace oneflow
