@@ -162,6 +162,16 @@ def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
 
 
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.permute(self, new_dims)
+
+
 def is_nonzero(input):
     r"""
     is_nonzero(input) -> (bool)
@@ -623,16 +633,6 @@ def _narrow(self, dimension, start, length):
 
 def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
-
-
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, new_dims)
 
 
 def _matmul(self, other):
@@ -1249,6 +1249,7 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.norm = _norm
     Tensor.transpose = _transpose
+    Tensor.permute = _permute
     Tensor.local_to_global = _local_to_global
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
@@ -1273,7 +1274,6 @@ def RegisterMethods():
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
-    Tensor.permute = _permute
     Tensor.to = _to
     Tensor.half = _half
     Tensor.gather = _gather
