@@ -2114,6 +2114,10 @@
   signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate, Tensor down_scale_by_tensor, Tensor skip_if, Tensor train_step, Double scale=1.0, Float weight_decay=0.0, Float lr_decay=0.0, Float epsilon=0) => OneEmbeddingAdagradUpdate"
   bind_python: True
 
+- name: "one_embedding_ftrl_update"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate, Tensor down_scale_by_tensor, Tensor skip_if, Double scale, Float weight_decay, Float lr_power, Float lambda1, Float lambda2, Float beta) => OneEmbeddingFtrlUpdate"
+  bind_python: True
+
 - name: "einsum"
   signature: "Tensor (String equation, TensorTuple operands) => EinSum"
   bind_python: True
