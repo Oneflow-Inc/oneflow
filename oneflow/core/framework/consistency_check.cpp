@@ -193,7 +193,8 @@ FLAT_MSG_BEGIN(FlatTensorMetaConsistency);
     const auto& that_synced_tensor_meta =
         JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
             flat_tensor_meta_consistency->synced_tensor_meta_symbol_id()));
-    CHECK_OR_RETURN(this_synced_tensor_meta == that_synced_tensor_meta) << Error::RuntimeError() << "Each rank must have same tensor meta";;
+    CHECK_OR_RETURN(this_synced_tensor_meta == that_synced_tensor_meta)
+        << Error::RuntimeError() << "Each rank must have same tensor meta";
     return Maybe<void>::Ok();
   }
 
