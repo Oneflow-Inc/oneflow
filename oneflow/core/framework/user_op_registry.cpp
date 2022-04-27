@@ -76,6 +76,11 @@ OpRegistry& OpRegistry::SupportCpuOnly() {
   return *this;
 }
 
+OpRegistry& OpRegistry::SupportNonContiguous() {
+  result_.non_contiguous_supported = true;
+  return *this;
+}
+
 OpRegistry& OpRegistry::NoGrad() {
   result_.no_grad = true;
   return *this;
@@ -241,7 +246,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       for (const auto& pair : ctx->inputs()) {
         const Symbol<Device>& input_device =
             ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
-        CHECK_EQ(JUST(input_device->of_type()), "cpu");
+        CHECK_EQ(input_device->type(), "cpu");
       }
       Symbol<Device> default_device;
       {

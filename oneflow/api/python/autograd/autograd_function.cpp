@@ -20,7 +20,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/autograd/autograd_function.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -34,15 +34,21 @@ namespace {
 // Transform input to TensorTuple
 Maybe<one::TensorTuple> UnpackTensorTuple(const py::object& input) {
   one::TensorTuple tp;
-  if (py::isinstance<one::Tensor>(input)) {
+  if (one::PyTensor_Check(input.ptr())) {
     tp.emplace_back(input.cast<std::shared_ptr<one::Tensor>>());
   } else if (py::isinstance<py::tuple>(input)) {
-    for (const auto& tensor : input.cast<py::tuple>()) {
-      CHECK_OR_RETURN(py::isinstance<one::Tensor>(tensor));
-      tp.emplace_back(tensor.cast<std::shared_ptr<one::Tensor>>());
+    auto tuple = input.cast<py::tuple>();
+    for (int i = 0; i < tuple.size(); ++i) {
+      PyObject* obj = tuple[i].ptr();
+      if (!one::PyTensor_Check(obj)) {
+        return Error::RuntimeError()
+               << "expected Tensor as element " << i << ", but got "
+               << one::functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(obj)));
+      }
+      tp.emplace_back(one::PyTensor_Unpack(obj));
     }
   } else {
-    throw std::runtime_error("Only support tensor or list of tensors");
+    return Error::RuntimeError() << "Only support tensor or list of tensors";
   }
   return tp;
 }
@@ -75,15 +81,15 @@ namespace one {
 ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
   py::class_<AutogradFunctionBase, std::shared_ptr<AutogradFunctionBase>>(m, "AutogradFunctionBase")
       .def(py::init([]() { return std::make_shared<AutogradFunctionBase>(); }))
-      .def_static("apply", [](const std::string& name, const py::function& forward_fn,
-                              const py::function& backward_fn, const py::args& input) {
-        const auto& input_tensor_tuple = UnpackTensorTuple(input).GetOrThrow();
-        const std::shared_ptr<TensorTuple>& res =
-            AutogradFunctionBase::Apply(name, PackPyFunctionToFType(forward_fn),
-                                        PackPyFunctionToFType(backward_fn), input_tensor_tuple)
-                .GetPtrOrThrow();
-        return PackTensorTuple(*res);
-      });
+      .def_static("apply",
+                  [](const std::string& name, const py::function& forward_fn,
+                     const py::function& backward_fn, const py::args& input) -> Maybe<py::object> {
+                    const auto& input_tensor_tuple = JUST(UnpackTensorTuple(input));
+                    const std::shared_ptr<TensorTuple>& res = JUST(AutogradFunctionBase::Apply(
+                        name, PackPyFunctionToFType(forward_fn), PackPyFunctionToFType(backward_fn),
+                        *input_tensor_tuple));
+                    return PackTensorTuple(*res);
+                  });
 
   py::class_<FunctionAutoGradCaptureState, std::shared_ptr<FunctionAutoGradCaptureState>>(
       m, "FunctionAutoGradCaptureState")

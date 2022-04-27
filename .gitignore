@@ -40,3 +40,6 @@ unittest-log-*
 /data-test
 /tmp
 /python/oneflow/test/dataloader/data-test/
+
+/target
+saved_model

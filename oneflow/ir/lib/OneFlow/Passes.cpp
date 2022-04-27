@@ -16,6 +16,9 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
 #include "oneflow/core/framework/random_generator.h"
 
@@ -288,12 +291,6 @@ bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
   return false;
 }
 
-ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [&](int32_t v) -> Attribute { return rewriter.getSI32IntegerAttr(v); }));
-  return rewriter.getArrayAttr(attrs);
-}
-
 IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
   return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
                           APInt(64, value, /*isSigned=*/true));
@@ -365,7 +362,67 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
   return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
 }
 
+LogicalResult InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
+                                      PatternRewriter& rewriter) {
+  if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                             op_to_replace_adaptor.device_tagAttr());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                             op_to_replace_adaptor.device_name());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
+                             op_to_replace_adaptor.hierarchyAttr());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                             rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
+
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                             op_to_replace_adaptor.scope_symbol_idAttr());
+    return success();
+  } else {
+    op->emitError("must be a op of trait IsOpConfCompatible!");
+    return failure();
+  }
+}
+
 bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
+
+llvm::SmallVector<int32_t> getChannelLastTransposePerm() { return {0, 2, 3, 1}; }
+
+llvm::SmallVector<int32_t> getChannelFirstTransposePerm() { return {0, 3, 1, 2}; }
+
+llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, Value val,
+                                                             NamedAttrList transpose_attributes,
+                                                             int num_transposed_operand,
+                                                             PatternRewriter& rewriter) {
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_input_"
+                               + std::to_string(num_transposed_operand);
+  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  SmallVector<Value, 4> input_operands;
+  input_operands.push_back(val);
+  auto res = rewriter
+                 .create<oneflow::TransposeOp>(op.getLoc(), val.getType(), input_operands,
+                                               transpose_attributes)
+                 ->getResults();
+  return res;
+}
+
+TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpose_attributes,
+                                 int num_transposed_result, PatternRewriter& rewriter) {
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_output_"
+                               + std::to_string(num_transposed_result);
+  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  SmallVector<Value, 4> operands;
+  operands.push_back(val);
+  TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(op.getLoc(), val.getType(),
+                                                                   operands, transpose_attributes);
+  return transpose_op;
+}
+
+bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
+  return cast_result.getType() == input.getType();
+}
 
 }  // namespace oneflow
 
@@ -376,6 +433,58 @@ bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false 
 namespace mlir {
 
 namespace oneflow {
+struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
+  explicit AutoNhwcPattern(mlir::MLIRContext* context)
+      : OpInterfaceRewritePattern<NCHWCompatible>(context, /*benefit=*/1) {}
+
+ public:
+  LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
+    llvm::SmallVector<int32_t> perm = getChannelLastTransposePerm();
+    llvm::SmallVector<int32_t> result_perm = getChannelFirstTransposePerm();
+
+    NamedAttrList transpose_attributes;
+    if (InitTransposeAttributes(op, transpose_attributes, rewriter).succeeded()) {
+      transpose_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
+    } else {
+      return failure();
+    }
+
+    if (op.IsNCHW()) {
+      // create transpose op for input operand
+      SmallVector<Value, 4> tranposed_operands;
+      llvm::DenseSet<Value> operand_transpose = op.OperandsToTranspose();
+      int num_transposed_operand = 0;
+      for (Value operand : op->getOperands()) {
+        if (operand_transpose.find(operand) != operand_transpose.end()) {
+          SmallVector<Value, 4> input_res = getInputOperandTransposeOp(
+              op, operand, transpose_attributes, num_transposed_operand, rewriter);
+          tranposed_operands.push_back(input_res[0]);
+          num_transposed_operand += 1;
+        }
+      }
+      // create NHWC op
+      SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
+      // create transpose op for results
+      int num_transposed_result = 0;
+      transpose_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
+      llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
+
+      for (Value result : op->getOpResults()) {
+        if (transpose_result.find(result) != transpose_result.end()) {
+          if (auto result_transpose_op =
+                  getResultTransposeOp(op, created_results[num_transposed_result],
+                                       transpose_attributes, num_transposed_result, rewriter)) {
+            result.replaceAllUsesWith(result_transpose_op);
+            num_transposed_result += 1;
+          } else {
+            return failure();
+          }
+        }
+      }
+    }
+    return success();
+  }
+};
 
 void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
   results.insert<BroadcastMulToScalarMulPattern>(context);
@@ -449,6 +558,9 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
+  bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PREFER_NHWC", false);
+  if (enable_nhwc) { patterns.add<AutoNhwcPattern>(patterns.getContext()); }
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {

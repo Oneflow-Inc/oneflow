@@ -54,7 +54,6 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   }
   ~CacheKeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
-    SyncCacheToStore();
     OF_CUDA_CHECK(cudaFree(num_buffer_));
     OF_CUDA_CHECK(cudaFreeHost(host_num_buffer_));
     if (max_query_length_ != 0) {
@@ -177,13 +176,14 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
     const std::string& name, const std::function<void(KVIterator* iter)>& Hook) {
   CudaCurrentDeviceGuard guard(device_index_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
+  CHECK_GT(max_query_length_, 0);
   cache_->Clear();
+  auto device =
+      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
+  CHECK(device);
+  auto* stream = device->CreateStream();
   store_->LoadSnapshot(name, [&](KVIterator* iter) {
     if (cache_->Policy() == CacheOptions::Policy::kFull) {
-      auto device =
-          Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
-      CHECK(device);
-      auto* stream = device->CreateStream();
       auto* cuda_stream = stream->As<ep::CudaStream>();
       while (true) {
         iter->NextN(stream, max_query_length_, num_buffer_, keys_buffer_, values_buffer_);
@@ -199,13 +199,13 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
         CHECK_JUST(stream->Sync());
         CHECK_EQ(*host_num_buffer_, 0);
       }
-      device->DestroyStream(stream);
     }
     if (Hook) {
       iter->Reset();
       Hook(iter);
     }
   });
+  device->DestroyStream(stream);
   store_->LoadSnapshot(name);
 }
 
@@ -227,6 +227,7 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
   auto* stream = device->CreateStream();
   auto* cuda_stream = stream->As<ep::CudaStream>();
   const uint64_t dump_capacity = cache_->DumpCapacity();
+  CHECK_GT(max_query_length_, 0);
   for (uint64_t start_key_index = 0; start_key_index < dump_capacity;
        start_key_index += max_query_length_) {
     cache_->Dump(stream, start_key_index,

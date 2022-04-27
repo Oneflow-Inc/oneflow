@@ -62,6 +62,8 @@ class InstructionMsg final : public intrusive::Base {
 
   intrusive::shared_ptr<InstructionMsg> Clone() const;
 
+  intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+
  private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
@@ -98,7 +100,7 @@ FLAT_MSG_BEGIN(InstructionStatusBuffer);
 FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on
 
-struct Instruction;
+class Instruction;
 class InstructionEdge final
     : public intrusive::Base,
       public intrusive::EnableObjectPool<InstructionEdge,
@@ -147,7 +149,7 @@ class InstructionEdge final
   intrusive::ListHook out_edge_hook_;
 };
 
-struct Stream;
+class Stream;
 class Instruction final : public intrusive::Base {
  public:
   // types
@@ -184,7 +186,7 @@ class Instruction final : public intrusive::Base {
   Stream* mut_stream() { return stream_; }
   InstructionMsg* mut_instr_msg() {
     if (unlikely(!instr_msg_)) { instr_msg_ = intrusive::make_shared<InstructionMsg>(); }
-    return instr_msg_.Mutable();
+    return CHECK_NOTNULL(instr_msg_.Mutable());
   }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
   void clear_instr_msg() { instr_msg_.Reset(); }

@@ -154,6 +154,13 @@ struct AtanhFunctor<float> {
 };
 
 template<>
+struct NotEqualZeroFunctor<float> {
+  static OF_DEVICE_FUNC float Forward(const float x) { return x != 0; }
+
+  static OF_DEVICE_FUNC float Backward(const float x, const float dy) { return 0.0f; }
+};
+
+template<>
 struct CeilFunctor<float> {
   static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(ceil, x); }
 
@@ -342,17 +349,6 @@ struct SinhFunctor<float> {
 };
 
 template<>
-struct SoftplusFunctor<float> {
-  static OF_DEVICE_FUNC float Forward(const float x) {
-    return MATH_FUNC_F(log, (1.0f + MATH_FUNC_F(exp, x)));
-  }
-
-  static OF_DEVICE_FUNC float Backward(const float x, const float dy) {
-    return dy * MATH_FUNC_F(exp, x) / (MATH_FUNC_F(exp, x) + 1.0f);
-  }
-};
-
-template<>
 struct SqrtFunctor<float> {
   static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(sqrt, x); }
 
@@ -431,6 +427,13 @@ struct AtanhFunctor<double> {
   static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
     return dy * (1.0 / (1.0 - x * x));
   }
+};
+
+template<>
+struct NotEqualZeroFunctor<double> {
+  static OF_DEVICE_FUNC double Forward(const double x) { return x != 0; }
+
+  static OF_DEVICE_FUNC double Backward(const double x, const double dy) { return 0.0f; }
 };
 
 template<>
@@ -622,17 +625,6 @@ struct SinhFunctor<double> {
 };
 
 template<>
-struct SoftplusFunctor<double> {
-  static OF_DEVICE_FUNC double Forward(const double x) {
-    return MATH_FUNC_D(log, (1.0 + MATH_FUNC_D(exp, x)));
-  }
-
-  static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
-    return dy * MATH_FUNC_D(exp, x) / (MATH_FUNC_D(exp, x) + 1.0);
-  }
-};
-
-template<>
 struct SqrtFunctor<double> {
   static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(sqrt, x); }
 
@@ -735,6 +727,13 @@ struct AtanhFunctor<half> {
 template<>
 struct CeilFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return hceil(x); }
+
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return GetZeroVal<half>(); }
+};
+
+template<>
+struct NotEqualZeroFunctor<half> {
+  static OF_HALF_FUNC half Forward(const half x) { return x != static_cast<half>(0.0); }
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) { return GetZeroVal<half>(); }
 };
@@ -931,17 +930,6 @@ struct SinhFunctor<half> {
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
     return __hmul(dy, MATH_FUNC_H(cosh, x));
-  }
-};
-
-template<>
-struct SoftplusFunctor<half> {
-  static OF_HALF_FUNC half Forward(const half x) {
-    return hlog(__hadd(GetOneVal<half>(), hexp(x)));
-  }
-
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-    return __hmul(dy, __hdiv(hexp(x), __hadd(hexp(x), GetOneVal<half>())));
   }
 };
 
