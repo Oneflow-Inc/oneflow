@@ -66,19 +66,10 @@ __global__ void embNorm(const T* in_buf, int32_t* indices_frep, double* emb_norm
                         const double norm_type, const int32_t emb_size, const int32_t emb_dim) {
   CUDA_1D_KERNEL_LOOP(i, emb_size * emb_dim) {
     int32_t emb_size_index = i / emb_dim;
-    int32_t emb_dim_index = i - emb_size_index * emb_dim;
 
     if (indices_frep[emb_size_index] > 0) {
-      double v;
       double item = static_cast<double>(in_buf[i]);
-      if (norm_type == 1) {
-        v = std::abs(item);
-      } else if (norm_type == 2) {
-        v = item * item;
-      } else {
-        v = std::pow(item, norm_type);
-      }
-      cuda::atomic::Add(emb_norm + emb_size_index, v);
+      cuda::atomic::Add(emb_norm + emb_size_index, std::pow(std::abs(item), norm_type));
     }
   }
 }
@@ -89,7 +80,6 @@ __global__ void embNorm_kernel(const T* in_buf, T* out_buf, double* emb_norm, in
                                const int32_t emb_dim) {
   CUDA_1D_KERNEL_LOOP(i, emb_size * emb_dim) {
     int32_t emb_size_index = i / emb_dim;
-    int32_t emb_dim_index = i - emb_size_index * emb_dim;
     if (indices_frep[emb_size_index] > 0) {
       double v = emb_norm[emb_size_index];
       if (v > max_norm) {

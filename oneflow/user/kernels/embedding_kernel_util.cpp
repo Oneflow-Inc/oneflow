@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/user/kernels/embedding_kernel_util.h"
-#include <cstdint>
 
 namespace oneflow {
 
@@ -30,20 +29,13 @@ struct EmbeddingRenormFunctor<DeviceType::kCPU, T, index_T> final {
     for (auto i = 0; i < num_indices; i++) {
       if (i > 0 && sorted_indices[i] == sorted_indices[i - 1]) { continue; }
       CHECK(sorted_indices[i] >= 0 && sorted_indices[i] < emb_size);
-      double v = 0;
+      double norm = 0;
       for (int j = emb_dim * sorted_indices[i]; j < emb_dim * (sorted_indices[i] + 1); j++) {
-        double item = in_buf[j];
-        if (norm_type == 1) {
-          v += std::abs(item);
-        } else if (norm_type == 2) {
-          v += item * item;
-        } else {
-          v += std::pow(item, norm_type);
-        }
+        norm += std::pow(std::abs(in_buf[j]), norm_type);
       }
-      v = std::pow(v, (1.0 / norm_type));
-      if (v > max_norm) {
-        double scale = max_norm / (v + 1e-7);
+      norm = std::pow(norm, (1.0 / norm_type));
+      if (norm > max_norm) {
+        double scale = max_norm / (norm + 1e-7);
         for (int j = emb_dim * sorted_indices[i]; j < emb_dim * (sorted_indices[i] + 1); j++) {
           out_buf[j] = in_buf[j] * scale;
         }
