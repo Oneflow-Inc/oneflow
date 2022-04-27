@@ -37,7 +37,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 namespace functional {
-  
+
 namespace impl {
 
 class AddNFunctor {
