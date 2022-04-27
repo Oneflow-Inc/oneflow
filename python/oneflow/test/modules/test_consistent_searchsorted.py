@@ -32,6 +32,7 @@ def _test_search_sorted(test_case, placement, sbp, ndim):
     )
     return y
 
+
 class TestSearchSorted_Global(flow.unittest.TestCase):
     @globaltest
     def test_search_sorted(test_case):
