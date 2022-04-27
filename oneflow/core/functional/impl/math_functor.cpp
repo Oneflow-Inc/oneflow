@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -39,26 +40,31 @@ namespace one {
 namespace functional {
 namespace {
 Maybe<std::vector<int32_t>> check(int32_t naxis, std::vector<int32_t> axis) {
-  CHECK_GE_OR_RETURN(naxis, axis.size())
-      << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
-      << ", " << naxis - 1 << "], but got " << axis.size() << ")";
-  ;
+  if (axis.size() == 0) {
+    std::vector<int32_t> reduce_axis(naxis);
+    std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+    return reduce_axis;
+  } else {
+    CHECK_GE_OR_RETURN(naxis, axis.size())
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
+        << ", " << naxis - 1 << "], but got " << axis.size() << ")";
 
-  std::vector<int32_t> reduce_axis(axis.size());
-  for (int32_t i = 0; i < axis.size(); i++) {
-    CHECK_GT_OR_RETURN(naxis, axis[i])
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
-        << ", " << naxis - 1 << "], but got " << axis[i] << ")";
-    CHECK_LE_OR_RETURN(-naxis, axis[i])
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
-        << ", " << naxis - 1 << "], but got " << axis[i] << ")";
-    if (axis[i] < 0) {
-      reduce_axis[i] = axis[i] + naxis;
-    } else {
-      reduce_axis[i] = axis[i];
+    std::vector<int32_t> reduce_axis(axis.size());
+    for (int32_t i = 0; i < axis.size(); i++) {
+      CHECK_GT_OR_RETURN(naxis, axis[i])
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
+          << ", " << naxis - 1 << "], but got " << axis[i] << ")";
+      CHECK_LE_OR_RETURN(-naxis, axis[i])
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
+          << ", " << naxis - 1 << "], but got " << axis[i] << ")";
+      if (axis[i] < 0) {
+        reduce_axis[i] = axis[i] + naxis;
+      } else {
+        reduce_axis[i] = axis[i];
+      }
     }
+    return reduce_axis;
   }
-  return reduce_axis;
 }
 };  // namespace
 
@@ -486,16 +492,8 @@ class ReduceSumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    const int32_t naxis = x->shape()->NumAxes();
-    if (axis.size() == 0) {
-      std::vector<int32_t> reduce_axis(naxis);
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    } else {
-      std::vector<int32_t> reduce_axis = *JUST(check(naxis, axis));
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    }
-
+    std::vector<int32_t> reduce_axis = *JUST(check(x->shape()->NumAxes(), axis));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
@@ -535,15 +533,8 @@ class ReduceAllFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    int32_t naxis = x->shape()->NumAxes();
-    if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(naxis);
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    } else {
-      std::vector<int32_t> reduce_axis = *JUST(check(naxis, axis));
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    }
+    std::vector<int32_t> reduce_axis = *JUST(check(x->shape()->NumAxes(), axis));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -580,15 +571,8 @@ class ReduceAnyFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    const int32_t naxis = x->shape()->NumAxes();
-    if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(naxis);
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    } else {
-      std::vector<int32_t> reduce_axis = *JUST(check(naxis, axis));
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    }
+    std::vector<int32_t> reduce_axis = *JUST(check(x->shape()->NumAxes(), axis));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -830,15 +814,8 @@ class ReduceProdFunctor {
     }
     JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    const int32_t naxis = x->shape()->NumAxes();
-    if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(naxis);
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    } else {
-      std::vector<int32_t> reduce_axis = *JUST(check(naxis, axis));
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
-    }
+    std::vector<int32_t> reduce_axis = *JUST(check(x->shape()->NumAxes(), axis));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
   }
@@ -864,8 +841,8 @@ class TransposeFunctor {
     for (auto i = 0; i < positive_perm.size(); i++) {
       if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
       CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
-          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
-          << ndim << " ) but got " << positive_perm[i];
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+          << "," << ndim << " ) but got " << positive_perm[i] << ")";
     }
 
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
@@ -894,11 +871,11 @@ class Transpose2dimFunctor {
     if (dim1 < 0) { dim_1 += ndim; }
 
     CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_0 << ")";
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << ", " << ndim - 1 << "], but got " << dim_0 << ")";
     CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_1 << ")";
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << ", " << ndim - 1 << "], but got " << dim_1 << ")";
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 
@@ -1638,8 +1615,8 @@ class SelectFunctor {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
     CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
-        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
-        << "], but got " << dim << ")";
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << "," << ndim - 1 << "], but got " << dim << ")";
     int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
     auto size = input->dim(pos_dim);
     CHECK_OR_RETURN((index >= -size) && (index < size))
@@ -2122,8 +2099,8 @@ class TensorSplitVecFunctor {
                                 const int32_t& dim) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
-        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
-        << "], but got " << dim << ")";
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << "," << ndim - 1 << "], but got " << dim << ")";
     int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
 
     std::vector<int64_t> start(ndim, 0);
@@ -2153,8 +2130,8 @@ class TensorSplitIntFunctor {
                                 const int32_t& indices_or_sections, const int32_t& dim) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
-        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
-        << "], but got " << dim << ")";
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << "," << ndim - 1 << "], but got " << dim << ")";
     CHECK_OR_RETURN(indices_or_sections > 0)
         << "number of sections must be larger than 0, got ," << indices_or_sections << ");";
     int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
@@ -2283,8 +2260,8 @@ class CumBaseFunctor {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
     CHECK_OR_RETURN(dim >= 0 && dim < ndim)
-        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
-        << ndim << " ) but got " << dim;
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << "," << ndim << " ) but got " << dim << ")";
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", dim));
