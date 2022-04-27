@@ -654,9 +654,11 @@ class Graph(object):
     def to_graph(func):
         """ Make a function to do static graph run with nn.Graph.
 
+        After decorating a function with ``to_graph``, the function is turned into a naive `nn.Graph`.
+
         Note:
             This is just a quick way to run a simple function with nn.Graph.
-            If you want to run nn.Module or do training, customize a nn.Graph class, donot use ``to_graph``.
+            If you want to do training or model save/load, customize a nn.Graph class instead, donot use ``to_graph``.
 
         For example:
 
