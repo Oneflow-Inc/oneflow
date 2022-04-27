@@ -42,3 +42,4 @@ unittest-log-*
 /python/oneflow/test/dataloader/data-test/
 
 /target
+saved_model
