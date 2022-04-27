@@ -133,17 +133,16 @@ def _test_slice_backward(test_case, device):
 
 def _test_slice_update(test_case, device):
     x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
-    input = flow.tensor(x, requires_grad=True, device=flow.device(device))
-    update = flow.tensor(
-        np.array([2, 3, 4]).astype(np.float32),
-        requires_grad=True,
-        device=flow.device(device),
-    )
+    input = flow.tensor(x, requires_grad=True)
+    input.retain_grad()
+    update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
     output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-    y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
-    z = y.sum()
+    # Get the inplaced tensor grad by another tensor
+    t = input + 0
+    flow.slice_update(t, update, slice_tup_list=[[1, 4, 1]])
+    z = t.sum()
     z.backward()
-    test_case.assertTrue(np.array_equal(y.numpy(), output))
+    test_case.assertTrue(np.array_equal(t.numpy(), output))
     np_grad = np.zeros(x.shape)
     np_grad[0] = 1
     np_grad[4] = 1
@@ -183,26 +182,9 @@ class TestSlice(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSliceUpdate(flow.unittest.TestCase):
-    def test_slice_update(test_case):
-        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
-        input = flow.tensor(x, requires_grad=True)
-        input.retain_grad()
-        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
-        output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-        # Get the inplaced tensor grad by another tensor
-        t = input + 0
-        flow.slice_update(t, update, slice_tup_list=[[1, 4, 1]])
-        z = t.sum()
-        z.backward()
-        test_case.assertTrue(np.array_equal(t.numpy(), output))
-        np_grad = np.zeros(x.shape)
-        np_grad[0] = 1
-        np_grad[4] = 1
-        test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
-        test_case.assertTrue(np.array_equal(update.grad.numpy(), np.ones(update.shape)))
-
     def test_slice(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -224,12 +206,12 @@ class TestSliceUpdate(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.weight = flow.nn.Parameter(flow.Tensor(x))
-            
+
             def forward(self, x, update):
                 flow.slice_update(x, update, slice_tup_list=[[1, 4, 1]])
                 y = x + self.weight
                 return x, y
-        
+
         test_m = TestModule()
         of_sgd = flow.optim.SGD(test_m.parameters(), lr=0.001, momentum=0.9)
 
@@ -238,13 +220,13 @@ class TestSliceUpdate(flow.unittest.TestCase):
                 super().__init__()
                 self.m = test_m
                 self.add_optimizer(of_sgd)
-            
+
             def build(self, x, update):
                 x, y = self.m(x, update)
                 z = y.sum()
                 z.backward()
                 return x
-        
+
         slice_update_g = TestSliceUpdateGraph()
 
         y = slice_update_g(input, update)
@@ -288,10 +270,12 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         np_arr = np.zeros(shape=(2, 3, 4))
         input = flow.tensor(np_arr, dtype=flow.float32)
         np_arr[-1] = 1
+
         @flow.nn.Graph.to_graph
         def test_func():
             input[-1] = 1
             return input
+
         out = test_func()
         test_case.assertTrue(np.array_equal(out.numpy(), np_arr))
 
@@ -306,12 +290,15 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
         input = flow.tensor(np_arr, dtype=flow.float32)
         np_arr[0, ::1, ..., 2:3] = 1
+
         @flow.nn.Graph.to_graph
         def test_func():
             input[0, ::1, ..., 2:3] = 1
             return input
+
         out = test_func()
         test_case.assertTrue(np.array_equal(out.numpy(), np_arr))
+
 
 if __name__ == "__main__":
     unittest.main()

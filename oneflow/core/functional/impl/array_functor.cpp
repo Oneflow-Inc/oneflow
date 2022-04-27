@@ -1235,12 +1235,13 @@ class LogicalSliceAssignFunctor {
 class LogicalSliceAssignOutFunctor {
  public:
   LogicalSliceAssignOutFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logical_slice_assign_out").Input("ref").Input("value").Output("y").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("logical_slice_assign_out").Input("ref").Input("value").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ref,
-                         const std::shared_ptr<one::Tensor>& value,
-                         const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
-                         const std::vector<int64_t>& step) const {
+                           const std::shared_ptr<one::Tensor>& value,
+                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));

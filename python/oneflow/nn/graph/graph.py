@@ -652,8 +652,24 @@ class Graph(object):
 
     @staticmethod
     def to_graph(func):
-        """ Make a function to do static graph run.
-        This is mainly for quick test of a function to run with nn.Graph.
+        """ Make a function to do static graph run with nn.Graph.
+
+        Note:
+            This is just a quick way to run a simple function with nn.Graph.
+            If you want to run nn.Module or do training, customize a nn.Graph class, donot use ``to_graph``.
+
+        For example:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> @flow.nn.Graph.to_graph
+            >>> def test_func(x):
+            ...     return x * 2
+            >>> input = flow.tensor((1, 2), dtype=flow.float32)
+            >>> out = test_func(input)
+            >>> out
+            tensor([2., 4.], dtype=oneflow.float32)
 
         ..
             Feature Stage of Feature [to_graph].
@@ -661,21 +677,21 @@ class Graph(object):
             - Current Stage [Pre-alpha, note that this is an experimental feature and maybe removed without notice.]
 
         """
-        assert inspect.isfunction(func), f"nn.Graph.to_graph only support function currently, so {func} must be a function."
+        assert inspect.isfunction(
+            func
+        ), f"nn.Graph.to_graph only support function currently, so {func} must be a function."
         graph_cls_name = func.__name__ + "_graph"
 
         def init(self):
             super(graph_cls_name, self).__init__()
-        
+
         def build(self, *args, **kwargs):
             return func(*args, **kwargs)
 
-        graph_cls_name = type(graph_cls_name,
-                              (Graph, ),
-                              {"__init__": init,
-                               "build": build,
-                              })
-        
+        graph_cls_name = type(
+            graph_cls_name, (Graph,), {"__init__": init, "build": build,}
+        )
+
         a_graph = graph_cls_name()
 
         return a_graph

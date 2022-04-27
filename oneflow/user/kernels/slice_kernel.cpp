@@ -394,7 +394,8 @@ class LogicalSliceAssignOutKernel final : public user_op::OpKernel {
     if (ref_tensor->dptr<T>() != y_tensor->dptr<T>()) {
       // lazy run
       AutoMemcpy(ctx->stream(), y_tensor->mut_dptr<T>(), ref_tensor->dptr<T>(),
-                 y_tensor->shape().elem_cnt() * sizeof(T), ref_tensor->mem_case(), y_tensor->mem_case());
+                 y_tensor->shape().elem_cnt() * sizeof(T), ref_tensor->mem_case(),
+                 y_tensor->mem_case());
     }
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();

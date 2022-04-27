@@ -243,7 +243,8 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> LogicalSliceAssignOutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> LogicalSliceAssignOutOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> LogicalSliceAssignOutOp::InferDataType(user_op::InferContext* ctx) {
