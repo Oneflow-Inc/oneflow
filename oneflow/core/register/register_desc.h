@@ -98,6 +98,9 @@ class RegstDesc final {
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
   bool HasSameMemSize(const RegstDesc*);
 
+  void set_exec_interval(int32_t val) { exec_interval_ = val; }
+  int32_t exec_interval() const { return exec_interval_; }
+
   // util
   void EraseUninitializedShapeBlob();
   void ToProto(RegstDescProto*) const;
@@ -119,6 +122,7 @@ class RegstDesc final {
   int64_t mem_block_offset_;
   int32_t hint_inplace_consumed_regst_desc_id_;
   int32_t force_inplace_consumed_regst_desc_id_;
+  int32_t exec_interval_;
 
   std::shared_ptr<Shape> data_regst_time_shape_;
 };

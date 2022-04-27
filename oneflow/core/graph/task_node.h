@@ -102,7 +102,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<Shape> GetFastestInputOutputTimeShape() const;
 
   virtual void InferExecInterval();
-  virtual void CorrectExecInterval() {}
   int32_t exec_interval() const { return exec_interval_; }
 
   void ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
@@ -119,6 +118,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
  protected:
   void set_exec_interval(int32_t val);
+  virtual int32_t TryGetNonTrivialExecIntervalOfSoleOp() const { return 1; }
 
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem,

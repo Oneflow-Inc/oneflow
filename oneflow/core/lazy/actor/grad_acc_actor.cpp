@@ -21,7 +21,7 @@ namespace oneflow {
 class GradAccActor final : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GradAccActor);
-  GradAccActor() = default;
+  GradAccActor() : acc_cnt_(0), acc_num_(0){};
   ~GradAccActor() override = default;
 
  private:

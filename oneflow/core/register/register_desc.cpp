@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-RegstDesc::RegstDesc() {
+RegstDesc::RegstDesc() : exec_interval_(-1) {
   regst_desc_id_ = Global<IDMgr>::Get()->NewRegstDescId();
   producer_ = nullptr;
   min_register_num_ = 1;
@@ -139,6 +139,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   } else {
     UNIMPLEMENTED();
   }
+  if (exec_interval_ > 1) { ret->set_exec_interval(exec_interval_); }
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);

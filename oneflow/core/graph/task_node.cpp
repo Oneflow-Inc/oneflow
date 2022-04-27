@@ -106,35 +106,39 @@ void TaskNode::PinConsumedRegst() {
 }
 
 void TaskNode::set_exec_interval(int32_t val) {
-  CHECK_NE(val, -1);
+  CHECK_GT(val, 0);
   exec_interval_ = val;
 }
 
 void TaskNode::InferExecInterval() {
-  int32_t exec_interval = -1;
-  ForEachNodeOnInDataEdge([&exec_interval, this](TaskNode* src_node) {
-    int32_t src_exec_interval = src_node->exec_interval();
-    CHECK_NE(src_exec_interval, -1);
-    exec_interval = std::max(exec_interval, src_exec_interval);
-    /*
-    if (exec_interval == -1) {
+  int32_t exec_interval = 1;
+  ForEachConsumedDataRegst([&](const std::string& name, const RegstDesc* regst) {
+    int32_t src_exec_interval = regst->exec_interval();
+    CHECK(src_exec_interval >= 1);
+    if (src_exec_interval == 1) { return; }  // NOTE(chengcheng): skip trivial interval
+    if (exec_interval == 1) {
       exec_interval = src_exec_interval;
     } else {
-      if (exec_interval != src_exec_interval) {
-        TaskProto this_proto;
-        TaskProto src_proto;
-        this->ToProto(&this_proto);
-        src_node->ToProto(&src_proto);
-        LOG(FATAL) << "cclog: ERROR! src node: " << src_proto.DebugString()
-                   << " -> this_node: " << this_proto.DebugString()
-                   << " exec interval is not equal with src: " << src_exec_interval << " vs this "
-                   << exec_interval;
-      }
-      // CHECK_EQ(exec_interval, src_exec_interval);
+      CHECK_EQ(exec_interval, src_exec_interval)
+          << " RuntimeError! TaskNode: " << task_id_
+          << " multi-input has different non-trivial interval.";
     }
-    */
   });
-  if (exec_interval == -1) { exec_interval = 1; }
+
+  // NOTE(chengcheng): For normal forward ops set exec_interval like TrainStep.
+  int32_t this_exec_interval = TryGetNonTrivialExecIntervalOfSoleOp();
+  if (this_exec_interval > 1) {
+    if (exec_interval == 1) {
+      exec_interval = this_exec_interval;
+    } else {
+      CHECK_EQ(exec_interval, this_exec_interval);
+    }
+  }
+
+  ForEachProducedDataRegst([exec_interval](const std::string& name, RegstDesc* regst) {
+    regst->set_exec_interval(exec_interval);
+  });
+
   exec_interval_ = exec_interval;
 }
 
