@@ -772,6 +772,7 @@ def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
     initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
     return _init_by_initializer_conf(self, initializer_conf)
 
+
 def _normal(self, mean=0, std=1):
     if self.is_global:
         src_tensor = flow.normal(mean, std, self.shape)
@@ -791,6 +792,7 @@ def _normal(self, mean=0, std=1):
             device=self.device,
             requires_grad=self.requires_grad,
         )
+
 
 def _fill(self, value):
     initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
