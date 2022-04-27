@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_ONEFLOWDIALECT_H
 
 #include "mlir/IR/Dialect.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #include "OneFlow/OneFlowOpsDialect.h.inc"
 
