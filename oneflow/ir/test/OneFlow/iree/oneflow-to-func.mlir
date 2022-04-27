@@ -1,5 +1,6 @@
+// oneflow-opt -lower-oneflow-to-func %s | FileCheck %s
 module {
-  oneflow.job @TestLowerFunc() {
+   oneflow.job private @TestLowerFunc() {
     oneflow.return 
   }
 }
