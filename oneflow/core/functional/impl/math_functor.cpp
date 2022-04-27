@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "_deps/pybind11-src/include/pybind11/attr.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -37,23 +38,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 namespace functional {
-
-namespace {
-std::string exception_check(int32_t base, int32_t value, bool check_ge = true,
-                            bool check_le = true) {
-  printf("%d, %d, %d, %d\n", base, value, check_ge, check_le);
-  if (check_ge) {
-    CHECK_GE_OR_RETURN(base, value) << "Dimension out of range, expected to be in range of ["
-                                    << -base << ", " << base - 1 << "], but got " << value;
-  }
-  if (check_le) {
-    CHECK_LE_OR_RETURN(-base, value) << "Dimension out of range, expected to be in range of ["
-                                     << -base << ", " << base - 1 << "], but got " << value;
-  }
-  return "";
-}
-}  // namespace
-
 namespace impl {
 
 class AddNFunctor {
@@ -427,6 +411,25 @@ class Min2Functor {
   }
 };
 
+class AmaxFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int32_t>>& dim, const bool& keepdim) const {
+    if (!dim.has_value()) { return ReduceMax(x, {}, keepdim); }
+
+    const int32_t ndim = x->ndim();
+    std::vector<int32_t>& dims = *JUST(dim);
+    for (int i = 0; i < dims.size(); i++) {
+      if (dims[i] < -ndim || dims[i] >= ndim) {
+        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                   << -ndim << ", " << ndim - 1 << "], but got " << dims[i] << ")";
+      }
+      if (dims[i] < 0) { dims[i] += ndim; }
+    }
+    return ReduceMax(x, dims, keepdim);
+  }
+};
+
 class ReduceSumWholeFunctor {
  public:
   ReduceSumWholeFunctor() {
@@ -450,25 +453,6 @@ class ReduceSumWholeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class AmaxFunctor {
- public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<std::vector<int32_t>>& dim, const bool& keepdim) const {
-    if (!dim.has_value()) { return ReduceMax(x, {}, keepdim); }
-
-    const int32_t ndim = x->ndim();
-    std::vector<int32_t>& dims = *JUST(dim);
-    for (int i = 0; i < dims.size(); i++) {
-      if (dims[i] < -ndim || dims[i] >= ndim) {
-        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
-                                   << -ndim << ", " << ndim - 1 << "], but got " << dims[i] << ")";
-      }
-      if (dims[i] < 0) { dims[i] += ndim; }
-    }
-    return ReduceMax(x, dims, keepdim);
-  }
-};
-
 class ReduceSumFunctor {
  public:
   ReduceSumFunctor() {
@@ -485,13 +469,18 @@ class ReduceSumFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
       CHECK_GE_OR_RETURN(naxis, axis.size())
-          << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-          << "], but got " << axis.size();
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
+          << ", " << naxis - 1 << "], but got " << axis.size() << ")";
       ;
 
       std::vector<int32_t> reduce_axis(axis.size());
       for (int i = 0; i < axis.size(); i++) {
-        exception_check(naxis, axis[i]);
+        CHECK_GT_OR_RETURN(naxis, axis[i])
+            << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+            << -naxis << ", " << naxis - 1 << "], but got " << axis[i] << ")";
+        CHECK_LE_OR_RETURN(-naxis, axis[i])
+            << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+            << -naxis << ", " << naxis - 1 << "], but got " << axis[i] << ")";
         if (axis[i] < 0) {
           reduce_axis[i] = axis[i] + naxis;
         } else {
@@ -590,13 +579,18 @@ class ReduceAnyFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
       CHECK_GE_OR_RETURN(naxis, axis.size())
-          << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-          << "], but got " << axis.size();
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
+          << ", " << naxis - 1 << "], but got " << axis.size() << ")";
       ;
 
       std::vector<int32_t> reduce_axis(axis.size());
       for (int i = 0; i < axis.size(); i++) {
-        exception_check(naxis, axis[i]);
+        CHECK_GT_OR_RETURN(naxis, axis[i])
+            << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+            << -naxis << ", " << naxis - 1 << "], but got " << axis[i] << ")";
+        CHECK_LE_OR_RETURN(-naxis, axis[i])
+            << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+            << -naxis << ", " << naxis - 1 << "], but got " << axis[i] << ")";
         if (axis[i] < 0) {
           reduce_axis[i] = axis[i] + naxis;
         } else {
@@ -853,19 +847,18 @@ class ReduceProdFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
       CHECK_GE_OR_RETURN(naxis, axis.size())
-          << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-          << "], but got " << axis.size();
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
+          << ", " << naxis - 1 << "], but got " << axis.size() << ")";
       ;
 
       std::vector<int32_t> reduce_axis(axis.size());
       for (int i = 0; i < axis.size(); i++) {
-        // exception_check(naxis, axis[i]);
-        CHECK_GE_OR_RETURN(naxis, axis[i])
-            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-            << "], but got " << axis[i];
+        CHECK_GT_OR_RETURN(naxis, axis[i])
+            << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+            << -naxis << ", " << naxis - 1 << "], but got " << axis[i] << ")";
         CHECK_LE_OR_RETURN(-naxis, axis[i])
-            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-            << "], but got " << axis[i];
+            << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+            << -naxis << ", " << naxis - 1 << "], but got " << axis[i] << ")";
         if (axis[i] < 0) {
           reduce_axis[i] = axis[i] + naxis;
         } else {
@@ -1951,8 +1944,8 @@ class StandardDeviationFunctor {
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
       CHECK_GE_OR_RETURN(ndim, dims.size())
-          << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
-          << "], but got " << dims.size();
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+          << ", " << ndim - 1 << "], but got " << dims.size() << ")";
       axis.assign(dims.begin(), dims.end());
     }
 
@@ -2047,8 +2040,8 @@ class VarianceFunctor {
     } else {
       std::vector<int32_t>& dims = *JUST(dim);
       CHECK_GE_OR_RETURN(ndim, dims.size())
-          << "Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
-          << "], but got " << dims.size();
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+          << ", " << ndim - 1 << "], but got " << dims.size() << ")";
       std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
@@ -2087,11 +2080,12 @@ class MovedimVecFunctor {
     FOR_RANGE(size_t, i, 0, perm.size()) {
       int32_t item = perm[i];
       if (item < 0) { item += ndim; }
-      CHECK_GE_OR_RETURN(item, 0) << ", Dimension out of range (expected to be in range of ["
-                                  << -ndim << ", " << ndim - 1 << "], but got " << perm[i] << ")";
+      CHECK_GE_OR_RETURN(item, 0) << Error::IndexError()
+                                  << "Dimension out of range (expected to be in range of [" << -ndim
+                                  << ", " << ndim - 1 << "], but got " << perm[i] << ")";
       CHECK_LT_OR_RETURN(item, ndim)
-          << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-          << "], but got " << perm[i] << ")";
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+          << ", " << ndim - 1 << "], but got " << perm[i] << ")";
       CHECK_EQ_OR_RETURN(is_used[item], false) << "repeated dim in " << desc;
 
       is_used[item] = true;
