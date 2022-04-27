@@ -508,6 +508,23 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });
+  m.add_functor("DispatchFtrlUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, double scale, float l1, float l2, float lr_power,
+                   float lambda1, float lambda2, float beta, float weight_decay) -> Maybe<void> {
+                  MutableAttrMap attrs;
+                  JUST(attrs.SetAttr("learning_rate_val", learning_rate));
+                  JUST(attrs.SetAttr("scale", scale));
+                  JUST(attrs.SetAttr("l1", l1));
+                  JUST(attrs.SetAttr("l2", l2));
+                  JUST(attrs.SetAttr("lr_power", lr_power));
+                  JUST(attrs.SetAttr("lambda1", lambda1));
+                  JUST(attrs.SetAttr("lambda2", lambda2));
+                  JUST(attrs.SetAttr("beta", beta));
+                  JUST(attrs.SetAttr("weight_decay", weight_decay));
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
+                });
   m.add_functor("DispatchEagerNcclAllReduce",
                 [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& input,
                    const std::string& parallel_conf, bool async_launch) -> Maybe<Tensor> {
