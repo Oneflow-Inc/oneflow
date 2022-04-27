@@ -1,12 +1,9 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -164,24 +161,24 @@ def _test_slice_update_with_stride(test_case, device):
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 
-# @flow.unittest.skip_unless_1n1d()
-# class TestSlice(flow.unittest.TestCase):
-#     def test_slice(test_case):
-#         arg_dict = OrderedDict()
-#         arg_dict["test_fun"] = [
-#             _test_slice,
-#             _test_slice_empty,
-#             _test_slice_1_dim,
-#             _test_slice_3_dim,
-#             _test_slice_4_dim,
-#             _test_slice_with_int_index,
-#             _test_slice_negative_index,
-#             _test_slice_ellipsis_type,
-#             _test_slice_backward,
-#         ]
-#         arg_dict["device"] = ["cpu", "cuda"]
-#         for arg in GenArgList(arg_dict):
-#             arg[0](test_case, *arg[1:])
+@flow.unittest.skip_unless_1n1d()
+class TestSlice(flow.unittest.TestCase):
+    def test_slice(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_slice,
+            _test_slice_empty,
+            _test_slice_1_dim,
+            _test_slice_3_dim,
+            _test_slice_4_dim,
+            _test_slice_with_int_index,
+            _test_slice_negative_index,
+            _test_slice_ellipsis_type,
+            _test_slice_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -189,7 +186,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
     def test_slice(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            # _test_slice_update,
+            _test_slice_update,
             _test_slice_update_with_stride
         ]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -197,29 +194,29 @@ class TestSliceUpdate(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-# @flow.unittest.skip_unless_1n1d()
-# class TestLogicalSliceAssign(flow.unittest.TestCase):
-#     def test_logical_slice_assign(test_case):
-#         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
-#         input = flow.tensor(x)
-#         update = flow.tensor(np.array([2, 3, 4]).astype(np.float32))
-#         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-#         flow.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
-#         test_case.assertTrue(np.array_equal(input.numpy(), output))
+@flow.unittest.skip_unless_1n1d()
+class TestLogicalSliceAssign(flow.unittest.TestCase):
+    def test_logical_slice_assign(test_case):
+        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+        input = flow.tensor(x)
+        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32))
+        output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
+        flow.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
+        test_case.assertTrue(np.array_equal(input.numpy(), output))
 
-#     def test_logical_slice_assign_negative_index(test_case):
-#         np_arr = np.zeros(shape=(2, 3, 4))
-#         input = flow.tensor(np_arr, dtype=flow.float32)
-#         np_arr[-1] = 1
-#         input[-1] = 1
-#         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
+    def test_logical_slice_assign_negative_index(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4))
+        input = flow.tensor(np_arr, dtype=flow.float32)
+        np_arr[-1] = 1
+        input[-1] = 1
+        test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
 
-#     def test_logical_slice_assign_ellipsis_type(test_case):
-#         np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
-#         input = flow.tensor(np_arr, dtype=flow.float32)
-#         np_arr[0, ::1, ..., 2:3] = 1
-#         input[0, ::1, ..., 2:3] = 1
-#         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
+    def test_logical_slice_assign_ellipsis_type(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
+        input = flow.tensor(np_arr, dtype=flow.float32)
+        np_arr[0, ::1, ..., 2:3] = 1
+        input[0, ::1, ..., 2:3] = 1
+        test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
 
 
 if __name__ == "__main__":
