@@ -406,7 +406,6 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   }
 
   DimVector target_dims(ndim);
-
   DimVector stride_vec(ndim);
   for (int i = 0; i < ndim; ++i) {
     target_dims[i] = shape->At(permute[i]);
