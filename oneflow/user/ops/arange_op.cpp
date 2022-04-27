@@ -61,9 +61,8 @@ namespace oneflow {
     int64_t integer_start = ctx->Attr<int64_t>("integer_start");
     int64_t integer_limit = ctx->Attr<int64_t>("integer_limit");
     // CHECK when limit > start, delta > 0; limit < start, delta < 0;
-    if ((integer_limit - integer_start) / integer_delta == static_cast<int64_t>(0)) {
+    if ((integer_limit - integer_start) / integer_delta < static_cast<int64_t>(0)) {
       return Error::RuntimeError() << " upper bound and larger bound inconsistent with step sign";
-      ;
     }
     range_elem_cnt = std::ceil(static_cast<double>(integer_limit - integer_start) / integer_delta);
   } else {
@@ -75,7 +74,7 @@ namespace oneflow {
     double float_limit = ctx->Attr<double>("float_limit");
     // CHECK when limit > start, delta > 0; limit < start, delta < 0;
     // CHECK_GE For 0-Dim Tensor
-    if ((float_limit - float_start) / float_delta == static_cast<double>(0.0)) {
+    if ((float_limit - float_start) / float_delta < static_cast<double>(0.0)) {
       return Error::RuntimeError() << " upper bound and larger bound inconsistent with step sign";
     }
     range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
