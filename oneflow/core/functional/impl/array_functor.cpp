@@ -604,10 +604,10 @@ class ExpandFunctor {
     for (int i = shape.NumAxes() - 1; i >= 0; --i) {
       int index = i - shift;
       if (index >= 0) {
-        if (shape.At(i) != -1 && shape.At(i) != in_shape.at(index)) {
-          CHECK_OR_RETURN(shape.At(i) >= 0 && in_shape.at(index) == 1)
+        if (shape.At(i) != -1 && shape.At(i) != in_shape[index]) {
+          CHECK_OR_RETURN(shape.At(i) >= 0 && in_shape[index] == 1)
               << "The expanded size of the tensor (" << shape.At(i)
-              << ") must match the existing size (" << in_shape.at(index)
+              << ") must match the existing size (" << in_shape[index]
               << ") at non-singleton dimension " << i << ".  Target sizes: " << shape.ToString()
               << ".  Tensor sizes: " << x->shape()->ToString();
         }
