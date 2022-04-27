@@ -938,7 +938,7 @@ class ArgSortFunctor {
     op_ = CHECK_JUST(one::OpBuilder("arg_sort").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
-                           const std::string direction) const {
+                           const std::string& direction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("direction", direction));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
@@ -1214,18 +1214,21 @@ class LogicalSliceFunctor : public SliceBaseFunctor {
 class LogicalSliceAssignFunctor {
  public:
   LogicalSliceAssignFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logical_slice_assign").Input("ref").Input("value").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("logical_slice_assign").Input("ref").Input("value").Output("y").Build());
   }
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
-                         const std::shared_ptr<one::Tensor>& value,
-                         const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
-                         const std::vector<int64_t>& step) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ref,
+                           const std::shared_ptr<one::Tensor>& value,
+                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, attrs));
-    return Maybe<void>::Ok();
+    auto outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = ref;
+    JUST(OpInterpUtil::Dispatch(*op_, {ref, value}, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:
@@ -2499,7 +2502,6 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     return tensor;
   } else {
     CheckMetaConsistency(x).GetOrThrow();
-    auto old_placement = JUST(x->parallel_desc());
     auto placement = JUST(ReplacePlacementDeviceTag(input_placement, device_type));
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
