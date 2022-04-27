@@ -89,9 +89,9 @@ class JobImporter : Importer {
   LogicalResult TryToUpdateJob();
   LogicalResult ConvertUserOp(Operation* op, ::oneflow::Job& job);
   LogicalResult ConvertSystemOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult ConvertVariableOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult ConvertInputOp(Operation* op, ::oneflow::Job& job);
-  LogicalResult ConvertOutputOp(Operation* op, ::oneflow::Job& job);
+  LogicalResult ConvertVariableOp(VariableOp op, ::oneflow::Job& job);
+  LogicalResult ConvertInputOp(InputOp op, ::oneflow::Job& job);
+  LogicalResult ConvertOutputOp(OutputOp op, ::oneflow::Job& job);
 
   Type GetTensorTypeOfLbn(const std::string& lbn) override;
   Type GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf);
@@ -642,8 +642,8 @@ LogicalResult JobImporter::TryToUpdateJob() {
           op->emitError("failed to convert SystemOp: ") << *op;
           return WalkResult::interrupt();
         }
-      } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
-        if (failed(ConvertVariableOp(op, new_job))) {
+      } else if (auto variable_op = llvm::dyn_cast<oneflow::VariableOp>(op)) {
+        if (failed(ConvertVariableOp(variable_op, new_job))) {
           op->emitError("failed to process VariableOp: ") << *op;
           return WalkResult::interrupt();
         }
@@ -678,15 +678,21 @@ LogicalResult JobImporter::TryToUpdateJob() {
   for (BlockArgument argument : arguments) {
     for (auto& use : argument.getUses()) {
       Operation* owner = use.getOwner();
-      if (!dyn_cast<oneflow::InputOp>(owner)) { return failure(); }
-      if (failed(ConvertInputOp(owner, new_job))) { return failure(); }
+      if (auto input_op = dyn_cast<oneflow::InputOp>(owner)) {
+        if (failed(ConvertInputOp(input_op, new_job))) { return failure(); }
+      } else {
+        return failure();
+      }
     }
   }
   // add output op
   for (auto output : outputs) {
     Operation* owner = output.getDefiningOp();
-    if (!dyn_cast<oneflow::OutputOp>(owner)) { return failure(); }
-    if (failed(ConvertOutputOp(owner, new_job))) { return failure(); }
+    if (auto output_op = dyn_cast<oneflow::OutputOp>(owner)) {
+      if (failed(ConvertOutputOp(output_op, new_job))) { return failure(); }
+    } else {
+      return failure();
+    }
   }
 
   job_wrapper_.UpdateJob(&new_job);
@@ -735,25 +741,25 @@ LogicalResult JobImporter::ConvertSystemOp(Operation* op, ::oneflow::Job& job) {
   return success();
 }
 
-LogicalResult JobImporter::ConvertVariableOp(Operation* op, ::oneflow::Job& job) {
+LogicalResult JobImporter::ConvertVariableOp(VariableOp op, ::oneflow::Job& job) {
   oneflow::VariableOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
-  UpdatePlacement(op, op_adaptor, job);
+  UpdatePlacement(&op, op_adaptor, job);
   auto* op_conf = job.mutable_net()->add_op();
-  return ConvertVariableOpConf(op, op_adaptor, op_conf);
+  return ConvertVariableOpConf(op, op_conf);
 }
 
-LogicalResult JobImporter::ConvertInputOp(Operation* op, ::oneflow::Job& job) {
+LogicalResult JobImporter::ConvertInputOp(InputOp op, ::oneflow::Job& job) {
   oneflow::InputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
-  UpdatePlacement(op, op_adaptor, job);
+  UpdatePlacement(&op, op_adaptor, job);
   auto* op_conf = job.mutable_net()->add_op();
-  return ConvertInputOpConf(op, op_adaptor, op_conf);
+  return ConvertInputOpConf(op, op_conf);
 }
 
-LogicalResult JobImporter::ConvertOutputOp(Operation* op, ::oneflow::Job& job) {
+LogicalResult JobImporter::ConvertOutputOp(OutputOp op, ::oneflow::Job& job) {
   oneflow::OutputOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
-  UpdatePlacement(op, op_adaptor, job);
+  UpdatePlacement(&op, op_adaptor, job);
   auto* op_conf = job.mutable_net()->add_op();
-  return ConvertOutputOpConf(op, op_adaptor, op_conf);
+  return ConvertOutputOpConf(op, op_conf);
 }
 
 Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& blob_conf) {
