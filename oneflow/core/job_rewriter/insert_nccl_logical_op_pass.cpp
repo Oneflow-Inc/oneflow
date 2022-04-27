@@ -77,20 +77,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
 
 bool IsAccOpNode(const OpNode* node) {
   return node->op().op_conf().has_user_conf()
-         && node->op().op_conf().user_conf().op_type_name() == "acc";
-}
-
-std::shared_ptr<const Shape> GetOpNodeTimeShape(const OpNode* op_node) {
-  return CHECK_JUST(op_node->op().GetOpTimeShape());
-}
-
-std::shared_ptr<const Shape> GetOpNodeInputTimeShape(const OpNode* op_node) {
-  return CHECK_JUST(op_node->op().GetInputBlobFastestTimeShape());
-}
-
-bool SharedPtrShapeEqual(const std::shared_ptr<const Shape>& lhs,
-                         const std::shared_ptr<const Shape>& rhs) {
-  return (*lhs) == (*rhs);
+         && node->op().op_conf().user_conf().op_type_name() == "_grad_acc";
 }
 
 void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>* ret,
@@ -110,7 +97,6 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
     HashSet<const OpNode*> this_subgraph;
     std::queue<const OpNode*> queued_nodes;
 
-    std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(seed_node);
     queued_nodes.push(seed_node);
     while (!queued_nodes.empty()) {
       const OpNode* cur_node = queued_nodes.front();
@@ -121,8 +107,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
 
       cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
         if (visited.find(next_node) == visited.end() && (!IsBreakpointOpNode(next_node))
-            && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
-            && SharedPtrShapeEqual(GetOpNodeTimeShape(next_node), seed_time_shape)) {
+            && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)) {
           CHECK(visited.insert(next_node).second);
           queued_nodes.push(next_node);
         }
@@ -540,16 +525,13 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
   }
 }
 
-bool IsOpEdgeAllowInsertNccl(const OpEdge* edge,
-                             const std::shared_ptr<const Shape>& seed_time_shape) {
+bool IsOpEdgeAllowInsertNccl(const OpEdge* edge) {
   const OpNode* src_node = edge->src_node();
   const OpNode* dst_node = edge->dst_node();
   const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
   return src_parallel_desc.device_type() == DeviceType::kCUDA
          && src_parallel_desc.parallel_num() > 1
-         && src_parallel_desc.EqualsIgnoringHierarchy(dst_node->parallel_desc())
-         && SharedPtrShapeEqual(GetOpNodeTimeShape(src_node), seed_time_shape)
-         && SharedPtrShapeEqual(GetOpNodeTimeShape(dst_node), seed_time_shape);
+         && src_parallel_desc.EqualsIgnoringHierarchy(dst_node->parallel_desc());
 }
 
 struct InsertedNcclInfo {
@@ -567,13 +549,12 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
                                   std::vector<OperatorConf>* nccl_op_confs,
                                   std::vector<ParallelConf>* nccl_op_parallel_confs) {
   HashSet<const OpEdge*> visited;
-  std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
   std::vector<InsertedNcclInfo> nccl_op_infos;
 
   for (const OpNode* acc : ordered_acc_op_nodes) {
     std::queue<const OpEdge*> queued_edges;
     for (const OpEdge* op_edge : acc->out_edges()) {
-      if (IsOpEdgeAllowInsertNccl(op_edge, seed_time_shape)) {
+      if (IsOpEdgeAllowInsertNccl(op_edge)) {
         queued_edges.push(op_edge);
         CHECK(visited.insert(op_edge).second);
       }
@@ -626,7 +607,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
 
       for (const OpEdge* dst_node_out_edge : op_edge->dst_node()->out_edges()) {
         if (visited.find(dst_node_out_edge) == visited.end()
-            && IsOpEdgeAllowInsertNccl(dst_node_out_edge, seed_time_shape)) {
+            && IsOpEdgeAllowInsertNccl(dst_node_out_edge)) {
           CHECK(visited.insert(dst_node_out_edge).second);
           queued_edges.push(dst_node_out_edge);
         }
@@ -670,7 +651,6 @@ struct PlacementNcclSubGraghsInfo {
   std::vector<std::shared_ptr<InsertNcclSubGraph>> ordered_subgraph;
   std::vector<const OpNode*> ordered_acc_op_nodes;
   const ParallelDesc* seed_parallel_desc;
-  std::shared_ptr<const Shape> seed_time_shape;
 };
 
 void InitInsertNcclSubGraphInfoFromSet(
@@ -778,63 +758,21 @@ void InsertNcclLogicalOpsInSubGraph(
   }
 }
 
+/*
 void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& ordered_acc_op_nodes,
     const HashMap<const OpNode*, int64_t>& op_node2global_order, const OpNode* bw_sink_op) {
   const OpNode* first_acc_op = ordered_acc_op_nodes.front();
-  std::shared_ptr<const Shape> time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
-  std::shared_ptr<const Shape> time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
-  VLOG(3) << " Find acc ops (num=" << ordered_acc_op_nodes.size()
-          << ") in Job: " << job_builder->job().job_conf().job_name()
-          << ", we will try insert special identity and ctrl for "
-          << " UNSAFE handle ALL nccl ops between different time shape: "
-          << time_shape_before_acc->DebugStr() << "->acc->" << time_shape_after_acc->DebugStr()
-          << "\n\n";
-  CHECK_GT(time_shape_before_acc->elem_cnt(), time_shape_after_acc->elem_cnt());
-  CHECK_EQ(time_shape_before_acc->elem_cnt() % time_shape_after_acc->elem_cnt(), 0);
-
-  for (const OpNode* acc : ordered_acc_op_nodes) {
-    CHECK(SharedPtrShapeEqual(time_shape_before_acc, GetOpNodeInputTimeShape(acc)));
-    CHECK(SharedPtrShapeEqual(time_shape_after_acc, GetOpNodeTimeShape(acc)));
-  }
-
-  // NOTE(chengcheng): insert acc_tick after bw_sink_op, and this tick op conf will control
-  //  after_acc_nccl_ops start.
-  const auto& obns = bw_sink_op->op().output_bns();
-  CHECK(!obns.empty());
-  const std::string bw_sink_op_out_lbn =
-      GenLogicalBlobName(bw_sink_op->op().BnInOp2Lbi(obns.Get(0)));
-  VLOG(3) << " bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
-
-  user_op::UserOpConfWrapper cast_to_tick_op =
-      user_op::UserOpConfWrapperBuilder("System-CastToTick-" + NewUniqueId())
-          .OpTypeName("cast_to_tick")
-          .Input("in", bw_sink_op_out_lbn)
-          .Output("out")
-          .Build();
-
-  OperatorConf bw_sink_acc_tick_conf;
-  bw_sink_acc_tick_conf.set_name(std::string("System-BwSinkTick-AccTick_") + NewUniqueId());
-  auto* acc_conf = bw_sink_acc_tick_conf.mutable_acc_tick_conf();
-  acc_conf->set_one(cast_to_tick_op.output("out", 0));
-  acc_conf->set_acc("acc");
-  acc_conf->set_max_acc_num(time_shape_before_acc->elem_cnt() / time_shape_after_acc->elem_cnt());
-
-  OperatorConf bw_sink_final_tick_conf;
-  bw_sink_final_tick_conf.set_name(std::string("System-BwSinkFinalTick-DeviceTick_")
-                                   + NewUniqueId());
-  auto* tick_conf = bw_sink_final_tick_conf.mutable_device_tick_conf();
-  tick_conf->add_tick(GenLogicalBlobName(bw_sink_acc_tick_conf.name(), "acc"));
-  tick_conf->set_out("out");
 
   // insert nccl ops after acc
   std::vector<OperatorConf> after_acc_nccl_op_confs;
   std::vector<ParallelConf> after_acc_nccl_parallel_confs;
   HashMap<std::string, OperatorConf> mut_consumer_name2op;
 
+  // NOTE(chengcheng): bw_sink_op will control after_acc_nccl_ops starts.
   InsertNcclLogicalOpsAfterAcc(op_graph, op_node2global_order, ordered_acc_op_nodes,
-                               bw_sink_final_tick_conf.name(), &mut_consumer_name2op,
+                               bw_sink_op->op().op_name(), &mut_consumer_name2op,
                                &after_acc_nccl_op_confs, &after_acc_nccl_parallel_confs);
 
   if (after_acc_nccl_op_confs.empty()) {
@@ -866,6 +804,8 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   }
 }
 
+*/
+
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<const OpNode*> ordered_op_nodes;
   HashMap<const OpNode*, int64_t> op_node2global_order;
@@ -889,56 +829,52 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     const OpNode* rand_node = *subgraph.begin();
     const ParallelDesc& this_parallel_desc = rand_node->parallel_desc();
     std::string key = GenParallelConfKey(this_parallel_desc.parallel_conf());
-    const std::shared_ptr<const Shape>& this_time_shape = GetOpNodeTimeShape(rand_node);
     auto it = placement2subgraphs.find(key);
     if (it == placement2subgraphs.end()) {
       it = placement2subgraphs.emplace(key, PlacementNcclSubGraghsInfo()).first;
       auto& info = it->second;
       info.seed_parallel_desc = &this_parallel_desc;
-      info.seed_time_shape = this_time_shape;
       info.ordered_subgraph.emplace_back(std::make_shared<InsertNcclSubGraph>());
       InitInsertNcclSubGraphInfoFromSet(info.ordered_subgraph.back(), subgraph,
                                         op_node2global_order, CmpOpNodeOrder);
     } else {
       auto& info = it->second;
-      if (SharedPtrShapeEqual(info.seed_time_shape, this_time_shape)) {
-        CHECK(this_parallel_desc.EqualsIgnoringHierarchy(*info.seed_parallel_desc));
-        std::shared_ptr<InsertNcclSubGraph> nccl_subgraph_info =
-            std::make_shared<InsertNcclSubGraph>();
-        InitInsertNcclSubGraphInfoFromSet(nccl_subgraph_info, subgraph, op_node2global_order,
-                                          CmpOpNodeOrder);
-        CHECK_GT(info.ordered_subgraph.size(), 0);
-        const auto& first_graph = info.ordered_subgraph.front();
-        const auto& last_graph = info.ordered_subgraph.back();
-        int64_t first_order = first_graph->begin_op_global_order;
-        int64_t last_order = last_graph->end_op_global_order;
-        if (nccl_subgraph_info->end_op_global_order < first_order) {
-          if (IsReachable(nccl_subgraph_info->end_op->op().op_name(),
-                          first_graph->begin_op->op().op_name())) {
-            info.ordered_subgraph.insert(info.ordered_subgraph.begin(), nccl_subgraph_info);
-          }
-        } else if (nccl_subgraph_info->begin_op_global_order > last_order) {
-          if (IsReachable(last_graph->end_op->op().op_name(),
-                          nccl_subgraph_info->begin_op->op().op_name())) {
-            info.ordered_subgraph.emplace_back(nccl_subgraph_info);
-          }
-        } else {
-          auto before = info.ordered_subgraph.begin();
-          auto next = before + 1;
-          while (next != info.ordered_subgraph.end()) {
-            if ((*before)->end_op_global_order < nccl_subgraph_info->begin_op_global_order
-                && nccl_subgraph_info->end_op_global_order < (*next)->begin_op_global_order) {
-              if (IsReachable((*before)->end_op->op().op_name(),
-                              nccl_subgraph_info->begin_op->op().op_name())
-                  && IsReachable(nccl_subgraph_info->end_op->op().op_name(),
-                                 (*next)->begin_op->op().op_name())) {
-                info.ordered_subgraph.insert(next, nccl_subgraph_info);
-              }
-              break;
+      CHECK(this_parallel_desc.EqualsIgnoringHierarchy(*info.seed_parallel_desc));
+      std::shared_ptr<InsertNcclSubGraph> nccl_subgraph_info =
+          std::make_shared<InsertNcclSubGraph>();
+      InitInsertNcclSubGraphInfoFromSet(nccl_subgraph_info, subgraph, op_node2global_order,
+                                        CmpOpNodeOrder);
+      CHECK_GT(info.ordered_subgraph.size(), 0);
+      const auto& first_graph = info.ordered_subgraph.front();
+      const auto& last_graph = info.ordered_subgraph.back();
+      int64_t first_order = first_graph->begin_op_global_order;
+      int64_t last_order = last_graph->end_op_global_order;
+      if (nccl_subgraph_info->end_op_global_order < first_order) {
+        if (IsReachable(nccl_subgraph_info->end_op->op().op_name(),
+                        first_graph->begin_op->op().op_name())) {
+          info.ordered_subgraph.insert(info.ordered_subgraph.begin(), nccl_subgraph_info);
+        }
+      } else if (nccl_subgraph_info->begin_op_global_order > last_order) {
+        if (IsReachable(last_graph->end_op->op().op_name(),
+                        nccl_subgraph_info->begin_op->op().op_name())) {
+          info.ordered_subgraph.emplace_back(nccl_subgraph_info);
+        }
+      } else {
+        auto before = info.ordered_subgraph.begin();
+        auto next = before + 1;
+        while (next != info.ordered_subgraph.end()) {
+          if ((*before)->end_op_global_order < nccl_subgraph_info->begin_op_global_order
+              && nccl_subgraph_info->end_op_global_order < (*next)->begin_op_global_order) {
+            if (IsReachable((*before)->end_op->op().op_name(),
+                            nccl_subgraph_info->begin_op->op().op_name())
+                && IsReachable(nccl_subgraph_info->end_op->op().op_name(),
+                               (*next)->begin_op->op().op_name())) {
+              info.ordered_subgraph.insert(next, nccl_subgraph_info);
             }
-            before = next;
-            next++;
+            break;
           }
+          before = next;
+          next++;
         }
       }
     }
@@ -970,6 +906,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
                                      &stream_offset);
     }
 
+    /*
     // NOTE(chengcheng): insert acc for all subgraph with same placement group
     const OpNode* bw_sink_op = info.ordered_subgraph.back()->end_op;
     const std::vector<const OpNode*>& ordered_acc_op_nodes = info.ordered_acc_op_nodes;
@@ -978,6 +915,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
           op_graph, job_builder, ordered_acc_op_nodes, op_node2global_order, bw_sink_op);
     }
+    */
   }
 
   return Maybe<void>::Ok();

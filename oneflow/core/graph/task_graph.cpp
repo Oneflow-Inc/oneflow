@@ -100,15 +100,10 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
       return true;
     }
   }
-  // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
-    return true;
-  }
   return false;
 }
 
-bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
+bool IsTaskNodeProducedRegstHasMultiRegstNum(const TaskNode* node) {
   for (const auto& pair : node->produced_regsts()) {
     if (pair.second->min_register_num() > 1) { return true; }
   }
@@ -117,7 +112,7 @@ bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
 
 bool CanBeMergedInChain(const TaskNode* node) {
   // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
-  if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
+  if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
   if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
