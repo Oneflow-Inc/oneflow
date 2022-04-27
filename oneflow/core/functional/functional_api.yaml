@@ -257,6 +257,13 @@
   ]
   bind_python: True
 
+- name: "median"
+  signature: [
+    "Tensor (Tensor input) => Median",
+    "TensorTuple (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
+  ]
+  bind_python: True
+
 - name: "reduce_max"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
   bind_python: True
