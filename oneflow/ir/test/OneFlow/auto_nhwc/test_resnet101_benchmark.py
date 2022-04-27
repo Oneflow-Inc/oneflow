@@ -24,6 +24,7 @@ import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -312,51 +313,55 @@ def _resnet(
     return model
 
 
-def resnet50(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> ResNet:
-    r"""ResNet-50 model from
-    `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-        progress (bool): If True, displays a progress bar of the download to stderr
+def resnet101(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> ResNet:
     """
-    return _resnet("resnet50", Bottleneck, [3, 4, 6, 3], pretrained, progress, **kwargs)
+    Constructs the ResNet-101 model.
+    .. note::
+        `Deep Residual Learning for Image Recognition <https://arxiv.org/pdf/1512.03385.pdf>`_.
+    Args:
+        pretrained (bool): Whether to download the pre-trained model on ImageNet. Default: ``False``
+        progress (bool): If True, displays a progress bar of the download to stderr. Default: ``True``
+    For example:
+    .. code-block:: python
+        >>> import flowvision
+        >>> resnet101 = flowvision.models.resnet101(pretrained=False, progress=True)
+    """
+    return _resnet(
+        "resnet101", Bottleneck, [3, 4, 23, 3], pretrained, progress, **kwargs
+    )
 
 
-def bench(forward_and_backward: Callable,  n=1000):
+def bench(forward: Callable,  x, n=1000):
     #warm up
     for _ in range(5):
-        loss, output = forward_and_backward()
-        t_loss = loss.item()
+        output = forward(x)
+        res = output.numpy()
 
+    flow._oneflow_internal.profiler.RangePush('eval begin')
     start_time = time.time()
     for _ in range(n):
-        loss, output = forward_and_backward()
-        t_loss = loss.item()
+        flow._oneflow_internal.profiler.RangePush('forward')
+        output = forward(x)
+        flow._oneflow_internal.profiler.RangePop()
+        flow._oneflow_internal.profiler.RangePush('numpy')
+        res = output.numpy()
+        flow._oneflow_internal.profiler.RangePop()
+    flow._oneflow_internal.profiler.RangePop()
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print(total_time_str)
 
-class VitTrainGraph(nn.Graph):
+class VitEvalGraph(nn.Graph):
 
-    def __init__(self, model, optimizer):
+    def __init__(self, model):
         super().__init__()
         self.model = model
-        self.criterion = nn.CrossEntropyLoss()
+        self.config.enable_cudnn_conv_heuristic_search_algo(True)
 
-        self.config.allow_fuse_add_to_output()
-        self.config.allow_fuse_model_update_ops()
-
-        self.add_optimizer(optimizer)
-
-    def build(self):
-        batch_size = 8
-        x = oneflow.rand(batch_size, 3, 224, 224).to(oneflow.device('cuda'))
-        y = oneflow.randint(0, 1000, (batch_size,)).to(oneflow.device('cuda'))
+    def build(self, x):
 
         y_pred = self.model(x)
-        loss = self.criterion(y_pred, y)
-        loss.backward()
-        return loss, y_pred
+        return y_pred
 
 
 def main():
@@ -364,12 +369,14 @@ def main():
     np.random.seed(42)
 
     device = oneflow.device('cuda')
-    model = resnet50()
+    model = resnet101()
+    model.eval()
     model.to(device)
+    batch_size = 8
+    x = oneflow.randn(batch_size, 3, 224, 224).to(oneflow.device('cuda'))
 
-    optimizer = oneflow.optim.SGD(model.parameters())
-    model_graph = VitTrainGraph(model, optimizer)
-    bench(model_graph, n=200)
+    model_graph = VitEvalGraph(model)
+    bench(model_graph, x, n=200)
 
 
 if __name__ == '__main__':
