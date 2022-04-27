@@ -32,7 +32,6 @@ def _test_search_sorted(test_case, placement, sbp, ndim):
     )
     return y
 
-
 class TestSearchSorted_Global(flow.unittest.TestCase):
     @globaltest
     def test_search_sorted(test_case):
@@ -40,6 +39,27 @@ class TestSearchSorted_Global(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 _test_search_sorted(test_case, placement, sbp, ndim)
+
+@autotest(n=1, auto_backward=False, check_graph=False)
+def _test_search_sorted_scalar(test_case, placement, sbp):
+    print(placement, sbp)
+    dim0 = [random(1, 3) * 8]
+    sorted_sequence = random_tensor(1, *dim0).to_global(placement, sbp)
+    values = 5
+    y = torch.searchsorted(
+        sorted_sequence,
+        values,
+        out_int32=oneof(True, False),
+        right=oneof(True, False),
+    )
+    return y
+
+class TestSearchSortedScalar_Global(flow.unittest.TestCase):
+    @globaltest
+    def test_search_sorted_scalar(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=1):
+                _test_search_sorted_scalar(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
