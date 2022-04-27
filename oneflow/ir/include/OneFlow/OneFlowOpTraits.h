@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace mlir {
 
@@ -30,6 +31,15 @@ OpFoldResult foldInvolutionOfIdenticalPlacement(Operation* op);
 LogicalResult VerifyIsOpConfCompatible(Operation* op);
 LogicalResult VerifyIsImportCompatible(Operation* op);
 
+// trait IsOpConfCompatible
+LogicalResult saveAttrToOpConf(Operation* op, ::oneflow::OperatorConf* op_conf);
+LogicalResult saveAttrsToNamedAttrList(Operation* op, NamedAttrList& named_attr_list);
+StringAttr getOpName(Operation* op);
+StringAttr getDeviceTag(Operation* op);
+ArrayAttr getDeviceName(Operation* op);
+IntegerAttr getScopeSymbolID(Operation* op);
+ArrayAttr getHierarchy(Operation* op);
+
 }  // namespace impl
 
 template<typename ConcreteType>
@@ -41,6 +51,17 @@ class IsOpConfCompatible : public TraitBase<ConcreteType, IsOpConfCompatible> {
   static StringRef getScopeSymbolIDAttr() { return "scope_symbol_id"; }
   static StringRef getHierarchyAttr() { return "hierarchy"; }
   static LogicalResult verifyTrait(Operation* op) { return impl::VerifyIsOpConfCompatible(op); }
+  static LogicalResult dump_attr(Operation* op, ::oneflow::OperatorConf* op_conf) {
+    return impl::saveAttrToOpConf(op, op_conf);
+  }
+  static LogicalResult saveToNamedAttrList(Operation* op, NamedAttrList& named_attr_list) {
+    return impl::saveAttrsToNamedAttrList(op, named_attr_list);
+  }
+  static StringAttr getOpName(Operation* op) { return impl::getOpName(op); }
+  static StringAttr getDeviceTag(Operation* op) { return impl::getDeviceTag(op); }
+  static ArrayAttr getDeviceName(Operation* op) { return impl::getDeviceName(op); }
+  static IntegerAttr getScopeSymbolID(Operation* op) { return impl::getScopeSymbolID(op); }
+  static ArrayAttr getHierarchy(Operation* op) { return impl::getHierarchy(op); }
 };
 
 template<typename ConcreteType>
