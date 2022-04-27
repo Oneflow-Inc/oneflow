@@ -299,7 +299,6 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
-    // const auto& stride = output_mut_meta.tensor_meta().stride_ptr();
     const auto& stride = std::make_shared<Stride>(Stride(output_mut_meta.tensor_meta().shape()));
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& obn = user_op_expr.output_arg_tuple()->indexed_bns().at(i);
@@ -332,7 +331,6 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
-    // const auto& stride = output_mut_meta.tensor_meta().stride_ptr();
     const auto& stride = std::make_shared<Stride>(Stride(output_mut_meta.tensor_meta().shape()));
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& nd_sbp = infer_args.nd_sbp();
