@@ -37,6 +37,20 @@ Maybe<void> FlatShape::Check(const Shape& shape) const {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> FlatShape::Check(const FlatShape& flat_shape) const {
+  CHECK_EQ_OR_RETURN(this->dim_size(), flat_shape.NumAxes())
+      << Error::RuntimeError()
+      << "Expected input of each rank must have the same size, but got at least two size, "
+      << JUST(ToShape())->ToString() << " and " << JUST(flat_shape.ToShape())->ToString();
+  for (int i = 0; i < this->dim_size(); ++i) {
+    CHECK_EQ_OR_RETURN(this->dim(i), flat_shape.At(i))
+        << Error::RuntimeError()
+        << "Expected input of each rank must have the same size, but got at least two size, "
+        << JUST(ToShape())->ToString() << " and " << JUST(flat_shape.ToShape())->ToString();
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<Shape> FlatShape::ToShape() const {
   const auto& shape = std::make_shared<Shape>();
   JUST(ToShape(shape.get()));

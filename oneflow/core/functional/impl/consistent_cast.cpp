@@ -95,6 +95,14 @@ FLAT_MSG_BEGIN(FlatShapeAndDataType);
     CHECK_EQ_OR_RETURN(this->dtype(), dtype);
     return Maybe<void>::Ok();
   }
+  Maybe<void> Check(const FlatShapeAndDataType& flat_shape_dtype) const {
+    JUST(this->shape().Check(flat_shape_dtype.shape()));
+    CHECK_EQ_OR_RETURN(this->dtype(), flat_shape_dtype.dtype())
+        << Error::RuntimeError()
+        << "Expected input of each rank must have the same dtype, but got at least two dtypes, "
+        << DType(this->dtype()).name() << " and " << DType(flat_shape_dtype.dtype()).name();
+    return Maybe<void>::Ok();
+  }
   Maybe<void> ToShape(Shape* shape) const { return this->shape().ToShape(shape); }
   Maybe<Shape> ToShape() const { return shape().ToShape(); }
   int64_t At(int i) const { return shape().At(i); }
@@ -106,6 +114,41 @@ FLAT_MSG_BEGIN(FlatShapeAndDataType);
   FLAT_MSG_DEFINE_OPTIONAL(DataType, dtype);
 FLAT_MSG_END(FlatShapeAndDataType);
 // clang-format on
+
+Maybe<void> ShapeAndDataTypeConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                             const Shape& shape, DataType dtype) {
+  if (!placement->containing_current_rank() || placement->parallel_num() == 1) {
+    return Maybe<void>::Ok();
+  }
+
+  const auto& transport_token =
+      JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncLocalShapeDtype));
+  const auto& send_buffer = JUST(FlatShapeAndDataType::New(shape, dtype));
+  const auto& recv_buffer = JUST(FlatShapeAndDataType::New());
+  recv_buffer->clear();
+
+  NaiveAsyncTransportCtx ctx(
+      transport_token,
+      [send_buffer](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+        *buffer = send_buffer.get();
+        *size = sizeof(FlatShapeAndDataType);
+        *Cb = [send_buffer] {};
+        return Maybe<void>::Ok();
+      },
+      [recv_buffer](int64_t rank, void** buffer, std::size_t* size,
+                    std::function<void()>* Cb) -> Maybe<void> {
+        *buffer = recv_buffer.get();
+        *size = sizeof(FlatShapeAndDataType);
+        *Cb = [recv_buffer] {};
+        return Maybe<void>::Ok();
+      });
+  const auto& rank_group = JUST(RankGroup::New(placement));
+  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
+  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
+  JUST_MSG(ctx.WaitDone(), kAsymmetricCodeErrorMsg);
+  JUST(send_buffer->Check(*recv_buffer));
+  return Maybe<void>::Ok();
+}
 
 Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherShapeAndDataType(
     const Shape& shape, DataType dtype, Symbol<ParallelDesc> parallel_desc) {
@@ -291,9 +334,7 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
       }
     } else {
       *logical_shape = *physical_shape;
-      ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(*logical_shape), *dtype,
-                                       nd_sbp, parallel_desc);
-      JUST(TensorMetaConsistencyCheck(parallel_desc, SymbolOf(tensor_meta)));
+      JUST(ShapeAndDataTypeConsistencyCheck(parallel_desc, *logical_shape, *dtype));
     }
   }
   if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {

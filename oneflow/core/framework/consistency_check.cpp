@@ -148,97 +148,6 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
   return Maybe<void>::Ok();
 }
 
-struct FlatTensorMetaConsistency;
-
-class CheckTensorMetaConsistencyAsyncTransportCtx : public AsyncTransportCtx {
- public:
-  CheckTensorMetaConsistencyAsyncTransportCtx(const TransportToken& transport_token,
-                                              Symbol<one::ConsistentTensorMeta> tensor_meta);
-
-  ~CheckTensorMetaConsistencyAsyncTransportCtx() override = default;
-
-  Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                           std::function<void()>* Callback) override;
-
-  Maybe<void> PrepareRecvBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
-                                           std::function<void()>* Callback) override;
-
-  Maybe<void> Check() const;
-
- private:
-  std::shared_ptr<FlatTensorMetaConsistency> this_flat_tensor_meta_consistency_;
-  std::shared_ptr<FlatTensorMetaConsistency> flat_tensor_meta_consistency_;
-};
-
-// clang-format off
-FLAT_MSG_BEGIN(FlatTensorMetaConsistency);
- public:
-  static Maybe<FlatTensorMetaConsistency> New() {
-    const auto& consistency = std::make_shared<FlatTensorMetaConsistency>();
-    consistency->clear();
-    return consistency;
-  }
-  static Maybe<FlatTensorMetaConsistency> New(
-      Symbol<one::ConsistentTensorMeta> tensor_meta) {
-    const auto& consistency = std::make_shared<FlatTensorMetaConsistency>();
-    consistency->clear();
-    JUST(consistency->Init(tensor_meta));
-    return consistency;
-  }
-
-  Maybe<void> Check(const std::shared_ptr<FlatTensorMetaConsistency>& flat_tensor_meta_consistency) {
-    const auto& this_synced_tensor_meta =
-        JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
-            this->synced_tensor_meta_symbol_id()));
-    const auto& that_synced_tensor_meta =
-        JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
-            flat_tensor_meta_consistency->synced_tensor_meta_symbol_id()));
-    CHECK_OR_RETURN(this_synced_tensor_meta == that_synced_tensor_meta)
-        << Error::RuntimeError() << "Each rank must have same tensor meta";
-    return Maybe<void>::Ok();
-  }
-
- private:
-  Maybe<void> Init(Symbol<one::ConsistentTensorMeta> tensor_meta) {
-    this->set_synced_tensor_meta_symbol_id(JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(
-        tensor_meta, &SyncSymbolConsistentTensorMeta)));
-    return Maybe<void>::Ok();
-  }
-  
-  FLAT_MSG_DEFINE_OPTIONAL(uint64_t, synced_tensor_meta_symbol_id);
-FLAT_MSG_END(FlatTensorMetaConsistency);
-// clang-format on
-
-CheckTensorMetaConsistencyAsyncTransportCtx::CheckTensorMetaConsistencyAsyncTransportCtx(
-    const TransportToken& transport_token, Symbol<one::ConsistentTensorMeta> tensor_meta)
-    : AsyncTransportCtx(transport_token),
-      this_flat_tensor_meta_consistency_(CHECK_JUST(FlatTensorMetaConsistency::New(tensor_meta))) {}
-
-Maybe<void> CheckTensorMetaConsistencyAsyncTransportCtx::PrepareSendBufferAndCallback(
-    int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
-  auto flat_tensor_meta_consistency = this_flat_tensor_meta_consistency_;
-  *buffer = flat_tensor_meta_consistency.get();
-  *size = sizeof(FlatTensorMetaConsistency);
-  *Callback = [flat_tensor_meta_consistency] {};
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CheckTensorMetaConsistencyAsyncTransportCtx::PrepareRecvBufferAndCallback(
-    int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
-  const auto& flat_tensor_meta_consistency = JUST(FlatTensorMetaConsistency::New());
-  *buffer = flat_tensor_meta_consistency.get();
-  *size = sizeof(FlatTensorMetaConsistency);
-  *Callback = [flat_tensor_meta_consistency]() {};
-  flat_tensor_meta_consistency_ = flat_tensor_meta_consistency;
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CheckTensorMetaConsistencyAsyncTransportCtx::Check() const {
-  if (!flat_tensor_meta_consistency_) { return Maybe<void>::Ok(); }
-  JUST(flat_tensor_meta_consistency_->Check(this_flat_tensor_meta_consistency_));
-  return Maybe<void>::Ok();
-}
-
 }  // namespace
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
@@ -350,23 +259,6 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
   Optional<Symbol<NdSbp>> grad_nd_sbp;
   if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
   JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level, force_check));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> TensorMetaConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                       Symbol<one::ConsistentTensorMeta> tensor_meta) {
-  JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(tensor_meta,
-                                                              &SyncSymbolConsistentTensorMeta));
-  if (!placement->containing_current_rank()) { return Maybe<void>::Ok(); }
-  const auto& rank_group = JUST(RankGroup::New(placement));
-  const auto& transport_token =
-      JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
-  const auto& ctx =
-      std::make_shared<CheckTensorMetaConsistencyAsyncTransportCtx>(transport_token, tensor_meta);
-  JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
-  JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
-  JUST_MSG(ctx->WaitDone(), kAsymmetricCodeErrorMsg);
-  JUST(ctx->Check());
   return Maybe<void>::Ok();
 }
 

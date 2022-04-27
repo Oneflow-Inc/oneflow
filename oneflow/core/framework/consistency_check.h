@@ -52,9 +52,6 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                      const size_t debug_level, bool force_check);
 
-Maybe<void> TensorMetaConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                       Symbol<one::ConsistentTensorMeta> tensor_meta);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_DATA_CONSISTENCY_CHECK_H_
