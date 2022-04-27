@@ -47,7 +47,7 @@ struct JobLowering final : public OpConversionPattern<Job> {
                                 ConversionPatternRewriter& rewriter) const override {
     rewriter.replaceOpWithNewOp<mlir::func::FuncOp>(op,
                                                     /* sym_name */ op.sym_name(),
-                                                    /* type     */ op.fuction_type());
+                                                    /* type     */ op.function_type());
     return success();
   }
 };
