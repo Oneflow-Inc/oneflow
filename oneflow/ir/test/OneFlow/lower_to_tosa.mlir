@@ -1,5 +1,5 @@
-// RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops -linalg-bufferize -tensor-bufferize -func-bufferize -buffer-results-to-out-params -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -convert-std-to-llvm -convert-memref-to-llvm -reconcile-unrealized-casts --print-ir-after-all %s
-// RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops  -linalg-bufferize -tensor-bufferize -func-bufferize -buffer-results-to-out-params  -finalizing-bufferize -canonicalize %s
+// RUN: oneflow-opt -lower-oneflow-to-tosa -pass-pipeline="func.func(tosa-to-linalg)" -cse --linalg-fuse-elementwise-ops -linalg-bufferize -tensor-bufferize -func-bufferize -buffer-results-to-out-params -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -convert-func-to-llvm -convert-memref-to-llvm -reconcile-unrealized-casts --print-after-all %s
+// RUN: oneflow-opt -lower-oneflow-to-tosa -pass-pipeline="func.func(tosa-to-linalg)" -cse --linalg-fuse-elementwise-ops  -linalg-bufferize -tensor-bufferize -func-bufferize -buffer-results-to-out-params  -finalizing-bufferize -canonicalize %s
 
 module  {
   func @Cast_1__FUSE__ScalarMulByTensor_2(%arg0: tensor<96x96xi64>, %arg1: tensor<1xf32>) -> tensor<96x96xf32> {
