@@ -39,7 +39,7 @@ namespace oneflow {
 namespace one {
 namespace functional {
 namespace {
-Maybe<std::vector<int32_t>> check(int32_t naxis, std::vector<int32_t> axis) {
+Maybe<std::vector<int32_t>> check_axis(int32_t naxis, const std::vector<int32_t>& axis) {
   if (axis.size() == 0) {
     std::vector<int32_t> reduce_axis(naxis);
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
@@ -492,7 +492,7 @@ class ReduceSumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check(x->shape()->NumAxes(), axis));
+    std::vector<int32_t> reduce_axis = *JUST(check_axis(x->shape()->NumAxes(), axis));
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
@@ -533,7 +533,7 @@ class ReduceAllFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check(x->shape()->NumAxes(), axis));
+    std::vector<int32_t> reduce_axis = *JUST(check_axis(x->shape()->NumAxes(), axis));
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -571,7 +571,7 @@ class ReduceAnyFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check(x->shape()->NumAxes(), axis));
+    std::vector<int32_t> reduce_axis = *JUST(check_axis(x->shape()->NumAxes(), axis));
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -814,7 +814,7 @@ class ReduceProdFunctor {
     }
     JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    std::vector<int32_t> reduce_axis = *JUST(check(x->shape()->NumAxes(), axis));
+    std::vector<int32_t> reduce_axis = *JUST(check_axis(x->shape()->NumAxes(), axis));
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
