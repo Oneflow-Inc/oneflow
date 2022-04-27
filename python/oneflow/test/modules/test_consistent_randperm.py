@@ -55,6 +55,7 @@ class TestRandpermConsistent(flow.unittest.TestCase):
     @globaltest
     def test_randperm_consistent(test_case):
         RandNs = [i for i in range(10, 50, 10)]
+        # TODO support uint8,int8,int64,float32,float64,data type test
         Dtypes = [
             flow.int32,
         ]
@@ -79,7 +80,12 @@ class TestRandpermConsistent(flow.unittest.TestCase):
             flow.placement("cuda", ranks=[[0, 1],]),
         ]
         arg_dict["dtype"] = [
+            flow.uint8,
+            flow.int8,
             flow.int32,
+            flow.int64,
+            flow.float32,
+            flow.float64,
         ]
         for args in GenArgDict(arg_dict):
             N = args["N"]
