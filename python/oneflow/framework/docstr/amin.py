@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.amin,
-    r"""
+    """
     amin(input, dim, keepdim=False) -> Tensor  
     
     This function is equivalent to PyTorch’s amin function. 
@@ -36,16 +36,20 @@ add_docstr(
     Example:
 
     .. code-block:: python
-    
+
         >>> import oneflow as flow
-        >>> a = flow.randn(4, 4)
-        >>> a
-        tensor([[-0.2492, -0.5142, -1.3223, -0.0793],
-                [ 1.5462,  0.2256, -0.6901, -0.1943],
-                [ 0.2688,  0.7676, -0.1927, -0.8397],
-                [-0.0454,  0.5621,  0.1304, -1.2015]], dtype=oneflow.float32)
-        >>> flow.amin(a, 1)
-        tensor([-1.3223, -0.6901, -0.8397, -1.2015], dtype=oneflow.float32)
-        
+               
+        >>> x = flow.tensor([[[0,1],[2,3]],[[4,5],[6,7]]])
+        >>> flow.amin(x, 1)
+        tensor([[0, 1],
+                [4, 5]], dtype=oneflow.int64)
+        >>> flow.amin(x, 0)
+        tensor([[0, 1],
+                [2, 3]], dtype=oneflow.int64)
+        >>> flow.amin(x)
+        tensor(0, dtype=oneflow.int64)
+        >>> flow.amin(x, 0, True)
+        tensor([[[0, 1],
+                 [2, 3]]], dtype=oneflow.int64)
     """,
 )
