@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 from collections import OrderedDict
 import tempfile
@@ -27,18 +26,24 @@ import oneflow as flow
 from oneflow.nn.parameter import Parameter
 
 
-def compare_with_numpy_sgd(
-    test_case, momentum, weight_decay, scale, learning_rate, train_iters,
+def compare_with_numpy_ftrl(
+    test_case,
+    weight_decay,
+    lr_power,
+    lambda1,
+    lambda2,
+    beta,
+    scale,
+    learning_rate,
+    train_iters,
 ):
-
     num_rows = 500
     embedding_size = 128
     model_shape = (num_rows, embedding_size)
-    line_size = embedding_size * 2 if momentum > 0 else embedding_size
+    line_size = embedding_size * 3
 
     num_valid_seq = np.random.randint(1, num_rows, (train_iters))
     skip_if_seq = [np.random.randint(2) for i in range(train_iters)]
-
     random_grad_seq = []
     for _ in range(train_iters):
         random_grad_seq.append(np.random.uniform(size=model_shape).astype(np.float32))
@@ -47,7 +52,7 @@ def compare_with_numpy_sgd(
 
     down_scale_by = 10
 
-    def sgd_by_oneflow():
+    def ftrl_by_oneflow():
         unique_embeddings_tensor = flow.tensor(init_value, requires_grad=False).to(
             "cuda"
         )
@@ -59,7 +64,7 @@ def compare_with_numpy_sgd(
         ).to("cuda")
 
         def train_one_iter(num_valid, unique_embeddings, embedding_grad, skip_if):
-            return flow._C.one_embedding_sgd_update(
+            return flow._C.one_embedding_ftrl_update(
                 num_valid,
                 unique_embeddings,
                 embedding_grad,
@@ -68,10 +73,13 @@ def compare_with_numpy_sgd(
                 skip_if,
                 scale,
                 weight_decay,
-                momentum,
+                lr_power,
+                lambda1,
+                lambda2,
+                beta,
             )
 
-        for i in range(train_iters):
+        for i in range(1, train_iters):
             num_valid_tensor = flow.tensor(
                 np.array(num_valid_seq[i]).reshape(1,).astype(np.int32)
             ).to("cuda")
@@ -79,68 +87,87 @@ def compare_with_numpy_sgd(
             skip_if_tensor = flow.tensor(
                 np.array(skip_if_seq[i]).reshape(1,).astype(np.int64)
             ).to("cuda")
+
             updated_tensor = train_one_iter(
-                num_valid_tensor, unique_embeddings_tensor, grad_tensor, skip_if_tensor
+                num_valid_tensor, unique_embeddings_tensor, grad_tensor, skip_if_tensor,
             )
             unique_embeddings_tensor[0 : num_valid_seq[i]] = updated_tensor[
                 0 : num_valid_seq[i]
             ]
         return unique_embeddings_tensor
 
-    def sgd_by_numpy():
+    def ftrl_by_numpy():
         x = init_value[:, 0:embedding_size]
-        vt = init_value[:, embedding_size:]
+        accumulate = init_value[:, embedding_size : 2 * embedding_size]
+        z = init_value[:, 2 * embedding_size :]
 
-        def train_one_iter(num_valid, grad, model, state):
+        def train_one_iter(iter, num_valid, grad, model, accum, z):
             grad[0:num_valid] = grad[0:num_valid] * (scale / down_scale_by)
-            next_state = (
-                momentum * state[0:num_valid] if momentum > 0 else 0
-            ) - learning_rate * grad[0:num_valid]
-            if momentum > 0:
-                state[0:num_valid] = next_state
-            model[0:num_valid] = (
-                model[0:num_valid]
-                + next_state
-                - learning_rate * weight_decay * model[0:num_valid]
-            )
-            return (model, state)
 
-        for i in range(train_iters):
+            new_accum = accumulate[0:num_valid] + grad[0:num_valid] * grad[0:num_valid]
+
+            sigma = (
+                np.power(new_accum, lr_power)
+                - np.power(accumulate[0:num_valid], lr_power)
+            ) / learning_rate
+
+            new_z_val = z[0:num_valid] + grad[0:num_valid] - sigma * model[0:num_valid]
+
+            # Here weight_decay equals to AdamW's, not equal to l2.
+            update_val = (np.sign(new_z_val) * lambda1 - new_z_val) / (
+                (beta + np.power(new_accum, lr_power)) / learning_rate + lambda2
+            ) - learning_rate * weight_decay * model[0:num_valid]
+
+            model[0:num_valid] = np.where(np.abs(new_z_val) < lambda1, 0.0, update_val)
+            accumulate[0:num_valid] = new_accum
+            z[0:num_valid] = new_z_val
+
+            return (model, accumulate, z)
+
+        for i in range(1, train_iters):
             if skip_if_seq[i] > 0:
                 pass
             else:
-                (x, vt) = train_one_iter(
-                    int(num_valid_seq[i]), random_grad_seq[i], x, vt
+                (x, accumulate, z) = train_one_iter(
+                    i, int(num_valid_seq[i]), random_grad_seq[i], x, accumulate, z
                 )
-        return x, vt
 
-    oneflow_res = sgd_by_oneflow().numpy()
+        return x, accumulate, z
+
+    oneflow_res = ftrl_by_oneflow().numpy()
     of_model = oneflow_res[:, 0:embedding_size]
-    of_momentum = oneflow_res[:, embedding_size:]
-    np_model, np_momentum = sgd_by_numpy()
+    of_accum = oneflow_res[:, embedding_size : 2 * embedding_size]
+    of_z = oneflow_res[:, 2 * embedding_size :]
+
+    np_model, np_accum, np_z = ftrl_by_numpy()
     test_case.assertTrue(
-        np.allclose(of_model.flatten(), np_model.flatten(), rtol=0.001, atol=0.001)
+        np.allclose(of_model.flatten(), np_model.flatten(), rtol=1e-4, atol=1e-4)
     )
-    if momentum > 0:
-        test_case.assertTrue(
-            np.allclose(
-                of_momentum.flatten(), np_momentum.flatten(), rtol=0.001, atol=0.001
-            )
-        )
+    test_case.assertTrue(
+        np.allclose(of_accum.flatten(), np_accum.flatten(), rtol=1e-4, atol=1e-4)
+    )
+    test_case.assertTrue(
+        np.allclose(of_z.flatten(), np_z.flatten(), rtol=1e-4, atol=1e-4)
+    )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
-    def test_one_embedding_sgd(test_case):
+    def test_ftrl(test_case):
         arg_dict = OrderedDict()
-        arg_dict["momentum"] = [0, 0.9]
-        arg_dict["weight_decay"] = [0, 0.1]
+        arg_dict["weight_decay"] = [
+            0.0
+        ]  # TODO(zzk): Currently Only support weight_decay = 0.0.
+        arg_dict["lr_power"] = [-0.2, -0.05]
+        arg_dict["lambda1"] = [0.1]
+        arg_dict["lambda2"] = [0.00]
+        arg_dict["beta"] = [1.0]
         arg_dict["scale"] = [1, 0.1]
-        arg_dict["learning_rate"] = [1, 0.9]
+        arg_dict["learning_rate"] = [0.3, 1.5]
         arg_dict["train_iters"] = [10]
         for arg in GenArgDict(arg_dict):
-            compare_with_numpy_sgd(test_case, **arg)
+            compare_with_numpy_ftrl(test_case, **arg)
 
 
 if __name__ == "__main__":
