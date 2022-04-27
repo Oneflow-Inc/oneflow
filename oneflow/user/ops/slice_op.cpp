@@ -160,11 +160,13 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
         .Split(user_op::OpArg("ref", 0), axis)
         // TODO(jianhao): Support (S(n), S(n)) when axis n is not sliced
         .Broadcast(user_op::OpArg("value", 0))
+        .Split(user_op::OpArg("y", 0), axis)
         .Build();
   }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("ref", 0))
       .PartialSum(user_op::OpArg("value", 0))
+      .PartialSum(user_op::OpArg("y", 0))
       .Build();
   return Maybe<void>::Ok();
 }
@@ -183,71 +185,15 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     CHECK_GT_OR_RETURN(stop, 0) << "logical_slice_assign stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "logical_slice_assign start must be less than stop";
   }
+  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  *y_desc->mut_shape() = ref_desc.shape();
+  *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> LogicalSliceAssignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 /*static*/ Maybe<void> LogicalSliceAssignOp::InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
-  const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
-  CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type());
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> LogicalSliceAssignOp::ModifyInputArg(
-    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
-  user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
-  CHECK_OR_RETURN(ref_modifier != nullptr);
-  ref_modifier->set_is_mutable(true);
-  user_op::InputArgModifier* value_modifier = GetInputArgModifierFn("value", 0);
-  CHECK_OR_RETURN(value_modifier != nullptr);
-  value_modifier->set_requires_grad(false);
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> LogicalSliceAssignOutOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& ref_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("ref", 0);
-  FOR_RANGE(int64_t, axis, 0, ref_desc.shape().NumAxes()) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("ref", 0), axis)
-        // TODO(jianhao): Support (S(n), S(n)) when axis n is not sliced
-        .Broadcast(user_op::OpArg("value", 0))
-        .Split(user_op::OpArg("y", 0), axis)
-        .Build();
-  }
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("ref", 0))
-      .PartialSum(user_op::OpArg("value", 0))
-      .PartialSum(user_op::OpArg("y", 0))
-      .Build();
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> LogicalSliceAssignOutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
-  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
-  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
-  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  CHECK_OR_RETURN(!ref_desc.is_dynamic());
-  FOR_RANGE(size_t, i, 0, step_vec.size()) {
-    const int64_t step = step_vec.at(i);
-    const int64_t start = start_vec.at(i);
-    const int64_t stop = stop_vec.at(i);
-    CHECK_GT_OR_RETURN(step, 0) << "logical_slice_assign_out step must be greater than 0";
-    CHECK_GE_OR_RETURN(start, 0) << "logical_slice_assign_out start must be greater or equal to 0";
-    CHECK_GT_OR_RETURN(stop, 0) << "logical_slice_assign_out stop must be greater than 0";
-    CHECK_LT_OR_RETURN(start, stop) << "logical_slice_assign_out start must be less than stop";
-  }
-  auto* y_desc = ctx->OutputTensorDesc("y", 0);
-  *y_desc->mut_shape() = ref_desc.shape();
-  *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> LogicalSliceAssignOutOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-/*static*/ Maybe<void> LogicalSliceAssignOutOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
   CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type());

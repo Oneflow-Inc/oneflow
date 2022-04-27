@@ -96,7 +96,7 @@ def logical_slice_assign_op(
     (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
     if update.dtype != input.dtype:
         update = update.to(dtype=input.dtype)
-    return flow._C.logical_slice_assign_out(input, update, start, stop, step)
+    return flow._C.logical_slice_assign(input, update, start, stop, step)
 
 
 def logical_slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):

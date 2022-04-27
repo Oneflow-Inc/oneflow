@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <iostream>
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
@@ -361,34 +360,6 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
-    const SliceContext& slice_ctx =
-        dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
-                     value_tensor, ref_tensor, slice_ctx, false);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
-};
-
-template<typename T>
-class LogicalSliceAssignOutKernel final : public user_op::OpKernel {
- public:
-  LogicalSliceAssignOutKernel() = default;
-  ~LogicalSliceAssignOutKernel() = default;
-
-  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
-      user_op::KernelCacheContext* ctx) const override {
-    if (ctx->parallel_ctx().parallel_num() > 1) {
-      const SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
-      CHECK(value_sbp.has_broadcast_parallel());
-    }
-    return CreateSliceCache(ctx, "ref");
-  }
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
-    user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     // When eager executing, y_tensor shared the same memory with ref_tensor
     if (ref_tensor->dptr<T>() != y_tensor->dptr<T>()) {
@@ -462,9 +433,6 @@ REGISTER_SLICE_KERNELS(DeviceType::kCUDA, float16)
 #define REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)               \
   REGISTER_USER_KERNEL("logical_slice_assign")                                       \
       .SetCreateFn<LogicalSliceAssignKernel<dtype>>()                                \
-      .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value); \
-  REGISTER_USER_KERNEL("logical_slice_assign_out")                                   \
-      .SetCreateFn<LogicalSliceAssignOutKernel<dtype>>()                             \
       .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value); \
   REGISTER_USER_KERNEL("logical_slice")                                              \
       .SetCreateFn<LogicalSliceKernel<dtype>>()                                      \

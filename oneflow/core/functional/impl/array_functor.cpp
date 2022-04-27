@@ -1214,29 +1214,8 @@ class LogicalSliceFunctor : public SliceBaseFunctor {
 class LogicalSliceAssignFunctor {
  public:
   LogicalSliceAssignFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logical_slice_assign").Input("ref").Input("value").Build());
-  }
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
-                         const std::shared_ptr<one::Tensor>& value,
-                         const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
-                         const std::vector<int64_t>& step) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, attrs));
-    return Maybe<void>::Ok();
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class LogicalSliceAssignOutFunctor {
- public:
-  LogicalSliceAssignOutFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("logical_slice_assign_out").Input("ref").Input("value").Output("y").Build());
+        one::OpBuilder("logical_slice_assign").Input("ref").Input("value").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ref,
                            const std::shared_ptr<one::Tensor>& value,
@@ -1980,7 +1959,7 @@ class TensorSetItemFunctor {
                                           "please use oneflow.no_grad() to disable autograd "
                                           "currently. We will fix this problem soon.";
         }
-        JUST(LogicalSliceAssignOut(x, value_tensor, start, end, step));
+        JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
       }
     }
     return Maybe<void>::Ok();
@@ -2839,7 +2818,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NarrowFunctor>("Narrow");
   m.add_functor<impl::NarrowGradFunctor>("NarrowGrad");
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
-  m.add_functor<impl::LogicalSliceAssignOutFunctor>("LogicalSliceAssignOut");
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
