@@ -55,10 +55,6 @@ class SbpCollector {
   void CollectUniverse(SbpNode<NdSbpSignature>* sbp_node);
   // Collect all the possible Sbp Parallel from a SbpGraph
   void CollectUniverse(SbpGraph<NdSbpSignature>& sbp_graph);
-  // Initialize sbp proxy with given parallel candidates of a blob
-  SbpNode<NdSbpSignature>* InitializePorxy(
-      SbpGraph<NdSbpSignature>& sbp_graph,
-      std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates);
 
   // Initialize copy cost from producer to proxy of producer
   void InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp_proxy,
@@ -67,8 +63,7 @@ class SbpCollector {
   // Initialize copy cost from proxy of producer to consumers
   void InitializeCopyCostFromProxy2Consumer(
       SbpNode<NdSbpSignature>* sbp_proxy,
-      HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>&
-          consumer_bn2sbp_set,
+      HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
       HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node);
 
   // Export list of possible combination of Sbp Parallels
@@ -77,13 +72,15 @@ class SbpCollector {
                          SbpGraph<NdSbpSignature>& sbp_graph);
 
  private:
-  // Depth first search to collect Sbp Parallel information for different lbis
-  void DfsSbpSet(
-      HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it,
-      HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>&
-          consumer_bn2sbp_set,
-      HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
-      std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates);
+  // Maximum number of possible sbp in the proxy
+  const unsigned long max_num_sbp_proxy_ = 3;
+
+  // Depth first search to collect Sbp Parallel information for the whole sbp set
+  void DfsSbpSet(int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
+                 const std::unordered_set<int32_t>::iterator sbp_set_it,
+                 HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
+                 const std::vector<BinarySet>& unique_sbp_groups,
+                 std::vector<BinarySet>& ParallelCandidates);
 };  // class SbpCollector
 
 }  // namespace auto_parallel

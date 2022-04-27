@@ -46,22 +46,26 @@ class BinarySet {
 
   // Initialization
   void Initialize(int32_t size_of_set);
+  // Clear all the elements in the set
+  void Clear();
   // Check if i-th element in this subset
-  int32_t CheckExistency(int32_t i);
+  int32_t CheckExistency(int32_t i) const;
   // Add i-th element into this subset
   void AddEntry(int32_t i);
   // Take i-th element out from this subset
   void DeleteEntry(int32_t i);
   // Get the union with another subset and store it into u
   void UnionTo(BinarySet& bs, BinarySet& u);
+  // If this binary set intersects another one
+  bool IfIntersect(const BinarySet& bs) const;
   // Get the intersection with another subset and store it into i
-  void IntersectionTo(BinarySet& bs, BinarySet& i);
+  void IntersectionTo(const BinarySet& bs, BinarySet& i) const;
   // Count number of elements in this subset
-  int32_t Total();
+  int32_t Total() const;
   // Output all the elements in the subset
-  void OutPut(std::vector<int32_t>& out);
+  void OutPut(std::vector<int32_t>& out) const;
   // Output all the elements in the subset
-  void QuickOutPut(std::vector<int32_t>& out);
+  void QuickOutPut(std::vector<int32_t>& out) const;
   // Add elements of input into this subset
   void AddEntrys(std::vector<int32_t>& in);
   // If two binary sets are equal to each other
