@@ -2,6 +2,7 @@
 #ifndef ONEFLOW_PATTERNS
 #define ONEFLOW_PATTERNS
 
+include "mlir/IR/PatternBase.td"
 include "OneFlow/OneFlowOps.td"
 include "mlir/Dialect/MemRef/IR/MemRefOps.td"
 include "mlir/Dialect/GPU/GPUOps.td"
