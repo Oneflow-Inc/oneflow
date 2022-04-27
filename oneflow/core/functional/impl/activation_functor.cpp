@@ -178,7 +178,7 @@ class CeluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
+      (*outputs)[0] = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
@@ -235,8 +235,8 @@ class GluFunctor {
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     return sequence_function(functional::Sigmoid)
-        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
-        .call(split_x->at(1));
+        .then(std::bind(functional::Mul, (*split_x)[0], std::placeholders::_1))
+        .call((*split_x)[1]);
   }
 };
 
