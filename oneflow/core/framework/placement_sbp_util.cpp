@@ -51,7 +51,8 @@ Maybe<void> GetIndexesFromOffset(const Stride& strides, int64_t offset, IndexVec
 
 Maybe<void> GetOffsetFromIndexes(const Stride& strides, const IndexVector& indexes,
                                  int64_t* offset) {
-  CHECK_EQ_OR_RETURN(strides.NumAxes(), indexes.size());
+  CHECK_EQ_OR_RETURN(strides.NumAxes(), indexes.size())
+      << Error::RuntimeError() << "Expected size of strides to match that of indexes";
   *offset = 0;
   for (int i = 0; i < strides.NumAxes(); ++i) { *offset += indexes.at(i) * strides.At(i); }
   return Maybe<void>::Ok();
@@ -706,7 +707,9 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
 }  // namespace
 
 int64_t CalcIndex4Axis(int64_t offset, const Stride& stride, int axis) {
-  CHECK_LT(axis, stride.NumAxes());
+  CHECK_LT(axis, stride.NumAxes())
+      << "Expected axis (" << axis << ") to be less than size of stride (" << stride.NumAxes()
+      << ")";
   if (axis == 0) {
     return offset / stride.At(0);
   } else {
