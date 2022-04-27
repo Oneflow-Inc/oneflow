@@ -1244,21 +1244,14 @@ class SliceUpdateFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-<<<<<<< HEAD
     const auto& stride = JUST(x->stride())->StrideVec();
     JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
-=======
->>>>>>> master
 
     if (inplace) {
       JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = x;
-<<<<<<< HEAD
       JUST(OpInterpUtil::Dispatch(*op_, {x, update->contiguous()}, outputs.get(), attrs));
-=======
-      JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
->>>>>>> master
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update->contiguous()}, attrs);
