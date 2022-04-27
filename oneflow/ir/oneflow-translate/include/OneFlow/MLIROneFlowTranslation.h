@@ -39,20 +39,17 @@ namespace oneflow {
 
 // TODO: wrap in a helper namespace
 
-LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
                                   ::oneflow::UserOpConf* user_conf);
-LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
                                    ::oneflow::UserOpConf* user_conf);
 LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf);
 llvm::Optional<std::string> GetOutputLbn(OpResult result);
 llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
                                                             ::oneflow::DataType oneflow_value);
-LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& adaptor,
-                                    ::oneflow::OperatorConf* op_conf);
-LogicalResult ConvertInputOpConf(Operation* op, oneflow::InputOpAdaptor& adaptor,
-                                 ::oneflow::OperatorConf* op_conf);
-LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adaptor,
-                                  ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf);
+LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf);
 
 LogicalResult ParseNdSbpFromAttr(ArrayAttr nd_sbp_attr, ::oneflow::NdSbp* nd_sbp);
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp);
@@ -114,8 +111,7 @@ class Importer {
   ModuleOp& GetModule() { return module_; }
   Location& GetRootLocation() { return unknown_loc_; }
   virtual Type GetTensorTypeOfLbn(const std::string& lbn) = 0;
-  LogicalResult ConvertUserOpAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
-                                        ::oneflow::OperatorConf& op_conf);
+  LogicalResult ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf);
 
  private:
   OpBuilder builder_;
