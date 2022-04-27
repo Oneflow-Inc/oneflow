@@ -46,10 +46,10 @@ struct JobLowering final : public OpConversionPattern<Job> {
   using OpConversionPattern<Job>::OpConversionPattern;
   LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::func::FuncOp>(op,
-                                                    /* sym_name */ op.sym_name(),
-                                                    /* type     */ op.function_type(),
-                                                    op.sym_visibilityAttr());
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(),
+                                                    op.getFunctionType());
+    rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
+    rewriter.eraseOp(op);
     return success();
   }
 };
