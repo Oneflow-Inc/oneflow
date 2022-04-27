@@ -58,9 +58,9 @@ class AddNFunctor {
       if (i == 0 && inplace) {
         JUST(CheckInplaceValid(partial_inputs.at(0)));
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
-        outs->at(0) = partial_inputs.at(0);
+        (*outs)[0] = partial_inputs[0];
         JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
-        outputs.emplace_back(outs->at(0));
+        outputs.emplace_back((*outs)[0]);
       } else {
         outputs.emplace_back(
             JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
@@ -726,7 +726,8 @@ class TransposeFunctor {
           << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
           << ndim << " ) but got " << positive_perm[i];
     }
-
+    // currently, view only support eager and local mode
+    if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, positive_perm)); }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
@@ -740,10 +741,10 @@ class Transpose2dimFunctor {
   Transpose2dimFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t dim0,
                            const int32_t dim1) const {
     MutableAttrMap attrs;
-    const int64_t ndim = x->shape()->NumAxes();
+    const int64_t ndim = input->shape()->NumAxes();
     std::vector<int32_t> permute;
     permute.reserve(ndim);
     int32_t dim_0 = dim0;
@@ -760,9 +761,10 @@ class Transpose2dimFunctor {
         << "], but got " << dim_1 << ")";
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
-
+    Shape shape(DimVector(permute.begin(), permute.end()));
+    if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, permute)); }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -783,6 +785,9 @@ class AsStridedFunctor {
       CHECK_OR_RETURN(stride[i] >= 0)
           << "as_strided: Negative strides are not supported at the moment, got strides:"
           << stride[i];
+    }
+    if (view::IsViewApplicable(input)) {
+      return JUST(view::AsStrided(input, size, stride, storage_offset));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
