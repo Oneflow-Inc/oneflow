@@ -92,6 +92,7 @@ oneflow
             narrow, 
             max, 
             mean,
+            median,
             mish,  
             min, 
             meshgrid,

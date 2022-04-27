@@ -984,6 +984,10 @@ def _min(self, *args, **kwargs):
     return flow.min(self, *args, **kwargs)
 
 
+def _median(self, *args, **kwargs):
+    return flow.median(self, *args, **kwargs)
+
+
 def _sum(self, dim=None, keepdim=False):
     return flow.sum(self, dim, keepdim)
 
@@ -1341,6 +1345,7 @@ def RegisterMethods():
     Tensor.nonzero = _nonzero
     Tensor.max = _max
     Tensor.min = _min
+    Tensor.median = _median
     Tensor.sum = _sum
     Tensor.mean = _mean
     Tensor.prod = _prod
