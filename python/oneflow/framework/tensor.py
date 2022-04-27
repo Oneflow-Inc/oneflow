@@ -162,6 +162,16 @@ def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
 
 
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.permute(self, new_dims)
+
+
 def is_nonzero(input):
     r"""
     is_nonzero(input) -> (bool)
@@ -625,16 +635,6 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, new_dims)
-
-
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -795,7 +795,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
-        random_seed = flow.default_generator.seed()
+        random_seed = flow.default_generator.initial_seed()
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
@@ -1249,6 +1249,7 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.norm = _norm
     Tensor.transpose = _transpose
+    Tensor.permute = _permute
     Tensor.local_to_global = _local_to_global
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
@@ -1273,7 +1274,6 @@ def RegisterMethods():
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
-    Tensor.permute = _permute
     Tensor.to = _to
     Tensor.half = _half
     Tensor.gather = _gather
