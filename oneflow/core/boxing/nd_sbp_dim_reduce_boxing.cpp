@@ -58,7 +58,7 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
         JUST(GetPhysicalShape(logical_shape, *in->nd_sbp(), *in->placement(), in_parallel_id));
     const auto& reduce_in_physical_shape = JUST(GetPhysicalShape(
         logical_shape, *reduced_in->nd_sbp(), *reduced_in->placement(), in_parallel_id));
-    CHECK_EQ_OR_RETURN(*in_physical_shape,
+    CHECK_EQ_OR_RETURN(*in_physical_shape,          // NOLINT(maybe-need-error-msg)
                        *reduce_in_physical_shape);  // NOLINT(maybe-need-error-msg)
   }
 
@@ -68,7 +68,7 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
         JUST(GetPhysicalShape(logical_shape, *out->nd_sbp(), *out->placement(), out_parallel_id));
     const auto& reduce_out_physical_shape = JUST(GetPhysicalShape(
         logical_shape, *reduced_out->nd_sbp(), *reduced_out->placement(), out_parallel_id));
-    CHECK_EQ_OR_RETURN(*out_physical_shape,
+    CHECK_EQ_OR_RETURN(*out_physical_shape,          // NOLINT(maybe-need-error-msg)
                        *reduce_out_physical_shape);  // NOLINT(maybe-need-error-msg)
   }
 

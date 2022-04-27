@@ -80,7 +80,7 @@ static constexpr auto* GetLogicalShape4Axis =
     DECORATE(&CalcLogicalShape4Axis, ThreadLocalCachedCopiable);
 
 Maybe<int> CalcTheFirstDiffAxisBetweenTwoNdSbp(Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp) {
-  CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(),
+  CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(),    // NOLINT(maybe-need-error-msg)
                      out_nd_sbp->sbp_parallel_size());  // NOLINT(maybe-need-error-msg)
   int dim = 0;
   for (; dim < in_nd_sbp->sbp_parallel_size(); ++dim) {
@@ -104,9 +104,9 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symb
 
 Maybe<void> RawCheckGenericSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                                 const Shape& logical_shape) {
-  CHECK_OR_RETURN(in->placement() == out->placement());  // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());        // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(),
+  CHECK_OR_RETURN(in->placement() == out->placement());      // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());            // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(),      // NOLINT(maybe-need-error-msg)
                      out->nd_sbp()->sbp_parallel_size());    // NOLINT(maybe-need-error-msg)
   CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
