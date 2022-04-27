@@ -39,6 +39,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
+        
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.max(input)
         tensor(6., dtype=oneflow.float32)
@@ -74,6 +75,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
+
         >>> input = flow.Tensor([[4, 1, 5], [2, 6, 3]])
         >>> flow.min(input)
         tensor(1., dtype=oneflow.float32)
@@ -105,6 +107,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
+
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.sum(input)
         tensor(21., dtype=oneflow.float32)
@@ -135,6 +138,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
+
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.mean(input)
         tensor(3.5000, dtype=oneflow.float32)
@@ -165,6 +169,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
+
         >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         >>> flow.prod(input)
         tensor(720., dtype=oneflow.float32)
@@ -195,18 +200,18 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input = flow.rand(5, 2) < 0.5
+
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]]) < 4
         >>> input
-        tensor([[ True, False],
-                [ True,  True],
-                [False, False],
-                [False, False],
-                [ True, False]], dtype=oneflow.bool)
+        tensor([[ True,  True,  True],
+                [False, False, False]], dtype=oneflow.bool)
         >>> flow.all(input)
         tensor(False, dtype=oneflow.bool)
-        >>> flow.all(input, dim=1)
-        tensor([False,  True, False, False, False], dtype=oneflow.bool)
-
+        >>> flow.all(input, 1)
+        tensor([ True, False], dtype=oneflow.bool)
+        >>> flow.all(input, 1, True)
+        tensor([[ True],
+                [False]], dtype=oneflow.bool)
     """,
 )
 
@@ -229,17 +234,17 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input = flow.rand(5, 2) < 0.5
+        
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]]) < 4
         >>> input
-        tensor([[ True, False],
-                [False,  True],
-                [False, False],
-                [False, False],
-                [False,  True]], dtype=oneflow.bool)
+        tensor([[ True,  True,  True],
+                [False, False, False]], dtype=oneflow.bool)
         >>> flow.any(input)
         tensor(True, dtype=oneflow.bool)
-        >>> flow.any(input, dim=0)
-        tensor([True, True], dtype=oneflow.bool)
+        >>> flow.any(input, 0)
+        tensor([True, True, True], dtype=oneflow.bool)
+        >>> flow.any(input, 0, True)
+        tensor([[True, True, True]], dtype=oneflow.bool)
 
     """,
 )

@@ -862,7 +862,7 @@ class Transpose2dimFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t dim0,
                            const int32_t dim1) const {
     MutableAttrMap attrs;
-    const int64_t ndim = x->ndim();
+    const int64_t ndim = input->ndim();
     std::vector<int32_t> permute;
     permute.reserve(ndim);
     int32_t dim_0 = dim0;
