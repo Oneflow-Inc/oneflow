@@ -40,6 +40,7 @@ limitations under the License.
 namespace mlir {
 namespace oneflow {
 
+// static void build(StringRef name, FunctionType type, ArrayRef<NamedAttribute> attrs = {}, ArrayRef<DictionaryAttr> argAttrs = {});
 struct JobLowering final : public OpConversionPattern<Job> {
  public:
   using OpConversionPattern<Job>::OpConversionPattern;
