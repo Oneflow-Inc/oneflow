@@ -164,6 +164,7 @@ class TestTensor(flow.unittest.TestCase):
         z.requires_grad_()
         flow.nn.init.xavier_normal_(z)
         flow.nn.init.xavier_uniform_(z)
+        flow.nn.init.orthogonal_(z)
         x = tensor_creator(*shape).to(dtype=flow.int32)
         np_ones = np.ones(x.shape, dtype=np.int32)
         np_zeros = np.zeros(x.shape, dtype=np.int32)
