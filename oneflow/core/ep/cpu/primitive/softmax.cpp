@@ -125,7 +125,7 @@ std::unique_ptr<SoftmaxBase> NewOneDnnSoftmax() {
   return std::unique_ptr<SoftmaxBase>(new OneDnnSoftmaxImpl<SoftmaxBase, algorithm, data_type>());
 }
 
-#endif // WITH_ONEDNN
+#endif  // WITH_ONEDNN
 
 template<typename SoftmaxBase, Algorithm algorithm, typename T>
 std::unique_ptr<SoftmaxBase> NewSoftmax() {
@@ -159,7 +159,7 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
     static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
         new_softmax_handle{
             OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
-#endif // WITH_ONEDNN
+#endif  // WITH_ONEDNN
 #undef MAKE_NEW_SOFTMAX_ENTRY
     const auto it = new_softmax_handle.find(data_type);
     if (it != new_softmax_handle.end()) {
