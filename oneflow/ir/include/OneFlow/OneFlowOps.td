@@ -253,6 +253,12 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
 #ifndef ONEFLOW_PASSES
 #define ONEFLOW_PASSES
 
+def LowerOneFlowToFuncPass : Pass<"lower-oneflow-to-func", "ModuleOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createLowerOneFlowToFuncPass()";
+  let dependentDialects = ["memref::MemRefDialect", "mlir::func::FuncDialect"];
+}
+
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";

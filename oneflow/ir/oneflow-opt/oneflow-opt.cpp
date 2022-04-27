@@ -46,6 +46,7 @@ void registerTestOneFlowTraitsPass() { PassRegistration<TestOneFlowTraitFolder>(
 int32_t main(int32_t argc, char** argv) {
   mlir::registerAllPasses();
   mlir::registerTestOneFlowTraitsPass();
+  mlir::registerLowerOneFlowToFuncPassPass();
   mlir::registerLowerOneFlowToTosaPassPass();
   mlir::registerMapSCFToGPUPassPass();
   mlir::registerBufferHostRegisterPassPass();

@@ -29,4 +29,4 @@ std::unique_ptr<mlir::Pass> createLowerOneFlowToFuncPass();
 
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_ONEFLOWTOTOSA_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_ONEFLOWTOFUNC_H_
