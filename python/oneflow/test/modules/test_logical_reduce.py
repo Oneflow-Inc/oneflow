@@ -145,6 +145,17 @@ class TestLogicalReduce(flow.unittest.TestCase):
         )
         return torch.any(x, dim)
 
+    def test_error_msg(test_case):
+        x = flow.randn(2, 3, 4)
+
+        with test_case.assertRaises(IndexError) as exp:
+            flow.sum(x, 3)
+        test_case.assertTrue("Dimension out of range" in str(exp.exception))
+
+        with test_case.assertRaises(IndexError) as exp:
+            flow.sum(x, [-4])
+        test_case.assertTrue("Dimension out of range" in str(exp.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

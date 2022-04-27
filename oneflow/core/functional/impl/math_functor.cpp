@@ -39,7 +39,8 @@ namespace oneflow {
 namespace one {
 namespace functional {
 namespace {
-Maybe<std::vector<int32_t>> check_and_construct_axis(const int32_t& naxis, const std::vector<int32_t>& axis) {
+Maybe<std::vector<int32_t>> check_and_construct_axis(const int32_t& naxis,
+                                                     const std::vector<int32_t>& axis) {
   const int32_t axis_size = axis.size();
 
   if (axis_size == 0) {
@@ -53,10 +54,7 @@ Maybe<std::vector<int32_t>> check_and_construct_axis(const int32_t& naxis, const
 
     std::vector<int32_t> reduce_axis(axis_size);
     for (int32_t i = 0; i < axis_size; i++) {
-      CHECK_GT_OR_RETURN(naxis, axis[i])
-          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
-          << ", " << naxis - 1 << "], but got " << axis[i] << ")";
-      CHECK_LE_OR_RETURN(-naxis, axis[i])
+      CHECK_OR_RETURN(axis[i] >= -naxis && axis[i] < naxis)
           << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
           << ", " << naxis - 1 << "], but got " << axis[i] << ")";
       if (axis[i] < 0) {
