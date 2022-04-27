@@ -25,19 +25,19 @@ limitations under the License.
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/PatternMatch.h"
+
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -72,14 +72,20 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   SymbolTable symbol_table(parent_module_op);
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
-  symbol_table.lookup(op.op_name())->print(os_mlir);
+  if (auto found = symbol_table.lookup(op.op_name())) {
+    found->print(os_mlir);
+  } else {
+    parent_module_op->dump();
+    return op.emitError("symbol of jit function not found: " + op.op_name());
+  }
   op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
   return success();
 }
 
 // TODO: cfg/multi block support
-FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, StringRef func_name,
-                         ValueRange operands, ValueRange results, SmallVector<Operation*, 4> ops) {
+func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+                               StringRef func_name, ValueRange operands, ValueRange results,
+                               SmallVector<Operation*, 4> ops) {
   BlockAndValueMapping mapping;
   SmallVector<Type, 4> argument_types;
   argument_types.reserve(operands.size());
@@ -102,24 +108,24 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   SymbolTable symbol_table(parent_module_op);
   OpBuilder::InsertionGuard guard(rewriter);
   Block::iterator insertPt(parent_func_op->getNextNode());
-  rewriter.setInsertionPointToStart(&parent_module_op.body().getBlocks().back());
+  rewriter.setInsertionPointToStart(parent_module_op.getBody());
   if (parent_func_op->hasAttr("llvm.emit_c_interface")) {
     emitError(loc) << "parent should not has attr of llvm.emit_c_interface " << *parent_func_op;
     return nullptr;
   }
-  auto function = rewriter.create<mlir::FuncOp>(loc, func_name, func_type);
+  auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-  function.body().emplaceBlock();
-  for (auto& arg : argument_types) { function.body().addArguments(arg, loc); }
-  for (auto argument_pair : llvm::zip(operands, function.body().getArguments())) {
+  function.getBody().emplaceBlock();
+  for (auto& arg : argument_types) { function.getBody().addArguments(arg, loc); }
+  for (auto argument_pair : llvm::zip(operands, function.getBody().getArguments())) {
     mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
   }
-  rewriter.setInsertionPointToStart(&function.body().front());
+  rewriter.setInsertionPointToStart(&function.getBody().front());
   ImplicitLocOpBuilder nb(loc, rewriter);
   for (auto op : ops) { nb.clone(*op, mapping); }
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<mlir::ReturnOp>(loc, mapped_results);
+  rewriter.create<func::ReturnOp>(loc, mapped_results);
   if (symbol_table.lookup(func_name)) {
     emitError(loc) << func_name << " should not be at symbol table of ModuleOp";
     return nullptr;
@@ -128,22 +134,20 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
 }
 
 NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op_name,
-                                 int32_t input_size, int32_t output_size,
-                                 Operation* op_to_replace) {
-  oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
-                                               op_to_replace->getAttrDictionary());
+                                 int32_t input_size, int32_t output_size, Operation* op) {
   NamedAttrList attributes;
   attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
-                 op_to_replace_adaptor.device_tagAttr());
+                 OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
   attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
-                 op_to_replace_adaptor.device_name());
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-                 op_to_replace_adaptor.hierarchyAttr());
+                 OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
+  if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
+  }
   attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                  rewriter.getStringAttr(op_name));
-  // TODO: use functions in oneflow to genearated bn
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
-                 op_to_replace_adaptor.scope_symbol_idAttr());
+  if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
+  }
   return attributes;
 }
 
@@ -365,19 +369,7 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 LogicalResult InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
                                       PatternRewriter& rewriter) {
   if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
-    oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
-                             op_to_replace_adaptor.device_tagAttr());
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
-                             op_to_replace_adaptor.device_name());
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-                             op_to_replace_adaptor.hierarchyAttr());
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                             rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
-
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
-                             op_to_replace_adaptor.scope_symbol_idAttr());
-    return success();
+    return OpTrait::IsOpConfCompatible<void>::saveToNamedAttrList(op, transpose_attributes);
   } else {
     op->emitError("must be a op of trait IsOpConfCompatible!");
     return failure();
@@ -394,9 +386,8 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
                                                              NamedAttrList transpose_attributes,
                                                              int num_transposed_operand,
                                                              PatternRewriter& rewriter) {
-  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
-  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_input_"
-                               + std::to_string(num_transposed_operand);
+  std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
+                               + "_transpose_input_" + std::to_string(num_transposed_operand);
   transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
@@ -409,9 +400,8 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
 
 TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpose_attributes,
                                  int num_transposed_result, PatternRewriter& rewriter) {
-  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
-  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_output_"
-                               + std::to_string(num_transposed_result);
+  std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
+                               + "_transpose_output_" + std::to_string(num_transposed_result);
   transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
@@ -491,30 +481,29 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 }
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
-  pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
-  pm.addPass(createCSEPass());                           // cse
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
-  auto p = createLinalgElementwiseOpFusionPass();
-  if (p->initializeOptions("allow-folding-unit-dim-reshapes=true").failed()) exit(1);
-  pm.addNestedPass<FuncOp>(std::move(p));                           // linalg-fuse-elementwise-ops
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());            // tensor-bufferize
-  pm.addPass(createFuncBufferizePass());                            // func-bufferize
+  pm.addPass(createLowerOneFlowToTosaPass());                  // lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                                 // cse
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
+  pm.addNestedPass<func::FuncOp>(
+      createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
+  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
+  pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
+  pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
   pm.addPass(createCanonicalizerPass());                            // canonicalize
-  pm.addNestedPass<FuncOp>(
+  pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
-  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
-  pm.addNestedPass<FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
-  pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
-  pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
-  pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
-  pm.addPass(createReconcileUnrealizedCastsPass());            // reconcile-unrealized-casts
+  pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
+  pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
+  pm.addPass(createConvertLinalgToLLVMPass());                       // convert-linalg-to-llvm
+  pm.addPass(createMemRefToLLVMPass());                              // convert-memref-to-llvm
+  pm.addPass(createConvertFuncToLLVMPass());                         // convert-func-to-llvm
+  pm.addPass(createReconcileUnrealizedCastsPass());                  // reconcile-unrealized-casts
   return pm.run(module);
 }
 
@@ -527,19 +516,19 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
       ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
   context->disableMultithreading(enable_ir_printing);
   AddLowerToLinalgMemRefPasses(pm);
-  pm.addNestedPass<FuncOp>(
-      createConvertLinalgToParallelLoopsPass());             // convert-linalg-to-parallel-loops
-  pm.addPass(createMapSCFToGPUPass());                       // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());                 // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());                // gpu-kernel-outlining
-  pm.addNestedPass<FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
-  pm.addPass(createCanonicalizerPass());                     // canonicalize
+  pm.addNestedPass<func::FuncOp>(
+      createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
+  pm.addPass(createMapSCFToGPUPass());            // gpu-greedy-parallel-loop-mapping
+  pm.addPass(createParallelLoopToGpuPass());      // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuKernelOutliningPass());     // gpu-kernel-outlining
+  pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
+  pm.addPass(createCanonicalizerPass());                           // canonicalize
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
-  pm.addNestedPass<FuncOp>(createGpuCopyArgPass());                      // buffer-host-register
+  pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
   if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);
