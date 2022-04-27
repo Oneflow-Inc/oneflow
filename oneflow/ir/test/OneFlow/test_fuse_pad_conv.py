@@ -25,6 +25,7 @@ os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
+import oneflow.sysconfig
 
 
 def do_pad_conv_graph(test_case, with_cuda, with_bias, with_nchw=True):
@@ -62,12 +63,15 @@ def do_pad_conv_graph(test_case, with_cuda, with_bias, with_nchw=True):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusePadConv(oneflow.unittest.TestCase):
-    def test_pad_conv_graph(test_case):
+    @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
+    def test_pad_conv_graph_cuda(test_case):
         do_pad_conv_graph(test_case, True, True)
-        do_pad_conv_graph(test_case, False, True)
         do_pad_conv_graph(test_case, True, False)
-        do_pad_conv_graph(test_case, False, False)
         do_pad_conv_graph(test_case, True, False, True)
+
+    def test_pad_conv_graph_cpu(test_case):
+        do_pad_conv_graph(test_case, False, True)
+        do_pad_conv_graph(test_case, False, False)
         do_pad_conv_graph(test_case, False, False, True)
 
 
