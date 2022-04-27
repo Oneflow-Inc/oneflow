@@ -39,18 +39,20 @@ namespace oneflow {
 namespace one {
 namespace functional {
 namespace {
-Maybe<std::vector<int32_t>> check_axis(int32_t naxis, const std::vector<int32_t>& axis) {
-  if (axis.size() == 0) {
+Maybe<std::vector<int32_t>> check_axis(const int32_t& naxis, const std::vector<int32_t>& axis) {
+  const int32_t axis_size = axis.size();
+  
+  if (axis_size == 0) {
     std::vector<int32_t> reduce_axis(naxis);
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
     return reduce_axis;
   } else {
-    CHECK_GE_OR_RETURN(naxis, axis.size())
+    CHECK_GE_OR_RETURN(naxis, axis_size)
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
-        << ", " << naxis - 1 << "], but got " << axis.size() << ")";
+        << ", " << naxis - 1 << "], but got " << axis_size << ")";
 
-    std::vector<int32_t> reduce_axis(axis.size());
-    for (int32_t i = 0; i < axis.size(); i++) {
+    std::vector<int32_t> reduce_axis(axis_size);
+    for (int32_t i = 0; i < axis_size; i++) {
       CHECK_GT_OR_RETURN(naxis, axis[i])
           << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
           << ", " << naxis - 1 << "], but got " << axis[i] << ")";
@@ -349,7 +351,7 @@ class ReduceMaxFunctor {
                            const bool& keepdims) const {
     MutableAttrMap attrs;
     if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(x->ndim());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
@@ -373,7 +375,7 @@ class ReduceMinFunctor {
                            const bool& keepdims) const {
     MutableAttrMap attrs;
     if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(x->ndim());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
@@ -468,7 +470,7 @@ class ReduceSumWholeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     MutableAttrMap attrs;
-    const int32_t naxis = x->shape()->NumAxes();
+    const int32_t naxis = x->ndim();
     std::vector<int32_t> axis(naxis);
     std::iota(axis.begin(), axis.end(), 0);
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
@@ -492,8 +494,8 @@ class ReduceSumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check_axis(x->shape()->NumAxes(), axis));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    // std::vector<int32_t> reduce_axis = *JUST(check_axis(x->ndim(), axis));
+    // JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
@@ -513,7 +515,7 @@ class ReduceAllWholeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+    std::vector<int32_t> reduce_axis(x->ndim());
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", false));
@@ -533,8 +535,8 @@ class ReduceAllFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check_axis(x->shape()->NumAxes(), axis));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    // std::vector<int32_t> reduce_axis = *JUST(check_axis(x->ndim(), axis));
+    // JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -551,7 +553,7 @@ class ReduceAnyWholeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+    std::vector<int32_t> reduce_axis(x->ndim());
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", false));
@@ -571,8 +573,8 @@ class ReduceAnyFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check_axis(x->shape()->NumAxes(), axis));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    // std::vector<int32_t> reduce_axis = *JUST(check_axis(x->ndim(), axis));
+    // JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -782,7 +784,7 @@ class ReduceProdWholeFunctor {
     }
     JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
+    std::vector<int32_t> reduce_axis(tensor->ndim());
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", false));
@@ -814,8 +816,8 @@ class ReduceProdFunctor {
     }
     JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    std::vector<int32_t> reduce_axis = *JUST(check_axis(x->shape()->NumAxes(), axis));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    // std::vector<int32_t> reduce_axis = *JUST(check_axis(x->ndim(), axis));
+    // JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
   }
@@ -861,7 +863,7 @@ class Transpose2dimFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
                            const int32_t dim1) const {
     MutableAttrMap attrs;
-    const int64_t ndim = x->shape()->NumAxes();
+    const int64_t ndim = x->ndim();
     std::vector<int32_t> permute;
     permute.reserve(ndim);
     int32_t dim_0 = dim0;
@@ -1199,7 +1201,7 @@ class VectorNormFunctor {
     bool full_dim_flag = true;
     std::vector<int32_t> dim;
     if (!input_dim.has_value()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(x->ndim());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       dim = reduce_axis;
     } else {
@@ -1209,11 +1211,11 @@ class VectorNormFunctor {
         if (dim_check[i] >= 0) {
           dim.emplace_back(dim_check[i]);
         } else {
-          dim.emplace_back(dim_check[i] + x->shape()->NumAxes());
+          dim.emplace_back(dim_check[i] + x->ndim());
         }
         if (dim[i] != i) { full_dim_flag = false; }
       }
-      if ((int)dim.size() < x->shape()->NumAxes()) { full_dim_flag = false; }
+      if ((int)dim.size() < x->ndim()) { full_dim_flag = false; }
     }
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
       double ord_val = JUST(ord.As<double>());
@@ -1278,7 +1280,7 @@ class ScalarMatrixNormFunctor {
                            const Optional<Symbol<DType>>& dtype) const {
     std::shared_ptr<one::Tensor> res;
 
-    auto num_dims = x->shape()->NumAxes();
+    auto num_dims = x->ndim();
     auto axis = input_dim.size();
     CHECK_OR_RETURN(num_dims >= 2)
         << "linalg.matrix_norm(): input tensor must be a matrix or batch of matrices";
@@ -1363,7 +1365,7 @@ class MatrixNormFunctor {
       }
       dtype_val = x->dtype();
     }
-    auto num_dims = x->shape()->NumAxes();
+    auto num_dims = x->ndim();
     auto axis = input_dim.size();
     std::vector<int32_t> dim_tmp(axis);
     for (int i = 0; i < axis; ++i) {
@@ -1438,9 +1440,9 @@ class NormFunctor {
       }
     } else {
       if (ord.has_value()) {
-        CHECK_OR_RETURN(x->shape()->NumAxes() <= 2)
+        CHECK_OR_RETURN(x->ndim() <= 2)
             << "linalg.norm(): input must be 1-D or 2-D when dim is None and ord is not None";
-        if (x->shape()->NumAxes() == 1) {
+        if (x->ndim() == 1) {
           res = JUST(VectorNorm(x, ord_sca, input_dim, keepdim, dtype));
         } else {
           std::vector<int32_t> dim{0, 1};
@@ -1462,7 +1464,7 @@ class Norm2Functor {
                            const Optional<std::vector<int32_t>>& input_dim, const bool& keepdim,
                            const Optional<Symbol<DType>>& dtype) const {
     std::shared_ptr<one::Tensor> res;
-    std::vector<int32_t> dim(x->shape()->NumAxes());
+    std::vector<int32_t> dim(x->ndim());
     std::iota(dim.begin(), dim.end(), 0);
     if (dtype) {
       Symbol<DType> dtype_val = JUST(dtype);
@@ -1885,7 +1887,7 @@ class StandardDeviationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
-    const int32_t ndim = input->shape()->NumAxes();
+    const int32_t ndim = input->ndim();
     std::vector<int32_t> axis;
     axis.reserve(ndim);
     if (dim.has_value() == false) {
@@ -1982,7 +1984,7 @@ class VarianceFunctor {
     if (unbiased) { JUST(attrs.SetAttr<bool>("unbiased", JUST(unbiased))); }
     if (keepdim) { JUST(attrs.SetAttr<bool>("keepdim", JUST(keepdim))); }
     std::vector<int32_t> axis;
-    const int ndim = input->shape()->NumAxes();
+    const int ndim = input->ndim();
     axis.reserve(ndim);
     if (!dim) {
       for (int i = 0; i < ndim; i++) { axis.emplace_back(i); }
@@ -2043,7 +2045,7 @@ class MovedimVecFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& source,
                            const std::vector<int32_t>& destination) const {
-    int32_t ndim = input->shape()->NumAxes();
+    int32_t ndim = input->ndim();
     int32_t dim = source.size();
 
     CHECK_EQ_OR_RETURN(source.size(), destination.size())
@@ -2214,7 +2216,7 @@ class VsplitVecFunctor {
   VsplitVecFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
                                 const std::vector<int32_t>& indices_or_sections) const {
-    int32_t ndim = input->shape()->NumAxes();
+    int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 2)
         << "flow.vsplit requires a tensor with at least 1 dimension, but got a tensor with " << ndim
         << " dimensions!";
@@ -2856,7 +2858,7 @@ class EinSumFunctor {
       // Multiply tensors and sum out dimensions in sum_dims
       if (sum_dims.empty()) {
         result = JUST(functional::Mul(result, operand));
-      } else if (sum_dims.size() == result->shape()->NumAxes()) {
+      } else if (sum_dims.size() == result->ndim()) {
         auto flatten_result = JUST(functional::Flatten(result, 0, -1));
         auto flatten_operand = JUST(functional::Flatten(operand, 0, -1));
         result = JUST(functional::Dot(flatten_result, flatten_operand));
