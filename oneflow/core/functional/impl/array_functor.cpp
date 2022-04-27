@@ -616,6 +616,9 @@ class ExpandFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
+
+    // if input tensor is eager local, then try return tensor's view
+    if (view::IsViewApplicable(x)) { return view::Expand(x, in_shape, expand_shape); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1101,6 +1104,9 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
+    // TODO:(zhaoluyang) use view::Slice
+    // if (view::IsViewApplicable(x)) { return view::Slice(x, start, stop, step); }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
@@ -1149,11 +1155,25 @@ class NarrowFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const int64_t& start, const int64_t& length) const {
     int64_t narrow_dim = dim;
+    int64_t narrow_start = start;
     const int64_t ndim = input->shape()->NumAxes();
+    CHECK_GT_OR_RETURN(ndim, 0) << "narrow() cannot be applied to a 0-dim tensor.";
     CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim - 1))
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
+    const int64_t dim_length = input->shape()->At(narrow_dim);
+    CHECK_OR_RETURN((-dim_length <= start) && (start <= dim_length - 1))
+        << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got:" << start << ")";
+    if (narrow_start < 0) { narrow_start += ndim; }
+    CHECK_GE_OR_RETURN(dim_length, narrow_start + length)
+        << "start (" << narrow_start << ") + length (" << length << ") exceeds dimension size ("
+        << dim_length << ").";
+
+    if (view::IsViewApplicable(input)) {
+      return JUST(view::Narrow(input, narrow_dim, narrow_start, length));
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
@@ -1225,10 +1245,11 @@ class SliceUpdateFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+
     if (inplace) {
       JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
+      (*outputs)[0] = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
@@ -1321,6 +1342,8 @@ class UnfoldTensorFunctor {
     JUST(attrs.SetAttr<int32_t>("dimension", dimension));
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
+    // if input tensor is eager local, than try return tensor's view
+    if (view::IsViewApplicable(x)) { return view::UnfoldTensor(x, dimension, size, step); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1753,16 +1776,19 @@ class DiagonalFunctor {
     CHECK_NE_OR_RETURN(p_dim1, p_dim2)
         << ", diagonal dimensions cannot be identical " << dim1 << ", " << dim2;
 
-    std::vector<int32_t> input_index{p_dim1, p_dim2};
-    for (int32_t i = 0; i < ndims; i++) {
-      if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
-    }
-
-    std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
-
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("offset", offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x}, attrs);
+
+    if (view::IsViewApplicable(x)) {
+      return view::Diagonal(x, offset, p_dim1, p_dim2);
+    } else {
+      std::vector<int32_t> input_index{p_dim1, p_dim2};
+      for (int32_t i = 0; i < ndims; i++) {
+        if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
+      }
+      std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x}, attrs);
+    }
   }
 
  private:

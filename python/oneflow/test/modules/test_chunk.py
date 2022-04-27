@@ -19,7 +19,7 @@ from collections import OrderedDict
 from random import shuffle
 
 import numpy as np
-from oneflow.test_utils.test_util import GenArgList
+from random import shuffle
 
 import oneflow as flow
 import oneflow.unittest
@@ -56,6 +56,22 @@ class TestChunk(flow.unittest.TestCase):
         permute_list = [0, 1, 2, 3]
         shuffle(permute_list)
         y = x.permute(permute_list)
+        z = torch.chunk(y, chunks=random(low=1, high=5).to(int), dim=dim)
+        return torch.cat(z, dim=dim)
+
+    @autotest(n=5, auto_backward=False, check_graph=True)
+    def test_flow_chunk_list_with_stride(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(
+            ndim=4,
+            dim1=random(low=4, high=8).to(int),
+            dim2=random(low=4, high=8).to(int),
+            dim3=random(low=4, high=8).to(int),
+        ).to(device)
+        perm = [0, 1, 2, 3]
+        shuffle(perm)
+        y = x.permute(perm)
         z = torch.chunk(y, chunks=random(low=1, high=5).to(int), dim=dim)
         return torch.cat(z, dim=dim)
 
