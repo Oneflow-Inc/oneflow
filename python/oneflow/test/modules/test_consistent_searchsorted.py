@@ -32,7 +32,6 @@ def _test_search_sorted(test_case, placement, sbp, ndim):
     )
     return y
 
-
 class TestSearchSorted_Global(flow.unittest.TestCase):
     @globaltest
     def test_search_sorted(test_case):
@@ -44,7 +43,6 @@ class TestSearchSorted_Global(flow.unittest.TestCase):
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_search_sorted_scalar(test_case, placement, sbp):
-    print(placement, sbp)
     dim0 = [random(1, 3) * 8]
     sorted_sequence = random_tensor(1, *dim0).to_global(placement, sbp)
     values = 5
