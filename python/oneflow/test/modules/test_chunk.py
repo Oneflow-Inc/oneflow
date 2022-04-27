@@ -42,7 +42,7 @@ class TestChunk(flow.unittest.TestCase):
         z = torch.cat(y, dim=dim)
         return z
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_chunk_list_with_stride(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
@@ -56,7 +56,7 @@ class TestChunk(flow.unittest.TestCase):
         shuffle(perm)
         y = x.permute(perm)
         z = torch.chunk(y, chunks=random(low=1, high=5).to(int), dim=dim)
-        return torch.cat(y, dim=dim)
+        return torch.cat(z, dim=dim)
 
     @autotest(n=5, auto_backward=False, check_graph=True)
     def test_flow_chunk_list_bool_with_random_data(test_case):
