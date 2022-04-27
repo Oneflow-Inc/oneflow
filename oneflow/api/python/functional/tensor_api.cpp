@@ -290,69 +290,6 @@ class LocalTensorSharedNumpyDataFunctor {
   }
 };
 
-class PinMemoryFunctor {
- public:
-  PinMemoryFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("slice_update").Input("x").Input("update").Output("y").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    // TODO:(zhaoluyang) support consistent tensor.pin_memory()
-    CHECK_OR_RETURN(input->is_local())
-        << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
-    // if tensor already pinned, then just return
-    if (JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory()) { return input; }
-    auto shape = input->shape();
-    auto device = JUST(input->device());
-    const bool requires_grad = input->requires_grad();
-    CHECK_EQ_OR_RETURN(device->enum_type(), DeviceType::kCPU)
-        << Error::RuntimeError() << "cannot pin tensor with device: " << device->ToString()
-        << ", only dense CPU tensors can be pinned.";
-
-    auto empty = JUST(functional::Empty(*shape.get(), input->dtype(), device, /*pin_memory=*/true));
-    // TODO: remove this requires_grad
-    JUST(empty->set_requires_grad(requires_grad));
-    const int32_t ndim = input->ndim();
-    if(ndim == 0){
-      //for 0-dim case, use assign, other use slice_update
-      JUST(functional::AssignLocalTensor(empty, input));
-      // if requires_grad, set backward function-node 'copy_backward'
-      if(autograd::GradMode::is_enabled() && requires_grad){
-        auto backward_fn = std::make_shared<BackwardFunction>();
-        backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                                bool create_graph) -> Maybe<void> {
-          autograd::AutoGradMode mode(create_graph);
-          CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-          in_grads->resize(1);
-          const Symbol<Device>& device = JUST(out_grads[0]->device());
-          (*in_grads)[0] = JUST(functional::Copy(out_grads[0], device->type(), device->device_id()););
-          return Maybe<void>::Ok();
-        };
-        backward_fn->status = []() { return true; };
-        TensorTuple outputs{empty};
-        JUST(GetThreadLocalAutogradEngine()->AddNode("copy_backward", backward_fn, {input},
-                                                    &outputs));
-      }
-      return empty;
-    } else {
-      MutableAttrMap attrs;
-      std::vector<int64_t> starts(ndim, 0);
-      std::vector<int64_t> stops(ndim);
-      std::vector<int64_t> steps(ndim, 1);
-      for (int i = 0; i < ndim; ++i) { stops[i] = input->shape()->At(i); }
-      JUST(attrs.SetAttr<std::vector<int64_t>>("start", starts));
-      JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stops));
-      JUST(attrs.SetAttr<std::vector<int64_t>>("step", steps));
-      JUST(empty->set_requires_grad(requires_grad));
-      auto outputs = TensorTuple{empty};
-      JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{empty, input}, &outputs, attrs));
-      return outputs[0];
-    }
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -367,7 +304,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
   m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensor");
   m.add_functor<impl::LocalTensorSharedNumpyDataFunctor>("LocalTensorSharedNumpyData");
-  m.add_functor<impl::PinMemoryFunctor>("PinMemory");
 }
 
 }  // namespace functional

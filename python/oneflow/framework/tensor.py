@@ -1089,10 +1089,6 @@ def _new_tensor(
         )
 
 
-def _pin_memory(self):
-    return flow._C.pin_memory(self)
-
-
 def _cumsum(self, dim, dtype=None):
     return flow._C.cumsum(self, dim, dtype=dtype)
 
@@ -1319,7 +1315,6 @@ def RegisterMethods():
     Tensor.isnan = _isnan
     Tensor.isinf = _isinf
     Tensor.new_tensor = _new_tensor
-    Tensor.pin_memory = _pin_memory
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
 

@@ -2128,3 +2128,8 @@
 - name: "roc_auc_score"
   signature: "Tensor (Tensor label, Tensor pred) => RocAucScore"
   bind_python: True
+
+- name: "pin_memory"
+  signature: "Tensor (Tensor input) => PinMemory"
+  bind_python: True
+
