@@ -2,6 +2,7 @@
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWENUMS_H_
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/EnumAttr.td"
 
 def OneFlow_InvalidDataType : I32EnumAttrCase<"DT_InvalidDataType", 0>;
 def OneFlow_Char : I32EnumAttrCase<"DT_Char", 1>;
