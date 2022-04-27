@@ -773,6 +773,25 @@ def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
     return _init_by_initializer_conf(self, initializer_conf)
 
 
+def _orthogonal(self, gain=1.0):
+    if self.ndimension() < 2:
+        raise ValueError("Only tensors with 2 or more dimensions are supported")
+    rows = self.shape[0]
+    cols = np.prod(self.shape[1:])
+    flattened = np.random.normal(0.0, 1.0, size=(rows, cols))
+    if rows < cols:
+        flattened = flattened.T
+    # TODO
+    q, r = np.linalg.qr(flattened)
+    d = np.diag(r, 0)
+    d = np.sign(d)
+    q *= d
+    if rows < cols:
+        q = q.T
+    self = gain * flow.tensor(q.reshape(self.shape))
+    return self
+
+
 def _normal(self, mean=0, std=1):
     initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
     return _init_by_initializer_conf(self, initializer_conf)
@@ -1156,6 +1175,7 @@ def RegisterMethods():
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal
     Tensor.xavier_uniform_ = _xavier_uniform
+    Tensor.orthogonal_ = _orthogonal
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
     Tensor.copy_ = _copy
