@@ -22,6 +22,9 @@ endif()
 
 project(oneflow-dialect LANGUAGES CXX C)
 
+# https://github.com/llvm/llvm-project/issues/55010
+set(LLVM_ABI_BREAKING_CHECKS "FORCE_OFF" CACHE STRING "")
+
 if(LLVM_PROVIDER STREQUAL "in-tree")
   include(llvm-in-tree.cmake)
 elseif(LLVM_PROVIDER STREQUAL "install")
@@ -39,6 +42,7 @@ set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} PARENT_SCOPE)
 set(MLIR_INCLUDE_DIRS ${MLIR_INCLUDE_DIRS} PARENT_SCOPE)
 set(ONEFLOW_MLIR_SOURCE_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include PARENT_SCOPE)
 set(ONEFLOW_MLIR_BINARY_INCLUDE_DIRS ${PROJECT_BINARY_DIR}/include PARENT_SCOPE)
+
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_BINARY_DIR}/include)
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
