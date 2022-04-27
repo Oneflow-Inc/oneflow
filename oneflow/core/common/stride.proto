@@ -1,7 +1,0 @@
-syntax = "proto2";
-package oneflow;
-
-message StrideProto {
-  repeated int64 dim = 1;
-}
-

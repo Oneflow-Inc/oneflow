@@ -45,10 +45,10 @@ Stride::Stride(const std::shared_ptr<Shape>& shape) {
 Stride::Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(const DimVector& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(DimVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
-Stride::Stride(const StrideProto& stride_proto) {
+Stride::Stride(const ShapeProto& stride_proto) {
   stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
-Stride::Stride(const cfg::StrideProto& stride_proto) {
+Stride::Stride(const cfg::ShapeProto& stride_proto) {
   stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
 
@@ -82,7 +82,7 @@ std::string Stride::ToString() const {
   return ss.str();
 }
 
-void Stride::ToProto(StrideProto* ret) const {
+void Stride::ToProto(ShapeProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(stride_vec_.begin(), stride_vec_.end());
 }
 

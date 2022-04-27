@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
+#include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/common/stride.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
@@ -26,7 +27,7 @@ namespace oneflow {
 class StrideView;
 
 namespace cfg {
-class StrideProto;
+class ShapeProto;
 }
 
 class Stride final {
@@ -36,8 +37,8 @@ class Stride final {
   explicit Stride(const std::shared_ptr<Shape>& shape);
   explicit Stride(DimVector&& stride_vec);
   explicit Stride(const DimVector& stride_vec);
-  explicit Stride(const StrideProto& stride_proto);
-  explicit Stride(const cfg::StrideProto& stride_proto);
+  explicit Stride(const ShapeProto& stride_proto);
+  explicit Stride(const cfg::ShapeProto& stride_proto);
   Stride(const std::initializer_list<int64_t>& stride_vec);
   Stride& operator=(const Stride& stride);
   Stride& assign(const DimVector& stride_vec);
@@ -48,7 +49,7 @@ class Stride final {
   bool operator!=(const Stride& rhs) const { return !(*this == rhs); }
 
   std::string ToString() const;
-  void ToProto(StrideProto*) const;
+  void ToProto(ShapeProto*) const;
 
   // Getters and Setters
   const DimVector& StrideVec() const { return stride_vec_; }

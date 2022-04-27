@@ -2,7 +2,6 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
-import "oneflow/core/common/stride.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device_type.proto";
 import "oneflow/core/record/record.proto";
@@ -162,7 +161,7 @@ message VariableOpConf {
   optional string tick = 1;
   required string out = 2;
   required ShapeProto shape = 3;
-  required StrideProto stride = 4;
+  required ShapeProto stride = 4;
   optional DataType data_type = 5;
   oneof initialize {
     InitializerConf initializer = 6;
@@ -342,7 +341,7 @@ message SliceBoxingConf {
   repeated TensorSliceViewProto in_slice = 2;
   required TensorSliceViewProto out_slice = 3;
   optional ShapeProto out_shape = 4;
-  optional StrideProto out_stride = 5;
+  optional ShapeProto out_stride = 5;
 }
 
 message SliceBoxingCopyOpConf {

@@ -2,7 +2,6 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
-import "oneflow/core/common/stride.proto";
 import "oneflow/core/common/data_type.proto";
 
 enum AttrType {
@@ -41,7 +40,7 @@ message AttrValue {
     repeated ShapeProto val = 1;
   }
   message ListStride {
-    repeated StrideProto val = 1;
+    repeated ShapeProto val = 1;
   }
   // order and naming convention of the oneof field must be consistent with the enum AttrType
   message ListString {
@@ -55,7 +54,7 @@ message AttrValue {
     double at_double = 5;
     string at_string = 6;
     ShapeProto at_shape = 7;
-    StrideProto at_stride = 8;
+    ShapeProto at_stride = 8;
     DataType at_data_type = 9;
     ListInt32 at_list_int32 = 10;
     ListInt64 at_list_int64 = 11;
