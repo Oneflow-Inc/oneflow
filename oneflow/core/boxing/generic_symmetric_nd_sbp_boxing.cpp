@@ -136,7 +136,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
     const auto& hierarchy_shape = *in_parallel_desc->hierarchy();
     Stride hierarchy_stride(hierarchy_shape);
 
-    const auto& logical_shape = *input->shape();
+    const auto& logical_shape = input->shape();
 
     // Convert input to broadcast tensor step by step
     // e.g.
@@ -149,19 +149,18 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       const auto& one_dim_nd_sbp = JUST(SbpToNdSbp(sbp_parallel));
       const auto& sub_logical_shape =
-          *JUST(GetLogicalShape4Axis(logical_shape, i, in_parallel_desc, nd_sbp));
+          *JUST(GetLogicalShape4Axis(*logical_shape, i, in_parallel_desc, nd_sbp));
       std::shared_ptr<one::Tensor> local_tensor = JUST(output->cur_rank_phy_tensor());
       const auto& sub_parallel_desc = JUST(CalcSubParallelDesc4Axis(in_parallel_desc, i));
 
       int64_t index = CalcIndex4Axis(parallel_id, hierarchy_stride, i);
 
       const auto& physical_shape =
-          *JUST(GetPhysicalShape(sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
-
-      CHECK_EQ_OR_RETURN(physical_shape, *local_tensor->shape())
+          JUST(GetPhysicalShape(sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
+      CHECK_EQ_OR_RETURN(*physical_shape, *local_tensor->shape())
           << Error::RuntimeError() << "Invalid input tensor, size of local tensor ("
           << local_tensor->shape()->ToString() << ") does not match global tensor ("
-          << logical_shape.ToString() << ")!";
+          << logical_shape->ToString() << ")!";
       std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToConsistent(
           local_tensor, sub_parallel_desc, *JUST(GetSbpList(one_dim_nd_sbp)), sub_logical_shape,
           local_tensor->dtype()));
@@ -175,8 +174,8 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, *broadcast_sbp, i));
 
       output = JUST(one::functional::LocalToConsistent(local_tensor, in_parallel_desc,
-                                                       *JUST(GetSbpList(new_nd_sbp)), logical_shape,
-                                                       local_tensor->dtype()));
+                                                       *JUST(GetSbpList(new_nd_sbp)),
+                                                       *logical_shape, local_tensor->dtype()));
     }
 
     CHECK_OR_RETURN(IsAllBroadcastNdSbpAfterDim(JUST(output->nd_sbp()), first_diff_sbp_dim))
@@ -190,7 +189,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
     // If out_nd_sbp is (S(0), S(0), S(1))
     // Altered state of sbp is (S(0), B, B) -> (S(0), S(0), B) -> (S(0), S(0), S(1))
     std::shared_ptr<Shape> sub_logical_shape = JUST(GetLogicalShape4Axis(
-        logical_shape, first_diff_sbp_dim, in_parallel_desc, JUST(output->nd_sbp())));
+        *logical_shape, first_diff_sbp_dim, in_parallel_desc, JUST(output->nd_sbp())));
     for (int64_t i = first_diff_sbp_dim; i < out_nd_sbp->sbp_parallel_size(); ++i) {
       const auto& sbp_parallel = out_nd_sbp->sbp_parallel(i);
       if (sbp_parallel.has_broadcast_parallel()) { continue; }
@@ -223,8 +222,8 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, sbp_parallel, i));
 
       output = JUST(one::functional::LocalToConsistent(local_tensor, in_parallel_desc,
-                                                       *JUST(GetSbpList(new_nd_sbp)), logical_shape,
-                                                       local_tensor->dtype()));
+                                                       *JUST(GetSbpList(new_nd_sbp)),
+                                                       *logical_shape, local_tensor->dtype()));
       // physical_shape of this axis is logical shape of next axis
       sub_logical_shape = physical_shape;
     }

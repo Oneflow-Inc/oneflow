@@ -174,7 +174,7 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
     Shape* logical_shape, DataType* dtype,
     const HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>& rank2flat_shape_dtype,
     Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
-  *dtype = JUST(MapAt(rank2flat_shape_dtype, 0))->dtype();
+  *dtype = rank2flat_shape_dtype.begin()->second->dtype();
   HashMap<int64_t, std::shared_ptr<Shape>> rank2logical_shape;
   for (const auto& pair : rank2flat_shape_dtype) {
     rank2logical_shape.emplace(pair.first, JUST(pair.second->ToShape()));
@@ -182,8 +182,8 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
         << Error::RuntimeError()
         << "Expected all tensors on each rank to be the same dtype, but found "
            "at least two dtypes, "
-        << DType(*dtype).name() << "(rank 0) and " << DType(pair.second->dtype()).name() << "(rank "
-        << pair.first << ")!";
+        << DType(*dtype).name() << "(rank " << rank2flat_shape_dtype.begin()->first << ") and "
+        << DType(pair.second->dtype()).name() << "(rank " << pair.first << ")!";
   }
   const auto& GetRankPhyShapeByParallelId = [&](Symbol<ParallelDesc> parallel_desc,
                                                 int64_t parallel_id) -> Maybe<Shape> {
@@ -270,7 +270,7 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
       }
     }
   }
-  *logical_shape = *JUST(MapAt(rank2logical_shape, 0));
+  *logical_shape = *JUST(GetRankPhyShapeByParallelId(parallel_desc, 0));
   return Maybe<void>::Ok();
 }
 
@@ -279,20 +279,16 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
                                        Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp,
                                        bool sync_and_check_meta) {
   if (!sync_and_check_meta) {
-    if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {
-      const auto& flat_shape_dtype =
-          JUST(BroadcastShapeAndDtype(*physical_shape, *dtype, parallel_desc));
-      physical_shape = JUST(flat_shape_dtype->ToShape());
-      *dtype = flat_shape_dtype->dtype();
-    }
     *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
   } else {
     if (ContainSplitSbp(nd_sbp)) {
       *logical_shape = *physical_shape;
-      const auto& rank2flat_shape_dtype =
-          JUST(BroadcastGatherShapeAndDataType(*logical_shape, *dtype, parallel_desc));
-      JUST(GetConcatenatedShapeAndCheckDtype(logical_shape, dtype, *rank2flat_shape_dtype,
-                                             parallel_desc, nd_sbp));
+      if (parallel_desc->containing_current_rank()) {
+        const auto& rank2flat_shape_dtype =
+            JUST(BroadcastGatherShapeAndDataType(*logical_shape, *dtype, parallel_desc));
+        JUST(GetConcatenatedShapeAndCheckDtype(logical_shape, dtype, *rank2flat_shape_dtype,
+                                               parallel_desc, nd_sbp));
+      }
     } else {
       *logical_shape = *physical_shape;
       ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(*logical_shape), *dtype,
