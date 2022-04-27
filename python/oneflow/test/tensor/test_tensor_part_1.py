@@ -176,7 +176,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(get_numpy(x), np_zeros))
         flow.nn.init.constant_(x, random_fill_val)
         test_case.assertTrue(np.allclose(get_numpy(x), random_fill_val * np_ones))
-        x.zeros_()
+        x.zero_()
         test_case.assertTrue(np.array_equal(get_numpy(x), np_zeros))
         test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
         test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
@@ -936,7 +936,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_zeros_(test_case):
         shape = (2, 3)
         x = flow.tensor(np.random.randn(*shape), dtype=flow.float32)
-        x.zeros_()
+        x.zero_()
         test_case.assertTrue(np.allclose(x.numpy(), np.zeros(shape)))
 
     @flow.unittest.skip_unless_1n1d()
@@ -1045,6 +1045,12 @@ class TestTensor(flow.unittest.TestCase):
         zt = None
         z = None in [xt, yt, zt]
         test_case.assertTrue(np.array_equal(z, True))
+
+    def test_half(test_case):
+        x = flow.tensor([1], dtype=flow.int64)
+        test_case.assertTrue(x.dtype == flow.int64)
+        y = x.half()
+        test_case.assertTrue(y.dtype == flow.float16)
 
 
 if __name__ == "__main__":

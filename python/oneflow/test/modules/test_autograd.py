@@ -127,6 +127,21 @@ class TestAutograd(flow.unittest.TestCase):
         )[0]
         return x_grad_grad
 
+    @autotest(n=10, auto_backward=False, rtol=1e-3, atol=1e-3, check_graph=False)
+    def test_autograd_multiple_times(test_case):
+        device = random_device()
+        ndim = random(1, 4).to(int).value()
+        dims = [random(0, 10).to(int) for _ in range(ndim)]
+        x = random_tensor(ndim, *dims, requires_grad=True)
+        x1 = x.to(device)
+        y = random_tensor(ndim, *dims, requires_grad=True)
+        y1 = y.to(device)
+        z = x1 + y1
+
+        for _ in range(10):
+            z.sum().backward()
+        return (x.grad, y.grad)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -71,10 +71,6 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 
-def _getitem(self, key):
-    return flow._C.tensor_getitem(self, key)
-
-
 def _setitem(self, key, value):
     if self.is_global:
         if isinstance(value, (int, float)):
@@ -164,6 +160,16 @@ def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
 
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
+
+
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.permute(self, new_dims)
 
 
 def is_nonzero(input):
@@ -389,6 +395,10 @@ def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
 
 
+def _amax(self, dim=None, keepdim=False):
+    return flow._C.amax(self, dim=dim, keepdim=keepdim)
+
+
 def _swapdims(self, dim0, dim1):
     return flow._C.swapdims(self, dim0, dim1)
 
@@ -473,6 +483,14 @@ def _cosh(self):
     return flow.cosh(self)
 
 
+def _addcmul(self, tensor1, tensor2, *, value=1):
+    return flow._C.addcmul(self, tensor1, tensor2, value=value)
+
+
+def _addcmul_(self, tensor1, tensor2, *, value=1):
+    return flow._C.addcmul_(self, tensor1, tensor2, value=value)
+
+
 def _erf(self):
     return flow.erf(self)
 
@@ -495,6 +513,10 @@ def _expm1(self):
 
 def _fmod(self, other):
     return flow.fmod(self, other)
+
+
+def _half(self):
+    return flow._C.to(self, flow.float16)
 
 
 def _index(self):
@@ -613,16 +635,6 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, new_dims)
-
-
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -697,12 +709,6 @@ def _all(self, dim=None, keepdim=False):
 
 def _any(self, dim=None, keepdim=False):
     return flow.any(self, dim, keepdim)
-
-
-def _len(self):
-    if self.dim() == 0:
-        raise TypeError("len() of a 0-d tensor")
-    return self.shape[0]
 
 
 def _uniform(self, a=0, b=1):
@@ -789,7 +795,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
-        random_seed = flow.default_generator.seed()
+        random_seed = flow.default_generator.initial_seed()
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
@@ -867,8 +873,18 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *new_args, **kwargs)
 
 
-def _to_global(self, placement=None, sbp=None, grad_sbp=None):
-    return flow.to_global(self, placement, sbp, grad_sbp)
+def _local_to_global(self, placement=None, sbp=None, *, check_meta=True):
+    return flow.local_to_global(self, placement, sbp, check_meta)
+
+
+def _global_to_global(
+    self, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
+):
+    return flow.global_to_global(self, placement, sbp, grad_sbp, check_meta)
+
+
+def _to_global(self, placement=None, sbp=None, **kwargs):
+    return flow.to_global(self, placement, sbp, **kwargs)
 
 
 def _to_local(self):
@@ -963,6 +979,10 @@ def _reshape(self, *shape):
     return flow._C.reshape(self, new_shape)
 
 
+def _reshape_as(self, other):
+    return _reshape(self, other.size())
+
+
 def _view(self, *shape):
     if len(shape) == 1:
         new_shape = shape[0]
@@ -1023,10 +1043,6 @@ def _numpy(self):
     return self.to_numpy()
 
 
-def _zero_(self):
-    return self.zeros_()
-
-
 def zero_(self):
     self.zero_()
     return self
@@ -1048,6 +1064,39 @@ def _isinf(self):
     return flow.isinf(self)
 
 
+def _new_tensor(
+    self, data, dtype=None, device=None, requires_grad=False, placement=None, sbp=None
+):
+    if dtype is None:
+        dtype = self.dtype
+    if self.is_local:
+        assert (
+            placement is None and sbp is None
+        ), "self is local tensor, placement and sbp are expected to be None."
+        if device is None:
+            device = self.device
+        return flow.tensor(
+            data, dtype=dtype, device=device, requires_grad=requires_grad
+        )
+    else:
+        assert device is None, "self is global tensor, device is expected to be None."
+        if placement is None:
+            placement = self.placement
+        if sbp is None:
+            sbp = self.sbp
+        return flow.tensor(
+            data, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
+        )
+
+
+def _cumsum(self, dim, dtype=None):
+    return flow._C.cumsum(self, dim, dtype=dtype)
+
+
+def _cumprod(self, dim, dtype=None):
+    return flow._C.cumprod(self, dim, dtype=dtype)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -1063,7 +1112,6 @@ def RegisterMethods():
     Tensor.numel = _numel
     Tensor.element_size = _element_size
     Tensor.backward = _backward
-    Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
@@ -1092,7 +1140,6 @@ def RegisterMethods():
     Tensor.__rpow__ = _rpow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
-    Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
     Tensor.__invert__ = _invert
@@ -1147,6 +1194,8 @@ def RegisterMethods():
     Tensor.log2 = _log2
     Tensor.add = _add
     Tensor.add_ = _add_inplace
+    Tensor.addcmul = _addcmul
+    Tensor.addcmul_ = _addcmul_
     Tensor.div = _truediv
     Tensor.div_ = _truediv_inplace
     Tensor.mul = _mul
@@ -1200,6 +1249,9 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.norm = _norm
     Tensor.transpose = _transpose
+    Tensor.permute = _permute
+    Tensor.local_to_global = _local_to_global
+    Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
     Tensor.relu = _relu
     Tensor.softmax = _softmax
@@ -1217,12 +1269,13 @@ def RegisterMethods():
     Tensor.unbind = _unbind
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
+    Tensor.amax = _amax
     Tensor.swapdims = _swapdims
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
-    Tensor.permute = _permute
     Tensor.to = _to
+    Tensor.half = _half
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
@@ -1237,6 +1290,7 @@ def RegisterMethods():
     Tensor.le = _le
     Tensor.to_local = _to_local
     Tensor.reshape = _reshape
+    Tensor.reshape_as = _reshape_as
     Tensor.view = _view
     Tensor.sort = _sort
     Tensor.type_as = _type_as
@@ -1256,11 +1310,13 @@ def RegisterMethods():
     Tensor.prod = _prod
     Tensor.sin = _sin
     Tensor.sin_ = _sin_inplace
-    Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
     Tensor.isnan = _isnan
     Tensor.isinf = _isinf
+    Tensor.new_tensor = _new_tensor
+    Tensor.cumsum = _cumsum
+    Tensor.cumprod = _cumprod
 
 
 def register_tensor_op(op_name):

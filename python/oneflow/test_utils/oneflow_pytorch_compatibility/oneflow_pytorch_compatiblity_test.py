@@ -150,8 +150,12 @@ def get_loss(
                 + [
                     "import oneflow as torch",
                     "import oneflow.nn as nn",
+                    "import oneflow.nn.init as init",
+                    "import oneflow.nn.functional as F",
                     "from oneflow import Tensor",
                     "from oneflow.nn import Parameter",
+                    "import math",
+                    "from flowvision.layers import *",
                 ]
                 + lines[i:]
             )
@@ -213,20 +217,24 @@ def get_loss(
 
 
 def do_test_train_loss_oneflow_pytorch(
-    test_case, model_path: str, module_name: str, device: str = "cuda",
+    test_case,
+    model_path: str,
+    module_name: str,
+    device: str = "cuda",
+    batch_size: int = 16,
+    img_size: int = 224,
 ):
-    batch_size = 16
-    image_nd = np.random.rand(batch_size, 3, 224, 224).astype(np.float32)
+    image_nd = np.random.rand(batch_size, 3, img_size, img_size).astype(np.float32)
     label_nd = np.array([e for e in range(batch_size)], dtype=np.int32)
     oneflow_model_loss = []
     pytorch_model_loss = []
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         pytorch_model_loss = get_loss(
-            image_nd, label_nd, model_path, module_name, True, "cuda", tmpdirname
+            image_nd, label_nd, model_path, module_name, True, device, tmpdirname
         )
         oneflow_model_loss = get_loss(
-            image_nd, label_nd, model_path, module_name, False, "cuda", tmpdirname
+            image_nd, label_nd, model_path, module_name, False, device, tmpdirname
         )
 
     if verbose:

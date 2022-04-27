@@ -13,17 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
-#define ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
+#ifndef ONEFLOW_CORE_EMBEDDING_MOCK_KEY_VALUE_STORE_H_
+#define ONEFLOW_CORE_EMBEDDING_MOCK_KEY_VALUE_STORE_H_
 
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/embedding/key_value_store.h"
 
 namespace oneflow {
 
-bool IsOpenGraphVerboseStepLr();
+namespace embedding {
 
-void SetGraphVerboseStepLr(bool verbose);
+#ifdef WITH_CUDA
+
+struct MockKeyValueStoreOptions {
+  uint32_t key_size = 0;
+  uint32_t value_size = 0;
+};
+
+std::unique_ptr<KeyValueStore> NewMockKeyValueStore(const MockKeyValueStoreOptions& options);
+
+#endif  // WITH_CUDA
+
+}  // namespace embedding
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
+#endif  // ONEFLOW_CORE_EMBEDDING_MOCK_KEY_VALUE_STORE_H_

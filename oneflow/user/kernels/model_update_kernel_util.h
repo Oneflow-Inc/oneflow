@@ -113,7 +113,8 @@ struct AdagradUpdateFunctor {
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
     const T next_sum = *sum + model_diff_t * model_diff_t;
     *sum = next_sum;
-    *model = model_val - learning_rate / (sqrt(next_sum) + epsilon) * model_diff_t;
+    *model = model_val - learning_rate / (sqrt(next_sum) + epsilon) * model_diff_t
+             - learning_rate * weight_decay * model_val;
   }
 };
 

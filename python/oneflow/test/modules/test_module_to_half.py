@@ -13,21 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.test_utils.oneflow_pytorch_compatiblity import *
+import unittest
+from oneflow.test_utils.automated_test_util import *
+import oneflow as flow
+import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
-class TestApiCompatiblity(flow.unittest.TestCase):
-    def test_alexnet_compatiblity(test_case):
-        do_test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_alexnet.py", "alexnet", "cuda"
-        )
-
-    def test_resnet50_compatiblity(test_case):
-        do_test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_resnet.py", "resnet50", "cuda"
-        )
+class TestModuleToHalf(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_module_to_half(test_case):
+        input = flow.randn(10, 10).to(flow.float16).cuda()
+        model = flow.nn.Linear(10, 20).half().cuda()
+        output = model(input)
+        test_case.assertEqual(output.dtype, flow.float16)
 
 
 if __name__ == "__main__":

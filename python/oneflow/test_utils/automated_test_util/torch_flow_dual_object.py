@@ -337,7 +337,7 @@ def get_functional_graph_res(
                 print(
                     "Run graph of function: ", repr(oneflow),
                 )
-                test_g.debug(3)
+                test_g.debug(2)
             test_g_res = test_g()
             if verbose:
                 print(
@@ -367,7 +367,7 @@ def get_tensor_graph_res(
         test_g = TestGraphOfTensorMethod()
         if verbose:
             print("Run graph of method: ", repr(oneflow))
-            test_g.debug(3)
+            test_g.debug(2)
         test_g_res = test_g()
         if verbose:
             print(
@@ -438,7 +438,7 @@ def oneflow_eager_run_with_graph_check(
             test_g = get_module_graph_test(graph_train_oneflow, oneflow, *args)
             if verbose:
                 print("Run graph of module: ", repr(oneflow))
-                test_g.debug(3)
+                test_g.debug(2)
             # When testing module methods, kwargs are not considered.
             test_g_res = test_g(*graph_args)
             if verbose:
@@ -451,7 +451,10 @@ def oneflow_eager_run_with_graph_check(
         # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
         # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
         elif (
-            ("oneflow.nn.modules" not in oneflow.__module__)
+            (
+                oneflow.__module__ is not None
+                and ("oneflow.nn.modules" not in oneflow.__module__)
+            )
             or inspect.isfunction(oneflow)
             or (
                 inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__
