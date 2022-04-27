@@ -25,7 +25,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EmbeddingRenormOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return EmbeddingRenormOp::InferLogicalTensorDesc(ctx);
+  return InferLogicalTensorDesc(ctx);
 }
 
 /*static*/ Maybe<void> EmbeddingRenormOp::GetSbp(user_op::SbpContext* ctx) {
@@ -42,7 +42,8 @@ namespace oneflow {
   const Shape& indices_shape = ctx->InputShape("indices", 0);
 
   DimVector out_dim_vec;
-  out_dim_vec.insert(out_dim_vec.end(), indices_shape.dim_vec().cbegin(), indices_shape.dim_vec().cend());
+  out_dim_vec.insert(out_dim_vec.end(), indices_shape.dim_vec().cbegin(),
+                     indices_shape.dim_vec().cend());
   out_dim_vec.push_back(weight_shape.At(1));
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
@@ -51,7 +52,7 @@ namespace oneflow {
 }
 
 /*static*/ auto EmbeddingOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return EmbeddingOp::InferLogicalTensorDesc(ctx);
+  return InferLogicalTensorDesc(ctx);
 }
 
 /*static*/ auto EmbeddingOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
@@ -72,13 +73,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto EmbeddingOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
+/*static*/ Maybe<void> EmbeddingOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("weight", 0);
   return Maybe<void>::Ok();
 }
 
-/* static */ auto EmbeddingGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
+/* static */ Maybe<void> EmbeddingGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& weight_shape = ctx->InputShape("weight", 0);
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = weight_shape;
@@ -86,12 +86,11 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto EmbeddingGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx)
-    -> Maybe<void> {
+/*static*/ Maybe<void> EmbeddingGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return EmbeddingGradOp::InferLogicalTensorDesc(ctx);
 }
 
-/*static*/ auto EmbeddingGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
+/*static*/ Maybe<void> EmbeddingGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
   const user_op::TensorDesc& weight_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("weight", 0);

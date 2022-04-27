@@ -750,7 +750,8 @@ class GatherFunctor {
 class EmbeddingRenormFunctor {
  public:
   EmbeddingRenormFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("embedding_renorm").Input("in").Input("indices").Output("out").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("embedding_renorm").Input("in").Input("indices").Output("out").Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
