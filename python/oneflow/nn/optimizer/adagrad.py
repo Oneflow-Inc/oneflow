@@ -119,7 +119,7 @@ class Adagrad(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 self._state[param]["sum"] = flow.zeros_like(param).fill_(
-                    initial_accumulator_value
+                    param_group["initial_accumulator_value"]
                 )
 
         self._op = (
