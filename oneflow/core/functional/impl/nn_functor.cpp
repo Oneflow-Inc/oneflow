@@ -400,10 +400,10 @@ class TensorDotFunctor {
     for (const int32_t dim_idx : dot_dims_a) dot_size *= reduced_sum_a->shape()->At(dim_idx);
     std::shared_ptr<Tensor> permuted_a =
         JUST(Reshape(JUST(Permute(reduced_sum_a, permuted_dims_a)),
-                     Shape(DimVector({non_dot_size_a, dot_size}))));
+                     Shape(DimVector({-1, dot_size}))));
     std::shared_ptr<Tensor> permuted_b =
         JUST(Reshape(JUST(Permute(reduced_sum_b, permuted_dims_b)),
-                     Shape(DimVector({dot_size, non_dot_size_b}))));
+                     Shape(DimVector({dot_size, -1}))));
 
     return Reshape(JUST(functional::MatMul(permuted_a, permuted_b, false, false, 1.0)),
                    Shape(DimVector({non_dot_shape_a.begin(), non_dot_shape_a.end()})));
