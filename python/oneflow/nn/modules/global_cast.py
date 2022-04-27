@@ -76,6 +76,15 @@ def global_to_global_op(
     return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
 
 
+def _to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
+    if input_tensor.is_global:
+        return global_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
+    else:
+        if "grad_sbp" in kwargs:
+            del kwargs["grad_sbp"]
+        return local_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
+
+
 def to_global_op(input, placement=None, sbp=None, **kwargs):
     r"""Converts the input tensor or input tensor(s) in list/tuple/dict to global tensor(s).
     
@@ -124,14 +133,6 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         True
         True
     """
-    def _to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
-        if input_tensor.is_global:
-            return global_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
-        else:
-            if "grad_sbp" in kwargs:
-                del kwargs["grad_sbp"]
-            return local_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
-
     if isinstance(input, Tensor):
         return _to_global_tensor(input, placement, sbp, **kwargs)
     else:
@@ -146,6 +147,13 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
 
         mapped_input = input_tree.map_leaf(leaf_fn)
         return mapped_input
+
+
+def _to_local_tensor(input_tensor):
+    if not input_tensor.is_global:
+        warnings.warn("The tensor should be global, it will not be converted if not.")
+        return input_tensor
+    return flow._C.to_local(input_tensor)
 
 
 def to_local_op(input):
@@ -189,12 +197,6 @@ def to_local_op(input):
         False
         False
     """
-    def _to_local_tensor(input_tensor):
-        if not input_tensor.is_global:
-            warnings.warn("The tensor should be global, it will not be converted if not.")
-            return input_tensor
-        return flow._C.to_local(input_tensor)
-
     if isinstance(input, Tensor):
         return _to_local_tensor(input)
     else:
