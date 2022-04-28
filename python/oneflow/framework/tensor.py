@@ -162,6 +162,16 @@ def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
 
 
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.permute(self, new_dims)
+
+
 def is_nonzero(input):
     r"""
     is_nonzero(input) -> (bool)
@@ -625,16 +635,6 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, new_dims)
-
-
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -771,6 +771,25 @@ def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
     assert gain == 1.0, "Only gain == 1.0 is supported now"
     initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
     return _init_by_initializer_conf(self, initializer_conf)
+
+
+def _orthogonal(self, gain=1.0):
+    if self.ndimension() < 2:
+        raise ValueError("Only tensors with 2 or more dimensions are supported")
+    rows = self.shape[0]
+    cols = np.prod(self.shape[1:])
+    flattened = np.random.normal(0.0, 1.0, size=(rows, cols))
+    if rows < cols:
+        flattened = flattened.T
+    # TODO
+    q, r = np.linalg.qr(flattened)
+    d = np.diag(r, 0)
+    d = np.sign(d)
+    q *= d
+    if rows < cols:
+        q = q.T
+    self = gain * flow.tensor(q.reshape(self.shape))
+    return self
 
 
 def _normal(self, mean=0, std=1):
@@ -947,6 +966,10 @@ def _max(self, *args, **kwargs):
 
 def _min(self, *args, **kwargs):
     return flow.min(self, *args, **kwargs)
+
+
+def _median(self, *args, **kwargs):
+    return flow.median(self, *args, **kwargs)
 
 
 def _sum(self, dim=None, keepdim=False):
@@ -1152,6 +1175,7 @@ def RegisterMethods():
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal
     Tensor.xavier_uniform_ = _xavier_uniform
+    Tensor.orthogonal_ = _orthogonal
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
     Tensor.copy_ = _copy
@@ -1249,6 +1273,7 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.norm = _norm
     Tensor.transpose = _transpose
+    Tensor.permute = _permute
     Tensor.local_to_global = _local_to_global
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
@@ -1273,7 +1298,6 @@ def RegisterMethods():
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
-    Tensor.permute = _permute
     Tensor.to = _to
     Tensor.half = _half
     Tensor.gather = _gather
@@ -1305,6 +1329,7 @@ def RegisterMethods():
     Tensor.nonzero = _nonzero
     Tensor.max = _max
     Tensor.min = _min
+    Tensor.median = _median
     Tensor.sum = _sum
     Tensor.mean = _mean
     Tensor.prod = _prod
