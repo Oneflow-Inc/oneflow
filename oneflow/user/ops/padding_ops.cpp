@@ -229,5 +229,4 @@ REGISTER_USER_OP_GRAD("replication_pad2d")
       return Maybe<void>::Ok();
     });
 
-
 }  // namespace oneflow

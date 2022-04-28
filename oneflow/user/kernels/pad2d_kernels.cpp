@@ -271,6 +271,5 @@ REGISTER_REPLICATION_PAD2D_WITH_DEVICE(DeviceType::kCUDA)
 REGISTER_REPLICATION_PAD2D_KERNELS(DeviceType::kCUDA, float16)
 #endif
 
-
 }  // namespace user_op
 }  // namespace oneflow

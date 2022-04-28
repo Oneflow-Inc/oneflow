@@ -207,7 +207,6 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR,
                                  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  PADDING_DATA_TYPE_CUDA_SEQ);
 
-
 }  // namespace user_op
 }  // namespace oneflow
 

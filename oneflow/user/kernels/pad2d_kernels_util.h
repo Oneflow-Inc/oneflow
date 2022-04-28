@@ -241,7 +241,6 @@ OF_DEVICE_FUNC void DoReplicationPad2dGrad(const IN_T* src, IN_T* dest,
 #define INSTANTIATE_REPLICATION_PAD2D_GRAD_FUNCTOR(device_type_v, dtype_pair) \
   template struct ReplicationPad2dGradFunctor<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>;
 
-
 }  // namespace user_op
 }  // namespace oneflow
 
