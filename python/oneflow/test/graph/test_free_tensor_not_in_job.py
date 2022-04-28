@@ -21,31 +21,21 @@ import oneflow.unittest
 import oneflow.nn as nn
 
 
-class my_model(nn.Module):
-    def __init__(self):
-        super(my_model, self).__init__()
-        self.batch_norm = nn.BatchNorm1d(6)
+def get_bn_graph():
+    model = nn.BatchNorm1d(6)
+    model.eval()
+    model.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
 
-    def forward(self, x):
-        y = self.batch_norm(x)
-        return y
+    class Testgraph(flow.nn.Graph):
+        def __init__(self, model):
+            super(Testgraph, self).__init__()
+            self.module = model
 
+        def build(self, x):
+            return self.module(x)
 
-model = my_model()
-model.eval()
-model.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-
-
-class Testgraph(flow.nn.Graph):
-    def __init__(self, model):
-        super(Testgraph, self).__init__()
-        self.module = model
-
-    def build(self, x):
-        return self.module(x)
-
-
-test_graph = Testgraph(model)
+    test_graph = Testgraph(model)
+    return test_graph
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -54,7 +44,7 @@ class TestFreeTensorNotInJob(flow.unittest.TestCase):
         x = flow.randn(1, 6, 2).to_global(
             placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0)
         )
-        y = test_graph(x)
+        y = get_bn_graph()(x)
         test_case.assertEqual(y.size(), (1, 6, 2))
 
 
