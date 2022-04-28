@@ -66,6 +66,25 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let hasCanonicalizer = 1;
 }
 
+def F32ElementsAttr : FloatElementsAttr<32>;
+
+def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSideEffect]> {
+  let summary = "Auxiliary variable op for constant folding, only exists in IR.";
+  let arguments = (ins
+    F32ElementsAttr:$value,
+    StrAttr:$op_name,
+    StrAttr:$device_tag,
+    StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
+    OptionalAttr<I64Attr>:$scope_symbol_id,
+    OptionalAttr<I64ArrayAttr>:$hierarchy,
+    StrArrayAttr:$nd_sbp
+  );
+  let results = (outs
+    AnyType:$output
+  );
+  let hasFolder = 1;
+}
+
 def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
   let summary = "mark a result as loss to prevent its defining op from optimized away";
   let arguments = (ins Variadic<AnyType>:$loss);
@@ -246,6 +265,12 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
   let hasVerifier = 1;
 }
 
+def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", [DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+}
+
 #endif // REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
 #endif // ONEFLOW_OPS
@@ -285,6 +310,21 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
+}
+
+def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
+  let summary = "Convert variable op to variable ir op for constant folding.";
+  let constructor = "mlir::oneflow::createPreConvertInferenceOpPass()";
+}
+
+def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
+  let summary = "Convert ops to their inference version and rewrite them with a more performant equivalent in inference workflow.";
+  let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
+}
+
+def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
+  let summary = "Convert variable ir op to variable op after contant folding.";
+  let constructor = "mlir::oneflow::createPostConvertInferenceOpPass()";
 }
 
 #endif // ONEFLOW_PASSES
