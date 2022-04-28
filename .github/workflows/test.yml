@@ -47,7 +47,7 @@ jobs:
             exit 0
           fi
           python3 -m pip install -U pip setuptools wheel
-          python3 -m pip install oss2
+          python3 -m pip install 'cryptography<2.2' oss2
           python3 tools/package_mirror.py -i $PWD
 
   check_license_and_format:
@@ -1071,7 +1071,7 @@ jobs:
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Module API test
-        timeout-minutes: 45
+        timeout-minutes: 60
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh

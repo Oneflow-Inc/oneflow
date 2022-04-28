@@ -291,7 +291,7 @@ class Optimizer(object):
                     if set_to_none:
                         param.grad = None
                     else:
-                        param.grad.zeros_()
+                        param.grad.zero_()
 
     def _parse_input_parameters(self, parameters):
         """

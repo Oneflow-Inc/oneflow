@@ -118,7 +118,6 @@ class PoolingNdGradFunctor {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
         op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name)
                                                     .Input("x")
-                                                    .Input("y")
                                                     .Input("indice")
                                                     .Input("dy")
                                                     .Output("dx")
@@ -130,7 +129,6 @@ class PoolingNdGradFunctor {
     return mode + "pool_" + std::to_string(ndims) + "d_grad";
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& indice,
                            const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
                            const int32_t& ndims, const std::string& data_format,
@@ -151,7 +149,7 @@ class PoolingNdGradFunctor {
     CHECK_OR_RETURN(it != op_expr_map_.end())
         << "Encounter unsupported op " << op_type_name << " in PoolingNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, indice, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, indice, dy}, attrs);
   }
 
  protected:
@@ -650,15 +648,14 @@ class AvgPoolingNdGradFunctor {
   AvgPoolingNdGradFunctor() {
     for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
-      op_expr_map_[op_type_name] = CHECK_JUST(
-          one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
+      op_expr_map_[op_type_name] =
+          CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
     }
   }
   static std::string GetOpTypeName(const int32_t& ndims) {
     return "avgpool_" + std::to_string(ndims) + "d_grad";
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims,
                            const std::string& data_format, const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& kernel_size,
@@ -677,7 +674,7 @@ class AvgPoolingNdGradFunctor {
     CHECK_OR_RETURN(it != op_expr_map_.end())
         << "Encounter unsupported op " << op_type_name << " in PoolingNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy}, attrs);
   }
 
  protected:

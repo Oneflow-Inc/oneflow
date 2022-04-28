@@ -371,7 +371,7 @@ class MaxPool3DGradGpuKernel final : public user_op::OpKernel, public user_op::C
 };
 
 #define REGISTER_POOL_CUDA_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("avg_pool_1d")                                                   \
+  REGISTER_USER_KERNEL("tf_avg_pool_1d")                                                \
       .SetCreateFn<AvgPool1DGpuKernel<dtype>>()                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
