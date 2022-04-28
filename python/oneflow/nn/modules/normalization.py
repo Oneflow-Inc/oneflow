@@ -145,7 +145,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
     for i in range(0, len(normalized_shape)):
         if input.shape[i + begin_params_axis] != normalized_shape[i]:
             raise RuntimeError(
-                f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {x.shape}"
+                f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {input.shape}"
             )
 
     if not input.is_cuda:

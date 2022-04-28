@@ -996,6 +996,119 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.median,
+    r"""
+    median(input) -> Tensor
+
+    Returns the median of the values in input.
+    The documentation is referenced from:
+    https://pytorch.org/docs/1.10/generated/torch.median.html#torch.median
+
+    .. note::
+        The median is not unique for :attr:`input` tensors with an even number
+        of elements. In this case the lower of the two medians is returned.
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float32)
+        >>> flow.median(x)
+        tensor(1., dtype=oneflow.float32)
+
+    .. function:: median(input, dim=-1, keepdim=False, *, out=None) -> (Tensor, LongTensor)
+        :noindex:
+
+    Returns a tuple ``(values, indices)`` where ``values`` contains the median of each row of :attr:`input`
+    in the dimension :attr:`dim`, and ``indices`` contains the index of the median values found in the dimension :attr:`dim`.
+
+    By default, :attr:`dim` is the last dimension of the :attr:`input` tensor.
+
+    If :attr:`keepdim` is ``True``, the output tensors are of the same size
+    as :attr:`input` except in the dimension :attr:`dim` where they are of size 1.
+    Otherwise, :attr:`dim` is squeezed (see :func:`flow.squeeze`), resulting in
+    the outputs tensor having 1 fewer dimension than :attr:`input`.
+
+    .. note::
+        The median is not unique for :attr:`input` tensors with an even number
+        of elements in the dimension :attr:`dim`. In this case the lower of the
+        two medians is returned.
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int): the dimension to reduce.
+        keepdim (bool): whether the output tensor has :attr:`dim` retained or not.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([[ 0.2505, -0.3982, -0.9948,  0.3518, -1.3131],
+        ...    [ 0.3180, -0.6993,  1.0436,  0.0438,  0.2270],
+        ...    [-0.2751,  0.7303,  0.2192,  0.3321,  0.2488],
+        ...    [ 1.0778, -1.9510,  0.7048,  0.4742, -0.7125]])
+        >>> flow.median(a, 1)
+        (tensor([-0.3982,  0.2270,  0.2488,  0.4742], dtype=oneflow.float32), tensor([1, 4, 4, 3], dtype=oneflow.int64))
+    
+    ..
+        Feature Stage of Operator [index_select].
+        - Maintainer List [@simonJJJ]
+        - Current Stage [pre Alpha]
+        - Alpha Stage Check List [ ]
+          - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[Yes]
+          - Doc(API Doc must be provided and showed normally on the web page.)[Yes]
+          - Functionality and its' Test [ ]
+            - Functionality is highly compatiable with PyTorch 1.11. [Yes]
+            - eager local [Yes] [@simonJJJ]
+              - forward [Yes]
+              - backward [Yes]
+              - gpu [Yes]
+              - cpu [Yes]
+            - graph local [ ] [@simonJJJ]
+              - forward [Yes]
+              - backward [ ]
+              - gpu [Yes]
+              - cpu [Yes]
+          - Exception Handling
+            - Exception Message and Hint must be provided [Yes]
+        - Beta Stage Check List [ ]
+          - API(High compatibility with PyTorch 1.11, shouldn't have anything incompatible for a naive reason.)[ ]
+          - Doc(Same standard as Alpha Stage)[Yes]
+          - Functionality and its' Test [ ]
+            - eager global [Yes] [@simonJJJ]
+              - forward [Yes]
+              - backward [Yes]
+              - gpu [Yes]
+              - cpu [Yes]
+            - graph gloal [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+            - CUDA kernel [ ]
+            - CPU kernel [ ]
+            - N nodes M devices [ ]
+          - Exception Handling [ ]
+            - Exception Message and Hint must be provided [ ]
+            - Try you best to do Exception Recovery [ ]
+        - Stable Stage Check List [ ]
+          - API(Same standard as Beta Stage)[ ]
+          - Doc(Same standard as Beta Stage)[ ]
+          - Functionality and its' Test [ ]
+            - fp16 and AMP [ ]
+            - NHWC [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+          - Exception Handling [ ]
+    """,
+)
+
+add_docstr(
     oneflow.pow,
     r"""Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
