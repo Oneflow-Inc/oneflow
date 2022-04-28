@@ -94,6 +94,7 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
       user_op::UserOpConfWrapper grad_op =
           builder.Op(mode + "_pool_" + std::to_string(dim) + "d_grad")
               .Input("x", op.input("x", 0))
+              .Input("y", op.output("y", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
               .Attr("data_format", op.attr<std::string>("data_format"))
