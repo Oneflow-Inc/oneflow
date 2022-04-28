@@ -36,11 +36,8 @@ Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const in
     std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
     return reduce_axis;
   } else {
-    CHECK_GE_OR_RETURN(ndim, naxis)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << ", " << ndim - 1 << "], but got " << naxis << ")";
-
     std::vector<int32_t> reduce_axis(naxis);
+    std::vector<int32_t> axis_num(ndim);
     for (int32_t i = 0; i < naxis; i++) {
       CHECK_OR_RETURN(axis[i] >= -ndim && axis[i] < ndim)
           << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
@@ -50,6 +47,10 @@ Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const in
       } else {
         reduce_axis[i] = axis[i];
       }
+      axis_num[reduce_axis[i]]++;
+      CHECK_OR_RETURN(axis_num[reduce_axis[i]] < 2)
+          << Error::RuntimeError() << "dim " << reduce_axis[i]
+          << " appears multiple times in the list of dims";
     }
     return reduce_axis;
   }
