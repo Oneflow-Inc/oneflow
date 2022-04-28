@@ -192,6 +192,19 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
     (*op_name2is_mirrored_parallel_view)[operator_conf.name()] = true;
   }
   job_->mutable_net()->add_op()->CopyFrom(operator_conf);
+
+  // set up the module config
+  const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(operator_conf.scope_symbol_id());
+  if (scope.scope_proto().has_module_struct() && scope.scope_proto().module_struct().has_name()) {
+    const auto& module_name = scope.scope_proto().module_struct().name();
+    auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+    if (!(*module_name2module_conf)[module_name].has_module_struct()) {
+      (*module_name2module_conf)[module_name].mutable_module_struct()->CopyFrom(
+          scope.scope_proto().module_struct());
+    }
+
+    (*module_name2module_conf)[module_name].add_ops()->CopyFrom(operator_conf);
+  }
 }
 
 Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,

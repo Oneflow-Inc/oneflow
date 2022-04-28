@@ -16,5 +16,5 @@ message ScopeProto {
   required int64 session_id = 80;
   map<string, AttrValue> attr_name2attr_value = 90;
   optional string calculation_pass_name = 100 [default = "forward_pass"];
-  optional ModuleConf module_config = 110;
+  optional ModuleStruct module_struct = 110;
 }

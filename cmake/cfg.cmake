@@ -46,6 +46,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     oneflow/core/graph/boxing/collective_boxing.proto
     oneflow/core/register/blob_desc.proto
     oneflow/core/job/scope.proto
+    oneflow/core/job/module_conf.proto
     oneflow/core/job/mirrored_parallel.proto
     oneflow/core/operator/op_attribute.proto
     oneflow/core/operator/arg_modifier_signature.proto
@@ -84,6 +85,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/framework/user_op_conf.proto
       oneflow/core/job/sbp_parallel.proto
       oneflow/core/job/scope.proto
+      oneflow/core/job/module_conf.proto
       oneflow/core/job/mirrored_parallel.proto
       oneflow/core/operator/op_attribute.proto
       oneflow/core/job/parallel_conf_signature.proto
