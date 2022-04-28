@@ -22,10 +22,12 @@ namespace oneflow {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
   CHECK_OR_RETURN(x.shape() == y.shape())
+      << Error::RuntimeError()
       << "inconsistent tensor size, expected tensor to have the same number of elements, but got "
       << x.shape().elem_cnt() << " and " << y.shape().elem_cnt() << "elements respectively";
   CHECK_OR_RETURN(x.shape().NumAxes() == 1)
-      << "1D tensors expected, but got " << x.shape().NumAxes() << "D tensors";
+      << Error::RuntimeError() << "1D tensors expected, but got " << x.shape().NumAxes()
+      << "D tensors";
   *ctx->OutputShape("out", 0) = Shape({});
   return Maybe<void>::Ok();
 }
@@ -48,8 +50,8 @@ namespace oneflow {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
   CHECK_OR_RETURN(x.data_type() == y.data_type())
-      << "expected both vectors to have same dtype, but found " << DataType_Name(x.data_type())
-      << " and " << DataType_Name(y.data_type());
+      << Error::RuntimeError() << "expected both vectors to have same dtype, but found "
+      << DataType_Name(x.data_type()) << " and " << DataType_Name(y.data_type());
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
