@@ -44,7 +44,7 @@ Maybe<void> RawCheckUnflattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSb
 }  // namespace
 
 static constexpr auto* CheckUnflattenHierarchy =
-    DECORATE(&RawCheckUnflattenHierarchy, ThreadLocalCopiable);
+    DECORATE(&RawCheckUnflattenHierarchy, ThreadLocalCachedCopiable);
 
 Maybe<one::Tensor> UnflattenHierarchy(const std::shared_ptr<one::Tensor>& tensor,
                                       Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {

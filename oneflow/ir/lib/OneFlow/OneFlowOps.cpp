@@ -16,14 +16,15 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
-#include "OneFlow/Passes.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 
+#include "llvm/Support/Casting.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -70,6 +71,12 @@ static ParseResult parseConstantOp(OpAsmParser& parser, OperationState& result) 
   return success();
 }
 
+ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> values) {
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [&](int32_t v) -> Attribute { return rewriter.getSI32IntegerAttr(v); }));
+  return rewriter.getArrayAttr(attrs);
+}
+
 namespace {
 
 LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
@@ -86,7 +93,7 @@ LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
     }
     OperationState state(op->getLoc(), op->getName(), op->getOperands(), data_outputs.getTypes(),
                          attributes);
-    auto created = rewriter.createOperation(state);
+    auto created = rewriter.create(state);
     for (auto data_output : data_outputs) {
       data_output.replaceAllUsesWith(created->getOpResult(data_output.getResultNumber()));
     }
@@ -147,7 +154,7 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
       state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-      if (auto created = rewriter.createOperation(state)) {
+      if (auto created = rewriter.create(state)) {
         if (created->hasTrait<OpTrait::AttrSizedOperandSegments>() == false) {
           created->removeAttr(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
         }
@@ -306,7 +313,7 @@ void Job::build(OpBuilder& builder, OperationState& state, StringRef name, Funct
   state.addRegion();
 }
 
-static ParseResult parseJob(OpAsmParser& parser, OperationState& result) {
+ParseResult Job::parse(OpAsmParser& parser, OperationState& result) {
   auto buildFuncType = [](Builder& builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
                           function_interface_impl::VariadicFlag,
                           std::string&) { return builder.getFunctionType(argTypes, results); };
@@ -315,24 +322,22 @@ static ParseResult parseJob(OpAsmParser& parser, OperationState& result) {
                                                   buildFuncType);
 }
 
-static void print(Job op, OpAsmPrinter& p) {
-  FunctionType fnType = op.getType();
-  function_interface_impl::printFunctionOp(p, op, fnType.getInputs(), /*isVariadic=*/false,
-                                           fnType.getResults());
+void Job::print(OpAsmPrinter& p) {
+  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
 }
 
-static LogicalResult verify(Job op) {
+LogicalResult Job::verify() {
   // If this function is external there is nothing to do.
-  if (op.isExternal()) return success();
+  if (isExternal()) return success();
 
   // Verify that the argument list of the function and the arg list of the entry
   // block line up.  The trait already verified that the number of arguments is
   // the same between the signature and the block.
-  auto fnInputTypes = op.getType().getInputs();
-  Block& entryBlock = op.front();
+  auto fnInputTypes = getFunctionType().getInputs();
+  Block& entryBlock = front();
   for (unsigned i = 0, e = entryBlock.getNumArguments(); i != e; ++i)
     if (fnInputTypes[i] != entryBlock.getArgument(i).getType())
-      return op.emitOpError("type of entry block argument #")
+      return emitOpError("type of entry block argument #")
              << i << '(' << entryBlock.getArgument(i).getType()
              << ") must match the type of the corresponding argument in "
              << "function signature(" << fnInputTypes[i] << ')';
@@ -340,20 +345,20 @@ static LogicalResult verify(Job op) {
   return success();
 }
 
-static LogicalResult verify(mlir::oneflow::ReturnOp op) {
-  auto job = cast<Job>(op->getParentOp());
+LogicalResult ReturnOp::verify() {
+  auto job = cast<Job>((*this)->getParentOp());
 
   // The operand number and types must match the function signature.
-  const auto& results = job.getType().getResults();
-  if (op.getNumOperands() != results.size())
-    return op.emitOpError("has ") << op.getNumOperands() << " operands, but enclosing function (@"
-                                  << job.getName() << ") returns " << results.size();
+  const auto& results = job.getFunctionType().getResults();
+  if (getNumOperands() != results.size())
+    return emitOpError("has ") << getNumOperands() << " operands, but enclosing function (@"
+                               << job.getName() << ") returns " << results.size();
 
   for (unsigned i = 0, e = results.size(); i != e; ++i)
-    if (op.getOperand(i).getType() != results[i])
-      return op.emitError() << "type of return operand " << i << " (" << op.getOperand(i).getType()
-                            << ") doesn't match function result type (" << results[i] << ")"
-                            << " in function @" << job.getName();
+    if (getOperand(i).getType() != results[i])
+      return emitError() << "type of return operand " << i << " (" << getOperand(i).getType()
+                         << ") doesn't match function result type (" << results[i] << ")"
+                         << " in function @" << job.getName();
 
   return success();
 }
@@ -387,6 +392,105 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
     if (auto ctrl_out = cec.ctrlOutputResult()) { return ctrl_out.cast<OpResult>(); }
   }
   return llvm::None;
+}
+
+bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+
+llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() { return {this->in(), this->weight()}; }
+
+llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                 PatternRewriter& rewriter) {
+  auto conv_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  operands.push_back(value[1]);
+  if (conv_op.bias()) operands.push_back(conv_op.bias());
+  if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+  NamedAttrList attributes = conv_op->getAttrs();
+  attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res = rewriter
+                 .create<oneflow::Conv2DOp>(conv_op.getLoc(), conv_op->getResultTypes(), operands,
+                                            attributes)
+                 ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  return results;
+}
+
+bool BiasAddOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
+
+llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() { return {this->a()}; }
+
+llvm::DenseSet<Value> BiasAddOp::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                  PatternRewriter& rewriter) {
+  auto bias_add_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  operands.push_back(bias_add_op.b());
+  NamedAttrList attributes = bias_add_op->getAttrs();
+  attributes.set(bias_add_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
+  auto res = rewriter
+                 .create<oneflow::BiasAddOp>(bias_add_op.getLoc(), bias_add_op->getResultTypes(),
+                                             operands, attributes)
+                 ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  return results;
+}
+
+bool NormalizationOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
+
+llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() { return {this->x()}; }
+
+llvm::DenseSet<Value> NormalizationOp::ResultsToTranspose() { return {this->y()}; }
+
+llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                        PatternRewriter& rewriter) {
+  auto normalization_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  if (normalization_op.moving_mean()) operands.push_back(normalization_op.moving_mean());
+  if (normalization_op.moving_variance()) operands.push_back(normalization_op.moving_variance());
+  operands.push_back(normalization_op.gamma());
+  operands.push_back(normalization_op.beta());
+  if (normalization_op._add_to_output()) operands.push_back(normalization_op._add_to_output());
+  NamedAttrList attributes = normalization_op->getAttrs();
+  attributes.set(normalization_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
+  auto res =
+      rewriter
+          .create<oneflow::NormalizationOp>(
+              normalization_op.getLoc(), normalization_op->getResultTypes(), operands, attributes)
+          ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  return results;
+}
+
+bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+
+llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() { return {this->x()}; }
+
+llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), this->indice()}; }
+
+llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                    PatternRewriter& rewriter) {
+  auto maxpool_2d_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  NamedAttrList attributes = maxpool_2d_op->getAttrs();
+  attributes.set(maxpool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res = rewriter
+                 .create<oneflow::MaxPool2DOp>(
+                     maxpool_2d_op.getLoc(), maxpool_2d_op->getResultTypes(), operands, attributes)
+                 ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  results.push_back(res[1]);
+  return results;
 }
 
 }  // namespace oneflow

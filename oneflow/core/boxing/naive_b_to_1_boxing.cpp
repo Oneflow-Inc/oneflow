@@ -39,7 +39,7 @@ Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocalCopiable);
+static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocalCachedCopiable);
 
 }  // namespace
 

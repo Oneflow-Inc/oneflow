@@ -60,7 +60,7 @@ class L1Loss(_Loss):
         output = \\sum_{i=1}^n|Target_i - Input_i|
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
+        input (oneflow.Tensor): the input Tensor.
         target (oneflow.Tensor): The target Tensor.
         reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
 

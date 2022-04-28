@@ -179,7 +179,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
     CpuStream* cpu_stream = stream->As<CpuStream>();
-    size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
+    size_t num_threads = cpu_stream->device()->GetNumThreads();
     CpuNumThreadsGuard guard(num_threads);
 
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();

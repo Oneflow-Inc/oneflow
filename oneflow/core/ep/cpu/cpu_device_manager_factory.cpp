@@ -43,6 +43,28 @@ COMMAND(DeviceManagerRegistry::RegisterDeviceManagerFactory(
 
 }  // namespace
 
+namespace {
+
+class MockDeviceManagerFactory : public DeviceManagerFactory {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MockDeviceManagerFactory);
+  MockDeviceManagerFactory() = default;
+  ~MockDeviceManagerFactory() override = default;
+
+  std::unique_ptr<DeviceManager> NewDeviceManager(DeviceManagerRegistry* registry) override {
+    return std::make_unique<CpuDeviceManager>(registry);
+  }
+
+  DeviceType device_type() const override { return DeviceType::kMockDevice; }
+
+  std::string device_type_name() const override { return "mock"; }
+};
+
+COMMAND(DeviceManagerRegistry::RegisterDeviceManagerFactory(
+    std::make_unique<MockDeviceManagerFactory>()))
+
+}  // namespace
+
 }  // namespace ep
 
 }  // namespace oneflow

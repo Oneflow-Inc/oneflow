@@ -114,6 +114,7 @@ struct LruCacheContext {
   void* mutex;
   uint64_t n_set;
   uint32_t line_size;
+  CacheOptions::MemoryKind value_memory_kind;
 };
 
 __global__ void InitCacheSetMutex(uint32_t n_set, void* mutex) {
@@ -164,7 +165,19 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   const size_t keys_size = n_set * keys_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->keys), keys_size));
   const size_t lines_size = n_set * lines_size_per_set;
-  OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
+  if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
+    OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
+  } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION", false)) {
+      OF_CUDA_CHECK(cudaMallocHost(&(ctx->lines), lines_size));
+    } else {
+      OF_CUDA_CHECK(
+          NumaAwareCudaMallocHost(device, reinterpret_cast<void**>(&ctx->lines), lines_size));
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+  ctx->value_memory_kind = options.value_memory_kind;
   const size_t ages_size = n_set * ages_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->ages), ages_size));
   const size_t mutex_size = n_set * mutex_size_per_set;
@@ -176,7 +189,13 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
 template<typename Key, typename Elem>
 void DestroyLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
   OF_CUDA_CHECK(cudaFree(ctx->keys));
-  OF_CUDA_CHECK(cudaFree(ctx->lines));
+  if (ctx->value_memory_kind == CacheOptions::MemoryKind::kDevice) {
+    OF_CUDA_CHECK(cudaFree(ctx->lines));
+  } else if (ctx->value_memory_kind == CacheOptions::MemoryKind::kHost) {
+    OF_CUDA_CHECK(cudaFreeHost(ctx->lines));
+  } else {
+    UNIMPLEMENTED();
+  }
   OF_CUDA_CHECK(cudaFree(ctx->ages));
   OF_CUDA_CHECK(cudaFree(ctx->mutex));
 }

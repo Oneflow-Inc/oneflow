@@ -22,15 +22,11 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("GetCurrentScope", []() { return GetCurrentScope().GetPtrOrThrow(); });
-  m.def("InitGlobalScopeStack", [](const std::shared_ptr<Scope>& scope) {
-    return InitThreadLocalScopeStack(scope).GetOrThrow();
-  });
+  m.def("GetCurrentScope", &GetCurrentScope);
+  m.def("InitGlobalScopeStack", &InitThreadLocalScopeStack);
 
-  m.def("GlobalScopeStackPush", [](const std::shared_ptr<Scope>& scope) {
-    return ThreadLocalScopeStackPush(scope).GetOrThrow();
-  });
-  m.def("GlobalScopeStackPop", []() { return ThreadLocalScopeStackPop().GetOrThrow(); });
+  m.def("GlobalScopeStackPush", &ThreadLocalScopeStackPush);
+  m.def("GlobalScopeStackPop", &ThreadLocalScopeStackPop);
 }
 
 }  // namespace oneflow

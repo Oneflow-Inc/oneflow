@@ -36,11 +36,11 @@ def mean_op(input, dim=None, keepdim=False):
     return flow._C.reduce_mean(input, axis=axis_checked, keepdims=keepdim)
 
 
-def prod_op(input, dim=None, keepdim=False):
+def prod_op(input, dim=None, keepdim=False, *, dtype=None):
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
-    return flow._C.reduce_prod(input, axis_checked, keepdim)
+    return flow._C.reduce_prod(input, axis_checked, keepdim, dtype=dtype)
 
 
 def all_op(input, dim=None, keepdim=False):

@@ -28,7 +28,7 @@ template<typename T, typename Enabled = void>
 class Maybe;
 
 template<typename T>
-struct Optional;
+class Optional;
 
 Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>&);
 namespace {

@@ -1037,6 +1037,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));

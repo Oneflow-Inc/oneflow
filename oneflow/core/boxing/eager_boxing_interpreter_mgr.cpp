@@ -158,7 +158,7 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
 
 }  // namespace
 
-static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocal);
+static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocalCached);
 
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<NdSbp> in_nd_sbp,
                                                    Symbol<NdSbp> out_nd_sbp,
@@ -184,7 +184,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<NdSbp> in_nd_sbp,
 }
 
 static constexpr auto* CachedGetBoxingInterpreter =
-    DECORATE(&GetBoxingInterpreter, ThreadLocalCopiable);
+    DECORATE(&GetBoxingInterpreter, ThreadLocalCachedCopiable);
 
 }  // namespace
 

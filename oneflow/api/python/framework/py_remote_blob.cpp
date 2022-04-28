@@ -55,7 +55,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("axis", &SplitDistribute::axis);
   distribute.def("auto", &GlobalAutoDistribute);
   distribute.def("broadcast", &GlobalBroadcastDistribute);
-  distribute.def("split", [](int axis) { return GlobalSplitDistribute(axis).GetPtrOrThrow(); });
+  distribute.def("split", [](int axis) { return GlobalSplitDistribute(axis); });
 
   py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")
       .def(py::init(

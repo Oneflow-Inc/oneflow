@@ -41,6 +41,8 @@ class VirtualMachine final {
 
   const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
+  Maybe<void> CloseVMThreads();
+
  private:
   friend class InstructionsBuilder;
 
@@ -50,6 +52,9 @@ class VirtualMachine final {
   vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
 
+  Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
+
+  bool vm_threads_closed_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;

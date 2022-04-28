@@ -24,16 +24,36 @@ limitations under the License.
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
                                   curandState* state) {
-  XPU_1D_KERNEL_LOOP(i, n) {
-    keys[i] = curand(state + i);
+  const int id = blockIdx.x * blockDim.x + threadIdx.x;
+  curandState local_state = state[id];
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    keys[i] = curand(&local_state);
     values[i] = i;
   }
+  state[id] = local_state;
 }
+
+namespace {
+
+template<typename K>
+size_t GetCubSortPairsTempStorageSize(int64_t n) {
+  size_t cub_sort_temp_store_size = 0;
+  OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
+                                                       nullptr, nullptr, nullptr, n)));
+  size_t temp_store_size = GetCudaAlignedSize(cub_sort_temp_store_size);
+  CHECK_GE(temp_store_size, 0) << "temp_store_size should >= 0.";
+  CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()))
+      << "temp_store_size should < " << static_cast<size_t>(GetMaxVal<int64_t>());
+  return temp_store_size;
+}
+
+}  // namespace
 
 class GpuRandPermKernel final : public user_op::OpKernel {
  public:
@@ -59,7 +79,9 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
-    const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+    auto* stream = ctx->stream();
+    const auto device_index = stream->device()->device_index();
+    const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
     CHECK_NOTNULL(generator);
 
     int32_t block_num = gpu_generator->max_block_num();
@@ -78,10 +100,9 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
     void* tmp_base =
         reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
-    size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
+    size_t temp_storage_bytes = GetCubSortPairsTempStorageSize<int32_t>(n);
 
-    GeneKeysAndValues<<<block_num, kCudaThreadsNumPerBlock, 0,
-                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+    GeneKeysAndValues<<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
         n, value_base, key_base, curand_states);
 
     auto err = cub::DeviceRadixSort::SortPairs(
@@ -110,8 +131,7 @@ REGISTER_USER_KERNEL("randperm")
       const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
 
       /* CUB Temp Storage */
-      const int32_t temp_storage_bytes =
-          InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
+      const int32_t temp_storage_bytes = GetCubSortPairsTempStorageSize<int32_t>(n);
 
       return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes;
     });

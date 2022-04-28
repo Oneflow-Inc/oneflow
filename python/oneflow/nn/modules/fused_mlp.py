@@ -77,6 +77,9 @@ class FusedMLP(Module):
         self.reset_parameters()
 
     def add_parameters(self) -> None:
+        """Register parameter in FusedMLP module. 
+
+        """
         if self.hidden_layer_num != 0:
             # First layer.
             self.register_parameter(
@@ -129,18 +132,33 @@ class FusedMLP(Module):
             )
 
     def weight(self, i):
+        """Returns the ith weight. 
+
+        """
         return getattr(self, f"weight_{i}")
 
     def weights(self):
+        """Returns the weight list in FusedMLP module. 
+
+        """
         return [self.weight(i) for i in range(self.hidden_layer_num + 1)]
 
     def bias(self, i):
+        """Return the ith bias. 
+
+        """
         return getattr(self, f"bias_{i}")
 
     def biases(self):
+        """Returns the bias list in FusedMLP module. 
+
+        """
         return [self.bias(i) for i in range(self.hidden_layer_num + 1)]
 
     def reset_parameters(self) -> None:
+        """Reset the parameters in FusedMLP module. 
+
+        """
         for layer_idx in range(self.hidden_layer_num + 1):
             flow.nn.init.kaiming_uniform_(self.weight(layer_idx), a=math.sqrt(5))
             (fan_in, _) = _calculate_fan_in_and_fan_out(self.weight(layer_idx))

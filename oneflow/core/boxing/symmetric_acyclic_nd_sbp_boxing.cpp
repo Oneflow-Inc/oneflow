@@ -35,7 +35,7 @@ Maybe<one::OpExpr> MakeToConsistentOpExpr() {
 }
 
 static constexpr auto* GetLocalToConsistentOpExpr =
-    DECORATE(&MakeToConsistentOpExpr, ThreadLocalCopiable);
+    DECORATE(&MakeToConsistentOpExpr, ThreadLocalCachedCopiable);
 
 Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor>& tensor,
                                                const Shape& shape,

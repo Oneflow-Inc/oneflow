@@ -40,7 +40,8 @@ Maybe<std::tuple<Symbol<PlacedNdSbp>, Symbol<PlacedNdSbp>>> RawInOutPlacedNdSbpD
       JUST(PlacedNdSbp::New(SymbolOf(reduced_out_nd_sbp), SymbolOf(reduced_out_placement))));
 }
 
-constexpr auto* InOutPlacedNdSbpDimReduce = DECORATE(&RawInOutPlacedNdSbpDimReduce, ThreadLocal);
+constexpr auto* InOutPlacedNdSbpDimReduce =
+    DECORATE(&RawInOutPlacedNdSbpDimReduce, ThreadLocalCached);
 
 Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                       const Shape& logical_shape) {
@@ -62,7 +63,7 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
 }
 
 static constexpr auto* CheckParallelDimReduce =
-    DECORATE(&RawCheckParallelDimReduce, ThreadLocalCopiable);
+    DECORATE(&RawCheckParallelDimReduce, ThreadLocalCachedCopiable);
 
 }  // namespace
 

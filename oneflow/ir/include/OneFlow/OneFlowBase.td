@@ -39,6 +39,7 @@ def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 def OneFlow_TensorSource : NativeOpTrait<"TensorSource">;
 def OneFlow_OnlyExistsInIR : NativeOpTrait<"OnlyExistsInIR">;
+def OneFlow_ElementwiseOp : NativeOpTrait<"IsElementwise">;
 
 class OneFlow_IROp<string mnemonic, list<Trait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_OnlyExistsInIR])> {}
@@ -256,7 +257,6 @@ class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let summary = "OneFlow Max Pooling Grad operation";
   let input = (ins
     AnyType:$x,
-    AnyType:$y,
     AnyType:$indice,
     AnyType:$dy
   );
@@ -283,7 +283,6 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let summary = "OneFlow Average Pooling Grad operation";
   let input = (ins
     AnyType:$x,
-    AnyType:$y,
     AnyType:$dy
   );
   let output = (outs

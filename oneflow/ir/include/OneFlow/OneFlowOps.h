@@ -25,6 +25,7 @@ limitations under the License.
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 
+#include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowOpTraits.h"
@@ -33,9 +34,11 @@ limitations under the License.
 
 namespace mlir {
 
+namespace func {
 class FuncOp;
+}  // namespace func
 
-}
+}  // namespace mlir
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
@@ -64,6 +67,8 @@ ResultRange GetDataOutputResults(Operation* op);
 OperandRange GetDataInputOperands(Operation* op);
 llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op);
 llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
+
+ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> values);
 
 }  // namespace oneflow
 

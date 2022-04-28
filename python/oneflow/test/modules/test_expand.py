@@ -123,6 +123,16 @@ def _test_expand_same_int(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 
 
+def _test_expand_flow_size(test_case, device):
+    input_shape = (2, 4, 1, 32)
+    expand_dim = flow.Size([2, 4, 2, 32])
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
+    of_input = flow.tensor(input, dtype=flow.int, device=flow.device(device))
+    of_out = of_input.expand(expand_dim)
+
+    test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
+
+
 def _test_expand_backward_same_dim(test_case, device):
     input = np.array(
         [
@@ -200,6 +210,7 @@ class TestExpand(flow.unittest.TestCase):
             _test_expand_same_dim,
             _test_expand_same_dim_negative,
             _test_expand_same_int,
+            _test_expand_flow_size,
             _test_expand_backward,
             _test_expand_backward_same_dim,
         ]

@@ -31,49 +31,6 @@ namespace oneflow {
 
 namespace {
 
-std::shared_ptr<Scope> BuildInitialScope(InstructionsBuilder* x, int64_t session_id,
-                                         const std::shared_ptr<cfg::JobConfigProto>& job_conf,
-                                         const std::string& device_tag,
-                                         const std::vector<std::string>& machine_device_ids,
-                                         const std::shared_ptr<Shape>& hierarchy,
-                                         bool is_mirrored) {
-  return x
-      ->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids, hierarchy,
-                          is_mirrored)
-      .GetPtrOrThrow();
-}
-
-std::shared_ptr<Scope> BuildScopeWithNewParallelDesc(
-    InstructionsBuilder* x, const std::shared_ptr<Scope>& scope, const std::string& device_tag,
-    const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy) {
-  return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids, hierarchy)
-      .GetPtrOrThrow();
-}
-
-std::shared_ptr<Scope> BuildScopeWithNewParallelConf(
-    InstructionsBuilder* x, const std::shared_ptr<Scope>& scope,
-    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  return x->BuildScopeWithNewParallelConf(scope, parallel_conf).GetPtrOrThrow();
-}
-
-std::shared_ptr<Scope> BuildScopeWithNewIsMirrored(InstructionsBuilder* x,
-                                                   const std::shared_ptr<Scope>& scope,
-                                                   bool is_mirrored) {
-  return x->BuildScopeWithNewIsMirrored(scope, is_mirrored).GetPtrOrThrow();
-}
-
-std::shared_ptr<Scope> BuildScopeWithNewScopeName(InstructionsBuilder* x,
-                                                  const std::shared_ptr<Scope>& scope,
-                                                  std::string scope_name) {
-  return x->BuildScopeWithNewScopeName(scope, scope_name).GetPtrOrThrow();
-}
-
-std::shared_ptr<Scope> BuildScopeByProtoSetter(
-    InstructionsBuilder* x, const std::shared_ptr<Scope>& scope,
-    const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter) {
-  return x->BuildScopeByProtoSetter(scope, Setter).GetPtrOrThrow();
-}
-
 Maybe<void> DeprecatedPhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   return PhysicalRun([&](InstructionsBuilder* instruction_builder) -> Maybe<void> {
     Build(instruction_builder);
@@ -85,24 +42,19 @@ Maybe<void> DeprecatedPhysicalRun(const std::function<void(InstructionsBuilder*)
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
-      .def("BuildInitialScope", &BuildInitialScope, py::arg("session_id").none(false),
-           py::arg("job_conf").none(false), py::arg("device_tag").none(false),
-           py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true),
-           py::arg("is_mirrored").none(false))
-      .def("BuildScopeWithNewParallelDesc", &BuildScopeWithNewParallelDesc,
+      .def("BuildInitialScope", &InstructionsBuilder::BuildInitialScope,
+           py::arg("session_id").none(false), py::arg("job_conf").none(false),
+           py::arg("device_tag").none(false), py::arg("machine_device_ids").none(false),
+           py::arg("hierarchy").none(true), py::arg("is_mirrored").none(false))
+      .def("BuildScopeWithNewParallelDesc", &InstructionsBuilder::BuildScopeWithNewParallelDesc,
            py::arg("scope").none(false), py::arg("device_tag").none(false),
            py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true))
-      .def("BuildScopeWithNewParallelConf", &BuildScopeWithNewParallelConf)
-      .def("BuildScopeWithNewIsMirrored", &BuildScopeWithNewIsMirrored)
-      .def("BuildScopeWithNewScopeName", &BuildScopeWithNewScopeName)
-      .def("BuildScopeByProtoSetter", &BuildScopeByProtoSetter);
+      .def("BuildScopeWithNewParallelConf", &InstructionsBuilder::BuildScopeWithNewParallelConf)
+      .def("BuildScopeWithNewIsMirrored", &InstructionsBuilder::BuildScopeWithNewIsMirrored)
+      .def("BuildScopeWithNewScopeName", &InstructionsBuilder::BuildScopeWithNewScopeName)
+      .def("BuildScopeByProtoSetter", &InstructionsBuilder::BuildScopeByProtoSetter);
 
-  m.def(
-      "PhysicalRun",
-      [](const std::function<void(InstructionsBuilder*)>& Build) {
-        return DeprecatedPhysicalRun(Build).GetOrThrow();
-      },
-      py::call_guard<py::gil_scoped_release>());
+  m.def("PhysicalRun", &DeprecatedPhysicalRun, py::call_guard<py::gil_scoped_release>());
 }
 
 }  // namespace oneflow

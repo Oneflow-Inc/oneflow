@@ -51,7 +51,7 @@ def _run_functional_doctest(
 class TestFunctionalDocstrModule(flow.unittest.TestCase):
     def test_functional_docstr(test_case):
         arg_dict = OrderedDict()
-        arg_dict["module"] = [flow, flow.sbp, flow.env, flow.nn.functional]
+        arg_dict["module"] = [flow, flow.Tensor, flow.sbp, flow.env, flow.nn.functional]
         for arg in GenArgList(arg_dict):
             _run_functional_doctest(
                 test_case, raise_on_error=True, verbose=True, module=arg[0]

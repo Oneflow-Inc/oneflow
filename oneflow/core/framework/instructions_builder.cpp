@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
@@ -575,7 +575,7 @@ template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 
 Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
     const std::function<void()>& callback) {
-  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
+  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(callback);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), "ComputeRankFrontSeqCallback",
       std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
@@ -584,7 +584,7 @@ Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
 }
 
 Maybe<void> InstructionsBuilder::ComputeGlobalFrontSeqBarrier() {
-  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>([] {});
+  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([] {});
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), "ComputeGlobalFrontSeqBarrier",
       std::shared_ptr<const ParallelDesc>(), phy_instr_operand);

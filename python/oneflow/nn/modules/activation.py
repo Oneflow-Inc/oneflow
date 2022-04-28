@@ -451,6 +451,57 @@ class Hardsigmoid(Module):
         return inplace_str
 
 
+class Hardshrink(Module):
+    r"""
+    The Hardshrink activation.
+
+    The formula is:
+
+    .. math::
+        \text{Hardshrink}(x) =
+        \begin{cases}
+        x, & \text{ if } x > \lambda \\
+        x, & \text{ if } x < -\lambda \\
+        0, & \text{ otherwise }
+        \end{cases}
+
+    Args:
+        lambd: the :math:`\lambda` value for the Hardshrink formulation. Default: 0.5
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+    
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array([-1.1, 0, 0.2, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardshrink = flow.nn.Hardshrink(lambd=0.5)
+        >>> out = hardshrink(input)
+        >>> out
+        tensor([-1.1000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
+    """
+
+    def __init__(self, lambd: float = 0.5, inplace: bool = False):
+        super().__init__()
+        self.inplace = inplace
+        self.lambd = lambd
+
+    def forward(self, x):
+        return flow._C.hardshrink(x, lambd=self.lambd, inplace=self.inplace)
+
+    def extra_repr(self) -> str:
+        param_str = f"lambd={self.lambd}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
 class Softmax(Module):
     """Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
@@ -634,11 +685,7 @@ class Softplus(Module):
         self.threshold = threshold
 
     def forward(self, x):
-        return flow.where(
-            x * self.beta > self.threshold,
-            x,
-            1 / self.beta * flow.log(1.0 + flow.exp(self.beta * x)),
-        )
+        return flow._C.softplus(x, beta=self.beta, threshold=self.threshold)
 
     def extra_repr(self):
         return f"beta={self.beta}, threshold={self.threshold}"
@@ -813,9 +860,7 @@ class LeakyReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            warnings.warn("LeakyReLU module do not support inplace now")
-        return flow._C.leaky_relu(x, alpha=self.negative_slope)
+        return flow._C.leaky_relu(x, alpha=self.negative_slope, inplace=self.inplace)
 
     def extra_repr(self):
         param_str = f"negative_slope={self.negative_slope}"
@@ -954,6 +999,61 @@ class SELU(Module):
         return flow._C.selu(x)
 
 
+class Softshrink(Module):
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Softshrink.html?highlight=softshrink#torch.nn.Softshrink.
+
+    The Softshrink activation.
+
+    The formula is:
+    
+    .. math::
+
+        \text{Softshrink}(x) =
+        \begin{cases}
+        x - \lambd, & \text{ if } x > \lambda \\
+        x + \lambd, & \text{ if } x < -\lambda \\
+        0, & \text{ otherwise }
+        \end{cases}
+
+    Args:
+        lambd: the :math:`\lambda` value for the Softshrink formulation. Default: 0.5
+        inplace: can optionally do the operation in-place. Default: ``False``
+    
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+    
+    .. code-block:: python
+    
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array([-1, 0, 0.2, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> softshrink = flow.nn.Softshrink(lambd=0.5)
+        >>> out = softshrink(input)
+        >>> out
+        tensor([-0.5000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
+    """
+
+    def __init__(self, lambd: float = 0.5, inplace: bool = False):
+        self.inplace = inplace
+        self.lambd = lambd
+        super().__init__()
+
+    def forward(self, x):
+        return flow._C.softshrink(x, alpha=self.lambd, inplace=self.inplace)
+
+    def extra_repr(self) -> str:
+        param_str = f"lambd={self.lambd}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
 class Softsign(Module):
     r"""The SoftSign activation.
 
@@ -1032,6 +1132,57 @@ class GLU(Module):
 
     def forward(self, input):
         return flow._C.glu(input, self.dim)
+
+
+class Threshold(Module):
+    r"""The Threshold Activation. Return ``x`` if ``x`` is greater than ``threshold``, else return ``value``.
+
+    The interface is consistent with PyTorch.
+    The documentation is referenced from https://pytorch.org/docs/stable/generated/torch.nn.Threshold.html.
+
+    The formula is:
+
+    .. math::
+
+        \text{Threshold}(x) =
+        \begin{cases}
+        x, & \text{ if } x > \text{ threshold } \\
+        \text{value }, & \text{ otherwise }
+        \end{cases}
+
+    Args:
+        threshold (float): The ``threshold`` value for the Threshold formulation
+        value (float): The ``value`` value for the Threshold formulation
+
+    Shapes:
+        - Input: :math:`(N, *)` where `*` means, any number of additional dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    Returns:
+        Oneflow.Tensor: The result tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> x = np.array([-1, 0, 0.5, 1]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> th = flow.nn.Threshold(threshold=0.5, value=0.2)
+        >>> out = th(input)
+        >>> out
+        tensor([0.2000, 0.2000, 0.2000, 1.0000], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, threshold: float, value: float):
+        super().__init__()
+        self.threshold = threshold
+        self.value = value
+
+    def forward(self, input):
+        return flow._C.threshold(input, threshold=self.threshold, value=self.value)
 
 
 if __name__ == "__main__":

@@ -70,10 +70,14 @@ namespace oneflow {
 
 /*static*/ Maybe<void> UnfoldTensorGradOp::GetSbp(user_op::SbpContext* ctx) {
   const int32_t dimension = ctx->Attr<int32_t>("dimension");
-  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dx", 0);
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
     if (i != dimension) {
-      ctx->NewBuilder().Split(user_op::OpArg("dy", 0), i).Split(user_op::OpArg("dx", 0), i).Build();
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("dy", 0), i)
+          .Split(user_op::OpArg("x", 0), i)
+          .Split(user_op::OpArg("dx", 0), i)
+          .Build();
     }
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
