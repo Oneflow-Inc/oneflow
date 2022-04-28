@@ -1138,6 +1138,10 @@ def _new_tensor(
         )
 
 
+def _amin(self, dim=None, keepdim=False):
+    return flow._C.amin(self, dim=dim, keepdim=keepdim)
+
+
 def _byte(self):
     return flow._C.to(self, flow.uint8)
 
@@ -1224,6 +1228,7 @@ def RegisterMethods():
     Tensor.acos = _acos
     Tensor.arccos = _arccos
     Tensor.acosh = _acosh
+    Tensor.amin = _amin
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
     Tensor.atan2 = _atan2
