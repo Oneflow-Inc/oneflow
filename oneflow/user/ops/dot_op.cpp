@@ -24,7 +24,7 @@ namespace oneflow {
   CHECK_OR_RETURN(x.shape() == y.shape())
       << Error::RuntimeError()
       << "inconsistent tensor size, expected tensor to have the same number of elements, but got "
-      << x.shape().elem_cnt() << " and " << y.shape().elem_cnt() << "elements respectively";
+      << x.shape().elem_cnt() << " and " << y.shape().elem_cnt() << " elements respectively";
   CHECK_OR_RETURN(x.shape().NumAxes() == 1)
       << Error::RuntimeError() << "1D tensors expected, but got " << x.shape().NumAxes()
       << "D tensors";
