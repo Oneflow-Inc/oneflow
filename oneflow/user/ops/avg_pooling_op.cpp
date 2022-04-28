@@ -25,6 +25,7 @@ typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn
 typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
+
 TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
@@ -67,7 +68,6 @@ Maybe<void> AvgPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, 2) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("y", 0), i)
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("dx", 0), i)
         .Build();
@@ -113,6 +113,7 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
+
 }  // namespace
 
 #define IMPLEMENT_AVGPOOL_FUNCS(name, ndim)                                              \
