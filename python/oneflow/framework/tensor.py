@@ -71,10 +71,6 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 
-def _getitem(self, key):
-    return flow._C.tensor_getitem(self, key)
-
-
 def _setitem(self, key, value):
     if self.is_global:
         if isinstance(value, (int, float)):
@@ -164,6 +160,16 @@ def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
 
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
+
+
+def _permute(self, *dims):
+    if len(dims) == 1:
+        new_dims = dims[0]
+        if isinstance(new_dims, int):
+            new_dims = (new_dims,)
+    else:
+        new_dims = dims
+    return flow._C.permute(self, new_dims)
 
 
 def is_nonzero(input):
@@ -387,6 +393,10 @@ def _softsign(self):
 
 def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
+
+
+def _amax(self, dim=None, keepdim=False):
+    return flow._C.amax(self, dim=dim, keepdim=keepdim)
 
 
 def _swapdims(self, dim0, dim1):
@@ -625,16 +635,6 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, new_dims)
-
-
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -711,12 +711,6 @@ def _any(self, dim=None, keepdim=False):
     return flow.any(self, dim, keepdim)
 
 
-def _len(self):
-    if self.dim() == 0:
-        raise TypeError("len() of a 0-d tensor")
-    return self.shape[0]
-
-
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
@@ -779,6 +773,25 @@ def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
     return _init_by_initializer_conf(self, initializer_conf)
 
 
+def _orthogonal(self, gain=1.0):
+    if self.ndimension() < 2:
+        raise ValueError("Only tensors with 2 or more dimensions are supported")
+    rows = self.shape[0]
+    cols = np.prod(self.shape[1:])
+    flattened = np.random.normal(0.0, 1.0, size=(rows, cols))
+    if rows < cols:
+        flattened = flattened.T
+    # TODO
+    q, r = np.linalg.qr(flattened)
+    d = np.diag(r, 0)
+    d = np.sign(d)
+    q *= d
+    if rows < cols:
+        q = q.T
+    self = gain * flow.tensor(q.reshape(self.shape))
+    return self
+
+
 def _normal(self, mean=0, std=1):
     initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
     return _init_by_initializer_conf(self, initializer_conf)
@@ -801,7 +814,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
-        random_seed = flow.default_generator.seed()
+        random_seed = flow.default_generator.initial_seed()
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
@@ -955,6 +968,10 @@ def _min(self, *args, **kwargs):
     return flow.min(self, *args, **kwargs)
 
 
+def _median(self, *args, **kwargs):
+    return flow.median(self, *args, **kwargs)
+
+
 def _sum(self, dim=None, keepdim=False):
     return flow.sum(self, dim, keepdim)
 
@@ -1049,10 +1066,6 @@ def _numpy(self):
     return self.to_numpy()
 
 
-def _zero_(self):
-    return self.zeros_()
-
-
 def zero_(self):
     self.zero_()
     return self
@@ -1122,7 +1135,6 @@ def RegisterMethods():
     Tensor.numel = _numel
     Tensor.element_size = _element_size
     Tensor.backward = _backward
-    Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
@@ -1151,7 +1163,6 @@ def RegisterMethods():
     Tensor.__rpow__ = _rpow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
-    Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
     Tensor.__invert__ = _invert
@@ -1164,6 +1175,7 @@ def RegisterMethods():
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal
     Tensor.xavier_uniform_ = _xavier_uniform
+    Tensor.orthogonal_ = _orthogonal
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
     Tensor.copy_ = _copy
@@ -1261,6 +1273,7 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.norm = _norm
     Tensor.transpose = _transpose
+    Tensor.permute = _permute
     Tensor.local_to_global = _local_to_global
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
@@ -1280,11 +1293,11 @@ def RegisterMethods():
     Tensor.unbind = _unbind
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
+    Tensor.amax = _amax
     Tensor.swapdims = _swapdims
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
-    Tensor.permute = _permute
     Tensor.to = _to
     Tensor.half = _half
     Tensor.gather = _gather
@@ -1316,12 +1329,12 @@ def RegisterMethods():
     Tensor.nonzero = _nonzero
     Tensor.max = _max
     Tensor.min = _min
+    Tensor.median = _median
     Tensor.sum = _sum
     Tensor.mean = _mean
     Tensor.prod = _prod
     Tensor.sin = _sin
     Tensor.sin_ = _sin_inplace
-    Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
     Tensor.isnan = _isnan
