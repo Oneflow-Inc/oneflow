@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
 #include <stack>
 #include <queue>
 #include "oneflow/core/autograd/autograd_engine.h"
@@ -33,6 +34,38 @@ namespace oneflow {
 namespace one {
 
 namespace {
+
+void GatherFunctionNodes(FunctionNode* node, std::stack<std::shared_ptr<FunctionNode>>& stack) {
+  for (auto& prev_node : node->next_functions()) {
+    if (prev_node) {
+      if (prev_node.use_count() == 1) { stack.push(prev_node); }
+    }
+  }
+}
+
+/* NOTE:
+ * Stack overflows when releasing a very deep computation graph without
+ * a custom deleter.
+ *
+ * For example, here is a very deep computation graph:
+ * Tensor -> FunctionNode -> Tensor -> FunctionNode -> ... -> Tensor -> FunctionNode
+ * When releasing the first Tensor, it will trigger the recursive deletion and stack overflow.
+ *
+ * So we must set a custom deleter and release them iteratively.
+ */
+void FunctionNodeDeleter(FunctionNode* node) {
+  std::stack<std::shared_ptr<FunctionNode>> stack;
+  node->ReleaseData();
+  GatherFunctionNodes(node, stack);
+  delete node;
+
+  while (!stack.empty()) {
+    auto now_node = std::move(stack.top());
+    stack.pop();
+    now_node->ReleaseData();
+    GatherFunctionNodes(now_node.get(), stack);
+  }
+}
 
 bool IsReadyToRun(const std::vector<std::shared_ptr<AutogradMeta>>& out_meta_datas) {
   return std::any_of(out_meta_datas.begin(), out_meta_datas.end(),
@@ -173,7 +206,15 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
 }
 
 void GraphFunctionNode::ReleaseData() {
-  if (backward_fn_->status()) { backward_fn_.reset(); }
+  if (backward_fn_ && backward_fn_->status()) { backward_fn_.reset(); }
+}
+
+/*static*/ std::shared_ptr<GraphFunctionNode> GraphFunctionNode::New(
+    const std::string& name, const std::shared_ptr<BackwardFunction>& backward_fn,
+    const TensorTuple& inputs, const TensorTuple& outputs) {
+  auto node = std::shared_ptr<GraphFunctionNode>(
+      new GraphFunctionNode(name, backward_fn, inputs, outputs), FunctionNodeDeleter);
+  return node;
 }
 
 GraphFunctionNode::GraphFunctionNode(const std::string& name,
@@ -365,7 +406,7 @@ Maybe<FunctionNode> GraphAutogradEngine::AddNode(
   }
 
   std::shared_ptr<FunctionNode> func_node =
-      std::make_shared<GraphFunctionNode>(name, backward_fn, inputs, *outputs);
+      GraphFunctionNode::New(name, backward_fn, inputs, *outputs);
   for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
     out_tensor->set_grad_fn_node(func_node);
   }
@@ -382,7 +423,7 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
   backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                           bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); };
   backward_fn->status = []() { return false; };
-  tensor->set_grad_fn_node(std::make_shared<GraphFunctionNode>(
+  tensor->set_grad_fn_node(GraphFunctionNode::New(
       "accumulate_grad", backward_fn, /*inputs=*/TensorTuple{}, /*outputs*/ TensorTuple{tensor}));
   return Maybe<void>::Ok();
 }
