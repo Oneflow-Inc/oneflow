@@ -27,7 +27,7 @@ class TestReduceOps(flow.unittest.TestCase):
         with test_case.assertRaises(IndexError) as exp:
             flow.sum(x, 3)
         test_case.assertTrue("Dimension out of range" in str(exp.exception))
-        
+
     def test_exception_dim_out_of_list_range(test_case):
         x = flow.randn(2, 3, 4)
         with test_case.assertRaises(IndexError) as exp:
