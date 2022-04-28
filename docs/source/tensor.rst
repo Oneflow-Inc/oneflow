@@ -12,6 +12,7 @@ OneFlow Tensor Class
             addcmul,
             addcmul_,
             addmm,
+            amin,
             amax,
             arccos, 
             arccosh, 
