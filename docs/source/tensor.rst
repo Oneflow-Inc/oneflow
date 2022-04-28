@@ -30,6 +30,7 @@ OneFlow Tensor Class
             atanh, 
             backward,
             bmm, 
+            byte, 
             cast, 
             ceil, 
             chunk,  
