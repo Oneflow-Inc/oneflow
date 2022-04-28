@@ -605,6 +605,15 @@
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
 
+- name: "normal"
+  signature: [
+    "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None, 
+    Generator generator=None, Bool requires_grad=False) => Normal",
+    "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
+    Generator generator=None, Bool requires_grad=False) => ConsistentNormal",
+    ]
+  bind_python: True
+
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
