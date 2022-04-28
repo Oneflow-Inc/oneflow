@@ -59,9 +59,17 @@ message AdagradModelUpdateConf {
   required float epsilon = 3 [default = 1e-10];
 }
 
+message FtrlModelUpdateConf {
+  required float initial_accumulator_value = 1 [default = 0.1];
+  required float lr_power = 2 [default = 0.5];
+  optional float lambda1 = 3 [default = 0.0];
+  optional float lambda2 = 4 [default = 0.0];
+  optional float beta = 5 [default = 0.0];
+}
+
 message ClipByGlobalNormConf {
-  required float clip_norm = 1;
-  optional float global_norm = 2;
+  optional float max_norm = 1 [default = 1.0];
+  optional double norm_type = 2 [default = 2.0];
 }
 
 message ClipConf {
@@ -98,6 +106,7 @@ message OptimizerConf {
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
     LambModelUpdateConf lamb_conf = 1006;
     AdagradModelUpdateConf adagrad_conf = 1007;
+    FtrlModelUpdateConf ftrl_conf = 1008;
   }
 }
 
@@ -114,6 +123,7 @@ message NormalModelUpdateOpUserConf {
     LazyAdamModelUpdateConf lazy_adam_conf = 1005;
     LambModelUpdateConf lamb_conf = 1006;
     AdagradModelUpdateConf adagrad_conf = 1007;
+    FtrlModelUpdateConf ftrl_conf = 1008;
   }
 }
 

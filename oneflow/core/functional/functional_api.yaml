@@ -56,6 +56,14 @@
     ]
   bind_python: true
 
+- name: "addcmul"
+  signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => Addcmul"
+  bind_python: true
+
+- name: "addcmul_"
+  signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => InplaceAddcmul"
+  bind_python: true
+
 - name: "div"
   signature:
     [
@@ -249,6 +257,13 @@
   ]
   bind_python: True
 
+- name: "median"
+  signature: [
+    "Tensor (Tensor input) => Median",
+    "TensorTuple (Tensor input, Int32 dim=-1, Bool keepdim=False) => MedianWithIndices",
+  ]
+  bind_python: True
+
 - name: "reduce_max"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
   bind_python: True
@@ -274,7 +289,7 @@
   bind_python: True
 
 - name: "reduce_prod"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceProd"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False, *, DataType dtype=None) => ReduceProd"
   bind_python: True
 
 - name: "reduce_min_device_stage"
@@ -330,10 +345,15 @@
   bind_python: True
 
 - name: "swapaxes"
-  signature:
-    [
-      "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapaxes",
-    ]
+  signature: "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapaxes"
+  bind_python: True
+
+- name: "swapdims"
+  signature: "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapdims"
+  bind_python: True
+
+- name: "amax"
+  signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amax"
   bind_python: True
 
 - name: "permute"
@@ -347,6 +367,14 @@
 - name: "t"
   signature: "Tensor (Tensor input) => TransposeAllDimFunction"
   bind_python: True 
+
+- name: "not_equal_zero"
+  signature: "Tensor (Tensor x) => NotEqualZero"
+  bind_python: False
+
+- name: "not_equal_zero_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => NotEqualZeroGrad"
+  bind_python: False
 
 - name: "reciprocal"
   signature: "Tensor (Tensor x) => Reciprocal"
@@ -541,6 +569,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => HardSigmoidGrad"
   bind_python: False
 
+- name: "hardshrink"
+  signature: "Tensor (Tensor x, *, Double lambd=0.5, Bool inplace=False) => HardShrink"
+  bind_python: True
+
+- name: "hardshrink_grad"
+  signature: "Tensor (Tensor y, Tensor dy, Double lambd=0.5) => HardShrinkGrad"
+  bind_python: False
+
 - name: "softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => Softmax"
   bind_python: True
@@ -562,7 +598,7 @@
   bind_python: False
 
 - name: "leaky_relu"
-  signature: "Tensor (Tensor x, Float alpha) => LeakyRelu"
+  signature: "Tensor (Tensor x, Float alpha, Bool inplace=False) => LeakyRelu"
   bind_python: True
 
 - name: "leaky_relu_grad"
@@ -770,23 +806,23 @@
 
 - name: "deconv1d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
-    Int32List padding, String data_format, Int32List kernel_size, 
-    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv1d"
+    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] stride=1, 
+    Int32List[1] padding=0, Int32List[1] output_padding=0, Int32 groups=1, 
+    Int32List[1] dilation=1, String data_format="channels_first") => Deconv1d'
   bind_python: True
 
 - name: "deconv2d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
-    Int32List padding, String data_format, Int32List kernel_size, 
-    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv2d"
+    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[2] stride=1, 
+    Int32List[2] padding=0, Int32List[2] output_padding=0, Int32 groups=1, 
+    Int32List[2] dilation=1, String data_format="channels_first") => Deconv2d'
   bind_python: True
 
 - name: "deconv3d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32 filters,
-    Int32List padding, String data_format, Int32List kernel_size, 
-    Int32List output_padding, Int32List strides, Int32List dilation, Int32 groups=1) => Deconv3d"
+    'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[3] stride=1, 
+    Int32List[3] padding=0, Int32List[3] output_padding=0, Int32 groups=1, 
+    Int32List[3] dilation=1, String data_format="channels_first") => Deconv3d'
   bind_python: True
 
 - name: "expand"
@@ -1139,7 +1175,7 @@
 
 - name: "pooling_grad"
   signature:
-    "Tensor (Tensor x, Tensor y, Tensor indice, Tensor dy, String mode, Int32 ndims,
+    "Tensor (Tensor x, Tensor indice, Tensor dy, String mode, Int32 ndims,
     String data_format, Int32List padding, Int32List kernel_size,
     Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode) => PoolingNdGrad"
   bind_python: False
@@ -1675,7 +1711,7 @@
 
 - name: "avg_pooling_grad"
   signature:
-    "Tensor (Tensor x, Tensor y, Tensor dy, Int32 ndims, String data_format, Int32List padding,
+    "Tensor (Tensor x, Tensor dy, Int32 ndims, String data_format, Int32List padding,
     Int32List kernel_size, Int32List stride, Bool ceil_mode, Bool count_include_pad,
     Int32 divisor_override=0) => AvgPoolingNdGrad"
   bind_python: False
@@ -1709,7 +1745,7 @@
   bind_python: False
 
 - name: "to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToConsistent"
   bind_python: True
 
 - name: "to_local"
@@ -1868,6 +1904,12 @@
   ]
   bind_python: True
 
+- name: "unbind"
+  signature: [
+    "TensorTuple (Tensor x, Int64 dim=0) => Unbind",
+  ]
+  bind_python: True
+
 - name: "chunk"
   signature: [
     "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
@@ -1986,6 +2028,11 @@
   signature: 'TensorTuple (TensorTuple tensors, String indexing="ij") => Meshgrid'
   bind_python: True
 
+- name: "index_select"
+  signature:
+    "Tensor (Tensor input, Int64 dim, Tensor index) => IndexSelect"
+  bind_python: True
+
 - name: "decode_onerec"
   signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
   bind_python: True
@@ -2023,7 +2070,7 @@
   bind_python: True
 
 - name: "cumsum"
-  signature: "Tensor (Tensor input, Int64 dim) => Cumsum"
+  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumsum"
   bind_python: True
 
 - name: "cumsum_grad"
@@ -2031,7 +2078,7 @@
   bind_python: False 
 
 - name: "cumprod"
-  signature: "Tensor (Tensor input, Int64 dim) => Cumprod"
+  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumprod"
   bind_python: True
 
 - name: "cumprod_grad"
@@ -2039,7 +2086,7 @@
   bind_python: False
 
 - name: "one_embedding_id_shuffle"
-  signature: "TensorTuple (Tensor ids, Tensor column_ids=None, Int32 num_columns=1) => OneEmbeddingIdShuffle"
+  signature: "TensorTuple (Tensor ids, Tensor table_ids=None, Int32 num_tables=1) => OneEmbeddingIdShuffle"
   bind_python: True
 
 - name: "one_embedding_embedding_shuffle"
@@ -2051,11 +2098,27 @@
   bind_python: True
 
 - name: "one_embedding_lookup"
-  signature: "Tensor (Tensor shadow, Tensor ids, Tensor column_ids=None, DataType dtype, Int64 embedding_size, Int32 num_columns, String embedding_columns, String embedding_store_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
   bind_python: True
 
 - name: "one_embedding_unique_key_value_pair"
-  signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_columns) => OneEmbeddingUniqueKeyValuePair"
+  signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_tables) => OneEmbeddingUniqueKeyValuePair"
+  bind_python: True
+
+- name: "one_embedding_sgd_update"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate, Tensor down_scale_by_tensor, Tensor skip_if, Double scale, Float weight_decay, Float momentum) => OneEmbeddingSgdUpdate"
+  bind_python: True
+
+- name: "one_embedding_adam_update"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate, Tensor down_scale_by_tensor, Tensor skip_if, Tensor bias_correction1=None, Tensor bias_correction2=None, Double scale=1.0, Float weight_decay=0.0, Float beta1=0.9, Float beta2=0.999, Float epsilon=0, Bool do_bias_correction=True) => OneEmbeddingAdamUpdate"
+  bind_python: True
+
+- name: "one_embedding_adagrad_update"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate, Tensor down_scale_by_tensor, Tensor skip_if, Tensor train_step, Double scale=1.0, Float weight_decay=0.0, Float lr_decay=0.0, Float epsilon=0) => OneEmbeddingAdagradUpdate"
+  bind_python: True
+
+- name: "one_embedding_ftrl_update"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate, Tensor down_scale_by_tensor, Tensor skip_if, Double scale, Float weight_decay, Float lr_power, Float lambda1, Float lambda2, Float beta) => OneEmbeddingFtrlUpdate"
   bind_python: True
 
 - name: "einsum"
@@ -2072,4 +2135,8 @@
 
 - name: "isinf"
   signature: "Tensor (Tensor input) => IsInf"
+  bind_python: True
+
+- name: "roc_auc_score"
+  signature: "Tensor (Tensor label, Tensor pred) => RocAucScore"
   bind_python: True

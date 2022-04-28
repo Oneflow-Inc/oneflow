@@ -78,7 +78,9 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
     OF_UNIMPLEMENTED();
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
-  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) { OF_UNIMPLEMENTED(); }
+  virtual Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) {
+    OF_UNIMPLEMENTED();
+  }
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -112,8 +114,17 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
+  // The same tensor instance should share the python object to ensure that
+  // their id are consistent in Python. That is if x and y are hold the same tensor,
+  // then `id(x)` should equal to `id(y)`
+  void* pyobject() const { return pyobject_; }
+  void set_pyobject(void* object) { pyobject_ = object; }
+
  protected:
-  Tensor() = default;
+  Tensor() : pyobject_(nullptr) {}
+
+ private:
+  void* pyobject_;
 };
 
 class StaticZerosTensor final : public Tensor {
@@ -168,7 +179,7 @@ class StaticZerosTensor final : public Tensor {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
@@ -336,7 +347,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
     return tensor_->cur_rank_phy_tensor();
   }
-  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
+  virtual Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) override {
     return tensor_->set_consumer_nd_sbp_constraint(val);
   }
 
@@ -573,7 +584,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
 
   // Setters
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) override {
     impl_->set_consumer_nd_sbp_constraint(val);
     return Maybe<void>::Ok();
   }

@@ -50,7 +50,7 @@ class TensorWithDataFunctor {
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    if (PyTensorCheck(data)) {
+    if (PyTensor_Check(data)) {
       // Throw warnings like pytorch.
       auto ret = PyErr_WarnEx(
           PyExc_UserWarning,
@@ -60,7 +60,7 @@ class TensorWithDataFunctor {
           1);
       if (ret != 0) { return Error::RuntimeError(); }
 
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, device, requires_grad);
     } else {
       // Make tensor from python sequence or numpy array.
@@ -79,7 +79,7 @@ class ConsistentTensorWithDataFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
 
-    if (PyTensorCheck(data)) {
+    if (PyTensor_Check(data)) {
       // Throw warnings like pytorch.
       auto ret = PyErr_WarnEx(
           PyExc_UserWarning,
@@ -89,7 +89,7 @@ class ConsistentTensorWithDataFunctor {
           1);
       if (ret != 0) { return Error::RuntimeError(); }
 
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple, requires_grad);
     }
     // Make consistent tensor from python sequence or numpy array.
@@ -138,8 +138,8 @@ class TensorWithDataCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
     const auto& dtype = DType::Float();
-    if (PyTensorCheck(data)) {
-      const auto& other = JUST(PyUnpackTensor(data));
+    if (PyTensor_Check(data)) {
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false);
     }
@@ -164,8 +164,8 @@ class ConsistentTensorWithDataCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
     const auto& dtype = DType::Float();
-    if (PyTensorCheck(data)) {
-      const auto& other = JUST(PyUnpackTensor(data));
+    if (PyTensor_Check(data)) {
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
                                        /*requires_grad=*/false);
     }

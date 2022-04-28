@@ -43,7 +43,7 @@ def _test_eager_boxing_normal_1d_exhaustive_testing(
             placement=in_placement, sbp=elem[0]
         )
         y = x.to_global(placement=out_placement, sbp=elem[1])
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
 
 
 def _test_eager_boxing_symmetric_2d_exhaustive_testing(
@@ -66,7 +66,7 @@ def _test_eager_boxing_symmetric_2d_exhaustive_testing(
             placement=in_placement, sbp=elem[0]
         )
         y = x.to_global(placement=out_placement, sbp=elem[1])
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
 
 
 def _test_eager_boxing_1d_special_split_axis(
@@ -86,7 +86,7 @@ def _test_eager_boxing_1d_special_split_axis(
             placement=in_placement, sbp=elem[0]
         )
         y = x.to_global(placement=out_placement, sbp=elem[1])
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
 
 
 def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
@@ -107,7 +107,7 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
             placement=in_placement, sbp=elem[0]
         )
         y = x.to_global(placement=out_placement, sbp=elem[1])
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
 
 
 @flow.unittest.skip_unless_1n4d()

@@ -27,16 +27,27 @@ class TestCallWhenShuttingDown:
         print(tensor)
 
     def __del__(self, of=oneflow):
-        if world_size == 1:
-            tensor = of.ones((2, 2))
+        try:
+            if world_size == 1:
+                tensor = of.ones((2, 2))
+        except:
+            # Please refer to: https://github.com/Oneflow-Inc/OneTeam/issues/1219#issuecomment-1092370402
+            print("__del__ at shutting down phase in Python is not stable.")
 
 
 test_call_when_shutting_down = TestCallWhenShuttingDown()
 
 
 class TestSyncWhenShuttingDown:
-    def __del__(self, of=oneflow):
-        of._oneflow_internal.eager.Sync()
+    def __init__(self):
+        self.eager = oneflow._oneflow_internal.eager
+
+    def __del__(self):
+        try:
+            self.eager.Sync()
+        except:
+            # Please refer to: https://github.com/Oneflow-Inc/OneTeam/issues/1219#issuecomment-1092370402
+            print("__del__ at shutting down phase in Python is not stable.")
 
 
 test_sync_when_shutting_down = TestSyncWhenShuttingDown()

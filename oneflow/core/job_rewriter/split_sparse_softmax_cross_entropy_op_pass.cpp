@@ -50,6 +50,8 @@ class SplitSparseSoftmaxCrossEntropyOpPass final : public JobPass {
 
 Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                                                         JobBuilder* job_builder) const {
+  std::vector<std::string> to_del_op_names;
+  HashMap<std::string, OperatorConf> consumer_op_name2op_confs;
   op_graph.ForEachNode([&](const OpNode* node) {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -57,14 +59,13 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
 
     const int64_t scope_symbol_id = node->op().op_conf().scope_symbol_id();
     user_op::UserOpConfWrapper cur_op(op_conf);
-    const std::string op_prediction_blob_name = cur_op.input("prediction", 0);
-    const std::string op_label_blob_name = cur_op.input("label", 0);
-    const int64_t depth = cur_op.attr<int64_t>("depth");
+    const std::string& op_prediction_blob_name = cur_op.input("prediction", 0);
+    const std::string& op_label_blob_name = cur_op.input("label", 0);
     const int32_t split_axis =
         node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi("prediction_0")).shape().NumAxes() - 1;
     const std::vector<int32_t> axis_vec(1, split_axis);
 
-    std::string op_name = node->op().op_name();
+    const std::string& op_name = node->op().op_name();
     const auto& prediction_nd_sbp = node->NdSbp4BnInOp("prediction_0");
 
     NdSbp stat_distribution_for_consumer;
@@ -83,6 +84,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     }
 
     if (!has_split_axis_parallel) { return; }
+    to_del_op_names.push_back(op_name);
 
     auto reduce_max_device_stage_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_device_stage")
@@ -180,6 +182,7 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
     } else {
       reduce_sum_op_out = reduce_sum_op.output("output_tensor", 0);
     }
+
     auto broadcast_div_op = user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_div")
                                 .Op("broadcast_div")
                                 .Input("x", exp_op.output("y", 0))
@@ -188,19 +191,65 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                                 .ScopeSymbolId(scope_symbol_id)
                                 .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_div_op.op_conf()});
-    UpdateProbConsumerOpConf(broadcast_div_op.output("z", 0), node, job_builder);
 
-    auto sparse_cross_entropy_ms_op = user_op::UserOpConfWrapperBuilder(op_name)
-                                          .Op("sparse_cross_entropy_ms")
-                                          .Input("prediction", broadcast_div_op.output("z", 0))
-                                          .Input("label", op_label_blob_name)
-                                          .Output("out")
-                                          .Attr("depth", depth)
-                                          .ScopeSymbolId(scope_symbol_id)
-                                          .Build();
+    auto log_op = user_op::UserOpConfWrapperBuilder(op_name + "-log")
+                      .Op("log")
+                      .Input("x", reduce_sum_op_out)
+                      .Output("y")
+                      .ScopeSymbolId(scope_symbol_id)
+                      .Build();
+    job_builder->AddOps(node->parallel_desc().parallel_conf(), {log_op.op_conf()});
 
-    job_builder->MutOpsOnlyOnce({sparse_cross_entropy_ms_op.op_conf()});
+    auto broadcast_sub_op = user_op::UserOpConfWrapperBuilder(op_name + "-broadcast_add")
+                                .Op("broadcast_sub")
+                                .Input("x", broadcast_sub_max_op.output("z", 0))
+                                .Input("y", log_op.output("y", 0))
+                                .Output("z")
+                                .ScopeSymbolId(scope_symbol_id)
+                                .Build();
+    job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_sub_op.op_conf()});
+
+    auto nll_op = user_op::UserOpConfWrapperBuilder(op_name + "-nll")
+                      .Op("nll")
+                      .Input("input", broadcast_sub_op.output("z", 0))
+                      .Input("target", op_label_blob_name)
+                      .Output("out")
+                      .Output("total_weight")
+                      .Attr<int64_t>("ignore_index", -100)
+                      .ScopeSymbolId(scope_symbol_id)
+                      .Build();
+    job_builder->AddOps(node->parallel_desc().parallel_conf(), {nll_op.op_conf()});
+
+    const std::string& prob_lbn = cur_op.output("prob", 0);
+    const std::string& out_lbn = cur_op.output("out", 0);
+    const std::string& new_prob_lbn = broadcast_div_op.output("z", 0);
+    const std::string& new_out_lbn = nll_op.output("out", 0);
+
+    for (const OpEdge* out_edge : node->out_edges()) {
+      const OpNode* consumer = out_edge->dst_node();
+      const std::string& consumer_op_name = consumer->op().op_name();
+      if (consumer_op_name2op_confs.find(consumer_op_name) == consumer_op_name2op_confs.end()) {
+        consumer_op_name2op_confs[consumer_op_name] = consumer->op().op_conf();
+      }
+      OperatorConf& consumer_op_conf = consumer_op_name2op_confs[consumer_op_name];
+      for (const std::string& ibn : consumer->op().input_bns()) {
+        const std::string& input_lbn = GenLogicalBlobName(consumer->op().BnInOp2Lbi(ibn));
+        if (input_lbn == prob_lbn) {
+          const auto& old_lbn =
+              ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_prob_lbn);
+          CHECK_EQ(old_lbn, prob_lbn);
+        } else if (input_lbn == out_lbn) {
+          const auto& old_lbn =
+              ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_out_lbn);
+          CHECK_EQ(old_lbn, out_lbn);
+        } else {
+          // does not care
+        }
+      }
+    }
   });
+  for (const auto& pair : consumer_op_name2op_confs) { job_builder->MutOpsOnlyOnce({pair.second}); }
+  job_builder->DelOps(to_del_op_names);
   return Maybe<void>::Ok();
 }
 

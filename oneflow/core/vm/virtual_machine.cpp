@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -139,7 +139,7 @@ namespace {
 
 void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgList* list,
                              const std::function<void()>& ComputeCallback) {
-  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(ComputeCallback);
+  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(ComputeCallback);
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       vm, "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
       phy_instr_operand);

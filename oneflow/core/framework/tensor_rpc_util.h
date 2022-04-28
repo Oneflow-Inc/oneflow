@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/common/check_level.h"
 
 namespace oneflow {
 
@@ -53,13 +54,16 @@ struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args
   template<RetT (*func)(const std::shared_ptr<one::Tensor>&, Args...)>
   static RetT Call(const std::shared_ptr<one::Tensor>& tensor, Args... args) {
     std::shared_ptr<private_details::CheckConsistencyAsyncTransportCtx> ctx;
+    static bool is_env_enabled_check = IsEnvEnabled(/* check_level */ 1);
     int64_t* depth = private_details::MutThreadLocalTensorMetaCheckDepth();
-    if (*depth == 0) { ctx = JUST(private_details::LaunchTensorMetaConsistencyCheck(*tensor)); }
+    if (*depth == 0 && is_env_enabled_check) {
+      ctx = JUST(private_details::LaunchTensorMetaConsistencyCheck(*tensor));
+    }
     ++*depth;
     RetT ret = func(tensor, args...);
     --*depth;
     // Always synchronize consistent tensor meta even if `func` failed.
-    if (*depth == 0) { JUST(private_details::BusyWaitAndCheck(ctx)); }
+    if (*depth == 0 && is_env_enabled_check) { JUST(private_details::BusyWaitAndCheck(ctx)); }
     return ret;
   }
 };

@@ -90,6 +90,18 @@ std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const D
   return result;
 }
 
+bool PyArrayCheckLongScalar(PyObject* obj) {
+  return PyArray_CheckScalar(obj) && PyDataType_ISINTEGER(PyArray_DescrFromScalar(obj));
+}
+
+bool PyArrayCheckFloatScalar(PyObject* obj) {
+  return PyArray_CheckScalar(obj) && PyDataType_ISFLOAT(PyArray_DescrFromScalar(obj));
+}
+
+bool PyArrayCheckBoolScalar(PyObject* obj) {
+  return PyArray_CheckScalar(obj) && PyDataType_ISBOOL(PyArray_DescrFromScalar(obj));
+}
+
 // Executing any numpy c api before _import_array() results in segfault
 // NOTE: this InitNumpyCAPI() works because of `PY_ARRAY_UNIQUE_SYMBOL`
 // defined in numpy_internal.h

@@ -2,6 +2,7 @@
 #ifndef ONEFLOW_PATTERNS
 #define ONEFLOW_PATTERNS
 
+include "mlir/IR/PatternBase.td"
 include "OneFlow/OneFlowOps.td"
 include "mlir/Dialect/MemRef/IR/MemRefOps.td"
 include "mlir/Dialect/GPU/GPUOps.td"
@@ -65,7 +66,7 @@ def BroadcastMulToScalarMulPattern : Pat<
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
 
-def IsGPU: Constraint<CPred<"$0.getValue().equals(\"gpu\")">, "is GPU device">;
+def IsGPU: Constraint<CPred<"$0.getValue().equals(\"cuda\")">, "is GPU device">;
 
 def FusedScaleTrilPattern : Pat<
   (
