@@ -47,14 +47,14 @@ __global__ void embedding_grad_kernel(const T* dy_buf, const index_T* indices_bu
 }
 
 template<typename index_T>
-__global__ void indicesFreq(const index_T* indices_buf, const int32_t num_indices,
-                            int32_t* tmp_buf) {
+__global__ void indices_freq_kernel(const index_T* indices_buf, const int32_t num_indices,
+                                    int32_t* tmp_buf) {
   CUDA_1D_KERNEL_LOOP(i, num_indices) { cuda::atomic::Add(tmp_buf + indices_buf[i], 1); }
 }
 
 template<typename T, typename index_T>
-__global__ void embeddingScale(T* dx_buf, const int32_t emb_size, const int32_t emb_dim,
-                               int32_t* tmp_buf) {
+__global__ void emb_scale_kernel(T* dx_buf, const int32_t emb_size, const int32_t emb_dim,
+                                 int32_t* tmp_buf) {
   CUDA_1D_KERNEL_LOOP(i, emb_size * emb_dim) {
     int32_t emb_size_index = i / emb_dim;
     if (tmp_buf[emb_size_index] > 1) { dx_buf[i] /= tmp_buf[emb_size_index]; }
@@ -62,7 +62,7 @@ __global__ void embeddingScale(T* dx_buf, const int32_t emb_size, const int32_t 
 }
 
 template<typename T, typename index_T>
-__global__ void embNorm(const T* in_buf, int32_t* indices_frep, double* emb_norm,
+__global__ void accum_norm_kernel(const T* in_buf, int32_t* indices_frep, double* emb_norm,
                         const double norm_type, const int32_t emb_size, const int32_t emb_dim) {
   CUDA_1D_KERNEL_LOOP(i, emb_size * emb_dim) {
     int32_t emb_size_index = i / emb_dim;
@@ -75,7 +75,7 @@ __global__ void embNorm(const T* in_buf, int32_t* indices_frep, double* emb_norm
 }
 
 template<typename T, typename index_T>
-__global__ void embNorm_kernel(const T* in_buf, T* out_buf, double* emb_norm, int32_t* indices_frep,
+__global__ void apply_norm_kernel(const T* in_buf, T* out_buf, double* emb_norm, int32_t* indices_frep,
                                const double max_norm, const int32_t emb_size,
                                const int32_t emb_dim) {
   CUDA_1D_KERNEL_LOOP(i, emb_size * emb_dim) {
@@ -103,13 +103,13 @@ struct EmbeddingRenormFunctor<DeviceType::kCUDA, T, index_T> final {
     double* emb_norm = reinterpret_cast<double*>(static_cast<char*>(tmp_buf) + bytes_used);
     bytes_used += sizeof(double) * emb_size;
 
-    indicesFreq<index_T>
+    indices_freq_kernel<index_T>
         <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
            stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, indices_frep);
-    embNorm<T, index_T><<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock, 0,
+    accum_norm_kernel<T, index_T><<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock, 0,
                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
         in_buf, indices_frep, emb_norm, norm_type, emb_size, emb_dim);
-    embNorm_kernel<T, index_T><<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock,
+    apply_norm_kernel<T, index_T><<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock,
                                  0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
         in_buf, out_buf, emb_norm, indices_frep, max_norm, emb_size, emb_dim);
   }
@@ -138,10 +138,10 @@ struct EmbeddingGradFunctor<DeviceType::kCUDA, T, index_T> final {
            stream->As<ep::CudaStream>()->cuda_stream()>>>(dy_buf, indices_buf, dx_buf, padding_idx,
                                                           num_indices, emb_dim);
     if (scale_grad_by_freq) {
-      indicesFreq<index_T>
+      indices_freq_kernel<index_T>
           <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf);
-      embeddingScale<T, index_T>
+      emb_scale_kernel<T, index_T>
           <<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(dx_buf, emb_size, emb_dim, tmp_buf);
     }
