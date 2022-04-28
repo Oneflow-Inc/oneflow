@@ -143,20 +143,21 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device, bool requires_grad) {
   PyObject* array = NULL;
-  if (PyArray_Check(data)) {
-    // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
-    array = PyArray_NewCopy((PyArrayObject*)data, NPY_CORDER);
-  } else {
-    // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
-    PyArray_Descr* np_dtype =
-        dtype.has_value()
-            ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
-            : nullptr;
-    // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
-    // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
-    array =
-        PyArray_FromAny(data, np_dtype, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr);
-    if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
+  PyArray_Descr* np_dtype =
+      dtype.has_value()
+          ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
+          : nullptr;
+  // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
+  // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
+  // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
+  // NPY_ARRAY_FORCECAST is needed otherwise there will a segfault.
+  array = PyArray_FromAny(data, np_dtype, 0, 0,
+                          NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY | NPY_ARRAY_FORCECAST, nullptr);
+  if (!array) {
+    return Error::RuntimeError() << "Can not convert input data to a new numpy array.";
+  }
+  // flow.tensor([1., 2.]).dtype should be flow.float32 rather than flow.float64
+  if (!PyArray_Check(data)) {
     int np_array_type = PyArray_TYPE(reinterpret_cast<PyArrayObject*>(array));
     // Cast to float if data is double sequence, rather than numpy array.
     if (np_array_type == NPY_DOUBLE && np_dtype == nullptr) {

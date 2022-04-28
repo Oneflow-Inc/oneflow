@@ -1053,6 +1053,31 @@ class TestTensor(flow.unittest.TestCase):
         y = x.half()
         test_case.assertTrue(y.dtype == flow.float16)
 
+    def test_tensor_constructor(test_case):
+        x = flow.tensor([1, 2, 3])
+        test_case.assertTrue(np.array_equal(x.numpy(), [1, 2, 3]))
+        test_case.assertEquals(x.dtype, flow.int64)
+        x = flow.tensor([1., 2., 3.])
+        test_case.assertTrue(np.array_equal(x.numpy(), [1., 2., 3.]))
+        test_case.assertEquals(x.dtype, flow.float32)
+        x = flow.tensor([1., 2., 3.], dtype=flow.float64)
+        test_case.assertTrue(np.array_equal(x.numpy(), [1., 2., 3.]))
+        test_case.assertEquals(x.dtype, flow.float64)
+        np_arr = np.array([1, 2, 3])
+        x = flow.tensor(np_arr)
+        test_case.assertTrue(np.array_equal(x.numpy(), [1, 2, 3]))
+        test_case.assertEquals(x.dtype, flow.int64)
+        np_arr = np.array([1, 2, 3], dtype=np.float64)
+        x = flow.tensor(np_arr)
+        test_case.assertTrue(np.array_equal(x.numpy(), [1., 2., 3.]))
+        test_case.assertEquals(x.dtype, flow.float64)
+        x = flow.tensor(np_arr, dtype=flow.float32)
+        test_case.assertTrue(np.array_equal(x.numpy(), [1., 2., 3.]))
+        test_case.assertEquals(x.dtype, flow.float32)
+        x = flow.tensor(np_arr, dtype=flow.int8)
+        test_case.assertTrue(np.array_equal(x.numpy(), [1., 2., 3.]))
+        test_case.assertEquals(x.dtype, flow.int8)
+
 
 if __name__ == "__main__":
     unittest.main()
