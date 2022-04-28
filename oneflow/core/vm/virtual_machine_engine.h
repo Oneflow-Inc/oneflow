@@ -46,7 +46,7 @@ class ScheduleCtx {
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
 };
 
-struct VmDesc;
+class VmDesc;
 class VirtualMachineEngine final : public intrusive::Base {
  public:
   // types

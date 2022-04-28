@@ -178,7 +178,7 @@ class CeluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
+      (*outputs)[0] = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
@@ -235,8 +235,8 @@ class GluFunctor {
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     return sequence_function(functional::Sigmoid)
-        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
-        .call(split_x->at(1));
+        .then(std::bind(functional::Mul, (*split_x)[0], std::placeholders::_1))
+        .call((*split_x)[1]);
   }
 };
 
@@ -268,6 +268,51 @@ class HardSigmoidGradFunctor : public BinaryFunctor {
         CHECK_JUST(one::OpBuilder("hardsigmoid_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
+
+class HardShrinkFunctor {
+ public:
+  HardShrinkFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& lambd,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    CHECK_GT_OR_RETURN(lambd, 0) << "lambd must be greater than 0";
+    JUST(attrs.SetAttr<double>("lambd", lambd));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      // outputs->at(0) = x;
+      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      // return outputs->at(0);
+      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class HardShrinkGradFunctor {
+ public:
+  HardShrinkGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("dy").Input("y").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+                           const double& lambd) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("lambd", lambd));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SoftmaxFunctorBase {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
@@ -362,10 +407,19 @@ class LeakyReluFunctor {
   LeakyReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("leaky_relu").Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha,
+                           bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:
@@ -568,6 +622,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
+  m.add_functor<impl::HardShrinkFunctor>("HardShrink");
+  m.add_functor<impl::HardShrinkGradFunctor>("HardShrinkGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
   m.add_functor<impl::SoftmaxGradFunctor>("SoftmaxGrad");
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");

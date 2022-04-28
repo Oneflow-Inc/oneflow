@@ -232,6 +232,14 @@ class Optimizer(object):
         }
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
+        """Performs a single optimization step (parameter update).
+
+        Args:
+            closure (Union[Callable, None], optional): A closure that reevaluates the model and returns the loss. Optional for most optimizers.
+
+        Returns:
+            Union[Tensor, None]: The loss. 
+        """
         raise NotImplementedError()
 
     def clip_grad(self):
@@ -283,7 +291,7 @@ class Optimizer(object):
                     if set_to_none:
                         param.grad = None
                     else:
-                        param.grad.zeros_()
+                        param.grad.zero_()
 
     def _parse_input_parameters(self, parameters):
         """
@@ -314,21 +322,24 @@ class Optimizer(object):
             )
 
     def _generate_grad_clip_conf_for_optim_conf(self, param_group, optimizer_conf):
-        if param_group._enable_clip_grad:
-            if (
-                param_group["clip_grad_max_norm"] == 1.0
-                and param_group["clip_grad_norm_type"] == 2.0
-            ):
-                optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm().set_clip_norm(
-                    param_group["clip_grad_max_norm"]
-                )
-            else:
-                warnings.warn(
-                    "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
-                )
+        if not param_group._enable_clip_grad:
+            return
+
+        assert "clip_grad_max_norm" in param_group
+        assert "clip_grad_norm_type" in param_group
+        max_norm = float(param_group["clip_grad_max_norm"])
+        norm_type = float(param_group["clip_grad_norm_type"])
+        clip_grad_norm = (
+            optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm()
+        )
+        clip_grad_norm.set_max_norm(max_norm)
+        clip_grad_norm.set_norm_type(norm_type)
 
     @property
     def support_sparse(self):
+        """Whether the Optimizer support sparse update. 
+
+        """
         return False
 
     def _check_variables_in_graph(self, vars_conf):

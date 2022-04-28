@@ -118,6 +118,12 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, DEVICE_TYPE_SEQ, GATHER_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 
+#ifdef WITH_CUDA
+// For Half
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
+                                 HALF_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+#endif
+
 }  // namespace user_op
 
 }  // namespace oneflow

@@ -77,7 +77,6 @@ Maybe<void> MaxPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("y", 0), i)
         .Split(user_op::OpArg("indice", 0), i)
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("dx", 0), i)

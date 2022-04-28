@@ -8,6 +8,6 @@ builtin.module  {
     %1 = "oneflow.scalar_mul_by_tensor"(%0, %data_output_0) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "ScalarMulByTensor_2", scope_symbol_id = 4611686018427437054 : i64} : (tensor<96x96xf32>, tensor<1xf32>) -> tensor<96x96xf32>
     "oneflow.system"(%1) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], input_bns = ["in"], op_name = "Return_3", op_type_case = 146 : i32, operand_segment_sizes = dense<[1, 0]> : vector<2xi32>, output_lbns = [], result_segment_sizes = dense<0> : vector<2xi32>, scope_symbol_id = 4611686018427445246 : i64} : (tensor<96x96xf32>) -> ()
     oneflow.return
-  }) {sym_name = "FuseCastScaleJob", type = () -> ()} : () -> ()
+  }) {sym_name = "FuseCastScaleJob", function_type = () -> ()} : () -> ()
 }
 // CHECK: %0 = oneflow.mlir_jit
