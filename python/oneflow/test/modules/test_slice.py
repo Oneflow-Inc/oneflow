@@ -139,7 +139,7 @@ def _test_slice_update(test_case, device):
     output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
     # Get the inplaced tensor grad by another tensor
     t = input + 0
-    flow.slice_update(t, update, slice_tup_list=[[1, 4, 1]])
+    flow._C.slice_update(t, update, [1,], [4,], [1,], inplace=True)
     z = t.sum()
     z.backward()
     test_case.assertTrue(np.array_equal(t.numpy(), output))
@@ -208,7 +208,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
                 self.weight = flow.nn.Parameter(flow.Tensor(x))
 
             def forward(self, x, update):
-                flow.slice_update(x, update, slice_tup_list=[[1, 4, 1]])
+                flow._C.slice_update(x, update, [1,], [4,], [1,], inplace=True)
                 y = x + self.weight
                 return x, y
 
