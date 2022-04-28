@@ -93,14 +93,13 @@ Maybe<void> MaxPoolNdGrad::Apply(const MaxPoolCaptureState* ctx, const TensorTup
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::MaxPoolNdGrad(
-      input, indice, out_grads.at(0), ndims, ctx->data_format, ctx->padding,
-      ctx->kernel_size, ctx->stride, ctx->dilation, ctx->return_indices, ctx->ceil_mode));
+      input, indice, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size,
+      ctx->stride, ctx->dilation, ctx->return_indices, ctx->ceil_mode));
 
   return Maybe<void>::Ok();
 }
 
 }  // namespace
-
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_1d", MaxPoolNdGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_2d", MaxPoolNdGrad);

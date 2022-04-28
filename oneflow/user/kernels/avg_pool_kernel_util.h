@@ -53,7 +53,7 @@ struct XPUAdd {
 
 }  // namespace
 
-#define AVG_POOL_DATA_TYPE_SEQ               \
+#define AVG_POOL_DATA_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
@@ -61,7 +61,7 @@ struct XPUAdd {
 
 #define AVG_POOL_DATA_TYPE_CUDA_SEQ AVG_POOL_DATA_TYPE_SEQ
 
-#define AVG_POOL_IDX_DATA_TYPE_SEQ             \
+#define AVG_POOL_IDX_DATA_TYPE_SEQ                \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
@@ -70,9 +70,9 @@ typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 class AvgPoolParams3D {
  public:
   AvgPoolParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-                     const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
-                     const std::vector<int32_t>& stride, const bool ceil_mode,
-                     const bool count_include_pad, const int32_t divisor_override);
+                  const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
+                  const std::vector<int32_t>& stride, const bool ceil_mode,
+                  const bool count_include_pad, const int32_t divisor_override);
   ~AvgPoolParams3D() = default;
 
   const std::string& data_format() const { return data_format_; }
@@ -404,7 +404,7 @@ OF_DEVICE_FUNC void Avgpool3dBackwardCompute(
 
 #define INSTANTIATE_AVG_POOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
   template struct AvgPoolKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),      \
-                                       OF_PP_PAIR_FIRST(index_dtype_pair)>;
+                                    OF_PP_PAIR_FIRST(index_dtype_pair)>;
 
 }  // namespace oneflow
 

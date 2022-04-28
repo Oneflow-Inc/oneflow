@@ -25,7 +25,6 @@ typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn
 typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
 
-
 TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
@@ -47,7 +46,7 @@ TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
     }
 
     const AvgPoolParams3D params_3d(dim, *x_shape, data_format, padding, kernel_size, stride,
-                                       ceil_mode, count_include_pad, divisor_override);
+                                    ceil_mode, count_include_pad, divisor_override);
     user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();

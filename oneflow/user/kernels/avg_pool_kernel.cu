@@ -149,9 +149,9 @@ struct AvgPoolKernelUtil<DeviceType::kCUDA, T, IDX> {
                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
         params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
-        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[1],
-        params_3d.pool_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
-        params_3d.count_include_pad(), params_3d.divisor_override());
+        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.count_include_pad(),
+        params_3d.divisor_override());
   }
 
   static void Avgpool2dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
@@ -161,9 +161,9 @@ struct AvgPoolKernelUtil<DeviceType::kCUDA, T, IDX> {
                                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
         params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
-        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[1],
-        params_3d.pool_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
-        params_3d.count_include_pad(), params_3d.divisor_override());
+        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.count_include_pad(),
+        params_3d.divisor_override());
   }
 
   static void Avgpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
@@ -174,9 +174,9 @@ struct AvgPoolKernelUtil<DeviceType::kCUDA, T, IDX> {
         index_helper, elem_num, src, dest, params_3d.padding()[0], params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-        params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
-        params_3d.pool_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
-        params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
+        params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[0], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
   static void Avgpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
@@ -187,9 +187,9 @@ struct AvgPoolKernelUtil<DeviceType::kCUDA, T, IDX> {
         index_helper, elem_num, src, dest, params_3d.padding()[0], params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-        params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
-        params_3d.pool_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
-        params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
+        params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[0], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.count_include_pad(), params_3d.divisor_override());
   }
 };
 

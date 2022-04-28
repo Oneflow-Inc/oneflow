@@ -115,12 +115,8 @@ class MaxPoolNdGradFunctor {
   MaxPoolNdGradFunctor() {
     for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
-      op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name)
-                                                  .Input("x")
-                                                  .Input("indice")
-                                                  .Input("dy")
-                                                  .Output("dx")
-                                                  .Build());
+      op_expr_map_[op_type_name] = CHECK_JUST(
+          one::OpBuilder(op_type_name).Input("x").Input("indice").Input("dy").Output("dx").Build());
     }
   }
   static std::string GetOpTypeName(const int32_t& ndims) {
@@ -128,9 +124,8 @@ class MaxPoolNdGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indice,
-                           const std::shared_ptr<one::Tensor>& dy,
-                           const int32_t& ndims, const std::string& data_format,
-                           const std::vector<int32_t>& padding,
+                           const std::shared_ptr<one::Tensor>& dy, const int32_t& ndims,
+                           const std::string& data_format, const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
                            const bool& return_indices, const bool& ceil_mode) const {

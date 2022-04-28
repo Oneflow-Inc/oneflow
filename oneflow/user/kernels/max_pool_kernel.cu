@@ -214,16 +214,15 @@ struct PoolKernelUtil<DeviceType::kCUDA, T, IDX> {
                                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
-        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-        params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2], params_3d.stride_3d()[1],
-        params_3d.stride_3d()[2], params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
+        params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[1],
+        params_3d.pool_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
   static void Maxpool2dBackwardCFirst(ep::Stream* stream,
                                       const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                       const IDX elem_num, const T* src, T* dest,
-                                      const int64_t* indice_ptr,
-                                      const MaxPoolParams3D& params_3d) {
+                                      const int64_t* indice_ptr, const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool2dBackwardCFirst<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
@@ -240,16 +239,15 @@ struct PoolKernelUtil<DeviceType::kCUDA, T, IDX> {
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3),
-        params_3d.GetYShape5D().At(4), params_3d.pool_size_3d()[1],
-        params_3d.pool_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
-        params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
+        params_3d.GetYShape5D().At(4), params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.dilation_3d()[1],
+        params_3d.dilation_3d()[2]);
   }
 
   static void Maxpool2dBackwardCLast(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                      const IDX elem_num, const T* src, T* dest,
-                                     const int64_t* indice_ptr,
-                                     const MaxPoolParams3D& params_3d) {
+                                     const int64_t* indice_ptr, const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool2dBackwardCLast<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
@@ -265,10 +263,10 @@ struct PoolKernelUtil<DeviceType::kCUDA, T, IDX> {
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
         params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
         params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
-        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[0],
-        params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2], params_3d.stride_3d()[0],
-        params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.dilation_3d()[0],
-        params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
+        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
+        params_3d.pool_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+        params_3d.stride_3d()[2], params_3d.dilation_3d()[0], params_3d.dilation_3d()[1],
+        params_3d.dilation_3d()[2]);
   }
 
   static void Maxpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,

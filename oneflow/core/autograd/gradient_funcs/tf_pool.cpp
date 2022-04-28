@@ -46,8 +46,8 @@ class TFPoolNdGrad : public OpExprGradFunction<TFPoolCaptureState> {
   using OpExprGradFunction<TFPoolCaptureState>::Init;
 
   Maybe<void> Init(const OpExpr& op, const std::string& mode);
-  Maybe<void> Capture(TFPoolCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override;
+  Maybe<void> Capture(TFPoolCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const TFPoolCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -65,7 +65,7 @@ Maybe<void> TFPoolNdGrad::Init(const OpExpr& op, const std::string& mode) {
 }
 
 Maybe<void> TFPoolNdGrad::Capture(TFPoolCaptureState* ctx, const TensorTuple& inputs,
-                                const TensorTuple& outputs, const AttrMap& attrs) const {
+                                  const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -84,7 +84,7 @@ Maybe<void> TFPoolNdGrad::Capture(TFPoolCaptureState* ctx, const TensorTuple& in
 }
 
 Maybe<void> TFPoolNdGrad::Apply(const TFPoolCaptureState* ctx, const TensorTuple& out_grads,
-                              TensorTuple* in_grads) const {
+                                TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 

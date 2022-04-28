@@ -483,10 +483,11 @@ llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   operands.push_back(value[0]);
   NamedAttrList attributes = max_pool_2d_op->getAttrs();
   attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
-  auto res = rewriter
-                 .create<oneflow::MaxPool2DOp>(
-                     max_pool_2d_op.getLoc(), max_pool_2d_op->getResultTypes(), operands, attributes)
-                 ->getResults();
+  auto res =
+      rewriter
+          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), max_pool_2d_op->getResultTypes(),
+                                        operands, attributes)
+          ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   results.push_back(res[1]);

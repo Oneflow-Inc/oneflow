@@ -71,12 +71,12 @@ void Get3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size
 }
 
 MaxPoolParams3D::MaxPoolParams3D(const int32_t dim, const ShapeView& x_shape,
-                                       const std::string& data_format,
-                                       const std::vector<int32_t>& padding,
-                                       const std::vector<int32_t>& kernel_size,
-                                       const std::vector<int32_t>& stride,
-                                       const std::vector<int32_t>& dilation,
-                                       const bool return_indices, const bool ceil_mode)
+                                 const std::string& data_format,
+                                 const std::vector<int32_t>& padding,
+                                 const std::vector<int32_t>& kernel_size,
+                                 const std::vector<int32_t>& stride,
+                                 const std::vector<int32_t>& dilation, const bool return_indices,
+                                 const bool ceil_mode)
     : dim_(dim),
       data_format_(data_format),
       padding_(Get3DPadVec(padding, dim)),
