@@ -1128,11 +1128,10 @@ def _new_tensor(
         )
 
 
-
 def _amin(self, dim=None, keepdim=False):
     return flow._C.amin(self, dim=dim, keepdim=keepdim)
 
-  
+
 def _byte(self):
     return flow._C.to(self, flow.uint8)
 
