@@ -1142,11 +1142,11 @@
 - name: "adaptive_pool_grad"
   signature: "Tensor (Tensor x, Tensor dy, String mode, Int32 ndims) => AdaptivePoolNdGrad"
 
-- name: "pool_grad"
+- name: "tf_pool_grad"
   signature:
     "Tensor (Tensor x, Tensor y, Tensor dy, String mode, Int32 ndims, String data_format,
     String padding, Int32List padding_before, Int32List padding_after, Int32List pool_size,
-    Int32List strides, Bool ceil_mode) => PoolNdGrad"
+    Int32List strides, Bool ceil_mode) => TFPoolNdGrad"
   bind_python: False
 
 - name: "max_pool1d"
