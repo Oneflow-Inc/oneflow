@@ -37,6 +37,8 @@ limitations under the License.
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
+#include <limits>
+
 namespace mlir {
 
 namespace oneflow {
@@ -84,6 +86,23 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
   }
 };
 
+    // %1 = "oneflow.relu"(%y) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-7", output_lbns = ["relu-7/y_0"], scope_symbol_id = 4611686018427416575 : i64} : (tensor<16x64x112x112xf32>) -> tensor<16x64x112x112xf32>
+struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
+ public:
+  using OpConversionPattern<ReluOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(ReluOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto floatMax = std::numeric_limits<float>::max();
+    auto intMax = std::numeric_limits<long long>::max();
+    rewriter.replaceOpWithNewOp<tosa::ReluNOp>(op,
+                                               /* output */ op.y().getType(),
+                                               /* input */ op.x(),
+                                               static_cast<uint64_t>(intMax),
+                                               static_cast<::llvm::APFloat>(floatMax));
+    return success();
+  }
+};
+
 namespace {
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
@@ -100,6 +119,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
+  patterns.insert<ReluOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
