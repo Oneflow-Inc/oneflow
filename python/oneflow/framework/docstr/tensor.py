@@ -1979,6 +1979,14 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.byte,
+    """
+    self.byte() is equivalent to self.to(oneflow.uint8).
+    See :func:`oneflow.Tensor.to`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.amin,
     """
     See :func:`oneflow.amin`

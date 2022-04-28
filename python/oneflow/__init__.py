@@ -141,6 +141,7 @@ from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max
 from oneflow._C import min
+from oneflow._C import median
 from oneflow._C import pow
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
@@ -348,6 +349,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.random_ops import normal_op as normal
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint

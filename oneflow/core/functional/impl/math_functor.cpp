@@ -689,6 +689,70 @@ class ReduceMeanFunctor {
   }
 };
 
+class MedianFunctor {
+ public:
+  MedianFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("median").Input("input").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    if (x->shape()->elem_cnt() == 0) {
+      return functional::To(
+          JUST(functional::Constant(Shape({1}).RemoveOnes({0}),
+                                    Scalar(std::numeric_limits<float>::quiet_NaN()),
+                                    JUST(DType::Get(DataType::kFloat)), NullOpt)),
+          x, false);
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class MedianWithIndicesFunctor {
+ public:
+  MedianWithIndicesFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("median_with_indices")
+                         .Input("input")
+                         .Output("values")
+                         .Output("indices")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool& keepdim) const {
+    MutableAttrMap attrs;
+    int32_t axis = dim;
+    if (axis < -x->ndim() || axis >= x->ndim()) {
+      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
+                                 << ")";
+    }
+    if (axis < 0) { axis += x->ndim(); }
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (x->dim(axis) == 0) {
+      return Error::IndexError() << "IndexError: Expected reduction dim " << axis
+                                 << " to have non-zero size.";
+    }
+    if (axis != x->ndim() - 1) {
+      tensor = JUST(functional::Squeeze(
+          JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),
+          std::vector<int32_t>({axis})));
+    }
+    std::shared_ptr<TensorTuple> result;
+    result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
+    if (keepdim) {
+      *JUST(VectorAt(result.get(), 0)) =
+          JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 0)), axis));
+      *JUST(VectorAt(result.get(), 1)) =
+          JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 1)), axis));
+    }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceProdFunctor {
  public:
   ReduceProdFunctor() {
@@ -2827,6 +2891,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<MinFunctor, Min2Functor>("Min");
   m.add_functor<AminFunctor>("Amin");
+  m.add_functor<MedianFunctor>("Median");
+  m.add_functor<MedianWithIndicesFunctor>("MedianWithIndices");
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
