@@ -536,6 +536,10 @@ class ModuleBlock(Block):
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg, flush=True)
 
+    def ops_proto(self, graph_proto):
+        assert isinstance(graph_proto, oneflow.core.job.job_pb2.Job)
+        return graph_proto.module_name2module_conf[self.name_prefix + self.name]
+
 
 class LazyBuilder(object):
     def __init__(self, name: str = None, method=None):
