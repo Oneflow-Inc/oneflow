@@ -140,6 +140,7 @@ from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max
 from oneflow._C import min
+from oneflow._C import median
 from oneflow._C import pow
 from oneflow._C import reduce_prod as prod
 from oneflow._C import reduce_sum as sum
