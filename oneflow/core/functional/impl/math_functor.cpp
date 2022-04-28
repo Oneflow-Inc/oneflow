@@ -705,7 +705,6 @@ class ReduceMeanWholeFunctor {
     reduce_count = x->shape()->Count(0);
     const auto& sum = JUST(functional::ReduceSumWhole(x));
     if (reduce_count == 1 || reduce_count == 0) { return sum; }
-    CHECK_GT_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
 };
@@ -726,7 +725,6 @@ class ReduceMeanFunctor {
       for (const int32_t& i : axis) { reduce_count *= x->shape()->At(i); }
     }
     if (reduce_count == 1 || reduce_count == 0) { return sum; }
-    CHECK_GT_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
 };
