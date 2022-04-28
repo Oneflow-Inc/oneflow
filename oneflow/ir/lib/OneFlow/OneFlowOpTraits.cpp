@@ -23,10 +23,11 @@ namespace {
 
 // TODO: merge all ctrl input and output when folding op
 bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
-  oneflow::UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
-  oneflow::UserOpAdaptor adaptor_b(b->getOperands(), b->getAttrDictionary());
-  return adaptor_a.device_tag() == adaptor_b.device_tag()
-         && adaptor_a.device_name() == adaptor_b.device_name();
+  const bool has_identical_dev_tag =
+      IsOpConfCompatible<void>::getDeviceTag(a) == IsOpConfCompatible<void>::getDeviceTag(b);
+  const bool has_identical_dev_name =
+      IsOpConfCompatible<void>::getDeviceName(a) == IsOpConfCompatible<void>::getDeviceName(b);
+  return has_identical_dev_tag && has_identical_dev_name;
 }
 
 }  // namespace
@@ -82,6 +83,58 @@ LogicalResult VerifyIsImportCompatible(Operation* op) {
   } else {
     return op->emitError("expected operation to have attribute: "
                          + IsImportCompatible<void>::getOutputLBNsAttr());
+  }
+  return success();
+}
+
+LogicalResult saveAttrToOpConf(Operation* op, ::oneflow::OperatorConf* op_conf) {
+  if (auto scope_symbol_id = op->getAttrOfType<IntegerAttr>(
+          OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
+    op_conf->set_scope_symbol_id(scope_symbol_id.getInt());
+  }
+  if (auto op_name =
+          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())) {
+    op_conf->set_name(op_name.str());
+  }
+  op_conf->set_device_tag(
+      op->getAttrOfType<StringAttr>(IsOpConfCompatible<void>::getDeviceTagAttr()).str());
+  return success();
+}
+
+StringAttr getOpName(Operation* op) {
+  assert(op->hasTrait<OpTrait::IsOpConfCompatible>());
+  return op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr());
+}
+StringAttr getDeviceTag(Operation* op) {
+  assert(op->hasTrait<OpTrait::IsOpConfCompatible>());
+  return op->getAttrOfType<StringAttr>(IsOpConfCompatible<void>::getDeviceTagAttr());
+}
+ArrayAttr getDeviceName(Operation* op) {
+  assert(op->hasTrait<OpTrait::IsOpConfCompatible>());
+  return op->getAttrOfType<ArrayAttr>(IsOpConfCompatible<void>::getDeviceNameAttr());
+}
+
+IntegerAttr getScopeSymbolID(Operation* op) {
+  assert(op->hasTrait<OpTrait::IsOpConfCompatible>());
+  return op->getAttrOfType<IntegerAttr>(IsOpConfCompatible<void>::getScopeSymbolIDAttr());
+}
+ArrayAttr getHierarchy(Operation* op) {
+  assert(op->hasTrait<OpTrait::IsOpConfCompatible>());
+  return op->getAttrOfType<ArrayAttr>(IsOpConfCompatible<void>::getHierarchyAttr());
+}
+
+LogicalResult saveAttrsToNamedAttrList(Operation* op, NamedAttrList& attributes) {
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
+  if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
+  }
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getOpName(op));
+  if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
   }
   return success();
 }
