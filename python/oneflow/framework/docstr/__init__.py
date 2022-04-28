@@ -69,4 +69,5 @@ from .oneflow import *
 from .argsort import *
 from .module import *
 from .util_ops import *
+from .amin import *
 from .deconv import *
