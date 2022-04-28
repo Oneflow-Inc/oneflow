@@ -351,12 +351,12 @@ def bench(forward: Callable,  x, n=1000):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print(total_time_str)
 
-class VitEvalGraph(nn.Graph):
+class ResNetEvalGraph(nn.Graph):
 
     def __init__(self, model):
         super().__init__()
         self.model = model
-        self.config.enable_cudnn_conv_heuristic_search_algo(True)
+        self.config.enable_amp(True)
 
     def build(self, x):
 
@@ -372,11 +372,11 @@ def main():
     model = resnet101()
     model.eval()
     model.to(device)
-    batch_size = 8
+    batch_size = 64
     x = oneflow.randn(batch_size, 3, 224, 224).to(oneflow.device('cuda'))
 
-    model_graph = VitEvalGraph(model)
-    bench(model_graph, x, n=200)
+    model_graph = ResNetEvalGraph(model)
+    bench(model_graph, x, n=1000)
 
 
 if __name__ == '__main__':
