@@ -152,7 +152,9 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement) {
-  if (!placement->containing_current_rank()) { return Maybe<void>::Ok(); }
+  if (!placement->containing_current_rank() || placement->parallel_num() == 1) {
+    return Maybe<void>::Ok();
+  }
 
   const auto& rank_group = JUST(RankGroup::New(placement));
 
