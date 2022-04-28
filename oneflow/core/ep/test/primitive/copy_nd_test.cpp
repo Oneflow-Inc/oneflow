@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
-#include <Eigen/Core>
 
 namespace oneflow {
 
