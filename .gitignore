@@ -8,6 +8,9 @@
 /examples/**/oneflow
 /benchmark/**/oneflow
 log/
+/debug
+/relwithdebinfo
+/kernel_meta_*
 *plan
 core.*
 *.pyc

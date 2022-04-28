@@ -41,9 +41,19 @@ struct GetReleaseInstructionName {
     static constexpr auto* Get = DECORATE(&Call::Host2Device, ThreadLocal);
     return *JUST(Get(device_type));
   }
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kHost2Npu>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::Host2Npu, ThreadLocal);
+    return *JUST(Get(device_type));
+  }
   static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kDevice2Host>,
                                         DeviceType device_type) {
     static constexpr auto* Get = DECORATE(&Call::Device2Host, ThreadLocal);
+    return *JUST(Get(device_type));
+  }
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kNpu2Host>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::Npu2Host, ThreadLocal);
     return *JUST(Get(device_type));
   }
   static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
@@ -74,9 +84,17 @@ struct GetReleaseInstructionName {
       CHECK_EQ_OR_RETURN(device_type, kCUDA);
       return std::string("cuda_h2d.ReleaseTensor");
     }
+    static Maybe<std::string> Host2Npu(DeviceType device_type) {
+      CHECK_EQ_OR_RETURN(device_type, kNPU);
+      return std::string("npu_h2d.ReleaseTensor");
+    }
     static Maybe<std::string> Device2Host(DeviceType device_type) {
       CHECK_EQ_OR_RETURN(device_type, kCUDA);
       return std::string("cuda_d2h.ReleaseTensor");
+    }
+    static Maybe<std::string> Npu2Host(DeviceType device_type) {
+      CHECK_EQ_OR_RETURN(device_type, kNPU);
+      return std::string("npu_d2h.ReleaseTensor");
     }
     static Maybe<std::string> SyncedLaunchedCommNet(DeviceType device_type) {
       if (device_type == kCPU) { return std::string("comm_net.ReleaseTensor"); }

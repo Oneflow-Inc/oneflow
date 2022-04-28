@@ -27,7 +27,7 @@ limitations under the License.
 
 namespace oneflow {
 
-const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
+const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu", "npu"});
 
 namespace {
 
@@ -98,6 +98,7 @@ Maybe<const std::string&> Device::of_type() const {
       {"cpu", "cpu"},
       {"gpu", "gpu"},
       {"cuda", "gpu"},
+      {"npu", "npu"},
       {"auto", "auto"},  // Only used for auto generator currently.
   };
   return MapAt(type2device_tag, type());

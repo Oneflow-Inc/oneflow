@@ -13,9 +13,14 @@ message DeviceCudaMemory {
   required int64 device_id = 1;
 }
 
+message DeviceNpuMemory {
+  required int64 device_id = 1;
+}
+
 message MemoryCase {
   oneof case {
     HostMemory host_mem = 1;
     DeviceCudaMemory device_cuda_mem = 2;
+    DeviceNpuMemory device_npu_mem = 3;
   }
 }

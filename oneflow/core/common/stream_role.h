@@ -25,7 +25,9 @@ namespace oneflow {
 #define STREAM_ROLE_SEQ                         \
   OF_PP_MAKE_TUPLE_SEQ(kCompute)                \
   OF_PP_MAKE_TUPLE_SEQ(kHost2Device)            \
+  OF_PP_MAKE_TUPLE_SEQ(kHost2Npu)            \
   OF_PP_MAKE_TUPLE_SEQ(kDevice2Host)            \
+  OF_PP_MAKE_TUPLE_SEQ(kNpu2Host)            \
   OF_PP_MAKE_TUPLE_SEQ(kSyncedLaunchedCommNet)  \
   OF_PP_MAKE_TUPLE_SEQ(kAsyncedLaunchedCommNet) \
   OF_PP_MAKE_TUPLE_SEQ(kCriticalSection)

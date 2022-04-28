@@ -41,9 +41,19 @@ struct GetCallInstructionName {
     static constexpr auto* Get = DECORATE(&Call::Host2Device, ThreadLocal);
     return *JUST(Get(device_type));
   }
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kHost2Npu>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::Host2Npu, ThreadLocal);
+    return *JUST(Get(device_type));
+  }
   static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kDevice2Host>,
                                         DeviceType device_type) {
     static constexpr auto* Get = DECORATE(&Call::Device2Host, ThreadLocal);
+    return *JUST(Get(device_type));
+  }
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kNpu2Host>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::Npu2Host, ThreadLocal);
     return *JUST(Get(device_type));
   }
   static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
@@ -83,6 +93,14 @@ struct GetCallInstructionName {
       CHECK_EQ_OR_RETURN(device_type, kCUDA);
       return std::string("gpu.LocalCallOpKernel");
     }
+    static Maybe<std::string> Host2Npu(DeviceType device_type) {
+      CHECK_EQ_OR_RETURN(device_type, kNPU);
+      return std::string("npu_h2d.LocalCallOpKernel");
+    }    
+    static Maybe<std::string> Npu2Host(DeviceType device_type) {
+      CHECK_EQ_OR_RETURN(device_type, kNPU);
+      return std::string("npu_d2h.LocalCallOpKernel");
+    }    
     static Maybe<std::string> AsyncedLaunchedCommNet(DeviceType device_type) {
       if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
       CHECK_EQ_OR_RETURN(device_type, kCUDA);

@@ -58,7 +58,7 @@ auto ReluPrimitiveExists() {
   });
 }
 
-REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel>().SetIsMatchedHob(ReluPrimitiveExists()
-                                                                       == true);
+REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel>().SetIsMatchedHob((!(user_op::HobDeviceType() == DeviceType::kNPU))
+                                                                         && ReluPrimitiveExists() == true);
 
 }  // namespace oneflow

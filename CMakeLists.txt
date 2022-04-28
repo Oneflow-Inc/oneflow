@@ -15,6 +15,7 @@ option(BUILD_PYTHON "" ON)
 option(BUILD_CPP_API "Option to build OneFlow C++ API (beta)" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
+option(BUILD_NPU "" ON)
 option(BUILD_TESTING "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
@@ -267,6 +268,11 @@ set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
 
 add_subdirectory(external)
 include(third_party)
+
+
+if(BUILD_NPU)
+  add_definitions(-DWITH_NPU)
+endif()
 
 if(BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags

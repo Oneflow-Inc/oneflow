@@ -31,6 +31,8 @@ struct NeedSoftSync {
   }
   static bool Case(StreamRoleCase<StreamRole::kHost2Device>, DeviceType) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kDevice2Host>, DeviceType) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kHost2Npu>, DeviceType) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kNpu2Host>, DeviceType) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>, DeviceType device_type) {
     return device_type != kCPU;
   }

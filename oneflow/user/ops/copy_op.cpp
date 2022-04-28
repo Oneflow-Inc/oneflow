@@ -30,6 +30,12 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
   } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
     const auto device = JUST(Device::New("cuda", out_device->device_id()));
     return Stream::New(device, StreamRole::kHost2Device);
+  } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "npu") {
+    const auto device = JUST(Device::New("npu", out_device->device_id()));
+    return Stream::New(device, StreamRole::kHost2Npu);
+  } else if (JUST(in_device->of_type()) == "npu" && JUST(out_device->of_type()) == "cpu") {
+    const auto device = JUST(Device::New("npu", out_device->device_id()));
+    return Stream::New(device, StreamRole::kNpu2Host);
   } else {
     CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());
     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));

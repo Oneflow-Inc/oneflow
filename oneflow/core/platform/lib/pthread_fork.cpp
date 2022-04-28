@@ -36,10 +36,15 @@ void CurrentRankVmSync() {
 }  // namespace
 
 void RegisterForkCallback() { pthread_atfork(&CurrentRankVmSync, nullptr, &SetIsForkedSubProcess); }
-COMMAND(RegisterForkCallback());
+//COMMAND(RegisterForkCallback());
 
 const char* kOfCudaNotSupportInForkedSubProcess =
     "Cannot re-initialize CUDA in forked subprocess. To use CUDA with multiprocessing, you "
+    "must add 'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using "
+    "Python's multiprocessing";
+    
+const char* kOfNpuNotSupportInForkedSubProcess =
+    "Cannot re-initialize NPU in forked subprocess. To use NPU with multiprocessing, you "
     "must add 'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using "
     "Python's multiprocessing";
 

@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/npu_util.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -1266,6 +1267,10 @@ class CopyFunctor {
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
+#endif
+
+#ifdef WITH_NPU
+    if (device_type == "npu")  { InitNpuContextOnce(device_id); }
 #endif
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }

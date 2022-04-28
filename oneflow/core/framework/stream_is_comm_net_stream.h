@@ -27,7 +27,9 @@ struct IsCommNetStream {
   }
   static bool Case(StreamRoleCase<StreamRole::kCompute>) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kHost2Device>) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kHost2Npu>) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kDevice2Host>) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kNpu2Host>) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) { return true; }
   static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) { return true; }
   static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return false; }

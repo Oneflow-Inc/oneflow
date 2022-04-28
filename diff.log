@@ -1,0 +1,476 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 694f45193..6a26e7d3e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -15,6 +15,7 @@ option(BUILD_PYTHON "" ON)
+ option(BUILD_CPP_API "Option to build OneFlow C++ API (beta)" OFF)
+ option(BUILD_RDMA "" OFF)
+ option(BUILD_CUDA "" ON)
++option(BUILD_NPU "" ON)
+ option(BUILD_TESTING "" OFF)
+ option(BUILD_GIT_VERSION "" ON)
+ option(BUILD_PROFILER "" OFF)
+@@ -268,6 +269,11 @@ set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
+ add_subdirectory(external)
+ include(third_party)
+ 
++
++if(BUILD_NPU)
++  add_definitions(-DWITH_NPU)
++endif()
++
+ if(BUILD_CUDA)
+   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags
+   if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+diff --git a/cmake/oneflow.cmake b/cmake/oneflow.cmake
+index 9c7ecd27d..e7f77ffd0 100644
+--- a/cmake/oneflow.cmake
++++ b/cmake/oneflow.cmake
+@@ -1,5 +1,4 @@
+ include(python)
+-
+ function(oneflow_add_executable)
+   add_executable(${ARGV})
+   set_compile_options_to_oneflow_target(${ARGV0})
+@@ -295,6 +294,7 @@ get_property(EXTERNAL_INCLUDE_DIRS GLOBAL PROPERTY EXTERNAL_INCLUDE_DIRS)
+ get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
+ 
+ target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
++link_directories("/usr/local/Ascend/ascend-toolkit/latest/lib64")
+ 
+ if(APPLE)
+   set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
+@@ -319,7 +319,9 @@ elseif(UNIX)
+     ${EXTERNAL_TARGETS}
+     -Wl,--no-whole-archive
+     -ldl
+-    -lrt)
++    -lrt
++    -lascendcl 
++    -lacl_op_compiler)
+   if(BUILD_CUDA)
+     target_link_libraries(oneflow CUDA::cudart_static)
+   endif()
+diff --git a/oneflow/api/python/framework/tensor.cpp b/oneflow/api/python/framework/tensor.cpp
+index 7949ec2d9..979e40786 100644
+--- a/oneflow/api/python/framework/tensor.cpp
++++ b/oneflow/api/python/framework/tensor.cpp
+@@ -36,6 +36,8 @@ limitations under the License.
+ #include "oneflow/core/autograd/autograd_engine.h"
+ #include "oneflow/core/common/decorator.h"
+ 
++
++
+ namespace py = pybind11;
+ 
+ namespace oneflow {
+diff --git a/oneflow/core/common/device_type.proto b/oneflow/core/common/device_type.proto
+index 65ee53d57..2c7ab52f3 100644
+--- a/oneflow/core/common/device_type.proto
++++ b/oneflow/core/common/device_type.proto
+@@ -5,4 +5,5 @@ enum DeviceType {
+   kInvalidDevice = 0;
+   kCPU = 1;
+   kCUDA = 2;
++  kNPU = 3;
+ }
+diff --git a/oneflow/core/common/stream_role.h b/oneflow/core/common/stream_role.h
+index 27fdd4256..6e10348da 100644
+--- a/oneflow/core/common/stream_role.h
++++ b/oneflow/core/common/stream_role.h
+@@ -25,7 +25,9 @@ namespace oneflow {
+ #define STREAM_ROLE_SEQ                         \
+   OF_PP_MAKE_TUPLE_SEQ(kCompute)                \
+   OF_PP_MAKE_TUPLE_SEQ(kHost2Device)            \
++  OF_PP_MAKE_TUPLE_SEQ(kHost2Npu)            \
+   OF_PP_MAKE_TUPLE_SEQ(kDevice2Host)            \
++  OF_PP_MAKE_TUPLE_SEQ(kNpu2Host)            \
+   OF_PP_MAKE_TUPLE_SEQ(kSyncedLaunchedCommNet)  \
+   OF_PP_MAKE_TUPLE_SEQ(kAsyncedLaunchedCommNet) \
+   OF_PP_MAKE_TUPLE_SEQ(kCriticalSection)
+diff --git a/oneflow/core/common/util.h b/oneflow/core/common/util.h
+index a087050fb..f64e981ff 100644
+--- a/oneflow/core/common/util.h
++++ b/oneflow/core/common/util.h
+@@ -180,7 +180,9 @@ inline double GetCurTime() {
+ 
+ const size_t kHostAlignSize = 64;
+ const size_t kCudaAlignSize = 512;
++const size_t kNpuAlignSize = 512;
+ const size_t kCudaMemAllocAlignSize = 512;
++const size_t kNpuMemAllocAlignSize = 512;
+ inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
+ 
+ inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }
+diff --git a/oneflow/core/device/device_context.h b/oneflow/core/device/device_context.h
+index de1f60756..7d000ed0c 100644
+--- a/oneflow/core/device/device_context.h
++++ b/oneflow/core/device/device_context.h
+@@ -17,6 +17,7 @@ limitations under the License.
+ #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
+ 
+ #include "oneflow/core/device/cuda_util.h"
++#include "oneflow/core/device/npu_util.h"
+ #include "oneflow/core/common/auto_registration_factory.h"
+ #include "oneflow/core/ep/include/stream.h"
+ 
+@@ -48,6 +49,13 @@ class DeviceCtx {
+   }
+ #endif
+ 
++#ifdef WITH_NPU
++  virtual aclrtStream npu_stream() const {
++    UNIMPLEMENTED();
++    return nullptr;
++  }
++#endif
++
+   virtual ep::Stream* stream() = 0;
+ 
+   virtual vm::Allocator* mut_allocator() {
+diff --git a/oneflow/core/eager/release_tensor_instruction_type.cpp b/oneflow/core/eager/release_tensor_instruction_type.cpp
+index d988b025a..3833a015b 100644
+--- a/oneflow/core/eager/release_tensor_instruction_type.cpp
++++ b/oneflow/core/eager/release_tensor_instruction_type.cpp
+@@ -22,7 +22,9 @@ limitations under the License.
+ #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
+ #include "oneflow/core/vm/cpu_stream_type.h"
+ #include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
+-
++#include "oneflow/core/vm/npu_copy_h2d_stream_type.h"
++#include "oneflow/core/vm/npu_copy_d2h_stream_type.h"
++#include "oneflow/core/vm/npu_stream_type.h"
+ namespace oneflow {
+ 
+ namespace vm {
+@@ -54,6 +56,29 @@ COMMAND(
+ COMMAND(vm::RegisterInstructionType<ReleaseTensorInstructionType<CpuStreamType>>(
+     "comm_net.ReleaseTensor"));
+ 
++#ifdef WITH_NPU
++template<typename StreamT>
++class NpuReleaseTensorInstructionType : public ReleaseTensorInstructionType<StreamT> {
++ public:
++  NpuReleaseTensorInstructionType() = default;
++  ~NpuReleaseTensorInstructionType() override = default;
++
++  void InitInstructionStatus(Instruction* instruction) const override {
++    auto* status_buffer = instruction->mut_status_buffer();
++    auto* stream = instruction->mut_stream();
++    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
++    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
++    NpuOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_npu_event(nullptr);
++  }
++};
++COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuStreamType>>(
++    "npu.ReleaseTensor"));
++COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuCopyH2DStreamType>>(
++    "npu_h2d.ReleaseTensor"));
++COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuCopyD2HStreamType>>(
++    "npu_d2h.ReleaseTensor"));
++#endif
++
+ #ifdef WITH_CUDA
+ 
+ template<typename StreamT>
+diff --git a/oneflow/core/framework/device.cpp b/oneflow/core/framework/device.cpp
+index 5d6e42304..687d96d1a 100644
+--- a/oneflow/core/framework/device.cpp
++++ b/oneflow/core/framework/device.cpp
+@@ -27,7 +27,7 @@ limitations under the License.
+ 
+ namespace oneflow {
+ 
+-const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
++const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu", "npu"});
+ 
+ namespace {
+ 
+@@ -98,6 +98,7 @@ Maybe<const std::string&> Device::of_type() const {
+       {"cpu", "cpu"},
+       {"gpu", "gpu"},
+       {"cuda", "gpu"},
++      {"npu", "npu"},
+       {"auto", "auto"},  // Only used for auto generator currently.
+   };
+   return MapAt(type2device_tag, type());
+diff --git a/oneflow/core/framework/stream_get_call_instruction_name.h b/oneflow/core/framework/stream_get_call_instruction_name.h
+index 03cd8a288..e2b7fb050 100644
+--- a/oneflow/core/framework/stream_get_call_instruction_name.h
++++ b/oneflow/core/framework/stream_get_call_instruction_name.h
+@@ -41,11 +41,21 @@ struct GetCallInstructionName {
+     static constexpr auto* Get = DECORATE(&Call::Host2Device, ThreadLocal);
+     return *JUST(Get(device_type));
+   }
++  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kHost2Npu>,
++                                        DeviceType device_type) {
++    static constexpr auto* Get = DECORATE(&Call::Host2Npu, ThreadLocal);
++    return *JUST(Get(device_type));
++  }
+   static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kDevice2Host>,
+                                         DeviceType device_type) {
+     static constexpr auto* Get = DECORATE(&Call::Device2Host, ThreadLocal);
+     return *JUST(Get(device_type));
+   }
++  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kNpu2Host>,
++                                        DeviceType device_type) {
++    static constexpr auto* Get = DECORATE(&Call::Npu2Host, ThreadLocal);
++    return *JUST(Get(device_type));
++  }
+   static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
+                                         DeviceType device_type) {
+     static constexpr auto* Get = DECORATE(&Call::SyncedLaunchedCommNet, ThreadLocal);
+@@ -83,6 +93,14 @@ struct GetCallInstructionName {
+       CHECK_EQ_OR_RETURN(device_type, kCUDA);
+       return std::string("gpu.LocalCallOpKernel");
+     }
++    static Maybe<std::string> Host2Npu(DeviceType device_type) {
++      CHECK_EQ_OR_RETURN(device_type, kNPU);
++      return std::string("npu_h2d.LocalCallOpKernel");
++    }    
++    static Maybe<std::string> Npu2Host(DeviceType device_type) {
++      CHECK_EQ_OR_RETURN(device_type, kNPU);
++      return std::string("npu_d2h.LocalCallOpKernel");
++    }    
+     static Maybe<std::string> AsyncedLaunchedCommNet(DeviceType device_type) {
+       if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+       CHECK_EQ_OR_RETURN(device_type, kCUDA);
+diff --git a/oneflow/core/framework/stream_get_release_instruction_name.h b/oneflow/core/framework/stream_get_release_instruction_name.h
+index 262da8c29..a6d1f41e8 100644
+--- a/oneflow/core/framework/stream_get_release_instruction_name.h
++++ b/oneflow/core/framework/stream_get_release_instruction_name.h
+@@ -41,11 +41,21 @@ struct GetReleaseInstructionName {
+     static constexpr auto* Get = DECORATE(&Call::Host2Device, ThreadLocal);
+     return *JUST(Get(device_type));
+   }
++  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kHost2Npu>,
++                                        DeviceType device_type) {
++    static constexpr auto* Get = DECORATE(&Call::Host2Npu, ThreadLocal);
++    return *JUST(Get(device_type));
++  }
+   static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kDevice2Host>,
+                                         DeviceType device_type) {
+     static constexpr auto* Get = DECORATE(&Call::Device2Host, ThreadLocal);
+     return *JUST(Get(device_type));
+   }
++  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kNpu2Host>,
++                                        DeviceType device_type) {
++    static constexpr auto* Get = DECORATE(&Call::Npu2Host, ThreadLocal);
++    return *JUST(Get(device_type));
++  }
+   static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
+                                         DeviceType device_type) {
+     static constexpr auto* Get = DECORATE(&Call::SyncedLaunchedCommNet, ThreadLocal);
+@@ -74,10 +84,18 @@ struct GetReleaseInstructionName {
+       CHECK_EQ_OR_RETURN(device_type, kCUDA);
+       return std::string("cuda_h2d.ReleaseTensor");
+     }
++    static Maybe<std::string> Host2Npu(DeviceType device_type) {
++      CHECK_EQ_OR_RETURN(device_type, kNPU);
++      return std::string("npu_h2d.ReleaseTensor");
++    }
+     static Maybe<std::string> Device2Host(DeviceType device_type) {
+       CHECK_EQ_OR_RETURN(device_type, kCUDA);
+       return std::string("cuda_d2h.ReleaseTensor");
+     }
++    static Maybe<std::string> Npu2Host(DeviceType device_type) {
++      CHECK_EQ_OR_RETURN(device_type, kNPU);
++      return std::string("npu_d2h.ReleaseTensor");
++    }
+     static Maybe<std::string> SyncedLaunchedCommNet(DeviceType device_type) {
+       if (device_type == kCPU) { return std::string("comm_net.ReleaseTensor"); }
+       CHECK_EQ_OR_RETURN(device_type, kCUDA);
+diff --git a/oneflow/core/framework/stream_is_comm_net_stream.h b/oneflow/core/framework/stream_is_comm_net_stream.h
+index c60906c7f..e9f3d0e5a 100644
+--- a/oneflow/core/framework/stream_is_comm_net_stream.h
++++ b/oneflow/core/framework/stream_is_comm_net_stream.h
+@@ -27,7 +27,9 @@ struct IsCommNetStream {
+   }
+   static bool Case(StreamRoleCase<StreamRole::kCompute>) { return false; }
+   static bool Case(StreamRoleCase<StreamRole::kHost2Device>) { return false; }
++  static bool Case(StreamRoleCase<StreamRole::kHost2Npu>) { return false; }
+   static bool Case(StreamRoleCase<StreamRole::kDevice2Host>) { return false; }
++  static bool Case(StreamRoleCase<StreamRole::kNpu2Host>) { return false; }
+   static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) { return true; }
+   static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) { return true; }
+   static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return false; }
+diff --git a/oneflow/core/framework/stream_need_soft_sync.h b/oneflow/core/framework/stream_need_soft_sync.h
+index d783c8f4d..b01a2c7f1 100644
+--- a/oneflow/core/framework/stream_need_soft_sync.h
++++ b/oneflow/core/framework/stream_need_soft_sync.h
+@@ -31,6 +31,8 @@ struct NeedSoftSync {
+   }
+   static bool Case(StreamRoleCase<StreamRole::kHost2Device>, DeviceType) { return false; }
+   static bool Case(StreamRoleCase<StreamRole::kDevice2Host>, DeviceType) { return false; }
++  static bool Case(StreamRoleCase<StreamRole::kHost2Npu>, DeviceType) { return false; }
++  static bool Case(StreamRoleCase<StreamRole::kNpu2Host>, DeviceType) { return false; }
+   static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>, DeviceType device_type) {
+     return device_type != kCPU;
+   }
+diff --git a/oneflow/core/functional/impl/array_functor.cpp b/oneflow/core/functional/impl/array_functor.cpp
+index d5e8fab30..64ad1a85b 100644
+--- a/oneflow/core/functional/impl/array_functor.cpp
++++ b/oneflow/core/functional/impl/array_functor.cpp
+@@ -23,6 +23,7 @@ limitations under the License.
+ #include "oneflow/core/common/container_util.h"
+ #include "oneflow/core/control/global_process_ctx.h"
+ #include "oneflow/core/device/cuda_util.h"
++#include "oneflow/core/device/npu_util.h"
+ #include "oneflow/core/framework/attr_map.h"
+ #include "oneflow/core/framework/device.h"
+ #include "oneflow/core/framework/nd_sbp.h"
+@@ -1267,6 +1268,10 @@ class CopyFunctor {
+ #ifdef WITH_CUDA
+     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
+ #endif
++
++#ifdef WITH_NPU
++    if (device_type == "npu")  { InitNpuContextOnce(device_id); }
++#endif
+     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+   }
+ 
+diff --git a/oneflow/core/memory/memory_case.proto b/oneflow/core/memory/memory_case.proto
+index c60d60bf7..2bd756c29 100644
+--- a/oneflow/core/memory/memory_case.proto
++++ b/oneflow/core/memory/memory_case.proto
+@@ -13,9 +13,14 @@ message DeviceCudaMemory {
+   required int64 device_id = 1;
+ }
+ 
++message DeviceNpuMemory {
++  required int64 device_id = 1;
++}
++
+ message MemoryCase {
+   oneof case {
+     HostMemory host_mem = 1;
+     DeviceCudaMemory device_cuda_mem = 2;
++    DeviceNpuMemory device_npu_mem = 3;
+   }
+ }
+diff --git a/oneflow/core/memory/memory_case_util.cpp b/oneflow/core/memory/memory_case_util.cpp
+index 9ef8f26d9..d5b3e6c31 100644
+--- a/oneflow/core/memory/memory_case_util.cpp
++++ b/oneflow/core/memory/memory_case_util.cpp
+@@ -76,7 +76,12 @@ std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_
+     mem_case->mutable_host_mem();
+   } else if (device_type == DeviceType::kCUDA) {
+     mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
+-  } else {
++  }
++  else if (device_type == DeviceType::kNPU){
++    std::cout<<"MakeMemCase for NPU doing"<<std::endl;
++    mem_case->mutable_device_npu_mem()->set_device_id(device_id);
++  }
++  else {
+     UNIMPLEMENTED();
+   }
+   return mem_case;
+diff --git a/oneflow/core/platform/include/pthread_fork.h b/oneflow/core/platform/include/pthread_fork.h
+index 92563b4db..c4b52e1dc 100644
+--- a/oneflow/core/platform/include/pthread_fork.h
++++ b/oneflow/core/platform/include/pthread_fork.h
+@@ -23,7 +23,7 @@ namespace pthread_fork {
+ bool IsForkedSubProcess();
+ 
+ extern const char* kOfCudaNotSupportInForkedSubProcess;
+-
++extern const char* kOfNpuNotSupportInForkedSubProcess;
+ }  // namespace pthread_fork
+ 
+ }  // namespace oneflow
+diff --git a/oneflow/core/platform/lib/pthread_fork.cpp b/oneflow/core/platform/lib/pthread_fork.cpp
+index 8b2ac6039..d2ef6227c 100644
+--- a/oneflow/core/platform/lib/pthread_fork.cpp
++++ b/oneflow/core/platform/lib/pthread_fork.cpp
+@@ -36,12 +36,17 @@ void CurrentRankVmSync() {
+ }  // namespace
+ 
+ void RegisterForkCallback() { pthread_atfork(&CurrentRankVmSync, nullptr, &SetIsForkedSubProcess); }
+-COMMAND(RegisterForkCallback());
++//COMMAND(RegisterForkCallback());
+ 
+ const char* kOfCudaNotSupportInForkedSubProcess =
+     "Cannot re-initialize CUDA in forked subprocess. To use CUDA with multiprocessing, you "
+     "must add 'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using "
+     "Python's multiprocessing";
++    
++const char* kOfNpuNotSupportInForkedSubProcess =
++    "Cannot re-initialize NPU in forked subprocess. To use NPU with multiprocessing, you "
++    "must add 'multiprocessing.set_start_method(\"spawn\")' in '__main__' if you are using "
++    "Python's multiprocessing";
+ 
+ }  // namespace pthread_fork
+ 
+diff --git a/oneflow/core/vm/fuse_instruction_type.cpp b/oneflow/core/vm/fuse_instruction_type.cpp
+index 87fc5b012..ed3f39662 100644
+--- a/oneflow/core/vm/fuse_instruction_type.cpp
++++ b/oneflow/core/vm/fuse_instruction_type.cpp
+@@ -20,6 +20,9 @@ limitations under the License.
+ #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
+ #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
+ #include "oneflow/core/vm/cpu_stream_type.h"
++#include "oneflow/core/vm/npu_stream_type.h"
++#include "oneflow/core/vm/npu_copy_h2d_stream_type.h"
++#include "oneflow/core/vm/npu_copy_d2h_stream_type.h"
+ #include "oneflow/core/profiler/profiler.h"
+ 
+ namespace oneflow {
+@@ -60,6 +63,12 @@ class FuseInstructionType : public vm::InstructionType {
+ COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("cpu.Fuse"));
+ COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("comm_net.Fuse"));
+ 
++#ifdef WITH_NPU
++COMMAND(vm::RegisterInstructionType<FuseInstructionType<NpuStreamType>>("npu.Fuse"));
++COMMAND(vm::RegisterInstructionType<FuseInstructionType<NpuCopyH2DStreamType>>("npu_h2d.Fuse"));
++COMMAND(vm::RegisterInstructionType<FuseInstructionType<NpuCopyD2HStreamType>>("npu_d2h.Fuse"));
++#endif
++
+ #ifdef WITH_CUDA
+ COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("gpu.Fuse"));
+ COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("cuda.Fuse"));
+diff --git a/oneflow/core/vm/virtual_machine.cpp b/oneflow/core/vm/virtual_machine.cpp
+index 45051fc43..459927293 100644
+--- a/oneflow/core/vm/virtual_machine.cpp
++++ b/oneflow/core/vm/virtual_machine.cpp
+@@ -195,6 +195,8 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
+       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
+       CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
++      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kNPU)
++          << pthread_fork::kOfNpuNotSupportInForkedSubProcess;
+       // NOTE: operate `vm_` in forked subprocesses causes mysterious problems.
+       // `ComputeInFuseMode` will be replaced by `Compute` soon.
+       instr_msg->mut_instr_type_id()->instruction_type().ComputeInFuseMode(instr_msg);
+diff --git a/oneflow/user/kernels/relu_kernel.cpp b/oneflow/user/kernels/relu_kernel.cpp
+index bbc03a052..ab7f65d5c 100644
+--- a/oneflow/user/kernels/relu_kernel.cpp
++++ b/oneflow/user/kernels/relu_kernel.cpp
+@@ -58,7 +58,7 @@ auto ReluPrimitiveExists() {
+   });
+ }
+ 
+-REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel>().SetIsMatchedHob(ReluPrimitiveExists()
+-                                                                       == true);
++REGISTER_USER_KERNEL("relu").SetCreateFn<ReluKernel>().SetIsMatchedHob((!(user_op::HobDeviceType() == DeviceType::kNPU))
++                                                                         && ReluPrimitiveExists() == true);
+ 
+ }  // namespace oneflow
+diff --git a/oneflow/user/ops/copy_op.cpp b/oneflow/user/ops/copy_op.cpp
+index b4a1d66b7..3de7ceb0a 100644
+--- a/oneflow/user/ops/copy_op.cpp
++++ b/oneflow/user/ops/copy_op.cpp
+@@ -30,6 +30,12 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
+   } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
+     const auto device = JUST(Device::New("cuda", out_device->device_id()));
+     return Stream::New(device, StreamRole::kHost2Device);
++  } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "npu") {
++    const auto device = JUST(Device::New("npu", out_device->device_id()));
++    return Stream::New(device, StreamRole::kHost2Npu);
++  } else if (JUST(in_device->of_type()) == "npu" && JUST(out_device->of_type()) == "cpu") {
++    const auto device = JUST(Device::New("npu", out_device->device_id()));
++    return Stream::New(device, StreamRole::kNpu2Host);
+   } else {
+     CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());
+     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));

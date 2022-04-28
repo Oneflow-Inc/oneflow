@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/npu_util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/ep/include/stream.h"
 
@@ -43,6 +44,13 @@ class DeviceCtx {
     return nullptr;
   }
   virtual cudnnHandle_t cudnn_handle() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+#endif
+
+#ifdef WITH_NPU
+  virtual aclrtStream npu_stream() const {
     UNIMPLEMENTED();
     return nullptr;
   }

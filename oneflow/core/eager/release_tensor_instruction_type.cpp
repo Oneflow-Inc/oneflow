@@ -22,7 +22,9 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
-
+#include "oneflow/core/vm/npu_copy_h2d_stream_type.h"
+#include "oneflow/core/vm/npu_copy_d2h_stream_type.h"
+#include "oneflow/core/vm/npu_stream_type.h"
 namespace oneflow {
 
 namespace vm {
@@ -53,6 +55,29 @@ COMMAND(
     vm::RegisterInstructionType<ReleaseTensorInstructionType<CpuStreamType>>("cpu.ReleaseTensor"));
 COMMAND(vm::RegisterInstructionType<ReleaseTensorInstructionType<CpuStreamType>>(
     "comm_net.ReleaseTensor"));
+
+#ifdef WITH_NPU
+template<typename StreamT>
+class NpuReleaseTensorInstructionType : public ReleaseTensorInstructionType<StreamT> {
+ public:
+  NpuReleaseTensorInstructionType() = default;
+  ~NpuReleaseTensorInstructionType() override = default;
+
+  void InitInstructionStatus(Instruction* instruction) const override {
+    auto* status_buffer = instruction->mut_status_buffer();
+    auto* stream = instruction->mut_stream();
+    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
+    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+    NpuOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_npu_event(nullptr);
+  }
+};
+COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuStreamType>>(
+    "npu.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuCopyH2DStreamType>>(
+    "npu_h2d.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuCopyD2HStreamType>>(
+    "npu_d2h.ReleaseTensor"));
+#endif
 
 #ifdef WITH_CUDA
 

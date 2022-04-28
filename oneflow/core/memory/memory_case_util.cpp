@@ -76,7 +76,12 @@ std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_
     mem_case->mutable_host_mem();
   } else if (device_type == DeviceType::kCUDA) {
     mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
-  } else {
+  }
+  else if (device_type == DeviceType::kNPU){
+    std::cout<<"MakeMemCase for NPU doing"<<std::endl;
+    mem_case->mutable_device_npu_mem()->set_device_id(device_id);
+  }
+  else {
     UNIMPLEMENTED();
   }
   return mem_case;

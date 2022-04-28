@@ -20,6 +20,9 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
+#include "oneflow/core/vm/npu_stream_type.h"
+#include "oneflow/core/vm/npu_copy_h2d_stream_type.h"
+#include "oneflow/core/vm/npu_copy_d2h_stream_type.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
@@ -59,6 +62,12 @@ class FuseInstructionType : public vm::InstructionType {
 
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("cpu.Fuse"));
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("comm_net.Fuse"));
+
+#ifdef WITH_NPU
+COMMAND(vm::RegisterInstructionType<FuseInstructionType<NpuStreamType>>("npu.Fuse"));
+COMMAND(vm::RegisterInstructionType<FuseInstructionType<NpuCopyH2DStreamType>>("npu_h2d.Fuse"));
+COMMAND(vm::RegisterInstructionType<FuseInstructionType<NpuCopyD2HStreamType>>("npu_d2h.Fuse"));
+#endif
 
 #ifdef WITH_CUDA
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("gpu.Fuse"));

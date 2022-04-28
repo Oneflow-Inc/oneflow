@@ -180,7 +180,9 @@ inline double GetCurTime() {
 
 const size_t kHostAlignSize = 64;
 const size_t kCudaAlignSize = 512;
+const size_t kNpuAlignSize = 512;
 const size_t kCudaMemAllocAlignSize = 512;
+const size_t kNpuMemAllocAlignSize = 512;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
 
 inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }

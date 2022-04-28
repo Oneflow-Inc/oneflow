@@ -13,19 +13,39 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PLATFORM_INCLUDE_PTHREAD_FORK_H_
-#define ONEFLOW_CORE_PLATFORM_INCLUDE_PTHREAD_FORK_H_
+#ifndef ONEFLOW_CORE_EP_NPU_NPU_EVENT_H_
+#define ONEFLOW_CORE_EP_NPU_NPU_EVENT_H_
 
+#include "oneflow/core/ep/include/event.h"
+
+#ifdef WITH_NPU
+
+#include "oneflow/core/device/npu_util.h"
+#include "acl/acl.h"
+#include "acl/acl_base.h"
 namespace oneflow {
 
-namespace pthread_fork {
+namespace ep {
 
-bool IsForkedSubProcess();
+class NpuEvent : public Event {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NpuEvent);
+  explicit NpuEvent(unsigned int flags);
+  ~NpuEvent() override;
 
-extern const char* kOfCudaNotSupportInForkedSubProcess;
-extern const char* kOfNpuNotSupportInForkedSubProcess;
-}  // namespace pthread_fork
+  Maybe<bool> QueryDone() override;
+  Maybe<void> Sync() override;
+
+  aclrtEvent npu_event();
+
+ private:
+  aclrtEvent npu_event_;
+};
+
+}  // namespace ep
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PLATFORM_INCLUDE_PTHREAD_FORK_H_
+#endif  // WITH_NPU
+
+#endif  // ONEFLOW_CORE_EP_NPU_NPU_EVENT_H_
