@@ -103,6 +103,26 @@ struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
   }
 };
 
+    // %y_267, %indice = "oneflow.maxpool_2d"(%1) {ceil_mode = false, data_format = "channels_first", device_name = ["@0:0"], device_tag = "cpu", dilation = [1 : si32, 1 : si32], hierarchy = [1], kernel_size = [3 : si32, 3 : si32], op_name = "maxpool_2d-8", output_lbns = ["maxpool_2d-8/y_0", "maxpool_2d-8/indice_0"], padding = [1 : si32, 1 : si32], return_indices = false, scope_symbol_id = 4611686018427416575 : i64, stride = [2 : si32, 2 : si32]} : (tensor<16x64x112x112xf32>) -> (tensor<16x64x56x56xf32>, tensor<16x64x56x56xi64>)
+
+  //  ::mlir::Type output, ::mlir::Value input, ::mlir::ArrayAttr kernel, ::mlir::ArrayAttr stride, ::mlir::ArrayAttr pad);
+  // TODO
+struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
+ public:
+  using OpConversionPattern<MaxPool2DOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(MaxPool2DOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<tosa::MaxPool2dOp>(op,
+                                               /* output */ op.y().getType(),
+                                               /* input */ op.x(),
+                                               op.kernel_size(),
+                                               op.stride(),
+                                               op.padding()
+                                               );
+
+    return success();
+  }
+};
 namespace {
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
@@ -120,6 +140,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
   patterns.insert<ReluOpLowering>(&getContext());
+  patterns.insert<MaxPool2DOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
