@@ -140,6 +140,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const std::string& config_proto_s
 }
 
 Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto) {
+  CHECK_OR_RETURN(is_inited_) << " session must be inited when updating resource.";
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
   Global<ResourceDesc, ForSession>::Get()->Update(reso_proto);
   return Maybe<void>::Ok();

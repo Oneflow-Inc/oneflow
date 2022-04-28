@@ -178,7 +178,7 @@ class CeluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
+      (*outputs)[0] = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
@@ -235,8 +235,8 @@ class GluFunctor {
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     return sequence_function(functional::Sigmoid)
-        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
-        .call(split_x->at(1));
+        .then(std::bind(functional::Mul, (*split_x)[0], std::placeholders::_1))
+        .call((*split_x)[1]);
   }
 };
 
@@ -407,10 +407,19 @@ class LeakyReluFunctor {
   LeakyReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("leaky_relu").Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha,
+                           bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:

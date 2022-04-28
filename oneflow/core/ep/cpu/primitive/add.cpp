@@ -89,7 +89,7 @@ class AddOneDnnImpl : public Add {
       if (srcs[i] == dst) { LOG(FATAL) << "Only the first parameter can be operated inplace"; }
     }
     CpuStream* cpu_stream = stream->As<CpuStream>();
-    size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
+    size_t num_threads = cpu_stream->device()->GetNumThreads();
     CpuNumThreadsGuard guard(num_threads);
 
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
