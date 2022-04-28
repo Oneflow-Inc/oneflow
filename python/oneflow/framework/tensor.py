@@ -968,15 +968,11 @@ def _min(self, *args, **kwargs):
     return flow.min(self, *args, **kwargs)
 
 
-<<<<<<< HEAD
-def _sum(self, dim=[], keepdim=False):
-=======
 def _median(self, *args, **kwargs):
     return flow.median(self, *args, **kwargs)
 
 
-def _sum(self, dim=None, keepdim=False):
->>>>>>> 16c3a443fbc035556dbe64e949ade9e171fb5cf0
+def _sum(self, dim=[], keepdim=False):
     return flow.sum(self, dim, keepdim)
 
 

@@ -761,7 +761,6 @@ class ReduceMeanFunctor {
   }
 };
 
-<<<<<<< HEAD
 class ReduceProdWholeFunctor {
  public:
   ReduceProdWholeFunctor() {
@@ -788,7 +787,12 @@ class ReduceProdWholeFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", false));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
-=======
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class MedianFunctor {
  public:
   MedianFunctor() {
@@ -847,7 +851,6 @@ class MedianWithIndicesFunctor {
           JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 1)), axis));
     }
     return result;
->>>>>>> 16c3a443fbc035556dbe64e949ade9e171fb5cf0
   }
 
  private:
