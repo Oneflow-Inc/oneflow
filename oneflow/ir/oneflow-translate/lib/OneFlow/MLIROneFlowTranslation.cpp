@@ -789,6 +789,11 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
+    pm.addPass(oneflow::createPreConvertInferenceOpPass());
+    pm.addPass(oneflow::createConvertInferenceOpPass());
+    pm.addPass(oneflow::createPostConvertInferenceOpPass());
+  }
   pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
