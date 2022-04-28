@@ -28,19 +28,31 @@ bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
   return !autograd::GradMode::is_enabled() || !(x->is_leaf() && x->requires_grad());
 }
 
-Maybe<void> CheckAxis(std::vector<int32_t>& axis, const Shape& shape) {
-  int32_t ndim = shape.NumAxes();
-  if (axis.size() == 0) {
-    for (int32_t i = 0; i < axis.size(); ++i) { axis[i] = i; }
+Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim) {
+  const int32_t naxis = axis.size();
+
+  if (naxis == 0) {
+    std::vector<int32_t> reduce_axis(ndim);
+    std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+    return reduce_axis;
   } else {
-    for (int i = 0; i < axis.size(); ++i) {
-      CHECK_OR_RETURN((-ndim < axis[i]) || (axis[i] < ndim - 1))
-          << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-          << "], but got " << axis[i];
-      if (axis[i] < 0) { axis[i] += ndim; }
+    CHECK_GE_OR_RETURN(ndim, naxis)
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << ", " << ndim - 1 << "], but got " << naxis << ")";
+
+    std::vector<int32_t> reduce_axis(naxis);
+    for (int32_t i = 0; i < naxis; i++) {
+      CHECK_OR_RETURN(axis[i] >= -ndim && axis[i] < ndim)
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+          << ", " << ndim - 1 << "], but got " << axis[i] << ")";
+      if (axis[i] < 0) {
+        reduce_axis[i] = axis[i] + naxis;
+      } else {
+        reduce_axis[i] = axis[i];
+      }
     }
+    return reduce_axis;
   }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {

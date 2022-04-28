@@ -38,36 +38,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 namespace functional {
-namespace {
-Maybe<std::vector<int32_t>> check_and_construct_axis(const int32_t& naxis,
-                                                     const std::vector<int32_t>& axis) {
-  const int32_t axis_size = axis.size();
-
-  if (axis_size == 0) {
-    std::vector<int32_t> reduce_axis(naxis);
-    std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-    return reduce_axis;
-  } else {
-    CHECK_GE_OR_RETURN(naxis, axis_size)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
-        << ", " << naxis - 1 << "], but got " << axis_size << ")";
-
-    std::vector<int32_t> reduce_axis(axis_size);
-    for (int32_t i = 0; i < axis_size; i++) {
-      CHECK_OR_RETURN(axis[i] >= -naxis && axis[i] < naxis)
-          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -naxis
-          << ", " << naxis - 1 << "], but got " << axis[i] << ")";
-      if (axis[i] < 0) {
-        reduce_axis[i] = axis[i] + naxis;
-      } else {
-        reduce_axis[i] = axis[i];
-      }
-    }
-    return reduce_axis;
-  }
-}
-};  // namespace
-
 namespace impl {
 
 class AddNFunctor {
@@ -492,7 +462,7 @@ class ReduceSumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check_and_construct_axis(x->ndim(), axis));
+    std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
@@ -533,7 +503,7 @@ class ReduceAllFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check_and_construct_axis(x->ndim(), axis));
+    std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -571,7 +541,7 @@ class ReduceAnyFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
-    std::vector<int32_t> reduce_axis = *JUST(check_and_construct_axis(x->ndim(), axis));
+    std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -878,7 +848,7 @@ class ReduceProdFunctor {
     }
     JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    std::vector<int32_t> reduce_axis = *JUST(check_and_construct_axis(x->ndim(), axis));
+    std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
@@ -1954,25 +1924,12 @@ class StandardDeviationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
-    const int32_t ndim = input->ndim();
-    std::vector<int32_t> axis;
-    axis.reserve(ndim);
-    if (dim.has_value() == false) {
-      for (int i = 0; i < ndim; ++i) { axis.emplace_back(i); }
-    } else {
-      std::vector<int32_t>& dims = *JUST(dim);
-      CHECK_GE_OR_RETURN(ndim, dims.size())
-          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-          << ", " << ndim - 1 << "], but got " << dims.size() << ")";
-      axis.assign(dims.begin(), dims.end());
-    }
-
+    std::vector<int32_t> axis = *JUST(CheckAxis(*JUST(dim), input->ndim()));
     bool unbias = true;
     bool keepdims = false;
     if (unbiased.has_value()) { unbias = JUST(unbiased); }
     if (keepdim.has_value()) { keepdims = JUST(keepdim); }
 
-    JUST(CheckAxis(axis, *input->shape()));
     if (axis.size() == 0) {
       return functional::Constant(*input->shape(), Scalar(0), *input->dtype(), NullOpt);
     }
