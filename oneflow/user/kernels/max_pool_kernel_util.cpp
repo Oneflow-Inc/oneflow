@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/avg_pooling_kernel_util.h"
+#include "oneflow/user/kernels/max_pool_kernel_util.h"
 
 namespace oneflow {
 
-std::vector<int32_t> GetAvg3DVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
+std::vector<int32_t> Get3DVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
   std::vector<int32_t> vec;
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
@@ -30,7 +30,7 @@ std::vector<int32_t> GetAvg3DVec(const std::vector<int32_t>& original_vec, int32
   return vec;
 }
 
-std::vector<int32_t> GetAvg3DPadVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
+std::vector<int32_t> Get3DPadVec(const std::vector<int32_t>& original_vec, int32_t NDims) {
   std::vector<int32_t> vec;
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
@@ -43,49 +43,51 @@ std::vector<int32_t> GetAvg3DPadVec(const std::vector<int32_t>& original_vec, in
   return vec;
 }
 
-const int64_t GetNoDilationWindowedOutputShape(int64_t input_size, int32_t filter_size,
-                                               int32_t stride, int32_t padding, bool ceil_mode) {
-  int64_t output_size =
-      (input_size + 2 * padding - (filter_size - 1) - 1 + stride + (ceil_mode ? stride - 1 : 0))
-      / stride;
+void GetWindowedOutputShape(int64_t input_size, int32_t filter_size, int32_t stride,
+                            int32_t padding, bool ceil_mode, int32_t dilation_rate,
+                            int64_t* output_ptr) {
+  int64_t output_size = (input_size + 2 * padding - dilation_rate * (filter_size - 1) - 1 + stride
+                         + (ceil_mode ? stride - 1 : 0))
+                        / stride;
 
   if (ceil_mode) {
-    // ensure that the last pooling starts inside the image
+    // ensure that the last pool starts inside the image
     // needed to avoid problems in ceil mode
     if ((output_size - 1) * stride >= input_size + padding) { --output_size; }
   }
-  return output_size;
+  *output_ptr = output_size;
 }
 
-void GetNoDilation3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size,
-                                const std::vector<int32_t>& strides,
-                                const std::vector<int32_t>& padding, const bool ceil_mode,
-                                DimVector* out) {
+void Get3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size,
+                      const std::vector<int32_t>& strides, const std::vector<int32_t>& padding,
+                      const bool ceil_mode, std::vector<int32_t> dilation_rate, DimVector* out) {
   out->clear();
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
-    out->at(i) = GetNoDilationWindowedOutputShape(in.at(i), pool_size.at(i), strides.at(i),
-                                                  padding.at(i), ceil_mode);
+    int64_t* out_ptr = &(*out).at(i);
+    GetWindowedOutputShape(in.at(i), pool_size.at(i), strides.at(i), padding.at(i), ceil_mode,
+                           dilation_rate.at(i), out_ptr);
   }
 }
 
-AvgPoolingParams3D::AvgPoolingParams3D(const int32_t dim, const ShapeView& x_shape,
+MaxPoolParams3D::MaxPoolParams3D(const int32_t dim, const ShapeView& x_shape,
                                        const std::string& data_format,
                                        const std::vector<int32_t>& padding,
                                        const std::vector<int32_t>& kernel_size,
-                                       const std::vector<int32_t>& stride, const bool ceil_mode,
-                                       const bool count_include_pad, const int32_t divisor_override)
+                                       const std::vector<int32_t>& stride,
+                                       const std::vector<int32_t>& dilation,
+                                       const bool return_indices, const bool ceil_mode)
     : dim_(dim),
       data_format_(data_format),
-      padding_(GetAvg3DPadVec(padding, dim)),
-      pooling_size_3d_(GetAvg3DVec(kernel_size, dim)),
-      stride_3d_(GetAvg3DVec(stride, dim)),
-      ceil_mode_(ceil_mode),
-      count_include_pad_(count_include_pad),
-      divisor_override_(divisor_override) {
+      padding_(Get3DPadVec(padding, dim)),
+      pool_size_3d_(Get3DVec(kernel_size, dim)),
+      stride_3d_(Get3DVec(stride, dim)),
+      dilation_3d_(Get3DVec(dilation, dim)),
+      return_indices_(return_indices),
+      ceil_mode_(ceil_mode) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
-  GetNoDilation3DOutputShape(x_3d_, pooling_size_3d_, stride_3d_, padding_, ceil_mode_, &y_3d_);
+  Get3DOutputShape(x_3d_, pool_size_3d_, stride_3d_, padding_, ceil_mode_, dilation_3d_, &y_3d_);
   if (data_format == "channels_first") {
     channel_num_ = x_shape.At(1);
   } else {
@@ -96,13 +98,13 @@ AvgPoolingParams3D::AvgPoolingParams3D(const int32_t dim, const ShapeView& x_sha
   batch_num_ = x_shape.At(0);
 }
 
-void AvgPoolingParams3D::Reset(const ShapeView& x_shape) {
+void MaxPoolParams3D::Reset(const ShapeView& x_shape) {
   x_3d_ = {GetInDim(x_shape, data_format_, 0, dim_), GetInDim(x_shape, data_format_, 1, dim_),
            GetInDim(x_shape, data_format_, 2, dim_)};
-  GetNoDilation3DOutputShape(x_3d_, pooling_size_3d_, stride_3d_, padding_, ceil_mode_, &y_3d_);
+  Get3DOutputShape(x_3d_, pool_size_3d_, stride_3d_, padding_, ceil_mode_, dilation_3d_, &y_3d_);
 }
 
-Shape AvgPoolingParams3D::GetYShape() const {
+Shape MaxPoolParams3D::GetYShape() const {
   DimVector y_dim_vec;
   if (dim_ == 1) {
     y_dim_vec = {y_3d_.at(2)};
@@ -124,11 +126,11 @@ Shape AvgPoolingParams3D::GetYShape() const {
   return Shape(y_dim_vec);
 }
 
-Shape AvgPoolingParams3D::GetXShape5D() const {
+Shape MaxPoolParams3D::GetXShape5D() const {
   return Shape({batch_num_, channel_num_, x_3d_.at(0), x_3d_.at(1), x_3d_.at(2)});
 }
 
-Shape AvgPoolingParams3D::GetYShape5D() const {
+Shape MaxPoolParams3D::GetYShape5D() const {
   return Shape({batch_num_, channel_num_, y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)});
 }
 

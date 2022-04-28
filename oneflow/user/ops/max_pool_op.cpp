@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/max_pooling_kernel_util.h"
+#include "oneflow/user/kernels/max_pool_kernel_util.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
@@ -45,7 +45,7 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
           << "pad should be smaller than half of kernel size";
     }
 
-    const MaxPoolingParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride,
+    const MaxPoolParams3D params_3d(dim, x_shape, data_format, padding, kernel_size, stride,
                                        dilation, return_indices, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
@@ -85,12 +85,12 @@ Maybe<void> MaxPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-GenBackwardOpConfFn MaxPoolMakeBackwardOpConfFn(const std::string& mode, const int32_t dim) {
-  return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
+GenBackwardOpConfFn MaxPoolMakeBackwardOpConfFn(const int32_t dim) {
+  return [dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
-          builder.Op(mode + "pool_" + std::to_string(dim) + "d_grad")
+          builder.Op("max_pool_" + std::to_string(dim) + "d_grad")
               .Input("x", op.input("x", 0))
               .Input("indice", op.output("indice", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
@@ -164,9 +164,9 @@ IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool2D)
 IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool3D)
 #undef IMPLEMENT_MAXPOOL_BACKWARD_FUNCS
 
-REGISTER_USER_OP_GRAD("maxpool_1d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn("max", 1));
-REGISTER_USER_OP_GRAD("maxpool_2d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn("max", 2));
-REGISTER_USER_OP_GRAD("maxpool_3d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn("max", 3));
+REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(1));
+REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(2));
+REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(3));
 
 #define IMPLEMENT_AVGPOOL_FUNCS(name, ndim)                                              \
   /*static*/ Maybe<void> name##Op::GetSbp(user_op::SbpContext* ctx) {                    \

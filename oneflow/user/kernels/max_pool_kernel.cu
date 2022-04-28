@@ -16,8 +16,9 @@ limitations under the License.
 #include <cstdint>
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/user/kernels/max_pooling_kernel_util.h"
+#include "oneflow/user/kernels/max_pool_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include <cuda_fp16.h>
 
 namespace oneflow {
 namespace {
@@ -185,20 +186,20 @@ __launch_bounds__(kBlockSize) __global__
 };
 
 template<typename T, typename IDX>
-struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
+struct PoolKernelUtil<DeviceType::kCUDA, T, IDX> {
   static void Maxpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                               const MaxPoolingParams3D& params_3d) {
+                               const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool1dForward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
         params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
-        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
+        params_3d.pool_size_3d()[2], params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
   }
 
   static void Maxpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+                                const int64_t* indice_ptr, const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool1dBackward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
@@ -208,13 +209,13 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   static void Maxpool2dForwardCFirst(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                      const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                                     const MaxPoolingParams3D& params_3d) {
+                                     const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool2dForwardCFirst<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1],
+        params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2], params_3d.stride_3d()[1],
         params_3d.stride_3d()[2], params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
@@ -222,7 +223,7 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
                                       const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                       const IDX elem_num, const T* src, T* dest,
                                       const int64_t* indice_ptr,
-                                      const MaxPoolingParams3D& params_3d) {
+                                      const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool2dBackwardCFirst<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
@@ -233,14 +234,14 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   static void Maxpool2dForwardCLast(ep::Stream* stream,
                                     const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                     const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                                    const MaxPoolingParams3D& params_3d) {
+                                    const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool2dForwardCLast<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3),
-        params_3d.GetYShape5D().At(4), params_3d.pooling_size_3d()[1],
-        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.GetYShape5D().At(4), params_3d.pool_size_3d()[1],
+        params_3d.pool_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
         params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
@@ -248,7 +249,7 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
                                      const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                      const IDX elem_num, const T* src, T* dest,
                                      const int64_t* indice_ptr,
-                                     const MaxPoolingParams3D& params_3d) {
+                                     const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool2dBackwardCLast<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
@@ -258,21 +259,21 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
 
   static void Maxpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                               const MaxPoolingParams3D& params_3d) {
+                               const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool3dForward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[0],
         params_3d.padding()[1], params_3d.padding()[2], params_3d.num_batch(),
         params_3d.num_channel(), params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3),
-        params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[0],
-        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0],
+        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[0],
+        params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2], params_3d.stride_3d()[0],
         params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.dilation_3d()[0],
         params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
   static void Maxpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d) {
+                                const int64_t* indice_ptr, const MaxPoolParams3D& params_3d) {
     DoCUDAMaxPool3dBackward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.num_batch(),
@@ -282,8 +283,8 @@ struct PoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL_UTIL, (DeviceType::kCUDA),
-                                 POOLING_DATA_TYPE_CUDA_SEQ, POOLING_IDX_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_POOL_KERNEL_UTIL, (DeviceType::kCUDA),
+                                 POOL_DATA_TYPE_CUDA_SEQ, POOL_IDX_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
 #endif  // WITH_CUDA

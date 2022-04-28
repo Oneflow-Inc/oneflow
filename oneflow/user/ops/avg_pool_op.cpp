@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/avg_pooling_kernel_util.h"
+#include "oneflow/user/kernels/avg_pool_kernel_util.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
@@ -46,7 +46,7 @@ TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
           << "pad should be smaller than half of kernel size";
     }
 
-    const AvgPoolingParams3D params_3d(dim, *x_shape, data_format, padding, kernel_size, stride,
+    const AvgPoolParams3D params_3d(dim, *x_shape, data_format, padding, kernel_size, stride,
                                        ceil_mode, count_include_pad, divisor_override);
     user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
     *y_desc = ctx->InputTensorDesc("x", 0);
@@ -80,7 +80,7 @@ GenBackwardOpConfFn AvgPoolMakeBackwardOpConfFn(const int32_t dim) {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       user_op::UserOpConfWrapper grad_op =
-          builder.Op("avgpool_" + std::to_string(dim) + "d_grad")
+          builder.Op("avg_pool_" + std::to_string(dim) + "d_grad")
               .Input("x", op.input("x", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
@@ -154,8 +154,8 @@ IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool2D)
 IMPLEMENT_AVGPOOL_BACKWARD_FUNCS(AvgPool3D)
 #undef IMPLEMENT_AVGPOOL_BACKWARD_FUNCS
 
-REGISTER_USER_OP_GRAD("avgpool_1d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(1));
-REGISTER_USER_OP_GRAD("avgpool_2d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(2));
-REGISTER_USER_OP_GRAD("avgpool_3d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(3));
+REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(1));
+REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(2));
+REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(AvgPoolMakeBackwardOpConfFn(3));
 
 }  // namespace oneflow

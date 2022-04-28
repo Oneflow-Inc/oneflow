@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_POOLING_KERNEL_UTIL_H_
-#define ONEFLOW_USER_KERNELS_POOLING_KERNEL_UTIL_H_
+#ifndef ONEFLOW_USER_KERNELS_POOL_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_POOL_KERNEL_UTIL_H_
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
@@ -28,18 +28,18 @@ limitations under the License.
 
 namespace oneflow {
 
-#define POOLING_DATA_TYPE_SEQ                     \
+#define POOL_DATA_TYPE_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)   \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-#define POOLING_IDX_DATA_TYPE_SEQ                 \
+#define POOL_IDX_DATA_TYPE_SEQ                 \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
-#define POOLING_DATA_TYPE_CPU_SEQ POOLING_DATA_TYPE_SEQ
+#define POOL_DATA_TYPE_CPU_SEQ POOL_DATA_TYPE_SEQ
 
-#define POOLING_DATA_TYPE_CUDA_SEQ POOLING_DATA_TYPE_SEQ
+#define POOL_DATA_TYPE_CUDA_SEQ POOL_DATA_TYPE_SEQ
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
@@ -54,17 +54,17 @@ struct DeviceAdd {
   };
 };
 
-class MaxPoolingParams3D {
+class MaxPoolParams3D {
  public:
-  MaxPoolingParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
+  MaxPoolParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
                      const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
                      const std::vector<int32_t>& stride, const std::vector<int32_t>& dilation,
                      const bool return_indices, const bool ceil_mode);
-  ~MaxPoolingParams3D() = default;
+  ~MaxPoolParams3D() = default;
 
   const std::string& data_format() const { return data_format_; }
   const std::vector<int32_t>& padding() const { return padding_; }
-  const std::vector<int32_t>& pooling_size_3d() const { return pooling_size_3d_; }
+  const std::vector<int32_t>& pool_size_3d() const { return pool_size_3d_; }
   const std::vector<int32_t>& stride_3d() const { return stride_3d_; }
   const std::vector<int32_t>& dilation_3d() const { return dilation_3d_; }
   const bool& return_indices() const { return return_indices_; }
@@ -83,7 +83,7 @@ class MaxPoolingParams3D {
   FixedDimVector y_3d_;
   std::string data_format_;
   std::vector<int32_t> padding_;
-  std::vector<int32_t> pooling_size_3d_;
+  std::vector<int32_t> pool_size_3d_;
   std::vector<int32_t> stride_3d_;
   std::vector<int32_t> dilation_3d_;
   bool return_indices_;
@@ -93,44 +93,44 @@ class MaxPoolingParams3D {
 };
 
 template<DeviceType device_type, typename T, typename IDX>
-struct PoolingKernelUtil {
+struct PoolKernelUtil {
   static void Maxpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                               const MaxPoolingParams3D& params_3d);
+                               const MaxPoolParams3D& params_3d);
 
   static void Maxpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
+                                const int64_t* indice_ptr, const MaxPoolParams3D& params_3d);
 
   static void Maxpool2dForwardCFirst(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                      const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                                     const MaxPoolingParams3D& params_3d);
+                                     const MaxPoolParams3D& params_3d);
 
   static void Maxpool2dBackwardCFirst(ep::Stream* stream,
                                       const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                       const IDX elem_num, const T* src, T* dest,
                                       const int64_t* indice_ptr,
-                                      const MaxPoolingParams3D& params_3d);
+                                      const MaxPoolParams3D& params_3d);
 
   static void Maxpool2dForwardCLast(ep::Stream* stream,
                                     const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                     const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                                    const MaxPoolingParams3D& params_3d);
+                                    const MaxPoolParams3D& params_3d);
 
   static void Maxpool2dBackwardCLast(ep::Stream* stream,
                                      const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                      const IDX elem_num, const T* src, T* dest,
                                      const int64_t* indice_ptr,
-                                     const MaxPoolingParams3D& params_3d);
+                                     const MaxPoolParams3D& params_3d);
 
   static void Maxpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                               const MaxPoolingParams3D& params_3d);
+                               const MaxPoolParams3D& params_3d);
 
   static void Maxpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const int64_t* indice_ptr, const MaxPoolingParams3D& params_3d);
+                                const int64_t* indice_ptr, const MaxPoolParams3D& params_3d);
 };
 
 template<typename T, typename IDX>
@@ -355,10 +355,10 @@ OF_DEVICE_FUNC void Maxpool3dBackwardCompute(const NdIndexOffsetHelper<IDX, 4> i
   }
 }
 
-#define INSTANTIATE_POOLING_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
-  template struct PoolingKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
+#define INSTANTIATE_POOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
+  template struct PoolKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),     \
                                     OF_PP_PAIR_FIRST(index_dtype_pair)>;
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_POOLING_KERNEL_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_POOL_KERNEL_UTIL_H_

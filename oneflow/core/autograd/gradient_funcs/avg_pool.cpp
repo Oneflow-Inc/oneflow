@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -26,91 +25,79 @@ namespace one {
 
 namespace {
 
-struct MaxPoolingCaptureState : public AutoGradCaptureState {
+struct AvgPoolCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   size_t input_index;
-  size_t indice_index;
 
   std::string data_format;
   std::vector<int32_t> padding;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> stride;
-  std::vector<int32_t> dilation;
-  bool return_indices;
   bool ceil_mode;
+  bool count_include_pad;
+  int32_t divisor_override;
 };
 
-class MaxPoolingNdGrad : public OpExprGradFunction<MaxPoolingCaptureState> {
+class AvgPoolNdGrad : public OpExprGradFunction<AvgPoolCaptureState> {
  public:
-  virtual ~MaxPoolingNdGrad() = default;
-
-  using OpExprGradFunction<MaxPoolingCaptureState>::Init;
-
-  Maybe<void> Init(const OpExpr& op, const std::string& mode);
-  Maybe<void> Capture(MaxPoolingCaptureState* ctx, const TensorTuple& inputs,
+  virtual ~AvgPoolNdGrad() = default;
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Capture(AvgPoolCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const MaxPoolingCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AvgPoolCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
-  std::string mode_;
   AttrMap base_attrs_;
 };
 
-Maybe<void> MaxPoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
+Maybe<void> AvgPoolNdGrad::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
-  mode_ = mode;
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MaxPoolingNdGrad::Capture(MaxPoolingCaptureState* ctx, const TensorTuple& inputs,
-                                   const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> AvgPoolNdGrad::Capture(AvgPoolCaptureState* ctx, const TensorTuple& inputs,
+                                      const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ctx->input_index = ctx->SaveTensorForBackward(inputs.at(0));
-  ctx->indice_index = ctx->SaveTensorForBackward(outputs.at(1));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
   ctx->padding = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("padding"));
   ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
   ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
-  ctx->dilation = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation"));
-  ctx->return_indices = JUST(composed_attrs.GetAttr<bool>("return_indices"));
   ctx->ceil_mode = JUST(composed_attrs.GetAttr<bool>("ceil_mode"));
+  ctx->count_include_pad = JUST(composed_attrs.GetAttr<bool>("count_include_pad"));
+  ctx->divisor_override = JUST(composed_attrs.GetAttr<int32_t>("divisor_override"));
+
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MaxPoolingNdGrad::Apply(const MaxPoolingCaptureState* ctx, const TensorTuple& out_grads,
-                                 TensorTuple* in_grads) const {
+Maybe<void> AvgPoolNdGrad::Apply(const AvgPoolCaptureState* ctx, const TensorTuple& out_grads,
+                                    TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_LE_OR_RETURN(out_grads.size(), 2);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   int32_t ndims = ctx->kernel_size.size();
   const auto& input = ctx->SavedTensors().at(ctx->input_index);
-  const auto& indice = ctx->SavedTensors().at(ctx->indice_index);
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::MaxPoolingNdGrad(
-      input, indice, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
-      ctx->kernel_size, ctx->stride, ctx->dilation, ctx->return_indices, ctx->ceil_mode));
+  in_grads->at(0) = JUST(functional::AvgPoolNdGrad(
+      input, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size, ctx->stride,
+      ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
 
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-class MaxpoolNdGrad final : public MaxPoolingNdGrad {
- public:
-  Maybe<void> Init(const OpExpr& op) override { return MaxPoolingNdGrad::Init(op, "max"); }
-};
-
-REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", MaxpoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_2d", MaxpoolNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_3d", MaxpoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_1d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_2d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_3d", AvgPoolNdGrad);
 
 }  // namespace one
 }  // namespace oneflow
