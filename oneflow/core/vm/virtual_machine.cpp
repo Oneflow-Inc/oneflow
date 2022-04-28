@@ -217,7 +217,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     if (vm_->flying_instruction_cnt() > kHighWaterMark) {
       JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
         auto bc = std::make_shared<BlockingCounter>(1);
-        vm_->InsertProbe([bc](vm::VirtualMachineEngine* vm) {
+        vm_->InsertCallbackProbe([bc](vm::VirtualMachineEngine* vm) {
           const int64_t kLowWaterMark = GetInstructionLowWaterMark();
           if (vm->flying_instruction_cnt() > kLowWaterMark) { return false; }
           bc->Decrease();

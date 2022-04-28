@@ -152,21 +152,17 @@ void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instructio
   mut_lively_instruction_list()->PushBack(instruction);
 }
 
-void VirtualMachineEngine::InsertProbe(
+void VirtualMachineEngine::InsertCallbackProbe(
     const std::function<bool(VirtualMachineEngine*)>& ProbeFunction) {
-  probe_list_.EmplaceBack(intrusive::make_shared<Probe>(ProbeFunction));
+  callback_probe_list_.EmplaceBack(intrusive::make_shared<CallbackProbe>(ProbeFunction));
 }
 
-void VirtualMachineEngine::HandleProbe() {
-  if (unlikely(probe_list_.thread_unsafe_size())) { probe_list_.MoveTo(&local_probe_list_); }
-  HandleLocalProbe();
-}
-
-void VirtualMachineEngine::HandleLocalProbe() {
-  if (unlikely(local_probe_list_.size())) {
-    OF_PROFILER_RANGE_PUSH("HandleLocalProbe");
-    INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
-      if (probe->probe(this)) { local_probe_list_.Erase(probe); }
+void VirtualMachineEngine::HandleLocalSchedulerProbe() {
+  if (unlikely(local_scheduler_probe_list_.size())) {
+    OF_PROFILER_RANGE_PUSH("HandleLocalSchedulerProbe");
+    INTRUSIVE_FOR_EACH_PTR(probe, &local_scheduler_probe_list_) {
+      probe->probe_function()(this);
+      local_scheduler_probe_list_.Erase(probe);
     }
     OF_PROFILER_RANGE_POP();
   }
@@ -176,9 +172,8 @@ intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListEr
     Instruction* instruction, const ScheduleCtx& schedule_ctx) {
   ++total_completed_instruction_cnt_;
   auto ret = mut_lively_instruction_list()->Erase(instruction);
-  static constexpr int kProbeAndFlushInterval = 64;
-  if (unlikely(total_completed_instruction_cnt_ % kProbeAndFlushInterval) == 0) {
-    HandleProbe();
+  static constexpr int kFlushInterval = 64;
+  if (unlikely(total_completed_instruction_cnt_ % kFlushInterval) == 0) {
     FlushGarbageInstructions(schedule_ctx);
   }
   return ret;
@@ -531,12 +526,12 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   if (unlikely(mut_ready_instruction_list()->size())) {
     DispatchAndPrescheduleInstructions(schedule_ctx);
   }
-  // handle probes
-  if (unlikely(local_probe_list_.size())) {
-    HandleLocalProbe();
-  } else if (unlikely(probe_list_.thread_unsafe_size())) {
-    probe_list_.MoveTo(&local_probe_list_);
-    HandleLocalProbe();
+  // handle scheduler probes
+  if (unlikely(local_scheduler_probe_list_.size())) {
+    HandleLocalSchedulerProbe();
+  } else if (unlikely(scheduler_probe_list_.thread_unsafe_size())) {
+    scheduler_probe_list_.MoveTo(&local_scheduler_probe_list_);
+    HandleLocalSchedulerProbe();
   }
 }
 
@@ -572,20 +567,38 @@ void VirtualMachineEngine::Callback() {
     }));
     ++total_erased_instruction_cnt_;
   }
+
+  if (unlikely(local_callback_probe_list_.size())) {
+    HandleLocalCallbackProbe();
+  } else if (unlikely(callback_probe_list_.thread_unsafe_size())) {
+    callback_probe_list_.MoveTo(&local_callback_probe_list_);
+    HandleLocalCallbackProbe();
+  }
+}
+
+void VirtualMachineEngine::HandleLocalCallbackProbe() {
+  OF_PROFILER_RANGE_PUSH("HandleLocalCallbackProbe");
+  INTRUSIVE_FOR_EACH_PTR(probe, &local_callback_probe_list_) {
+    if (probe->probe_function()(this)) { local_callback_probe_list_.Erase(probe); }
+  }
+  OF_PROFILER_RANGE_POP();
 }
 
 bool VirtualMachineEngine::SchedulerThreadUnsafeEmpty() const {
   return pending_msg_list().thread_unsafe_size() == 0 && local_pending_msg_list().empty()
-         && lively_instruction_list_.empty() && active_stream_list().empty();
+         && lively_instruction_list_.empty() && active_stream_list().empty()
+         && scheduler_probe_list_.thread_unsafe_size() == 0 && local_scheduler_probe_list_.empty();
 }
 
 bool VirtualMachineEngine::SchedulerEmpty() const {
   // hook and size will be check in pending_msg_list().empty().
-  return pending_msg_list().empty() && SchedulerThreadUnsafeEmpty();
+  return pending_msg_list().empty() && scheduler_probe_list_.empty()
+         && SchedulerThreadUnsafeEmpty();
 }
 
 bool VirtualMachineEngine::CallbackEmpty() const {
-  return total_erased_instruction_cnt() == total_inserted_instruction_cnt();
+  return (total_erased_instruction_cnt() == total_inserted_instruction_cnt())
+         && callback_probe_list_.empty() && local_callback_probe_list_.empty();
 }
 
 }  // namespace vm
