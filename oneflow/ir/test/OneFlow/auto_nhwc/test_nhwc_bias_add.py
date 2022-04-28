@@ -56,7 +56,10 @@ def do_nhwc_bias_add(test_case, with_cuda):
 @flow.unittest.skip_unless_1n1d()
 class TestNhwcBiasAdd(oneflow.unittest.TestCase):
     def test_nhwc_bias_add_graph(test_case):
-        do_nhwc_bias_add(test_case, True)
+        import oneflow.sysconfig
+
+        if oneflow.sysconfig.with_cuda():
+            do_nhwc_bias_add(test_case, True)
         do_nhwc_bias_add(test_case, False)
 
 

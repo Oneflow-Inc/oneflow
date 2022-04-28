@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/api/python/functional/python_arg.h"
+
+#include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/indexing.h"
 #include "oneflow/extension/python/numpy.h"
@@ -33,17 +34,21 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-#define INSTANCE_OBJECT_AS_INTEGER(T)                                                             \
-  template<>                                                                                      \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                                                       \
-    return static_cast<T>(PyLong_AsLongLong(object_));                                            \
-  }                                                                                               \
-  template<>                                                                                      \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                             \
-    if (size_ > 0 && PyLong_Check(object_)) {                                                     \
-      return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyLong_AsLongLong(object_))); \
-    }                                                                                             \
-    return PyUnpackLongSequence<T>(object_);                                                      \
+#define INSTANCE_OBJECT_AS_INTEGER(T)                                                            \
+  template<>                                                                                     \
+  T PythonArg::ObjectAs<T>() const {                                                             \
+    return static_cast<T>(PyLong_AsLongLong(object_));                                           \
+  }                                                                                              \
+  template<>                                                                                     \
+  std::vector<T> PythonArg::ObjectAs<std::vector<T>>() const {                                   \
+    if (size_ > 0 && PyLong_Check(object_)) {                                                    \
+      return std::vector<T>(size_, static_cast<T>(PyLong_AsLongLong(object_)));                  \
+    }                                                                                            \
+    return PyUnpackLongSequence<T>(object_);                                                     \
+  }                                                                                              \
+  template<>                                                                                     \
+  std::shared_ptr<std::vector<T>> PythonArg::ObjectAs<std::shared_ptr<std::vector<T>>>() const { \
+    return std::make_shared<std::vector<T>>(ObjectAs<std::vector<T>>());                         \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
@@ -51,149 +56,142 @@ OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_INTEGER, INTEGER_TYPE_SEQ)
 
 #define INSTANCE_OBJECT_AS_FLOAT(T)                                                              \
   template<>                                                                                     \
-  Maybe<T> PythonArg::ObjectAs<T>() const {                                                      \
+  T PythonArg::ObjectAs<T>() const {                                                             \
     return static_cast<T>(PyFloat_AsDouble(object_));                                            \
   }                                                                                              \
   template<>                                                                                     \
-  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const {                            \
+  std::vector<T> PythonArg::ObjectAs<std::vector<T>>() const {                                   \
     if (size_ > 0 && PyFloat_Check(object_)) {                                                   \
-      return std::make_shared<std::vector<T>>(size_, static_cast<T>(PyFloat_AsDouble(object_))); \
+      return std::vector<T>(size_, static_cast<T>(PyFloat_AsDouble(object_)));                   \
     }                                                                                            \
     return PyUnpackFloatSequence<T>(object_);                                                    \
+  }                                                                                              \
+  template<>                                                                                     \
+  std::shared_ptr<std::vector<T>> PythonArg::ObjectAs<std::shared_ptr<std::vector<T>>>() const { \
+    return std::make_shared<std::vector<T>>(ObjectAs<std::vector<T>>());                         \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
 #undef INSTANCE_OBJECT_AS_FLOAT
 
-template<>
-Maybe<std::string> PythonArg::ObjectAs<std::string>() const {
-  return JUST(PyStringAsString(object_));
-}
+#define INSTANCE_OBJECT_AS_SHARED_PTR(T)                               \
+  template<>                                                           \
+  std::shared_ptr<T> PythonArg::ObjectAs<std::shared_ptr<T>>() const { \
+    return std::make_shared<T>(ObjectAs<T>());                         \
+  }
 
 template<>
-Maybe<Scalar> PythonArg::ObjectAs<Scalar>() const {
+std::string PythonArg::ObjectAs<std::string>() const {
+  return PyStringAsString(object_);
+}
+INSTANCE_OBJECT_AS_SHARED_PTR(std::string)
+
+template<>
+Scalar PythonArg::ObjectAs<Scalar>() const {
   return PyUnpackScalar(object_);
 }
+INSTANCE_OBJECT_AS_SHARED_PTR(Scalar)
 
 template<>
-Maybe<std::shared_ptr<one::Tensor>> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
-  return JUST(PyUnpackTensor(object_));
+std::shared_ptr<one::Tensor> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
+  return PyTensor_Unpack(object_);
 }
 
 template<>
-Maybe<one::Tensor> PythonArg::ObjectAs<one::Tensor>() const {
-  return PyUnpackTensor(object_);
-}
-
-template<>
-Maybe<std::shared_ptr<one::TensorTuple>> PythonArg::ObjectAs<std::shared_ptr<one::TensorTuple>>()
-    const {
-  if (PyTensorTupleCheck(object_)) { return JUST(PyUnpackTensorTuple(object_)); }
-  const auto& v = JUST(PyUnpackTensorSequence(object_));
-  auto values = std::make_shared<one::TensorTuple>(v->size());
-  for (int i = 0; i < v->size(); ++i) { values->at(i) = v->at(i); }
+one::TensorTuple PythonArg::ObjectAs<one::TensorTuple>() const {
+  if (PyTensorTupleCheck(object_)) { return *PyUnpackTensorTuple(object_); }
+  const auto& v = PyUnpackTensorSequence(object_);
+  one::TensorTuple values(v.size());
+  for (int i = 0; i < v.size(); ++i) { values[i] = v.at(i); }
   return values;
 }
+INSTANCE_OBJECT_AS_SHARED_PTR(one::TensorTuple)
 
 template<>
-Maybe<one::TensorTuple> PythonArg::ObjectAs<one::TensorTuple>() const {
-  return *JUST(ObjectAs<std::shared_ptr<one::TensorTuple>>());
-}
-
-template<>
-Maybe<Symbol<DType>> PythonArg::ObjectAs<Symbol<DType>>() const {
+Symbol<DType> PythonArg::ObjectAs<Symbol<DType>>() const {
   return PyUnpackDType(object_);
 }
 
 template<>
-Maybe<std::vector<Symbol<DType>>> PythonArg::ObjectAs<std::vector<Symbol<DType>>>() const {
+std::vector<Symbol<DType>> PythonArg::ObjectAs<std::vector<Symbol<DType>>>() const {
   return PyUnpackDTypeSequence(object_);
 }
+INSTANCE_OBJECT_AS_SHARED_PTR(std::vector<Symbol<DType>>)
 
 template<>
-Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
-  const auto& shape = JUST(PyUnpackLongSequence<int64_t>(object_));
-  return std::make_shared<Shape>(DimVector(shape->begin(), shape->end()));
+Shape PythonArg::ObjectAs<Shape>() const {
+  const auto& shape = PyUnpackLongSequence<int64_t>(object_);
+  return Shape(DimVector(shape.begin(), shape.end()));
 }
+INSTANCE_OBJECT_AS_SHARED_PTR(Shape)
 
 template<>
-Maybe<std::vector<Shape>> PythonArg::ObjectAs<std::vector<Shape>>() const {
+std::vector<Shape> PythonArg::ObjectAs<std::vector<Shape>>() const {
   return PyUnpackShapeSequence(object_);
 }
+INSTANCE_OBJECT_AS_SHARED_PTR(std::vector<Shape>)
 
 template<>
-Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::Generator>>()
-    const {
-  return JUST(PyUnpackGenerator(object_));
-}
-
-template<>
-Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
+std::shared_ptr<one::Generator> PythonArg::ObjectAs<std::shared_ptr<one::Generator>>() const {
   return PyUnpackGenerator(object_);
 }
 
 template<>
-Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
+Symbol<Device> PythonArg::ObjectAs<Symbol<Device>>() const {
   if (PyStringCheck(object_)) {
-    std::string device_str = *JUST(PyStringAsString(object_));
-    return Device::ParseAndNew(device_str);
+    std::string device_str = PyStringAsString(object_);
+    return Device::ParseAndNew(device_str).GetOrThrow();
   }
   return PyUnpackDevice(object_);
 }
 
 template<>
-Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
+Symbol<ParallelDesc> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
   return PyUnpackParallelDesc(object_);
 }
 
 template<>
-Maybe<Symbol<SbpParallel>> PythonArg::ObjectAs<Symbol<SbpParallel>>() const {
+Symbol<SbpParallel> PythonArg::ObjectAs<Symbol<SbpParallel>>() const {
   return PyUnpackSbpParallel(object_);
 }
 
 template<>
-Maybe<std::vector<Symbol<SbpParallel>>> PythonArg::ObjectAs<std::vector<Symbol<SbpParallel>>>()
-    const {
+std::vector<Symbol<SbpParallel>> PythonArg::ObjectAs<std::vector<Symbol<SbpParallel>>>() const {
   if (PySbpParallelCheck(object_)) {
-    return std::make_shared<std::vector<Symbol<SbpParallel>>>(1,
-                                                              JUST(PyUnpackSbpParallel(object_)));
+    return std::vector<Symbol<SbpParallel>>(1, PyUnpackSbpParallel(object_));
   }
   return PyUnpackSbpParallelSequence(object_);
 }
+INSTANCE_OBJECT_AS_SHARED_PTR(std::vector<Symbol<SbpParallel>>)
 
 template<>
-Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
+TensorIndex PythonArg::ObjectAs<TensorIndex>() const {
   return PyUnpackTensorIndex(object_);
 }
+INSTANCE_OBJECT_AS_SHARED_PTR(TensorIndex)
 
 template<>
-Maybe<std::shared_ptr<one::OpExpr>> PythonArg::ObjectAs<std::shared_ptr<one::OpExpr>>() const {
-  return JUST(PyUnpackOpExpr(object_));
-}
-
-template<>
-Maybe<one::OpExpr> PythonArg::ObjectAs<one::OpExpr>() const {
+std::shared_ptr<one::OpExpr> PythonArg::ObjectAs<std::shared_ptr<one::OpExpr>>() const {
   return PyUnpackOpExpr(object_);
 }
 
 template<>
-Maybe<PyObject*> PythonArg::ObjectAs<PyObject*>() const {
+PyObject* PythonArg::ObjectAs<PyObject*>() const {
   return object_;
 }
 
 template<>
-Maybe<const PyObject*> PythonArg::ObjectAs<const PyObject*>() const {
-  return object_;
-}
-
-template<>
-Maybe<std::vector<std::string>> PythonArg::ObjectAs<std::vector<std::string>>() const {
+std::vector<std::string> PythonArg::ObjectAs<std::vector<std::string>>() const {
   return PyUnpackSequence<std::string>(
-      object_, [](PyObject* item) -> Maybe<std::string> { return JUST(PyStringAsString(item)); });
+      object_, [](PyObject* item) -> std::string { return PyStringAsString(item); });
 }
 
-Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
-  if (active_tag_ == HAS_IMMEDIATE) { return immediate_->value_type() == type; }
+INSTANCE_OBJECT_AS_SHARED_PTR(std::vector<std::string>)
+
+#undef INSTANCE_OBJECT_AS_SHARED_PTR
+
+bool PythonArg::TypeCheck(ValueType type) const {
+  if (tag_ == HAS_DEFAULT) { return default_val_->value_type() == type; }
   switch (type) {
     case kINT32:
     case kUINT32:
@@ -219,7 +217,7 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
       return PyScalarCheck(object_) || numpy::PyArrayCheckLongScalar(object_)
              || numpy::PyArrayCheckFloatScalar(object_);
     case kTENSOR:
-    case kTENSOR_REF: return PyTensorCheck(object_);
+    case kTENSOR_REF: return PyTensor_Check(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);
     case kDTYPE: return PyDTypeCheck(object_);
     case kSHAPE: return PyLongSequenceCheck(object_);
@@ -236,15 +234,13 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kDTYPE_LIST: return PyDTypeSequenceCheck(object_);
     case kSHAPE_LIST: return PyShapeSequenceCheck(object_);
     default: {
-      OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));
+      THROW(RuntimeError) << "Can not check type " << ValueTypeName(type);
     }
   }
   return false;
 }
 
-bool PythonArgCheck(const PythonArg& arg, ValueType type) {
-  return arg.TypeCheck(type).GetOrThrow();
-}
+bool PythonArgCheck(const PythonArg& arg, ValueType type) { return arg.TypeCheck(type); }
 
 }  // namespace functional
 }  // namespace one
