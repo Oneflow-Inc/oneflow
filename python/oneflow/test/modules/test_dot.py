@@ -31,6 +31,28 @@ class TestDot(flow.unittest.TestCase):
         z = torch.dot(x, y)
         return z
 
+    def test_dot_shape_error_msg(test_case):
+        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+            a = flow.tensor([2, 3])
+            b = flow.tensor([2, 3, 4])
+            flow.dot(a, b)
+        test_case.assertTrue("inconsistent tensor size" in str(exp.exception))
+
+    def test_dot_dims_error_msg(test_case):
+        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+            a = flow.tensor([[2, 3], [3, 4]])
+            flow.dot(a, a)
+        test_case.assertTrue("1D tensors expected" in str(exp.exception))
+
+    def test_dot_dtype_error_msg(test_case):
+        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+            a = flow.tensor([2, 3], dtype=flow.int64)
+            b = flow.tensor([2, 3], dtype=flow.float32)
+            flow.dot(a, b)
+        test_case.assertTrue(
+            "expected both vectors to have same dtype" in str(exp.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

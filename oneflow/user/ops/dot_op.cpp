@@ -22,7 +22,7 @@ namespace oneflow {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
   CHECK_OR_RETURN(x.shape() == y.shape())
-      << "Inconsistent tensor size, expected tensor to have the same number of elements, but got "
+      << "inconsistent tensor size, expected tensor to have the same number of elements, but got "
       << x.shape().elem_cnt() << " and " << y.shape().elem_cnt() << "elements respectively";
   CHECK_OR_RETURN(x.shape().NumAxes() == 1)
       << "1D tensors expected, but got " << x.shape().NumAxes() << "D tensors";
