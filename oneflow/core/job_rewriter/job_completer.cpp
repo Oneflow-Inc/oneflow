@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
+#include "oneflow/core/job_rewriter/straighten_nodes.h"
 #include "oneflow/core/job_rewriter/xrt_compilation.h"
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
 
@@ -113,6 +114,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   }
   JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
   JUST(WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp));
+  JUST(WithOpGraphAndMutJob(job, &StraightenNodes));
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
   JUST(WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape));
