@@ -275,7 +275,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);
   }
-  std::cout << "111" << std::endl;
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -289,18 +288,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     //     then it can be cleared for saving mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
   }
-  std::cout << "222" << std::endl;
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
-  std::cout << "333" << std::endl;
   NewRuntimeBuffers();
 
-  std::cout << "444" << std::endl;
   JUST(GetVariableRealBlobAfterSyncPlan());
-  std::cout << "555" << std::endl;
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
-  std::cout << "666" << std::endl;
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
@@ -383,13 +377,11 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       var_blob = JUST(local_var->eager_blob_object())->mut_blob();
     } else if (tensor->is_consistent()) {
       // Deal with tensors which need to change sbp.
-      std::cout << "enter here" << std::endl;
       NdSbpSignature var_nd_sbp_signature = NdSbpSignature(plan_.job_id2op_attribute_ref_table()
                                                                .at(job_id)
                                                                .op_name2op_attribute()
                                                                .at(var_name)
                                                                .nd_sbp_signature());
-      std::cout << "leave here" << std::endl;
       NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
       // Change variable tensor's impl with new sbp when job pass has changed their sbp.
       if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
