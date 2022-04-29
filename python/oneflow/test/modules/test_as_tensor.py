@@ -149,8 +149,8 @@ class TestAsTensor(flow.unittest.TestCase):
         x = np.random.randn(10)
         y1 = flow.as_tensor(x, dtype=flow.int64)
         y2 = flow.as_tensor(x, dtype=flow.float64)
-        test_case.assertTrue(y1.dtype, flow.int64)
-        test_case.assertTrue(y2.dtype, flow.float64)
+        test_case.assertEqual(y1.dtype, flow.int64)
+        test_case.assertEqual(y2.dtype, flow.float64)
 
 
 if __name__ == "__main__":
