@@ -806,7 +806,7 @@ void ClipGradByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
     // embedding_grads, the total_norm_lbn is the global norm of other gradients, embedding_grads
     // need to compute global norm with total_norm_lbn and update the consumer of the
     // total_norm_lbn, no need to compute clamp coff because it has been built in autograd pass.
-    const std::shared_ptr<TotalNormState>& total_norm_state =
+    const std::shared_ptr<ClipByGlobalNormJobPassState::TotalNormState>& total_norm_state =
         clip_by_global_norm_pass_state->GetTotalNormState(variable_op_name);
     const LogicalBlobId total_norm_lbi = GenLogicalBlobId(total_norm_state->total_norm_lbn());
     std::string new_total_norm_lbn =
