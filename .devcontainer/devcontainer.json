@@ -10,15 +10,16 @@
 		"--shm-size=8g",
 		"--security-opt",
 		"seccomp=unconfined",
+		"network=host",
 	],
 	"remoteEnv": {
 		"PATH": "${containerEnv:PATH}:/opt/python/cp37-cp37m/bin"
 	},
-	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/.cache/dot/ccache && mkdir -p ${localWorkspaceFolder}/.cache/dot/local && mkdir -p ${localWorkspaceFolder}/.cache/dot/cache",
+	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/ccache && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/local && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/cache",
 	"mounts": [
-		"source=${localWorkspaceFolder}/.cache/dot/ccache,target=/root/.ccache,type=bind,consistency=cached",
-		"source=${localWorkspaceFolder}/.cache/dot/local,target=/root/.local,type=bind,consistency=cached",
-		"source=${localWorkspaceFolder}/.cache/dot/cache,target=/root/.cache,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/devcontainer-cache/dot/ccache,target=/root/.ccache,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/devcontainer-cache/dot/local,target=/root/.local,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/devcontainer-cache/dot/cache,target=/root/.cache,type=bind,consistency=cached",
 	],
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
