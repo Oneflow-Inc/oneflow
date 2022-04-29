@@ -71,9 +71,9 @@ class CompileScope {
     const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(job_config, device));
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
-    ConfigXrt(job_config_cfg, kind);
+    ConfigXrt(job_config, kind);
     CHECK_JUST(of::JobBuildAndInferCtx_Open(job_config.job_name()));
-    CHECK_JUST(CHECK_JUST(GetCurInferCtx())->SetJobConf(job_conf));
+    CHECK_JUST(CHECK_JUST(GetCurInferCtx())->SetJobConf(job_config));
   }
 
   ~CompileScope() {
