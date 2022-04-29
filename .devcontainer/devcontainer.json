@@ -18,6 +18,7 @@
 		"ONEFLOW_CI_PYTHON_EXE": "/opt/python/cp37-cp37m/bin/python3",
 		"ONEFLOW_CI_SRC_DIR": "${localWorkspaceFolder}",
 		"ONEFLOW_CI_BUILD_DIR": "${localWorkspaceFolder}/build",
+		"ONEFLOW_CI_CMAKE_INIT_CACHE": "${localWorkspaceFolder}/cmake/caches/ci/cuda.cmake",
 	},
 	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/ccache && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/local && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/cache",
 	"mounts": [
