@@ -619,10 +619,10 @@ class LazyBuilder(object):
 
 class TensorBlock(Block):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Union[Parameter, Tensor] = None,
+        self, prefix: str = "", name: str = "", origin: Union[Parameter, Tensor] = None, belonged_graph = None
     ):
         assert not isinstance(origin, Block)
-        super().__init__(prefix, name)
+        super().__init__(prefix, name, belonged_graph)
         if isinstance(origin, Parameter):
             self._type = BlockType.PARAMETER
         elif isinstance(origin, Tensor):
@@ -688,17 +688,18 @@ class TensorBlock(Block):
 
 class SequentialBlock(get_seq(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Sequential = None,
+        self, prefix: str = "", name: str = "", origin: Sequential = None, belonged_graph = None
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
 
 
 class ModuleListBlock(get_list(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ModuleList = None,
+        self, prefix: str = "", name: str = "", origin: ModuleList = None, belonged_graph = None
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -706,28 +707,31 @@ class ModuleListBlock(get_list(ModuleBlock)):
         self.set_origin(origin)
         # MoudleList is a container without forward() method,
         # so it will not be executed or has an execution config.
+        self._belonged_graph = belonged_graph
         self.config = None
 
 
 class ModuleDictBlock(get_dict(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ModuleDict = None,
+        self, prefix: str = "", name: str = "", origin: ModuleDict = None, belonged_graph = None
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
+        self._belonged_graph = belonged_graph
 
 
 class ParameterListBlock(get_para_list(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ParameterList = None,
+        self, prefix: str = "", name: str = "", origin: ParameterList = None, belonged_graph = None
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
         self._is_executing_forward = True
+        self._belonged_graph = belonged_graph
 
     def __getitem__(self, idx):
         assert isinstance(idx, int)
@@ -742,13 +746,14 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
 
 class ParameterDictBlock(get_para_dict(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ParameterDict = None,
+        self, prefix: str = "", name: str = "", origin: ParameterDict = None, belonged_graph = None
     ):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
         self.set_origin(origin)
         self._is_executing_forward = True
+        self._belonged_graph = belonged_graph
 
     def __getitem__(self, key: str):
         p_state = self._get_from_states(key, "_parameters")
