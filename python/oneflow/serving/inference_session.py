@@ -194,8 +194,7 @@ class InferenceSession(object):
         if isinstance(batch_size, int):
             self.set_job_batch_size(job_name, batch_size)
         job_conf = self._get_job_conf(job_name)
-        serialized_job_conf = text_format.MessageToString(job_conf)
-        c_api_util.CurJobBuildAndInferCtx_SetJobConf(serialized_job_conf)
+        c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         # NOTE(chengcheng): placement_util is unavailable.
         # tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(
         #     self.config_proto_.resource
