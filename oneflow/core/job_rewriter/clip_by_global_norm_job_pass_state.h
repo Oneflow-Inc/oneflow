@@ -20,43 +20,41 @@ limitations under the License.
 
 namespace oneflow {
 
-class TotalNormState {
- public:
-  TotalNormState(const std::string& total_norm_lbn, const std::string coeff_lbn,
-                 const ParallelConf& parallel_conf, int64_t scope_symbol_id)
-      : total_norm_lbn_(total_norm_lbn),
-        coeff_lbn_(coeff_lbn),
-        parallel_conf_(parallel_conf),
-        scope_symbol_id_(scope_symbol_id) {}
-
-  void set_total_norm_lbn(const std::string& total_norm_lbn) { total_norm_lbn_ = total_norm_lbn; }
-  const std::string& total_norm_lbn() const { return total_norm_lbn_; }
-  const std::string& coeff_lbn() const { return coeff_lbn_; }
-  const ParallelConf& parallel_conf() const { return parallel_conf_; }
-  int64_t scope_symbol_id() const { return scope_symbol_id_; }
-
- private:
-  std::string total_norm_lbn_;
-  std::string coeff_lbn_;
-  ParallelConf parallel_conf_;
-  int64_t scope_symbol_id_;
-};
-
 class ClipByGlobalNormJobPassState : public JobPassState {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ClipByGlobalNormJobPassState);
   ClipByGlobalNormJobPassState() = default;
   ~ClipByGlobalNormJobPassState() override = default;
 
+  class TotalNormState {
+   public:
+    TotalNormState(const std::string& total_norm_lbn, const std::string& coeff_lbn,
+                   const ParallelConf& parallel_conf, int64_t scope_symbol_id)
+        : total_norm_lbn_(total_norm_lbn),
+          coeff_lbn_(coeff_lbn),
+          parallel_conf_(parallel_conf),
+          scope_symbol_id_(scope_symbol_id) {}
+
+    void set_total_norm_lbn(const std::string& total_norm_lbn) { total_norm_lbn_ = total_norm_lbn; }
+    const std::string& total_norm_lbn() const { return total_norm_lbn_; }
+    const std::string& coeff_lbn() const { return coeff_lbn_; }
+    const ParallelConf& parallel_conf() const { return parallel_conf_; }
+    int64_t scope_symbol_id() const { return scope_symbol_id_; }
+
+   private:
+    std::string total_norm_lbn_;
+    std::string coeff_lbn_;
+    ParallelConf parallel_conf_;
+    int64_t scope_symbol_id_;
+  };
+
   void AddTotalNormState(const std::string& variable_op_name,
                          const std::shared_ptr<TotalNormState>& total_norm_state) {
-    const auto& it = variable_op_name2total_norm_state_.find(variable_op_name);
-    CHECK(it == variable_op_name2total_norm_state_.end())
-        << variable_op_name << "token has been existed";
-    variable_op_name2total_norm_state_[variable_op_name] = total_norm_state;
+    CHECK(variable_op_name2total_norm_state_.emplace(variable_op_name, total_norm_state).second)
+        << variable_op_name;
   }
 
-  const std::shared_ptr<TotalNormState> GetTotalNormState(const std::string& variable_op_name) {
+  const std::shared_ptr<TotalNormState>& GetTotalNormState(const std::string& variable_op_name) {
     const auto& it = variable_op_name2total_norm_state_.find(variable_op_name);
     CHECK(it != variable_op_name2total_norm_state_.end());
     return it->second;

@@ -266,7 +266,7 @@ class Embedding(Module):
         self.handler.LoadSnapshot(snapshot_name)
 
     def forward(self, ids, table_ids=None):
-        """forward of MultiTableEmbedding
+        """Embedding lookup operation
 
         Args:
             ids (flow.tensor): the feature ids
