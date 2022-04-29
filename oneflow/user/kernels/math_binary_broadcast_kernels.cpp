@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/user/ops/math_binary_broadcast_seq.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
-#include "oneflow/core/profiler/profiler.h"
 namespace oneflow {
 
 template<typename Context, ep::primitive::BinaryOp binary_op>
@@ -69,15 +68,9 @@ class MathBinaryBroadcastEpKernel final : public user_op::OpKernel,
         num_src1_dims = 1;
         src1_dims = &zero_dim;
       }
-      // auto t1 = std::chrono::high_resolution_clock::now();
-      OF_PROFILER_RANGE_PUSH("MathBinaryBroadcastEpKernel_tbb_off");
+
       primitive->Launch(ctx->stream(), num_src0_dims, src0_dims, x->dptr(), num_src1_dims,
                         src1_dims, y->dptr(), z->mut_dptr());
-      // auto t2 = std::chrono::high_resolution_clock::now();
-      // auto time  = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-      // printf("MathBinaryBroadcastEpKernel_tbb_off time = %ld \n", time);
-      OF_PROFILER_RANGE_POP();
-      
     } else {
       // For 0-d Tensor
       return;
