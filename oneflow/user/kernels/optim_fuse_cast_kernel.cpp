@@ -42,7 +42,7 @@ class OptimFuseCastOpKernelState final : public OpKernelState {
   bool cast_flag = true;
 };
 
-class OptimFuseCast final : public OpKernel, public user_op::CudaGraphSupport {
+class OptimFuseCast final : public OpKernel {
  public:
   OptimFuseCast() = default;
   ~OptimFuseCast() = default;
