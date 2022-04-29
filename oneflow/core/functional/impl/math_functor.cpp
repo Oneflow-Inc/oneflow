@@ -463,6 +463,7 @@ class ReduceSumFunctor {
                            const bool& keepdims) const {
     MutableAttrMap attrs;
     std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
+    if (reduce_axis.size() == 0) { return x; }
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
@@ -504,6 +505,7 @@ class ReduceAllFunctor {
                            const bool& keepdims) const {
     MutableAttrMap attrs;
     std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
+    if (reduce_axis.size() == 0) { return x; }
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -542,6 +544,7 @@ class ReduceAnyFunctor {
                            const bool& keepdims) const {
     MutableAttrMap attrs;
     std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
+    if (reduce_axis.size() == 0) { return x; }
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -847,6 +850,7 @@ class ReduceProdFunctor {
     JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
+    if (reduce_axis.size() == 0) { return x; }
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
