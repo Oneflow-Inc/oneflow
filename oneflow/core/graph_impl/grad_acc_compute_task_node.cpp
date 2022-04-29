@@ -13,23 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/grad_acc_compute_task_node.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-
-class GradAccCompTaskNode final : public CompTaskNode {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(GradAccCompTaskNode);
-  GradAccCompTaskNode() = default;
-  ~GradAccCompTaskNode() = default;
-  TaskType GetTaskType() const override { return TaskType::kGradAcc; }
-  void BuildExecGphAndRegst() override;
-  void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override;
-  void InferExecInterval() override;
-};
 
 void GradAccCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> regst = ProduceRegst("out", false, 1, 1);
