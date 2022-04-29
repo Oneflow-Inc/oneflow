@@ -26,16 +26,16 @@ namespace one {
 namespace {
 
 struct AvgPoolCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  size_t input_index;
+  bool requires_grad=false;
+  size_t input_index=0;
 
   std::string data_format;
   std::vector<int32_t> padding;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> stride;
-  bool ceil_mode;
-  bool count_include_pad;
-  int32_t divisor_override;
+  bool ceil_mode=false;
+  bool count_include_pad=false;
+  int32_t divisor_override=0;
 };
 
 class AvgPoolNdGrad : public OpExprGradFunction<AvgPoolCaptureState> {
@@ -86,8 +86,8 @@ Maybe<void> AvgPoolNdGrad::Apply(const AvgPoolCaptureState* ctx, const TensorTup
   const auto& input = ctx->SavedTensors().at(ctx->input_index);
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::AvgPoolNdGrad(
-      input, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size, ctx->stride,
+  (*in_grads)[0] = JUST(functional::AvgPoolNdGrad(
+      input, out_grads[0], ndims, ctx->data_format, ctx->padding, ctx->kernel_size, ctx->stride,
       ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
 
   return Maybe<void>::Ok();

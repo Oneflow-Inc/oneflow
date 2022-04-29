@@ -26,9 +26,9 @@ namespace one {
 namespace {
 
 struct TFPoolCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  size_t input_index;
-  size_t output_index;
+  bool requires_grad=false;
+  size_t input_index=0;
+  size_t output_index=0;
 
   std::string data_format;
   std::string padding;
@@ -36,7 +36,7 @@ struct TFPoolCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> padding_after;
   std::vector<int32_t> pool_size;
   std::vector<int32_t> strides;
-  bool ceil_mode;
+  bool ceil_mode=false;
 };
 
 class TFPoolNdGrad : public OpExprGradFunction<TFPoolCaptureState> {
@@ -93,8 +93,8 @@ Maybe<void> TFPoolNdGrad::Apply(const TFPoolCaptureState* ctx, const TensorTuple
   const auto& output = ctx->SavedTensors().at(ctx->output_index);
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::TFPoolNdGrad(
-      input, output, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
+  (*in_grads)[0] = JUST(functional::TFPoolNdGrad(
+      input, output, out_grads[0], mode_, ndims, ctx->data_format, ctx->padding,
       ctx->padding_before, ctx->padding_after, ctx->pool_size, ctx->strides, ctx->ceil_mode));
 
   return Maybe<void>::Ok();

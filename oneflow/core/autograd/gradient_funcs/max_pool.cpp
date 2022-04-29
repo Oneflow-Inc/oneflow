@@ -27,17 +27,17 @@ namespace one {
 namespace {
 
 struct MaxPoolCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  size_t input_index;
-  size_t indice_index;
+  bool requires_grad=false;
+  size_t input_index=0;
+  size_t indice_index=0;
 
   std::string data_format;
   std::vector<int32_t> padding;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> stride;
   std::vector<int32_t> dilation;
-  bool return_indices;
-  bool ceil_mode;
+  bool return_indices=false;
+  bool ceil_mode=false;
 };
 
 class MaxPoolNdGrad : public OpExprGradFunction<MaxPoolCaptureState> {
@@ -46,7 +46,7 @@ class MaxPoolNdGrad : public OpExprGradFunction<MaxPoolCaptureState> {
 
   using OpExprGradFunction<MaxPoolCaptureState>::Init;
 
-  Maybe<void> Init(const OpExpr& op);
+  Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(MaxPoolCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const MaxPoolCaptureState* ctx, const TensorTuple& out_grads,
@@ -92,8 +92,8 @@ Maybe<void> MaxPoolNdGrad::Apply(const MaxPoolCaptureState* ctx, const TensorTup
   const auto& indice = ctx->SavedTensors().at(ctx->indice_index);
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::MaxPoolNdGrad(
-      input, indice, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size,
+  (*in_grads)[0] = JUST(functional::MaxPoolNdGrad(
+      input, indice, out_grads[0], ndims, ctx->data_format, ctx->padding, ctx->kernel_size,
       ctx->stride, ctx->dilation, ctx->return_indices, ctx->ceil_mode));
 
   return Maybe<void>::Ok();
