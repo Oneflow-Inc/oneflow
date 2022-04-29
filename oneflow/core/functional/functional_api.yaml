@@ -30,6 +30,10 @@
     ]
   bind_python: true
 
+- name: "amin"
+  signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amin"
+  bind_python: True
+
 - name: "sub"
   signature:
     [
@@ -187,6 +191,14 @@
 - name: "pow_y_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGrad"
   bind_python: False
+
+- name: "searchsorted"
+  signature:
+    [
+      'Tensor (Tensor sorted_sequence, Tensor values, Bool out_int32=False, Bool right=False) => SearchSorted',
+      'Tensor (Tensor sorted_sequence, Scalar values, Bool out_int32=False, Bool right=False) => SearchSortedScalar',
+    ]
+  bind_python: True
 
 - name: "scalar_pow_grad"
   signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
@@ -605,6 +617,15 @@
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
 
+- name: "normal"
+  signature: [
+    "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None, 
+    Generator generator=None, Bool requires_grad=False) => Normal",
+    "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
+    Generator generator=None, Bool requires_grad=False) => ConsistentNormal",
+    ]
+  bind_python: True
+
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
@@ -909,6 +930,11 @@
 - name: "cublas_bias_add_relu_matmul_grad"
   signature:
     "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => CublasBiasAddReluMatmulGrad"
+  bind_python: False
+
+- name: "cublas_matmul_bias_add_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor x) => CublasMatmulBiasAddGrad"
   bind_python: False
 
 - name: "broadcast_matmul_grad_b"

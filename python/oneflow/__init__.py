@@ -69,6 +69,7 @@ from oneflow._C import acos
 from oneflow._C import acos as arccos
 from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
+from oneflow._C import amin
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
@@ -195,6 +196,7 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
+from oneflow._C import searchsorted
 from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
@@ -348,6 +350,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.random_ops import normal_op as normal
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
