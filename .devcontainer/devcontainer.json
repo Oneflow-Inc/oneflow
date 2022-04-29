@@ -38,17 +38,6 @@
 		"llvm-vs-code-extensions.vscode-clangd",
 		"ms-vscode.cmake-tools"
 	],
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "gcc -v",
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "root",
-	// "Dev container features" is not ready. Adding features will lead to failure on running AMD64 on ARM
-	// https://code.visualstudio.com/docs/remote/containers#_dev-container-features-preview
-	// "features": {
-	// 	"git": "os-provided",
-	// 	"sshd": "os-provided",
-	// 	"python": "os-provided"
-	// }
 }
