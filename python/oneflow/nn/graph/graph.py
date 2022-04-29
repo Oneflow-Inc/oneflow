@@ -771,11 +771,6 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
-<<<<<<< HEAD
-            oneflow._oneflow_internal.FillVariableTensorMgr(
-                state_op_names, self._state_tensor_tuple
-            )
-=======
             enable_mlir_inference_opt = os.getenv(
                 "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
             )
@@ -794,7 +789,6 @@ class Graph(object):
                 oneflow._oneflow_internal.FillVariableTensorMgr(
                     state_op_names, self._state_tensor_tuple
                 )
->>>>>>> master
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.

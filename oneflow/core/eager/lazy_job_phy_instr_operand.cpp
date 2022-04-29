@@ -48,7 +48,7 @@ void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
-  // DoEach(GetStaticGlobalTransportLocalDepObject());
+  DoEach(GetStaticGlobalTransportLocalDepObject());
 }
 
 }  // namespace vm

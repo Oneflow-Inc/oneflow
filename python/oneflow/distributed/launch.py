@@ -135,9 +135,6 @@ def main():
         with_python = not args.no_python
         cmd = []
         if with_python:
-            # if local_rank == 0:
-            #     cmd = ["/home/zhangxiaoyu/nsight-systems-2021.4.1/bin/nsys", "profile", "--stats=false", "--trace-fork-before-exec=true", "--force-overwrite=false", "-o", "8-rank-t5-no-loss-item-light-actor-fp16.qdrep", sys.executable, "-u"]
-            # else:
             cmd = [sys.executable, "-u"]
             if args.module:
                 cmd.append("-m")
