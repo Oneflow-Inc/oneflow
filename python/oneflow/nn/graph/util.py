@@ -15,9 +15,56 @@ limitations under the License.
 """
 import sys
 from collections import OrderedDict
-
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.framework.tensor import Tensor
+from string import Template
 
+def operators_repr(ops):
+    r"""Generate operators' string representation of this module
+    """
+    def _op_signature(op):
+        signature_template = Template(op.name + "($input) -> ($output)")
+        input_sig_str = "..."
+        output_sig_str = "..."
+
+        # only deal with UserOpConf and VariableOpConf for now
+        if op.HasField("user_conf"):
+            user_conf = op.user_conf
+            input_params = []
+            for param in user_conf.input_order:
+                x = user_conf.input[param].s
+                if len(x) > 1:  # param of multiple tensors
+                    input_params.append("[" + (", ").join(list(x)) + "]")
+                else:
+                    assert len(x) == 1
+                    input_params.append(x[0])
+            input_sig_str = ", ".join(input_params)
+
+            output_params = []
+            for param in user_conf.output_order:
+                x = user_conf.output[param].s
+                if len(x) > 1:
+                    output_params.append("[" + (", ").join(list(x)) + "]")
+                else:
+                    assert len(x) == 1
+                    output_params.append(x[0])
+            output_sig_str = ", ".join(output_params)
+
+        elif op.HasField("variable_conf"):
+            variable_conf = op.variable_conf
+            input_sig_str = ""
+            output_sig_str = op.name + "/" + variable_conf.out
+
+        return signature_template.substitute(input=input_sig_str, output=output_sig_str)
+
+    ops_strs = []
+    for op in ops:
+        assert isinstance(op, op_conf_util.OperatorConf)
+        op_str = "(OPERATOR: "
+        op_str += _op_signature(op)
+        op_str += ")"
+        ops_strs.append(op_str)
+    return ops_strs
 
 def add_indent(in_s, num_spaces):
     s = in_s.split("\n")

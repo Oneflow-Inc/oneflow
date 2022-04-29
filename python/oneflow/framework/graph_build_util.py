@@ -31,6 +31,7 @@ import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
 
 import oneflow._oneflow_internal._C as _C
+from oneflow.nn.graph.block import ModuleBlock
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
@@ -125,7 +126,6 @@ class DebugScopeContext(object):
 def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
     assert block is not None
-
     attr_dict = dict()
     if block.config.stage_id is not None:
         attr_dict["pipeline_stage_id_hint"] = block.config.stage_id
@@ -146,6 +146,10 @@ def make_new_block_scope(prev_scope, block):
         # append name prefix
         scope_proto.clear_scope_op_name_prefixes()
         scope_proto.add_scope_op_name_prefixes(block.name_prefix + block.name)
+
+        # set module name
+        if isinstance(block, ModuleBlock):
+            scope_proto.set_module_name(block.name_prefix + block.name)
 
     new_scope = None
 
