@@ -54,6 +54,9 @@ class SbpConstructor final {
   // Print the graph with SBP in order
   void PrintSBPGraphDebugInfo();
 
+  // Algorithms for straightening
+  void ExposeCtrlEdges();
+
  private:
   Maybe<void> InitSbpGraph(const OpGraph& op_graph, const Job& job, bool take_curr_sbp);
   Maybe<void> GenerateNodeAndEdge(const OpGraph& op_graph, const Job& job);

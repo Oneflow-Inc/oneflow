@@ -28,6 +28,7 @@ Maybe<void> StraightenNodes(const OpGraph& op_graph, Job* job) {
   // test debug
   if (GlobalProcessCtx::Rank() == 0) { std::cout << "Start straightening operators" << std::endl; }
   auto_parallel::SbpConstructor sbp_constructor(op_graph, job, /*take_curr_sbp=*/true);
+  sbp_constructor.ExposeCtrlEdges();
 
   return Maybe<void>::Ok();
 }

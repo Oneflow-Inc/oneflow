@@ -223,6 +223,9 @@ class SbpNode {
   // Assemble copy cost for all the incoming edges
   void InitializeCopyCost(bool compute_cost, bool use_sbp_collector_);
 
+  // Algorithms for straightening
+  void ExposeCtrlEdges(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+
 };  // class SbpNode
 
 // function in cpp. Should be put in one file due to use of template
@@ -940,6 +943,18 @@ void SbpNode<SbpSignature>::SpreadTributaryLayer(
     }
   }
   counter--;
+}
+
+// Create an explicit control edge from the producer to this node
+template<class SbpSignature>
+void SbpNode<SbpSignature>::ExposeCtrlEdges(
+    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
+  if (op_node) {
+    for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
+      auto it = op_name2sbp_node.find(ctrl_in_op_name);
+      if (it != op_name2sbp_node.end()) { PointFrom(it->second); }
+    }
+  }
 }
 
 }  // namespace auto_parallel

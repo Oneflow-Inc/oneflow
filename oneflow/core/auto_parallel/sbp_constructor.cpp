@@ -39,7 +39,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job, take_curr_sbp));
   JUST(InitComputationCost(op_graph));
-  if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
+  if (enable_mainstem_algo_ && !take_curr_sbp) { JUST(ApplyMainstemAlgo()); }
   if (use_sbp_collector_) {
     // Load logical blobs on all sbp edges.
     LoadLbi2SbpEdge(op_graph);
@@ -434,6 +434,11 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
     }
     std::cout << std::endl;
   }
+}
+
+// Explicitly show the control edges
+void SbpConstructor::ExposeCtrlEdges() {
+  for (auto* sbp_node : sbp_graph_.NodeList) { sbp_node->ExposeCtrlEdges(op_name2sbp_node_); }
 }
 
 }  // namespace auto_parallel
