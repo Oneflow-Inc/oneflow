@@ -580,6 +580,7 @@ jobs:
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
+            -e ONEFLOW_MLIR_PREFER_NHWC=1 \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
