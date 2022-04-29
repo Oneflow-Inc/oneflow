@@ -296,13 +296,11 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
   }
   if (dtype != NULL) {
     if(functional::PyDTypeCheck(dtype)) {
-      std::cout << "got dtype: " << functional::PyUnpackDType(dtype)->name() << std::endl;
       const auto& tt = functional::To(t, functional::PyUnpackDType(dtype), false);
       return functional::CastToPyObject(tt);
     }
     else if(PyTensortype_Check(dtype))
     {
-      std::cout << "got tensortype: " << ((PyTypeObject*)dtype)->tp_name << std::endl;
       const auto& tt = functional::To(t, TensortypeToDType(dtype), false);
       return functional::CastToPyObject(tt);
     }
