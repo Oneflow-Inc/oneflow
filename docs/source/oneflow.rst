@@ -13,6 +13,8 @@ oneflow
             add, 
             addcmul, 
             addmm, 
+            amin, 
+            amax,
             arccos, 
             arcsin, 
             arcsinh, 
@@ -91,6 +93,7 @@ oneflow
             narrow, 
             max, 
             mean,
+            median,
             mish,  
             min, 
             meshgrid,
@@ -99,6 +102,7 @@ oneflow
             negative, 
             new_ones,
             nonzero,
+            normal,
             numel, 
             ne, 
             empty,
@@ -190,7 +194,8 @@ oneflow
             get_rng_state,
             set_rng_state,
             isnan,
-            isinf
+            isinf,
+            searchsorted
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads

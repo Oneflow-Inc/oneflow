@@ -145,39 +145,40 @@ std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t de
 }
 
 void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instruction) {
-  ++total_inserted_lively_instruction_cnt_;
+  ++total_inserted_instruction_cnt_;
   mut_lively_instruction_list()->PushBack(instruction);
 }
 
-void VirtualMachineEngine::InsertProbe(
+void VirtualMachineEngine::InsertCallbackProbe(
     const std::function<bool(VirtualMachineEngine*)>& ProbeFunction) {
-  probe_list_.EmplaceBack(intrusive::make_shared<Probe>(ProbeFunction));
+  callback_probe_list_.EmplaceBack(intrusive::make_shared<CallbackProbe>(ProbeFunction));
 }
 
-void VirtualMachineEngine::HandleProbe() {
-  if (unlikely(probe_list_.thread_unsafe_size())) { probe_list_.MoveTo(&local_probe_list_); }
-  HandleLocalProbe();
-}
-
-void VirtualMachineEngine::HandleLocalProbe() {
-  if (unlikely(local_probe_list_.size())) {
-    INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
-      if (probe->probe(this)) { local_probe_list_.Erase(probe); }
+void VirtualMachineEngine::HandleLocalSchedulerProbe() {
+  if (unlikely(local_scheduler_probe_list_.size())) {
+    OF_PROFILER_RANGE_PUSH("HandleLocalSchedulerProbe");
+    INTRUSIVE_FOR_EACH_PTR(probe, &local_scheduler_probe_list_) {
+      probe->probe_function()(this);
+      local_scheduler_probe_list_.Erase(probe);
     }
+    OF_PROFILER_RANGE_POP();
   }
 }
 
 intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
-    Instruction* instruction) {
-  ++total_erased_lively_instruction_cnt_;
+    Instruction* instruction, const ScheduleCtx& schedule_ctx) {
+  ++total_completed_instruction_cnt_;
   auto ret = mut_lively_instruction_list()->Erase(instruction);
-  static constexpr int kProbeInterval = 20;
-  if (unlikely(total_erased_lively_instruction_cnt_ % kProbeInterval) == 0) { HandleProbe(); }
+  static constexpr int kFlushInterval = 64;
+  if (unlikely(total_completed_instruction_cnt_ % kFlushInterval) == 0) {
+    FlushGarbageInstructions(schedule_ctx);
+  }
   return ret;
 }
 
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx) {
+  OF_PROFILER_RANGE_PUSH("ReleaseFinishedInstructions");
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
@@ -187,32 +188,21 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
       // By referencing `instruction_ptr->mut_instr_msg()`, we can avoid instr_msg being destructed
       // in stream->DeleteInstruction(...)
       intrusive::shared_ptr<InstructionMsg> instr_msg(instruction_ptr->mut_instr_msg());
-      stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
-      static constexpr int kFlushWindowSize = 32;
-      MoveInstructionMsgToGarbageMsgList(kFlushWindowSize, std::move(instr_msg), schedule_ctx);
+      stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr, schedule_ctx));
+      local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
+  OF_PROFILER_RANGE_POP();
 }
 
-void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
-    int flush_window_size, intrusive::shared_ptr<InstructionMsg>&& instr_msg,
-    const ScheduleCtx& schedule_ctx) {
-  local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
-  // local_garbage_msg_list_ is the cache of garbage_msg_list_.
-  // `kWindowSize` controls the frequency of the usage of mutexed list.
-  if (unlikely(local_garbage_msg_list_.size() > flush_window_size)) {
-    MoveToGarbageMsgListAndNotifyGC(schedule_ctx);
+void VirtualMachineEngine::FlushGarbageInstructions(const ScheduleCtx& schedule_ctx) {
+  if (local_garbage_msg_list_.size()) {
+    OF_PROFILER_RANGE_PUSH("FlushGarbageInstructions");
+    garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
+    schedule_ctx.OnGarbageMsgPending();
+    OF_PROFILER_RANGE_POP();
   }
-}
-
-void VirtualMachineEngine::FlushGarbageMsgList() {
-  garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
-}
-
-void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC(const ScheduleCtx& schedule_ctx) {
-  FlushGarbageMsgList();
-  schedule_ctx.OnGarbageMsgPending();
 }
 
 int64_t VirtualMachineEngine::this_machine_id() const {
@@ -499,9 +489,9 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   intrusive::shared_ptr<InstructionMsg> instr_msg(sequnential_instruction->mut_instr_msg());
-  LivelyInstructionListErase(sequnential_instruction);
-  constexpr int kZeroWindowSize = 0;  // flush immediately.
-  MoveInstructionMsgToGarbageMsgList(kZeroWindowSize, std::move(instr_msg), schedule_ctx);
+  LivelyInstructionListErase(sequnential_instruction, schedule_ctx);
+  local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
+  FlushGarbageInstructions(schedule_ctx);
 }
 
 void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
@@ -529,12 +519,12 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   if (unlikely(mut_ready_instruction_list()->size())) {
     DispatchAndPrescheduleInstructions(schedule_ctx);
   }
-  // handle probes
-  if (unlikely(local_probe_list_.size())) {
-    HandleLocalProbe();
-  } else if (unlikely(probe_list_.thread_unsafe_size())) {
-    probe_list_.MoveTo(&local_probe_list_);
-    HandleLocalProbe();
+  // handle scheduler probes
+  if (unlikely(local_scheduler_probe_list_.size())) {
+    HandleLocalSchedulerProbe();
+  } else if (unlikely(scheduler_probe_list_.thread_unsafe_size())) {
+    scheduler_probe_list_.MoveTo(&local_scheduler_probe_list_);
+    HandleLocalSchedulerProbe();
   }
 }
 
@@ -568,21 +558,40 @@ void VirtualMachineEngine::Callback() {
       // Destruct garbage.
       return Maybe<void>::Ok();
     }));
+    ++total_erased_instruction_cnt_;
+  }
+
+  if (unlikely(local_callback_probe_list_.size())) {
+    HandleLocalCallbackProbe();
+  } else if (unlikely(callback_probe_list_.thread_unsafe_size())) {
+    callback_probe_list_.MoveTo(&local_callback_probe_list_);
+    HandleLocalCallbackProbe();
   }
 }
 
-bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
-  return local_pending_msg_list().empty() && active_stream_list().empty()
-         && flying_instruction_cnt() == 0;
+void VirtualMachineEngine::HandleLocalCallbackProbe() {
+  OF_PROFILER_RANGE_PUSH("HandleLocalCallbackProbe");
+  INTRUSIVE_FOR_EACH_PTR(probe, &local_callback_probe_list_) {
+    if (probe->probe_function()(this)) { local_callback_probe_list_.Erase(probe); }
+  }
+  OF_PROFILER_RANGE_POP();
 }
 
-bool VirtualMachineEngine::Empty() const {
+bool VirtualMachineEngine::SchedulerThreadUnsafeEmpty() const {
+  return pending_msg_list().thread_unsafe_size() == 0 && local_pending_msg_list().empty()
+         && lively_instruction_list_.empty() && active_stream_list().empty()
+         && scheduler_probe_list_.thread_unsafe_size() == 0 && local_scheduler_probe_list_.empty();
+}
+
+bool VirtualMachineEngine::SchedulerEmpty() const {
   // hook and size will be check in pending_msg_list().empty().
-  return pending_msg_list().empty() && ThreadUnsafeEmpty();
+  return pending_msg_list().empty() && scheduler_probe_list_.empty()
+         && SchedulerThreadUnsafeEmpty();
 }
 
 bool VirtualMachineEngine::CallbackEmpty() const {
-  return garbage_msg_list_.empty() && local_garbage_msg_list_.empty();
+  return (total_erased_instruction_cnt() == total_inserted_instruction_cnt())
+         && callback_probe_list_.empty() && local_callback_probe_list_.empty();
 }
 
 }  // namespace vm

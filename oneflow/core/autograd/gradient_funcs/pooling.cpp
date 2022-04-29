@@ -29,7 +29,6 @@ namespace {
 struct PoolingCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   size_t input_index;
-  size_t output_index;
   size_t indice_index;
 
   std::string data_format;
@@ -72,7 +71,6 @@ Maybe<void> PoolingNdGrad::Capture(PoolingCaptureState* ctx, const TensorTuple& 
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ctx->input_index = ctx->SaveTensorForBackward(inputs.at(0));
-  ctx->output_index = ctx->SaveTensorForBackward(outputs.at(0));
   ctx->indice_index = ctx->SaveTensorForBackward(outputs.at(1));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -93,12 +91,11 @@ Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* ctx, const TensorTup
 
   int32_t ndims = ctx->kernel_size.size();
   const auto& input = ctx->SavedTensors().at(ctx->input_index);
-  const auto& output = ctx->SavedTensors().at(ctx->output_index);
   const auto& indice = ctx->SavedTensors().at(ctx->indice_index);
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::PoolingNdGrad(
-      input, output, indice, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
+      input, indice, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
       ctx->kernel_size, ctx->stride, ctx->dilation, ctx->return_indices, ctx->ceil_mode));
 
   return Maybe<void>::Ok();
