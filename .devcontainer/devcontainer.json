@@ -10,7 +10,7 @@
 		"--shm-size=8g",
 		"--security-opt",
 		"seccomp=unconfined",
-		"network=host",
+		"--network=host",
 	],
 	"remoteEnv": {
 		"PATH": "${containerEnv:PATH}:/opt/python/cp37-cp37m/bin"
