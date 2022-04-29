@@ -24,7 +24,7 @@ import oneflow.unittest
 from alexnet_model import alexnet
 
 
-class Graph(flow.nn.Graph):
+class TvmFrontedGraph(flow.nn.Graph):
     def __init__(self, module):
         super().__init__()
         self.m = module
@@ -97,7 +97,7 @@ class TestConvertDependency(flow.unittest.TestCase):
 
     def test_infos_of_nodes(test_case):
         alexnet_module = alexnet()
-        alexnet_graph = Graph(alexnet_module)
+        alexnet_graph = TvmFrontedGraph(alexnet_module)
         if not alexnet_graph._is_compiled:
             alexnet_graph._compile(flow.rand(1, 3, 224, 224))
         graph_str = repr(alexnet_graph)
@@ -199,7 +199,7 @@ class TestConvertDependency(flow.unittest.TestCase):
                         print(node_output_name)
                         node_output_list.append(node_output_name)
 
-        test_case.assertEqual("_Graph_1_input.0.0_2" in node_input_list, True)
+        test_case.assertEqual("_TvmFrontedGraph_1_input.0.0_2" in node_input_list, True)
         test_case.assertEqual("m.features.0.weight" in node_input_list, True)
         test_case.assertEqual("m.features.5-maxpool_2d-7" in node_input_list, True)
         test_case.assertEqual("m.features.0-conv2d-0" in node_output_list, True)
@@ -218,7 +218,7 @@ class TestConvertDependency(flow.unittest.TestCase):
                 return x
 
         sub_module = SubModule()
-        sub_graph = Graph(sub_module)
+        sub_graph = TvmFrontedGraph(sub_module)
         graph_str = repr(sub_graph)
 
         size_where = 2

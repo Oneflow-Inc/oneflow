@@ -366,6 +366,33 @@ class TestConvTranspose(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(n=3, auto_backward=False)
+    def test_functional_conv_transpose1d(test_case):
+        device = random_device()
+        channels = random(1, 6)
+        img = random_tensor(ndim=3, dim1=channels).to(device)
+        kernel = random_tensor(ndim=3, dim0=channels).to(device)
+        y = torch.nn.functional.conv_transpose1d(img, kernel)
+        return y
+
+    @autotest(n=3, auto_backward=False)
+    def test_functional_conv_transpose2d(test_case):
+        device = random_device()
+        channels = random(1, 6)
+        img = random_tensor(ndim=4, dim1=channels).to(device)
+        kernel = random_tensor(ndim=4, dim0=channels).to(device)
+        y = torch.nn.functional.conv_transpose2d(img, kernel)
+        return y
+
+    @autotest(n=3, auto_backward=False)
+    def test_functional_conv_transpose3d(test_case):
+        device = random_device()
+        channels = random(1, 6)
+        img = random_tensor(ndim=5, dim1=channels).to(device)
+        kernel = random_tensor(ndim=5, dim0=channels).to(device)
+        y = torch.nn.functional.conv_transpose3d(img, kernel)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
