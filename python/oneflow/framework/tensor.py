@@ -793,8 +793,24 @@ def _orthogonal(self, gain=1.0):
 
 
 def _normal(self, mean=0, std=1):
-    initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
-    return _init_by_initializer_conf(self, initializer_conf)
+    if self.is_global:
+        src_tensor = flow.normal(mean, std, self.shape)
+        src_tensor = src_tensor.to_global(
+            placement=self.placement,
+            sbp=tuple(flow.sbp.broadcast for _ in range(len(self.sbp))),
+        )
+        self.copy_(src_tensor)
+        return self
+    else:
+        return flow.normal(
+            mean,
+            std,
+            self.size(),
+            out=self,
+            dtype=self.dtype,
+            device=self.device,
+            requires_grad=self.requires_grad,
+        )
 
 
 def _fill(self, value):
@@ -1112,6 +1128,10 @@ def _new_tensor(
         )
 
 
+def _byte(self):
+    return flow._C.to(self, flow.uint8)
+
+
 def _cumsum(self, dim, dtype=None):
     return flow._C.cumsum(self, dim, dtype=dtype)
 
@@ -1126,6 +1146,7 @@ def RegisterMethods():
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.__matmul__ = lambda self, other: self.matmul(other)
+    Tensor.byte = _byte
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
     Tensor.size = _size
