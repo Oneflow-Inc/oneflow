@@ -630,7 +630,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
     } else {
       return failure();
     }
-    // when op op has no sense of data_format and pre op is transpose, we greedily insert transpose 
+    // when op op has no sense of data_format and pre op is transpose, we greedily insert transpose
     // into this op, seeking more opportunities to eliminate transpose pattern.
     const bool greedily_transpose_flag = !op.IsNCHW() && IsInsertTransposeOpBefore(op, rewriter);
 
@@ -695,7 +695,8 @@ struct AutoNhwcEliminateRedundantTransposePattern : public mlir::OpRewritePatter
     mlir::Value transposeInput = op.getOperand();
     TransposeOp transposeInputOp = transposeInput.getDefiningOp<TransposeOp>();
 
-    if (!transposeInputOp || !IsRedundantTransposeMatch(op.permAttr(), transposeInputOp.permAttr())) {
+    if (!transposeInputOp
+        || !IsRedundantTransposeMatch(op.permAttr(), transposeInputOp.permAttr())) {
       return failure();
     }
     rewriter.replaceOp(op, {transposeInputOp.getOperand()});
