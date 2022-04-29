@@ -35,6 +35,7 @@ from oneflow.nn.graph.util import (
     IONodeType,
     IONode,
 )
+from string import Template
 
 
 def get_block_cls(item):
@@ -554,12 +555,13 @@ class ModuleBlock(Block):
     def _op_signature(self, op):
         r"""Generate a single operator's signature
         """
-        sig = op.name
+        signature_template = Template(op.name + "($input) -> ($output)")
+        input_sig_str = "..."
+        output_sig_str = "..."
 
-        # only deal with UserOpConf for now
+        # only deal with UserOpConf and VariableOpConf for now
         if op.HasField("user_conf"):
             user_conf = op.user_conf
-            sig += "("
             input_params = []
             for param in user_conf.input_order:
                 x = user_conf.input[param].s
@@ -568,10 +570,8 @@ class ModuleBlock(Block):
                 else:
                     assert len(x) == 1
                     input_params.append(x[0])
-            sig += ", ".join(input_params)
-            sig += ")"
+            input_sig_str= ", ".join(input_params)
 
-            sig += " -> ("
             output_params = []
             for param in user_conf.output_order:
                 x = user_conf.output[param].s
@@ -580,10 +580,14 @@ class ModuleBlock(Block):
                 else:
                     assert len(x) == 1
                     output_params.append(x[0])
-            sig += ", ".join(output_params)
-            sig += ")"
-    
-        return sig
+            output_sig_str = ", ".join(output_params)
+
+        elif op.HasField("variable_conf"):
+            variable_conf = op.variable_conf
+            input_sig_str = ""
+            output_sig_str = op.name + "/" + variable_conf.out
+
+        return signature_template.substitute(input=input_sig_str, output=output_sig_str)
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
