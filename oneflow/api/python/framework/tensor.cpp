@@ -19,6 +19,7 @@ limitations under the License.
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
+#include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
@@ -53,6 +54,17 @@ namespace one {
 
 PyTypeObject* PyTensorObject_Type = NULL;
 PyTypeObject* PyParameterObject_Type = NULL;
+
+extern PyTypeObject* PyByteTensortypeObject_Type;
+
+extern PyTypeObject* PyCharTensortypeObject_Type;
+extern PyTypeObject* PyShortTensortypeObject_Type;
+extern PyTypeObject* PyIntTensortypeObject_Type;
+extern PyTypeObject* PyLongTensortypeObject_Type;
+
+extern PyTypeObject* PyHalfTensortypeObject_Type;
+extern PyTypeObject* PyFloatTensortypeObject_Type;
+extern PyTypeObject* PyDoubleTensortypeObject_Type;
 
 static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -269,6 +281,76 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+
+bool PyTensortype_Check(PyObject* op) {
+  return op->ob_type == PyByteTensortypeObject_Type || op->ob_type == PyCharTensortypeObject_Type
+         || op->ob_type == PyShortTensortypeObject_Type || op->ob_type == PyIntTensortypeObject_Type
+         || op->ob_type == PyLongTensortypeObject_Type || op->ob_type == PyHalfTensortypeObject_Type
+         || op->ob_type == PyFloatTensortypeObject_Type
+         || op->ob_type == PyDoubleTensortypeObject_Type;
+}
+
+static Symbol<DType> TensortypeToDType(PyObject* type) {
+  if (type == (PyObject*)PyByteTensortypeObject_Type) return DType::UInt8();
+  if (type == (PyObject*)PyCharTensortypeObject_Type) return DType::Int8();
+  if (type == (PyObject*)PyShortTensortypeObject_Type) return DType::Int16();
+  if (type == (PyObject*)PyIntTensortypeObject_Type) return DType::Int32();
+  if (type == (PyObject*)PyLongTensortypeObject_Type) return DType::Int64();
+  if (type == (PyObject*)PyHalfTensortypeObject_Type) return DType::Float16();
+  if (type == (PyObject*)PyFloatTensortypeObject_Type) return DType::Float();
+  if (type == (PyObject*)PyDoubleTensortypeObject_Type) return DType::Double();
+  return DType::UInt8();
+}
+
+static PyObject* PyTensorObject_typemethod(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  PyObject* dtype_arg = NULL;
+  bool non_blocking = false;
+  static const char* keywords[3] = {"dtype", "non_blocking", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords),
+                                   &dtype_arg, &non_blocking)) {
+    return NULL;
+  }
+  if (dtype_arg != NULL) {
+    if (!functional::PyDTypeCheck(dtype_arg) && !PyTensortype_Check(dtype_arg)) {
+      std::cout << "doesn't parse dtype arguments" << std::endl;
+      return NULL;
+    }
+    else if(functional::PyDTypeCheck(dtype_arg))
+    {
+      std::cout << "get dtype" << std::endl;
+      const auto& tt = functional::To(t, functional::PyUnpackDType(dtype_arg), true);
+      return functional::CastToPyObject(tt);
+    }
+    else {
+      std::cout << "get tensortype" << std::endl;
+      const auto& tt = functional::To(t, TensortypeToDType(dtype_arg), true);
+      return functional::CastToPyObject(tt);
+    }
+  }
+
+
+  std::cout << "argument: " << dtype_arg << std::endl;
+  const auto dtype = t->dtype();
+  
+  if (dtype == DType::UInt8()) { return (PyObject*)PyByteTensortypeObject_Type; }
+  if (dtype == DType::Int8()) { return (PyObject*)PyCharTensortypeObject_Type; }
+  if (dtype == DType::Int16()) { return (PyObject*)PyShortTensortypeObject_Type; }
+  if (dtype == DType::Int32()) { return (PyObject*)PyIntTensortypeObject_Type; }
+  if (dtype == DType::Int64()) { return (PyObject*)PyLongTensortypeObject_Type; }
+
+  if (dtype == DType::Float16()) {
+    return (PyObject*)PyHalfTensortypeObject_Type;
+  } if (dtype == DType::Float()) {
+    return (PyObject*)PyFloatTensortypeObject_Type;
+  } if (t->dtype() == DType::Double()) {
+    return (PyObject*)PyDoubleTensortypeObject_Type;
+  }
+  return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
+  END_HANDLE_ERRORS
+}
+
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                               \
   static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {   \
     HANDLE_ERRORS                                                                         \
@@ -331,6 +413,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
+    {"type", (PyCFunction)PyTensorObject_typemethod, METH_VARARGS | METH_KEYWORDS, NULL},
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                \
   {"_copy_to_numpy_" #T, PyTensorObject__copy_to_numpy_##T, METH_O, NULL}, \
       {"_copy_from_numpy_" #T, PyTensorObject__copy_from_numpy_##T, METH_O, NULL},
