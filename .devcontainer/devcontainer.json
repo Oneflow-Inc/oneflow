@@ -27,6 +27,11 @@
 		"files.trimFinalNewlines": true,
 		"files.trimTrailingWhitespace": true,
 		"files.eol": "\n",
+		"clangd.arguments": [
+			"-j",
+			"8",
+			"-header-insertion=never"
+		],
 	},
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
