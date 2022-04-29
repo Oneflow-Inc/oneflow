@@ -551,9 +551,14 @@ class ModuleBlock(Block):
         )
 
         if self._belonged_graph.is_compiled:
-            module_conf = self._belonged_graph._graph_proto.module_name2module_conf[
-                self.name_prefix + self.name
-            ]
+            if self._belonged_graph._full_graph_proto is not NONE:
+                module_conf = self._belonged_graph._full_graph_proto.module_name2module_conf[
+                    self.name_prefix + self.name
+                ]
+            elif self._belonged_graph._graph_proto is not NONE:
+                module_conf = self._belonged_graph._graph_proto.module_name2module_conf[
+                    self.name_prefix + self.name
+                ]
 
             return operators_repr(module_conf.ops)
 

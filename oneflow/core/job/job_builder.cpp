@@ -19,7 +19,10 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/scope_util.h"
 
 namespace oneflow {
 
@@ -170,6 +173,7 @@ Maybe<void> JobBuilder::AddOp(const ParallelConf& parallel_conf, const OperatorC
   OperatorConf* mut_op_conf = job_->mutable_net()->add_op();
   *mut_op_conf = op_conf;
   CHECK_OR_RETURN(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
+  AddOpToModuleConf(op_conf);
   AddOpNamesToPlacementGroup({op_conf.name()}, parallel_conf);
   return Maybe<void>::Ok();
 }
@@ -185,8 +189,27 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
     *mut_op_conf = op_conf;
     CHECK(op_name2op_conf_.emplace(op_conf.name(), mut_op_conf).second);
     op_names.emplace_back(op_conf.name());
+    AddOpToModuleConf(op_conf);
   }
   AddOpNamesToPlacementGroup(op_names, parallel_conf);
+}
+
+void JobBuilder::AddOpToModuleConf(const OperatorConf& op_conf) {
+    // set up the module config
+    if (!Global<symbol::Storage<Scope>>::Get()->Has(op_conf.scope_symbol_id())) {
+      LOG(INFO) << "op " << op_conf.name() << " has a scope symbol id that has no scope data.";
+      return;
+    }
+    const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+    if (scope.scope_proto().has_module_name()) {
+      const auto& module_name = scope.scope_proto().module_name();
+      auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+      if (!(*module_name2module_conf)[module_name].has_name()) {
+        (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
+      }
+
+      (*module_name2module_conf)[module_name].add_ops()->CopyFrom(op_conf);
+    }
 }
 
 void JobBuilder::AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
@@ -224,6 +247,7 @@ void JobBuilder::RemoveOpByName(const std::string& op_name) {
 }
 
 void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_names) {
+  // rm module conf
   // Update net
   DLNetConf net = job_->net();
   job_->mutable_net()->clear_op();
