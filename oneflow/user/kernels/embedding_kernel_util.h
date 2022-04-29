@@ -17,7 +17,6 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_EMBEDDING_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_EMBEDDING_KERNEL_UTIL_H_
 
-#include <cstdint>
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -26,7 +25,7 @@ template<DeviceType device_type, typename T, typename index_T>
 struct EmbeddingRenormFunctor final {
   void operator()(ep::Stream* stream, const T* in_buf, const index_T* indices_buf, T* out_buf,
                   const double max_norm, const double norm_type, const int32_t num_indices,
-                  const int32_t emb_size, const int32_t emb_dim, void* tmp_buf);
+                  const int32_t emb_size, const int32_t emb_dim, int32_t* tmp_buf);
 };
 
 template<DeviceType device_type, typename T, typename index_T>

@@ -31,6 +31,7 @@ class GpuEmbeddingRenormKernel final : public user_op::OpKernel {
   ~GpuEmbeddingRenormKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
@@ -45,9 +46,9 @@ class GpuEmbeddingRenormKernel final : public user_op::OpKernel {
     const index_T* indices_buf = indices->dptr<index_T>();
     T* out_buf = out->mut_dptr<T>();
     const int32_t num_indices = indices->shape().elem_cnt();
-    void* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr();
+    int32_t* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<int32_t>();
     Memset<DeviceType::kCUDA>(ctx->stream(), tmp_buf, 0,
-                              GetCudaAlignedSize(sizeof(double) * emb_size * 2));
+                              GetCudaAlignedSize(sizeof(int32_t) * emb_size));
     EmbeddingRenormFunctor<DeviceType::kCUDA, T, index_T>()(
         ctx->stream(), in_buf, indices_buf, out_buf, max_norm, norm_type, num_indices, emb_size,
         emb_dim, tmp_buf);
@@ -62,6 +63,7 @@ class GpuEmbeddingKernel final : public user_op::OpKernel {
   ~GpuEmbeddingKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
@@ -91,6 +93,7 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
   ~GpuEmbeddingGradKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
@@ -128,7 +131,7 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const Shape& in_shape = ctx->InputShape("in", 0);                                          \
         const int32_t emb_size = in_shape.At(0);                                                   \
-        return GetCudaAlignedSize(sizeof(double) * emb_size * 2);                                  \
+        return GetCudaAlignedSize(sizeof(int32_t) * emb_size);                                     \
       });                                                                                          \
   REGISTER_USER_KERNEL("embedding")                                                                \
       .SetCreateFn<                                                                                \

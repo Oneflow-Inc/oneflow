@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cub/cub.cuh>
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/embedding_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -41,15 +42,17 @@ __global__ void embedding_grad_kernel(const T* dy_buf, const index_T* indices_bu
     int32_t indices_index = i / emb_dim;
     int32_t emb_dim_index = i - indices_index * emb_dim;
     int32_t emb_size_index = indices_buf[indices_index];
-    int32_t from_index = emb_size_index * emb_dim + emb_dim_index;
-    if (emb_size_index != padding_idx) { cuda::atomic::Add(dx_buf + from_index, dy_buf[i]); }
+    if (emb_size_index != padding_idx) {
+      int32_t from_index = emb_size_index * emb_dim + emb_dim_index;
+      cuda::atomic::Add(dx_buf + from_index, dy_buf[i]);
+    }
   }
 }
 
 template<typename index_T>
 __global__ void indices_freq_kernel(const index_T* indices_buf, const int32_t num_indices,
-                                    int32_t* tmp_buf) {
-  CUDA_1D_KERNEL_LOOP(i, num_indices) { cuda::atomic::Add(tmp_buf + indices_buf[i], 1); }
+                                    int32_t* indices_frep) {
+  CUDA_1D_KERNEL_LOOP(i, num_indices) { cuda::atomic::Add(indices_frep + indices_buf[i], 1); }
 }
 
 template<typename T, typename index_T>
@@ -62,30 +65,32 @@ __global__ void emb_scale_kernel(T* dx_buf, const int32_t emb_size, const int32_
 }
 
 template<typename T, typename index_T>
-__global__ void accum_norm_kernel(const T* in_buf, int32_t* indices_frep, double* emb_norm,
-                        const double norm_type, const int32_t emb_size, const int32_t emb_dim) {
-  CUDA_1D_KERNEL_LOOP(i, emb_size * emb_dim) {
-    int32_t emb_size_index = i / emb_dim;
+__global__ void embedding_renorm_kernel(const T* in_buf, T* out_buf, int32_t* indices_frep,
+                                        const double max_norm, const double norm_type,
+                                        const int32_t emb_dim) {
+  if (indices_frep[blockIdx.x] == 0) { return; }
 
-    if (indices_frep[emb_size_index] > 0) {
-      double item = static_cast<double>(in_buf[i]);
-      cuda::atomic::Add(emb_norm + emb_size_index, std::pow(std::abs(item), norm_type));
-    }
+  int tid = threadIdx.x;
+  int base_index = blockIdx.x * emb_dim;
+
+  double v = 0;
+  for (int i = tid; i < emb_dim; i += blockDim.x) {
+    double item = static_cast<double>(in_buf[base_index + i]);
+    v += pow(abs(item), norm_type);
   }
-}
 
-template<typename T, typename index_T>
-__global__ void apply_norm_kernel(const T* in_buf, T* out_buf, double* emb_norm, int32_t* indices_frep,
-                               const double max_norm, const int32_t emb_size,
-                               const int32_t emb_dim) {
-  CUDA_1D_KERNEL_LOOP(i, emb_size * emb_dim) {
-    int32_t emb_size_index = i / emb_dim;
-    if (indices_frep[emb_size_index] > 0) {
-      double v = emb_norm[emb_size_index];
-      if (v > max_norm) {
-        T scale = static_cast<T>(max_norm / (v + 1e-7));
-        out_buf[i] = in_buf[i] * scale;
-      }
+  using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  __shared__ double norm;
+  v = BlockReduce(temp_storage).Sum(v);
+
+  if (tid == 0) { norm = pow(v, 1.0 / norm_type); }
+  __syncthreads();
+
+  if (norm > max_norm) {
+    T scale = static_cast<T>(max_norm / (norm + 1e-7));
+    for (int i = tid; i < emb_dim; i += blockDim.x) {
+      out_buf[base_index + i] = in_buf[base_index + i] * scale;
     }
   }
 }
@@ -96,22 +101,13 @@ template<typename T, typename index_T>
 struct EmbeddingRenormFunctor<DeviceType::kCUDA, T, index_T> final {
   void operator()(ep::Stream* stream, const T* in_buf, const index_T* indices_buf, T* out_buf,
                   const double max_norm, const double norm_type, const int32_t num_indices,
-                  const int32_t emb_size, const int32_t emb_dim, void* tmp_buf) {
-    size_t bytes_used = 0;
-    int32_t* indices_frep = reinterpret_cast<int32_t*>(static_cast<char*>(tmp_buf) + bytes_used);
-    bytes_used += sizeof(int32_t) * emb_size * 2;
-    double* emb_norm = reinterpret_cast<double*>(static_cast<char*>(tmp_buf) + bytes_used);
-    bytes_used += sizeof(double) * emb_size;
-
+                  const int32_t emb_size, const int32_t emb_dim, int32_t* tmp_buf) {
     indices_freq_kernel<index_T>
         <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
-           stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, indices_frep);
-    accum_norm_kernel<T, index_T><<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock, 0,
-                          stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        in_buf, indices_frep, emb_norm, norm_type, emb_size, emb_dim);
-    apply_norm_kernel<T, index_T><<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock,
-                                 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        in_buf, out_buf, emb_norm, indices_frep, max_norm, emb_size, emb_dim);
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf);
+    embedding_renorm_kernel<T, index_T><<<BlocksNum4ThreadsNum(emb_size), kCudaThreadsNumPerBlock,
+                                          0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        in_buf, out_buf, tmp_buf, max_norm, norm_type, emb_dim);
   }
 };
 
