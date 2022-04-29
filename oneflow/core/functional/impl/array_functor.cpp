@@ -948,6 +948,81 @@ class ArgSortFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SearchSortedFunctor {
+ public:
+  SearchSortedFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("searchsorted")
+                         .Input("sorted_sequence")
+                         .Input("values")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
+                           const std::shared_ptr<one::Tensor>& values, bool out_int32,
+                           bool right) const {
+    // checks
+    CHECK_OR_RETURN(values->shape()->NumAxes() > 0)
+        << "for searchsorted op, input values tensor should have positive dimension";
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() > 0)
+        << "for searchsorted op, input sorted_sequence should have positive dimension, "
+        << "but got 0 dimension";
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1
+                    || sorted_sequence->shape()->MatchBeforeLastDim(*(values->shape())))
+        << "for searchsorted op, sorted_sequence should be 1 dimension or the first N-1 dimensions "
+        << "of boundaries tensor and input value tensor must match";
+    if (out_int32) {
+      CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
+                      < INT32_MAX)
+          << "for searchsorted op, the size of input sorted_sequence' last dimension should "
+          << "be less than " << INT32_MAX;
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("out_int32", out_int32));
+    JUST(attrs.SetAttr<bool>("right", right));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SearchSortedScalarFunctor {
+ public:
+  SearchSortedScalarFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
+                           const Scalar& values, bool out_int32, bool right) const {
+    // checks
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1)
+        << "for searchsorted op, input value can be a scalar only when sorted_sequence tensor "
+        << "dimension is 1, but we got sorted_sequence dim(" << sorted_sequence->shape()->NumAxes()
+        << ")";
+    if (out_int32) {
+      CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
+                      < INT32_MAX)
+          << "for searchsorted op, the size of input sorted_sequence' last dimension should "
+          << "be less than " << INT32_MAX;
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("out_int32", out_int32));
+    JUST(attrs.SetAttr<bool>("right", right));
+    bool is_values_float = values.IsFloatingPoint();
+    if (is_values_float) {
+      double_t values_tmp = JUST(values.As<double_t>());
+      JUST(attrs.SetAttr<double>("values", values_tmp));
+    } else {
+      int64_t values_tmp = JUST(values.As<int64_t>());
+      JUST(attrs.SetAttr<double>("values", values_tmp));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GatherNdFunctor {
  public:
   GatherNdFunctor() {
@@ -2807,6 +2882,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::ArgSortFunctor>("ArgSort");
+  m.add_functor<impl::SearchSortedFunctor>("SearchSorted");
+  m.add_functor<impl::SearchSortedScalarFunctor>("SearchSortedScalar");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
