@@ -204,7 +204,7 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
       (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
     }
 
-    (*module_name2module_conf)[module_name].add_ops()->CopyFrom(operator_conf);
+    *((*module_name2module_conf)[module_name].add_ops()) = operator_conf.name();
   }
 }
 

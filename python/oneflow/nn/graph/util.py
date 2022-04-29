@@ -19,9 +19,14 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.framework.tensor import Tensor
 from string import Template
 
-def operators_repr(ops):
+def operators_repr(ops, graph_proto):
     r"""Generate operators' string representation of this module
     """
+    if len(ops) > 0:
+        op_confs = dict()
+        for op_conf in graph_proto.net.op:
+            op_confs[op_conf.name] = op_conf
+
     def _op_signature(op):
         signature_template = Template(op.name + "($input) -> ($output)")
         input_sig_str = "..."
@@ -59,9 +64,11 @@ def operators_repr(ops):
 
     ops_strs = []
     for op in ops:
-        assert isinstance(op, op_conf_util.OperatorConf)
+        assert op in op_confs
+        op_conf = op_confs[op]
+        assert isinstance(op_conf, op_conf_util.OperatorConf)
         op_str = "(OPERATOR: "
-        op_str += _op_signature(op)
+        op_str += _op_signature(op_conf)
         op_str += ")"
         ops_strs.append(op_str)
     return ops_strs

@@ -555,12 +555,13 @@ class ModuleBlock(Block):
                 module_conf = self._belonged_graph._full_graph_proto.module_name2module_conf[
                     self.name_prefix + self.name
                 ]
+                return operators_repr(module_conf.ops, self._belonged_graph._full_graph_proto)
             elif self._belonged_graph._graph_proto is not None:
                 module_conf = self._belonged_graph._graph_proto.module_name2module_conf[
                     self.name_prefix + self.name
                 ]
+                return operators_repr(module_conf.ops, self._belonged_graph._graph_proto)
 
-            return operators_repr(module_conf.ops)
 
         return []
 

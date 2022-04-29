@@ -208,7 +208,7 @@ void JobBuilder::AddOpToModuleConf(const OperatorConf& op_conf) {
         (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
       }
 
-      (*module_name2module_conf)[module_name].add_ops()->CopyFrom(op_conf);
+      *((*module_name2module_conf)[module_name].add_ops()) = op_conf.name();
     }
 }
 
@@ -253,6 +253,20 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
   job_->mutable_net()->clear_op();
   for (const OperatorConf& op_conf : net.op()) {
     if (removing_names.count(op_conf.name()) == 0) { *(job_->mutable_net()->add_op()) = op_conf; }
+  }
+  auto module_confs_map = job_->module_name2module_conf();
+  job_->clear_module_name2module_conf();
+  for (const auto& module_conf_pair : module_confs_map) {
+    const auto& module_name = module_conf_pair.first;
+    auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+    if (!(*module_name2module_conf)[module_name].has_name()) {
+      (*module_name2module_conf)[module_name].set_name(module_name);
+    }
+    for (const auto& op_name : module_conf_pair.second) {
+      if (removing_names.count(op_name) == 0) {
+        *((*module_name2module_conf)[module_name].add_ops()) = op_name;
+      }
+    }
   }
   // Update placement
   auto placement_group = job_->placement().placement_group();
