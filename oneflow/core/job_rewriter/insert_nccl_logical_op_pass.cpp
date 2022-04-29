@@ -85,6 +85,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
                                              const std::vector<const OpNode*>& order) {
   HashSet<const OpNode*> visited;
 
+  int32_t i = 0;
   for (const OpNode* seed_node : order) {
     if (visited.find(seed_node) != visited.end()) { continue; }
     CHECK(visited.insert(seed_node).second);
@@ -114,6 +115,13 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
       });
     }
 
+    /*
+    LOG(INFO) << " cclog: subgraph: " << i << " with op num = " << this_subgraph.size();
+    for (const OpNode* node : this_subgraph) {
+      LOG(INFO) << "cclog: i = " << i << " op name : " << node->op().op_name();
+    }
+    i++;
+    */
     if (this_subgraph.size() > 1) {
       ret->emplace_back(HashSet<const OpNode*>());
       ret->back().swap(this_subgraph);
@@ -404,6 +412,10 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
     for (const OpEdge* op_edge : src_node->out_edges()) {
       const OpNode* dst_node = op_edge->dst_node();
       const std::string& dst_op_name = dst_node->op().op_name();
+       
+      // LOG(INFO) << "cclog: op_edge : [ "  
+      //    << src_op_name << " ] -> [ " << dst_op_name << " ].";
+      
       CHECK(src_node != dst_node);
       if (subgraph_op_name2conf->find(dst_op_name) == subgraph_op_name2conf->end()) {
         // NOTE(chengcheng): child node is not in this subgraph.
@@ -415,6 +427,10 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
         NdSbp src_reduced_nd_sbp;
         NdSbp dst_reduced_nd_sbp;
+
+        // LOG(INFO) << "cclog: Try insert nccl op [ "
+        //  << src_op_name << " ] -> [ " << dst_op_name << " ].";
+
         if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
                                        &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
                                        &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
@@ -445,7 +461,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
+          VLOG(2) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
                   << "](order=" << src_order
                   << ", nd_sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << ")->[" << dst_op_name
                   << "](order=" << node2subgraph_order.at(dst_node)
@@ -812,6 +828,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
     ordered_op_nodes.emplace_back(node);
     op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
+    // LOG(INFO) << " cclog: order: " << ordered_op_nodes.size() - 1 << " op_name: " << node->op().op_name();
   });
 
   std::vector<HashSet<const OpNode*>> subgraph_list;
@@ -837,6 +854,15 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       info.ordered_subgraph.emplace_back(std::make_shared<InsertNcclSubGraph>());
       InitInsertNcclSubGraphInfoFromSet(info.ordered_subgraph.back(), subgraph,
                                         op_node2global_order, CmpOpNodeOrder);
+
+      /*
+      LOG(INFO) << "================";
+      for (const auto* node : info.ordered_subgraph.front()->ordered_op_nodes) {
+        LOG(INFO) << " order : " << op_node2global_order.at(node) << " op_name : " <<   
+          node->op().op_name();
+      }
+      LOG(INFO) << "================";
+      */
     } else {
       auto& info = it->second;
       CHECK(this_parallel_desc.EqualsIgnoringHierarchy(*info.seed_parallel_desc));
@@ -847,24 +873,34 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       CHECK_GT(info.ordered_subgraph.size(), 0);
       const auto& first_graph = info.ordered_subgraph.front();
       const auto& last_graph = info.ordered_subgraph.back();
-      int64_t first_order = first_graph->begin_op_global_order;
-      int64_t last_order = last_graph->end_op_global_order;
-      if (nccl_subgraph_info->end_op_global_order < first_order) {
-        if (IsReachable(nccl_subgraph_info->end_op->op().op_name(),
-                        first_graph->begin_op->op().op_name())) {
-          info.ordered_subgraph.insert(info.ordered_subgraph.begin(), nccl_subgraph_info);
-        }
-      } else if (nccl_subgraph_info->begin_op_global_order > last_order) {
-        if (IsReachable(last_graph->end_op->op().op_name(),
-                        nccl_subgraph_info->begin_op->op().op_name())) {
-          info.ordered_subgraph.emplace_back(nccl_subgraph_info);
-        }
+      /*
+      LOG(INFO) << "cclog: ordered_subgraph " 
+        << " \n first order = " << first_order 
+        << " with op name : " << first_graph->begin_op->op().op_name()
+        << " \n last_order = " << last_order
+        << " with op name : " << last_graph->end_op->op().op_name()
+        << " \n this sugraph\n begin order = " << nccl_subgraph_info->begin_op_global_order
+        << " with op name : " << nccl_subgraph_info->begin_op->op().op_name()
+        << " \n end order = " << nccl_subgraph_info->end_op_global_order
+        << " with op name : " << nccl_subgraph_info->end_op->op().op_name();
+
+      LOG(INFO) << "================";
+      for (const auto* node : nccl_subgraph_info->ordered_op_nodes) {
+        LOG(INFO) << " order : " << op_node2global_order.at(node) << " op_name : " <<   
+          node->op().op_name();
+      }
+      LOG(INFO) << "================";
+      */
+      if (nccl_subgraph_info->end_op_global_order < first_graph->end_op_global_order) {
+        info.ordered_subgraph.insert(info.ordered_subgraph.begin(), nccl_subgraph_info);
+      } else if (nccl_subgraph_info->end_op_global_order > last_graph->end_op_global_order) {
+        info.ordered_subgraph.emplace_back(nccl_subgraph_info);
       } else {
         auto before = info.ordered_subgraph.begin();
         auto next = before + 1;
         while (next != info.ordered_subgraph.end()) {
-          if ((*before)->end_op_global_order < nccl_subgraph_info->begin_op_global_order
-              && nccl_subgraph_info->end_op_global_order < (*next)->begin_op_global_order) {
+          if ((*before)->end_op_global_order < nccl_subgraph_info->end_op_global_order
+              && nccl_subgraph_info->end_op_global_order < (*next)->end_op_global_order) {
             if (IsReachable((*before)->end_op->op().op_name(),
                             nccl_subgraph_info->begin_op->op().op_name())
                 && IsReachable(nccl_subgraph_info->end_op->op().op_name(),
@@ -895,8 +931,19 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     PlacementNcclSubGraghsInfo& info = pair.second;
     for (int i = 0; i < info.ordered_subgraph.size() - 1; i++) {
       CHECK_LT(info.ordered_subgraph.at(i)->end_op_global_order,
-               info.ordered_subgraph.at(i + 1)->begin_op_global_order);
+               info.ordered_subgraph.at(i + 1)->end_op_global_order);
     }
+
+    /*
+    for (int i = 0; i < info.ordered_subgraph.size(); i++) {
+      LOG(INFO) << " cclog : in placement: " << pair.first << " subgraph : i = " << i
+        << " has op node with " << info.ordered_subgraph.at(i)->ordered_op_nodes.size();
+      for (const auto* node : info.ordered_subgraph.at(i)->ordered_op_nodes) {
+        LOG(INFO) << " subgraph: " << i << " has op: " << node->op().op_name(); 
+      } 
+    }
+    */
+    
 
     // NOTE(chengcheng): insert nccl ops for each subgraph
     uint32_t stream_offset = 0;
