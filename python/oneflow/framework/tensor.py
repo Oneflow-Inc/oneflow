@@ -773,9 +773,44 @@ def _xavier_uniform(self, gain=1.0, *, data_format="NCHW"):
     return _init_by_initializer_conf(self, initializer_conf)
 
 
+def _orthogonal(self, gain=1.0):
+    if self.ndimension() < 2:
+        raise ValueError("Only tensors with 2 or more dimensions are supported")
+    rows = self.shape[0]
+    cols = np.prod(self.shape[1:])
+    flattened = np.random.normal(0.0, 1.0, size=(rows, cols))
+    if rows < cols:
+        flattened = flattened.T
+    # TODO
+    q, r = np.linalg.qr(flattened)
+    d = np.diag(r, 0)
+    d = np.sign(d)
+    q *= d
+    if rows < cols:
+        q = q.T
+    self = gain * flow.tensor(q.reshape(self.shape))
+    return self
+
+
 def _normal(self, mean=0, std=1):
-    initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
-    return _init_by_initializer_conf(self, initializer_conf)
+    if self.is_global:
+        src_tensor = flow.normal(mean, std, self.shape)
+        src_tensor = src_tensor.to_global(
+            placement=self.placement,
+            sbp=tuple(flow.sbp.broadcast for _ in range(len(self.sbp))),
+        )
+        self.copy_(src_tensor)
+        return self
+    else:
+        return flow.normal(
+            mean,
+            std,
+            self.size(),
+            out=self,
+            dtype=self.dtype,
+            device=self.device,
+            requires_grad=self.requires_grad,
+        )
 
 
 def _fill(self, value):
@@ -949,6 +984,10 @@ def _min(self, *args, **kwargs):
     return flow.min(self, *args, **kwargs)
 
 
+def _median(self, *args, **kwargs):
+    return flow.median(self, *args, **kwargs)
+
+
 def _sum(self, dim=None, keepdim=False):
     return flow.sum(self, dim, keepdim)
 
@@ -1089,6 +1128,14 @@ def _new_tensor(
         )
 
 
+def _amin(self, dim=None, keepdim=False):
+    return flow._C.amin(self, dim=dim, keepdim=keepdim)
+
+
+def _byte(self):
+    return flow._C.to(self, flow.uint8)
+
+
 def _cumsum(self, dim, dtype=None):
     return flow._C.cumsum(self, dim, dtype=dtype)
 
@@ -1103,6 +1150,7 @@ def RegisterMethods():
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.__matmul__ = lambda self, other: self.matmul(other)
+    Tensor.byte = _byte
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
     Tensor.size = _size
@@ -1152,6 +1200,7 @@ def RegisterMethods():
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal
     Tensor.xavier_uniform_ = _xavier_uniform
+    Tensor.orthogonal_ = _orthogonal
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
     Tensor.copy_ = _copy
@@ -1169,6 +1218,7 @@ def RegisterMethods():
     Tensor.acos = _acos
     Tensor.arccos = _arccos
     Tensor.acosh = _acosh
+    Tensor.amin = _amin
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
     Tensor.atan2 = _atan2
@@ -1305,6 +1355,7 @@ def RegisterMethods():
     Tensor.nonzero = _nonzero
     Tensor.max = _max
     Tensor.min = _min
+    Tensor.median = _median
     Tensor.sum = _sum
     Tensor.mean = _mean
     Tensor.prod = _prod
