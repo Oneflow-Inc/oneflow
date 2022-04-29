@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include <Eigen/Core>
+#include <unsupported/Eigen/CXX11/Tensor>
 
 namespace oneflow {
 
