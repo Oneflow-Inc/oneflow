@@ -192,6 +192,14 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGrad"
   bind_python: False
 
+- name: "searchsorted"
+  signature:
+    [
+      'Tensor (Tensor sorted_sequence, Tensor values, Bool out_int32=False, Bool right=False) => SearchSorted',
+      'Tensor (Tensor sorted_sequence, Scalar values, Bool out_int32=False, Bool right=False) => SearchSortedScalar',
+    ]
+  bind_python: True
+
 - name: "scalar_pow_grad"
   signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
   bind_python: False
