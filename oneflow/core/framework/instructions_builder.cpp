@@ -446,7 +446,6 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
       Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
       parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
-  sdff
   return Maybe<void>::Ok();
 }
 

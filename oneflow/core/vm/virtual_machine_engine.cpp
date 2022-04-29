@@ -399,7 +399,6 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
     OF_PROFILER_RANGE_POP();
   }
   bool old_list_empty = mut_pending_msg_list()->MoveFrom(compute_instr_msg_list);
-  OF_PROFILER_RANGE_POP();
   return old_list_empty;
 }
 
