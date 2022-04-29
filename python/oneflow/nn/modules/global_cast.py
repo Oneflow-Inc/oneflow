@@ -88,8 +88,6 @@ def _to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
 def to_global_op(input, placement=None, sbp=None, **kwargs):
     r"""Converts the input tensor or input tensor(s) in list/tuple/dict to global tensor(s).
     
-    It performs the same conversion as :func:`oneflow.Tensor.to_global` to the tensor or every tensor in the input.
-
     Note:
         Both placement and sbp are required if the input is local, otherwise at least one of placement and sbp is required.
 
@@ -142,7 +140,7 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
             if isinstance(node._value, Tensor):
                 return _to_global_tensor(node._value, placement, sbp, **kwargs)
             else:
-                warnings.warn("Non-Tensor type: {} encountered, it will not be converted.".format(type(node._value)))
+                warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(node._value)))
                 return node._value
 
         mapped_input = input_tree.map_leaf(leaf_fn)
@@ -151,15 +149,13 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
 
 def _to_local_tensor(input_tensor):
     if not input_tensor.is_global:
-        warnings.warn("The tensor should be global, it will not be converted if not.")
+        warnings.warn("The tensor should be global, local tensor will remain the same.")
         return input_tensor
     return flow._C.to_local(input_tensor)
 
 
 def to_local_op(input):
-    r"""Returns the local component of the input.
-
-    It performs the same conversion as :func:`oneflow.Tensor.to_local` to the tensor(s) in the input.
+    r"""Returns the local part of the input.
     
     Returns:
         The converted input.
@@ -206,7 +202,7 @@ def to_local_op(input):
             if isinstance(node._value, Tensor):
                 return _to_local_tensor(node._value)
             else:
-                warnings.warn("Non-Tensor type: {} encountered, it will not be converted.".format(type(node._value)))
+                warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(node._value)))
                 return node._value
 
         mapped_input = input_tree.map_leaf(leaf_fn)

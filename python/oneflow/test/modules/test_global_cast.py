@@ -32,10 +32,10 @@ class GraphModel(nn.Graph):
 
 class TestToGlobalLocal(oneflow.unittest.TestCase):
     placement = flow.placement('cpu', ranks=[0, 1])
-    sbp = (flow.sbp.broadcast,)
+    sbp = None
     model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2))
     local_graph_model = GraphModel(model)
-    global_graph_model = GraphModel(model.to_global(placement=placement, sbp=sbp))
+    global_graph_model = None
 
     def _all_global(test_case, input, placement, sbp):
         node_tree = IONode(value=input)
@@ -57,12 +57,12 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
 
     def test_any_input(test_case):
         tensor = flow.zeros((3, 4))
-        tensor_lt = [flow.tensor([1, 2, 3]), flow.randn((2, 3, 4))]
-        tensor_tp = (flow.zeros((2, 2)), flow.ones((2, 3)), flow.randn((3, 5)))
-        tensor_dt = {'tensor': tensor, 'tensor_lt': tensor_lt}
-        random_combination = [None, 1, "test_str", tensor, tensor_lt, tensor_tp, tensor_dt]
+        tensor_list = [flow.tensor([1, 2, 3]), flow.randn((2, 3, 4))]
+        tensor_tuple = (flow.zeros((2, 2)), flow.ones((2, 3)), flow.randn((3, 5)))
+        tensor_dict = {'tensor': tensor, 'tensor_lt': tensor_list}
+        random_combination = [None, 1, "test_str", tensor, tensor_list, tensor_tuple, tensor_dict]
 
-        inputs = [None, 100, 'test_str', tensor, tensor_lt, tensor_tp, tensor_dt, random_combination]
+        inputs = [None, 100, 'test_str', tensor, tensor_list, tensor_tuple, tensor_dict, random_combination]
         global_inputs = []
         for i in inputs:
             ret = flow.to_global(i, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
@@ -130,4 +130,19 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # test on three types of sbp
+    sbp_types = [(flow.sbp.broadcast,), (flow.sbp.split(0),), (flow.sbp.partial_sum,)]
+    for sbp in sbp_types:
+        TestToGlobalLocal.sbp = sbp
+        TestToGlobalLocal.global_graph_model = GraphModel(TestToGlobalLocal.model.to_global(placement=TestToGlobalLocal.placement, sbp=sbp))
+
+        suite = unittest.TestSuite()
+        suite.addTests([
+            TestToGlobalLocal('test_any_input'),
+            TestToGlobalLocal('test_tensor_to_global'),
+            TestToGlobalLocal('test_tensor_to_local'),
+            TestToGlobalLocal('test_eagar_state_dict'),
+            TestToGlobalLocal('test_graph_state_dict')
+        ])
+        runner = unittest.TextTestRunner()
+        runner.run(suite)
