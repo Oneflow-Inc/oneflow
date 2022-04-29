@@ -13,6 +13,7 @@ oneflow
             add, 
             addcmul, 
             addmm, 
+            amin, 
             amax,
             arccos, 
             arcsin, 
