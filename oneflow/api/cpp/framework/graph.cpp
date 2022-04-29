@@ -73,7 +73,7 @@ class CompileScope {
 
     ConfigXrt(job_config, kind);
     CHECK_JUST(of::JobBuildAndInferCtx_Open(job_config.job_name()));
-    CHECK_JUST(CHECK_JUST(GetCurInferCtx())->SetJobConf(job_config));
+    CHECK_JUST(CHECK_JUST(of::GetCurInferCtx())->SetJobConf(job_config));
   }
 
   ~CompileScope() {
