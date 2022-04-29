@@ -58,10 +58,9 @@ namespace oneflow {
 /*static*/ auto EmbeddingOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const int64_t indices_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
-  const int32_t padding_idx = ctx->Attr<int32_t>("padding_idx");
   const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
-  if (padding_idx < 0 && !scale_grad_by_freq) {
+  if (!scale_grad_by_freq) {
     FOR_RANGE(int64_t, i, 0, indices_num_axes) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("indices", 0), i)
@@ -91,21 +90,14 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EmbeddingGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  const user_op::TensorDesc& weight_tensor =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("weight", 0);
-  const user_op::TensorDesc& indices_tensor =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
-  const user_op::TensorDesc& dx_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dx", 0);
-  const int32_t padding_idx = ctx->Attr<int32_t>("padding_idx");
   const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
+  const int64_t indices_num_axes =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
 
-  int32_t dy_num_axes = dy_tensor.shape().NumAxes();
-
-  if (padding_idx < 0 && !scale_grad_by_freq) {
-    for (int32_t i = 0; i < dy_num_axes - 1; i++) {
+  if (!scale_grad_by_freq) {
+    for (int32_t i = 0; i < indices_num_axes; i++) {
       ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("dy", 0))
+          .Split(user_op::OpArg("dy", 0), i)
           .Broadcast(user_op::OpArg("weight", 0))
           .Split(user_op::OpArg("indices", 0), i)
           .PartialSum(user_op::OpArg("dx", 0))
@@ -122,21 +114,19 @@ namespace oneflow {
 
 REGISTER_USER_OP_GRAD("embedding")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      bool need_grad_weight = op.NeedGenGradTensor4OpInput("weight", 0);
-      if (need_grad_weight) {
-        user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper in_grad_op =
-            in_grad_builder.Op("embedding_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("weight", 0))
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("weight", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op = builder.Op("embedding_grad")
+                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Input("weight", op.input("weight", 0))
                 .Input("indices", op.input("indices", 0))
                 .Output("dx")
                 .Attr("padding_idx", op.attr<int32_t>("padding_idx"))
                 .Attr("scale_grad_by_freq", op.attr<bool>("scale_grad_by_freq"))
                 .Build();
-        op.BindGradTensorWithOpInput(in_grad_op.output("dx", 0), "weight", 0);
-        AddOp(in_grad_op);
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "weight", 0);
+        AddOp(grad_op);
       }
       return Maybe<void>::Ok();
     });

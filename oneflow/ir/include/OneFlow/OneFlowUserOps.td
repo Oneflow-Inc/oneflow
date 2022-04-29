@@ -3072,8 +3072,8 @@ def OneFlow_EmbeddingGradOp : OneFlow_BaseOp<"embedding_grad", [NoSideEffect, De
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "0">:$padding_idx,
-    DefaultValuedAttr<BoolAttr, "0">:$scale_grad_by_freq
+    DefaultValuedAttr<SI32Attr, "-1">:$padding_idx,
+    DefaultValuedAttr<BoolAttr, "false">:$scale_grad_by_freq
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
