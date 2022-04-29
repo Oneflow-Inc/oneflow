@@ -30,11 +30,11 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
+    operators_repr,
     seq_to_func_return,
     IONodeType,
     IONode,
 )
-from string import Template
 
 
 def get_block_cls(item):
@@ -549,56 +549,15 @@ class ModuleBlock(Block):
             + self.name
             + "'s belonged graph is not set."
         )
-        ops_strs = []
 
         if self._belonged_graph.is_compiled:
             module_conf = self._belonged_graph._graph_proto.module_name2module_conf[
                 self.name_prefix + self.name
             ]
-            for op in module_conf.ops:
-                op_str = "(OPERATOR: "
-                op_str += self._op_signature(op)
-                op_str += ")"
-                ops_strs.append(op_str)
 
-        return ops_strs
+            return operators_repr(module_conf.ops)
 
-    def _op_signature(self, op):
-        r"""Generate a single operator's signature
-        """
-        signature_template = Template(op.name + "($input) -> ($output)")
-        input_sig_str = "..."
-        output_sig_str = "..."
-
-        # only deal with UserOpConf and VariableOpConf for now
-        if op.HasField("user_conf"):
-            user_conf = op.user_conf
-            input_params = []
-            for param in user_conf.input_order:
-                x = user_conf.input[param].s
-                if len(x) > 1:  # param of multiple tensors
-                    input_params.append("[" + (", ").join(list(x)) + "]")
-                else:
-                    assert len(x) == 1
-                    input_params.append(x[0])
-            input_sig_str = ", ".join(input_params)
-
-            output_params = []
-            for param in user_conf.output_order:
-                x = user_conf.output[param].s
-                if len(x) > 1:
-                    output_params.append("[" + (", ").join(list(x)) + "]")
-                else:
-                    assert len(x) == 1
-                    output_params.append(x[0])
-            output_sig_str = ", ".join(output_params)
-
-        elif op.HasField("variable_conf"):
-            variable_conf = op.variable_conf
-            input_sig_str = ""
-            output_sig_str = op.name + "/" + variable_conf.out
-
-        return signature_template.substitute(input=input_sig_str, output=output_sig_str)
+        return []
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
