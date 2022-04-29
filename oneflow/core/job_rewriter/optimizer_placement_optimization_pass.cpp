@@ -87,7 +87,7 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
       if (cur_node->in_edges().size() > 1) { break; }
       if (cur_node->op().input_bns().size() != 1) { break; }
       const std::string& sole_ibn = cur_node->op().SoleIbn();
-      LOG(ERROR) << cur_node->op().op_name()
+      VLOG(3) << cur_node->op().op_name()
                  << " has sbp: " << cur_node->NdSbp4BnInOp(sole_ibn).DebugString();
       // if (!cur_node->SbpParallel4BnInOp(sole_ibn).has_broadcast_parallel()) { break; }
       // if (!(ibn_nd_sbp.sbp_parallel_size() == 1 &&
@@ -103,7 +103,7 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
     if (!IsAllowed(cur_node)) { break; }
     if (cur_node->op().output_bns().size() != 1) { break; }
     const std::string& sole_obn = cur_node->op().SoleObn();
-    LOG(ERROR) << cur_node->op().op_name()
+    VLOG(3) << cur_node->op().op_name()
                << " has sbp: " << cur_node->NdSbp4BnInOp(sole_obn).DebugString();
     // if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
     const NdSbp& obn_nd_sbp = cur_node->NdSbp4BnInOp(sole_obn);
@@ -157,7 +157,7 @@ void SetNdSbp4OpNodeIbn(JobBuilder* builder, const OpNode* node, const std::stri
 void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const NdSbp& nd_sbp) {
   const OpNode* node = sequence->GetLastNode();
   const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
-  int limit_consumer_mode = ParseIntegerFromEnv("ZERO_LIMIT_CONSUMER_MODE", 2); 
+  const int64_t limit_consumer_mode = builder->job().job_conf().optimizer_placement_optimization_comsumer_limit_level();
   // If limit_consumer_mode == 0, no limit on consumer
   if (limit_consumer_mode == 1) {
     // Soft limt consumer to consume weight as Broadcast.
@@ -176,7 +176,6 @@ void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const 
     node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
       for (const std::string& ibn : out_node->op().input_bns()) {
         if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
-          // SetNdSbp4OpNodeIbn(builder, out_node, ibn, nd_sbp);
           if (!CHECK_JUST(builder->IsInMutOpTransaction(out_node->op().op_name()))) {
             CHECK_JUST(builder->MutOpTransactionMut(out_node->op().op_conf()));
           }
@@ -322,7 +321,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
       const std::string& sole_obn = var_node->op().SoleObn();
-      LOG(ERROR) << var_node->op().op_name() << " can be splited, "
+      VLOG(3) << var_node->op().op_name() << " can be splited, "
                  << " has sbp: " << var_node->NdSbp4BnInOp(sole_obn).DebugString();
       const NdSbp& var_nd_sbp = var_node->NdSbp4BnInOp(sole_obn);
       // CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
@@ -330,7 +329,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
         if (new_var_op_conf.variable_conf().nd_sbp(i) == "B") {
           // TODO(strint): zero with nd choose dim
           *new_var_op_conf.mutable_variable_conf()->mutable_nd_sbp(i) = "S(0)";
-          LOG(ERROR) << var_node->op().op_name() << " ranks dim " << i << " sbp is changed form B to S(0) " << new_var_op_conf.variable_conf().DebugString(); 
+          VLOG(3) << var_node->op().op_name() << " ranks dim " << i << " sbp is changed form B to S(0) " << new_var_op_conf.variable_conf().DebugString(); 
           // Only split one more dim.
           break;
         }

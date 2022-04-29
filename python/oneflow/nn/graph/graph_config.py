@@ -73,7 +73,7 @@ class GraphConfig(object):
         self.proto.set_enable_auto_mixed_precision(mode)
 
     def enable_zero(
-        self, mode: bool = True, *, stage: int = 2, min_shard_size: int = 1024
+        self, mode: bool = True, *, stage: int = 2, min_shard_size: int = 1024, parameter_consumer_limit_level: int = 2,
     ):
         r"""Enable ZeRO redundancy optimizer.
 
@@ -102,6 +102,7 @@ class GraphConfig(object):
             mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
             stage (int): optimization stage, range from 1 to 3. 
             min_shard_size (int): min size of a shard of an optimizer state.
+            parameter_consumer_limit_level (int): limit consumer to comsume sharded parameter with Broadcast, level 2 is hard limit, level 1 is soft limit, level 0 is no limit. Note that this paremeter is at pre-alpha stage and is not stable.
         """
         if not mode:
             self.proto.set_optimizer_placement_optimization_mode("none")
@@ -110,19 +111,14 @@ class GraphConfig(object):
         assert (
             min_shard_size > 0
         ), "ZeRO min size of a sharded optimizer state must > 0."
-        if stage == 1:
-            print("zero stage 1 optimization")
+        assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
+        if stage >= 1:
             self.proto.set_optimizer_placement_optimization_mode("distributed_split")
             self.proto.set_optimizer_placement_optimization_threshold(min_shard_size)
-        elif stage == 2:
-            self.proto.set_optimizer_placement_optimization_mode("distributed_split")
-            self.proto.set_optimizer_placement_optimization_threshold(min_shard_size)
+            self.proto.set_optimizer_placement_optimization_comsumer_limit_level(parameter_consumer_limit_level)
+        if stage >= 2:
             oneflow.boxing.nccl.enable_use_compute_stream(True)
-        elif stage == 3:
-            print("zero stage 3 optimization")
-            self.proto.set_optimizer_placement_optimization_mode("distributed_split")
-            self.proto.set_optimizer_placement_optimization_threshold(min_shard_size)
-            oneflow.boxing.nccl.enable_use_compute_stream(True)
+        if stage >= 3:
             oneflow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
