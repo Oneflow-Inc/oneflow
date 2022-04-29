@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
-# CHECK: oneflow.transpose
+# CHECK-NOT: oneflow.transpose
 
 import unittest
 import numpy as np
@@ -51,7 +51,7 @@ def do_eliminate_transpose(test_case, with_cuda):
 
 @flow.unittest.skip_unless_1n1d()
 class TestNhwcEliminateTranspose(oneflow.unittest.TestCase):
-    def test_nhwc_bias_add_graph(test_case):
+    def test_eliminate_transpose(test_case):
         do_eliminate_transpose(test_case, True)
         do_eliminate_transpose(test_case, False)
 
