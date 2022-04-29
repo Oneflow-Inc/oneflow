@@ -68,12 +68,13 @@ namespace {
 class CompileScope {
  public:
   CompileScope(const of::JobConfigProto& job_config, const of::Device& device, XrtKind kind) {
-    const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(job_config, device));
+    of::JobConfigProto mut_job_config = job_config;
+    const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(mut_job_config, device));
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
-    ConfigXrt(job_config, kind);
-    CHECK_JUST(of::JobBuildAndInferCtx_Open(job_config.job_name()));
-    CHECK_JUST(CHECK_JUST(of::GetCurInferCtx())->SetJobConf(job_config));
+    ConfigXrt(mut_job_config, kind);
+    CHECK_JUST(of::JobBuildAndInferCtx_Open(mut_job_config.job_name()));
+    CHECK_JUST(CHECK_JUST(of::GetCurInferCtx())->SetJobConf(mut_job_config));
   }
 
   ~CompileScope() {
