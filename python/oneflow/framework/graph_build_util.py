@@ -147,18 +147,9 @@ def make_new_block_scope(prev_scope, block):
         scope_proto.clear_scope_op_name_prefixes()
         scope_proto.add_scope_op_name_prefixes(block.name_prefix + block.name)
 
-        # set up module struct
+        # set module name
         if isinstance(block, ModuleBlock):
-            scope_proto.clear_module_struct()
-            module_struct = scope_proto.mutable_module_struct()
-            # set current ModuleBlock's name
-            module_struct.set_name(block.name_prefix + block.name)
-
-            # set its children's names
-            module_struct.clear_children_names()
-            for m in block.modules():
-                if m != block and isinstance(m, ModuleBlock):
-                    module_struct.add_children_names(m.name_prefix + m.name)
+            scope_proto.set_module_name(block.name_prefix + block.name)
 
     new_scope = None
 

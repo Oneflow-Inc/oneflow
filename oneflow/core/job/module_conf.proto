@@ -3,12 +3,7 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 
-message ModuleStruct {
-  required string name = 1;
-  repeated string children_names = 2;
-}
-
 message ModuleConf {
-  required ModuleStruct module_struct = 1;
+  required string name = 1;
   repeated OperatorConf ops = 2;
 }
