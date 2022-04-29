@@ -32,7 +32,8 @@ class SbpConstructor final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SbpConstructor);
   SbpConstructor() = delete;
-  SbpConstructor(const OpGraph& op_graph, Job* job)
+  // take_curr_sbp means only taking current sbp signature for each op node
+  SbpConstructor(const OpGraph& op_graph, Job* job, bool take_curr_sbp = false)
       : cost_ratio_(job->job_conf().auto_parallel_computation_cost_ratio()),
         enable_mainstem_algo_(job->job_conf().enable_auto_parallel_mainstem_algo()),
         use_sbp_collector_(!Global<ResourceDesc, ForSession>::Get()
@@ -41,11 +42,11 @@ class SbpConstructor final {
                            && job->job_conf().enable_auto_parallel_sbp_collector()) {
     sbp_graph_.SetWaitTime(job->job_conf().auto_parallel_wait_time());
     sbp_graph_.SetTransferCost(job->job_conf().auto_parallel_transfer_cost());
-    CHECK_JUST(Init(op_graph, job));
+    CHECK_JUST(Init(op_graph, job, take_curr_sbp));
   }
   ~SbpConstructor() = default;
 
-  Maybe<void> Init(const OpGraph& op_graph, Job* job);
+  Maybe<void> Init(const OpGraph& op_graph, Job* job, bool take_curr_sbp);
   Maybe<void> FindBestSbpSignature();
   Maybe<void> DumpNdSbpSignatureForJob(const OpGraph& op_graph, Job* job);
   // Re-build OpGraph and check all sbp is same between op_graph and job
@@ -54,9 +55,10 @@ class SbpConstructor final {
   void PrintSBPGraphDebugInfo();
 
  private:
-  Maybe<void> InitSbpGraph(const OpGraph& op_graph, const Job& job);
+  Maybe<void> InitSbpGraph(const OpGraph& op_graph, const Job& job, bool take_curr_sbp);
   Maybe<void> GenerateNodeAndEdge(const OpGraph& op_graph, const Job& job);
-  Maybe<void> FillSbpSignatureForOpNode(const OpGraph& op_graph, const Job& job);
+  Maybe<void> FillSbpSignatureForOpNode(const OpGraph& op_graph, const Job& job,
+                                        bool take_curr_sbp);
   Maybe<void> StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job);
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
   Maybe<void> InitCopyCost(const OpGraph& op_graph);

@@ -27,7 +27,7 @@ Maybe<void> StraightenNodes(const OpGraph& op_graph, Job* job) {
   if (ParseBooleanFromEnv("ONEFLOW_RANDOM_STRAIGHTEN_NODES", false)) { return Maybe<void>::Ok(); }
   // test debug
   if (GlobalProcessCtx::Rank() == 0) { std::cout << "Start straightening operators" << std::endl; }
-  auto_parallel::SbpConstructor sbp_constructor(op_graph, job);
+  auto_parallel::SbpConstructor sbp_constructor(op_graph, job, /*take_curr_sbp=*/true);
 
   return Maybe<void>::Ok();
 }

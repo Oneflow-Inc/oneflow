@@ -27,15 +27,17 @@ namespace oneflow {
 
 namespace auto_parallel {
 
-Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not use*/) {
-  JUST(InitSbpGraph(op_graph, *job));
+Maybe<void> SbpConstructor::Init(const OpGraph& op_graph, Job* job /*Maybe not use*/,
+                                 bool take_curr_sbp) {
+  JUST(InitSbpGraph(op_graph, *job, take_curr_sbp));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job) {
+Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job,
+                                         bool take_curr_sbp) {
   // TODO: process mirrored node
   JUST(GenerateNodeAndEdge(op_graph, job));
-  JUST(FillSbpSignatureForOpNode(op_graph, job));
+  JUST(FillSbpSignatureForOpNode(op_graph, job, take_curr_sbp));
   JUST(InitComputationCost(op_graph));
   if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
   if (use_sbp_collector_) {
@@ -172,35 +174,43 @@ Maybe<void> SbpConstructor::GenerateNodeAndEdge(const OpGraph& op_graph, const J
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, const Job& job) {
+Maybe<void> SbpConstructor::FillSbpSignatureForOpNode(const OpGraph& op_graph, const Job& job,
+                                                      bool take_curr_sbp) {
+  // take_curr_sbp means only taking current sbp signature
   // TODO: use user sbp signature in JobParallelViewConf
   // const JobParallelViewConf& job_parallel_view_conf(job.job_parallel_view_conf());
   JUST(op_graph.TopoForEachNodeWithErrorCaptured([&](OpNode* op_node) -> Maybe<void> {
-    HashMap<std::string, const BlobDesc*> ibn2blob_desc;
-    auto FindShape4Blobs = [&](const PbRpf<std::string>& bns) -> Maybe<void> {
-      for (const std::string& ibn : bns) {
-        const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
-        const BlobDesc* logical_blob_desc = &op_node->LogicalBlobDesc4Lbi(lbi);
-        ibn2blob_desc.emplace(ibn, logical_blob_desc);
-      }
-      return Maybe<void>::Ok();
-    };
-    JUST(FindShape4Blobs(op_node->op().input_bns()));
-    JUST(FindShape4Blobs(op_node->op().output_bns()));
-    // Get logical blob description
-    auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
-      auto it = ibn2blob_desc.find(ibn);
-      if (it == ibn2blob_desc.end()) {
-        return Error::InvalidValueError(
-            "Cannot find corresponding blob description for input_blob_name : " + ibn + " in "
-            + op_node->op().op_name());
-      }
-      return *(it->second);
-    };
-    // Get all valid sbp_signatures
     SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[op_node->op().op_name()];
-    JUST(op_node->op().GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, op_node->parallel_desc(),
-                                                  &sbp_node->SbpSignatureObjList));
+    if (take_curr_sbp) {
+      // Get current sbp_signatures
+      sbp_node->SbpSignatureObjList.push_back(op_node->nd_sbp_signature());
+    } else {
+      // Get all valid sbp_signatures
+      HashMap<std::string, const BlobDesc*> ibn2blob_desc;
+      auto FindShape4Blobs = [&](const PbRpf<std::string>& bns) -> Maybe<void> {
+        for (const std::string& ibn : bns) {
+          const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
+          const BlobDesc* logical_blob_desc = &op_node->LogicalBlobDesc4Lbi(lbi);
+          ibn2blob_desc.emplace(ibn, logical_blob_desc);
+        }
+        return Maybe<void>::Ok();
+      };
+      JUST(FindShape4Blobs(op_node->op().input_bns()));
+      JUST(FindShape4Blobs(op_node->op().output_bns()));
+      // Get logical blob description
+      auto LogicalBlobDesc4Ibn = [&](const std::string& ibn) -> Maybe<const BlobDesc&> {
+        auto it = ibn2blob_desc.find(ibn);
+        if (it == ibn2blob_desc.end()) {
+          return Error::InvalidValueError(
+              "Cannot find corresponding blob description for input_blob_name : " + ibn + " in "
+              + op_node->op().op_name());
+        }
+        return *(it->second);
+      };
+      // Get all valid sbp_signatures from op node
+      JUST(op_node->op().GetValidNdSbpSignatureList(LogicalBlobDesc4Ibn, op_node->parallel_desc(),
+                                                    &sbp_node->SbpSignatureObjList));
+    }
     sbp_node->InitializeSbp();
     return Maybe<void>::Ok();
   }));
