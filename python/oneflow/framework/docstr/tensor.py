@@ -2003,3 +2003,10 @@ add_docstr(
     See :func:`oneflow.Tensor.to`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.amin,
+    """
+    See :func:`oneflow.amin`
+    """,
+)
