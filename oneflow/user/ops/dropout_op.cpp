@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -41,7 +42,7 @@ namespace oneflow {
 /* static */ Maybe<void> DropoutOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                               const user_op::UserOpConfWrapper& conf) {
   float rate = conf.attr<float>("rate");
-  CHECK_GE_OR_RETURN(rate, 0.0);
+  CHECK_GE_OR_RETURN(rate, 0.0) << "rate has to be greater than or equal to 0, but got " << rate;
   return Maybe<void>::Ok();
 }
 
@@ -55,7 +56,9 @@ namespace oneflow {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   *ctx->OutputShape("dx", 0) = dy_shape;
   *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
+  const Shape& mask_shape = ctx->InputShape("mask", 0);
+  CHECK_EQ_OR_RETURN(mask_shape, dy_shape)
+      << "inconsistent shape, " << dy_shape.ToString() << " and " << mask_shape.ToString();
   return Maybe<void>::Ok();
 }
 
@@ -78,13 +81,15 @@ namespace oneflow {
 /* static */ Maybe<void> DropoutGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                                   const user_op::UserOpConfWrapper& conf) {
   float scale = conf.attr<float>("scale");
-  CHECK_GT_OR_RETURN(scale, 1);
+  CHECK_GT_OR_RETURN(scale, 1) << "dropout grad scale has to be greater than 1, but got " << scale;
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> DropoutGradOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
+  const auto& mask_datatype = ctx->InputDType("mask", 0);
+  CHECK_EQ_OR_RETURN(mask_datatype, DataType::kBool)
+      << " mask date type expected to be kBool data type, but got " << DataType_Name(mask_datatype);
   return Maybe<void>::Ok();
 }
 
@@ -111,8 +116,7 @@ namespace oneflow {
 /* static */ Maybe<void> RandomMaskLikeOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                                      const user_op::UserOpConfWrapper& conf) {
   float rate = conf.attr<float>("rate");
-  CHECK_GE_OR_RETURN(rate, 0);
-  CHECK_LT_OR_RETURN(rate, 1);
+  CHECK_OR_RETURN(rate >= 0 && rate < 1) << "random_mask_like rate has to be between 0 and 1, but got " << rate;
   return Maybe<void>::Ok();
 }
 
