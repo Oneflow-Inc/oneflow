@@ -34,7 +34,7 @@ def do_eliminate_transpose(test_case, with_cuda):
         x = x.cuda()
 
     eager_res = flow.permute(flow.permute(x, (0, 2, 3, 1)), (0, 3, 1, 2))
-    
+
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -45,9 +45,7 @@ def do_eliminate_transpose(test_case, with_cuda):
     graph_to_run = GraphToRun()
     lazy_res = graph_to_run(x)
     test_case.assertTrue(
-        np.allclose(
-            eager_res.numpy(), lazy_res.numpy(), rtol=1e-5, atol=1e-5
-        )
+        np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-5, atol=1e-5)
     )
 
 

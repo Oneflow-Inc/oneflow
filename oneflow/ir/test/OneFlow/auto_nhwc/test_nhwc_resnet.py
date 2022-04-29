@@ -34,6 +34,7 @@ __all__ = [
     "resnet50",
 ]
 
+
 def conv3x3(
     in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
 ) -> nn.Conv2d:

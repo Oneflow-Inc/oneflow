@@ -37,6 +37,7 @@ __all__ = [
     "resnet50",
 ]
 
+
 def conv3x3(
     in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
 ) -> nn.Conv2d:
@@ -331,19 +332,19 @@ def resnet101(pretrained: bool = False, progress: bool = True, **kwargs: Any) ->
     )
 
 
-def bench(forward: Callable,  x, n=1000):
-    #warm up
+def bench(forward: Callable, x, n=1000):
+    # warm up
     for _ in range(5):
         output = forward(x)
         res = output.numpy()
 
-    flow._oneflow_internal.profiler.RangePush('eval begin')
+    flow._oneflow_internal.profiler.RangePush("eval begin")
     start_time = time.time()
     for _ in range(n):
-        flow._oneflow_internal.profiler.RangePush('forward')
+        flow._oneflow_internal.profiler.RangePush("forward")
         output = forward(x)
         flow._oneflow_internal.profiler.RangePop()
-        flow._oneflow_internal.profiler.RangePush('numpy')
+        flow._oneflow_internal.profiler.RangePush("numpy")
         res = output.numpy()
         flow._oneflow_internal.profiler.RangePop()
     flow._oneflow_internal.profiler.RangePop()
@@ -351,8 +352,8 @@ def bench(forward: Callable,  x, n=1000):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print(total_time_str)
 
-class ResNetEvalGraph(nn.Graph):
 
+class ResNetEvalGraph(nn.Graph):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -368,16 +369,16 @@ def main():
 
     np.random.seed(42)
 
-    device = oneflow.device('cuda')
+    device = oneflow.device("cuda")
     model = resnet101()
     model.eval()
     model.to(device)
     batch_size = 64
-    x = oneflow.randn(batch_size, 3, 224, 224).to(oneflow.device('cuda'))
+    x = oneflow.randn(batch_size, 3, 224, 224).to(oneflow.device("cuda"))
 
     model_graph = ResNetEvalGraph(model)
     bench(model_graph, x, n=1000)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
