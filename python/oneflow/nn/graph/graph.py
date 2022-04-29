@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import logging
 import os
 import time
 from collections import OrderedDict
@@ -770,9 +771,30 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
+<<<<<<< HEAD
             oneflow._oneflow_internal.FillVariableTensorMgr(
                 state_op_names, self._state_tensor_tuple
             )
+=======
+            enable_mlir_inference_opt = os.getenv(
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            )
+            enable_mlir_inference_opt = (
+                False
+                if enable_mlir_inference_opt is None
+                else bool(enable_mlir_inference_opt)
+            )
+            if self.training and enable_mlir_inference_opt:
+                logging.warn(
+                    "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode. "
+                )
+                enable_mlir_inference_opt - False
+                del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
+            if enable_mlir_inference_opt:
+                oneflow._oneflow_internal.FillVariableTensorMgr(
+                    state_op_names, self._state_tensor_tuple
+                )
+>>>>>>> master
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
@@ -804,12 +826,12 @@ class Graph(object):
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
             )
-
-            (
-                state_op_names,
-                state_tensors,
-            ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
-            self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+            if enable_mlir_inference_opt:
+                (
+                    state_op_names,
+                    state_tensors,
+                ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
+                self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
 
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple

@@ -44,7 +44,6 @@ limitations under the License.
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -115,7 +114,7 @@ LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
     }
     OperationState state(op->getLoc(), op->getName(), op->getOperands(), data_outputs.getTypes(),
                          attributes);
-    auto created = rewriter.createOperation(state);
+    auto created = rewriter.create(state);
     for (auto data_output : data_outputs) {
       data_output.replaceAllUsesWith(created->getOpResult(data_output.getResultNumber()));
     }
@@ -176,7 +175,7 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
       state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-      if (auto created = rewriter.createOperation(state)) {
+      if (auto created = rewriter.create(state)) {
         if (created->hasTrait<OpTrait::AttrSizedOperandSegments>() == false) {
           created->removeAttr(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
         }
@@ -336,7 +335,7 @@ void Job::build(OpBuilder& builder, OperationState& state, StringRef name, Funct
   state.addRegion();
 }
 
-static ParseResult parseJob(OpAsmParser& parser, OperationState& result) {
+ParseResult Job::parse(OpAsmParser& parser, OperationState& result) {
   auto buildFuncType = [](Builder& builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
                           function_interface_impl::VariadicFlag,
                           std::string&) { return builder.getFunctionType(argTypes, results); };
@@ -345,24 +344,22 @@ static ParseResult parseJob(OpAsmParser& parser, OperationState& result) {
                                                   buildFuncType);
 }
 
-static void print(Job op, OpAsmPrinter& p) {
-  FunctionType fnType = op.getType();
-  function_interface_impl::printFunctionOp(p, op, fnType.getInputs(), /*isVariadic=*/false,
-                                           fnType.getResults());
+void Job::print(OpAsmPrinter& p) {
+  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
 }
 
-static LogicalResult verify(Job op) {
+LogicalResult Job::verify() {
   // If this function is external there is nothing to do.
-  if (op.isExternal()) return success();
+  if (isExternal()) return success();
 
   // Verify that the argument list of the function and the arg list of the entry
   // block line up.  The trait already verified that the number of arguments is
   // the same between the signature and the block.
-  auto fnInputTypes = op.getType().getInputs();
-  Block& entryBlock = op.front();
+  auto fnInputTypes = getFunctionType().getInputs();
+  Block& entryBlock = front();
   for (unsigned i = 0, e = entryBlock.getNumArguments(); i != e; ++i)
     if (fnInputTypes[i] != entryBlock.getArgument(i).getType())
-      return op.emitOpError("type of entry block argument #")
+      return emitOpError("type of entry block argument #")
              << i << '(' << entryBlock.getArgument(i).getType()
              << ") must match the type of the corresponding argument in "
              << "function signature(" << fnInputTypes[i] << ')';
@@ -370,20 +367,20 @@ static LogicalResult verify(Job op) {
   return success();
 }
 
-static LogicalResult verify(mlir::oneflow::ReturnOp op) {
-  auto job = cast<Job>(op->getParentOp());
+LogicalResult ReturnOp::verify() {
+  auto job = cast<Job>((*this)->getParentOp());
 
   // The operand number and types must match the function signature.
-  const auto& results = job.getType().getResults();
-  if (op.getNumOperands() != results.size())
-    return op.emitOpError("has ") << op.getNumOperands() << " operands, but enclosing function (@"
-                                  << job.getName() << ") returns " << results.size();
+  const auto& results = job.getFunctionType().getResults();
+  if (getNumOperands() != results.size())
+    return emitOpError("has ") << getNumOperands() << " operands, but enclosing function (@"
+                               << job.getName() << ") returns " << results.size();
 
   for (unsigned i = 0, e = results.size(); i != e; ++i)
-    if (op.getOperand(i).getType() != results[i])
-      return op.emitError() << "type of return operand " << i << " (" << op.getOperand(i).getType()
-                            << ") doesn't match function result type (" << results[i] << ")"
-                            << " in function @" << job.getName();
+    if (getOperand(i).getType() != results[i])
+      return emitError() << "type of return operand " << i << " (" << getOperand(i).getType()
+                         << ") doesn't match function result type (" << results[i] << ")"
+                         << " in function @" << job.getName();
 
   return success();
 }
