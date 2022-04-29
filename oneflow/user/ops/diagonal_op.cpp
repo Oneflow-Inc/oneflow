@@ -23,7 +23,8 @@ namespace oneflow {
   const int32_t offset = ctx->Attr<int32_t>("offset");
   const ShapeView& in_shape = in.shape();
   const int32_t in_dim = in_shape.NumAxes();
-  CHECK_GE_OR_RETURN(in_dim, 2);
+  CHECK_GE_OR_RETURN(in_dim, 2) << ", expected to be greater than or equal to 2, but got "
+                                << in_dim;
 
   DimVector out_dim_vec = {};
   FOR_RANGE(int32_t, index, 2, in_dim) { out_dim_vec.push_back(in_shape.At(index)); }
