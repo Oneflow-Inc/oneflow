@@ -111,6 +111,7 @@ def main():
     if len(args.proto_file_path) <= 0:
         return
     import multiprocessing
+
     with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
         pool.map(render_template, args.proto_file_path)
         pool.close()
