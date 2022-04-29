@@ -517,7 +517,7 @@ class ModuleBlock(Block):
             for out_str in self._outs_repr:
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
-                
+
         if len(child_lines) > 0:
             lines = child_lines
 
@@ -552,7 +552,7 @@ class ModuleBlock(Block):
         ops_strs = []
 
         if self._belonged_graph.is_compiled:
-            module_conf = self._belonged_graph._full_graph_proto.module_name2module_conf[
+            module_conf = self._belonged_graph._graph_proto.module_name2module_conf[
                 self.name_prefix + self.name
             ]
             for op in module_conf.ops:
