@@ -51,7 +51,7 @@ void TestElementwiseBinary(DeviceManagerRegistry* registry,
   for (const auto& device_type : device_types) {
     // TODO: onednn C++ exception with description "could not create a primitive descriptor
     // iterator" thrown in the test body.
-    if (device_type != DeviceType::kCPU && data_type == DataType::kFloat16) { continue; }
+    if (device_type == DeviceType::kCPU && data_type == DataType::kFloat16) { continue; }
     auto device = registry->GetDevice(device_type, 0);
     ep::test::PinnedMemoryGuard input_a(device.get(), a_size);
     ep::test::PinnedMemoryGuard input_b(device.get(), b_size);

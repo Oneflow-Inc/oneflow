@@ -61,7 +61,7 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
   }
 
   for (const auto& device_type : device_types) {
-    if (device_type != DeviceType::kCPU) { continue; }
+    if (device_type != DeviceType::kCUDA) { continue; }
     auto device = registry->GetDevice(device_type, 0);
     ep::test::PinnedMemoryGuard input(device.get(), data_size);
     ep::test::PinnedMemoryGuard output(device.get(), data_size);
@@ -79,24 +79,22 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
     softmax->Launch(stream.stream(), num_rows, num_cols, device_in.ptr(), device_out.ptr());
     d2h->Launch(stream.stream(), output.ptr(), device_out.ptr(), data_size);
     CHECK_JUST(stream.stream()->Sync());
-    auto res = Eigen::TensorMap<Eigen::Tensor<T, 2>, Eigen::Unaligned>(
-        reinterpret_cast<T*>(output.ptr()), num_rows, num_cols);
-    // ASSERT_TRUE(*(softmax_out == res));
-    // ASSERT_TRUE(softmax_out.template isApprox(res));
-    //Eigen::Map<Eigen::VectorXd<T>> mt(softmax_out.data(), softmax_out.size());
-    //Eigen::Map<Eigen::VectorXd<T>> mr(res.data(), res.size());
-    std::cout<<"softmax_out "<<softmax_out<<std::endl;
-    std::cout<<"res "<<res<<std::endl;
-   // ASSERT_TRUE(mt.isApprox(mr));
+    Eigen::Map<Eigen::Matrix<T, 1, Eigen::Dynamic>, Eigen::Unaligned> eigen_out(softmax_out.data(),
+                                                                                softmax_out.size());
+    Eigen::Map<Eigen::Matrix<T, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
+        reinterpret_cast<T*>(output.ptr()), softmax_out.size());
+    std::cout << "softmax_out " << eigen_out(0) << std::endl;
+    std::cout << "res " << of_out(0) << std::endl;
+    std::cout << "is equal " << eigen_out.isApprox(of_out, 0.01) << std::endl;
+    // ASSERT_TRUE(eigen_out.isApprox(of_out, 0.01));
   }
 }
 
 }  // namespace
 
 TEST_F(PrimitiveTest, TestSoftmax) {
-  //TestSoftmax<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 1,
-  //                                       16);
-  TestSoftmax<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 5,
+  TestSoftmax<DataType::kFloat, float>(&device_manager_registry_, available_device_types_, 32, 16);
+  TestSoftmax<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 32,
                                          16);
 }
 
