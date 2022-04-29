@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
 #include <Eigen/Core>
-#include <unsupported/Eigen/CXX11/Tensor>
 namespace oneflow {
 
 namespace ep {
@@ -56,14 +55,14 @@ struct LogicalNotFunctor {
 };
 
 template<typename Src, typename Dst, typename FunctorT>
-void EigenElementwiseTest(FunctorT functor, Src* src, Dst* dst, const size_t elem_cnt) {
+void EigenElementwise(FunctorT functor, Src* src, Dst* dst, const size_t elem_cnt) {
   for (int idx = 0; idx < elem_cnt; idx++) { dst[idx] = functor(src[idx]); }
 }
 
 template<typename Src, typename Dst, DataType SrcType, DataType DstType,
          ep::primitive::UnaryOp unary_op, template<typename A, typename B> class FunctorClass>
-void TestElementwisePrimitive(DeviceManagerRegistry* registry,
-                              const std::set<DeviceType>& device_types, const size_t elem_cnt) {
+void TestElementwise(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
+                     const size_t elem_cnt) {
   for (const auto& device_type : device_types) {
     auto device = registry->GetDevice(device_type, 0);
     using EigenSrcVec = Eigen::Matrix<Src, 1, Eigen::Dynamic>;
@@ -98,8 +97,8 @@ void TestElementwisePrimitive(DeviceManagerRegistry* registry,
     CHECK_JUST(stream.stream()->Sync());
 
     FunctorClass<Src, Dst> functor{};
-    EigenElementwiseTest<Src, Dst, FunctorClass<Src, Dst>>(functor, eigen_src.data(),
-                                                           eigen_dst.data(), elem_cnt);
+    EigenElementwise<Src, Dst, FunctorClass<Src, Dst>>(functor, eigen_src.data(), eigen_dst.data(),
+                                                       elem_cnt);
     auto elementwise_primitive_res =
         Eigen::Map<EigenDstVec, Eigen::Unaligned>(host_dst.ptr<Dst>(), elem_cnt);
     ASSERT_TRUE(eigen_dst.template isApprox(elementwise_primitive_res));
@@ -108,51 +107,48 @@ void TestElementwisePrimitive(DeviceManagerRegistry* registry,
 
 TEST_F(PrimitiveTest, TestElementwisePrimitive) {
   // Test Relu
-  TestElementwisePrimitive<float, float, DataType::kFloat, DataType::kFloat,
-                           ep::primitive::UnaryOp::kRelu, ReluFunctor>(&device_manager_registry_,
-                                                                       available_device_types_, 16);
-  TestElementwisePrimitive<double, double, DataType::kDouble, DataType::kDouble,
-                           ep::primitive::UnaryOp::kRelu, ReluFunctor>(&device_manager_registry_,
-                                                                       available_device_types_, 32);
-  TestElementwisePrimitive<int32_t, int32_t, DataType::kInt32, DataType::kInt32,
-                           ep::primitive::UnaryOp::kRelu, ReluFunctor>(&device_manager_registry_,
-                                                                       available_device_types_, 64);
-  TestElementwisePrimitive<int64_t, int64_t, DataType::kInt64, DataType::kInt64,
-                           ep::primitive::UnaryOp::kRelu, ReluFunctor>(
-      &device_manager_registry_, available_device_types_, 128);
+  TestElementwise<float, float, DataType::kFloat, DataType::kFloat, ep::primitive::UnaryOp::kRelu,
+                  ReluFunctor>(&device_manager_registry_, available_device_types_, 16);
+  TestElementwise<double, double, DataType::kDouble, DataType::kDouble,
+                  ep::primitive::UnaryOp::kRelu, ReluFunctor>(&device_manager_registry_,
+                                                              available_device_types_, 32);
+  TestElementwise<int32_t, int32_t, DataType::kInt32, DataType::kInt32,
+                  ep::primitive::UnaryOp::kRelu, ReluFunctor>(&device_manager_registry_,
+                                                              available_device_types_, 64);
+  TestElementwise<int64_t, int64_t, DataType::kInt64, DataType::kInt64,
+                  ep::primitive::UnaryOp::kRelu, ReluFunctor>(&device_manager_registry_,
+                                                              available_device_types_, 128);
 
   // Test Gelu
-  TestElementwisePrimitive<float, float, DataType::kFloat, DataType::kFloat,
-                           ep::primitive::UnaryOp::kGelu, GeluFunctor>(&device_manager_registry_,
-                                                                       available_device_types_, 32);
-  TestElementwisePrimitive<double, double, DataType::kDouble, DataType::kDouble,
-                           ep::primitive::UnaryOp::kGelu, GeluFunctor>(
-      &device_manager_registry_, available_device_types_, 128);
+  TestElementwise<float, float, DataType::kFloat, DataType::kFloat, ep::primitive::UnaryOp::kGelu,
+                  GeluFunctor>(&device_manager_registry_, available_device_types_, 32);
+  TestElementwise<double, double, DataType::kDouble, DataType::kDouble,
+                  ep::primitive::UnaryOp::kGelu, GeluFunctor>(&device_manager_registry_,
+                                                              available_device_types_, 128);
 
   // Test Tanh
-  TestElementwisePrimitive<float, float, DataType::kFloat, DataType::kFloat,
-                           ep::primitive::UnaryOp::kTanh, TanhFunctor>(&device_manager_registry_,
-                                                                       available_device_types_, 32);
-  TestElementwisePrimitive<double, double, DataType::kDouble, DataType::kDouble,
-                           ep::primitive::UnaryOp::kTanh, TanhFunctor>(
-      &device_manager_registry_, available_device_types_, 128);
+  TestElementwise<float, float, DataType::kFloat, DataType::kFloat, ep::primitive::UnaryOp::kTanh,
+                  TanhFunctor>(&device_manager_registry_, available_device_types_, 32);
+  TestElementwise<double, double, DataType::kDouble, DataType::kDouble,
+                  ep::primitive::UnaryOp::kTanh, TanhFunctor>(&device_manager_registry_,
+                                                              available_device_types_, 128);
 
   // Test Logical Not
-  TestElementwisePrimitive<float, bool, DataType::kFloat, DataType::kBool,
-                           ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
+  TestElementwise<float, bool, DataType::kFloat, DataType::kBool,
+                  ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
       &device_manager_registry_, available_device_types_, 32);
-  TestElementwisePrimitive<double, bool, DataType::kDouble, DataType::kBool,
-                           ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
+  TestElementwise<double, bool, DataType::kDouble, DataType::kBool,
+                  ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
+      &device_manager_registry_, available_device_types_, 64);
+  TestElementwise<int8_t, bool, DataType::kInt8, DataType::kBool,
+                  ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
+      &device_manager_registry_, available_device_types_, 16);
+  TestElementwise<int32_t, bool, DataType::kInt32, DataType::kBool,
+                  ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
       &device_manager_registry_, available_device_types_, 128);
-  TestElementwisePrimitive<int8_t, bool, DataType::kInt8, DataType::kBool,
-                           ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
-      &device_manager_registry_, available_device_types_, 128);
-  TestElementwisePrimitive<int32_t, bool, DataType::kInt32, DataType::kBool,
-                           ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
-      &device_manager_registry_, available_device_types_, 128);
-  TestElementwisePrimitive<int64_t, bool, DataType::kInt64, DataType::kBool,
-                           ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
-      &device_manager_registry_, available_device_types_, 128);
+  TestElementwise<int64_t, bool, DataType::kInt64, DataType::kBool,
+                  ep::primitive::UnaryOp::kLogicalNot, LogicalNotFunctor>(
+      &device_manager_registry_, available_device_types_, 96);
 }
 
 }  // namespace test
