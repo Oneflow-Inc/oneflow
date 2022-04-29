@@ -33,7 +33,7 @@ namespace oneflow {
 namespace vm {
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_PUSH("R:" + instruction->instr_msg().DebugName());
+  OF_PROFILER_RANGE_GUARD("R:" + instruction->instr_msg().DebugName());
   auto* access_list = instruction->mut_access_list();
   INTRUSIVE_FOR_EACH(access, access_list) {
     CHECK_GT(access->ref_cnt(), 1);
@@ -50,17 +50,15 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
     if (Dispatchable(out_instruction)) {
-      OF_PROFILER_RANGE_PUSH("E:" + out_instruction->instr_msg().DebugName());
+      OF_PROFILER_RANGE_GUARD("E:" + out_instruction->instr_msg().DebugName());
       mut_ready_instruction_list()->PushBack(out_instruction);
-      OF_PROFILER_RANGE_POP();
     }
   }
-  OF_PROFILER_RANGE_POP();
 }
 
 // Handle pending instructions, and try schedule them to ready list.
 void VirtualMachineEngine::HandleLocalPending() {
-  OF_PROFILER_RANGE_PUSH("HandleLocalPending");
+  OF_PROFILER_RANGE_GUARD("HandleLocalPending");
   InstructionMsgList pending_instr_msgs;
   constexpr static int kPendingHandleWindow = 10;
   GetRewritedPendingInstructionsByWindowSize(kPendingHandleWindow, &pending_instr_msgs);
@@ -75,7 +73,6 @@ void VirtualMachineEngine::HandleLocalPending() {
       new_instruction_list.Erase(instruction);
     }
   }
-  OF_PROFILER_RANGE_POP();
 }
 
 namespace {
@@ -320,25 +317,22 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx) {
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
-  OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
+  OF_PROFILER_RANGE_GUARD("DispatchAndPrescheduleInstructions");
   INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
     // Erases `instruction` from tmp_ready_instruction_list before dispatching, because
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
     tmp_ready_instruction_list.Erase(instruction.Mutable());
-    OF_PROFILER_RANGE_PUSH("D:" + instruction->instr_msg().DebugName());
+    OF_PROFILER_RANGE_GUARD("D:" + instruction->instr_msg().DebugName());
     DispatchInstruction(instruction.Mutable(), schedule_ctx);
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
       auto* out_instruction = edge->mut_dst_instruction();
       if (Dispatchable(out_instruction)) {
-        OF_PROFILER_RANGE_PUSH("P:" + out_instruction->instr_msg().DebugName());
+        OF_PROFILER_RANGE_GUARD("P:" + out_instruction->instr_msg().DebugName());
         mut_ready_instruction_list()->PushBack(out_instruction);
-        OF_PROFILER_RANGE_POP();
       }
     }
-    OF_PROFILER_RANGE_POP();
   }
-  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
@@ -409,7 +403,7 @@ int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 // Returns true if old pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
-  OF_PROFILER_RANGE_PUSH("vm:Receive");
+  OF_PROFILER_RANGE_GUARD("vm:Receive");
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
     OF_PROFILER_RANGE_PUSH(compute_instr_msg->DebugName());
     OF_PROFILER_RANGE_POP();
@@ -496,7 +490,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
-  OF_PROFILER_RANGE_PUSH("RunBarrierInstruction");
+  OF_PROFILER_RANGE_GUARD("RunBarrierInstruction");
   const auto& instr_type_id = sequnential_instruction->instr_msg().instr_type_id();
   const auto& instruction_type = instr_type_id.instruction_type();
   CHECK(instruction_type.IsFrontSequential());
@@ -508,7 +502,6 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   LivelyInstructionListErase(sequnential_instruction);
   constexpr int kZeroWindowSize = 0;  // flush immediately.
   MoveInstructionMsgToGarbageMsgList(kZeroWindowSize, std::move(instr_msg), schedule_ctx);
-  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
