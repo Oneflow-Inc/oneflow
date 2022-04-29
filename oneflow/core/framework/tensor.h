@@ -114,8 +114,17 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
+  // The same tensor instance should share the python object to ensure that
+  // their id are consistent in Python. That is if x and y are hold the same tensor,
+  // then `id(x)` should equal to `id(y)`
+  void* pyobject() const { return pyobject_; }
+  void set_pyobject(void* object) { pyobject_ = object; }
+
  protected:
-  Tensor() = default;
+  Tensor() : pyobject_(nullptr) {}
+
+ private:
+  void* pyobject_;
 };
 
 class StaticZerosTensor final : public Tensor {

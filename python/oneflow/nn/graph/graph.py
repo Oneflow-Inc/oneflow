@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import logging
 import os
 import time
 from collections import OrderedDict
@@ -127,6 +128,7 @@ class Graph(object):
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
+        self._debug_max_py_stack_depth = 2
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -204,8 +206,11 @@ class Graph(object):
             Donot override this function.
         """
         if not self._is_compiled:
-            with graph_build_util.GLogScopeContext(
-                self._debug_min_s_level, self._debug_max_v_level
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug,
+                self._debug_max_py_stack_depth,
             ):
                 self._compile(*args, **kwargs)
 
@@ -301,8 +306,7 @@ class Graph(object):
             self.config._train(True)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
-        r"""Set the GradScaler for gradient and loss scaling.
-        """
+        r"""Set the GradScaler for gradient and loss scaling."""
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
@@ -402,21 +406,20 @@ class Graph(object):
 
     @property
     def name(self):
-        r"""Name auto-generated for this graph.
-        """
+        r"""Name auto-generated for this graph."""
         return self._name
 
     @property
     def training(self):
-        r"""In traninig mode if the graph has an optimizer.
-        """
+        r"""In traninig mode if the graph has an optimizer."""
         return self.config.training
 
     def debug(
         self,
         v_level: int = 0,
+        *,
         ranks: Optional[Union[int, List[int]]] = None,
-        mode: bool = True,
+        max_py_stack_depth: int = 2,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -425,13 +428,16 @@ class Graph(object):
 
         Each nn.Module inside a nn.Graph also has a debug() method to enable debug mode.
 
-        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3.
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3. 
+        ``v_level`` -1 will disable the debug mode of the graph (i.e. no info will be printed).
         ``v_level`` 0 will print warning and graph building stages. ``v_level`` 1 will additionally
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
 
         Use ``ranks`` to choose which rank to print the debug information.
+
+        Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information. 
 
         For example:
 
@@ -442,15 +448,16 @@ class Graph(object):
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
-            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3.
+            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3. v_level can be set to -1 to close the debug mode.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
-            mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
+            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``
         """
         assert isinstance(v_level, int)
-        assert v_level >= 0, "The min verbose debug info level is 0."
+        assert v_level >= -1, "The min verbose debug info level is -1."
         assert v_level <= 3, "The max verbose debug info level is 3."
-        assert isinstance(mode, bool)
+        assert max_py_stack_depth >= 0, "The min max stack depth is 0."
+        assert isinstance(max_py_stack_depth, int)
 
         if ranks is None:
             rank_list = [0]
@@ -463,13 +470,15 @@ class Graph(object):
 
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
-            self._debug = mode
+            self._debug = v_level >= 0
             if self._debug:
                 self._debug_min_s_level = 0
-                self._debug_max_v_level = v_level
+                self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(v_level, ranks, mode)
+                block.debug(v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth)
+
+        self._debug_max_py_stack_depth = max_py_stack_depth
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -519,8 +528,7 @@ class Graph(object):
         return shallow_repr
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
-        r"""Do print according to info level.
-        """
+        r"""Do print according to info level."""
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
@@ -763,6 +771,24 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
+            enable_mlir_inference_opt = os.getenv(
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            )
+            enable_mlir_inference_opt = (
+                False
+                if enable_mlir_inference_opt is None
+                else bool(enable_mlir_inference_opt)
+            )
+            if self.training and enable_mlir_inference_opt:
+                logging.warn(
+                    "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode. "
+                )
+                enable_mlir_inference_opt - False
+                del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
+            if enable_mlir_inference_opt:
+                oneflow._oneflow_internal.FillVariableTensorMgr(
+                    state_op_names, self._state_tensor_tuple
+                )
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
@@ -794,6 +820,13 @@ class Graph(object):
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
             )
+            if enable_mlir_inference_opt:
+                (
+                    state_op_names,
+                    state_tensors,
+                ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
+                self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
             )
