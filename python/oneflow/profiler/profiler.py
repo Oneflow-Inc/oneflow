@@ -37,7 +37,7 @@ class profile:
 
     def key_averages(self):
         self.__check_finish()
-        return self.profile_events
+        return self.profile_events.key_averages()
 
     def events(self):
         self.__check_finish()

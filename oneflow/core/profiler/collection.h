@@ -45,12 +45,6 @@ struct Result {
     avg_duration = all_duration / num_called;
   }
 
-  void Update(time_t duration) {
-    all_duration += duration;
-    num_called += 1;
-    avg_duration = all_duration / num_called;
-  }
-
   std::string name;
   time_t avg_duration = 0;
   time_t all_duration = 0;
@@ -122,7 +116,7 @@ class ProfileMgr {
   std::unordered_map<std::string, int64_t> event_recorders_last_id_;
 
   std::string __GetNextEventRecorderKey(const std::string& name);
-  std::vector<Result> __CountResults();
+  std::vector<Result> __ExportResults();
 };
 
 class EventRecorder {

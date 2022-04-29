@@ -15,7 +15,8 @@ limitations under the License.
 """
 import json
 from dataclasses import dataclass
-from typing import List
+from typing import Tuple, Dict
+from collections import OrderedDict
 from dacite import from_dict
 from prettytable import PrettyTable
 from oneflow.profiler.util import format_time
@@ -46,19 +47,42 @@ class Event:
         self.event_type_ = format_event_type(self.event_type)
         self.shapes_ = self.shapes
 
+    def update(self, event):
+        self.all_duration += event.all_duration
+        self.num_called += event.num_called
+        self.avg_duration = self.all_duration / self.num_called
+        self.__post_init__()
 
-class Events:
-    def __init__(self, events: str) -> None:
-        self.events: List[Event] = []
-        self.__init_events(events)
+
+class Events(list):
+    def __init__(self, events: str = "") -> None:
+        list.__init__([])
+        if events != "":
+            self.__init_events(events)
 
     def __init_events(self, events: str):
         events_json = json.loads(events)
         for event_json in events_json:
-            self.events.append(from_dict(data_class=Event, data=event_json))
+            self.append(from_dict(data_class=Event, data=event_json))
 
     def __str__(self):
         return self.table()
+
+    def key_averages(self):
+        stats: Dict[Tuple[str, ...], Event] = OrderedDict()
+
+        def get_key(event: Event) -> Tuple[str, ...]:
+            return tuple([event.name_, event.shapes_])
+
+        for event in self:
+            key = get_key(event=event)
+            if key in stats:
+                stats[key].update(event)
+            else:
+                stats[key] = event
+        results = Events()
+        results.extend(stats.values())
+        return results
 
     def table(self):
         t = PrettyTable()
@@ -70,7 +94,7 @@ class Events:
             "Event type",
             "Shapes of inputs",
         ]
-        for item in self.events:
+        for item in self:
             t.add_row(
                 [
                     item.name_,
