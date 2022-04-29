@@ -586,7 +586,7 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
   return transpose_op;
 }
 
-bool checkInsertTransposeOp(NCHWCompatible op, PatternRewriter& rewriter) {
+bool IsInsertTransposeOpBefore(NCHWCompatible op, PatternRewriter& rewriter) {
   bool insert_transpose_op_flag = false;
   for (mlir::Value operand : op->getOperands()) {
     TransposeOp transposeInputOp = operand.getDefiningOp<TransposeOp>();
@@ -630,8 +630,11 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
     } else {
       return failure();
     }
+    // when op op has no sense of data_format and pre op is transpose, we greedily insert transpose 
+    // into this op, seeking more opportunities to eliminate transpose pattern.
+    const bool greedily_transpose_flag = !op.IsNCHW() && IsInsertTransposeOpBefore(op, rewriter);
 
-    if (op.IsNCHW() || (!op.IsNCHW() && checkInsertTransposeOp(op, rewriter))) {
+    if (op.IsNCHW() || greedily_transpose_flag) {
       // create transpose op for input operand
       SmallVector<Value, 4> tranposed_operands;
       llvm::DenseSet<Value> operand_transpose = op.OperandsToTranspose();
@@ -668,7 +671,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   }
 };
 
-bool checkRedundantTranspose(ArrayAttr pre, ArrayAttr afe) {
+bool IsRedundantTransposeMatch(ArrayAttr pre, ArrayAttr afe) {
   const auto prePerm = pre.getValue();
   const auto afePerm = afe.getValue();
   if (prePerm.size() == 4 && afePerm.size() == 4) {
@@ -692,7 +695,7 @@ struct AutoNhwcEliminateRedundantTransposePattern : public mlir::OpRewritePatter
     mlir::Value transposeInput = op.getOperand();
     TransposeOp transposeInputOp = transposeInput.getDefiningOp<TransposeOp>();
 
-    if (!transposeInputOp || !checkRedundantTranspose(op.permAttr(), transposeInputOp.permAttr())) {
+    if (!transposeInputOp || !IsRedundantTransposeMatch(op.permAttr(), transposeInputOp.permAttr())) {
       return failure();
     }
     rewriter.replaceOp(op, {transposeInputOp.getOperand()});
