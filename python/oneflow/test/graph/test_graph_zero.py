@@ -53,7 +53,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
 
                 self.config.enable_amp(True)
                 self.set_grad_scaler(grad_scaler)
-                self.config.enable_zero(True, stage=zero_stage, min_shard_size=1)
+                self.config.enable_zero(True, stage=zero_stage, min_shard_size=1, parameter_consumer_limit_level=0)
                 self.debug(2)
 
             def build(self, x):
@@ -143,7 +143,7 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
                 self.config.enable_amp(True)
                 self.set_grad_scaler(grad_scaler)
-                self.config.enable_zero(True, stage=zero_stage, min_shard_size=1)
+                self.config.enable_zero(True, stage=zero_stage, min_shard_size=1, parameter_consumer_limit_level=2)
                 self.debug(1)
 
             def build(self, x):
