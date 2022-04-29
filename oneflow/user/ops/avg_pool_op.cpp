@@ -36,13 +36,17 @@ TensorDescInferFn AvgPoolMakeForwardTensorDescInferFn(const int32_t dim) {
     const bool count_include_pad = ctx->Attr<bool>("count_include_pad");
     const int32_t& divisor_override = ctx->Attr<int32_t>("divisor_override");
 
-    CHECK_EQ_OR_RETURN(kernel_size.size(), dim) << Error::RuntimeError() << "kernel size.size() should equal to dim."; 
-    for (int32_t pool_dim : kernel_size) { 
-      CHECK_GT_OR_RETURN(pool_dim, 0) << Error::RuntimeError() << "kernel size should great than 0, but got: " << pool_dim; 
+    CHECK_EQ_OR_RETURN(kernel_size.size(), dim)
+        << Error::RuntimeError() << "kernel size.size() should equal to dim.";
+    for (int32_t pool_dim : kernel_size) {
+      CHECK_GT_OR_RETURN(pool_dim, 0)
+          << Error::RuntimeError() << "kernel size should great than 0, but got: " << pool_dim;
     }
-    CHECK_EQ_OR_RETURN(stride.size(), dim) << Error::RuntimeError() << "stride.size() should equal to dim."; 
-    for (int32_t stride_dim : stride) { 
-      CHECK_GT_OR_RETURN(stride_dim, 0)  << Error::RuntimeError() << "stride size should great than 0, but got: " << stride_dim; 
+    CHECK_EQ_OR_RETURN(stride.size(), dim)
+        << Error::RuntimeError() << "stride.size() should equal to dim.";
+    for (int32_t stride_dim : stride) {
+      CHECK_GT_OR_RETURN(stride_dim, 0)
+          << Error::RuntimeError() << "stride size should great than 0, but got: " << stride_dim;
     }
     for (int32_t i = 0; i < padding.size(); i++) {
       CHECK_GE_OR_RETURN(kernel_size[i], 2 * padding[i])

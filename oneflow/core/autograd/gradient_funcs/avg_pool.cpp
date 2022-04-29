@@ -26,16 +26,16 @@ namespace one {
 namespace {
 
 struct AvgPoolCaptureState : public AutoGradCaptureState {
-  bool requires_grad=false;
-  size_t input_index=0;
+  bool requires_grad = false;
+  size_t input_index = 0;
 
   std::string data_format;
   std::vector<int32_t> padding;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> stride;
-  bool ceil_mode=false;
-  bool count_include_pad=false;
-  int32_t divisor_override=0;
+  bool ceil_mode = false;
+  bool count_include_pad = false;
+  int32_t divisor_override = 0;
 };
 
 class AvgPoolNdGrad : public OpExprGradFunction<AvgPoolCaptureState> {

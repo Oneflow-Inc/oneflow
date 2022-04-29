@@ -27,17 +27,17 @@ namespace one {
 namespace {
 
 struct MaxPoolCaptureState : public AutoGradCaptureState {
-  bool requires_grad=false;
-  size_t input_index=0;
-  size_t indice_index=0;
+  bool requires_grad = false;
+  size_t input_index = 0;
+  size_t indice_index = 0;
 
   std::string data_format;
   std::vector<int32_t> padding;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> stride;
   std::vector<int32_t> dilation;
-  bool return_indices=false;
-  bool ceil_mode=false;
+  bool return_indices = false;
+  bool ceil_mode = false;
 };
 
 class MaxPoolNdGrad : public OpExprGradFunction<MaxPoolCaptureState> {

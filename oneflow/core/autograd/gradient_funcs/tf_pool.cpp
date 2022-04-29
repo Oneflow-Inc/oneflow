@@ -26,9 +26,9 @@ namespace one {
 namespace {
 
 struct TFPoolCaptureState : public AutoGradCaptureState {
-  bool requires_grad=false;
-  size_t input_index=0;
-  size_t output_index=0;
+  bool requires_grad = false;
+  size_t input_index = 0;
+  size_t output_index = 0;
 
   std::string data_format;
   std::string padding;
@@ -36,7 +36,7 @@ struct TFPoolCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> padding_after;
   std::vector<int32_t> pool_size;
   std::vector<int32_t> strides;
-  bool ceil_mode=false;
+  bool ceil_mode = false;
 };
 
 class TFPoolNdGrad : public OpExprGradFunction<TFPoolCaptureState> {
