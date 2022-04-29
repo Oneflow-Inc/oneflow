@@ -58,7 +58,7 @@ def operators_repr(ops, graph_proto):
         elif op.HasField("variable_conf"):
             variable_conf = op.variable_conf
             input_sig_str = ""
-            output_sig_str = op.name + "/" + variable_conf.out
+            output_sig_str = op.name + "/" + variable_conf.out + " : " + variable_conf.nd_sbp
 
         return signature_template.substitute(input=input_sig_str, output=output_sig_str)
 
