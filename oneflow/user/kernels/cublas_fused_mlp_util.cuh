@@ -169,7 +169,8 @@ void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cu
 void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEpilogue_t epilogue,
                        const void* bias_ptr, const void* aux_ptr) {
   if (epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS
-      || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD) {
+      || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD
+      || epilogue == CUBLASLT_EPILOGUE_BGRADB) {
     // Set epilogue
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
         matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
@@ -241,6 +242,11 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
                                                    &aligned_aux_ld, sizeof(aligned_aux_ld)));
+  } else {
+    long no_need_aligned_aux_ld = 0;
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+        matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
+        &no_need_aligned_aux_ld, sizeof(no_need_aligned_aux_ld)));
   }
   // Set matrix layout
   SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
