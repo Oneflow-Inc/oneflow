@@ -586,7 +586,6 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
   return transpose_op;
 }
 
-
 bool checkInsertTransposeOp(NCHWCompatible op, PatternRewriter& rewriter) {
   bool insert_transpose_op_flag = false;
   for (mlir::Value operand : op->getOperands()) {
