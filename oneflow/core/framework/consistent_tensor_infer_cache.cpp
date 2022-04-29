@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -164,8 +165,19 @@ Maybe<void> CheckInputParallelDescIdentical(const ConsistentTensorMetaInferArgs&
   if (infer_args.input_consistent_tensor_metas().empty()) { return Maybe<void>::Ok(); }
   const auto& first_parallel_desc =
       infer_args.input_consistent_tensor_metas().begin()->tensor_meta()->parallel_desc();
-  for (const auto& input_meta : infer_args.input_consistent_tensor_metas()) {
-    CHECK_OR_RETURN(first_parallel_desc == input_meta.tensor_meta()->parallel_desc());
+  for (int i = 0; i < infer_args.input_consistent_tensor_metas().size(); ++i) {
+    CHECK_OR_RETURN(first_parallel_desc
+                    == JUST(VectorAt(infer_args.input_consistent_tensor_metas(), i))
+                           .tensor_meta()
+                           ->parallel_desc())
+        << Error::RuntimeError()
+        << "Expected all tensors to be on the same placement, but found "
+           "at least two placements, "
+        << *JUST(PlacementToString(first_parallel_desc)) << " (positional 0) and "
+        << *JUST(PlacementToString(JUST(VectorAt(infer_args.input_consistent_tensor_metas(), i))
+                                       .tensor_meta()
+                                       ->parallel_desc()))
+        << " (positional " << i << ")!";
   }
   return Maybe<void>::Ok();
 }
