@@ -73,7 +73,12 @@ class GraphConfig(object):
         self.proto.set_enable_auto_mixed_precision(mode)
 
     def enable_zero(
-        self, mode: bool = True, *, stage: int = 2, min_shard_size: int = 1024, parameter_consumer_limit_level: int = 2,
+        self,
+        mode: bool = True,
+        *,
+        stage: int = 2,
+        min_shard_size: int = 1024,
+        parameter_consumer_limit_level: int = 2,
     ):
         r"""Enable ZeRO redundancy optimizer.
 
@@ -115,7 +120,9 @@ class GraphConfig(object):
         if stage >= 1:
             self.proto.set_optimizer_placement_optimization_mode("distributed_split")
             self.proto.set_optimizer_placement_optimization_threshold(min_shard_size)
-            self.proto.set_optimizer_placement_optimization_comsumer_limit_level(parameter_consumer_limit_level)
+            self.proto.set_optimizer_placement_optimization_comsumer_limit_level(
+                parameter_consumer_limit_level
+            )
         if stage >= 2:
             oneflow.boxing.nccl.enable_use_compute_stream(True)
         if stage >= 3:

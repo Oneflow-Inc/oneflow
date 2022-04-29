@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "glog/logging.h"
+#include "oneflow/api/python/env/env.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
@@ -997,6 +999,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     }
   };
   int32_t pass_cnt = 0;
+  const int64_t prev_v = FLAGS_v;
   auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
     VLOG(1) << job_name << " is compiling with pass"
             << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
@@ -1004,9 +1007,11 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     if (unlikely(NeedLogJob(pass_name))) {
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
       LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-before");
+      FLAGS_v = 3;
     }
     JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
     if (unlikely(NeedLogJob(pass_name))) {
+      FLAGS_v = prev_v;
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
       LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-after");
     }
