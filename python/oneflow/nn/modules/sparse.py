@@ -35,7 +35,12 @@ class Embedding(Module):
                                     i.e. it remains as a fixed "pad". For a newly constructed Embedding,
                                     the embedding vector at :attr:`padding_idx` will default to all zeros,
                                     but can be updated to another value to be used as the padding vector.
-    
+        max_norm (float, optional): If given, each embedding vector with norm larger than :attr:`max_norm` is renormalized to have 
+                                    norm :attr:`max_norm`
+        norm_type (float, optional): The p of the p-norm to compute for the :attr:`max_norm` option. Default :attr:`2`.
+        scale_grad_by_freq (boolean, optional): If given, this will scale gradients by the inverse of 
+                                                frequency of the words in the mini-batch. Default :attr:`False`
+
     For example:
 
     .. code-block:: python
@@ -74,9 +79,9 @@ class Embedding(Module):
                 ), "Padding_idx must be within num_embeddings"
                 padding_idx = self.num_embeddings + padding_idx
         self.padding_idx = padding_idx
-        assert max_norm is None, "Not support max_norm yet!"
-        assert norm_type is None, "Not support norm_type yet!"
-        assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+        self.max_norm = max_norm
+        self.norm_type = norm_type
+        self.scale_grad_by_freq = scale_grad_by_freq
         assert sparse is False, "Not support sparse=True yet!"
         if _weight is None:
             self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
@@ -99,8 +104,13 @@ class Embedding(Module):
                 self.weight[self.padding_idx].fill_(0)
 
     def forward(self, indices):
-        res = flow._C.gather(self.weight, indices, axis=0)
-        return res
+        if self.max_norm is not None:
+            flow._C.embedding_renorm_(
+                self.weight, indices, self.max_norm, self.norm_type
+            )
+        return flow._C.embedding(
+            self.weight, indices, self.padding_idx, self.scale_grad_by_freq
+        )
 
 
 def embedding(
@@ -127,6 +137,11 @@ def embedding(
         padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
                                      therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
                                      i.e. it remains as a fixed "pad".
+        max_norm (float, optional): If given, each embedding vector with norm larger than max_norm is renormalized to have 
+                                    norm max_norm
+        norm_type (float, optional): The p of the p-norm to compute for the max_norm option. Default 2.
+        scale_grad_by_freq (boolean, optional): If given, this will scale gradients by the inverse of 
+                                                frequency of the words in the mini-batch. Default False
 
     For example:
 
@@ -148,14 +163,15 @@ def embedding(
         >>> output.shape
         oneflow.Size([1, 4, 3])
     """
-    assert max_norm is None, "Not support max_norm yet!"
-    assert norm_type is None, "Not support norm_type yet!"
-    assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+
     assert sparse is False, "Not support sparse=True yet!"
     if padding_idx is not None:
         weight[padding_idx].fill_(0)
-    res = flow._C.gather(weight, input, axis=0)
-    return res
+    
+    if max_norm is not None:
+        weight = flow._C.embedding_renorm_(weight, input, max_norm, norm_type)
+
+    return flow._C.embedding(weight, input, padding_idx, scale_grad_by_freq)
 
 
 if __name__ == "__main__":
