@@ -14,7 +14,10 @@
 		// "all",
 	],
 	"remoteEnv": {
-		"PATH": "${containerEnv:PATH}:/opt/python/cp37-cp37m/bin"
+		"PATH": "${containerEnv:PATH}:/opt/python/cp37-cp37m/bin",
+		"ONEFLOW_CI_PYTHON_EXE": "/opt/python/cp37-cp37m/bin/python3",
+		"ONEFLOW_CI_SRC_DIR": "${localWorkspaceFolder}",
+		"ONEFLOW_CI_BUILD_DIR": "${localWorkspaceFolder}/build",
 	},
 	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/ccache && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/local && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/cache",
 	"mounts": [
