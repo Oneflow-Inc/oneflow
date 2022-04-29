@@ -11,6 +11,11 @@
 		"--privileged",
 		"--shm-size=8g"
 	],
+	"mounts": [
+		"source=${localWorkspaceFolder}/build/dot/ccache,target=/root/.ccache,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/build/dot/local,target=/root/.local,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/build/dot/cache,target=/root/.cache,type=bind,consistency=cached",
+	],
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
 		"files.insertFinalNewline": true,
