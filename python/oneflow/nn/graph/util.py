@@ -20,7 +20,7 @@ from oneflow.framework.tensor import Tensor
 from string import Template
 
 def operators_repr(ops):
-    r"""Generate operators' string representation of this module
+    r"""Generate operators' string representation
     """
     def _op_signature(op):
         signature_template = Template(op.name + "($input) -> ($output)")
