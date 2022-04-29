@@ -16,12 +16,14 @@ limitations under the License.
 from collections import OrderedDict
 from functools import partial
 from typing import Iterator, Optional, Set, Union, List
+import weakref
 
 import oneflow._C
 import oneflow._oneflow_internal
 import oneflow.framework.graph_build_util as graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
+import oneflow.nn as nn
 from oneflow.nn.module import Module
 from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
@@ -63,7 +65,7 @@ class BlockType:
 
 class Block(object):
     def __init__(
-        self, prefix: str = "", name: str = "",
+        self, prefix: str = "", name: str = "", belonged_graph = None
     ):
         self._name = name
         self._name_prefix = prefix
@@ -71,6 +73,8 @@ class Block(object):
         self._origin = None
         self._scope = None
         self._prev_scope = None
+        assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
+        self._belonged_graph = belonged_graph
         self.config = BlockConfig()
 
     @property
@@ -103,10 +107,10 @@ class Block(object):
 
 class ModuleBlock(Block):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Module = None,
+        self, prefix: str = "", name: str = "", origin: Module = None, belonged_graph = None
     ):
         assert not isinstance(origin, Block)
-        super().__init__(prefix, name)
+        super().__init__(prefix, name, belonged_graph)
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
@@ -131,7 +135,7 @@ class ModuleBlock(Block):
         assert isinstance(origin, Module)
         for (n, m) in list(origin.named_children()):
             self.__setattr__(
-                n, get_block_cls(m)(self._name_prefix + self._name + ".", n, m)
+                n, get_block_cls(m)(self._name_prefix + self._name + ".", n, m, self._belonged_graph)
             )
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
@@ -289,7 +293,7 @@ class ModuleBlock(Block):
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(
             name,
-            get_block_cls(module)(self._name_prefix + self._name + ".", name, module),
+            get_block_cls(module)(self._name_prefix + self._name + ".", name, module, self._belonged_graph),
         )
 
     def register_parameter(self, name: str, param: Optional[Parameter]) -> None:
@@ -499,11 +503,14 @@ class ModuleBlock(Block):
         _append_child(self._buffers)
         _append_child(self._modules)
 
+        for op_str in self._ops_repr():
+            child_lines.append(add_indent(op_str, 2))
+
         if len(self._outs_repr) > 0:
             for out_str in self._outs_repr:
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
-
+        
         if len(child_lines) > 0:
             lines = child_lines
 
@@ -526,6 +533,58 @@ class ModuleBlock(Block):
         )
         return shallow_repr
 
+    def _ops_repr(self):
+        r"""Generate operators' string representation of this module
+        """
+        assert self._belonged_graph, "ModuleBlock: " + self._name_prefix + self.name + "'s belonged graph is not set."
+        ops_strs = []
+       
+        if self._belonged_graph.is_compiled:
+            module_conf = self._belonged_graph._full_graph_proto.module_name2module_conf[
+                self.name_prefix + self.name
+            ]
+            for op in module_conf.ops:
+                op_str = "(OPERATOR: "
+                op_str += self._op_signature(op)
+                op_str += ")"
+                ops_strs.append(op_str)
+     
+        return ops_strs
+    
+    def _op_signature(self, op):
+        r"""Generate a single operator's signature
+        """
+        sig = op.name
+
+        # only deal with UserOpConf for now
+        if op.HasField("user_conf"):
+            user_conf = op.user_conf
+            sig += "("
+            input_params = []
+            for param in user_conf.input_order:
+                x = user_conf.input[param].s
+                if len(x) > 1: # param of multiple tensors
+                    input_params.append("[" + (", ").join(list(x)) + "]")
+                else:
+                    assert len(x) == 1
+                    input_params.append(x[0])
+            sig += ", ".join(input_params)
+            sig += ")"
+
+            sig += " -> ("
+            output_params = []
+            for param in user_conf.output_order:
+                x = user_conf.output[param].s
+                if len(x) > 1:
+                    output_params.append("[" + (", ").join(list(x)) + "]")
+                else:
+                    assert len(x) == 1
+                    output_params.append(x[0])
+            sig += ", ".join(output_params)
+            sig += ")"
+    
+        return sig
+
     def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
         """
@@ -535,10 +594,6 @@ class ModuleBlock(Block):
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg, flush=True)
-
-    def ops_proto(self, graph_proto):
-        assert isinstance(graph_proto, oneflow.core.job.job_pb2.Job)
-        return graph_proto.module_name2module_conf[self.name_prefix + self.name]
 
 
 class LazyBuilder(object):

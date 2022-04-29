@@ -18,6 +18,7 @@ import time
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
+import weakref
 from google.protobuf import text_format
 
 import oneflow
@@ -409,6 +410,12 @@ class Graph(object):
         r"""Name auto-generated for this graph.
         """
         return self._name
+        
+    @property
+    def is_compiled(self):
+        r"""Whether this graph is compiled or not
+        """
+        return self._is_compiled
 
     @property
     def training(self):
@@ -1153,7 +1160,7 @@ class Graph(object):
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
 
-        self._blocks[name] = get_block_cls(module)("", name, module)
+        self._blocks[name] = get_block_cls(module)("", name, module, weakref.proxy(self))
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
