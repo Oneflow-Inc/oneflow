@@ -19,6 +19,7 @@ limitations under the License.
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
+#include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
@@ -53,6 +54,17 @@ namespace one {
 
 PyTypeObject* PyTensorObject_Type = NULL;
 PyTypeObject* PyParameterObject_Type = NULL;
+
+extern PyTypeObject* PyByteTensortypeObject_Type;
+
+extern PyTypeObject* PyCharTensortypeObject_Type;
+extern PyTypeObject* PyShortTensortypeObject_Type;
+extern PyTypeObject* PyIntTensortypeObject_Type;
+extern PyTypeObject* PyLongTensortypeObject_Type;
+
+extern PyTypeObject* PyHalfTensortypeObject_Type;
+extern PyTypeObject* PyFloatTensortypeObject_Type;
+extern PyTypeObject* PyDoubleTensortypeObject_Type;
 
 static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -269,6 +281,43 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+
+
+
+static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  const auto& t = PyTensor_Unpack(self);
+  PyObject* dtype = NULL;
+  int non_blocking = 0;
+  static const char* keywords[3] = {"dtype", "non_blocking", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords),
+                                   &dtype, &non_blocking)) {
+    return NULL;
+  }
+  if (dtype != NULL) {
+    if(functional::PyDTypeCheck(dtype)) {
+      std::cout << "got dtype: " << functional::PyUnpackDType(dtype)->name() << std::endl;
+      const auto& tt = functional::To(t, functional::PyUnpackDType(dtype), false);
+      return functional::CastToPyObject(tt);
+    }
+    else if(PyTensortype_Check(dtype))
+    {
+      std::cout << "got tensortype: " << ((PyTypeObject*)dtype)->tp_name << std::endl;
+      const auto& tt = functional::To(t, TensortypeToDType(dtype), false);
+      return functional::CastToPyObject(tt);
+    }
+    else {
+      return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
+    }
+  }
+
+
+
+  PyObject* result = DTypeToTensortype(t->dtype());
+  return result;
+  END_HANDLE_ERRORS
+}
+
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                               \
   static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {   \
     HANDLE_ERRORS                                                                         \
@@ -331,6 +380,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
+    {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                \
   {"_copy_to_numpy_" #T, PyTensorObject__copy_to_numpy_##T, METH_O, NULL}, \
       {"_copy_from_numpy_" #T, PyTensorObject__copy_from_numpy_##T, METH_O, NULL},

@@ -19,7 +19,7 @@ import oneflow as flow
 
 __all__ = [
     "HalfTensor",
-    "FloatTensor",
+    # "FloatTensor",
     "DoubleTensor",
     "BoolTensor",
     "ByteTensor",
@@ -37,11 +37,11 @@ def HalfTensor(*args, **kwargs):
     return flow.Tensor(*args, **kwargs).to(flow.float16)
 
 
-def FloatTensor(*args, **kwargs):
-    r"""
-    Creates a Tensor with the dtype of float32 and it has the same parameters as :func:`oneflow.Tensor`.
-    """
-    return flow.Tensor(*args, **kwargs).to(flow.float32)
+# def FloatTensor(*args, **kwargs):
+#     r"""
+#     Creates a Tensor with the dtype of float32 and it has the same parameters as :func:`oneflow.Tensor`.
+#     """
+#     return flow.Tensor(*args, **kwargs).to(flow.float32)
 
 
 def DoubleTensor(*args, **kwargs):

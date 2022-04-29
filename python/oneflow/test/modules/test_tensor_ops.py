@@ -44,179 +44,226 @@ def _test_is_floating_point(test_case, shape, device, dtype):
         test_case.assertEqual(output, False)
 
 
-@flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestCuda(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_cuda(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        x = x.cuda()
-        y = x.sum()
-        return y
+# @flow.unittest.skip_unless_1n1d()
+# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+# class TestCuda(flow.unittest.TestCase):
+#     @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=True)
+#     def test_cuda(test_case):
+#         device = random_device()
+#         x = random_tensor().to(device)
+#         x = x.cuda()
+#         y = x.sum()
+#         return y
 
-    @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_cuda_0dim(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0).to(device)
-        x = x.cuda()
-        y = x.sum()
-        return y
+#     @autotest(n=20, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=True)
+#     def test_cuda_0dim(test_case):
+#         device = random_device()
+#         x = random_tensor(ndim=0).to(device)
+#         x = x.cuda()
+#         y = x.sum()
+#         return y
 
-    @autotest(n=5)
-    def test_cuda_int_device(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        x = x.cuda(0)
-        y = x.sum()
-        return y
+#     @autotest(n=5)
+#     def test_cuda_int_device(test_case):
+#         device = random_device()
+#         x = random_tensor().to(device)
+#         x = x.cuda(0)
+#         y = x.sum()
+#         return y
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorOps(flow.unittest.TestCase):
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_cpu(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        x = x.cpu()
-        y = x.sum()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_cpu(test_case):
+    #     device = random_device()
+    #     x = random_tensor().to(device)
+    #     x = x.cpu()
+    #     y = x.sum()
+    #     return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_long(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        y = x.long()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_long(test_case):
+    #     device = random_device()
+    #     x = random_tensor().to(device)
+    #     y = x.long()
+    #     return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_long_0dim(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0).to(device)
-        y = x.long()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_long_0dim(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=0).to(device)
+    #     y = x.long()
+    #     return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_int(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        y = x.int()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_int(test_case):
+    #     device = random_device()
+    #     x = random_tensor().to(device)
+    #     y = x.int()
+    #     return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_int_0dim(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0).to(device)
-        y = x.int()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_int_0dim(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=0).to(device)
+    #     y = x.int()
+    #     return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_float(test_case):
-        device = random_device()
-        x = random_tensor(dtype=int).to(device)
-        y = x.float()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_float(test_case):
+    #     device = random_device()
+    #     x = random_tensor(dtype=int).to(device)
+    #     y = x.float()
+    #     return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_float_0dim(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0, dtype=int).to(device)
-        y = x.float()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_float_0dim(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=0, dtype=int).to(device)
+    #     y = x.float()
+    #     return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_double(test_case):
-        device = random_device()
-        x = random_tensor(dtype=int).to(device)
-        y = x.double()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_double(test_case):
+    #     device = random_device()
+    #     x = random_tensor(dtype=int).to(device)
+    #     y = x.double()
+    #     return y
 
-    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
-    def test_double_0dim(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0, dtype=int).to(device)
-        y = x.double()
-        return y
+    # @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    # def test_double_0dim(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=0, dtype=int).to(device)
+    #     y = x.double()
+    #     return y
 
-    # Not check graph because of 2 reason.
-    # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
-    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
-    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
-    @autotest(
-        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
-    )
-    def test_item(test_case):
-        device = random_device()
-        x = random_tensor(ndim=1, dim0=1, dtype=int).to(device)
-        y = torch.tensor(x.item())
-        return y
+    # # Not check graph because of 2 reason.
+    # # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
+    # # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
+    # # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
+    # @autotest(
+    #     n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+    # )
+    # def test_item(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=1, dim0=1, dtype=int).to(device)
+    #     y = torch.tensor(x.item())
+    #     return y
 
-    # Not check graph because of 2 reason.
-    # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
-    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
-    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
-    @autotest(
-        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
-    )
-    def test_item_0dim(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0, dtype=int).to(device)
-        y = torch.tensor(x.item())
-        return y
+    # # Not check graph because of 2 reason.
+    # # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
+    # # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
+    # # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
+    # @autotest(
+    #     n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+    # )
+    # def test_item_0dim(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=0, dtype=int).to(device)
+    #     y = torch.tensor(x.item())
+    #     return y
 
-    # Not check graph because of 2 reason.
-    # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
-    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
-    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
-    @autotest(
-        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
-    )
-    def test_tolist(test_case):
-        device = random_device()
-        x = random_tensor(ndim=4).to(device)
-        y = torch.tensor(x.tolist())
-        return y
+    # # Not check graph because of 2 reason.
+    # # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
+    # # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
+    # # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
+    # @autotest(
+    #     n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+    # )
+    # def test_tolist(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=4).to(device)
+    #     y = torch.tensor(x.tolist())
+    #     return y
 
-    # Not check graph because of 2 reason.
-    # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
-    # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
-    # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
-    @autotest(
-        n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
-    )
-    def test_tolist_0dim(test_case):
-        device = random_device()
-        x = random_tensor(ndim=0).to(device)
-        y = torch.tensor(x.tolist())
-        return y
+    # # Not check graph because of 2 reason.
+    # # Reason 1, nn.Graph.build()'s input/output item only support types: Tensor/None.
+    # # Reason 2, This op needs to convert the EagerTensor to a numpy array，so this op only supports eager mode.
+    # # Please refer to File "oneflow/api/python/utils/tensor_utils.h", line 49, in EagerTensorToNumpy.
+    # @autotest(
+    #     n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph="ValidatedFlase"
+    # )
+    # def test_tolist_0dim(test_case):
+    #     device = random_device()
+    #     x = random_tensor(ndim=0).to(device)
+    #     y = torch.tensor(x.tolist())
+    #     return y
 
-    def test_type_as(test_case):
+    # def test_type_as(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
+    #     arg_dict["device"] = ["cpu", "cuda"]
+    #     arg_dict["src_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
+    #     arg_dict["tgt_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
+    #     for arg in GenArgList(arg_dict):
+    #         _test_type_as(test_case, *arg)
+
+    # def test_is_floating_point(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
+    #     arg_dict["device"] = ["cpu", "cuda"]
+    #     arg_dict["dtype"] = [
+    #         flow.uint8,
+    #         flow.int8,
+    #         flow.int32,
+    #         flow.int64,
+    #         flow.char,
+    #         flow.float32,
+    #         flow.float64,
+    #         flow.double,
+    #         flow.float,
+    #         flow.int,
+    #     ]
+    #     for arg in GenArgList(arg_dict):
+    #         _test_is_floating_point(test_case, *arg)
+    
+    def test_type(test_case):
+        # def _test_type_dtype(test_case, shape, device, src_dtype, tgt_dtype):
+        #     # print(f"src dtype: {src_dtype}, dst dtype: {tgt_dtype}")
+        #     np_input = np.random.rand(*shape)
+        #     input = flow.tensor(np_input, dtype=src_dtype, device=device)
+        #     target = flow.tensor(np_input, dtype=tgt_dtype, device=device)
+        #     input = input.type(target.type())
+        #     test_case.assertEqual(input.dtype, target.dtype)
+
+        def _test_type_tensortype(test_case, shape, device, src_dtype, tgt_tensortype):
+            # print(f"src dtype: {src_dtype}, dst dtype: {tgt_tensortype}")
+            np_input = np.random.rand(*shape)
+            input = flow.tensor(np_input, dtype=src_dtype, device=device)
+            input = input.type(tgt_tensortype)
+            test_case.assertEqual(input.type(), tgt_tensortype)
+
+
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["src_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
-        arg_dict["tgt_dtype"] = [flow.int64, flow.int32, flow.float32, flow.float64]
-        for arg in GenArgList(arg_dict):
-            _test_type_as(test_case, *arg)
+        arg_dict["src_dtype"] = [flow.uint8, flow.int8, flow.int64, flow.int32, flow.float16, flow.float32, flow.float64]
+        # arg_dict["src_dtype"] = [ flow.float32, flow.float64]
+        # arg_dict["tgt_dtype"] = [flow.uint8, flow.int8, flow.int64, flow.int32, flow.float16, flow.float32, flow.float64]
+        # for arg in GenArgList(arg_dict):
+        #     _test_type_dtype(test_case, *arg)
 
-    def test_is_floating_point(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["dtype"] = [
-            flow.uint8,
-            flow.int8,
-            flow.int32,
-            flow.int64,
-            flow.char,
-            flow.float32,
-            flow.float64,
-            flow.double,
-            flow.float,
-            flow.int,
-        ]
+        # arg_dict.pop["tgt_dtype"]
+        arg_dict["tgt_tensortype"] = [
+            flow._oneflow_internal.ByteTensor,
+            flow._oneflow_internal.CharTensor,
+            # flow._oneflow_internal.ShortTensor,
+            flow._oneflow_internal.IntTensor,
+            flow._oneflow_internal.LongTensor,
+            flow._oneflow_internal.HalfTensor,
+            flow._oneflow_internal.FloatTensor,
+            flow._oneflow_internal.DoubleTensor,
+        ]    
+        # import itertools
+        # sets = [arg_set for (_, arg_set) in arg_dict.items()]
+        # sets = list(itertools.product(*sets))
+
+
+        # import ipdb; ipdb.set_trace()
         for arg in GenArgList(arg_dict):
-            _test_is_floating_point(test_case, *arg)
+            # print(arg)
+            _test_type_tensortype(test_case, *arg)
 
 
 if __name__ == "__main__":
