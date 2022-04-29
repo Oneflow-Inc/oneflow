@@ -522,6 +522,16 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
         .Input("train_step", train_conf.train_step_lbn())
         .Attr<float>("lr_decay", adagrad_conf.lr_decay())
         .Attr<float>("epsilon", adagrad_conf.epsilon());
+  } else if (optimizer_conf.has_ftrl_conf()) {
+    const FtrlModelUpdateConf& ftrl_conf = optimizer_conf.ftrl_conf();
+    state_constant_init_values.push_back(ftrl_conf.initial_accumulator_value());
+    // For `z`, its init value is 0.0.
+    state_constant_init_values.push_back(0.0);
+    embedding_update_op_builder.OpTypeName("ftrl_embedding_update")
+        .Attr<float>("lr_power", ftrl_conf.lr_power())
+        .Attr<float>("lambda1", ftrl_conf.lambda1())
+        .Attr<float>("lambda2", ftrl_conf.lambda2())
+        .Attr<float>("beta", ftrl_conf.beta());
   } else {
     UNIMPLEMENTED();
   }
