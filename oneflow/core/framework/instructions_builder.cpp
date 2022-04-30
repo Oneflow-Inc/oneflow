@@ -438,7 +438,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   if (!StreamRoleSwitch<NeedSoftSync>(stream->stream_role(), device_type)) {
     return Maybe<void>::Ok();
   }
-  OF_PROFILER_RANGE_PUSH("SoftStream");
+  OF_PROFILER_RANGE_GUARD("SoftStream");
   const auto& parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
       std::move(compute_local_dep_objects), modifier);
@@ -446,7 +446,6 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
       Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
       parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
-  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
