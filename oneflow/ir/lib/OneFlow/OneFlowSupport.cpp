@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/user/kernels/avg_pooling_kernel_util.h"
+
 
 namespace mlir {
 
