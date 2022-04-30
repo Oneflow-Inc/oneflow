@@ -331,7 +331,20 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
-    if (/*is_null=*/!tensor) {
+
+    if (plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().find(var_name)
+        == plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().end()) {
+      // Deal with variable tensor not used in nn.Graph build.
+      CHECK(tensor != NULL)
+          << "the tensor of " << var_name
+          << " is not existed in job, so it's not created in nn.Graph and cannot be NULL.";
+      if (tensor->is_consistent()) {
+        const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+        var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+      } else {
+        var_blob = JUST(tensor->eager_blob_object())->mut_blob();
+      }
+    } else if (/*is_null=*/!tensor) {
       // Deal with tensors which are not in the nn.Module.
       // We can call these tensors as additional variables.
       const auto& op_attribute =
