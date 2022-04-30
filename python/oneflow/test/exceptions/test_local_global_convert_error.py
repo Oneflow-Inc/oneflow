@@ -92,7 +92,7 @@ class TestModule(flow.unittest.TestCase):
                 placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(1)
             )
         test_case.assertTrue(
-            "Sizes of tensors must match except in dimension 1. Expected size 4 but got size 2 for tensor on rank 1!"
+            "Sizes of tensors must match except in dimension 1. Expected size 2 but got size 4 for tensor on rank 1!"
             in str(ctx.exception)
         )
 
