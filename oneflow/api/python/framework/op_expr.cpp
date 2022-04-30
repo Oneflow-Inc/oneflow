@@ -17,6 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -40,7 +41,9 @@ py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>> PybindExportOpExpr(
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns) {
         ConfT proto_op_conf;
-        CHECK(TxtString2PbMessage(op_conf_str, &proto_op_conf)) << "op conf parse failed";
+        if (!TxtString2PbMessage(op_conf_str, &proto_op_conf)) {
+          THROW(RuntimeError) << "op conf parse failed.\n" << op_conf_str;
+        }
         return OpT::New(op_name, std::move(proto_op_conf), indexed_ibns, indexed_obns)
             .GetPtrOrThrow();
       }));
