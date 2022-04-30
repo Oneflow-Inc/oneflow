@@ -18,9 +18,9 @@ limitations under the License.
 
 #include <Python.h>
 
-#include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 
 namespace oneflow {
 namespace one {

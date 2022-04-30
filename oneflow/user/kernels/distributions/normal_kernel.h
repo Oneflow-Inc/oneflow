@@ -35,7 +35,9 @@ class NormalKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(device_type));
-    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    // When SBP is Split, each rank uses a different seeds, otherwise, ranks use the same seed
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
