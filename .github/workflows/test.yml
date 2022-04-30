@@ -484,6 +484,7 @@ jobs:
     needs: [wait_for_gpu_slot, find-benchmark-cache]
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    timeout-minutes: 120
     strategy:
       fail-fast: true
       max-parallel: 1
