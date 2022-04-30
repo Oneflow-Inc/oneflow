@@ -58,7 +58,22 @@ def operators_repr(ops, graph_proto):
         elif op.HasField("variable_conf"):
             variable_conf = op.variable_conf
             input_sig_str = ""
-            output_sig_str = op.name + "/" + variable_conf.out + " : " + variable_conf.nd_sbp
+            output_sig_str = op.name + "/" + variable_conf.out
+            len_sbp_dim = len(variable_conf.nd_sbp)
+            #if len_sbp_dim > 0:
+            #    output_sig_str += " : ("
+            #    print("8 ++++++++++++ ")
+            #    for i_sbp in range(len_sbp_dim):
+            #        print("i sbp ", i_sbp)
+            #        sbp = variable_conf.nd_sbp[i]
+            #        if i_sbp > 0:
+            #            output_str += ", "
+            #        print("+++++ sbp ", sbp)
+            #        output_sig_str += sbp
+            #        print("----- sbp ", sbp)
+            #    print("9 ++++++++++++ ")
+            #    output_sig_str += ")"
+            #    print("10 ++++++++++++ ")
 
         return signature_template.substitute(input=input_sig_str, output=output_sig_str)
 
