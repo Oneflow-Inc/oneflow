@@ -644,6 +644,7 @@ jobs:
     name: Distributed test suite
     needs: [wait_for_gpu_slot, find-test-cache-distributed]
     runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 120
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
@@ -814,6 +815,7 @@ jobs:
   test:
     name: Test suite
     needs: [wait_for_gpu_slot, find-test-cache]
+    timeout-minutes: 120
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     strategy:
