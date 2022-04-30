@@ -26,6 +26,8 @@ def operators_repr(ops):
     assert isinstance(ops, protobuf.pyext._message.RepeatedCompositeContainer)
     
     def _op_signature(op):
+        assert isinstance(op, op_conf_util.OperatorConf)
+        
         signature_template = Template(op.name + "($input) -> ($output)")
         input_sig_str = "..."
         output_sig_str = "..."
@@ -62,7 +64,6 @@ def operators_repr(ops):
 
     ops_strs = []
     for op in ops:
-        assert isinstance(op, op_conf_util.OperatorConf)
         op_str = "(OPERATOR: "
         op_str += _op_signature(op)
         op_str += ")"
