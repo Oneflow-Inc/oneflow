@@ -1144,7 +1144,7 @@
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
     Int32List padding_before, Int32List padding_after,
-    String data_format="channels_first", Bool ceil_mode=False) => AvgPool2D'
+    String data_format="channels_first", Bool ceil_mode=False) => TFAvgPool2D'
   bind_python: True
 
 - name: "ctc_loss_grad"
