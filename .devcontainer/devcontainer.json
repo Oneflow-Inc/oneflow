@@ -25,6 +25,8 @@
 		"source=${localWorkspaceFolder}/devcontainer-cache/dot/ccache,target=/root/.ccache,type=bind,consistency=cached",
 		"source=${localWorkspaceFolder}/devcontainer-cache/dot/local,target=/root/.local,type=bind,consistency=cached",
 		"source=${localWorkspaceFolder}/devcontainer-cache/dot/cache,target=/root/.cache,type=bind,consistency=cached",
+		"source=/dataset,target=/dataset,type=bind,consistency=cached,readonly",
+		"source=/model_zoo,target=/model_zoo,type=bind,consistency=cached,readonly",
 	],
 	// Set *default* container specific settings.json values on container create.
 	"settings": {
