@@ -18,10 +18,13 @@ from collections import OrderedDict
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.framework.tensor import Tensor
 from string import Template
+import google.protobuf as protobuf
 
 def operators_repr(ops):
     r"""Generate operators' string representation
     """
+    assert isinstance(ops, protobuf.pyext._message.RepeatedCompositeContainer)
+    
     def _op_signature(op):
         signature_template = Template(op.name + "($input) -> ($output)")
         input_sig_str = "..."
