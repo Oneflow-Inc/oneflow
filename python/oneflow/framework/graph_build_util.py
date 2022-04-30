@@ -47,9 +47,14 @@ def graph_build_context(config_proto, session):
         False,  # is_mirrored
     )
 
+    # currently in proto buffer, only module_conf can save the operator's info
+    # so we make a fake module block to save the operators' info of this graph
+    fake_module_block_for_graph = ModuleBlock("", config_proto.job_name())
+    graph_scope = make_new_block_scope(new_scope, fake_module_block_for_graph)
+
     with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
-            with BlockScopeContext(prev_scope, new_scope):
+            with BlockScopeContext(prev_scope, graph_scope):
                 yield
 
 
