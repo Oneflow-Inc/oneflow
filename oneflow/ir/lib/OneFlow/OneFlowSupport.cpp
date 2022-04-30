@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
-
 namespace mlir {
 
 namespace oneflow {
