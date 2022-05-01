@@ -22,8 +22,8 @@ oneflow_add_mlir_dialect_library(
   OneFlowOps.cpp
   OneFlowOpTraits.cpp
   OneFlowSupport.cpp
-  Conversion/OneFlowToFunc.cpp
-  Conversion/OneFlowToTosa.cpp
+	Conversion/OneFlowToFunc/OneFlowToFunc.cpp
+	Conversion/OneFlowToTosa/OneFlowToTosa.cpp
   Conversion/SCFToGPU.cpp
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp

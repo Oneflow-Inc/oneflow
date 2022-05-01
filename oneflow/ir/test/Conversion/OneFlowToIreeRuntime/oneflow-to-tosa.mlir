@@ -1,4 +1,3 @@
-
 //RUN: oneflow-opt -lower-oneflow-to-tosa %s | \
 //RUN: ireec --iree-mlir-to-vm-bytecode-module --iree-input-type=tosa --iree-hal-target-backends=dylib-llvm-aot | \
 //RUN: iree-run-module --entry_function=main --function_input="2x2xf32=-1. 0. 1. 2." --driver=dylib | \

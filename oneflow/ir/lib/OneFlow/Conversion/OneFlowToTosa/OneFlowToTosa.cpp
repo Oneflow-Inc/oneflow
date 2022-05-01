@@ -86,7 +86,6 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
   }
 };
 
-    // %1 = "oneflow.relu"(%y) {device_name = ["@0:0"], device_tag = "cpu", hierarchy = [1], op_name = "relu-7", output_lbns = ["relu-7/y_0"], scope_symbol_id = 4611686018427416575 : i64} : (tensor<16x64x112x112xf32>) -> tensor<16x64x112x112xf32>
 struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
  public:
   using OpConversionPattern<ReluOp>::OpConversionPattern;
@@ -96,28 +95,24 @@ struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
     auto intMax = std::numeric_limits<long long>::max();
     rewriter.replaceOpWithNewOp<tosa::ReluNOp>(op,
                                                /* output */ op.y().getType(),
-                                               /* input */ op.x(),
-                                               static_cast<uint64_t>(intMax),
+                                               /* input */ op.x(), static_cast<uint64_t>(intMax),
                                                static_cast<::llvm::APFloat>(floatMax));
     return success();
   }
 };
 
-
-  //  ::mlir::Type output, ::mlir::Value input, ::mlir::ArrayAttr kernel, ::mlir::ArrayAttr stride, ::mlir::ArrayAttr pad);
-  // TODO
+//  ::mlir::Type output, ::mlir::Value input, ::mlir::ArrayAttr kernel, ::mlir::ArrayAttr stride,
+//  ::mlir::ArrayAttr pad);
+// TODO
 struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
  public:
   using OpConversionPattern<MaxPool2DOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(MaxPool2DOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     rewriter.replaceOpWithNewOp<tosa::MaxPool2dOp>(op,
-                                               /* output */ op.y().getType(),
-                                               /* input */ op.x(),
-                                               op.kernel_size(),
-                                               op.stride(),
-                                               op.padding()
-                                               );
+                                                   /* output */ op.y().getType(),
+                                                   /* input */ op.x(), op.kernel_size(),
+                                                   op.stride(), op.padding());
 
     return success();
   }
