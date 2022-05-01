@@ -108,6 +108,13 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
+
+		auto a = op.a().getType().cast<RankedTensorType>();
+		auto b = op.b().getType().cast<RankedTensorType>();
+
+		if(a.getElementType() != b.getElementType()) {
+			return op.emitError("Matmul coversion mismatched element type error...");
+		}
     rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op, op.out().getType(), op.a(), op.b());
     return success();
   }
@@ -154,6 +161,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
   patterns.insert<ReluOpLowering>(&getContext());
+  patterns.insert<MatmulOpLowering>(&getContext());
   patterns.insert<NormalizationOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
