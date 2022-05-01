@@ -663,7 +663,7 @@ class Graph(object):
 
             >>> import oneflow as flow
             >>> @flow.nn.Graph.to_graph
-            >>> def test_func(x):
+            ... def test_func(x):
             ...     return x * 2
             >>> input = flow.tensor((1, 2), dtype=flow.float32)
             >>> out = test_func(input)
