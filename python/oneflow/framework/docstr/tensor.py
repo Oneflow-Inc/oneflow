@@ -199,7 +199,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.new_empty,
     """
-    Tensor.new_empty(size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+    Tensor.new_empty(*size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
 
     Returns a Tensor of size :attr:`size` filled with uninitialized data. By default, the returned Tensor has the same :attr:`flow.dtype` and :attr:`flow.device` as this tensor.
 
