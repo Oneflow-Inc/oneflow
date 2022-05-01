@@ -679,7 +679,7 @@ class ExpandDimsFunctor {
     const int32_t ndim = input->shape()->NumAxes();
     CHECK_OR_RETURN(-(ndim + 1) <= dim && dim <= ndim)
         << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-        << -(ndim + 1) << ", " << ndim << "], but got: " << dim << ")";
+        << -(ndim + 1) << ", " << ndim << "], but got " << dim << ")";
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
@@ -745,8 +745,8 @@ class RollFunctor {
     } else {
       actual_dims.emplace_back(-1);
     }
-    CHECK_GE_OR_RETURN(shifts.size(), actual_dims.size())
-        << Error::RuntimeError() << "The `shifts` and `dims` parameters should have the same size.";
+    CHECK_EQ_OR_RETURN(shifts.size(), actual_dims.size())
+        << Error::RuntimeError() << "The shifts and dims parameters should have the same size.";
     JUST(attrs.SetAttr<std::vector<int32_t>>("dims", actual_dims));
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -785,7 +785,7 @@ class DimGatherFunctor {
     CHECK_EQ_OR_RETURN(sparse_grad, false) << "Only support bool = False for now!";
     CHECK_LT_OR_RETURN(dim, index->ndim())
         << Error::RuntimeError()
-        << "Value of dim is out of range(dim should be less than len(index.shape))";
+        << "Value of dim is out of range (dim should be less than len(index.shape))";
     CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
         << Error::RuntimeError() << "Dimensions of input and index should equal";
 
@@ -1189,16 +1189,16 @@ class NarrowFunctor {
                                 << "narrow() cannot be applied to a 0-dim tensor.";
     CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim - 1))
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << ", " << ndim - 1 << "], but got:" << dim << ")";
+        << ", " << ndim - 1 << "], but got " << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
     const int64_t dim_length = input->shape()->At(narrow_dim);
     CHECK_OR_RETURN((-dim_length <= start) && (start <= dim_length - 1))
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << ", " << ndim - 1 << "], but got:" << start << ")";
+        << ", " << ndim - 1 << "], but got " << start << ")";
     if (narrow_start < 0) { narrow_start += ndim; }
     CHECK_GE_OR_RETURN(dim_length, narrow_start + length)
         << Error::RuntimeError() << "start (" << narrow_start << ") + length (" << length
-        << ") exceeds dimension size (" << dim_length << ").";
+        << ") exceeds dimension size (" << dim_length << ")";
 
     if (view::IsViewApplicable(input)) {
       return JUST(view::Narrow(input, narrow_dim, narrow_start, length));
@@ -1789,16 +1789,10 @@ class DiagonalFunctor {
                            const int32_t& dim1, const int32_t& dim2) const {
     int64_t ndims = x->shape()->NumAxes();
 
-    CHECK_GE_OR_RETURN(dim1, -ndims)
+    CHECK_OR_RETURN(dim1 >= -ndims && dim1 < ndims)
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndims
         << ", " << ndims - 1 << "], but got " << dim1 << ")";
-    CHECK_LT_OR_RETURN(dim1, ndims)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndims
-        << ", " << ndims - 1 << "], but got " << dim1 << ")";
-    CHECK_GE_OR_RETURN(dim2, -ndims)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndims
-        << ", " << ndims - 1 << "], but got " << dim2 << ")";
-    CHECK_LT_OR_RETURN(dim2, ndims)
+    CHECK_OR_RETURN(dim2 >= -ndims && dim2 < ndims)
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndims
         << ", " << ndims - 1 << "], but got " << dim2 << ")";
 
@@ -1871,7 +1865,8 @@ class TensorGetItemFunctor {
       expand_input = JUST(functional::ExpandDims(expand_input, dim + i));
     }
     int64_t ndims = expand_input->shape()->NumAxes();
-    CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
+    CHECK_EQ_OR_RETURN(slice_indices.size(), ndims)
+        << Error::RuntimeError() << "Failed to prepare slice indices.";
     Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
 
     std::vector<int64_t> start(ndims), end(ndims), step(ndims);
@@ -1922,7 +1917,8 @@ class TensorSetItemFunctor {
       slice_indices = *JUST(RemoveExpandDimSlice(slice_indices, expand_dims));
     }
     int64_t ndims = x->shape()->NumAxes();
-    CHECK_EQ_OR_RETURN(slice_indices.size(), ndims) << "Failed to prepare slice indices.";
+    CHECK_EQ_OR_RETURN(slice_indices.size(), ndims)
+        << Error::RuntimeError() << "Failed to prepare slice indices.";
     // Not support combined indexing now
     if (!tensor_indices.empty()) {
       CHECK_OR_RETURN(tensor_indices.size() == ndims
@@ -2192,7 +2188,8 @@ class SplitFunctor {
     int64_t axis = dim;
     if (axis < 0) { axis += x->ndim(); }
     CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
-        << Error::IndexError() << "The dim " << dim << " is out of bound " << x->ndim() - 1;
+        << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+        << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis << ")";
     CHECK_GE_OR_RETURN(split_size_or_sections, 0)
         << Error::RuntimeError() << "split expects split_size be non-negative, but got split_size="
         << split_size_or_sections;
@@ -2237,7 +2234,7 @@ class ChunkFunctor {
     CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError()
                               << "chunk expects at least a 1-dimensional tensor.";
     CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError()
-                                << "chunk expects `chunks` to be greater than 0, got: " << chunks;
+                                << "chunk expects `chunks` to be greater than 0, got " << chunks;
     CHECK_OR_RETURN(-ndim <= dim && dim <= (ndim - 1))
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
         << ", " << ndim - 1 << "], but got " << dim << ")";
@@ -2292,7 +2289,8 @@ class SplitWithSizeFunctor {
     int64_t axis = dim;
     if (axis < 0) { axis += x->ndim(); }
     CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
-        << Error::IndexError() << "The dim " << dim << " is out of bound " << x->ndim() - 1;
+        << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+        << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis << ")";
     int64_t dim_size = x->shape()->At(axis);
     int64_t num_splits = split_size_or_sections.size();
     TensorTuple splits(num_splits);
@@ -2401,8 +2399,9 @@ class MeshgridFunctor {
  public:
   Maybe<TensorTuple> operator()(const TensorTuple& tensors, const std::string& indexing) const {
     int size = tensors.size();
+    printf("%d\n", size);
     CHECK_GT_OR_RETURN(size, 0) << Error::RuntimeError()
-                                << "meshgrid expects a non-empty TensorList";
+                                << "Meshgrid expects a non-empty TensorList.";
     for (int i = 0; i < size - 1; ++i) {
       const auto& cur_tensor = JUST(VectorAt(tensors, i));
       const auto& next_tensor = JUST(VectorAt(tensors, i + 1));
@@ -2439,7 +2438,7 @@ class MeshgridFunctor {
     DimVector grids_vec(size);
     for (int i = 0; i < size; ++i) {
       CHECK_LE_OR_RETURN(tensor_consts[i]->shape()->NumAxes(), 1)
-          << Error::RuntimeError() << "Expected scalar or 1D tensor in the tensor list but got: "
+          << Error::RuntimeError() << "Expected scalar or 1D tensor in the tensor list but got "
           << tensor_consts[i]->shape()->NumAxes();
       if (tensor_consts[i]->shape()->NumAxes() == 0) {
         grids_vec[i] = 1;
