@@ -118,8 +118,8 @@ void TestElementwiseBinary(DeviceManagerRegistry* registry,
 
 template<BinaryOp binary_op, DataType src_data_type, typename Src, DataType dst_data_type,
          typename Dst>
-void TestBroadcastBinary(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
-                         bool is_broadcast) {
+void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
+                                    const std::set<DeviceType>& device_types, bool is_broadcast) {
   const int num_axes = 4;
   const int a_dim0 = 2;
   const int a_dim1 = 3;
@@ -151,6 +151,10 @@ void TestBroadcastBinary(DeviceManagerRegistry* registry, const std::set<DeviceT
   } else if (binary_op == BinaryOp::kMul) {
     c = (a.broadcast(a_broadcast) * b.broadcast(b_broadcast)).template cast<Dst>();
   } else if (binary_op == BinaryOp::kDiv) {
+    Eigen::Tensor<Src, 4, Eigen::RowMajor> constant_1(b_dim0, b_dim1, b_dim2, b_dim3);
+    constant_1.setConstant(static_cast<Src>(1));
+    // avoid div 0
+    b += constant_1;
     c = (a.broadcast(a_broadcast) / b.broadcast(b_broadcast)).template cast<Dst>();
   } else if (binary_op == BinaryOp::kMax) {
     c = (a.broadcast(a_broadcast).cwiseMax(b.broadcast(b_broadcast))).template cast<Dst>();
@@ -222,8 +226,6 @@ void TestBroadcastBinary(DeviceManagerRegistry* registry, const std::set<DeviceT
                                                                                   c.size());
     Eigen::Map<Eigen::Matrix<Dst, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
         reinterpret_cast<Dst*>(output.ptr()), c.size());
-
-    ASSERT_TRUE(eigen_out.template isApprox(of_out));
     if (!eigen_out.template isApprox(of_out)) {
       LOG(ERROR) << " assert false";
       std::cout << "a " << a << std::endl;
@@ -232,76 +234,59 @@ void TestBroadcastBinary(DeviceManagerRegistry* registry, const std::set<DeviceT
       std::cout << "out " << *reinterpret_cast<Dst*>(output.ptr()) << std::endl;
       std::cout << "of out " << of_out << std::endl;
       std::cout << "eigen out " << eigen_out << std::endl;
+      auto diff = eigen_out - of_out;
+      std::cout << "diff " << diff << std::endl;
     }
+    ASSERT_TRUE(eigen_out.template isApprox(of_out, static_cast<Dst>(0.001)));
   }
 }
 
-template<BinaryOp binary_op, size_t m, size_t n>
+template<BinaryOp binary_op>
 void TestComputeBinary(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
-  // TestElementwiseBinary<binary_op, DataType::kDouble, double, DataType::kDouble, double, 16, 8>(
-  //    registry, device_types);
-  // TestElementwiseBinary<binary_op, DataType::kFloat, float, DataType::kFloat, float, 16, 8>(
-  //    registry, device_types);
-  // TestElementwiseBinary<binary_op, DataType::kFloat16, Eigen::half, DataType::kFloat16,
-  // Eigen::half,
-  //                      16, 8>(registry, device_types);
-  TestBroadcastBinary<binary_op, DataType::kFloat, float, DataType::kFloat, float>(
+  TestElementwiseBroadcastBinary<binary_op, DataType::kDouble, double, DataType::kDouble, double>(
       registry, device_types, true);
-  TestBroadcastBinary<binary_op, DataType::kFloat, float, DataType::kFloat, float>(
+  TestElementwiseBroadcastBinary<binary_op, DataType::kDouble, double, DataType::kDouble, double>(
       registry, device_types, false);
-  TestBroadcastBinary<binary_op, DataType::kFloat16, Eigen::half, DataType::kFloat16, Eigen::half>(
+  TestElementwiseBroadcastBinary<binary_op, DataType::kFloat, float, DataType::kFloat, float>(
       registry, device_types, true);
-  TestBroadcastBinary<binary_op, DataType::kFloat16, Eigen::half, DataType::kFloat16, Eigen::half>(
+  TestElementwiseBroadcastBinary<binary_op, DataType::kFloat, float, DataType::kFloat, float>(
       registry, device_types, false);
+  TestElementwiseBroadcastBinary<binary_op, DataType::kFloat16, Eigen::half, DataType::kFloat16,
+                                 Eigen::half>(registry, device_types, true);
+  TestElementwiseBroadcastBinary<binary_op, DataType::kFloat16, Eigen::half, DataType::kFloat16,
+                                 Eigen::half>(registry, device_types, false);
 }
 
-template<BinaryOp binary_op, size_t m, size_t n>
+template<BinaryOp binary_op>
 void TestLogicalBinary(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
-  // TestElementwiseBinary<binary_op, DataType::kDouble, double, DataType::kBool, bool, 16, 8>(
-  //    registry, device_types);
-  // TestElementwiseBinary<binary_op, DataType::kFloat, float, DataType::kBool, bool, 16, 8>(
-  //    registry, device_types);
-  // TestElementwiseBinary<binary_op, DataType::kFloat16, Eigen::half, DataType::kBool, bool, 16,
-  // 8>(
-  //    registry, device_types);
-  TestBroadcastBinary<binary_op, DataType::kDouble, double, DataType::kBool, bool>(
+  TestElementwiseBroadcastBinary<binary_op, DataType::kDouble, double, DataType::kBool, bool>(
       registry, device_types, true);
-  TestBroadcastBinary<binary_op, DataType::kDouble, double, DataType::kBool, bool>(
+  TestElementwiseBroadcastBinary<binary_op, DataType::kDouble, double, DataType::kBool, bool>(
       registry, device_types, false);
-  TestBroadcastBinary<binary_op, DataType::kFloat, float, DataType::kBool, bool>(
+  TestElementwiseBroadcastBinary<binary_op, DataType::kFloat, float, DataType::kBool, bool>(
       registry, device_types, true);
-  TestBroadcastBinary<binary_op, DataType::kFloat, float, DataType::kBool, bool>(
+  TestElementwiseBroadcastBinary<binary_op, DataType::kFloat, float, DataType::kBool, bool>(
       registry, device_types, false);
-  // TestBroadcastBinary<binary_op, DataType::kFloat16, Eigen::half, DataType::kBool, bool>(
-  //    registry, device_types, true);
-  // TestBroadcastBinary<binary_op, DataType::kFloat16, Eigen::half, DataType::kBool, bool>(
-  //    registry, device_types, false);
 }
 
 }  // namespace
 
 TEST_F(PrimitiveTest, TestBinary) {
-  TestComputeBinary<BinaryOp::kAdd, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestComputeBinary<BinaryOp::kSub, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestComputeBinary<BinaryOp::kMul, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestComputeBinary<BinaryOp::kDiv, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestComputeBinary<BinaryOp::kMax, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestComputeBinary<BinaryOp::kMin, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestLogicalBinary<BinaryOp::kEqual, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestLogicalBinary<BinaryOp::kNotEqual, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestLogicalBinary<BinaryOp::kLessThan, 16, 8>(&device_manager_registry_, available_device_types_);
-  TestLogicalBinary<BinaryOp::kLessEqual, 16, 8>(&device_manager_registry_,
-                                                 available_device_types_);
-  TestLogicalBinary<BinaryOp::kGreaterThan, 16, 8>(&device_manager_registry_,
-                                                   available_device_types_);
-  TestLogicalBinary<BinaryOp::kGreaterEqual, 16, 8>(&device_manager_registry_,
-                                                    available_device_types_);
-  TestLogicalBinary<BinaryOp::kLogicalAnd, 16, 8>(&device_manager_registry_,
-                                                  available_device_types_);
-  TestLogicalBinary<BinaryOp::kLogicalOr, 16, 8>(&device_manager_registry_,
-                                                 available_device_types_);
-  TestLogicalBinary<BinaryOp::kLogicalXor, 16, 8>(&device_manager_registry_,
-                                                  available_device_types_);
+  TestComputeBinary<BinaryOp::kAdd>(&device_manager_registry_, available_device_types_);
+  TestComputeBinary<BinaryOp::kSub>(&device_manager_registry_, available_device_types_);
+  TestComputeBinary<BinaryOp::kMul>(&device_manager_registry_, available_device_types_);
+  TestComputeBinary<BinaryOp::kDiv>(&device_manager_registry_, available_device_types_);
+  TestComputeBinary<BinaryOp::kMax>(&device_manager_registry_, available_device_types_);
+  TestComputeBinary<BinaryOp::kMin>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kEqual>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kNotEqual>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kLessThan>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kLessEqual>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kGreaterThan>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kGreaterEqual>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kLogicalAnd>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kLogicalOr>(&device_manager_registry_, available_device_types_);
+  TestLogicalBinary<BinaryOp::kLogicalXor>(&device_manager_registry_, available_device_types_);
 }
 
 }  // namespace test
