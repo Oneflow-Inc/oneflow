@@ -25,41 +25,41 @@ namespace one {
 
 namespace {
 
-struct AvgPoolingCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  size_t input_index;
+struct AvgPoolCaptureState : public AutoGradCaptureState {
+  bool requires_grad = false;
+  size_t input_index = 0;
 
   std::string data_format;
   std::vector<int32_t> padding;
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> stride;
-  bool ceil_mode;
-  bool count_include_pad;
-  int32_t divisor_override;
+  bool ceil_mode = false;
+  bool count_include_pad = false;
+  int32_t divisor_override = 0;
 };
 
-class AvgPoolingNdGrad : public OpExprGradFunction<AvgPoolingCaptureState> {
+class AvgPoolNdGrad : public OpExprGradFunction<AvgPoolCaptureState> {
  public:
-  virtual ~AvgPoolingNdGrad() = default;
+  virtual ~AvgPoolNdGrad() = default;
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(AvgPoolingCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(AvgPoolCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const AvgPoolingCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const AvgPoolCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
 };
 
-Maybe<void> AvgPoolingNdGrad::Init(const OpExpr& op) {
+Maybe<void> AvgPoolNdGrad::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingCaptureState* ctx, const TensorTuple& inputs,
-                                      const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> AvgPoolNdGrad::Capture(AvgPoolCaptureState* ctx, const TensorTuple& inputs,
+                                   const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -77,8 +77,8 @@ Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingCaptureState* ctx, const TensorT
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingCaptureState* ctx, const TensorTuple& out_grads,
-                                    TensorTuple* in_grads) const {
+Maybe<void> AvgPoolNdGrad::Apply(const AvgPoolCaptureState* ctx, const TensorTuple& out_grads,
+                                 TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
@@ -86,8 +86,8 @@ Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingCaptureState* ctx, const Ten
   const auto& input = ctx->SavedTensors().at(ctx->input_index);
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::AvgPoolingNdGrad(
-      input, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size, ctx->stride,
+  (*in_grads)[0] = JUST(functional::AvgPoolNdGrad(
+      input, out_grads[0], ndims, ctx->data_format, ctx->padding, ctx->kernel_size, ctx->stride,
       ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
 
   return Maybe<void>::Ok();
@@ -95,9 +95,9 @@ Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingCaptureState* ctx, const Ten
 
 }  // namespace
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_1d", AvgPoolingNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_2d", AvgPoolingNdGrad);
-REGISTER_OP_EXPR_GRAD_FUNCTION("avgpool_3d", AvgPoolingNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_1d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_2d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_3d", AvgPoolNdGrad);
 
 }  // namespace one
 }  // namespace oneflow
