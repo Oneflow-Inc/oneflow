@@ -17,10 +17,7 @@ import warnings
 from typing import Optional
 
 import oneflow as flow
-import oneflow._oneflow_internal
-from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_inplace_valid
 
 
 class PReLU(Module):
@@ -116,8 +113,6 @@ class ReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
         return flow._C.relu(x, self.inplace)
 
     def extra_repr(self):
@@ -321,8 +316,6 @@ class CELU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            _check_inplace_valid(x)
         return flow._C.celu(x, alpha=self.alpha, inplace=self.inplace)
 
     def extra_repr(self):
