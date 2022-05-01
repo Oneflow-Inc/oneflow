@@ -32,12 +32,12 @@ namespace test {
 namespace {
 
 template<typename T>
-Scalar GetScalar(T value) {
+Scalar GetScalar(const T& value) {
   return Scalar(value);
 }
 
 template<>
-Scalar GetScalar<Eigen::half>(Eigen::half value) {
+Scalar GetScalar<Eigen::half>(const Eigen::half& value) {
   return Scalar(static_cast<float>(value));
 }
 
