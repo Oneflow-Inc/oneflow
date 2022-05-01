@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <cstdint>
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/user/kernels/avg_pooling_kernel_util.h"
+#include "oneflow/user/kernels/avg_pool_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -121,79 +121,79 @@ __launch_bounds__(kBlockSize) __global__ void DoCUDAAvgPool3dBackward(
 };
 
 template<typename T, typename IDX>
-struct AvgPoolingKernelUtil<DeviceType::kCUDA, T, IDX> {
+struct AvgPoolKernelUtil<DeviceType::kCUDA, T, IDX> {
   static void Avgpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest,
-                               const AvgPoolingParams3D& params_3d) {
+                               const AvgPoolParams3D& params_3d) {
     DoCUDAAvgPool1dForward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, params_3d.padding()[2], params_3d.num_batch(),
-        params_3d.num_channel(), params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[2],
+        params_3d.num_channel(), params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[2],
         params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
   static void Avgpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const AvgPoolingParams3D& params_3d) {
+                                const AvgPoolParams3D& params_3d) {
     DoCUDAAvgPool1dBackward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, params_3d.padding()[2], params_3d.num_batch(),
-        params_3d.num_channel(), params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[2],
+        params_3d.num_channel(), params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[2],
         params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
   static void Avgpool2dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                const IDX elem_num, const T* src, T* dest,
-                               const AvgPoolingParams3D& params_3d) {
+                               const AvgPoolParams3D& params_3d) {
     DoCUDAAvgPool2dForward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
         params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
-        params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[1],
-        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
-        params_3d.count_include_pad(), params_3d.divisor_override());
+        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.count_include_pad(),
+        params_3d.divisor_override());
   }
 
   static void Avgpool2dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const AvgPoolingParams3D& params_3d) {
+                                const AvgPoolParams3D& params_3d) {
     DoCUDAAvgPool2dBackward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
         params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
-        params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[1],
-        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
-        params_3d.count_include_pad(), params_3d.divisor_override());
+        params_3d.GetXShape5D().At(4), params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[1], params_3d.stride_3d()[2], params_3d.count_include_pad(),
+        params_3d.divisor_override());
   }
 
   static void Avgpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest,
-                               const AvgPoolingParams3D& params_3d) {
+                               const AvgPoolParams3D& params_3d) {
     DoCUDAAvgPool3dForward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, params_3d.padding()[0], params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-        params_3d.pooling_size_3d()[0], params_3d.pooling_size_3d()[1],
-        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
-        params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
+        params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[0], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
   static void Avgpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const AvgPoolingParams3D& params_3d) {
+                                const AvgPoolParams3D& params_3d) {
     DoCUDAAvgPool3dBackward<T, IDX><<<GetNumBlocks(elem_num), GetMinThreadNum(elem_num), 0,
                                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
         index_helper, elem_num, src, dest, params_3d.padding()[0], params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-        params_3d.pooling_size_3d()[0], params_3d.pooling_size_3d()[1],
-        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
-        params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
+        params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2],
+        params_3d.stride_3d()[0], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.count_include_pad(), params_3d.divisor_override());
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_AVG_POOLING_KERNEL_UTIL, (DeviceType::kCUDA),
-                                 AVG_POOLING_DATA_TYPE_CUDA_SEQ, AVG_POOLING_IDX_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_AVG_POOL_KERNEL_UTIL, (DeviceType::kCUDA),
+                                 AVG_POOL_DATA_TYPE_CUDA_SEQ, AVG_POOL_IDX_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
