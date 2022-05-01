@@ -50,9 +50,8 @@ class FuseInstructionType : public vm::InstructionType {
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
-      OF_PROFILER_RANGE_PUSH("F:" + instr_msg->DebugName());
+      OF_PROFILER_RANGE_GUARD("F:" + instr_msg->DebugName());
       instr_msg->instr_type_id().instruction_type().ComputeInFuseMode(instr_msg);
-      OF_PROFILER_RANGE_POP();
     }
   }
 };
