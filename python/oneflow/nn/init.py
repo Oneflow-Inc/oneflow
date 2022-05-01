@@ -36,7 +36,7 @@ def normal_(tensor, mean=0.0, std=1.0):
 def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
@@ -64,7 +64,7 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
 def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
@@ -117,7 +117,7 @@ def kaiming_uniform_(
 ):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
@@ -154,7 +154,7 @@ def kaiming_normal_(
 ):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
     
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
