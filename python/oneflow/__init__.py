@@ -363,7 +363,6 @@ from oneflow.nn.modules.random_ops import randperm_op as randperm
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
-from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.slice import logical_slice_op as logical_slice
 from oneflow.nn.modules.sort import sort_op as sort
