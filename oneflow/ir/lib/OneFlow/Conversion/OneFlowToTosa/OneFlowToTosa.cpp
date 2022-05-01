@@ -101,9 +101,29 @@ struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
   }
 };
 
+
+
+struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
+ public:
+  using OpConversionPattern<MatmulOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op, op.out().getType(), op.a(), op.b());
+    return success();
+  }
+};
+
 //  ::mlir::Type output, ::mlir::Value input, ::mlir::ArrayAttr kernel, ::mlir::ArrayAttr stride,
 //  ::mlir::ArrayAttr pad);
 // TODO
+struct NormalizationOpLowering final : public OpConversionPattern<NormalizationOp> {
+ public:
+  using OpConversionPattern<NormalizationOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(NormalizationOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    return success();
+  }
+};
 struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
  public:
   using OpConversionPattern<MaxPool2DOp>::OpConversionPattern;
@@ -134,7 +154,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
   patterns.insert<ReluOpLowering>(&getContext());
-  patterns.insert<MaxPool2DOpLowering>(&getContext());
+  patterns.insert<NormalizationOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
