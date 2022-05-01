@@ -17,6 +17,7 @@ import os
 import unittest
 from oneflow.test_utils.test_util import GenArgList
 from collections import OrderedDict
+from oneflow.test_utils.automated_test_util import *
 
 import numpy as np
 import oneflow as flow
@@ -409,6 +410,16 @@ class TestTensorIndexing(flow.unittest.TestCase):
         arg_dict["dtype"] = [flow.uint8, flow.int8, flow.int32, flow.int64]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=3, auto_backward=False)
+    def test_advanced_indexing_with_0_size_tensor(test_case):
+        device = random_device()
+        data = torch.arange(8).reshape(2, 2, 2).to(device)
+        ranges = []
+        ranges.append(torch.ones(0, 1).to(torch.int64))
+        ranges.append(torch.zeros(1, 3).to(torch.int64))
+        res = data[ranges]
+        return res
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_indecies_on_different_devices(test_case):
