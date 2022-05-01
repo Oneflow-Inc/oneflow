@@ -31,121 +31,61 @@ namespace test {
 
 namespace {
 
-template<BinaryOp binary_op, DataType src_data_type, typename Src, DataType dst_data_type,
-         typename Dst, size_t m, size_t n>
-void TestElementwiseBinary(DeviceManagerRegistry* registry,
-                           const std::set<DeviceType>& device_types) {
-  using SrcMatrix = Eigen::Matrix<Src, m, n>;
-  using DstMatrix = Eigen::Matrix<Dst, m, n>;
-  SrcMatrix a = SrcMatrix::Random();
-  SrcMatrix b = SrcMatrix::Random() + SrcMatrix::Constant(static_cast<Src>(1));
-  DstMatrix c;
-  std::cout << "a" << a << std::endl;
-  std::cout << "b" << b << std::endl;
-  if (binary_op == BinaryOp::kAdd) {
-    c = (a + b).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kSub) {
-    c = (a - b).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kMul) {
-    c = (a.array() * b.array()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kDiv) {
-    c = (a.array() / b.array()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kMax) {
-    c = (a.array().max(b.array())).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kMin) {
-    c = (a.array().min(b.array())).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kPow) {
-    c = (a.array().pow(b.array())).template cast<Dst>();  // consider nan
-  } else if (binary_op == BinaryOp::kEqual) {
-    c = (a.array() == b.array()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kNotEqual) {
-    c = (a.array() != b.array()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kLessThan) {
-    c = (a.array() < b.array()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kLessEqual) {
-    c = (a.array() <= b.array()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kGreaterThan) {
-    c = (a.array() > b.array()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kGreaterEqual) {
-    c = (a.array() >= b.array()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kLogicalAnd) {
-    c = (a.array().template cast<bool>() && b.array().template cast<bool>()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kLogicalOr) {
-    c = (a.array().template cast<bool>() || b.array().template cast<bool>()).template cast<Dst>();
-  } else if (binary_op == BinaryOp::kLogicalXor) {
-    c = (a.array().template cast<bool>() ^ b.array().template cast<bool>()).template cast<Dst>();
-  }
-  int64_t num_a_dims = 2;
-  std::vector<int64_t> a_dims = {m, n};
-  int64_t num_b_dims = 2;
-  std::vector<int64_t> b_dims = {m, n};
-  int64_t a_size = m * n * sizeof(Src);
-  int64_t b_size = m * n * sizeof(Src);
-  int64_t c_size = m * n * sizeof(Dst);
-  int num_axes = 2;
+template<typename T>
+Scalar GetScalar(T value) {
+  return Scalar(value);
+}
 
-  for (const auto& device_type : device_types) {
-    LOG(ERROR) << "device " << device_type << " dtype " << src_data_type << " binary " << binary_op;
-    auto device = registry->GetDevice(device_type, 0);
-    ep::test::PinnedMemoryGuard input_a(device.get(), a_size);
-    ep::test::PinnedMemoryGuard input_b(device.get(), b_size);
-    std::memcpy(input_a.ptr(), a.data(), a_size);
-    std::memcpy(input_b.ptr(), b.data(), b_size);
-
-    ep::test::PinnedMemoryGuard output(device.get(), c_size);
-    ep::test::DeviceMemoryGuard device_a(device.get(), a_size);
-    ep::test::DeviceMemoryGuard device_b(device.get(), b_size);
-    ep::test::DeviceMemoryGuard device_c(device.get(), c_size);
-    ep::test::StreamGuard stream(device.get());
-    std::unique_ptr<Memcpy> h2d = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kHtoD);
-    std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
-    std::unique_ptr<BroadcastElementwiseBinary> binary =
-        NewPrimitive<BroadcastElementwiseBinaryFactory>(device_type, binary_op, src_data_type,
-                                                        dst_data_type, num_axes);
-    ASSERT_TRUE(d2h.operator bool());
-    ASSERT_TRUE(h2d.operator bool());
-    ASSERT_TRUE(binary.operator bool());
-    h2d->Launch(stream.stream(), device_a.ptr(), input_a.ptr(), a_size);
-    h2d->Launch(stream.stream(), device_b.ptr(), input_b.ptr(), b_size);
-    binary->Launch(stream.stream(), num_a_dims, a_dims.data(), device_a.ptr(), num_b_dims,
-                   b_dims.data(), device_b.ptr(), device_c.ptr());
-    d2h->Launch(stream.stream(), output.ptr(), device_c.ptr(), c_size);
-    CHECK_JUST(stream.stream()->Sync());
-    auto res = Eigen::Map<DstMatrix, Eigen::Unaligned>(reinterpret_cast<Dst*>(output.ptr()), m, n);
-    ASSERT_TRUE(c.template isApprox(res));
-  }
+template<>
+Scalar GetScalar<Eigen::half>(Eigen::half value) {
+  return Scalar(static_cast<float>(value));
 }
 
 template<BinaryOp binary_op, DataType src_data_type, typename Src, DataType dst_data_type,
          typename Dst>
 void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
-                                    const std::set<DeviceType>& device_types, bool is_broadcast) {
+                                    const std::set<DeviceType>& device_types, int test_type) {
   const int num_axes = 4;
-  const int broadcast_dim0 = 2;
+  const int broadcast_dim0 = 16;
   const int broadcast_dim1 = 3;
   const int broadcast_dim2 = 4;
   const int broadcast_dim3 = 8;
-  const int a_dim0 = broadcast_dim0;
-  const int a_dim1 = broadcast_dim1;
-  const int a_dim2 = broadcast_dim2;
-  const int a_dim3 = is_broadcast ? 1 : broadcast_dim3;
-  const int b_dim0 = broadcast_dim0;
-  const int b_dim1 = is_broadcast ? 1 : broadcast_dim1;
-  const int b_dim2 = broadcast_dim2;
-  const int b_dim3 = broadcast_dim3;
-  const int a_broadcast0 = 1;
-  const int a_broadcast1 = 1;
-  const int a_broadcast2 = 1;
-  const int a_broadcast3 = is_broadcast ? broadcast_dim3 : 1;
-  const int b_broadcast0 = 1;
-  const int b_broadcast1 = is_broadcast ? broadcast_dim1 : 1;
-  const int b_broadcast2 = 1;
-  const int b_broadcast3 = 1;
+  bool is_broadcast = false;
+  bool left_scalar = false;
+  bool right_scalar = false;
+  if (test_type == 0) {
+    // do nothing
+  } else if (test_type == 1) {
+    is_broadcast = true;
+  } else if (test_type == 2) {
+    left_scalar = true;
+  } else if (test_type == 3) {
+    right_scalar = true;
+  } else {
+    UNIMPLEMENTED();
+  }
+  const int a_dim0 = left_scalar ? 1 : broadcast_dim0;
+  const int a_dim1 = left_scalar ? 1 : broadcast_dim1;
+  const int a_dim2 = left_scalar ? 1 : broadcast_dim2;
+  const int a_dim3 = left_scalar ? 1 : (is_broadcast ? 1 : broadcast_dim3);
+  const int b_dim0 = right_scalar ? 1 : broadcast_dim0;
+  const int b_dim1 = right_scalar ? 1 : (is_broadcast ? 1 : broadcast_dim1);
+  const int b_dim2 = right_scalar ? 1 : broadcast_dim2;
+  const int b_dim3 = right_scalar ? 1 : broadcast_dim3;
+  const int a_broadcast0 = left_scalar ? broadcast_dim0 : 1;
+  const int a_broadcast1 = left_scalar ? broadcast_dim1 : 1;
+  const int a_broadcast2 = left_scalar ? broadcast_dim2 : 1;
+  const int a_broadcast3 = left_scalar ? broadcast_dim3 : (is_broadcast ? broadcast_dim3 : 1);
+  const int b_broadcast0 = right_scalar ? broadcast_dim0 : 1;
+  const int b_broadcast1 = right_scalar ? broadcast_dim1 : (is_broadcast ? broadcast_dim1 : 1);
+  const int b_broadcast2 = right_scalar ? broadcast_dim2 : 1;
+  const int b_broadcast3 = right_scalar ? broadcast_dim3 : 1;
   const Eigen::array<int, 4> a_broadcast = {a_broadcast0, a_broadcast1, a_broadcast2, a_broadcast3};
   const Eigen::array<int, 4> b_broadcast = {b_broadcast0, b_broadcast1, b_broadcast2, b_broadcast3};
   Eigen::Tensor<Src, 4, Eigen::RowMajor> a(a_dim0, a_dim1, a_dim2, a_dim3);
   Eigen::Tensor<Src, 4, Eigen::RowMajor> b(b_dim0, b_dim1, b_dim2, b_dim3);
-  Eigen::Tensor<Dst, 4, Eigen::RowMajor> c(broadcast_dim0, broadcast_dim1, broadcast_dim2, broadcast_dim3);
+  Eigen::Tensor<Dst, 4, Eigen::RowMajor> c(broadcast_dim0, broadcast_dim1, broadcast_dim2,
+                                           broadcast_dim3);
   a.setRandom();
   b.setRandom();
   if (binary_op == BinaryOp::kAdd) {
@@ -205,7 +145,8 @@ void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
   int64_t c_size = c.size() * sizeof(Dst);
 
   for (const auto& device_type : device_types) {
-    LOG(ERROR) << "device " << device_type << " dtype " << src_data_type << " binary " << binary_op;
+    LOG(ERROR) << "device " << device_type << " dtype " << src_data_type << " binary " << binary_op
+               << " test " << test_type;
     auto device = registry->GetDevice(device_type, 0);
     ep::test::PinnedMemoryGuard input_a(device.get(), a_size);
     ep::test::PinnedMemoryGuard input_b(device.get(), b_size);
@@ -227,8 +168,18 @@ void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
     ASSERT_TRUE(binary.operator bool());
     h2d->Launch(stream.stream(), device_a.ptr(), input_a.ptr(), a_size);
     h2d->Launch(stream.stream(), device_b.ptr(), input_b.ptr(), b_size);
-    binary->Launch(stream.stream(), num_axes, a_dims.data(), device_a.ptr(), num_axes,
-                   b_dims.data(), device_b.ptr(), device_c.ptr());
+    if (left_scalar) {
+      Src a_value = *reinterpret_cast<Src*>(input_a.ptr());
+      binary->Launch(stream.stream(), GetScalar(a_value), num_axes, b_dims.data(), device_b.ptr(),
+                     device_c.ptr());
+    } else if (right_scalar) {
+      Src b_value = *reinterpret_cast<Src*>(input_b.ptr());
+      binary->Launch(stream.stream(), num_axes, a_dims.data(), device_a.ptr(), GetScalar(b_value),
+                     device_c.ptr());
+    } else {
+      binary->Launch(stream.stream(), num_axes, a_dims.data(), device_a.ptr(), num_axes,
+                     b_dims.data(), device_b.ptr(), device_c.ptr());
+    }
     d2h->Launch(stream.stream(), output.ptr(), device_c.ptr(), c_size);
     CHECK_JUST(stream.stream()->Sync());
 
@@ -236,17 +187,6 @@ void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
                                                                                   c.size());
     Eigen::Map<Eigen::Matrix<Dst, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
         reinterpret_cast<Dst*>(output.ptr()), c.size());
-    if (!eigen_out.template isApprox(of_out)) {
-      LOG(ERROR) << " assert false";
-      std::cout << "a " << a << std::endl;
-      std::cout << "b " << b << std::endl;
-      std::cout << "c " << c << std::endl;
-      std::cout << "out " << *reinterpret_cast<Dst*>(output.ptr()) << std::endl;
-      std::cout << "of out " << of_out << std::endl;
-      std::cout << "eigen out " << eigen_out << std::endl;
-      auto diff = eigen_out - of_out;
-      std::cout << "diff " << diff << std::endl;
-    }
     ASSERT_TRUE(eigen_out.template isApprox(of_out));
   }
 }
@@ -256,9 +196,13 @@ template<BinaryOp binary_op, DataType src_data_type, typename Src, DataType dst_
 void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
                                     const std::set<DeviceType>& device_types) {
   TestElementwiseBroadcastBinary<binary_op, src_data_type, Src, dst_data_type, Dst>(
-      registry, device_types, true);
+      registry, device_types, 0);
   TestElementwiseBroadcastBinary<binary_op, src_data_type, Src, dst_data_type, Dst>(
-      registry, device_types, false);
+      registry, device_types, 1);
+  TestElementwiseBroadcastBinary<binary_op, src_data_type, Src, dst_data_type, Dst>(
+      registry, device_types, 2);
+  TestElementwiseBroadcastBinary<binary_op, src_data_type, Src, dst_data_type, Dst>(
+      registry, device_types, 3);
 }
 
 template<BinaryOp binary_op>

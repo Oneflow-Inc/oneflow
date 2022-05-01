@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/softmax.h"
+#include "oneflow/core/ep/include/primitive/log_softmax.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 
 namespace oneflow {
@@ -32,7 +33,7 @@ namespace {
 
 template<DataType data_type, typename T>
 void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
-                 int num_rows, int num_cols) {
+                 int num_rows, int num_cols, bool log_softmax) {
   const int elem_cnt = num_rows * num_cols;
   const int data_size = elem_cnt * sizeof(T);
   Eigen::Tensor<T, 2, Eigen::RowMajor> softmax_in(num_rows, num_cols);
@@ -45,8 +46,7 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
   Eigen::Tensor<T, 2, Eigen::RowMajor> row_buf =
       (softmax_in
        - softmax_in.maximum(reduce_dim).eval().reshape(reduced_shape).broadcast(broadcast_shape));
-  bool log = false;
-  if (log) {
+  if (log_softmax) {
     softmax_out = row_buf
                   - row_buf.exp()
                         .sum(reduce_dim)
@@ -61,7 +61,10 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
   }
 
   for (const auto& device_type : device_types) {
-    if (device_type != DeviceType::kCUDA) { continue; }
+    if (device_type == DeviceType::kCPU && data_type == DataType::kFloat16) {
+      // CPU softmax not support float16
+      continue;
+    }
     auto device = registry->GetDevice(device_type, 0);
     ep::test::PinnedMemoryGuard input(device.get(), data_size);
     ep::test::PinnedMemoryGuard output(device.get(), data_size);
@@ -71,28 +74,44 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
     ep::test::StreamGuard stream(device.get());
     std::unique_ptr<Memcpy> h2d = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kHtoD);
     ASSERT_TRUE(h2d.operator bool());
-    std::unique_ptr<Softmax> softmax = NewPrimitive<SoftmaxFactory>(device_type, data_type);
-    ASSERT_TRUE(softmax.operator bool());
     std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
     ASSERT_TRUE(d2h.operator bool());
     h2d->Launch(stream.stream(), device_in.ptr(), input.ptr(), data_size);
-    softmax->Launch(stream.stream(), num_rows, num_cols, device_in.ptr(), device_out.ptr());
+    if (log_softmax) {
+      std::unique_ptr<LogSoftmax> log_softmax =
+          NewPrimitive<LogSoftmaxFactory>(device_type, data_type);
+      ASSERT_TRUE(log_softmax.operator bool());
+      log_softmax->Launch(stream.stream(), num_rows, num_cols, device_in.ptr(), device_out.ptr());
+    } else {
+      std::unique_ptr<Softmax> softmax = NewPrimitive<SoftmaxFactory>(device_type, data_type);
+      ASSERT_TRUE(softmax.operator bool());
+      softmax->Launch(stream.stream(), num_rows, num_cols, device_in.ptr(), device_out.ptr());
+    }
     d2h->Launch(stream.stream(), output.ptr(), device_out.ptr(), data_size);
     CHECK_JUST(stream.stream()->Sync());
     Eigen::Map<Eigen::Matrix<T, 1, Eigen::Dynamic>, Eigen::Unaligned> eigen_out(softmax_out.data(),
                                                                                 softmax_out.size());
     Eigen::Map<Eigen::Matrix<T, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
         reinterpret_cast<T*>(output.ptr()), softmax_out.size());
-    ASSERT_TRUE(eigen_out.isApprox(of_out, 0.01));
+    ASSERT_TRUE(eigen_out.template isApprox(of_out, static_cast<T>(0.001)));
   }
 }
 
 }  // namespace
 
 TEST_F(PrimitiveTest, TestSoftmax) {
-  TestSoftmax<DataType::kFloat, float>(&device_manager_registry_, available_device_types_, 32, 16);
-  TestSoftmax<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 32,
-                                         16);
+  TestSoftmax<DataType::kFloat, float>(&device_manager_registry_, available_device_types_, 32, 16,
+                                       true);
+  TestSoftmax<DataType::kFloat, float>(&device_manager_registry_, available_device_types_, 32, 16,
+                                       false);
+  TestSoftmax<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 32, 16,
+                                         true);
+  TestSoftmax<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 32, 16,
+                                         false);
+  TestSoftmax<DataType::kFloat16, Eigen::half>(&device_manager_registry_, available_device_types_,
+                                               32, 16, true);
+  TestSoftmax<DataType::kFloat16, Eigen::half>(&device_manager_registry_, available_device_types_,
+                                               32, 16, false);
 }
 
 }  // namespace test

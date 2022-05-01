@@ -237,15 +237,16 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   }
 };
 
-#define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ                               \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool) \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)
+#define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool)
+//  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)
 
 // OneDNN binary op does not support s32
 // CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ
 
 #define CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ \
   CPU_PRIMITIVE_FLOAT16_TYPE_SEQ                           \
+  CPU_PRIMITIVE_FLOAT_TYPE_SEQ                             \
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ                            \
   CPU_PRIMITIVE_INT8_TYPE_SEQ                              \
   CPU_PRIMITIVE_UINT8_TYPE_SEQ                             \
