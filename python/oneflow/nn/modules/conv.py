@@ -259,7 +259,7 @@ class Conv1d(Module):
 
 class Conv2d(Module):
     """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
+    The documentation is referenced from: https://pytorch.org/docs/1.11/generated/torch.nn.Conv2d.html
     
     Applies a 2D convolution over an input signal composed of several input
     planes.
@@ -367,11 +367,56 @@ class Conv2d(Module):
         >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
         >>> output = m(input)
 
-    .. _cross-correlation:
-        https://en.wikipedia.org/wiki/Cross-correlation
-
-    .. _link:
-        https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
+    ..
+        Feature Stage of Operator.
+        - Maintainer List [ ]
+        - Current Stage [ ]
+        - Alpha Stage Check List [ ]
+          - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[ ]
+          - Doc(API Doc must be provided and showed normally on the web page.)[ ]
+          - Functionality and its' Test [ ]
+            - Functionality is highly compatiable with PyTorch 1.11. [ ]
+            - eager local [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+            - graph local [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+          - Exception Handling
+            - Exception Message and Hint must be provided [ ]
+        - Beta Stage Check List [ ]
+          - API(High compatibility with PyTorch 1.11, shouldn't have anything incompatible for a naive reason.)[ ]
+          - Doc(Same standard as Alpha Stage)[ ]
+          - Functionality and its' Test [ ]
+            - eager global [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+            - graph gloal [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+            - CUDA kernel [ ]
+            - CPU kernel [ ]
+            - N nodes M devices [ ]
+          - Exception Handling [ ]
+            - Exception Message and Hint must be provided [ ]
+            - Try you best to do Exception Recovery [ ]
+        - Stable Stage Check List [ ]
+          - API(Same standard as Beta Stage)[ ]
+          - Doc(Same standard as Beta Stage)[ ]
+          - Functionality and its' Test [ ]
+            - fp16 and AMP [ ]
+            - NHWC [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+          - Exception Handling [ ]
     """
 
     def __init__(
