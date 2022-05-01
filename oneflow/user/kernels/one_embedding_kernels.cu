@@ -120,7 +120,7 @@ void ParseAndSetStateInitializerIndex(const std::string& state_initializer,
                                       std::vector<EmbeddingInitializer>* initializer_params,
                                       std::vector<int8_t>* initializer_index) {
   if (line_size == embedding_size) { return; }
-  CHECK(state_initializer != "");
+  CHECK(!state_initializer.empty());
   auto initializers = nlohmann::json::parse(state_initializer);
   CHECK(initializers.is_array());
   const int num_states = line_size / embedding_size - 1;
