@@ -35,14 +35,14 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
                  int num_rows, int num_cols) {
   const int elem_cnt = num_rows * num_cols;
   const int data_size = elem_cnt * sizeof(T);
-  Eigen::Tensor<T, 2> softmax_in(num_rows, num_cols);
-  Eigen::Tensor<T, 2> softmax_out(num_rows, num_cols);
+  Eigen::Tensor<T, 2, Eigen::RowMajor> softmax_in(num_rows, num_cols);
+  Eigen::Tensor<T, 2, Eigen::RowMajor> softmax_out(num_rows, num_cols);
   softmax_in.setRandom();
   Eigen::array<int, 1> reduce_dim = {1};
   Eigen::array<int, 2> reduced_shape = {num_rows, 1};
   Eigen::array<int, 2> broadcast_shape = {1, num_cols};
 
-  Eigen::Tensor<T, 2> row_buf =
+  Eigen::Tensor<T, 2, Eigen::RowMajor> row_buf =
       (softmax_in
        - softmax_in.maximum(reduce_dim).eval().reshape(reduced_shape).broadcast(broadcast_shape));
   bool log = false;
@@ -83,10 +83,7 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
                                                                                 softmax_out.size());
     Eigen::Map<Eigen::Matrix<T, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
         reinterpret_cast<T*>(output.ptr()), softmax_out.size());
-    std::cout << "softmax_out " << eigen_out(0) << std::endl;
-    std::cout << "res " << of_out(0) << std::endl;
-    std::cout << "is equal " << eigen_out.isApprox(of_out, 0.01) << std::endl;
-    // ASSERT_TRUE(eigen_out.isApprox(of_out, 0.01));
+    ASSERT_TRUE(eigen_out.isApprox(of_out, 0.01));
   }
 }
 
