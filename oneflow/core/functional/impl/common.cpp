@@ -58,7 +58,8 @@ Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const in
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
   CHECK_OR_RETURN(IsInplaceValid(x))
-      << "a leaf Tensor that requires grad is being used in an in-place operation.";
+      << Error::RuntimeError()
+      << "a leaf Tensor that requires grad is being used in an in-place operation";
   return Maybe<void>::Ok();
 }
 
