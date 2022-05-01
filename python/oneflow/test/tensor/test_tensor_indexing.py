@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import random
+import os
 import unittest
 from oneflow.test_utils.test_util import GenArgList
 from collections import OrderedDict
@@ -420,6 +420,26 @@ class TestTensorIndexing(flow.unittest.TestCase):
         ranges.append(torch.zeros(1, 3).to(torch.int64))
         res = data[ranges]
         return res
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_indecies_on_different_devices(test_case):
+        x = flow.ones(3, 10)
+        y = flow.ones(3, 10, device=flow.device("cuda:0"))
+
+        x_idx = [flow.tensor([1, 2]), flow.tensor([2, 0], device=flow.device("cuda:0"))]
+        y_idx = [flow.tensor([1, 2], device=flow.device("cuda:0")), flow.tensor([2, 0])]
+
+        test_case.assertTrue(np.allclose(x[x_idx].numpy(), np.array([1, 1])))
+        test_case.assertTrue(np.allclose(y[y_idx].numpy(), np.array([1, 1])))
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestTensorIndexingMultiGpu(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
+    def test_indecies_on_different_devices(test_case):
+        x = flow.ones(3, 10, device=flow.device("cuda:0"))
+        idx = [flow.tensor([1, 2], device=flow.device("cuda:1")), flow.tensor([2, 0])]
+        test_case.assertTrue(np.allclose(x[idx].numpy(), np.array([1, 1])))
 
 
 if __name__ == "__main__":

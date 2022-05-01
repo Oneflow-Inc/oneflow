@@ -62,7 +62,7 @@ class TestConstantPad2d(flow.unittest.TestCase):
 class TestConstantPad3d(flow.unittest.TestCase):
     @autotest(rtol=0.001, atol=0.001)
     def test_constantpad3d_with_random_data(test_case):
-        m = torch.nn.ConstantPad2d(
+        m = torch.nn.ConstantPad3d(
             padding=random(1, 6).to(_size_6_t), value=random().to(float)
         )
         m.train(random())

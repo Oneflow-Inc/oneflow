@@ -1951,7 +1951,19 @@ class TensorGetItemFunctor {
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
-    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
+    if (!tensor_indices.empty()) {
+      const auto x_device = JUST(x->device());
+      for (int64_t i = 0; i < tensor_indices.size(); ++i) {
+        const auto tensor_index = tensor_indices[i];
+        if (tensor_index == nullptr) { continue; }
+        const auto tensor_index_device = JUST(tensor_index->device());
+        if ((tensor_index_device->type() != x_device->type())
+            || (tensor_index_device->device_id() != x_device->device_id())) {
+          tensor_indices[i] = JUST(Copy(tensor_index, x_device->type(), x_device->device_id()));
+        }
+      }
+      result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
+    }
 
     // TODO(): Returns a view of tensor `x`.
     if (result == x) { result = JUST(Identity(x)); }
