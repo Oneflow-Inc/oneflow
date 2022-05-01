@@ -121,27 +121,31 @@ template<BinaryOp binary_op, DataType src_data_type, typename Src, DataType dst_
 void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
                                     const std::set<DeviceType>& device_types, bool is_broadcast) {
   const int num_axes = 4;
-  const int a_dim0 = 2;
-  const int a_dim1 = 3;
-  const int a_dim2 = 4;
-  const int a_dim3 = is_broadcast ? 1 : 8;
-  const int b_dim0 = 2;
-  const int b_dim1 = is_broadcast ? 1 : 3;
-  const int b_dim2 = 4;
-  const int b_dim3 = 8;
+  const int broadcast_dim0 = 2;
+  const int broadcast_dim1 = 3;
+  const int broadcast_dim2 = 4;
+  const int broadcast_dim3 = 8;
+  const int a_dim0 = broadcast_dim0;
+  const int a_dim1 = broadcast_dim1;
+  const int a_dim2 = broadcast_dim2;
+  const int a_dim3 = is_broadcast ? 1 : broadcast_dim3;
+  const int b_dim0 = broadcast_dim0;
+  const int b_dim1 = is_broadcast ? 1 : broadcast_dim1;
+  const int b_dim2 = broadcast_dim2;
+  const int b_dim3 = broadcast_dim3;
   const int a_broadcast0 = 1;
   const int a_broadcast1 = 1;
   const int a_broadcast2 = 1;
-  const int a_broadcast3 = is_broadcast ? 8 : 1;
+  const int a_broadcast3 = is_broadcast ? broadcast_dim3 : 1;
   const int b_broadcast0 = 1;
-  const int b_broadcast1 = is_broadcast ? 3 : 1;
+  const int b_broadcast1 = is_broadcast ? broadcast_dim1 : 1;
   const int b_broadcast2 = 1;
   const int b_broadcast3 = 1;
   const Eigen::array<int, 4> a_broadcast = {a_broadcast0, a_broadcast1, a_broadcast2, a_broadcast3};
   const Eigen::array<int, 4> b_broadcast = {b_broadcast0, b_broadcast1, b_broadcast2, b_broadcast3};
   Eigen::Tensor<Src, 4, Eigen::RowMajor> a(a_dim0, a_dim1, a_dim2, a_dim3);
   Eigen::Tensor<Src, 4, Eigen::RowMajor> b(b_dim0, b_dim1, b_dim2, b_dim3);
-  Eigen::Tensor<Dst, 4, Eigen::RowMajor> c(a_dim0, a_dim1, a_dim2, b_dim3);
+  Eigen::Tensor<Dst, 4, Eigen::RowMajor> c(broadcast_dim0, broadcast_dim1, broadcast_dim2, broadcast_dim3);
   a.setRandom();
   b.setRandom();
   if (binary_op == BinaryOp::kAdd) {
@@ -201,7 +205,6 @@ void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
   int64_t c_size = c.size() * sizeof(Dst);
 
   for (const auto& device_type : device_types) {
-    if (device_type != DeviceType::kCPU) { continue; }
     LOG(ERROR) << "device " << device_type << " dtype " << src_data_type << " binary " << binary_op;
     auto device = registry->GetDevice(device_type, 0);
     ep::test::PinnedMemoryGuard input_a(device.get(), a_size);
