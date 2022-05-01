@@ -592,7 +592,10 @@ class ExpandFunctor {
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     CHECK_GE_OR_RETURN(shape.NumAxes(), x->shape()->NumAxes())
-        << "The desired expanded dims should not be less than the input dims.";
+        << "expand(tensor{" << x->shape()->ToString() << "}, size=" << x->shape()->NumAxes()
+        << "): the number of sizes provided (" << shape.NumAxes() << ") "
+        << "must be greater or equal to the number of dimensions in the tensor ("
+        << x->shape()->NumAxes() << ")";
     std::vector<int32_t> in_shape(x->shape()->NumAxes());
     for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
 
@@ -601,12 +604,18 @@ class ExpandFunctor {
     for (int i = shape.NumAxes() - 1; i >= 0; --i) {
       int index = i - shift;
       if (index >= 0) {
-        if (shape.At(i) != -1 && shape.At(i) != in_shape.at(index)) {
-          CHECK_OR_RETURN(shape.At(i) > 0 && in_shape.at(index) == 1)
-              << "Invalid expand shape " << shape.ToString();
+        if (shape.At(i) != -1 && shape.At(i) != in_shape[index]) {
+          CHECK_OR_RETURN(shape.At(i) >= 0 && in_shape[index] == 1)
+              << "The expanded size of the tensor (" << shape.At(i)
+              << ") must match the existing size (" << in_shape[index]
+              << ") at non-singleton dimension " << i << ".  Target sizes: " << shape.ToString()
+              << ".  Tensor sizes: " << x->shape()->ToString();
         }
       } else {
-        CHECK_GT_OR_RETURN(shape.At(i), 0) << "Invalid expand shape " << shape.ToString();
+        CHECK_GE_OR_RETURN(shape.At(i), 0)
+            << "The expanded size of the tensor (" << shape.At(i)
+            << ") isn't allowed in a leading, non-existing dimension " << i
+            << " .Target size: " << shape.ToString();
       }
     }
 
