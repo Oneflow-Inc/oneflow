@@ -755,7 +755,7 @@ class TestTensor(flow.unittest.TestCase):
         y = torch.ones(dim_size)
         return x.expand_as(y)
 
-    @autotest(n=10, check_graph=True)
+    @autotest(check_graph=True)
     def test_flow_tensor_view_with_random_data(test_case):
         dim0_ = random(2, 4).to(int)
         dim1_ = random(2, 4).to(int)
