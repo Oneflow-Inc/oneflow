@@ -30,7 +30,7 @@ def _nd_sbp2repr(nd_sbp):
             nd_sbp_str += "B"
         elif sbp.HasField("partial_sum_parallel"):
             nd_sbp_str += "P"
-        elif sbp.HasFeild("split_parallel"):
+        elif sbp.HasField("split_parallel"):
             nd_sbp_str += "S(" + str(sbp.split_parallel.axis) + ")"
     nd_sbp_str += ")"
     return nd_sbp_str
@@ -66,7 +66,7 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
         # sub arg repr
         sub_arg_repr_list = []
         for bn_idx in range(len(lbns)):
-            sub_arg_repr_list.append(lbns[bn_idx] + ":" + sub_bns_sbp[bn_idx] + ", " + sub_bns_desc[bn_idx])
+            sub_arg_repr_list.append(lbns[bn_idx] + ":(" + sub_bns_sbp[bn_idx] + ", " + sub_bns_desc[bn_idx] + ")")
 
 
         if len(lbns) > 1:  # arg of multiple tensors

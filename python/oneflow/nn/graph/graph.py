@@ -38,6 +38,7 @@ from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
+    operators_repr,
     seq_to_func_return,
     sys_exc_error_msg,
     IONodeType,
@@ -520,6 +521,9 @@ class Graph(object):
                 mod_str = add_indent(mod_str, 2)
                 child_lines.append(mod_str)
 
+        for op_str in self._ops_repr():
+            child_lines.append(add_indent(op_str, 2))
+
         if len(self._outs_repr) > 0:
             for out_str in self._outs_repr:
                 output_str = add_indent(out_str, 2)
@@ -534,6 +538,18 @@ class Graph(object):
     def _shallow_repr(self):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
+
+    def _ops_repr(self):
+        r"""Generate operators' string representation of this graph 
+        """
+        if self._full_graph_proto is not None:
+            module_conf = self._full_graph_proto.module_name2module_conf[
+                self.name
+            ]
+            return operators_repr(module_conf.ops, self._full_graph_proto)
+
+        return []
+
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level."""

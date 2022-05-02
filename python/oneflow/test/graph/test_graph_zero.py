@@ -91,7 +91,11 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         def one_train_iter():
             out = linear_t_g(x)
             if flow.env.get_rank() == 0:
-                print(linear_t_g)
+                import traceback
+                try:
+                    print(linear_t_g)
+                except:
+                    print(traceback.format_exc())
 
         def one_eval_iter():
             out = linear_e_g(x)
@@ -183,8 +187,8 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         def one_train_iter():
             out = linear_t_g(x)
-            if flow.env.get_rank() == 0:
-                print(linear_t_g)
+            #if flow.env.get_rank() == 0:
+            #    print(linear_t_g)
 
         def one_eval_iter():
             out = linear_e_g(x)
@@ -208,10 +212,10 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestLinearTrainGraphWithZeRO(oneflow.unittest.TestCase):
-    def test_linear_train_graph_with_zero_1(test_case):
+    def _test_linear_train_graph_with_zero_1(test_case):
         _test_linear_train_graph_with_zero(test_case, 1)
 
-    def _test_linear_train_graph_with_zero_2(test_case):
+    def test_linear_train_graph_with_zero_2(test_case):
         _test_linear_train_graph_with_zero(test_case, 2)
 
     def _test_linear_train_graph_with_zero_3(test_case):
