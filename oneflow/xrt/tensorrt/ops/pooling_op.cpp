@@ -25,7 +25,7 @@ namespace xrt {
 namespace tensorrt {
 
 template<nvinfer1::PoolingType pooling_type>
-class PoolingOp : public TrtOpKernel {
+class TFPoolOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext* ctx) override {
     Shape in_shape = ctx->SoleInputShape();
@@ -68,10 +68,10 @@ class PoolingOp : public TrtOpKernel {
   }
 };
 
-REGISTER_TRT_OP_KERNEL(MaxPooling2D, PoolingOp<nvinfer1::PoolingType::kMAX>)
+REGISTER_TRT_OP_KERNEL(TFMaxPool2D, TFPoolOp<nvinfer1::PoolingType::kMAX>)
     .EnableTrainPhase()
     .Finalize();
-REGISTER_TRT_OP_KERNEL(AveragePooling2D, PoolingOp<nvinfer1::PoolingType::kAVERAGE>)
+REGISTER_TRT_OP_KERNEL(TFAvgPool2D, TFPoolOp<nvinfer1::PoolingType::kAVERAGE>)
     .EnableTrainPhase()
     .Finalize();
 
