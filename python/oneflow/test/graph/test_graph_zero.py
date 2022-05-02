@@ -173,7 +173,6 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
             def build(self, x):
                 out = self.linear_dp_mp(x)
-                # out = out.to_global(placement=P, sbp=[B, S0])
                 out = self.linear_mp_dp(out)
                 return out
 

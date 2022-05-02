@@ -209,6 +209,8 @@ void JobBuilder::AddOpToModuleConf(const OperatorConf& op_conf) {
       }
 
       *((*module_name2module_conf)[module_name].add_ops()) = op_conf.name();
+    } else {
+      LOG(INFO) << "op " << op_conf.name() << " has no module name.";
     }
 }
 

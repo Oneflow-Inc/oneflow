@@ -56,7 +56,7 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
             nd_sbp = bn2nd_sbp[sub_bn]
             sub_bns_sbp.append(_nd_sbp2repr(nd_sbp))
 
-        # placement repr
+        # TODO: placement repr
 
         # shape repr and dtype
         sub_bns_desc = []
