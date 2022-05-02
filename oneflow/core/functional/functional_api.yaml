@@ -1255,7 +1255,7 @@
   bind_python: True
 
 - name: "logical_slice_assign"
-  signature: "Void (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
+  signature: "Tensor (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
   bind_python: True
 
 - name: "copy"
