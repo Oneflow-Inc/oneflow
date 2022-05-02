@@ -73,9 +73,9 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();
     const int32_t n = ctx->Attr<int32_t>("n");
+    if (n == 0) { return; }
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int32_t* temp = tmp_buffer->mut_dptr<int32_t>();
-    if (n == 0) { return; }
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();

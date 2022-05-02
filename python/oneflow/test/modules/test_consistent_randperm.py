@@ -52,6 +52,7 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
 
 
 class TestRandpermConsistent(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
     @globaltest
     def test_randperm_consistent(test_case):
         RandNs = [i for i in range(10, 50, 10)]
@@ -80,12 +81,7 @@ class TestRandpermConsistent(flow.unittest.TestCase):
             flow.placement("cuda", ranks=[[0, 1],]),
         ]
         arg_dict["dtype"] = [
-            flow.uint8,
-            flow.int8,
             flow.int32,
-            flow.int64,
-            flow.float32,
-            flow.float64,
         ]
         for args in GenArgDict(arg_dict):
             N = args["N"]
