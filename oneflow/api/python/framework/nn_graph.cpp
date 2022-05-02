@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
 #include <memory>
 #include <string>
@@ -41,6 +42,11 @@ Maybe<py::object> APINNGraphAdditionalVarTensors(const std::shared_ptr<NNGraph>&
   py::list tensor_list = py::cast(tensors);
   return py::cast<py::object>(tensor_list);
 }
+
+Maybe<py::bytes> APINNGraphGetCompiledSerializedJob(const std::shared_ptr<NNGraph>& graph) {
+  const auto job = *JUST(graph->GetCompiledJob());
+  return py::bytes(job.SerializeAsString());
+}
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
@@ -55,7 +61,8 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
            &NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded)
       .def_property_readonly("additional_var_names", &APINNGraphAdditionalVarNames)
       .def_property_readonly("additional_var_tensors", &APINNGraphAdditionalVarTensors)
-      .def("complie_and_init_runtime", &NNGraph::CompileAndInitRuntime);
+      .def("complie_and_init_runtime", &NNGraph::CompileAndInitRuntime)
+      .def("get_compiled_job_str", &APINNGraphGetCompiledSerializedJob);
 
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
