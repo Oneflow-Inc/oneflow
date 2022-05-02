@@ -217,9 +217,9 @@ add_docstr(
 
         >>> import oneflow as flow
 
-        >>> tensor = flow.ones(())
-        >>> tensor.new_empty((2, 3))
-        >>> tensor
+        >>> x = flow.ones(())
+        >>> y = x.new_empty((2, 3))
+        >>> y
         tensor([[0., 0., 0.],
                 [0., 0., 0.]], dtype=oneflow.float32)
     """,
