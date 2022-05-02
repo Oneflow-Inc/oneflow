@@ -16,6 +16,7 @@ limitations under the License.
 import logging
 import os
 import time
+import inspect
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
@@ -645,6 +646,54 @@ class Graph(object):
                     state_config,
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
+
+    @staticmethod
+    def to_graph(func):
+        """ Make a function to do static graph run with nn.Graph.
+
+        After decorating a function with ``to_graph``, the function is turned into a naive `nn.Graph`.
+
+        Note:
+            This is just a quick way to run a simple function with nn.Graph.
+            If you want to do training or model save/load, customize a nn.Graph class instead, donot use ``to_graph``.
+
+        For example:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> @flow.nn.Graph.to_graph
+            ... def test_func(x):
+            ...     return x * 2
+            >>> input = flow.tensor((1, 2), dtype=flow.float32)
+            >>> out = test_func(input)
+            >>> out
+            tensor([2., 4.], dtype=oneflow.float32)
+
+        ..
+            Feature Stage of Feature [to_graph].
+            - Maintainer List [@strint]
+            - Current Stage [Pre-alpha, note that this is an experimental feature and maybe removed without notice.]
+
+        """
+        assert inspect.isfunction(
+            func
+        ), f"nn.Graph.to_graph only support function currently, so {func} must be a function."
+        graph_cls_name = func.__name__ + "_graph"
+
+        def init(self):
+            super(graph_cls_name, self).__init__()
+
+        def build(self, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        graph_cls_name = type(
+            graph_cls_name, (Graph,), {"__init__": init, "build": build,}
+        )
+
+        a_graph = graph_cls_name()
+
+        return a_graph
 
     def _compile(self, *args, **kwargs):
         # Build graph
