@@ -160,11 +160,13 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
         .Split(user_op::OpArg("ref", 0), axis)
         // TODO(jianhao): Support (S(n), S(n)) when axis n is not sliced
         .Broadcast(user_op::OpArg("value", 0))
+        .Split(user_op::OpArg("y", 0), axis)
         .Build();
   }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("ref", 0))
       .PartialSum(user_op::OpArg("value", 0))
+      .PartialSum(user_op::OpArg("y", 0))
       .Build();
   return Maybe<void>::Ok();
 }
@@ -183,6 +185,9 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     CHECK_GT_OR_RETURN(stop, 0) << "logical_slice_assign stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "logical_slice_assign start must be less than stop";
   }
+  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  *y_desc->mut_shape() = ref_desc.shape();
+  *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> LogicalSliceAssignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -192,17 +197,8 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
   CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type());
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> LogicalSliceAssignOp::ModifyInputArg(
-    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
-  user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
-  CHECK_OR_RETURN(ref_modifier != nullptr);
-  ref_modifier->set_is_mutable(true);
-  user_op::InputArgModifier* value_modifier = GetInputArgModifierFn("value", 0);
-  CHECK_OR_RETURN(value_modifier != nullptr);
-  value_modifier->set_requires_grad(false);
+  auto* y_desc = ctx->OutputTensorDesc("y", 0);
+  *y_desc->mut_data_type() = ref_desc.data_type();
   return Maybe<void>::Ok();
 }
 
