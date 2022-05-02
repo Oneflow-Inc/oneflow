@@ -21,19 +21,30 @@ from string import Template
 
 def _nd_sbp2repr(nd_sbp):
     dim_len = len(nd_sbp.sbp_parallel)
-    nd_sbp_str = "("
+    nd_sbp_str = "sbp=("
     for i in range(dim_len):
+        if i > 0:
+            nd_sbp_str += ", "
         sbp = nd_sbp.sbp_parallel[i]
         if sbp.HasField("broadcast_parallel"):
-            nd_sbp_str += "B, "
+            nd_sbp_str += "B"
         elif sbp.HasField("partial_sum_parallel"):
-            nd_sbp_str += "P, "
+            nd_sbp_str += "P"
         elif sbp.HasFeild("split_parallel"):
-            nd_sbp_str += "S(" + str(sbp.split_parallel.axis) + "), "
+            nd_sbp_str += "S(" + str(sbp.split_parallel.axis) + ")"
     nd_sbp_str += ")"
     return nd_sbp_str
 
-def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp):
+def _blob_desc_repr(blob_desc):
+    desc_str = "size=("
+    for i in range(len(blob_desc.shape.dim)):
+        if i > 0:
+            desc_str += ", "
+        desc_str += str(blob_desc.shape.dim[i])
+    desc_str += ")"
+    return desc_str
+
+def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
     arg_repr_list = []
     for bn in ordered_bn:
         lbns = list(bn2lbn[bn].s)
@@ -45,10 +56,17 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp):
             nd_sbp = bn2nd_sbp[sub_bn]
             sub_bns_sbp.append(_nd_sbp2repr(nd_sbp))
 
+        # placement repr
+
+        # shape repr and dtype
+        sub_bns_desc = []
+        for bn_idx in range(len(lbns)):
+            sub_bns_desc.append(_blob_desc_repr(lbn2blob_desc[lbns[bn_idx]]))
+
         # sub arg repr
         sub_arg_repr_list = []
         for bn_idx in range(len(lbns)):
-            sub_arg_repr_list.append(lbns[bn_idx] + ":" + sub_bns_sbp[bn_idx])
+            sub_arg_repr_list.append(lbns[bn_idx] + ":" + sub_bns_sbp[bn_idx] + ", " + sub_bns_desc[bn_idx])
 
 
         if len(lbns) > 1:  # arg of multiple tensors
@@ -59,9 +77,9 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp):
 
     return arg_repr_list
 
-def _get_user_op_io_repr(user_op_conf, bn2nd_sbp):
-    input_sig_str = ", ".join(_get_args_repr(user_op_conf.input_order, user_op_conf.input, bn2nd_sbp))
-    output_sig_str = ", ".join(_get_args_repr(user_op_conf.output_order, user_op_conf.output, bn2nd_sbp))
+def _get_user_op_io_repr(user_op_conf, bn2nd_sbp, lbn2blob_desc):
+    input_sig_str = ", ".join(_get_args_repr(user_op_conf.input_order, user_op_conf.input, bn2nd_sbp, lbn2blob_desc))
+    output_sig_str = ", ".join(_get_args_repr(user_op_conf.output_order, user_op_conf.output, bn2nd_sbp, lbn2blob_desc))
     return input_sig_str, output_sig_str
 
 def _get_var_op_io_repr(var_op_conf, bn2nd_sbp):
@@ -83,13 +101,14 @@ def operators_repr(ops, graph_proto):
 
     def _op_signature(op):
         bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[op.name].bn_in_op2nd_sbp
+        lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
         signature_template = Template(op.name + "($input) -> ($output)")
         input_sig_str = "..."
         output_sig_str = "..."
 
         # Only deal with UserOpConf and VariableOpConf for now.
         if op.HasField("user_conf"):
-            input_sig_str, output_sig_str = _get_user_op_io_repr(op.user_conf, bn2nd_sbp)
+            input_sig_str, output_sig_str = _get_user_op_io_repr(op.user_conf, bn2nd_sbp, lbn2blob_desc)
         elif op.HasField("variable_conf"):
             input_sig_str, output_sig_str = _get_var_op_io_repr(op.variable_conf, bn2nd_sbp)
 
