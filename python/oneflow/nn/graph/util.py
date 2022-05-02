@@ -19,6 +19,60 @@ import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.framework.tensor import Tensor
 from string import Template
 
+def _nd_sbp2repr(nd_sbp):
+    dim_len = len(nd_sbp.sbp_parallel)
+    nd_sbp_str = "("
+    for i in range(dim_len):
+        sbp = nd_sbp.sbp_parallel[i]
+        if sbp.HasField("broadcast_parallel"):
+            nd_sbp_str += "B, "
+        elif sbp.HasField("partial_sum_parallel"):
+            nd_sbp_str += "P, "
+        elif sbp.HasFeild("split_parallel"):
+            nd_sbp_str += "S(" + str(sbp.split_parallel.axis) + "), "
+    nd_sbp_str += ")"
+    return nd_sbp_str
+
+def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp):
+    arg_repr_list = []
+    for bn in ordered_bn:
+        lbns = list(bn2lbn[bn].s)
+
+        # sbp repr
+        sub_bns_sbp = []
+        for bn_idx in range(len(lbns)):
+            sub_bn = bn + "_" + str(bn_idx)
+            nd_sbp = bn2nd_sbp[sub_bn]
+            sub_bns_sbp.append(_nd_sbp2repr(nd_sbp))
+
+        # sub arg repr
+        sub_arg_repr_list = []
+        for bn_idx in range(len(lbns)):
+            sub_arg_repr_list.append(lbns[bn_idx] + ":" + sub_bns_sbp[bn_idx])
+
+
+        if len(lbns) > 1:  # arg of multiple tensors
+            arg_repr_list.append("[" + (", ").join(sub_arg_repr_list) + "]")
+        else:
+            assert len(lbns) == 1
+            arg_repr_list.append(sub_arg_repr_list[0])
+
+    return arg_repr_list
+
+def _get_user_op_io_repr(user_op_conf, bn2nd_sbp):
+    input_sig_str = ", ".join(_get_args_repr(user_op_conf.input_order, user_op_conf.input, bn2nd_sbp))
+    output_sig_str = ", ".join(_get_args_repr(user_op_conf.output_order, user_op_conf.output, bn2nd_sbp))
+    return input_sig_str, output_sig_str
+
+def _get_var_op_io_repr(var_op_conf, bn2nd_sbp):
+    input_sig_str = ""
+    #output_sig_str = op.name + "/" + var_op_conf.out
+    output_sig_str = var_op_conf.out
+    nd_sbp = bn2nd_sbp[var_op_conf.out]
+    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)
+    return input_sig_str, output_sig_str
+
+
 def operators_repr(ops, graph_proto):
     r"""Generate operators' string representation of this module
     """
@@ -28,52 +82,16 @@ def operators_repr(ops, graph_proto):
             op_confs[op_conf.name] = op_conf
 
     def _op_signature(op):
+        bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[op.name].bn_in_op2nd_sbp
         signature_template = Template(op.name + "($input) -> ($output)")
         input_sig_str = "..."
         output_sig_str = "..."
 
-        # only deal with UserOpConf and VariableOpConf for now
+        # Only deal with UserOpConf and VariableOpConf for now.
         if op.HasField("user_conf"):
-            user_conf = op.user_conf
-            input_params = []
-            for param in user_conf.input_order:
-                x = user_conf.input[param].s
-                if len(x) > 1:  # param of multiple tensors
-                    input_params.append("[" + (", ").join(list(x)) + "]")
-                else:
-                    assert len(x) == 1
-                    input_params.append(x[0])
-            input_sig_str = ", ".join(input_params)
-
-            output_params = []
-            for param in user_conf.output_order:
-                x = user_conf.output[param].s
-                if len(x) > 1:
-                    output_params.append("[" + (", ").join(list(x)) + "]")
-                else:
-                    assert len(x) == 1
-                    output_params.append(x[0])
-            output_sig_str = ", ".join(output_params)
-
+            input_sig_str, output_sig_str = _get_user_op_io_repr(op.user_conf, bn2nd_sbp)
         elif op.HasField("variable_conf"):
-            variable_conf = op.variable_conf
-            input_sig_str = ""
-            output_sig_str = op.name + "/" + variable_conf.out
-            len_sbp_dim = len(variable_conf.nd_sbp)
-            #if len_sbp_dim > 0:
-            #    output_sig_str += " : ("
-            #    print("8 ++++++++++++ ")
-            #    for i_sbp in range(len_sbp_dim):
-            #        print("i sbp ", i_sbp)
-            #        sbp = variable_conf.nd_sbp[i]
-            #        if i_sbp > 0:
-            #            output_str += ", "
-            #        print("+++++ sbp ", sbp)
-            #        output_sig_str += sbp
-            #        print("----- sbp ", sbp)
-            #    print("9 ++++++++++++ ")
-            #    output_sig_str += ")"
-            #    print("10 ++++++++++++ ")
+            input_sig_str, output_sig_str = _get_var_op_io_repr(op.variable_conf, bn2nd_sbp)
 
         return signature_template.substitute(input=input_sig_str, output=output_sig_str)
 
