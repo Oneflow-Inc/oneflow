@@ -219,9 +219,8 @@ add_docstr(
 
         >>> x = flow.ones(())
         >>> y = x.new_empty((2, 3))
-        >>> y
-        tensor([[0., 0., 0.],
-                [0., 0., 0.]], dtype=oneflow.float32)
+        >>> y.shape
+        oneflow.Size([2, 3])
     """,
 )
 
