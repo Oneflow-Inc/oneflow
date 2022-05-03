@@ -102,9 +102,9 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
           int size = shape->At(dim);
           int expanded_size = expanded_shape->At(expanded_dim);
           CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << "Cannot broadcast advanced index to size " << std::max(size, expanded_size)
-              << " at dimension " << j << " since the size of another index is not 1.";
-          sizes[j] = std::max(size, expanded_size);
+              << "The size of tensor a (" << size << ") must match the size of tensor b ("
+              << expanded_size << ") at non-singleton dimension " << i;
+          sizes[j] = size == 1 ? expanded_size : size;
         }
       }
       expanded_shape.reset(new Shape(sizes));

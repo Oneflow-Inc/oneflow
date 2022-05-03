@@ -51,23 +51,20 @@ struct LocalCallOpKernelUtil final {
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorageBlobMemory");
+      OF_PROFILER_RANGE_GUARD("TryAllocateTempStorageBlobMemory");
       InferTempStorageBlobDesc(operand);
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
-      OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
-      OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
+      OF_PROFILER_RANGE_GUARD("TryInitOpKernelStateAndCache");
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
-      OF_PROFILER_RANGE_POP();
     }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
+      OF_PROFILER_RANGE_GUARD("DeallocateTempStorageBlobMemory");
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
-      OF_PROFILER_RANGE_POP();
     }
     return Maybe<void>::Ok();
   }
