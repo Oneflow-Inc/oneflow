@@ -218,9 +218,9 @@ add_docstr(
         >>> import oneflow as flow
 
         >>> x = flow.ones(())
-        >>> y = x.new_empty((2, 3))
+        >>> y = x.new_empty((2, 2))
         >>> y.shape
-        oneflow.Size([2, 3])
+        oneflow.Size([2, 2])
     """,
 )
 
