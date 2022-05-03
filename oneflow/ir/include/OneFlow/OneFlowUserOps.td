@@ -156,6 +156,9 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
     OneFlow_Tensor:$ref,
     OneFlow_Tensor:$value
   );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
   let attrs = (ins
     SI64ArrayAttr:$start,
     SI64ArrayAttr:$stop,
@@ -165,7 +168,6 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_input_arg_modify_fn = 1;
 }
 
 #endif // GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
@@ -6160,7 +6162,7 @@ def OneFlow_ParallelCastOp : OneFlow_BaseOp<"parallel_cast", [NoSideEffect, Decl
 #endif // GET_ONEFLOW_PARALLEL_CAST_OP_DEFINITIONS
 
 // Group: POOL
-// adaptive_avg_pool1d, adaptive_avg_pool1d_grad, adaptive_avg_pool2d, adaptive_avg_pool2d_grad, adaptive_avg_pool3d, adaptive_avg_pool3d_grad, avgpool_1d, avgpool_1d_grad, avgpool_2d, avgpool_2d_grad, avgpool_3d, avgpool_3d_grad, maxpool_1d, maxpool_1d_grad, maxpool_2d, maxpool_2d_grad, maxpool_3d, maxpool_3d_grad, tf_avg_pool_1d, tf_avg_pool_1d_grad, tf_avg_pool_2d, tf_avg_pool_2d_grad, tf_avg_pool_3d, tf_avg_pool_3d_grad, tf_max_pool_1d, tf_max_pool_1d_grad, tf_max_pool_2d, tf_max_pool_2d_grad, tf_max_pool_3d, tf_max_pool_3d_grad
+// adaptive_avg_pool1d, adaptive_avg_pool1d_grad, adaptive_avg_pool2d, adaptive_avg_pool2d_grad, adaptive_avg_pool3d, adaptive_avg_pool3d_grad, avg_pool_1d, avg_pool_1d_grad, avg_pool_2d, avg_pool_2d_grad, avg_pool_3d, avg_pool_3d_grad, max_pool_1d, max_pool_1d_grad, max_pool_2d, max_pool_2d_grad, max_pool_3d, max_pool_3d_grad, tf_avg_pool_1d, tf_avg_pool_1d_grad, tf_avg_pool_2d, tf_avg_pool_2d_grad, tf_avg_pool_3d, tf_avg_pool_3d_grad, tf_max_pool_1d, tf_max_pool_1d_grad, tf_max_pool_2d, tf_max_pool_2d_grad, tf_max_pool_3d, tf_max_pool_3d_grad
 // Total: 30
 
 #ifdef GET_ONEFLOW_POOL_OP_DEFINITIONS
@@ -6177,29 +6179,29 @@ def OneFlow_AdaptiveAvgPool3DOp : OneFlow_AdaptivePoolBaseOp<"adaptive_avg_pool3
 
 def OneFlow_AdaptiveAvgPool3DGradOp : OneFlow_AdaptivePoolGradBaseOp<"adaptive_avg_pool3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AvgPool1DOp : OneFlow_AvgPoolBaseOp<"avgpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool1DOp : OneFlow_AvgPoolBaseOp<"avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AvgPool1DGradOp : OneFlow_AvgPoolGradBaseOp<"avgpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool1DGradOp : OneFlow_AvgPoolGradBaseOp<"avg_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AvgPool2DOp : OneFlow_AvgPoolBaseOp<"avgpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool2DOp : OneFlow_AvgPoolBaseOp<"avg_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AvgPool2DGradOp : OneFlow_AvgPoolGradBaseOp<"avgpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool2DGradOp : OneFlow_AvgPoolGradBaseOp<"avg_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AvgPool3DOp : OneFlow_AvgPoolBaseOp<"avgpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool3DOp : OneFlow_AvgPoolBaseOp<"avg_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_AvgPool3DGradOp : OneFlow_AvgPoolGradBaseOp<"avgpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_AvgPool3DGradOp : OneFlow_AvgPoolGradBaseOp<"avg_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_MaxPool1DOp : OneFlow_MaxPoolBaseOp<"maxpool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool1DOp : OneFlow_MaxPoolBaseOp<"max_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_MaxPool1DGradOp : OneFlow_MaxPoolGradBaseOp<"maxpool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool1DGradOp : OneFlow_MaxPoolGradBaseOp<"max_pool_1d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_MaxPool2DOp : OneFlow_MaxPoolBaseOp<"maxpool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {}
+def OneFlow_MaxPool2DOp : OneFlow_MaxPoolBaseOp<"max_pool_2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {}
 
-def OneFlow_MaxPool2DGradOp : OneFlow_MaxPoolGradBaseOp<"maxpool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool2DGradOp : OneFlow_MaxPoolGradBaseOp<"max_pool_2d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_MaxPool3DOp : OneFlow_MaxPoolBaseOp<"maxpool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool3DOp : OneFlow_MaxPoolBaseOp<"max_pool_3d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
-def OneFlow_MaxPool3DGradOp : OneFlow_MaxPoolGradBaseOp<"maxpool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_MaxPool3DGradOp : OneFlow_MaxPoolGradBaseOp<"max_pool_3d_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
 def OneFlow_TfAvgPool1DOp : OneFlow_TFPoolBaseOp<"tf_avg_pool_1d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
@@ -9551,6 +9553,7 @@ def OneFlow_SgdEmbeddingUpdateOp : OneFlow_BaseOp<"sgd_embedding_update", [AttrS
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
   );
@@ -9576,6 +9579,7 @@ def OneFlow_MomentumEmbeddingUpdateOp : OneFlow_BaseOp<"momentum_embedding_updat
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
   );
@@ -9602,6 +9606,7 @@ def OneFlow_AdamEmbeddingUpdateOp : OneFlow_BaseOp<"adam_embedding_update", [Att
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if,
     Optional<OneFlow_Tensor>:$bias_correction1,
@@ -9634,6 +9639,7 @@ def OneFlow_AdagradEmbeddingUpdateOp : OneFlow_BaseOp<"adagrad_embedding_update"
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
     OneFlow_Tensor:$train_step,
+    Optional<OneFlow_Tensor>:$scale_by_tensor,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
     Optional<OneFlow_Tensor>:$skip_if
   );
