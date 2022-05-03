@@ -743,7 +743,7 @@ class TestTensor(flow.unittest.TestCase):
         dim_size[random_index] = expand_size
         return x.expand(*dim_size)
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_flow_tensor_expand_with_random_data(test_case):
         random_expand_size = random(1, 6).to(int).value()
         x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
@@ -755,7 +755,7 @@ class TestTensor(flow.unittest.TestCase):
         y = torch.ones(dim_size)
         return x.expand_as(y)
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_flow_tensor_view_with_random_data(test_case):
         dim0_ = random(2, 4).to(int)
         dim1_ = random(2, 4).to(int)
