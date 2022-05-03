@@ -32,7 +32,10 @@ Maybe<void> FlatShape::Init(const Shape& shape) {
 }
 
 Maybe<void> FlatShape::Check(const Shape& shape) const {
-  CHECK_EQ_OR_RETURN(this->dim_size(), shape.NumAxes());
+  CHECK_EQ_OR_RETURN(this->dim_size(), shape.NumAxes())
+      << Error::RuntimeError()
+      << "Expected same shape on each rank, but found at least two shapes, "
+      << JUST(ToShape())->ToString() << " and " << shape.ToString() << "!";
   for (int i = 0; i < this->dim_size(); ++i) { CHECK_EQ_OR_RETURN(this->dim(i), shape.At(i)); }
   return Maybe<void>::Ok();
 }
