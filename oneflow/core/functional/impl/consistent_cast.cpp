@@ -92,7 +92,10 @@ FLAT_MSG_BEGIN(FlatShapeAndDataType);
   }
   Maybe<void> Check(const Shape& shape, DataType dtype) const {
     JUST(this->shape().Check(shape));
-    CHECK_EQ_OR_RETURN(this->dtype(), dtype);
+    CHECK_EQ_OR_RETURN(this->dtype(), dtype) << Error::RuntimeError()
+        << "Expected all tensors on each rank to be the same dtype, but found "
+            "at least two dtypes, " << DType(this->dtype()).name() << " and "
+        << DType(dtype).name() << "!";
     return Maybe<void>::Ok();
   }
   Maybe<void> Check(const FlatShapeAndDataType& flat_shape_dtype) const {
@@ -172,7 +175,7 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherSh
         *buffer = recv_buffer.get();
         *size = sizeof(FlatShapeAndDataType);
         *Cb = [recv_buffer] {};
-        CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);
+        CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);  // NOLINT(maybe-need-error-msg)
         return Maybe<void>::Ok();
       });
   const auto& rank_group = JUST(RankGroup::New(parallel_desc));
@@ -272,9 +275,9 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
             CHECK_EQ_OR_RETURN(rank_shape->NumAxes(), first_shape->NumAxes())
                 << Error::RuntimeError() << "Sizes of tensors must match except in dimension "
                 << concat_axis << ", but found " << first_shape->ToString() << "(rank "
-                << JUST(parallel_desc->MachineId4ParallelId(0)) << ") and "
+                << JUST(sub_parallel_desc->MachineId4ParallelId(0)) << ") and "
                 << rank_shape->ToString() << "(rank "
-                << JUST(parallel_desc->MachineId4ParallelId(parallel_id)) << ")!";
+                << JUST(sub_parallel_desc->MachineId4ParallelId(parallel_id)) << ")!";
             logical_concat_dim += rank_shape->At(concat_axis);
           }
 
@@ -302,9 +305,9 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
               } else {
                 CHECK_EQ_OR_RETURN(rank_shape->At(i), first_shape->At(i))
                     << Error::RuntimeError() << "Sizes of tensors must match except in dimension "
-                    << concat_axis << ". Expected size " << rank_shape->At(i) << " but got size "
-                    << first_shape->At(i) << " for tensor on rank "
-                    << JUST(parallel_desc->MachineId4ParallelId(parallel_id)) << "!";
+                    << concat_axis << ". Expected size " << first_shape->At(i) << " but got size "
+                    << rank_shape->At(i) << " for tensor on rank "
+                    << JUST(sub_parallel_desc->MachineId4ParallelId(parallel_id)) << "!";
               }
             }
             rank_shape->Set(concat_axis, logical_concat_dim);
@@ -346,6 +349,19 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CheckNdSbpValid(Symbol<NdSbp> nd_sbp, const Shape& logical_shape) {
+  for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    const auto& sbp_parallel = nd_sbp->sbp_parallel(i);
+    if (sbp_parallel.has_split_parallel()) {
+      CHECK_LT_OR_RETURN(sbp_parallel.split_parallel().axis(), logical_shape.NumAxes())
+          << Error::RuntimeError() << "Split axis out of range (expected to be in range of [" << 0
+          << ", " << logical_shape.NumAxes() << "), but got "
+          << sbp_parallel.split_parallel().axis() << "!)";
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 namespace {
 
 Maybe<one::OpExpr> RawGetConsistentToConsistentOpExpr(
@@ -367,6 +383,8 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
   const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
+  const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
+  JUST(CheckNdSbpValid(nd_sbp, *x->shape()));
   std::shared_ptr<one::OpExpr> op;
   if (unlikely(!LazyMode::is_enabled()
                && JUST(x->parallel_desc())->hierarchy()->NumAxes()
@@ -376,7 +394,6 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   } else {
     op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   }
-  const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
   if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
     return x;
@@ -386,7 +403,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
-    CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
+    CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);  // NOLINT(maybe-need-error-msg)
   }
   return tensor;
 }
@@ -396,8 +413,9 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                                 const std::shared_ptr<OpExpr>& op, bool check_meta_hint) {
   CHECK_OR_RETURN(!x->is_lazy())
+      << Error::RuntimeError()
       << "local_tensor.to_global() is not supported within nn.Graph for now";
-  CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
+  CHECK_OR_RETURN(x->is_local()) << Error::RuntimeError() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
   if (JUST(input->device())->type() != parallel_desc->device_tag()) {
@@ -447,7 +465,9 @@ class LocalToConsistentFunctor {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1, /* force_check */ false));
-    CHECK_OR_RETURN(x->is_local());
+    CHECK_OR_RETURN(x->is_local())
+        << Error::RuntimeError()
+        << "Expected local tensor for local_to_global but got global tensor!";
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
     if (JUST(input->device())->type() != parallel_desc->device_tag()) {
@@ -515,8 +535,10 @@ class ConsistentToLocalFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     CHECK_OR_RETURN(!x->is_lazy())
+        << Error::RuntimeError()
         << "consistent_tensor.to_local() is not supported within nn.Graph for now";
-    CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
+    CHECK_OR_RETURN(x->is_consistent())
+        << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }
 
