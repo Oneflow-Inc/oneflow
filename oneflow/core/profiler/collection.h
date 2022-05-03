@@ -23,6 +23,7 @@ limitations under the License.
 #include <queue>
 #include <unordered_map>
 #include <vector>
+#include "nlohmann/json.hpp"
 #include "oneflow/core/profiler/util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/global.h"
@@ -34,25 +35,6 @@ namespace profiler {
 
 enum class EventType { kCustom, kKernel };
 
-struct Result {
-  explicit Result(const std::string& name, time_t all_duration, int64_t num_called,
-                  EventType event_type, const std::string& shapes)
-      : name(name),
-        all_duration(all_duration),
-        num_called(num_called),
-        event_type(event_type),
-        shapes(shapes) {
-    avg_duration = all_duration / num_called;
-  }
-
-  std::string name;
-  time_t avg_duration = 0;
-  time_t all_duration = 0;
-  int64_t num_called = 0;
-  EventType event_type;
-  std::string shapes;
-};
-
 class CustomEvent;
 class KernelEvent;
 
@@ -63,7 +45,7 @@ class IEvent {
   IEvent() = delete;
   explicit IEvent(const std::string& name) : name_(name) {}
   virtual std::string Key() = 0;
-  virtual Result ConvertToResult() = 0;
+  virtual nlohmann::json ToJson();
   virtual ~IEvent() = default;
 
   void Start();
@@ -81,15 +63,15 @@ class IEvent {
 class CustomEvent final : public IEvent {
  public:
   explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
-  std::string Key();
-  Result ConvertToResult();
+  std::string Key() override;
+  nlohmann::json ToJson() override;
 };
 
 class KernelEvent final : public IEvent {
  public:
   explicit KernelEvent(const std::string& kernel_name) : IEvent(kernel_name) {}
-  std::string Key();
-  Result ConvertToResult();
+  std::string Key() override;
+  nlohmann::json ToJson() override;
   void RecordShape(const Shape& shape);
 
  private:
@@ -116,7 +98,7 @@ class ProfileMgr {
   std::unordered_map<std::string, int64_t> event_recorders_last_id_;
 
   std::string __GetNextEventRecorderKey(const std::string& name);
-  std::vector<Result> __ExportResults();
+  std::vector<std::shared_ptr<IEvent>> __ExportEvents();
 };
 
 class EventRecorder {

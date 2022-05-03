@@ -25,22 +25,8 @@ using json = nlohmann::json;
 
 namespace nlohmann {
 
-void to_json(json& j, const ::oneflow::profiler::Result& result) {
-  j = json{{"name", result.name},
-           {"avg_duration", result.avg_duration},
-           {"num_called", result.num_called},
-           {"all_duration", result.all_duration},
-           {"event_type", result.event_type},
-           {"shapes", result.shapes}};
-}
-
-void from_json(const json& j, ::oneflow::profiler::Result& result) {
-  j.at("name").get_to(result.name);
-  j.at("avg_duration").get_to(result.avg_duration);
-  j.at("num_called").get_to(result.num_called);
-  j.at("all_duration").get_to(result.all_duration);
-  j.at("event_type").get_to(result.event_type);
-  j.at("shapes").get_to(result.shapes);
+void to_json(json& j, const std::shared_ptr<::oneflow::profiler::IEvent>& event) {
+  j = event->ToJson();
 }
 
 }  // namespace nlohmann
@@ -49,6 +35,9 @@ namespace oneflow {
 
 namespace profiler {
 
+nlohmann::json IEvent::ToJson() {
+  return json{{"name", name_}, {"cpu_time", GetDuration() / 1000}, {"input_shapes", "-"}};
+}
 void IEvent::Start() { started_at_ = GetTimeNow(); }
 void IEvent::Finish() { finished_at_ = GetTimeNow(); }
 const std::string& IEvent::GetName() const { return name_; }
@@ -60,8 +49,11 @@ std::shared_ptr<IEvent> IEvent::Create(EventType type, const std::string& name) 
   return nullptr;
 }
 
-Result KernelEvent::ConvertToResult() {
-  return Result(name_, GetDuration(), 1, EventType::kKernel, __FormatShapes());
+nlohmann::json KernelEvent::ToJson() {
+  auto j = IEvent::ToJson();
+  j["type"] = EventType::kKernel;
+  j["input_shapes"] = __FormatShapes();
+  return j;
 }
 
 std::string KernelEvent::Key() { return name_ + "." + __FormatShapes(); }
@@ -84,8 +76,10 @@ std::string KernelEvent::__FormatShapes() {
 
 void KernelEvent::RecordShape(const Shape& shape) { input_shapes_.emplace_back(shape); }
 
-Result CustomEvent::ConvertToResult() {
-  return Result(name_, GetDuration(), 1, EventType::kCustom, "-");
+nlohmann::json CustomEvent::ToJson() {
+  auto j = IEvent::ToJson();
+  j["type"] = EventType::kKernel;
+  return j;
 }
 
 std::string CustomEvent::Key() { return name_; }
@@ -103,18 +97,18 @@ void ProfileMgr::UnregisterEventRecorder(const std::string& event_recorder_key) 
 }
 
 std::string ProfileMgr::DumpResultsJson() {
-  const json j = __ExportResults();
+  const json j = __ExportEvents();
   return j.dump();
 }
 
-std::vector<Result> ProfileMgr::__ExportResults() {
-  std::vector<Result> results;
+std::vector<std::shared_ptr<IEvent>> ProfileMgr::__ExportEvents() {
+  std::vector<std::shared_ptr<IEvent>> events;
   while (!events_.empty()) {
     auto e = events_.front();
     events_.pop();
-    results.emplace_back(e->ConvertToResult());
+    events.emplace_back(e);
   }
-  return results;
+  return events;
 }
 
 std::string ProfileMgr::__GetNextEventRecorderKey(const std::string& name) {
