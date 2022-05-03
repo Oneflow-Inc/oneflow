@@ -50,6 +50,7 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
+
 @unittest.skip("This fails in multi-gpu")
 class TestRandpermConsistent(flow.unittest.TestCase):
     @globaltest
