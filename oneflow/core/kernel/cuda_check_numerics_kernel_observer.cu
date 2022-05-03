@@ -66,6 +66,7 @@ bool HasNotFiniteGpu(ep::Stream* stream, const Blob* blob, bool* has_not_finite_
   auto* cuda_stream = stream->As<ep::CudaStream>();
   const DataType dtype = blob->data_type();
   const int64_t elem_cnt = blob->shape().elem_cnt();
+  if (elem_cnt == 0) { return false; }
   if (dtype == kFloat) {
     return HasNotFinite<float>(stream, elem_cnt, blob->dptr<float>(), has_not_finite_host,
                                has_not_finite_device);

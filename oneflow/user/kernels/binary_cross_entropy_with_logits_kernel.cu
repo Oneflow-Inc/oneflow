@@ -70,7 +70,7 @@ struct BinaryCrossEntropyWithLogitsFunctor<float, WeightType::kNone> {
   __device__ __forceinline__ float operator()(float input_val, float target_val) const {
     const float max_val = -input_val < zero_ ? zero_ : -input_val;
     return (one_ - target_val) * input_val + max_val
-           + (__logf(__expf(-max_val) + __expf(-input_val - max_val)));
+           + (logf(expf(-max_val) + expf(-input_val - max_val)));
   }
 };
 
@@ -85,7 +85,7 @@ struct BinaryCrossEntropyWithLogitsFunctor<float, WeightType::kPosWeight> {
     const float pos_weight_processed_val = weight_val - target_val + one_;
     return (one_ - target_val) * input_val
            + (pos_weight_processed_val
-              * (__logf(__expf(-max_val) + __expf(-input_val - max_val)) + max_val));
+              * (logf(expf(-max_val) + expf(-input_val - max_val)) + max_val));
   }
 };
 

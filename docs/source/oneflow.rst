@@ -11,7 +11,10 @@ oneflow
             acos, 
             acosh, 
             add, 
+            addcmul, 
             addmm, 
+            amin, 
+            amax,
             arccos, 
             arcsin, 
             arcsinh, 
@@ -90,6 +93,7 @@ oneflow
             narrow, 
             max, 
             mean,
+            median,
             mish,  
             min, 
             meshgrid,
@@ -98,6 +102,7 @@ oneflow
             negative, 
             new_ones,
             nonzero,
+            normal,
             numel, 
             ne, 
             empty,
@@ -112,6 +117,7 @@ oneflow
             randint,
             randperm,
             reciprocal,
+            roc_auc_score,
             roll,
             round, 
             rsqrt,
@@ -128,7 +134,6 @@ oneflow
             silu, 
             slice, 
             logical_slice,  
-            slice_update, 
             softsign, 
             sort, 
             softplus, 
@@ -161,7 +166,8 @@ oneflow
             is_nonzero,
             is_tensor,
             no_grad,
-            grad_enable,
+            set_grad_enabled,
+            enable_grad,
             inference_mode,
             is_grad_enabled,
             is_floating_point,
@@ -187,7 +193,8 @@ oneflow
             get_rng_state,
             set_rng_state,
             isnan,
-            isinf
+            isinf,
+            searchsorted
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads
