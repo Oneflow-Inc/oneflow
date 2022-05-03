@@ -212,9 +212,9 @@ void DecodeField(const TensorBuffer* records, const int64_t record_num, const st
   const Shape instance_shape = Shape(instance_dim_vec);
   if (is_dynamic) {
     CHECK_LE(instance_shape.elem_cnt(), static_shape.elem_cnt());
-    out_blob->mut_shape()->Set(0, record_num);
+    out_blob->mut_shape().Set(0, record_num);
     for (int64_t d = 0; d < instance_shape.NumAxes(); ++d) {
-      out_blob->mut_shape()->Set(d + 1, instance_shape.At(d));
+      out_blob->mut_shape().Set(d + 1, instance_shape.At(d));
     }
   } else {
     CHECK(instance_shape == static_shape);
