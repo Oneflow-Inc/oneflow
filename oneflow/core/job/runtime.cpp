@@ -61,6 +61,7 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 Runtime::Runtime(
     const Plan& plan,
     const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
+  DumpThreadIdsFromPlan(plan);
   {
     // NOTE(chengcheng): All runtime Global objects AddPlan
     Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob_object);
