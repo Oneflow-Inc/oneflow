@@ -16,6 +16,24 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
+#include "OneFlow/Passes.h"
+#include "llvm/ADT/StringRef.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OperationSupport.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/api/common/ofblob.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/vm/vm_util.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -23,6 +41,7 @@ limitations under the License.
 #include "llvm/Support/Casting.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/FunctionImplementation.h"
@@ -30,7 +49,9 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 
 #include <iostream>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace mlir {
 
@@ -306,6 +327,7 @@ void RandomMaskLikeOp::build(mlir::OpBuilder& odsBuilder, mlir::OperationState& 
 }
 
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
+std::string NormalizationInferenceOp::getOriginalOpTypeName() { return "normalization"; }
 
 void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type) {
   state.addAttribute(SymbolTable::getSymbolAttrName(), builder.getStringAttr(name));
@@ -361,6 +383,26 @@ LogicalResult ReturnOp::verify() {
                          << " in function @" << job.getName();
 
   return success();
+}
+
+struct NormalizationInferencePattern : public OpRewritePattern<NormalizationOp> {
+  explicit NormalizationInferencePattern(MLIRContext* context)
+      : OpRewritePattern<NormalizationOp>(context, /*benefit=*/1) {}
+  LogicalResult matchAndRewrite(oneflow::NormalizationOp op,
+                                PatternRewriter& rewriter) const override {
+    if (op.mean() || op.inv_variance()) return failure();
+    if (auto created_op = rewriter.replaceOpWithNewOp<NormalizationInferenceOp>(
+            op, op->getResultTypes(), op.getOperands(), op->getAttrs())) {
+      return success();
+    }
+    op.emitError("Failed to create inference bn op");
+    return failure();
+  }
+};
+
+void NormalizationOp::getCanonicalizationPatterns(RewritePatternSet& results,
+                                                  MLIRContext* context) {
+  results.insert<NormalizationInferencePattern>(context);
 }
 
 ResultRange GetDataOutputResults(Operation* op) {
@@ -478,15 +520,16 @@ llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), thi
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
-  auto maxpool_2d_op = *this;
+  auto max_pool_2d_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  NamedAttrList attributes = maxpool_2d_op->getAttrs();
-  attributes.set(maxpool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
-  auto res = rewriter
-                 .create<oneflow::MaxPool2DOp>(
-                     maxpool_2d_op.getLoc(), maxpool_2d_op->getResultTypes(), operands, attributes)
-                 ->getResults();
+  NamedAttrList attributes = max_pool_2d_op->getAttrs();
+  attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res =
+      rewriter
+          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), max_pool_2d_op->getResultTypes(),
+                                        operands, attributes)
+          ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   results.push_back(res[1]);

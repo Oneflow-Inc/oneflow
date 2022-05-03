@@ -1053,6 +1053,12 @@ class TestTensor(flow.unittest.TestCase):
         y = x.half()
         test_case.assertTrue(y.dtype == flow.float16)
 
+    def test_byte(test_case):
+        x = flow.tensor([1.2], dtype=flow.float32)
+        test_case.assertTrue(x.dtype == flow.float32)
+        y = x.byte()
+        test_case.assertTrue(y.dtype == flow.uint8)
+
     def test_tensor_constructor(test_case):
         x = flow.tensor([1, 2, 3])
         test_case.assertTrue(np.array_equal(x.numpy(), [1, 2, 3]))
