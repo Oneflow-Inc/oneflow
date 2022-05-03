@@ -581,6 +581,12 @@ def _neg(self):
     return flow._C.negative(self)
 
 
+def _new_empty(
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+):
+    return flow.new_empty(self, size, dtype, device, placement, sbp, requires_grad)
+
+
 def _new_ones(
     self,
     size=None,
@@ -1036,6 +1042,10 @@ def _view(self, *shape):
     return flow._C.view(self, new_shape)
 
 
+def _view_as(self, other):
+    return _view(self, *other.size())
+
+
 def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
 
@@ -1287,6 +1297,7 @@ def RegisterMethods():
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
+    Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
     Tensor.pow = _pow
@@ -1347,6 +1358,7 @@ def RegisterMethods():
     Tensor.reshape = _reshape
     Tensor.reshape_as = _reshape_as
     Tensor.view = _view
+    Tensor.view_as = _view_as
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
