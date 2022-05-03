@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11042
 
 namespace oneflow {
 
