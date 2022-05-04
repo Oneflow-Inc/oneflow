@@ -23,20 +23,23 @@ import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
 
 
-def do_nhwc_conv(test_case, with_cuda, with_bias):
+def do_nhwc_conv_maxpool(test_case, with_cuda, with_bias):
     x = flow.randn(2, 3, 4, 5)
     conv = flow.nn.Conv2d(3, 4, 2, 1, bias=with_bias)
+    maxpool_2d = flow.nn.MaxPool2d(
+        kernel_size=3, padding=1, stride=2, return_indices=False
+    )
     if with_cuda:
         x = x.cuda()
         conv.to("cuda")
+        maxpool_2d.to("cuda")
 
-    eager_conv_x = conv(x)
+    eager_x = maxpool_2d(conv(x))
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
@@ -44,22 +47,20 @@ def do_nhwc_conv(test_case, with_cuda, with_bias):
             self.conv = conv
 
         def build(self, x):
-            return self.conv(x)
+            return maxpool_2d(self.conv(x))
 
     graph_to_run = GraphToRun()
-    lazy_conv_x = graph_to_run(x)
+    lazy_x = graph_to_run(x)
     test_case.assertTrue(
-        np.allclose(eager_conv_x.numpy(), lazy_conv_x.numpy(), rtol=1e-5, atol=1e-5)
+        np.allclose(eager_x.numpy(), lazy_x.numpy(), rtol=1e-5, atol=1e-5)
     )
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestNhwcConv(oneflow.unittest.TestCase):
+class TestNhwcConvMaxPool(oneflow.unittest.TestCase):
     def test_nhwc_conv_graph(test_case):
-        do_nhwc_conv(test_case, True, True)
-        do_nhwc_conv(test_case, False, True)
-        do_nhwc_conv(test_case, True, False)
-        do_nhwc_conv(test_case, False, False)
+        do_nhwc_conv_maxpool(test_case, True, True)
+        do_nhwc_conv_maxpool(test_case, True, False)
 
 
 if __name__ == "__main__":
