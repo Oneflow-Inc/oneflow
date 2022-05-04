@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/vm/vm_util.h"
 #ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
@@ -86,6 +88,40 @@ void ProfilerStop() {
 #ifdef OF_ENABLE_PROFILER
   OF_CUDA_CHECK(cudaProfilerStop());
 #endif  // OF_ENABLE_PROFILER
+}
+
+void EnableProfiler() {
+  CHECK_JUST(vm::ClusterSync());
+  if (Global<ProfileMgr>::Get() == nullptr) { Global<ProfileMgr>::New(); }
+}
+
+// DisableProfilerAndReturnResult will return a json of profile results.
+std::string DisableProfilerAndReturnResult() {
+  CHECK_JUST(vm::ClusterSync());
+
+  auto pmgr = Global<ProfileMgr>::Get();
+  if (pmgr != nullptr) {
+    std::string results = pmgr->DumpResultsJson();
+    Global<ProfileMgr>::Delete();
+    return results;
+  }
+  return "";
+}
+
+Maybe<std::string> StartRecord(const std::string& name) {
+  auto pmgr = Global<ProfileMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
+  CHECK_JUST(vm::ClusterSync());
+  return pmgr->RegisterEventRecorder(profiler::EventRecorder::CreateCustomEventRecorder(name),
+                                     name);
+}
+
+Maybe<void> EndRecord(const std::string& event_recorder_key) {
+  auto pmgr = Global<ProfileMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
+  CHECK_JUST(vm::ClusterSync());
+  pmgr->UnregisterEventRecorder(event_recorder_key);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace profiler

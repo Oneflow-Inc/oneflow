@@ -13,7 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.framework.profiler import ProfilerStart as profiler_start
-from oneflow.framework.profiler import ProfilerStop as profiler_stop
-from oneflow.framework.profiler import RangePop as range_pop
-from oneflow.framework.profiler import RangePush as range_push
+
+NS_IN_SECOND = 1000.0 * 1000.0
+NS_IN_MS = 1000.0
+
+
+def format_time(time_us):
+    if time_us >= NS_IN_SECOND:
+        return "{:.3f}s".format(time_us / NS_IN_SECOND)
+    if time_us >= NS_IN_MS:
+        return "{:.3f}ms".format(time_us / NS_IN_MS)
+    return "{:.3f}us".format(time_us)
