@@ -295,9 +295,11 @@ class TensorDotIntDimsFunctor {
 class TensorDotFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
-                           const std::vector<int32_t>& _dot_dims_a,
-                           const std::vector<int32_t>& _dot_dims_b) const {
-    if (_dot_dims_a.empty() && _dot_dims_b.empty()) {
+                           const std::vector<int32_t>& dims_a,
+                           const std::vector<int32_t>& dims_b) const {
+    // dims_a and dims_b represent dim indices to calculate dot, and are copied to variables
+    // dot_dims_a and dot_dims_b when they need to be modified
+    if (dims_a.empty() && dims_b.empty()) {
       DimVector shape_sum(a->ndim() + b->ndim());
       for (int64_t i = 0; i < a->ndim(); i++) { shape_sum[i] = a->shape()->At(i); }
       for (int64_t i = 0; i < b->ndim(); i++) { shape_sum[i + a->ndim()] = b->shape()->At(i); }
@@ -306,11 +308,11 @@ class TensorDotFunctor {
       return JUST(Reshape(JUST(functional::MatMul(reshape_a, reshape_b, false, false, 1.0)),
                           Shape(DimVector(shape_sum.begin(), shape_sum.end()))));
     }
-    CHECK_EQ_OR_RETURN(_dot_dims_a.size(), _dot_dims_b.size())
+    CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
         << Error::RuntimeError() << "both dimension lists should have same length, got "
-        << _dot_dims_a.size() << " and " << _dot_dims_b.size();
-    std::vector<int32_t> dot_dims_a(_dot_dims_a.begin(), _dot_dims_a.end());
-    std::vector<int32_t> dot_dims_b(_dot_dims_b.begin(), _dot_dims_b.end());
+        << dims_a.size() << " and " << dims_b.size();
+    std::vector<int32_t> dot_dims_a(dims_a.begin(), dims_a.end());
+    std::vector<int32_t> dot_dims_b(dims_b.begin(), dims_b.end());
     for (int64_t i = 0; i < dot_dims_a.size(); i++) {
       CHECK_LT_OR_RETURN(dot_dims_a[i], a->ndim())
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
@@ -354,8 +356,8 @@ class TensorDotFunctor {
       } else {
         CHECK_EQ_OR_RETURN(size_a, size_b)
             << Error::RuntimeError() << "contracted dimensions need to match, but first has size "
-            << size_a << " in dim " << dot_dims_a[i] << " and second has size " << size_b << " in dim "
-            << dot_dims_b[i];
+            << size_a << " in dim " << dot_dims_a[i] << " and second has size " << size_b
+            << " in dim " << dot_dims_b[i];
       }
     }
 
@@ -398,12 +400,10 @@ class TensorDotFunctor {
 
     int64_t dot_size = 1;
     for (const int32_t dim_idx : dot_dims_a) dot_size *= reduced_sum_a->shape()->At(dim_idx);
-    std::shared_ptr<Tensor> permuted_a =
-        JUST(Reshape(JUST(Permute(reduced_sum_a, permuted_dims_a)),
-                     Shape(DimVector({-1, dot_size}))));
-    std::shared_ptr<Tensor> permuted_b =
-        JUST(Reshape(JUST(Permute(reduced_sum_b, permuted_dims_b)),
-                     Shape(DimVector({dot_size, -1}))));
+    std::shared_ptr<Tensor> permuted_a = JUST(
+        Reshape(JUST(Permute(reduced_sum_a, permuted_dims_a)), Shape(DimVector({-1, dot_size}))));
+    std::shared_ptr<Tensor> permuted_b = JUST(
+        Reshape(JUST(Permute(reduced_sum_b, permuted_dims_b)), Shape(DimVector({dot_size, -1}))));
 
     return Reshape(JUST(functional::MatMul(permuted_a, permuted_b, false, false, 1.0)),
                    Shape(DimVector({non_dot_shape_a.begin(), non_dot_shape_a.end()})));

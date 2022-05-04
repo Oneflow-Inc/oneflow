@@ -38,9 +38,9 @@ class TestTensordotError(flow.unittest.TestCase):
             b = flow.randn(1, 2, 3)
             flow.tensordot(a, b, dims=100)
         test_case.assertTrue(
-            "tensordot expects dims <= a.ndim which is 3, but got 100" in str(context.exception)
+            "tensordot expects dims <= a.ndim which is 3, but got 100"
+            in str(context.exception)
         )
-        
 
     def test_tensordot_out_of_range_dims_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
@@ -48,7 +48,8 @@ class TestTensordotError(flow.unittest.TestCase):
             b = flow.randn(1, 2, 3)
             flow.tensordot(a, b, dims=[[3], [2]])
         test_case.assertTrue(
-            "Dimension out of range (expected to be in range of [-3, 2], but got 3)" in str(context.exception)
+            "Dimension out of range (expected to be in range of [-3, 2], but got 3)"
+            in str(context.exception)
         )
 
     def test_tensordot_unmatch_dims_runtime_error(test_case):
@@ -57,9 +58,10 @@ class TestTensordotError(flow.unittest.TestCase):
             b = flow.randn(1, 2, 3)
             flow.tensordot(a, b, dims=[[1], [2]])
         test_case.assertTrue(
-            "contracted dimensions need to match, but first has size 2 in dim 1 and second has size 3 in dim 2" in str(context.exception)
+            "contracted dimensions need to match, but first has size 2 in dim 1 and second has size 3 in dim 2"
+            in str(context.exception)
         )
-    
+
     def test_tensordot_recurring_dim_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             a = flow.randn(1, 2, 3)
