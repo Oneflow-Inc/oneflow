@@ -90,7 +90,7 @@ def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
   let arguments = (ins Variadic<AnyType>:$loss);
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
@@ -310,6 +310,11 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
+}
+
+def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createAutoNhwcPass()";
 }
 
 def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
