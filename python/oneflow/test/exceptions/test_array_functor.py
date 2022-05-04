@@ -57,7 +57,7 @@ class TestArrayError(flow.unittest.TestCase):
             y = flow.concat([x1, x2], dim=3)
         test_case.assertTrue("Dimension out of range" in str(context.exception))
 
-    def test_concat_runtime_error1(test_case):
+    def test_concat_dim_equal_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2, 2, 2), dtype=flow.float32, requires_grad=True)
@@ -66,7 +66,7 @@ class TestArrayError(flow.unittest.TestCase):
             "Tensors must have same number of dimensions" in str(context.exception)
         )
 
-    def test_concat_runtime_error2(test_case):
+    def test_concat_match_size_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2, 3), dtype=flow.float32, requires_grad=True)
@@ -91,7 +91,7 @@ class TestArrayError(flow.unittest.TestCase):
             "Stacks expects each tensor to be equal size" in str(context.exception)
         )
 
-    def test_expand_runtime_error1(test_case):
+    def test_expand_dim_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 1), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2), dtype=flow.float32, requires_grad=True)
@@ -101,14 +101,14 @@ class TestArrayError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
-    def test_expand_runtime_error2(test_case):
+    def test_expand_g_shape_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2, 4), dtype=flow.float32, requires_grad=True)
             y = flow.expand(x1, x2.shape)
         test_case.assertTrue("Invalid expand shape" in str(context.exception))
 
-    def test_expand_runtime_error3(test_case):
+    def test_expand_l_shape_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2, 0), dtype=flow.float32, requires_grad=True)
@@ -129,14 +129,14 @@ class TestArrayError(flow.unittest.TestCase):
             "parameters should have the same size" in str(context.exception)
         )
 
-    def test_gather_runtime_error1(test_case):
+    def test_gather_dim_value_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             y = flow.gather(x1, 2, x2)
         test_case.assertTrue("Value of dim is out of range" in str(context.exception))
 
-    def test_gather_runtime_error2(test_case):
+    def test_gather_dim_equal_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2, 2, 2), dtype=flow.float32, requires_grad=True)
@@ -145,7 +145,7 @@ class TestArrayError(flow.unittest.TestCase):
             "Dimensions of input and index should equal" in str(context.exception)
         )
 
-    def test_gather_runtime_error3(test_case):
+    def test_gather_size_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((4, 2), dtype=flow.float32, requires_grad=True)
@@ -174,19 +174,19 @@ class TestArrayError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
-    def test_narrow_index_error1(test_case):
+    def test_narrow_dim_index_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.ones((3, 3), dtype=flow.float32, requires_grad=True)
             y = flow.narrow(x, 3, 0, 2)
         test_case.assertTrue("Dimension out of range" in str(context.exception))
 
-    def test_narrow_index_error2(test_case):
+    def test_narrow_dim_index_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.ones((3, 3), dtype=flow.float32, requires_grad=True)
             y = flow.narrow(x, 0, 3, 2)
         test_case.assertTrue("Dimension out of range" in str(context.exception))
 
-    def test_narrow_runtime_error1(test_case):
+    def test_narrow_0_dim_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor(1, dtype=flow.float32, requires_grad=True)
             y = flow.narrow(x, 0, 0, 0)
@@ -194,7 +194,7 @@ class TestArrayError(flow.unittest.TestCase):
             "narrow() cannot be applied to a 0-dim tensor." in str(context.exception)
         )
 
-    def test_narrow_runtime_error2(test_case):
+    def test_narrow_dim_exceed_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.ones((1, 1), dtype=flow.float32, requires_grad=True)
             y = flow.narrow(x, 0, 0, 2)
@@ -272,7 +272,7 @@ class TestArrayError(flow.unittest.TestCase):
             "chunk expects `chunks` to be greater than 0, got" in str(context.exception)
         )
 
-    def test_meshgrid_tensors_scalar_runtime_error1(test_case):
+    def test_meshgrid_tensors_scalar_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.tensor([], dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((1, 2, 3), dtype=flow.float32, requires_grad=True)
