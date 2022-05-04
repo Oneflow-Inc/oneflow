@@ -105,7 +105,7 @@ namespace oneflow {
   if (ctx->has_input("table_ids", 0)) {
     *ctx->OutputDType("cur_rank_unique_table_ids", 0) = ctx->InputDType("table_ids", 0);
   } else {
-    *ctx->OutputDType("cur_rank_unique_table_ids", 0) = DataType::kUInt32;
+    *ctx->OutputDType("cur_rank_unique_table_ids", 0) = DataType::kUInt8;
   }
   return Maybe<void>::Ok();
 }

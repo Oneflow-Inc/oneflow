@@ -120,7 +120,7 @@ void ParseAndSetStateInitializerIndex(const std::string& state_initializer,
                                       std::vector<EmbeddingInitializer>* initializer_params,
                                       std::vector<int8_t>* initializer_index) {
   if (line_size == embedding_size) { return; }
-  CHECK(state_initializer != "");
+  CHECK(!state_initializer.empty());
   auto initializers = nlohmann::json::parse(state_initializer);
   CHECK(initializers.is_array());
   const int num_states = line_size / embedding_size - 1;
@@ -498,9 +498,11 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
 
 #define EMBEDDING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
 
-#define ID_DATA_TYPE_SEQ                            \
+#define TABLE_ID_DATA_TYPE_SEQ                      \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)   \
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, DataType::kUInt64) \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)     \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)   \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
@@ -526,7 +528,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_PREFETCH_KERNEL, EMBEDDING_DATA_TYPE_SEQ,
-                                 ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+                                 TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename U, typename IDX>
 class EmbeddingLookupKernel final : public user_op::OpKernel {
@@ -586,7 +588,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_LOOKUP_KERNEL, EMBEDDING_DATA_TYPE_SEQ,
-                                 ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+                                 TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 template<typename IDX>
 class EmbeddingPutKernel final : public user_op::OpKernel {
