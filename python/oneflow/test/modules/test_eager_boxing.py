@@ -3489,7 +3489,7 @@ class TestEagerBoxingAsymmetricMix1d2dWithRandomPlacement(flow.unittest.TestCase
     def test_eager_boxing_asymmetric_mix_1d_2d_with_random_placement(test_case):
         arg_dict = OrderedDict()
         sbp_dict = OrderedDict()
-        arg_dict["shape"] = [(12, 24), (12, 24, 12)]
+        arg_dict["shape"] = [(12, 24), (17, 13, 19)]
 
         arg_dict["in_device_type"] = ["cpu", "cuda"]
         arg_dict["out_device_type"] = ["cpu", "cuda"]
@@ -3560,6 +3560,23 @@ class TestEagerBoxingAsymmetricMix1d2dWithRandomPlacement(flow.unittest.TestCase
                         )
             else:
                 raise NotImplementedError
+
+
+@flow.unittest.skip_unless_1n4d()
+class TestEagerBoxing2DLocalToGlobalWithBalancedSplitSize(flow.unittest.TestCase):
+    def test_eager_boxing_2d_local_to_globa_with_balanced_size(test_case):
+        placement = flow.placement(type="cpu", ranks=np.arange(4).reshape((2, 2)))
+        sbp = (flow.sbp.split(0), flow.sbp.split(1))
+        x = flow.tensor(np.arange(25).reshape((5, 5)), placement=placement, sbp=sbp)
+        y = x.to_local()
+        z = y.to_global(placement=placement, sbp=sbp)
+
+        test_case.assertEqual(z.placement, placement)
+        test_case.assertEqual(z.sbp, sbp)
+        test_case.assertEqual(z.size(), (5, 5))
+        test_case.assertTrue(
+            np.allclose(z.numpy(), np.arange(25).reshape((5, 5)), 1e-5, 1e-5)
+        )
 
 
 if __name__ == "__main__":
