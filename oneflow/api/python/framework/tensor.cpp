@@ -55,17 +55,6 @@ namespace one {
 PyTypeObject* PyTensorObject_Type = NULL;
 PyTypeObject* PyParameterObject_Type = NULL;
 
-extern PyTypeObject* PyByteTensortypeObject_Type;
-
-extern PyTypeObject* PyCharTensortypeObject_Type;
-extern PyTypeObject* PyShortTensortypeObject_Type;
-extern PyTypeObject* PyIntTensortypeObject_Type;
-extern PyTypeObject* PyLongTensortypeObject_Type;
-
-extern PyTypeObject* PyHalfTensortypeObject_Type;
-extern PyTypeObject* PyFloatTensortypeObject_Type;
-extern PyTypeObject* PyDoubleTensortypeObject_Type;
-
 static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
@@ -281,35 +270,27 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-
-
-
 static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   const auto& t = PyTensor_Unpack(self);
   PyObject* dtype = NULL;
   int non_blocking = 0;
   static const char* keywords[3] = {"dtype", "non_blocking", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords),
-                                   &dtype, &non_blocking)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords), &dtype,
+                                   &non_blocking)) {
     return NULL;
   }
   if (dtype != NULL) {
-    if(functional::PyDTypeCheck(dtype)) {
+    if (functional::PyDTypeCheck(dtype)) {
       const auto& tt = functional::To(t, functional::PyUnpackDType(dtype), false);
       return functional::CastToPyObject(tt);
-    }
-    else if(PyTensortype_Check(dtype))
-    {
+    } else if (PyTensortype_Check(dtype)) {
       const auto& tt = functional::To(t, TensortypeToDType(dtype), false);
       return functional::CastToPyObject(tt);
-    }
-    else {
+    } else {
       return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
     }
   }
-
-
 
   PyObject* result = DTypeToTensortype(t->dtype());
   return result;
@@ -675,6 +656,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   auto nn = m.def_submodule("nn");
   if (PyParameterObject_Type
       && PyModule_AddObject(nn.ptr(), "Parameter", (PyObject*)PyParameterObject_Type) < 0) {
+    return;
+  }
+
+  if(TensorMetaclass_Type && PyModule_AddObject(m.ptr(), "_TensorMetaCls", (PyObject*)TensorMetaclass_Type) < 0) {
     return;
   }
 }

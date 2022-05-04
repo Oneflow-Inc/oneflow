@@ -217,7 +217,7 @@ class TestTensorOps(flow.unittest.TestCase):
     #     ]
     #     for arg in GenArgList(arg_dict):
     #         _test_is_floating_point(test_case, *arg)
-    
+
     def test_type(test_case):
         # def _test_type_dtype(test_case, shape, device, src_dtype, tgt_dtype):
         #     # print(f"src dtype: {src_dtype}, dst dtype: {tgt_dtype}")
@@ -234,11 +234,18 @@ class TestTensorOps(flow.unittest.TestCase):
             input = input.type(tgt_tensortype)
             test_case.assertEqual(input.type(), tgt_tensortype)
 
-
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["src_dtype"] = [flow.uint8, flow.int8, flow.int64, flow.int32, flow.float16, flow.float32, flow.float64]
+        arg_dict["src_dtype"] = [
+            flow.uint8,
+            flow.int8,
+            flow.int64,
+            flow.int32,
+            flow.float16,
+            flow.float32,
+            flow.float64,
+        ]
         # arg_dict["src_dtype"] = [ flow.float32, flow.float64]
         # arg_dict["tgt_dtype"] = [flow.uint8, flow.int8, flow.int64, flow.int32, flow.float16, flow.float32, flow.float64]
         # for arg in GenArgList(arg_dict):
@@ -254,15 +261,14 @@ class TestTensorOps(flow.unittest.TestCase):
             flow._oneflow_internal.HalfTensor,
             flow._oneflow_internal.FloatTensor,
             flow._oneflow_internal.DoubleTensor,
-        ]    
+        ]
         # import itertools
         # sets = [arg_set for (_, arg_set) in arg_dict.items()]
         # sets = list(itertools.product(*sets))
 
-
         # import ipdb; ipdb.set_trace()
         for arg in GenArgList(arg_dict):
-            # print(arg)
+            print(arg)
             _test_type_tensortype(test_case, *arg)
 
 
