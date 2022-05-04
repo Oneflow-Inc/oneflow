@@ -616,6 +616,9 @@ class ExpandFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
+
+    // if input tensor is eager local, then try return tensor's view
+    if (view::IsViewApplicable(x)) { return view::Expand(x, in_shape, expand_shape); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -945,6 +948,81 @@ class ArgSortFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SearchSortedFunctor {
+ public:
+  SearchSortedFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("searchsorted")
+                         .Input("sorted_sequence")
+                         .Input("values")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
+                           const std::shared_ptr<one::Tensor>& values, bool out_int32,
+                           bool right) const {
+    // checks
+    CHECK_OR_RETURN(values->shape()->NumAxes() > 0)
+        << "for searchsorted op, input values tensor should have positive dimension";
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() > 0)
+        << "for searchsorted op, input sorted_sequence should have positive dimension, "
+        << "but got 0 dimension";
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1
+                    || sorted_sequence->shape()->MatchBeforeLastDim(*(values->shape())))
+        << "for searchsorted op, sorted_sequence should be 1 dimension or the first N-1 dimensions "
+        << "of boundaries tensor and input value tensor must match";
+    if (out_int32) {
+      CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
+                      < INT32_MAX)
+          << "for searchsorted op, the size of input sorted_sequence' last dimension should "
+          << "be less than " << INT32_MAX;
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("out_int32", out_int32));
+    JUST(attrs.SetAttr<bool>("right", right));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SearchSortedScalarFunctor {
+ public:
+  SearchSortedScalarFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
+                           const Scalar& values, bool out_int32, bool right) const {
+    // checks
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1)
+        << "for searchsorted op, input value can be a scalar only when sorted_sequence tensor "
+        << "dimension is 1, but we got sorted_sequence dim(" << sorted_sequence->shape()->NumAxes()
+        << ")";
+    if (out_int32) {
+      CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
+                      < INT32_MAX)
+          << "for searchsorted op, the size of input sorted_sequence' last dimension should "
+          << "be less than " << INT32_MAX;
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("out_int32", out_int32));
+    JUST(attrs.SetAttr<bool>("right", right));
+    bool is_values_float = values.IsFloatingPoint();
+    if (is_values_float) {
+      double_t values_tmp = JUST(values.As<double_t>());
+      JUST(attrs.SetAttr<double>("values", values_tmp));
+    } else {
+      int64_t values_tmp = JUST(values.As<int64_t>());
+      JUST(attrs.SetAttr<double>("values", values_tmp));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GatherNdFunctor {
  public:
   GatherNdFunctor() {
@@ -1101,6 +1179,9 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
+    // TODO:(zhaoluyang) use view::Slice
+    // if (view::IsViewApplicable(x)) { return view::Slice(x, start, stop, step); }
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
@@ -1149,11 +1230,25 @@ class NarrowFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const int64_t& start, const int64_t& length) const {
     int64_t narrow_dim = dim;
+    int64_t narrow_start = start;
     const int64_t ndim = input->shape()->NumAxes();
+    CHECK_GT_OR_RETURN(ndim, 0) << "narrow() cannot be applied to a 0-dim tensor.";
     CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim - 1))
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
+    const int64_t dim_length = input->shape()->At(narrow_dim);
+    CHECK_OR_RETURN((-dim_length <= start) && (start <= dim_length - 1))
+        << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got:" << start << ")";
+    if (narrow_start < 0) { narrow_start += ndim; }
+    CHECK_GE_OR_RETURN(dim_length, narrow_start + length)
+        << "start (" << narrow_start << ") + length (" << length << ") exceeds dimension size ("
+        << dim_length << ").";
+
+    if (view::IsViewApplicable(input)) {
+      return JUST(view::Narrow(input, narrow_dim, narrow_start, length));
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
@@ -1225,10 +1320,11 @@ class SliceUpdateFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+
     if (inplace) {
       JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
+      (*outputs)[0] = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
@@ -1321,6 +1417,8 @@ class UnfoldTensorFunctor {
     JUST(attrs.SetAttr<int32_t>("dimension", dimension));
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
+    // if input tensor is eager local, than try return tensor's view
+    if (view::IsViewApplicable(x)) { return view::UnfoldTensor(x, dimension, size, step); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1753,16 +1851,19 @@ class DiagonalFunctor {
     CHECK_NE_OR_RETURN(p_dim1, p_dim2)
         << ", diagonal dimensions cannot be identical " << dim1 << ", " << dim2;
 
-    std::vector<int32_t> input_index{p_dim1, p_dim2};
-    for (int32_t i = 0; i < ndims; i++) {
-      if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
-    }
-
-    std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
-
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("offset", offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x}, attrs);
+
+    if (view::IsViewApplicable(x)) {
+      return view::Diagonal(x, offset, p_dim1, p_dim2);
+    } else {
+      std::vector<int32_t> input_index{p_dim1, p_dim2};
+      for (int32_t i = 0; i < ndims; i++) {
+        if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
+      }
+      std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x}, attrs);
+    }
   }
 
  private:
@@ -1841,7 +1942,19 @@ class TensorGetItemFunctor {
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
-    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
+    if (!tensor_indices.empty()) {
+      const auto x_device = JUST(x->device());
+      for (int64_t i = 0; i < tensor_indices.size(); ++i) {
+        const auto tensor_index = tensor_indices[i];
+        if (tensor_index == nullptr) { continue; }
+        const auto tensor_index_device = JUST(tensor_index->device());
+        if ((tensor_index_device->type() != x_device->type())
+            || (tensor_index_device->device_id() != x_device->device_id())) {
+          tensor_indices[i] = JUST(Copy(tensor_index, x_device->type(), x_device->device_id()));
+        }
+      }
+      result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
+    }
 
     // TODO(): Returns a view of tensor `x`.
     if (result == x) { result = JUST(Identity(x)); }
@@ -2173,44 +2286,26 @@ class ChunkFunctor {
   ChunkFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& chunks,
                                 const int64_t& dim) const {
-    int64_t axis = dim;
-    if (axis < 0) { axis += x->ndim(); }
-    int64_t split_size = x->shape()->At(axis) / chunks;
-    CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
-        << "Dimension out of range (expected to be in range of [" << -(x->ndim()) << ", "
-        << x->ndim() - 1 << "], but got " << dim;
-    int64_t dim_size = x->shape()->At(axis);
-    if ((split_size * chunks) != dim_size) {
-      std::vector<int64_t> sections;
-      for (int i = 0; i < chunks - 1; ++i) { sections.emplace_back(split_size); }
-      sections.emplace_back(dim_size - split_size * (chunks - 1));
-      int64_t num_splits = sections.size();
-      TensorTuple splits(num_splits);
-      int64_t start_idx = 0;
-      for (int i = 0; i < num_splits; ++i) {
-        int64_t length = sections[i];
-        CHECK_GE_OR_RETURN(length, 0) << "split_with_sizes expects split_sizes have only "
-                                         "non-negative entries, but split_sizes["
-                                      << i << "] = " << length;
-        splits[i] = JUST(Narrow(x, axis, start_idx, length));
-        start_idx += length;
-      }
-      CHECK_EQ_OR_RETURN(start_idx, dim_size)
-          << "split_with_sizes expects split_sizes to sum exactly to " << dim_size
-          << " (input tensor's size at dimension " << axis << "), "
-          << "but got sum(split_sizes)=" << start_idx;
-      return splits;
+    const int64_t ndim = x->ndim();
+    int64_t infferd_dim = dim;
+    CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError()
+                              << "chunk expects at least a 1-dimensional tensor.";
+    CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError()
+                                << "chunk expects `chunks` to be greater than 0, got: " << chunks;
+    CHECK_OR_RETURN(-ndim <= dim && dim <= (ndim - 1))
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << ", " << ndim - 1 << "], but got " << dim << ")";
+    if (dim < 0) { infferd_dim += ndim; }
+
+    const auto dim_size = x->shape()->At(infferd_dim);
+    int64_t split_size = (dim_size + chunks - 1) / chunks;
+    if (split_size == 0 && dim_size == 0) {
+      std::vector<int64_t> split_sizes(chunks, split_size);
+      split_sizes[chunks - 1] = split_size - (split_size * chunks - dim_size);
+      return functional::SplitWithSize(x, split_sizes, infferd_dim);
+    } else {
+      return functional::Split(x, split_size, infferd_dim);
     }
-    CHECK_GE_OR_RETURN(split_size, 0)
-        << "split expects split_size be non-negative, but got split_size=" << split_size;
-    int64_t num_splits = std::max<int64_t>((dim_size + split_size - 1) / split_size, 1);
-    TensorTuple splits(num_splits);
-    int64_t last_split_size = split_size - (split_size * num_splits - dim_size);
-    for (int i = 0; i < num_splits; ++i) {
-      int64_t length = i < num_splits - 1 ? split_size : last_split_size;
-      splits[i] = JUST(Narrow(x, axis, i * split_size, length));
-    }
-    return splits;
   }
 };
 
@@ -2796,6 +2891,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::ArgSortFunctor>("ArgSort");
+  m.add_functor<impl::SearchSortedFunctor>("SearchSorted");
+  m.add_functor<impl::SearchSortedScalarFunctor>("SearchSortedScalar");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");

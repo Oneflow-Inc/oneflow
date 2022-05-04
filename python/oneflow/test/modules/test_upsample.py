@@ -388,9 +388,10 @@ class TestUpsample2d(flow.unittest.TestCase):
     # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
     # So here we only test cuda device forward result.
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(auto_backward=False, atol=1e-8)
+    @autotest(n=10, auto_backward=False, atol=1e-8)
     def test_upsample2d_bilinear(test_case):
         x = random_tensor(ndim=4).to("cuda")
+        x = x.permute(1, 3, 0, 2)
         m = torch.nn.Upsample(
             scale_factor=random().to(float),
             mode="bilinear",

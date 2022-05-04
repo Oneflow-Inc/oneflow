@@ -207,6 +207,14 @@ bool Shape::Containing(const Shape& small_shape) const {
   return true;
 }
 
+bool Shape::MatchBeforeLastDim(const Shape& next_shape) const {
+  if (this->NumAxes() != next_shape.NumAxes()) { return false; }
+  for (int64_t i = 0; i < this->NumAxes() - 1; ++i) {
+    if (next_shape.At(i) != this->At(i)) { return false; }
+  }
+  return true;
+}
+
 Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   CHECK_OR_RETURN(start_dim >= 0 && end_dim >= start_dim);
   int64_t ndims = this->NumAxes();
