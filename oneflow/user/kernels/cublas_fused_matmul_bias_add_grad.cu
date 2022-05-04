@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/cuda/cuda_device.h"
 // CUBLASLT_EPILOGUE_BGRADB only support in cuda11.4.2 or higher version.
-#if CUDA_VERSION >= 11042
+#if CUDA_VERSION >= 11060
 
 namespace oneflow {
 
@@ -136,4 +136,4 @@ REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(half)
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 11040
+#endif  // CUDA_VERSION >= 11060
