@@ -44,7 +44,11 @@ def parse_args():
         description="helper to start multiple distributed launches in parallel"
     )
     parser.add_argument(
-        "--files", type=str, help="files to run, support pattern", required=True, nargs='+'
+        "--files",
+        type=str,
+        help="files to run, support pattern",
+        required=True,
+        nargs="+",
     )
     parser.add_argument(
         "--group_size",
