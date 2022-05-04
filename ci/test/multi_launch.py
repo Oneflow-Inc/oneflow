@@ -44,7 +44,7 @@ def parse_args():
         description="helper to start multiple distributed launches in parallel"
     )
     parser.add_argument(
-        "--files", type=str, help="files to run, support pattern", required=True,
+        "--files", type=str, help="files to run, support pattern", required=True, nargs='+'
     )
     parser.add_argument(
         "--group_size",
@@ -138,7 +138,9 @@ async def launch_multiple(
 def main():
     args = parse_args()
     # find files and chuck them
-    files = glob.glob(args.files, recursive=True)
+    files = []
+    for f in args.files:
+        files += list(glob.glob(f, recursive=True))
     print("total files:", len(files))
     files = sorted(
         files,
