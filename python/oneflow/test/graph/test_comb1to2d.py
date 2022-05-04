@@ -117,7 +117,7 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)
         y = graph_diff_hierarchy(x)
 
-        model_diff_placement = TestModuleDiffPlacement()
+        model_diff_placement = _TestModuleDiffPlacement()
         graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
 
