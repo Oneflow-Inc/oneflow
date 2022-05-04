@@ -88,7 +88,7 @@ class TestModuleDiffPlacement(nn.Module):
         return x
 
 
-class TestGraph(nn.Graph):
+class _TestGraph(nn.Graph):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -113,11 +113,11 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         )
 
         model_diff_hierarchy = TestModuleDiffHierarchy()
-        graph_diff_hierarchy = TestGraph(model_diff_hierarchy)
+        graph_diff_hierarchy = _TestGraph(model_diff_hierarchy)
         y = graph_diff_hierarchy(x)
 
         model_diff_placement = TestModuleDiffPlacement()
-        graph_diff_placement = TestGraph(model_diff_placement)
+        graph_diff_placement = _TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
 
 
