@@ -337,7 +337,7 @@ class NLLLoss(_WeightedLoss):
 class KLDivLoss(_Loss):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html?highlight=kldivloss#torch.nn.KLDivLoss
+    https://pytorch.org/docs/1.10/generated/torch.nn.KLDivLoss.html.
 
     The Kullback-Leibler divergence loss measure
 
@@ -432,7 +432,7 @@ class KLDivLoss(_Loss):
 class MSELoss(_Loss):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
+    https://pytorch.org/docs/1.10/generated/torch.nn.MSELoss.html.
 
     Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
@@ -575,7 +575,7 @@ class CTCLoss(_Loss):
     """The Connectionist Temporal Classification loss.
     The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.CTCLoss.html#torch.nn.CTCLoss
+    https://pytorch.org/docs/1.10/generated/torch.nn.CTCLoss.html.
 
     Calculates loss between a continuous (unsegmented) time series and a target sequence. CTCLoss sums over the
     probability of possible alignments of input to target, producing a loss value which is differentiable
@@ -779,7 +779,7 @@ class SmoothL1Loss(_Loss):
     element-wise error falls below beta and an L1 term otherwise.
     The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.SmoothL1Loss.html
+    https://pytorch.org/docs/1.10/generated/torch.nn.SmoothL1Loss.html.
 
     It is less sensitive to outliers than :class:`torch.nn.MSELoss` and in some cases
     prevents exploding gradients (e.g. see the paper `Fast R-CNN <https://openaccess.thecvf.com/content_iccv_2015/papers/Girshick_Fast_R-CNN_ICCV_2015_paper.pdf>`__ by Ross Girshick)..

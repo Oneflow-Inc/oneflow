@@ -520,15 +520,16 @@ llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), thi
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
-  auto maxpool_2d_op = *this;
+  auto max_pool_2d_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  NamedAttrList attributes = maxpool_2d_op->getAttrs();
-  attributes.set(maxpool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
-  auto res = rewriter
-                 .create<oneflow::MaxPool2DOp>(
-                     maxpool_2d_op.getLoc(), maxpool_2d_op->getResultTypes(), operands, attributes)
-                 ->getResults();
+  NamedAttrList attributes = max_pool_2d_op->getAttrs();
+  attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res =
+      rewriter
+          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), max_pool_2d_op->getResultTypes(),
+                                        operands, attributes)
+          ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   results.push_back(res[1]);
