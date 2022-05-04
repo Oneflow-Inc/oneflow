@@ -56,7 +56,7 @@ class _TestModuleDiffHierarchy(nn.Module):
         return x
 
 
-class TestModuleDiffPlacement(nn.Module):
+class _TestModuleDiffPlacement(nn.Module):
     def forward(self, x):
         sbp_1ds = [
             flow.sbp.broadcast,
