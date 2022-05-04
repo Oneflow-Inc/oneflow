@@ -53,7 +53,6 @@ limitations under the License.
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/vm/tensor_view_operand.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
@@ -455,7 +454,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   if (!StreamRoleSwitch<NeedSoftSync>(last_used_stream->stream_role(), device_type)) {
     return Maybe<void>::Ok();
   }
-  OF_PROFILER_RANGE_PUSH("SoftStream");
+  OF_PROFILER_RANGE_GUARD("SoftStream");
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
       std::move(compute_local_dep_objects), modifier);
   StreamRole stream_role = last_used_stream->stream_role();
@@ -464,40 +463,8 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
       JUST(StreamRoleSwitch<GetRecordEventInstructionType>(stream_role, device_type)),
       phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
-  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
-
-template<typename T>
-Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_tensor) {
-  /**
-   * TensorView instruction assign the data pointer of input tensor to output view tensor,
-   * so they can share memory.
-   */
-  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object =
-      JUST(input_tensor->eager_blob_object());
-  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
-      JUST(view_tensor->eager_blob_object());
-  // init view blob (with empty data pointer)
-  JUST(view_eager_blob_object->InitBlobWithOffset(JUST(view_tensor->storage_offset())));
-  view_eager_blob_object->set_is_shape_synced(true);
-  view_eager_blob_object->set_last_used_stream(JUST(eager_blob_object->last_used_stream()));
-
-  const auto& stream = JUST(eager_blob_object->producer_stream());
-  // prepare instruction operand
-  const auto& phy_instr_operand =
-      std::make_shared<vm::TensorViewOperand>(eager_blob_object, view_eager_blob_object);
-  // prepare instruction
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      stream->mut_vm_stream(), SingletonPtr<vm::TensorViewInstructionType>(), phy_instr_operand);
-  // assign the data pointer to output view blob
-  instruction_list_->EmplaceBack(std::move(instruction));
-  return Maybe<void>::Ok();
-}
-
-template Maybe<void> InstructionsBuilder::TensorView(
-    const std::shared_ptr<one::MirroredTensor> input_tensor,
-    const std::shared_ptr<one::MirroredTensor> view_tensor);
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
