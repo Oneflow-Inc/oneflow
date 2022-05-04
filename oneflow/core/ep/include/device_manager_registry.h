@@ -38,6 +38,7 @@ class DeviceManagerRegistry {
   static void DumpVersionInfo();
   static std::string GetDeviceTypeNameByDeviceType(DeviceType device_type);
   static DeviceType GetDeviceTypeByDeviceTypeName(const std::string& device_type_name);
+  static std::set<DeviceType> GetRegisteredDeviceTypes();
 
  private:
   class Impl;
