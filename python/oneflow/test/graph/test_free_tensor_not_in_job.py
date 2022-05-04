@@ -20,6 +20,10 @@ import oneflow as flow
 import oneflow.unittest
 import oneflow.nn as nn
 
+import os
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
+
 
 def get_bn_graph():
     model = nn.BatchNorm1d(6)
