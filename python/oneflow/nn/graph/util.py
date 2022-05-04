@@ -60,13 +60,7 @@ def operators_repr(ops: protobuf.pyext._message.RepeatedCompositeContainer):
 
         return signature_template.substitute(input=input_sig_str, output=output_sig_str)
 
-    ops_strs = []
-    for op in ops:
-        op_str = "(OPERATOR: "
-        op_str += _op_signature(op)
-        op_str += ")"
-        ops_strs.append(op_str)
-    return ops_strs
+    return map(lambda op: "(OPERATOR: " + _op_signature(op) + ")", ops)
 
 def add_indent(in_s, num_spaces):
     s = in_s.split("\n")
