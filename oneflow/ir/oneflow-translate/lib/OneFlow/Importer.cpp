@@ -358,19 +358,20 @@ LogicalResult ParseNdSbpFromAttr(::llvm::ArrayRef<Attribute> nd_sbp_attr,
 }
 
 Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
-  llvm::SmallVector<StringRef, 2> sbp_strrefs;
+  llvm::SmallVector<std::string, 2> sbp_strs;
   for (const auto& sbp : nd_sbp.sbp_parallel()) {
     if (sbp.has_split_parallel()) {
-      sbp_strrefs.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
+      sbp_strs.emplace_back("S(" + std::to_string(sbp.split_parallel().axis()) + ")");
     } else if (sbp.has_broadcast_parallel()) {
-      sbp_strrefs.emplace_back("B");
+      sbp_strs.emplace_back("B");
     } else if (sbp.has_partial_sum_parallel()) {
-      sbp_strrefs.emplace_back("P");
+      sbp_strs.emplace_back("P");
     } else {
       llvm::errs() << "unsupported sbp";
     }
   }
-  return builder.getStrArrayAttr(makeArrayRef(sbp_strrefs));
+  return builder.getStrArrayAttr(
+      makeArrayRef(llvm::SmallVector<StringRef>(sbp_strs.begin(), sbp_strs.end())));
 }
 
 LogicalResult ValidateUserOpConf(const ::oneflow::OperatorConf& op_conf, UserOpArgs args,
