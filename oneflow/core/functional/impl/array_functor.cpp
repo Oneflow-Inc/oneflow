@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <cstdint>
+#include <ostream>
 #include <vector>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
@@ -2399,7 +2400,6 @@ class MeshgridFunctor {
  public:
   Maybe<TensorTuple> operator()(const TensorTuple& tensors, const std::string& indexing) const {
     int size = tensors.size();
-    printf("%d\n", size);
     CHECK_GT_OR_RETURN(size, 0) << Error::RuntimeError()
                                 << "Meshgrid expects a non-empty TensorList.";
     for (int i = 0; i < size - 1; ++i) {
@@ -2427,11 +2427,10 @@ class MeshgridFunctor {
       swap_first_and_second_tensors = (size >= 2);
       if (swap_first_and_second_tensors) { std::swap(tensor_consts[0], tensor_consts[1]); }
     } else {
-      CHECK_EQ_OR_RETURN(indexing, "ij")
-          << Error::RuntimeError()
-          << "flow.meshgrid: indexing must be one of \"xy\" or \"ij\", "
-             "but received: ,"
-          << indexing;
+      CHECK_EQ_OR_RETURN(indexing, "ij") << Error::RuntimeError()
+                                         << "Meshgrid: indexing must be one of \"xy\" or \"ij\", "
+                                            "but received: "
+                                         << indexing;
     }
 
     TensorTuple grids(size);
@@ -2480,6 +2479,7 @@ class IndexSelectFunctor {
     CHECK_LE_OR_RETURN(new_dim, input_num_axes)
         << Error::IndexError() << "Dimension out of range (expected to be in range of ["
         << -input_num_axes << ", " << input_num_axes - 1 << "], but got " << new_dim << ")";
+
     DimVector index_broad_cast(input_num_axes);
     for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
     index_broad_cast[new_dim] = 1;
@@ -2555,7 +2555,6 @@ class ToFunctor {
                            const Optional<std::string>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-
     if (input->is_consistent()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
       CHECK_OR_RETURN(device_type == "cpu" || device_type == "cuda")
