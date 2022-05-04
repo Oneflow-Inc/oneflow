@@ -329,6 +329,7 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
+from oneflow.nn.modules.empty import new_empty_op as new_empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
@@ -361,7 +362,6 @@ from oneflow.nn.modules.reduce_ops import any_op as any
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
-from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.slice import logical_slice_op as logical_slice
 from oneflow.nn.modules.sort import sort_op as sort

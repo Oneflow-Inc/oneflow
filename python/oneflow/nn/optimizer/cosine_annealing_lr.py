@@ -21,7 +21,7 @@ from .lr_scheduler import LRScheduler
 
 class CosineAnnealingLR(LRScheduler):
     r"""
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html?highlight=cosine#torch.optim.lr_scheduler.CosineAnnealingLR
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html.
 
     Set the learning rate of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial lr and
