@@ -581,6 +581,12 @@ def _neg(self):
     return flow._C.negative(self)
 
 
+def _new_empty(
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+):
+    return flow.new_empty(self, size, dtype, device, placement, sbp, requires_grad)
+
+
 def _new_ones(
     self,
     size=None,
@@ -659,8 +665,12 @@ def _to_local(self):
     return flow.to_local(self)
 
 
-def _relu(self, inplace=False):
-    return flow.relu(self, inplace=inplace)
+def _relu(self):
+    return flow._C.relu(self)
+
+
+def _relu_inplace(self):
+    return flow.relu(self, inplace=True)
 
 
 def _softmax(self, dim=None):
@@ -1032,6 +1042,10 @@ def _view(self, *shape):
     return flow._C.view(self, new_shape)
 
 
+def _view_as(self, other):
+    return _view(self, *other.size())
+
+
 def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
 
@@ -1128,6 +1142,14 @@ def _new_tensor(
         )
 
 
+def _amin(self, dim=None, keepdim=False):
+    return flow._C.amin(self, dim=dim, keepdim=keepdim)
+
+
+def _byte(self):
+    return flow._C.to(self, flow.uint8)
+
+
 def _cumsum(self, dim, dtype=None):
     return flow._C.cumsum(self, dim, dtype=dtype)
 
@@ -1142,6 +1164,7 @@ def RegisterMethods():
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.__matmul__ = lambda self, other: self.matmul(other)
+    Tensor.byte = _byte
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
     Tensor.size = _size
@@ -1209,6 +1232,7 @@ def RegisterMethods():
     Tensor.acos = _acos
     Tensor.arccos = _arccos
     Tensor.acosh = _acosh
+    Tensor.amin = _amin
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
     Tensor.atan2 = _atan2
@@ -1273,6 +1297,7 @@ def RegisterMethods():
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
+    Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
     Tensor.pow = _pow
@@ -1294,6 +1319,7 @@ def RegisterMethods():
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
     Tensor.relu = _relu
+    Tensor.relu_ = _relu_inplace
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
     Tensor.logical_and = _and
@@ -1332,6 +1358,7 @@ def RegisterMethods():
     Tensor.reshape = _reshape
     Tensor.reshape_as = _reshape_as
     Tensor.view = _view
+    Tensor.view_as = _view_as
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist

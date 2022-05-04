@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
 
 namespace oneflow {
 
@@ -239,6 +240,25 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   }));
   return Maybe<void>::Ok();
 }
+Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
+  std::set<std::string> variable_names = [&]() -> Maybe<std::set<std::string>> {
+    std::set<std::string> variable_names_;
+    OpGraph op_graph(job_);
+    JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+      if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
+      variable_names_.insert(op_node->op().op_name());
+      return Maybe<void>::Ok();
+    }));
+    return variable_names_;
+  }()
+                                                      .GetOrThrow();
+
+  auto mgr = Global<VariableTensorMgr>::Get();
+  for (auto& name : mgr->DumpNames()) {
+    if (variable_names.find(name) == variable_names.end()) { mgr->Delete(name); }
+  }
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
@@ -248,6 +268,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
+  JUST(DeleteOutdatedVariableInVariableTensorMgr());
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
@@ -275,7 +296,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);
   }
-  std::cout << "111" << std::endl;
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
     if (GlobalProcessCtx::IsThisProcessMaster()) {
@@ -289,24 +309,19 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     //     then it can be cleared for saving mem.
     if (GlobalProcessCtx::IsThisProcessMaster()) { Global<CtrlClient>::Get()->ClearKV(plan_name); }
   }
-  std::cout << "222" << std::endl;
   // NOTE(chengcheng): recovery op_attr
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
-  std::cout << "333" << std::endl;
   NewRuntimeBuffers();
 
-  std::cout << "444" << std::endl;
   JUST(GetVariableRealBlobAfterSyncPlan());
-  std::cout << "555" << std::endl;
-  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
-  std::cout << "666" << std::endl;
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
-  CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
+  CHECK_OR_RETURN(variable_op_name2eager_blob_object_.empty()) << kOfBugIssueUploadPrompt;
   JUST(vm::CurrentRankSync());
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
   auto job_id = job_ctx->job_id();
@@ -315,17 +330,18 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     auto iter = variable_op_name2tensor_.find(var_name);
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
-    Blob* var_blob = nullptr;
-
+    vm::EagerBlobObject* var_blob = nullptr;
     if (plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().find(var_name)
         == plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().end()) {
-      // deal with variable tensor not used in nn.Graph build.
-      CHECK(tensor != NULL) << "the tensor is not existed in job, so it's not created in nn.Graph.";
+      // Deal with variable tensor not used in nn.Graph build.
+      CHECK(tensor != NULL)
+          << "the tensor of " << var_name
+          << " is not existed in job, so it's not created in nn.Graph and cannot be NULL.";
       if (tensor->is_consistent()) {
         const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
-        var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+        var_blob = JUST(local_var->eager_blob_object()).get();
       } else {
-        var_blob = JUST(tensor->eager_blob_object())->mut_blob();
+        var_blob = JUST(tensor->eager_blob_object()).get();
       }
     } else if (/*is_null=*/!tensor) {
       // Deal with tensors which are not in the nn.Module.
@@ -380,16 +396,14 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       session_ctx_->StoreFreeEagerTensorWithNameByGraphName(name_, tensor, var_name);
 
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
-      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+      var_blob = JUST(local_var->eager_blob_object()).get();
     } else if (tensor->is_consistent()) {
       // Deal with tensors which need to change sbp.
-      std::cout << "enter here" << std::endl;
       NdSbpSignature var_nd_sbp_signature = NdSbpSignature(plan_.job_id2op_attribute_ref_table()
                                                                .at(job_id)
                                                                .op_name2op_attribute()
                                                                .at(var_name)
                                                                .nd_sbp_signature());
-      std::cout << "leave here" << std::endl;
       NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
       // Change variable tensor's impl with new sbp when job pass has changed their sbp.
       if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
@@ -411,12 +425,13 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         }
       }
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
-      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+      var_blob = JUST(local_var->eager_blob_object()).get();
     } else {
-      var_blob = JUST(tensor->eager_blob_object())->mut_blob();
+      var_blob = JUST(tensor->eager_blob_object()).get();
     }
-    CHECK_OR_RETURN(var_blob != nullptr);
-    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+    CHECK_OR_RETURN(var_blob != nullptr) << kOfBugIssueUploadPrompt;
+    CHECK_OR_RETURN(variable_op_name2eager_blob_object_.emplace(var_name, var_blob).second)
+        << kOfBugIssueUploadPrompt;
   }
   // Clear after load additional variable is finished.
   additional_variable_op_tobe_loaded_name2tensor_.clear();

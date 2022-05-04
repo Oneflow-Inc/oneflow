@@ -96,7 +96,7 @@ def get_padding(padding, kernel_size, dilation, stride):
 
 class Conv1d(Module):
     """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv1d.html.
     
     Applies a 1D convolution over an input signal composed of several input
     planes.
@@ -259,7 +259,7 @@ class Conv1d(Module):
 
 class Conv2d(Module):
     """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv2d.html.
     
     Applies a 2D convolution over an input signal composed of several input
     planes.
@@ -467,7 +467,7 @@ class Conv2d(Module):
 
 class Conv3d(Module):
     r"""The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv3d.html#conv3d
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Conv3d.html.
     
     Applies a 3D convolution over an input signal composed of several input
     planes.
