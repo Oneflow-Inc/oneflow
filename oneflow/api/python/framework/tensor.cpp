@@ -658,8 +658,4 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       && PyModule_AddObject(nn.ptr(), "Parameter", (PyObject*)PyParameterObject_Type) < 0) {
     return;
   }
-
-  if(TensorMetaclass_Type && PyModule_AddObject(m.ptr(), "_TensorMetaCls", (PyObject*)TensorMetaclass_Type) < 0) {
-    return;
-  }
 }
