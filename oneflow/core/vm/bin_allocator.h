@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_CUDA_ALLOCATOR_H_
-#define ONEFLOW_CORE_VM_CUDA_ALLOCATOR_H_
+#ifndef ONEFLOW_CORE_VM_BIN_ALLOCATOR_H_
+#define ONEFLOW_CORE_VM_BIN_ALLOCATOR_H_
 
 #include <cstdint>
 #include "oneflow/core/vm/allocator.h"
@@ -23,10 +23,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class CudaAllocator final : public Allocator {
+class BinAllocator final : public Allocator {
  public:
-  explicit CudaAllocator(int64_t device_id);
-  ~CudaAllocator() override;
+  explicit BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend);
+  ~BinAllocator() override;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
@@ -35,7 +35,7 @@ class CudaAllocator final : public Allocator {
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
 
-  // Piece is the basic memory unit of CudaAllocator.
+  // Piece is the basic memory unit of BinAllocator.
   // A Piece is either is free(is_free = true) or in used(is_free = false).
   // If the Piece is_free = true, the pointer to the piece will be stored in the Bin structure of
   // the corresponding BinSize. Pieces are stored in a linked list. The Piece's prev and next are
@@ -52,10 +52,10 @@ class CudaAllocator final : public Allocator {
   // Bin is a structure that stores a set of pieces which is free and has similar size, and
   // these Pieces are arger than the size of bin
   //
-  // CudaAllocator has a set of Bin structures according to the binary multiple increasing relation,
+  // BinAllocator has a set of Bin structures according to the binary multiple increasing relation,
   // which is used to quickly index and find the free Piece of appropriate size when Allocate()
   //
-  // The size of the smallest bin is 512 (512 is the smallest unit Allocated by CudaAllocator,
+  // The size of the smallest bin is 512 (512 is the smallest unit Allocated by BinAllocator,
   // and the memory size of all Allocated will be multiples of 512, 512 is kCudaMemAllocAlignSize).
   // The size of each Bin is twice the size of the previous Bin, like
   //    BinNum:   Bin0, Bin1, Bin2, Bin3, ..., Bin19
@@ -113,7 +113,8 @@ class CudaAllocator final : public Allocator {
   bool AllocateBlockToExtendTotalMem(size_t aligned_size);
   bool DeallocateFreeBlockForGarbageCollection();
 
-  int64_t device_id_;
+  const size_t alignment_;
+  const std::unique_ptr<Allocator> backend_;
   size_t total_memory_bytes_;
   HashMap<char*, Block> mem_ptr2block_;
 
@@ -126,4 +127,4 @@ class CudaAllocator final : public Allocator {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_CUDA_ALLOCATOR_H_
+#endif  // ONEFLOW_CORE_VM_BIN_ALLOCATOR_H_
