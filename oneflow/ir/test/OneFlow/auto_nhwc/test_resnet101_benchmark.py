@@ -378,7 +378,7 @@ def main():
     x = oneflow.randn(batch_size, 3, 224, 224).to(oneflow.device("cuda"))
 
     model_graph = ResNetEvalGraph(model)
-    bench(model_graph, x, n=1000)
+    bench(model_graph, x, n=10)
 
 
 if __name__ == "__main__":
