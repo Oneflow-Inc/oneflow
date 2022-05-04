@@ -43,7 +43,7 @@ Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const in
           << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
           << ", " << ndim - 1 << "], but got " << axis[i] << ")";
       if (axis[i] < 0) {
-        reduce_axis[i] = axis[i] + naxis;
+        reduce_axis[i] = axis[i] + ndim;
       } else {
         reduce_axis[i] = axis[i];
       }

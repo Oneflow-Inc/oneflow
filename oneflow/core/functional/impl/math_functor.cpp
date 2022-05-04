@@ -744,7 +744,8 @@ class ReduceMeanFunctor {
     if (axis.empty()) {
       reduce_count = x->shape()->Count(0);
     } else {
-      for (const int32_t& i : axis) { reduce_count *= x->shape()->At(i); }
+      std::vector<int32_t> reduce_axis = *JUST(CheckAxis(axis, x->ndim()));
+      for (int32_t& i : reduce_axis) { reduce_count *= x->shape()->At(i); }
     }
     if (reduce_count == 1 || reduce_count == 0) { return sum; }
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
