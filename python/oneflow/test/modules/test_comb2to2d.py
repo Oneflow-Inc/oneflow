@@ -24,7 +24,7 @@ import numpy as np
 import oneflow.unittest
 
 
-class TestModuleDiffHierarchy(nn.Module):
+class _TestModuleDiffHierarchy(nn.Module):
     def forward(self, x):
         sbp_1ds = [
             flow.sbp.broadcast,
