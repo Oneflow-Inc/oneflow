@@ -34,14 +34,25 @@ extern PyTypeObject* PyShortTensortypeObject_Type;  // int16
 extern PyTypeObject* PyIntTensortypeObject_Type;    // int32
 extern PyTypeObject* PyLongTensortypeObject_Type;   // int64
 
-extern PyTypeObject* PyHalfTensortypeObject_Type;
-extern PyTypeObject* PyFloatTensortypeObject_Type;
-extern PyTypeObject* PyDoubleTensortypeObject_Type;
+extern PyTypeObject* PyHalfTensortypeObject_Type;    // float16
+extern PyTypeObject* PyFloatTensortypeObject_Type;   // float32
+extern PyTypeObject* PyDoubleTensortypeObject_Type;  // float64
 
-bool PyTensortype_Check(PyObject* op);
+inline bool PyTensortype_Check(PyObject* op) {
+  // return PyObject_TypeCheck(op, PyTensortypeObject_Type);
+  return op == (PyObject*)PyByteTensortypeObject_Type
+         || op == (PyObject*)PyCharTensortypeObject_Type
+         || op == (PyObject*)PyShortTensortypeObject_Type
+         || op == (PyObject*)PyIntTensortypeObject_Type
+         || op == (PyObject*)PyLongTensortypeObject_Type
+         || op == (PyObject*)PyHalfTensortypeObject_Type
+         || op == (PyObject*)PyFloatTensortypeObject_Type
+         || op == (PyObject*)PyDoubleTensortypeObject_Type;
+};
+inline bool PyTensortype_CheckExact(PyObject* op) { return op->ob_type == PyTensortypeObject_Type; }
+
 Symbol<DType> TensortypeToDType(PyObject*);
 PyObject* DTypeToTensortype(Symbol<DType>);
-// static Symbol<DType> TensortypeToDType(PyObject* type);
 
 inline bool PyByteTensor_Check(PyObject* op) {
   return PyObject_TypeCheck(op, PyByteTensortypeObject_Type);

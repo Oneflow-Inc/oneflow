@@ -59,16 +59,27 @@ PyObject* DTypeToTensortype(Symbol<DType> dtype) {
   return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
 }
 
-bool PyTensortype_Check(PyObject* op) {
-  return op == (PyObject*)PyByteTensortypeObject_Type
-         || op == (PyObject*)PyCharTensortypeObject_Type
-         || op == (PyObject*)PyShortTensortypeObject_Type
-         || op == (PyObject*)PyIntTensortypeObject_Type
-         || op == (PyObject*)PyLongTensortypeObject_Type
-         || op == (PyObject*)PyHalfTensortypeObject_Type
-         || op == (PyObject*)PyFloatTensortypeObject_Type
-         || op == (PyObject*)PyDoubleTensortypeObject_Type;
-}
+// std::unordered_map<const Symbol<DType>&, PyObject*> dtype_to_tensortype_map {
+//   {DType::UInt8(), (PyObject*)PyByteTensortypeObject_Type }  ,
+//   {DType::Int8(),  (PyObject*)PyCharTensortypeObject_Type }  ,
+//   {DType::Int16(), (PyObject*)PyShortTensortypeObject_Type } ,
+//   {DType::Int32(), (PyObject*)PyIntTensortypeObject_Type }   ,
+//   {DType::Int64(), (PyObject*)PyLongTensortypeObject_Type }  ,
+//   {DType::Float16(), (PyObject*)PyHalfTensortypeObject_Type },
+//   {DType::Float(), (PyObject*)PyFloatTensortypeObject_Type } ,
+//   {DType::Double(), (PyObject*)PyDoubleTensortypeObject_Type },
+// };
+
+// std::unordered_map<PyObject*, const Symbol<DType>&> tensortype_to_dtype_map{
+//     {(PyObject*)PyByteTensortypeObject_Type, DType::UInt8()},
+//     {(PyObject*)PyCharTensortypeObject_Type, DType::Int8()},
+//     {(PyObject*)PyShortTensortypeObject_Type, DType::Int16()},
+//     {(PyObject*)PyIntTensortypeObject_Type, DType::Int32()},
+//     {(PyObject*)PyLongTensortypeObject_Type, DType::Int64()},
+//     {(PyObject*)PyHalfTensortypeObject_Type, DType::Float16()},
+//     {(PyObject*)PyFloatTensortypeObject_Type, DType::Float()},
+//     {(PyObject*)PyDoubleTensortypeObject_Type, DType::Double()},
+// };
 
 Symbol<DType> TensortypeToDType(PyObject* type) {
   if (type == (PyObject*)PyByteTensortypeObject_Type) return DType::UInt8();
@@ -79,23 +90,12 @@ Symbol<DType> TensortypeToDType(PyObject* type) {
   if (type == (PyObject*)PyHalfTensortypeObject_Type) return DType::Float16();
   if (type == (PyObject*)PyFloatTensortypeObject_Type) return DType::Float();
   if (type == (PyObject*)PyDoubleTensortypeObject_Type) return DType::Double();
+  CHECK_OR_THROW(false) << "invalid tensortype";
   return DType::UInt8();
 }
 
 static PyObject* TensortypeMetaCls_call(PyObject* type, PyObject* args, PyObject* kwargs) {
-    PyObject* tensor = NULL;                                                                      
-    static const char* keywords[2] = {"tensor", NULL};                                            
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:tensortype", const_cast<char**>(keywords), 
-                                     &tensor)) {                                                  
-                                       std::cout << "parse error" << std::endl;
-      return NULL;                                                                                
-    }                                                                                             
-    const auto& t = PyTensor_Unpack(tensor);                                                      
-    std::cout << "unpack successfully" << std::endl;
-    const auto& result = functional::To(t, DType::UInt64(), false);                                         
-    std::cout << "convert successfully" << std::endl;
-    return functional::CastToPyObject(result);                                                    
-  // return PyType_Type.tp_call(type, args, kwargs);
+  return ((PyTypeObject*)type)->tp_call(type, args, kwargs);
 }
 
 static void TensortypeMetaCls_dealloc(PyObject* type) { PyType_Type.tp_dealloc(type); }
@@ -111,7 +111,6 @@ static PyHeapTypeObject* MakeTensortypeMetaclass() {
   auto* type = &heap_type->ht_type;
   // auto* type = (PyTypeObject*)PyType_Type.tp_alloc(&PyType_Type, 0);
 
-
   type->tp_name = "tensortype";
   type->tp_base = PY_XINCREF(&PyType_Type);
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
@@ -126,72 +125,42 @@ static PyHeapTypeObject* MakeTensortypeMetaclass() {
 
 static PyHeapTypeObject* TensortypeMetaclass_Type = MakeTensortypeMetaclass();
 
-#define CASTFUNC(dtype)                                                                           \
-  (PyObject * self, PyObject * args, PyObject * kwargs) {                                         \
-  std::cout << "fuck" << std::endl; \
-    PyObject* tensor = NULL;                                                                      \
-    static const char* keywords[2] = {"tensor", NULL};                                            \
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:tensortype", const_cast<char**>(keywords), \
-                                     &tensor)) {                                                  \
-      return NULL;                                                                                \
-    }                                                                                             \
-    const auto& t = PyTensor_Unpack(tensor);                                                      \
-    const auto& result = functional::To(t, dtype, false);                                         \
-    return functional::CastToPyObject(result);                                                    \
-  }
-
-typedef PyObject* (*func)(PyObject*, PyObject*, PyObject*);
-
-static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* test_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* data = NULL;
-  int requires_grad = 1;
-  static const char* keywords[2] = {"data", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:__init__", const_cast<char**>(keywords),
-                                   &data)) {
-    return -1;
+  PyObject* tensor = NULL;
+  static const char* keywords[2] = {"tensor", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", const_cast<char**>(keywords),
+                                   &tensor)) {
+    return NULL;
   }
-  if (self) {
-    auto* _self = (PyTensorObject*)self;
-    _self->data = ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad));
-    _self->data->set_pyobject(self);
+  if (!PyTensor_Check(tensor)) {
+    return NULL;
   }
-  return 0;
-  END_HANDLE_ERRORS_RET(-1)
+
+  Symbol<DType> dtype = TensortypeToDType(self);
+  const auto& t = PyTensor_Unpack(tensor);
+  const auto& cast_t = functional::To(t, dtype, false);
+  return functional::CastToPyObject(cast_t);
+  END_HANDLE_ERRORS
 }
 
-static PyObject* castfloat CASTFUNC(oneflow::DType::Float());
 static PyTypeObject* MakeTensortypeType(const char* tensortype_name, pybind11::module_& m) {
   PyObject* name = PyUnicode_FromString(tensortype_name);
 
   auto* metaclass = &TensortypeMetaclass_Type->ht_type;
   auto* heap_type = (PyHeapTypeObject*)metaclass->tp_alloc(metaclass, 0);
   if (!heap_type) { return NULL; }
-  // auto* type = (PyHeapTypeObject*)PyType_Type.tp_alloc(&PyType_Type, 0);
-  // type->ht_name = name;
   heap_type->ht_qualname = PY_XINCREF(name);
   auto* type = &heap_type->ht_type;
-  type->tp_name = "xxxTensor";
+  type->tp_base = (PyTypeObject*)TensortypeMetaclass_Type;
+  type->tp_name = tensortype_name;
   type->tp_basicsize = sizeof(PyTensorObject);
-  // type->tp_base = PY_XINCREF(TensortypeMetaclass_Type);
-  // type->tp_call = test2;
-
-  type->tp_init = PyTensorObject_init;
-  // type->tp_dealloc = PyTensorObject_dealloc;
-  // type->tp_getset = PyTensorObject_properties;
-  // type->tp_methods = PyTensorObject_methods;
-
-  // type->tp_as_number = &heap_type->as_number;
-  // type->tp_as_sequence = &PyTensorObject_as_sequence;
-  // type->tp_as_mapping = &PyTensorObject_as_mapping;
-
+  type->tp_call = test_call;
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
   if (PyType_Ready(type) < 0) { return NULL; }
   PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow"));
-
   if (type && PyModule_AddObject(m.ptr(), tensortype_name, (PyObject*)type) < 0) { return NULL; }
-
   return type;
 }
 
@@ -203,7 +172,6 @@ static PyTypeObject* MakeTensortypeType(const char* tensortype_name, pybind11::m
 
 using namespace oneflow::one;
 
-// func castfloat_ = castfloat
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   PyByteTensortypeObject_Type = MakeTensortypeType("ByteTensor", m);
   PyCharTensortypeObject_Type = MakeTensortypeType("CharTensor", m);
