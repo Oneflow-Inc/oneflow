@@ -34,6 +34,7 @@ compile_commands.json
 test_tmp_dir
 unittest-log-*
 /oneflow/python
+/python/oneflow/include
 /oneflow/compatible_single_client_python
 /benchmarks
 /oneflow/python/version.py
