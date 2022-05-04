@@ -28,43 +28,39 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def do_nhwc_bacth_norm(test_case, with_cuda):
+def do_nhwc_conv(test_case, with_cuda, with_bias):
     x = flow.randn(2, 3, 4, 5)
-    bn = flow.nn.BatchNorm2d(3)
+    conv = flow.nn.Conv2d(3, 4, 2, 1, bias=with_bias)
     if with_cuda:
         x = x.cuda()
-        bn.to("cuda")
+        conv.to("cuda")
 
-    eager_batch_norm_res = bn(x)
+    eager_conv_x = flow.relu(conv(x)) + flow.relu(conv(x))
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            self.m = bn
+            self.conv = conv
 
         def build(self, x):
-            return self.m(x)
+            return flow.relu(self.conv(x)) + flow.relu(self.conv(x))
 
     graph_to_run = GraphToRun()
-    lazy_batch_norm_res = graph_to_run(x)
+    lazy_conv_x = graph_to_run(x)
+    print(eager_conv_x.numpy().flatten()[:10])
+    print(lazy_conv_x.numpy().flatten()[:10])
     test_case.assertTrue(
-        np.allclose(
-            eager_batch_norm_res.numpy(),
-            lazy_batch_norm_res.numpy(),
-            rtol=1e-5,
-            atol=1e-5,
-        )
+        np.allclose(eager_conv_x.numpy(), lazy_conv_x.numpy(), rtol=1e-5, atol=1e-5)
     )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestNhwcConv(oneflow.unittest.TestCase):
     def test_nhwc_conv_graph(test_case):
-        import oneflow.sysconfig
-
-        if oneflow.sysconfig.with_cuda():
-            do_nhwc_bacth_norm(test_case, True)
-        # do_nhwc_bacth_norm(test_case, False)
+        do_nhwc_conv(test_case, True, True)
+        do_nhwc_conv(test_case, False, True)
+        do_nhwc_conv(test_case, True, False)
+        do_nhwc_conv(test_case, False, False)
 
 
 if __name__ == "__main__":
