@@ -84,7 +84,7 @@ add_docstr(
     oneflow.Tensor.device,
     r"""
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.Tensor.device.html#torch.Tensor.device
+    https://pytorch.org/docs/1.10/generated/torch.Tensor.device.html.
     
     Is the :class:`oneflow.device` where this Tensor is, which is invalid for global tensor.
     """,
@@ -193,6 +193,34 @@ add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new_empty,
+    """
+    Tensor.new_empty(*size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
+    Returns a Tensor of size :attr:`size` filled with uninitialized data. By default, the returned Tensor has the same :attr:`flow.dtype` and :attr:`flow.device` as this tensor.
+
+    Args:
+        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
+        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> x = flow.ones(())
+        >>> y = x.new_empty((2, 2))
+        >>> y.shape
+        oneflow.Size([2, 2])
     """,
 )
 
@@ -526,7 +554,7 @@ add_docstr(
     oneflow.Tensor.unfold,
     """
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.unfold.html#torch.Tensor.unfold.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.unfold.html.
 
     Returns a view of the original tensor which contains all slices of `size` size from `self`
     tensor in the dimension `dimension`.
@@ -676,7 +704,7 @@ add_docstr(
     oneflow.Tensor.backward,
     """
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html#torch.Tensor.backward.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.backward.html.
 
     Computes the gradient of current tensor w.r.t. graph leaves.
 
@@ -1669,16 +1697,34 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.sum,
     """
-    input.sum(dim, index) -> Tensor
+    input.sum(dim=None, keepdim=False) -> Tensor
 
     See :func:`oneflow.sum`
     """,
 )
 
 add_docstr(
+    oneflow.Tensor.all,
+    """
+    input.all(dim=None, keepdim=False) -> Tensor
+
+    See :func:`oneflow.all`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.any,
+    """
+    input.any(dim=None, keepdim=False) -> Tensor
+
+    See :func:`oneflow.any`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.mean,
     """
-    input.mean(dim, index) -> Tensor
+    input.mean(dim=None, keepdim=False) -> Tensor
 
     See :func:`oneflow.mean`
     """,
@@ -1687,7 +1733,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.prod,
     """
-    input.prod(dim, index) -> Tensor
+    input.prod(dim=None, keepdim=False) -> Tensor
 
     See :func:`oneflow.prod`
     """,
@@ -1720,7 +1766,7 @@ add_docstr(
     oneflow.Tensor.view,
     """
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.view.html.
 
     Returns a new tensor with the same data as the :attr:`self` tensor but of a
     different :attr:`shape`.
@@ -1763,6 +1809,22 @@ add_docstr(
         >>> y = input.view(2, 2, 2, -1).numpy().shape
         >>> y
         (2, 2, 2, 2)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.view_as,
+    """
+    Tensor.view_as(other) -> Tensor
+
+    Expand this tensor to the same size as :attr:`other`.
+    ``self.view_as(other)`` is equivalent to ``self.view(other.size())``.
+    
+    Please see :meth:`~Tensor.view` for more information about ``view``.
+
+    Args:
+        other (:class:`oneflow.Tensor`): The result tensor has the same size
+            as :attr:`other`.
     """,
 )
 
@@ -1975,6 +2037,21 @@ add_docstr(
     oneflow.Tensor.isinf,
     """
     See :func:`oneflow.isinf`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.byte,
+    """
+    self.byte() is equivalent to self.to(oneflow.uint8).
+    See :func:`oneflow.Tensor.to`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.amin,
+    """
+    See :func:`oneflow.amin`
     """,
 )
 

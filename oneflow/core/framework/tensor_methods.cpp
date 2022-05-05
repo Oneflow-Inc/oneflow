@@ -75,15 +75,15 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
       tensor_meta, JUST(input->tensor_storage()), requires_grad,
       /*is_leaf=*/!requires_grad);
-  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()),
-                                        /*pin_memory=*/false));
-  std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
+  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), /*pin_memory=*/false));
 
-  // NOTE: TensorView instruction will be remove in the future
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
-  }));
-  return output;
+  auto view_tensor = std::make_shared<MirroredTensor>(tensor_impl);
+
+  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
+      JUST(view_tensor->eager_blob_object());
+  view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
+  view_eager_blob_object->set_is_shape_synced(true);
+  return std::static_pointer_cast<Tensor>(view_tensor);
 }
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {

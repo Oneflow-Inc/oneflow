@@ -43,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/autograd/autograd_engine.h"
 
 namespace oneflow {
 namespace one {
@@ -593,7 +594,10 @@ class ExpandFunctor {
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     CHECK_GE_OR_RETURN(shape.NumAxes(), x->shape()->NumAxes())
-        << "The desired expanded dims should not be less than the input dims.";
+        << "expand(tensor{" << x->shape()->ToString() << "}, size=" << x->shape()->NumAxes()
+        << "): the number of sizes provided (" << shape.NumAxes() << ") "
+        << "must be greater or equal to the number of dimensions in the tensor ("
+        << x->shape()->NumAxes() << ")";
     std::vector<int32_t> in_shape(x->shape()->NumAxes());
     for (int i = 0; i < in_shape.size(); ++i) { in_shape[i] = x->shape()->At(i); }
 
@@ -602,12 +606,18 @@ class ExpandFunctor {
     for (int i = shape.NumAxes() - 1; i >= 0; --i) {
       int index = i - shift;
       if (index >= 0) {
-        if (shape.At(i) != -1 && shape.At(i) != in_shape.at(index)) {
-          CHECK_OR_RETURN(shape.At(i) > 0 && in_shape.at(index) == 1)
-              << "Invalid expand shape " << shape.ToString();
+        if (shape.At(i) != -1 && shape.At(i) != in_shape[index]) {
+          CHECK_OR_RETURN(shape.At(i) >= 0 && in_shape[index] == 1)
+              << "The expanded size of the tensor (" << shape.At(i)
+              << ") must match the existing size (" << in_shape[index]
+              << ") at non-singleton dimension " << i << ".  Target sizes: " << shape.ToString()
+              << ".  Tensor sizes: " << x->shape()->ToString();
         }
       } else {
-        CHECK_GT_OR_RETURN(shape.At(i), 0) << "Invalid expand shape " << shape.ToString();
+        CHECK_GE_OR_RETURN(shape.At(i), 0)
+            << "The expanded size of the tensor (" << shape.At(i)
+            << ") isn't allowed in a leading, non-existing dimension " << i
+            << " .Target size: " << shape.ToString();
       }
     }
 
@@ -939,10 +949,85 @@ class ArgSortFunctor {
     op_ = CHECK_JUST(one::OpBuilder("arg_sort").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
-                           const std::string direction) const {
+                           const std::string& direction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("direction", direction));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SearchSortedFunctor {
+ public:
+  SearchSortedFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("searchsorted")
+                         .Input("sorted_sequence")
+                         .Input("values")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
+                           const std::shared_ptr<one::Tensor>& values, bool out_int32,
+                           bool right) const {
+    // checks
+    CHECK_OR_RETURN(values->shape()->NumAxes() > 0)
+        << "for searchsorted op, input values tensor should have positive dimension";
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() > 0)
+        << "for searchsorted op, input sorted_sequence should have positive dimension, "
+        << "but got 0 dimension";
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1
+                    || sorted_sequence->shape()->MatchBeforeLastDim(*(values->shape())))
+        << "for searchsorted op, sorted_sequence should be 1 dimension or the first N-1 dimensions "
+        << "of boundaries tensor and input value tensor must match";
+    if (out_int32) {
+      CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
+                      < INT32_MAX)
+          << "for searchsorted op, the size of input sorted_sequence' last dimension should "
+          << "be less than " << INT32_MAX;
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("out_int32", out_int32));
+    JUST(attrs.SetAttr<bool>("right", right));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SearchSortedScalarFunctor {
+ public:
+  SearchSortedScalarFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
+                           const Scalar& values, bool out_int32, bool right) const {
+    // checks
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1)
+        << "for searchsorted op, input value can be a scalar only when sorted_sequence tensor "
+        << "dimension is 1, but we got sorted_sequence dim(" << sorted_sequence->shape()->NumAxes()
+        << ")";
+    if (out_int32) {
+      CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
+                      < INT32_MAX)
+          << "for searchsorted op, the size of input sorted_sequence' last dimension should "
+          << "be less than " << INT32_MAX;
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("out_int32", out_int32));
+    JUST(attrs.SetAttr<bool>("right", right));
+    bool is_values_float = values.IsFloatingPoint();
+    if (is_values_float) {
+      double_t values_tmp = JUST(values.As<double_t>());
+      JUST(attrs.SetAttr<double>("values", values_tmp));
+    } else {
+      int64_t values_tmp = JUST(values.As<int64_t>());
+      JUST(attrs.SetAttr<double>("values", values_tmp));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence}, attrs);
   }
 
  private:
@@ -1215,18 +1300,22 @@ class LogicalSliceFunctor : public SliceBaseFunctor {
 class LogicalSliceAssignFunctor {
  public:
   LogicalSliceAssignFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logical_slice_assign").Input("ref").Input("value").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("logical_slice_assign").Input("ref").Input("value").Output("y").Build());
   }
-  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
-                         const std::shared_ptr<one::Tensor>& value,
-                         const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
-                         const std::vector<int64_t>& step) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ref,
+                           const std::shared_ptr<one::Tensor>& value,
+                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, attrs));
-    return Maybe<void>::Ok();
+    auto outputs = std::make_shared<TensorTuple>(1);
+    JUST(CheckInplaceValid(ref));
+    *JUST(VectorAt(outputs.get(), 0)) = ref;
+    JUST(OpInterpUtil::Dispatch(*op_, {ref, value}, outputs.get(), attrs));
+    return *JUST(VectorAt(outputs.get(), 0));
   }
 
  private:
@@ -1868,7 +1957,19 @@ class TensorGetItemFunctor {
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
-    if (!tensor_indices.empty()) { result = JUST(ApplyAdvancedIndexing(result, tensor_indices)); }
+    if (!tensor_indices.empty()) {
+      const auto x_device = JUST(x->device());
+      for (int64_t i = 0; i < tensor_indices.size(); ++i) {
+        const auto tensor_index = tensor_indices[i];
+        if (tensor_index == nullptr) { continue; }
+        const auto tensor_index_device = JUST(tensor_index->device());
+        if ((tensor_index_device->type() != x_device->type())
+            || (tensor_index_device->device_id() != x_device->device_id())) {
+          tensor_indices[i] = JUST(Copy(tensor_index, x_device->type(), x_device->device_id()));
+        }
+      }
+      result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
+    }
 
     // TODO(): Returns a view of tensor `x`.
     if (result == x) { result = JUST(Identity(x)); }
@@ -2500,7 +2601,6 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     return tensor;
   } else {
     CheckMetaConsistency(x).GetOrThrow();
-    auto old_placement = JUST(x->parallel_desc());
     auto placement = JUST(ReplacePlacementDeviceTag(input_placement, device_type));
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
@@ -2780,6 +2880,7 @@ class PinMemoryFunctor {
  public:
   PinMemoryFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("slice_update").Input("x").Input("update").Output("y").Build());
+    assign_op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     // TODO:(zhaoluyang) support consistent tensor.pin_memory()
@@ -2800,30 +2901,26 @@ class PinMemoryFunctor {
     const int32_t ndim = input->ndim();
     if(ndim == 0){
       // for 0-dim case only
-      // TODO: use TensorSetItem replace AssignLocalTensor
-      TensorIndex tensor_index;
-      tensor_index.emplace_back(functional::detail::IndexItem(functional::detail::EllipsisIndex{}));
-      JUST(functional::TensorSetItem(empty, tensor_index, input));
+      // TODO:(zhaoluyang) use TensorSetItem replace AssignLocalTensor
+      JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {empty, input}));
+      // if requires_grad, set backward function-node 'copy_backward'
+      if(autograd::GradMode::is_enabled() && requires_grad){
+        auto backward_fn = std::make_shared<BackwardFunction>();
+        backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                                bool create_graph) -> Maybe<void> {
+          autograd::AutoGradMode mode(create_graph);
+          CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+          in_grads->resize(1);
+          const Symbol<Device>& device = JUST(out_grads[0]->device());
+          (*in_grads)[0] = JUST(functional::Copy(out_grads[0], device->type(), device->device_id()););
+          return Maybe<void>::Ok();
+        };
+        backward_fn->status = []() { return true; };
+        TensorTuple outputs{empty};
+        JUST(GetThreadLocalAutogradEngine()->AddNode("copy_backward", backward_fn, {input},
+                                                    &outputs));
+      }
       return empty;
-      // JUST(functional::AssignLocalTensor(empty, input));
-      // // if requires_grad, set backward function-node 'copy_backward'
-      // if(autograd::GradMode::is_enabled() && requires_grad){
-      //   auto backward_fn = std::make_shared<BackwardFunction>();
-      //   backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-      //                           bool create_graph) -> Maybe<void> {
-      //     autograd::AutoGradMode mode(create_graph);
-      //     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-      //     in_grads->resize(1);
-      //     const Symbol<Device>& device = JUST(out_grads[0]->device());
-      //     (*in_grads)[0] = JUST(functional::Copy(out_grads[0], device->type(), device->device_id()););
-      //     return Maybe<void>::Ok();
-      //   };
-      //   backward_fn->status = []() { return true; };
-      //   TensorTuple outputs{empty};
-      //   JUST(GetThreadLocalAutogradEngine()->AddNode("copy_backward", backward_fn, {input},
-      //                                               &outputs));
-      // }
-      // return empty;
     } else {
       MutableAttrMap attrs;
       std::vector<int64_t> starts(ndim, 0);
@@ -2842,6 +2939,7 @@ class PinMemoryFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> assign_op_;
 };
 
 }  // namespace impl
@@ -2874,6 +2972,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::ArgSortFunctor>("ArgSort");
+  m.add_functor<impl::SearchSortedFunctor>("SearchSorted");
+  m.add_functor<impl::SearchSortedScalarFunctor>("SearchSortedScalar");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
