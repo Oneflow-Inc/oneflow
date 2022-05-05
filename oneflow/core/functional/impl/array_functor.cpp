@@ -2483,30 +2483,21 @@ class IndexSelectFunctor {
     for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
     index_broad_cast[new_dim] = 1;
     Shape expand_shape(index_broad_cast);
-
+    std::shared_ptr<one::Tensor> index_new;
     if (index_num_axes == 1) {
-      auto index_gather =
-          JUST(functional::Expand(JUST(functional::Slice(index, {0}, {1}, {1})), expand_shape));
-      for (int i = 1; i < index->dim(0); i++) {
-        index_gather = JUST(functional::Concat(
-            {index_gather, JUST(functional::Expand(
-                               JUST(functional::Slice(index, {i}, {i + 1}, {1})), expand_shape))},
-            new_dim));
-      }
-      return JUST(functional::DimGather(input, new_dim, index_gather, false));
+      index_new = index;
     } else {
-      std::shared_ptr<one::Tensor> index_new = JUST(Unsqueeze(index, 0));
-      auto index_gather =
-          JUST(functional::Expand(JUST(functional::Slice(index_new, {0}, {1}, {1})), expand_shape));
-      for (int i = 1; i < index_new->dim(0); i++) {
-        index_gather = JUST(functional::Concat(
-            {index_gather,
-             JUST(functional::Expand(JUST(functional::Slice(index_new, {i}, {i + 1}, {1})),
-                                     expand_shape))},
-            new_dim));
-      }
-      return JUST(functional::DimGather(input, new_dim, index_gather, false));
+      index_new = JUST(Unsqueeze(index, 0));
     }
+    auto index_gather =
+        JUST(functional::Expand(JUST(functional::Slice(index_new, {0}, {1}, {1})), expand_shape));
+    for (int i = 1; i < index_new->dim(0); i++) {
+      index_gather = JUST(functional::Concat(
+          {index_gather, JUST(functional::Expand(
+                             JUST(functional::Slice(index_new, {i}, {i + 1}, {1})), expand_shape))},
+          new_dim));
+    }
+    return JUST(functional::DimGather(input, new_dim, index_gather, false));
   }
 };
 
