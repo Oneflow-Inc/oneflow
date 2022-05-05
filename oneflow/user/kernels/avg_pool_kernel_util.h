@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_AVG_POOLING_KERNEL_UTIL_H_
-#define ONEFLOW_USER_KERNELS_AVG_POOLING_KERNEL_UTIL_H_
+#ifndef ONEFLOW_USER_KERNELS_AVG_POOL_KERNEL_UTIL_H_
+#define ONEFLOW_USER_KERNELS_AVG_POOL_KERNEL_UTIL_H_
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/framework/framework.h"
@@ -53,31 +53,31 @@ struct XPUAdd {
 
 }  // namespace
 
-#define AVG_POOLING_DATA_TYPE_SEQ               \
+#define AVG_POOL_DATA_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
 
-#define AVG_POOLING_DATA_TYPE_CPU_SEQ AVG_POOLING_DATA_TYPE_SEQ
+#define AVG_POOL_DATA_TYPE_CPU_SEQ AVG_POOL_DATA_TYPE_SEQ
 
-#define AVG_POOLING_DATA_TYPE_CUDA_SEQ AVG_POOLING_DATA_TYPE_SEQ
+#define AVG_POOL_DATA_TYPE_CUDA_SEQ AVG_POOL_DATA_TYPE_SEQ
 
-#define AVG_POOLING_IDX_DATA_TYPE_SEQ             \
+#define AVG_POOL_IDX_DATA_TYPE_SEQ                \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
 
-class AvgPoolingParams3D {
+class AvgPoolParams3D {
  public:
-  AvgPoolingParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
-                     const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
-                     const std::vector<int32_t>& stride, const bool ceil_mode,
-                     const bool count_include_pad, const int32_t divisor_override);
-  ~AvgPoolingParams3D() = default;
+  AvgPoolParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,
+                  const std::vector<int32_t>& padding, const std::vector<int32_t>& kernel_size,
+                  const std::vector<int32_t>& stride, const bool ceil_mode,
+                  const bool count_include_pad, const int32_t divisor_override);
+  ~AvgPoolParams3D() = default;
 
   const std::string& data_format() const { return data_format_; }
   const std::vector<int32_t>& padding() const { return padding_; }
-  const std::vector<int32_t>& pooling_size_3d() const { return pooling_size_3d_; }
+  const std::vector<int32_t>& pool_size_3d() const { return pool_size_3d_; }
   const std::vector<int32_t>& stride_3d() const { return stride_3d_; }
   const bool& ceil_mode() const { return ceil_mode_; }
   const bool& count_include_pad() const { return count_include_pad_; }
@@ -96,7 +96,7 @@ class AvgPoolingParams3D {
   FixedDimVector y_3d_;
   std::string data_format_;
   std::vector<int32_t> padding_;
-  std::vector<int32_t> pooling_size_3d_;
+  std::vector<int32_t> pool_size_3d_;
   std::vector<int32_t> stride_3d_;
   bool ceil_mode_;
   bool count_include_pad_;
@@ -106,30 +106,30 @@ class AvgPoolingParams3D {
 };
 
 template<DeviceType device_type, typename T, typename IDX>
-struct AvgPoolingKernelUtil {
+struct AvgPoolKernelUtil {
   static void Avgpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest,
-                               const AvgPoolingParams3D& params_3d);
+                               const AvgPoolParams3D& params_3d);
 
   static void Avgpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const AvgPoolingParams3D& params_3d);
+                                const AvgPoolParams3D& params_3d);
 
   static void Avgpool2dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                const IDX elem_num, const T* src, T* dest,
-                               const AvgPoolingParams3D& params_3d);
+                               const AvgPoolParams3D& params_3d);
 
   static void Avgpool2dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const AvgPoolingParams3D& params_3d);
+                                const AvgPoolParams3D& params_3d);
 
   static void Avgpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                const IDX elem_num, const T* src, T* dest,
-                               const AvgPoolingParams3D& params_3d);
+                               const AvgPoolParams3D& params_3d);
 
   static void Avgpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                 const IDX elem_num, const T* src, T* dest,
-                                const AvgPoolingParams3D& params_3d);
+                                const AvgPoolParams3D& params_3d);
 };
 
 template<typename T, typename IDX>
@@ -402,10 +402,10 @@ OF_DEVICE_FUNC void Avgpool3dBackwardCompute(
   }
 }
 
-#define INSTANTIATE_AVG_POOLING_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
-  template struct AvgPoolingKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),      \
-                                       OF_PP_PAIR_FIRST(index_dtype_pair)>;
+#define INSTANTIATE_AVG_POOL_KERNEL_UTIL(device_type_v, dtype_pair, index_dtype_pair) \
+  template struct AvgPoolKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),      \
+                                    OF_PP_PAIR_FIRST(index_dtype_pair)>;
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_AVG_POOLING_KERNEL_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_AVG_POOL_KERNEL_UTIL_H_

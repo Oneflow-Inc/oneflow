@@ -22,7 +22,7 @@ from math import sqrt
 
 class RNN(Module):
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.RNN.html#torch.nn.RNN
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.RNN.html.
 
     Applies a multi-layer Elman RNN with \tanhtanh or \text{ReLU}ReLU non-linearity to an input sequence.
 
@@ -346,7 +346,7 @@ class RNN(Module):
 
 class GRU(Module):
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#GRU
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#GRU.
 
     Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
 
@@ -681,7 +681,7 @@ class GRU(Module):
 
 class LSTM(nn.Module):
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/_modules/torch/nn/modules/rnn.html#LSTM
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#LSTM.
 
     Applies a multi-layer long short-term memory (LSTM) RNN to an input sequence.
 
