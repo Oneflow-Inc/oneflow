@@ -13,18 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from tkinter import X
 import unittest
-from collections import OrderedDict
-
-import os
-import numpy as np
-import time
-import oneflow as flow
 import oneflow.unittest
-
-from oneflow.test_utils.automated_test_util import *
-
+import oneflow as flow
 
 class TestArrayError(flow.unittest.TestCase):
     def test_argmax_index_error(test_case):
