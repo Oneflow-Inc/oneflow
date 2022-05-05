@@ -64,7 +64,6 @@ Maybe<void> Embedding::Capture(EmbeddingCaptureState* ctx, const TensorTuple& in
 Maybe<void> Embedding::Apply(const EmbeddingCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  in_grads->resize(1);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   const auto& weight = ctx->SavedTensors().at(0);

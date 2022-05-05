@@ -25,11 +25,14 @@ namespace {
 
 template<typename T, typename index_T>
 __global__ void embedding_kernel(const T* weight_buf, const index_T* indices_buf, T* out_buf,
-                                 const int32_t num_indices, const int32_t emb_dim) {
+                                 const int32_t num_indices, const int32_t emb_size,
+                                 const int32_t emb_dim) {
   CUDA_1D_KERNEL_LOOP(i, num_indices * emb_dim) {
     int32_t indices_index = i / emb_dim;
     int32_t emb_dim_index = i - indices_index * emb_dim;
-    int32_t from_index = indices_buf[indices_index] * emb_dim + emb_dim_index;
+    int32_t emb_size_index = indices_buf[indices_index];
+    assert(emb_size_index >= 0 && emb_size_index < emb_size);
+    int32_t from_index = emb_size_index * emb_dim + emb_dim_index;
     out_buf[i] = weight_buf[from_index];
   }
 }
@@ -50,8 +53,18 @@ __global__ void embedding_grad_kernel(const T* dy_buf, const index_T* indices_bu
 }
 
 template<typename index_T>
-__global__ void indices_freq_kernel(const index_T* indices_buf, const int32_t num_indices,
-                                    int32_t* indices_frep) {
+__global__ void renorm_indices_freq_kernel(const index_T* indices_buf, const int32_t num_indices,
+                                           int32_t* indices_frep, const int32_t emb_size) {
+  CUDA_1D_KERNEL_LOOP(i, num_indices) {
+    int32_t index = indices_buf[i];
+    assert(index >= 0 && index < emb_size);
+    cuda::atomic::Add(indices_frep + index, 1);
+  }
+}
+
+template<typename index_T>
+__global__ void grad_indices_freq_kernel(const index_T* indices_buf, const int32_t num_indices,
+                                         int32_t* indices_frep) {
   CUDA_1D_KERNEL_LOOP(i, num_indices) { cuda::atomic::Add(indices_frep + indices_buf[i], 1); }
 }
 
@@ -102,12 +115,13 @@ struct EmbeddingRenormFunctor<DeviceType::kCUDA, T, index_T> final {
   void operator()(ep::Stream* stream, const T* in_buf, const index_T* indices_buf, T* out_buf,
                   const double max_norm, const double norm_type, const int32_t num_indices,
                   const int32_t emb_size, const int32_t emb_dim, int32_t* tmp_buf) {
-    indices_freq_kernel<index_T>
+    renorm_indices_freq_kernel<index_T>
         <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
-           stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf);
-    embedding_renorm_kernel<T, index_T><<<BlocksNum4ThreadsNum(emb_size), kCudaThreadsNumPerBlock,
-                                          0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-        in_buf, out_buf, tmp_buf, max_norm, norm_type, emb_dim);
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf,
+                                                          emb_size);
+    embedding_renorm_kernel<T, index_T>
+        <<<emb_size, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            in_buf, out_buf, tmp_buf, max_norm, norm_type, emb_dim);
   }
 };
 
@@ -119,7 +133,7 @@ struct EmbeddingFunctor<DeviceType::kCUDA, T, index_T> final {
     embedding_kernel<T, index_T>
         <<<BlocksNum4ThreadsNum(num_indices * emb_dim), kCudaThreadsNumPerBlock, 0,
            stream->As<ep::CudaStream>()->cuda_stream()>>>(weight_buf, indices_buf, out_buf,
-                                                          num_indices, emb_dim);
+                                                          num_indices, emb_size, emb_dim);
   }
 };
 
@@ -134,7 +148,7 @@ struct EmbeddingGradFunctor<DeviceType::kCUDA, T, index_T> final {
            stream->As<ep::CudaStream>()->cuda_stream()>>>(dy_buf, indices_buf, dx_buf, padding_idx,
                                                           num_indices, emb_dim);
     if (scale_grad_by_freq) {
-      indices_freq_kernel<index_T>
+      grad_indices_freq_kernel<index_T>
           <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf);
       emb_scale_kernel<T, index_T>

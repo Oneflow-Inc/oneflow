@@ -51,6 +51,7 @@ struct EmbeddingFunctor<DeviceType::kCPU, T, index_T> final {
                   const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim) {
     for (int32_t i = 0; i < num_indices; i++) {
       index_T indice = indices_buf[i];
+      CHECK(indice >= 0 && indice < emb_size);
       const T* from = weight_buf + indice * emb_dim;
       T* to = out_buf + i * emb_dim;
       std::copy(from, from + emb_dim, to);

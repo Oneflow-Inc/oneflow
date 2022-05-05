@@ -117,7 +117,8 @@ REGISTER_USER_OP_GRAD("embedding")
                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("weight", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("embedding_grad")
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("embedding_grad")
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Input("weight", op.input("weight", 0))
                 .Input("indices", op.input("indices", 0))

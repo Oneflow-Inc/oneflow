@@ -60,7 +60,7 @@ class Embedding(Module):
         embedding_dim: int,
         padding_idx: Optional[int] = None,
         max_norm: Optional[float] = None,
-        norm_type: Optional[float] = None,
+        norm_type: float = 2.0,
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
         _weight: Optional[Tensor] = None,
@@ -101,7 +101,7 @@ class Embedding(Module):
     def _fill_padding_idx_with_zero(self) -> None:
         if self.padding_idx is not None:
             with flow.no_grad():
-                self.weight[self.padding_idx].fill_(0)
+                self.weight[self.padding_idx] = 0
 
     def forward(self, indices):
         if self.max_norm is not None:
@@ -118,7 +118,7 @@ def embedding(
     weight,
     padding_idx=None,
     max_norm=None,
-    norm_type=None,
+    norm_type=2.0,
     scale_grad_by_freq=False,
     sparse=False,
 ):
@@ -166,8 +166,16 @@ def embedding(
 
     assert sparse is False, "Not support sparse=True yet!"
     if padding_idx is not None:
-        weight[padding_idx].fill_(0)
-    
+        if padding_idx > 0:
+            assert padding_idx < weight.size(
+                0
+            ), "Padding_idx must be within num_embeddings"
+        elif padding_idx < 0:
+            assert padding_idx >= -weight.size(
+                0
+            ), "Padding_idx must be within num_embeddings"
+            padding_idx = weight.size(0) + padding_idx
+
     if max_norm is not None:
         weight = flow._C.embedding_renorm_(weight, input, max_norm, norm_type)
 
