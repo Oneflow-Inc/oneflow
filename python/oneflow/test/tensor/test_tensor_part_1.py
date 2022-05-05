@@ -164,6 +164,7 @@ class TestTensor(flow.unittest.TestCase):
         z.requires_grad_()
         flow.nn.init.xavier_normal_(z)
         flow.nn.init.xavier_uniform_(z)
+        flow.nn.init.orthogonal_(z)
         x = tensor_creator(*shape).to(dtype=flow.int32)
         np_ones = np.ones(x.shape, dtype=np.int32)
         np_zeros = np.zeros(x.shape, dtype=np.int32)
@@ -1051,6 +1052,12 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(x.dtype == flow.int64)
         y = x.half()
         test_case.assertTrue(y.dtype == flow.float16)
+
+    def test_byte(test_case):
+        x = flow.tensor([1.2], dtype=flow.float32)
+        test_case.assertTrue(x.dtype == flow.float32)
+        y = x.byte()
+        test_case.assertTrue(y.dtype == flow.uint8)
 
 
 if __name__ == "__main__":
