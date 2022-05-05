@@ -1406,14 +1406,14 @@ class NormalFunctor {
       if (optional_dtype.has_value()) {
         CHECK_OR_RETURN(output_tensor_dtype == dtype)
             << Error::RuntimeError() << "data type " << dtype->name()
-            << " does not match data type of out parameter (" << output_tensor_dtype->name();
+            << " does not match data type of out parameter " << output_tensor_dtype->name();
       }
       dtype = output_tensor_dtype;
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
       if (optional_device.has_value()) {
         CHECK_OR_RETURN(out_tensor_device == JUST(optional_device))
             << Error::RuntimeError() << "device type " << device->ToString()
-            << " does not match device type of out parameter (" << out_tensor_device->ToString();
+            << " does not match device type of out parameter " << out_tensor_device->ToString();
       }
       device = out_tensor_device;
     }
@@ -2492,7 +2492,7 @@ class FusedDotFeatureInteractionFunctor {
     JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
     JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
     const int64_t n_features = features.size();
-    CHECK_LE_OR_RETURN(n_features, kMaxInputCount);
+    CHECK_LE_OR_RETURN(n_features, kMaxInputCount) << "Features num should be less than 128. ";
     if (output_concat) {
       JUST(attrs.SetAttr<bool>("has_output_concat", true));
       TensorTuple inputs(n_features + 1);
