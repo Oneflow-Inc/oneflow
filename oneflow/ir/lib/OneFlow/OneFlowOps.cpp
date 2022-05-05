@@ -520,19 +520,54 @@ llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), thi
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
-  auto maxpool_2d_op = *this;
+  auto max_pool_2d_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
-  NamedAttrList attributes = maxpool_2d_op->getAttrs();
-  attributes.set(maxpool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
-  auto res = rewriter
-                 .create<oneflow::MaxPool2DOp>(
-                     maxpool_2d_op.getLoc(), maxpool_2d_op->getResultTypes(), operands, attributes)
-                 ->getResults();
+  NamedAttrList attributes = max_pool_2d_op->getAttrs();
+  attributes.set(max_pool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res =
+      rewriter
+          .create<oneflow::MaxPool2DOp>(max_pool_2d_op.getLoc(), max_pool_2d_op->getResultTypes(),
+                                        operands, attributes)
+          ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
   results.push_back(res[1]);
   return results;
+}
+
+bool ReluOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> ReluOp::OperandsToTranspose() { return {this->x()}; }
+
+llvm::DenseSet<Value> ReluOp::ResultsToTranspose() { return {this->y()}; }
+
+llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto relu_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res = rewriter
+                 .create<oneflow::ReluOp>(relu_op.getLoc(), relu_op->getResultTypes(), operands,
+                                          relu_op->getAttrs())
+                 ->getResults();
+  return {res[0]};
+}
+
+bool Add2Op::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> Add2Op::OperandsToTranspose() { return {this->in0(), this->in1()}; }
+
+llvm::DenseSet<Value> Add2Op::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto add2_op = *this;
+  SmallVector<Value, 4> operands{value[0], value[1]};
+  auto res = rewriter
+                 .create<oneflow::Add2Op>(add2_op.getLoc(), add2_op->getResultTypes(), operands,
+                                          add2_op->getAttrs())
+                 ->getResults();
+  return {res[0]};
 }
 
 }  // namespace oneflow
