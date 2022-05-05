@@ -31,12 +31,31 @@ Maybe<void> StraightenNodes(const OpGraph& op_graph, Job* job) {
   sbp_constructor.ExposeCtrlEdges();
   // Add control edge
   JobBuilder job_builder(job);
+  // Judge whether we can set a control edge from source node to destination node
+  // We set up this function from task_graph.cpp:ForEachOpGraphNecessaryCtrlEdge()
+  auto IsOpGraphDataReachable = op_graph.MakePredicatorIsReachable();
+  auto able_to_add_control_edge = [&](OpNode* src, OpNode* dst) {
+    if (IsOpGraphDataReachable(dst, src)) { return false; }
+    if (!IsOpGraphDataReachable(src, dst)) {
+      if (dst->parallel_desc().parallel_num() != src->parallel_desc().parallel_num()) {
+        return false;
+      }
+      const Shape* src_time_shape = CHECK_JUST(src->op().GetOpTimeShape()).get();
+      const Shape* dst_time_shape = CHECK_JUST(dst->op().GetInputBlobFastestTimeShape()).get();
+      if (dst_time_shape == nullptr) {
+        dst_time_shape = CHECK_JUST(dst->op().GetOpTimeShape()).get();
+      }
+      if (src_time_shape->elem_cnt() != dst_time_shape->elem_cnt()) { return false; }
+    }
+    return true;
+  };
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   // Add a control edge from the previous node to this node
   auto add_control_edge = [&](OpNode* previous_node, OpNode* this_node) -> Maybe<void> {
     const auto& previous_name = previous_node->op().op_conf().name();
     const auto& this_conf = this_node->op().op_conf();
-    if (!IsReachable(previous_name, this_conf.name())) {
+    if (!IsReachable(previous_name, this_conf.name())
+        && able_to_add_control_edge(previous_node, this_node)) {
       OperatorConf mutable_consumer_op_conf(this_conf);
       mutable_consumer_op_conf.add_ctrl_in_op_name(previous_name);
       JUST(job_builder.MutOpOnlyOnce(mutable_consumer_op_conf));
