@@ -42,9 +42,8 @@ message OpDesc {
     optional int64 root = 4;
     required DataType data_type = 5;
     required ShapeProto shape = 6;
-    required ShapeProto stride = 7;
-    required int64 num_ranks = 8;
-    required Backend backend = 9;
+    required int64 num_ranks = 7;
+    required Backend backend = 8;
 }
 
 message RequestDesc {

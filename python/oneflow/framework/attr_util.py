@@ -17,6 +17,7 @@ import oneflow
 import oneflow._oneflow_internal
 import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
 import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
+import oneflow._oneflow_internal.oneflow.core.common.stride as stride_cfg
 import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 
 
@@ -70,6 +71,12 @@ def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
         for x in attr_value:
             assert isinstance(x, int)
             attribute_mutable_at_shape.add_dim(x)
+    elif attr_type == user_op_attr_cfg.kAtStride:
+        assert isinstance(attr_value, (tuple, list))
+        attribute_mutable_at_stride = attribute.mutable_at_stride()
+        for x in attr_value:
+            assert isinstance(x, int)
+            attribute_mutable_at_stride.add_dim(x)
     elif attr_type == user_op_attr_cfg.kAtDataType:
         assert attr_value in oneflow.dtypes()
         attr_value = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
@@ -115,6 +122,18 @@ def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
                 assert isinstance(dim, int)
                 shape.add_dim(dim)
             attribute_mutable_at_list_shape.Add().CopyFrom(shape)
+    elif attr_type == user_op_attr_cfg.kAtListStride:
+        assert isinstance(attr_value, (tuple, list))
+        attribute_mutable_at_list_stride = (
+            attribute.mutable_at_list_stride().mutable_val()
+        )
+        for x in attr_value:
+            assert isinstance(x, (tuple, list))
+            stride = stride_cfg.StrideProto()
+            for dim in x:
+                assert isinstance(dim, int)
+                stride.add_dim(dim)
+            attribute_mutable_at_list_stride.Add().CopyFrom(stride)
     elif attr_type == user_op_attr_cfg.kAtListString:
         assert isinstance(attr_value, (tuple, list))
         attribute_mutable_at_list_string = attribute.mutable_at_list_string()

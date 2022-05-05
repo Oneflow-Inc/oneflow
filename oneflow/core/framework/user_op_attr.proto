@@ -12,15 +12,15 @@ enum AttrType {
   kAtDouble = 5;
   kAtString = 6;
   kAtShape = 7;
-  kAtStride = 8;
-  kAtDataType = 9;
-  kAtListInt32 = 10;
-  kAtListInt64 = 11;
-  kAtListFloat = 12;
-  kAtListDataType = 13;
-  kAtListShape = 14;
-  kAtListStride = 15;
-  kAtListString = 16;
+  kAtDataType = 8;
+  kAtListInt32 = 9;
+  kAtListInt64 = 10;
+  kAtListFloat = 11;
+  kAtListDataType = 12;
+  kAtListShape = 13;
+  kAtListString = 14;
+  kAtStride = 15;
+  kAtListStride = 16;
 }
 
 message AttrValue {
@@ -54,15 +54,15 @@ message AttrValue {
     double at_double = 5;
     string at_string = 6;
     ShapeProto at_shape = 7;
-    ShapeProto at_stride = 8;
-    DataType at_data_type = 9;
-    ListInt32 at_list_int32 = 10;
-    ListInt64 at_list_int64 = 11;
-    ListFloat at_list_float = 12;
-    ListDataType at_list_data_type = 13;
-    ListShape at_list_shape = 14;
-    ListStride at_list_stride = 15;
-    ListString at_list_string = 16;
+    DataType at_data_type = 8;
+    ListInt32 at_list_int32 = 9;
+    ListInt64 at_list_int64 = 10;
+    ListFloat at_list_float = 11;
+    ListDataType at_list_data_type = 12;
+    ListShape at_list_shape = 13;
+    ListString at_list_string = 14;
+    ShapeProto at_stride = 15;
+    ListStride at_list_stride = 16;
   }
 }
 

@@ -6,6 +6,5 @@ import "oneflow/core/common/data_type.proto";
 
 message VariableMetaInfo {
   required ShapeProto shape = 2;
-  required ShapeProto stride = 3;
   required DataType data_type = 4;
 }
