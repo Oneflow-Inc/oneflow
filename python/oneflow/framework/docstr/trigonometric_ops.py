@@ -19,7 +19,8 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.atan2,
-    """Element-wise arctangent of input{i}/other{i}
+    """oneflow.atan2(input,output)
+    Element-wise arctangent of input{i}/other{i}
     with consideration of the quadrant. Returns a new tensor with the signed
     angles in radians between vector (other{i},input{i}) and vector (1, 0).
 

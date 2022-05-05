@@ -19,6 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.cast,
     """
+    oneflow.cast(x, dtype)
     
     The operation takes input tensor `x` and casts it to the output with `dtype`
 
