@@ -542,7 +542,9 @@ class Graph(object):
         r"""Generate this graph's operators' string representation 
         """
         if self._is_compiled:
-            conf = self._graph_proto.module_name2module_conf[self._config_proto.job_name()]
+            conf = self._graph_proto.module_name2module_conf[
+                self._config_proto.job_name()
+            ]
             return operators_repr(conf.ops)
         return []
 

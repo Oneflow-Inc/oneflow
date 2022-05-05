@@ -20,12 +20,13 @@ from oneflow.framework.tensor import Tensor
 from string import Template
 import google.protobuf as protobuf
 
+
 def operators_repr(ops: protobuf.pyext._message.RepeatedCompositeContainer):
     r"""Generate operators' string representation
     """
-    
+
     def _op_signature(op: op_conf_util.OperatorConf):
-        
+
         signature_template = Template(op.name + "($input) -> ($output)")
         input_sig_str = "..."
         output_sig_str = "..."
@@ -61,6 +62,7 @@ def operators_repr(ops: protobuf.pyext._message.RepeatedCompositeContainer):
         return signature_template.substitute(input=input_sig_str, output=output_sig_str)
 
     return map(lambda op: "(OPERATOR: " + _op_signature(op) + ")", ops)
+
 
 def add_indent(in_s, num_spaces):
     s = in_s.split("\n")

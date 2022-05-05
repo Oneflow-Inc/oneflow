@@ -64,7 +64,12 @@ class BlockType:
 
 
 class Block(object):
-    def __init__(self, prefix: str = "", name: str = "", belonged_graph: weakref.ProxyTypes = None):
+    def __init__(
+        self,
+        prefix: str = "",
+        name: str = "",
+        belonged_graph: weakref.ProxyTypes = None,
+    ):
         self._name = name
         self._name_prefix = prefix
         self._type = BlockType.NONE
@@ -108,7 +113,7 @@ class ModuleBlock(Block):
         prefix: str = "",
         name: str = "",
         origin: Module = None,
-        belonged_graph: weakref.ProxyTypes = None
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         assert not isinstance(origin, Block)
         super().__init__(prefix, name, belonged_graph)
@@ -592,7 +597,7 @@ class TensorBlock(Block):
         prefix: str = "",
         name: str = "",
         origin: Union[Parameter, Tensor] = None,
-        belonged_graph: weakref.ProxyTypes = None
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         assert not isinstance(origin, Block)
         super().__init__(prefix, name, belonged_graph)
@@ -665,7 +670,7 @@ class SequentialBlock(get_seq(ModuleBlock)):
         prefix: str = "",
         name: str = "",
         origin: Sequential = None,
-        belonged_graph: weakref.ProxyTypes = None
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -680,7 +685,7 @@ class ModuleListBlock(get_list(ModuleBlock)):
         prefix: str = "",
         name: str = "",
         origin: ModuleList = None,
-        belonged_graph: weakref.ProxyTypes = None
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -698,7 +703,7 @@ class ModuleDictBlock(get_dict(ModuleBlock)):
         prefix: str = "",
         name: str = "",
         origin: ModuleDict = None,
-        belonged_graph: weakref.ProxyTypes = None
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -713,7 +718,7 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
         prefix: str = "",
         name: str = "",
         origin: ParameterList = None,
-        belonged_graph: weakref.ProxyTypes = None
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -739,7 +744,7 @@ class ParameterDictBlock(get_para_dict(ModuleBlock)):
         prefix: str = "",
         name: str = "",
         origin: ParameterDict = None,
-        belonged_graph: weakref.ProxyTypes = None
+        belonged_graph: weakref.ProxyTypes = None,
     ):
         super().__init__()
         self._name_prefix = prefix
