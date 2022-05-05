@@ -102,9 +102,9 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
           int size = shape->At(dim);
           int expanded_size = expanded_shape->At(expanded_dim);
           CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << "Cannot broadcast advanced index to size " << std::max(size, expanded_size)
-              << " at dimension " << j << " since the size of another index is not 1.";
-          sizes[j] = std::max(size, expanded_size);
+              << "The size of tensor a (" << size << ") must match the size of tensor b ("
+              << expanded_size << ") at non-singleton dimension " << i;
+          sizes[j] = size == 1 ? expanded_size : size;
         }
       }
       expanded_shape.reset(new Shape(sizes));
@@ -327,7 +327,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   std::vector<int> permute(packed_ndim);
   permute[packed_ndim - 1] = 0;
   std::iota(permute.begin(), permute.end() - 1, 1);
-  packed_indices = JUST(Transpose(packed_indices, permute));
+  packed_indices = JUST(Transpose(packed_indices, permute))->contiguous();
 
   if (transposed_input->is_consistent()) {
     const auto& placement = JUST(transposed_input->parallel_desc());

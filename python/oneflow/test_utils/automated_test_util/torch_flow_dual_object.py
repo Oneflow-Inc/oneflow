@@ -849,7 +849,11 @@ class DualObject:
 
     def __del__(self):
         # force running gc to avoid the periodic gc related to metaclass
-        gc.collect()
+        # 'gc' will be None if Python is shutting down
+        try:
+            gc.collect()
+        except AttributeError:
+            pass
 
 
 dual_modules_to_test = []

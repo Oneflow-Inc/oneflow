@@ -25,7 +25,7 @@ def create_generator(device=None):
 
 def seed() -> int:
     r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.seed.html
+    https://pytorch.org/docs/1.10/generated/torch.seed.html.
     
     Sets the seed for generating random numbers to a non-deterministic
     random number. Returns a 64 bit number used to seed the RNG.
@@ -37,7 +37,7 @@ def seed() -> int:
 
 def manual_seed(seed):
     r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.manual_seed.html
+    https://pytorch.org/docs/1.10/generated/torch.manual_seed.html.
     
     Sets the seed for generating random numbers. Returns a
     `oneflow.Generator` object.
@@ -54,7 +54,7 @@ def manual_seed(seed):
 
 def initial_seed() -> int:
     r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/_modules/torch/random.html
+    https://pytorch.org/docs/1.10/_modules/torch/random.html.
     
     Returns the initial seed for generating random numbers as a
     Python `long`.
@@ -73,7 +73,7 @@ def _setstate(self, state_dict):
 
 def get_rng_state():
     r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.get_rng_state.html
+    https://pytorch.org/docs/1.10/generated/torch.get_rng_state.html.
     
     Sets the random number generator state.
 
@@ -88,7 +88,7 @@ def get_rng_state():
 
 def set_rng_state(state):
     """The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.set_rng_state.html
+    https://pytorch.org/docs/1.10/generated/torch.set_rng_state.html.
     
     
     Returns the random number generator state as a `oneflow.ByteTensor`.
