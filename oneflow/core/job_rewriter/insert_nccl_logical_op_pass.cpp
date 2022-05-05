@@ -412,10 +412,10 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
     for (const OpEdge* op_edge : src_node->out_edges()) {
       const OpNode* dst_node = op_edge->dst_node();
       const std::string& dst_op_name = dst_node->op().op_name();
-       
-      // LOG(INFO) << "cclog: op_edge : [ "  
+
+      // LOG(INFO) << "cclog: op_edge : [ "
       //    << src_op_name << " ] -> [ " << dst_op_name << " ].";
-      
+
       CHECK(src_node != dst_node);
       if (subgraph_op_name2conf->find(dst_op_name) == subgraph_op_name2conf->end()) {
         // NOTE(chengcheng): child node is not in this subgraph.
@@ -828,7 +828,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
     ordered_op_nodes.emplace_back(node);
     op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
-    // LOG(INFO) << " cclog: order: " << ordered_op_nodes.size() - 1 << " op_name: " << node->op().op_name();
+    // LOG(INFO) << " cclog: order: " << ordered_op_nodes.size() - 1 << " op_name: " <<
+    // node->op().op_name();
   });
 
   std::vector<HashSet<const OpNode*>> subgraph_list;
@@ -858,7 +859,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       /*
       LOG(INFO) << "================";
       for (const auto* node : info.ordered_subgraph.front()->ordered_op_nodes) {
-        LOG(INFO) << " order : " << op_node2global_order.at(node) << " op_name : " <<   
+        LOG(INFO) << " order : " << op_node2global_order.at(node) << " op_name : " <<
           node->op().op_name();
       }
       LOG(INFO) << "================";
@@ -874,8 +875,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       const auto& first_graph = info.ordered_subgraph.front();
       const auto& last_graph = info.ordered_subgraph.back();
       /*
-      LOG(INFO) << "cclog: ordered_subgraph " 
-        << " \n first order = " << first_order 
+      LOG(INFO) << "cclog: ordered_subgraph "
+        << " \n first order = " << first_order
         << " with op name : " << first_graph->begin_op->op().op_name()
         << " \n last_order = " << last_order
         << " with op name : " << last_graph->end_op->op().op_name()
@@ -886,7 +887,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
       LOG(INFO) << "================";
       for (const auto* node : nccl_subgraph_info->ordered_op_nodes) {
-        LOG(INFO) << " order : " << op_node2global_order.at(node) << " op_name : " <<   
+        LOG(INFO) << " order : " << op_node2global_order.at(node) << " op_name : " <<
           node->op().op_name();
       }
       LOG(INFO) << "================";
@@ -939,11 +940,10 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       LOG(INFO) << " cclog : in placement: " << pair.first << " subgraph : i = " << i
         << " has op node with " << info.ordered_subgraph.at(i)->ordered_op_nodes.size();
       for (const auto* node : info.ordered_subgraph.at(i)->ordered_op_nodes) {
-        LOG(INFO) << " subgraph: " << i << " has op: " << node->op().op_name(); 
-      } 
+        LOG(INFO) << " subgraph: " << i << " has op: " << node->op().op_name();
+      }
     }
     */
-    
 
     // NOTE(chengcheng): insert nccl ops for each subgraph
     uint32_t stream_offset = 0;
