@@ -52,7 +52,8 @@ int64_t GetGpuDeviceNum() {
 struct PlacementSymbolExportUtil {
   static Maybe<void> CheckDeviceTag(const std::string& type) {
     if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
-      return Error::RuntimeError() << "placement type " << type << " not supported.";
+      return Error::RuntimeError() << "Expected one of " << PrintAvailableDevices()
+                                   << " device type at start of device string: " << type;
     }
     return Maybe<void>::Ok();
   }
@@ -107,17 +108,12 @@ struct PlacementSymbolExportUtil {
   static Maybe<std::vector<std::string>> ParseAndFormatRanks(PyArrayObject* ranks) {
     size_t size = PyArray_SIZE(ranks);
     CHECK_EQ_OR_RETURN(PyArray_TYPE(ranks), NPY_INT64)
-        << "placement ranks shoule be array of int64.";
+        << Error::RuntimeError() << "placement ranks shoule be an array of long int";
     int64_t* rank_data = static_cast<int64_t*>(PyArray_DATA(ranks));
 
     std::vector<std::pair<int64_t, int64_t>> machine_device_id_vec;
     for (int i = 0; i < size; ++i) {
       int64_t rank = rank_data[i];
-      // TODO(hjchen2): Prevent users from creating illegal placement
-      // if (rank >= GlobalProcessCtx::WorldSize()) {
-      //   return Error::RuntimeError() << "rank " << rank << " is invalid since the world size is "
-      //                                << GlobalProcessCtx::WorldSize();
-      // }
       int64_t machine_id = GlobalProcessCtx::NodeId(rank);
       int64_t device_id = GlobalProcessCtx::LocalRank(rank);
       machine_device_id_vec.emplace_back(machine_id, device_id);
@@ -143,7 +139,7 @@ struct PlacementSymbolExportUtil {
                                                               const py::object& ranks) {
     auto* obj = reinterpret_cast<PyArrayObject*>(PyArray_FromAny(
         ranks.ptr(), nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr));
-    if (!obj) { return Error::RuntimeError() << "placement ranks must be int64 array."; }
+    if (!obj) { return Error::RuntimeError() << "placement ranks shoule be an array of long int"; }
 
     const auto& shape = JUST(GetRanksShape(obj));
     const auto& formated_machine_device_ids = JUST(ParseAndFormatRanks(obj));
@@ -160,8 +156,9 @@ struct PlacementSymbolExportUtil {
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
       if (type == "cuda") {
         const int64_t gpu_device_num = GetGpuDeviceNum();
-        CHECK_NE_OR_RETURN(gpu_device_num, 0)
-            << "Can\'t construct placement with \"cuda\" type because there is no CUDA device!";
+        CHECK_NE_OR_RETURN(gpu_device_num, 0) << Error::RuntimeError()
+                                              << "Can\'t construct placement with \"cuda\" device "
+                                                 "type because there is no CUDA device!";
         device_num = std::min(device_num, gpu_device_num);
       }
       std::vector<std::string> machine_device_ids;

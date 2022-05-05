@@ -13,26 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import unittest
+
 import oneflow as flow
 import oneflow.unittest
-import oneflow.nn.functional as F
-import torch
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestErrorMsg(flow.unittest.TestCase):
-    def test_torch_error_msg(test_case):
-        with test_case.assertRaises(RuntimeError) as exp:
-            F.pad(torch.randn(2, 2))
-        test_case.assertTrue("torch.Tensor" in str(exp.exception))
+class TestReduceOps(flow.unittest.TestCase):
+    def test_exception_dim_out_of_int_range(test_case):
+        x = flow.randn(2, 3, 4)
+        with test_case.assertRaises(IndexError) as exp:
+            flow.sum(x, 3)
+        test_case.assertTrue("Dimension out of range" in str(exp.exception))
 
-    def test_numpy_error_msg(test_case):
-        import numpy as np
-
-        with test_case.assertRaises(RuntimeError) as exp:
-            F.pad(np.random.randn(2, 2))
-        test_case.assertTrue("numpy" in str(exp.exception))
+    def test_exception_dim_out_of_list_range(test_case):
+        x = flow.randn(2, 3, 4)
+        with test_case.assertRaises(IndexError) as exp:
+            flow.sum(x, [-4])
+        test_case.assertTrue("Dimension out of range" in str(exp.exception))
 
 
 if __name__ == "__main__":
