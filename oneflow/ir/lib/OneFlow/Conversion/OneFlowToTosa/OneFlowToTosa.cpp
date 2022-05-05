@@ -108,11 +108,12 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
   using OpConversionPattern<MatmulOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
+		auto a = op.a();
+		auto b = op.b();
+		auto a_type = a.getType().cast<RankedTensorType>();
+		auto b_type = b.getType().cast<RankedTensorType>();
 
-		auto a = op.a().getType().cast<RankedTensorType>();
-		auto b = op.b().getType().cast<RankedTensorType>();
-
-		if(a.getElementType() != b.getElementType()) {
+		if(a_type.getElementType() != b_type.getElementType()) {
 			return op.emitError("Matmul coversion mismatched element type error...");
 		}
     rewriter.replaceOpWithNewOp<tosa::MatMulOp>(op, op.out().getType(), op.a(), op.b());
@@ -120,30 +121,6 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
   }
 };
 
-//  ::mlir::Type output, ::mlir::Value input, ::mlir::ArrayAttr kernel, ::mlir::ArrayAttr stride,
-//  ::mlir::ArrayAttr pad);
-// TODO
-struct NormalizationOpLowering final : public OpConversionPattern<NormalizationOp> {
- public:
-  using OpConversionPattern<NormalizationOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(NormalizationOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    return success();
-  }
-};
-struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
- public:
-  using OpConversionPattern<MaxPool2DOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(MaxPool2DOp op, OpAdaptor adaptor,
-                                ConversionPatternRewriter& rewriter) const override {
-    rewriter.replaceOpWithNewOp<tosa::MaxPool2dOp>(op,
-                                                   /* output */ op.y().getType(),
-                                                   /* input */ op.x(), op.kernel_size(),
-                                                   op.stride(), op.padding());
-
-    return success();
-  }
-};
 namespace {
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
@@ -162,7 +139,6 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
   patterns.insert<ReluOpLowering>(&getContext());
   patterns.insert<MatmulOpLowering>(&getContext());
-  patterns.insert<NormalizationOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
