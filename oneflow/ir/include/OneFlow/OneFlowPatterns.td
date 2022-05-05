@@ -2,6 +2,7 @@
 #ifndef ONEFLOW_PATTERNS
 #define ONEFLOW_PATTERNS
 
+include "mlir/IR/PatternBase.td"
 include "OneFlow/OneFlowOps.td"
 include "mlir/Dialect/MemRef/IR/MemRefOps.td"
 include "mlir/Dialect/GPU/GPUOps.td"
@@ -366,6 +367,62 @@ def ReplaceCopyWithGPUPattern : Pat<
   [(IsArg $dst)]
 >;
 
+def FuseConv2DBatchNorm : NativeCodeCall<"mlir::oneflow::FuseConv2DBatchNorm($_builder, $0, $1)">;
+def FuseConv2DBatchNormPattern : Pat<
+  (
+    OneFlow_NormalizationInferenceOp: $batch_norm_op
+      (
+        OneFlow_Conv2DOp : $conv_2d_op
+          $x,
+          (
+            OneFlow_FrozenVariableOp : $variable_conv_2d_weight
+              $value,
+              $v_op_name,
+              $v_device_tag,
+              $v_device_name,
+              $v_scope_symbol_id,
+              $v_hierarchy,
+              $v_nd_sbp
+          ),
+          $bias,
+          $bias_multiplier,
+          $conv2d_op_name,
+          $conv2d_device_tag,
+          $conv2d_device_name,
+          $conv2d_scope_symbol_id,
+          $conv2d_hierarchy,
+          $conv2d_operand_segment_sizes,
+          $filters,
+          $padding_before,
+          $data_format,
+          $kernel_size,
+          $strides,
+          $dilation_rate,
+          $groups
+      ),
+      $bn_moving_mean,
+      $bn_moving_variance,
+      $bn_gamma,
+      $bn_beta,
+      $bn__add_to_output,
+      $bn_op_name,
+      $bn_device_tag,
+      $bn_device_name,
+      $bn_scope_symbol_id,
+      $bn_hierarchy,
+      $bn_operand_segment_sizes,
+      $bn_result_segment_sizes,
+      $bn_axis,
+      $bn_epsilon,
+      $bn_training,
+      $bn_momentum
+  ),
+  (
+    FuseConv2DBatchNorm $conv_2d_op, $batch_norm_op__0
+  ),
+  []
+>;
+
 def IsSameDtype : Constraint<CPred<"mlir::oneflow::IsSameDtype($0, $1)">>;
 
 def DeleteSameDtypeCastOpPattern : Pat<
@@ -373,8 +430,8 @@ def DeleteSameDtypeCastOpPattern : Pat<
     OneFlow_CastOp : $res
      $x,
      $cast_op_name,
-     $cast_device_tag, 
-     $cast_device_name, 
+     $cast_device_tag,
+     $cast_device_name,
      $cast_scope_symbol_id,
      $cast_hierarchy,
      $dtype

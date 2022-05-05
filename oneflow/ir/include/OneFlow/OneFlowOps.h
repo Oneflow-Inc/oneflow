@@ -34,9 +34,11 @@ limitations under the License.
 
 namespace mlir {
 
+namespace func {
 class FuncOp;
+}  // namespace func
 
-}
+}  // namespace mlir
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
