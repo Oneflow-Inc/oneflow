@@ -1,21 +1,35 @@
 ## Iree Scheme
 
 ### 1. Oneflow Graph -> Oneflow Dialect
+  - [x] using flags in python
+```python
+import os
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
+```
+  - [] excplicit call with special function
+```python 
+from iree.tf.support import module_utils
+backend_choice = "iree_llvmaot (CPU)"
+backend_choice = backend_choice.split(" ")[0]
+backend = module_utils.BackendInfo(backend_choice)
+iree_module = backend.compile_from_class(ResNetModule, ["predict"])
+```
 
 ### 2. Oneflow Dialect -> Iree Support Input Dialect
 
 #### 2.1 Iree Suport Input Dialect 
-  - [-] tosa
-  - [x] mhlo
-  - [x] tm_tensor
-  - [x] xla 
+  - [x] tosa
+  - [] mhlo
+  - [] tm_tensor
+  - [] xla 
 
 #### 2.2 Conversion route
   - [?] pybind11
   - [?] subprocess
 
 ### 3. Iree Load Module
- - [y] using iree package
+ - [x] using iree package
 ```python
 import numpy as np
 from iree.compiler import compile_str
@@ -35,7 +49,7 @@ vm_module = ireert.VmModule.from_flatbuffer(compiled_flatbuffer)
 ```
 
 ### 4. Iree Runtime Module
- - [y] using iree package
+ - [x] using iree package
 ``` python
 import numpy as np
 from iree import runtime as ireert
