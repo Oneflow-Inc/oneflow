@@ -116,7 +116,8 @@ namespace oneflow {
 /* static */ Maybe<void> RandomMaskLikeOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                                      const user_op::UserOpConfWrapper& conf) {
   float rate = conf.attr<float>("rate");
-  CHECK_OR_RETURN(rate >= 0 && rate < 1) << "random_mask_like rate has to be between 0 and 1, but got " << rate;
+  CHECK_OR_RETURN(rate >= 0 && rate < 1)
+      << "random_mask_like rate has to be between 0 and 1, but got " << rate;
   return Maybe<void>::Ok();
 }
 
