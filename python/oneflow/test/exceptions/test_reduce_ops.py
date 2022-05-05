@@ -13,29 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import unittest
+
 import oneflow as flow
 import oneflow.unittest
 
-from oneflow.test_utils.automated_test_util import *
 
+@flow.unittest.skip_unless_1n1d()
+class TestReduceOps(flow.unittest.TestCase):
+    def test_exception_dim_out_of_int_range(test_case):
+        x = flow.randn(2, 3, 4)
+        with test_case.assertRaises(IndexError) as exp:
+            flow.sum(x, 3)
+        test_case.assertTrue("Dimension out of range" in str(exp.exception))
 
-@autotest(n=1, check_graph=False)
-def _test_prod_without_dim(test_case, placement, sbp, device, ndim):
-    x = random_tensor(ndim=ndim, dim0=8, dim1=8).to(device=device)
-    x = x.to_global(placement=placement, sbp=sbp)
-    y = torch.prod(x)
-    return y
-
-
-class TestReduceProd(flow.unittest.TestCase):
-    @globaltest
-    def test_reduce_prod_without_dim(test_case):
-        device = random_device()
-        ndim = random(2, 5).to(int)
-        for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_prod_without_dim(test_case, placement, sbp, device, ndim)
+    def test_exception_dim_out_of_list_range(test_case):
+        x = flow.randn(2, 3, 4)
+        with test_case.assertRaises(IndexError) as exp:
+            flow.sum(x, [-4])
+        test_case.assertTrue("Dimension out of range" in str(exp.exception))
 
 
 if __name__ == "__main__":
