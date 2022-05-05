@@ -76,7 +76,7 @@ class KernelEvent final : public IEvent {
 
  private:
   std::vector<Shape> input_shapes_;
-  std::string __FormatShapes();
+  std::string __FormatShapes(size_t max_num_to_format = 4);
 };
 
 class EventRecorder;

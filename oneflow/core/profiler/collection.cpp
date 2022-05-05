@@ -58,10 +58,10 @@ nlohmann::json KernelEvent::ToJson() {
 
 std::string KernelEvent::Key() { return name_ + "." + __FormatShapes(); }
 
-std::string KernelEvent::__FormatShapes() {
+std::string KernelEvent::__FormatShapes(size_t max_num_to_format) {
   if (input_shapes_.size() == 0) { return "-"; }
   std::string result("[");
-  for (size_t i = 0; i < input_shapes_.size(); ++i) {
+  for (size_t i = 0; i < std::min(input_shapes_.size(), max_num_to_format); ++i) {
     if (i != 0) { result += ", "; }
     const std::string current_shape = input_shapes_[i].ToString();
     if (current_shape == "()") {
@@ -70,6 +70,7 @@ std::string KernelEvent::__FormatShapes() {
       result += current_shape;
     }
   }
+  if (input_shapes_.size() > max_num_to_format) { result += ", ..."; }
   result += "]";
   return result;
 }
