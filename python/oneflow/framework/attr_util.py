@@ -17,7 +17,6 @@ import oneflow
 import oneflow._oneflow_internal
 import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
 import oneflow._oneflow_internal.oneflow.core.common.shape as shape_cfg
-import oneflow._oneflow_internal.oneflow.core.common.stride as stride_cfg
 import oneflow._oneflow_internal.oneflow.core.framework.user_op_attr as user_op_attr_cfg
 
 
@@ -129,7 +128,7 @@ def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
         )
         for x in attr_value:
             assert isinstance(x, (tuple, list))
-            stride = stride_cfg.StrideProto()
+            stride = shape_cfg.StrideProto()
             for dim in x:
                 assert isinstance(dim, int)
                 stride.add_dim(dim)
