@@ -39,6 +39,7 @@ Operators for neural networks
         GLU,
         GroupNorm,
         Hardsigmoid,
+        Hardshrink,
         Hardswish,
         Hardtanh,
         Identity,

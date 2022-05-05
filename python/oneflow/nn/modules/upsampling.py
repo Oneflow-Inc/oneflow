@@ -23,7 +23,7 @@ from oneflow.nn.module import Module
 class Upsample(Module):
     """The interface is consistent with PyTorch.    
     
-    The documentation is referenced from: https://pytorch.org/docs/1.9.0/_modules/torch/nn/modules/upsampling.html#Upsample
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/upsampling.html.
     
     Upsamples a given multi-channel 1D (temporal), 2D (spatial) or 3D (volumetric) data.
 

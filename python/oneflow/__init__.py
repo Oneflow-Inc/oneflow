@@ -69,6 +69,7 @@ from oneflow._C import acos
 from oneflow._C import acos as arccos
 from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
+from oneflow._C import amin
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
@@ -106,6 +107,7 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div, div_
+from oneflow._C import addcmul
 from oneflow._C import floor, floor_
 from oneflow._C import floor_divide
 from oneflow._C import mul
@@ -139,6 +141,7 @@ from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max
 from oneflow._C import min
+from oneflow._C import median
 from oneflow._C import pow
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
@@ -153,6 +156,7 @@ from oneflow._C import triu
 from oneflow._C import pad
 from oneflow._C import transpose
 from oneflow._C import relu
+from oneflow._C import roc_auc_score
 from oneflow._C import softmax
 from oneflow._C import log_softmax
 from oneflow._C import argmax
@@ -165,6 +169,7 @@ from oneflow._C import narrow
 from oneflow._C import unsqueeze
 from oneflow._C import permute
 from oneflow._C import select
+from oneflow._C import unbind
 from oneflow._C import tensor_split
 from oneflow._C import hsplit
 from oneflow._C import vsplit
@@ -178,8 +183,11 @@ from oneflow._C import dot
 from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
+from oneflow._C import contiguous
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
+from oneflow._C import amax
+from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
 from oneflow._C import equal
@@ -188,6 +196,8 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
+from oneflow._C import searchsorted
+from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
@@ -271,7 +281,13 @@ import oneflow._C
 from oneflow._C import tensor, batch_gather
 from oneflow._C import from_numpy
 
-from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
+from oneflow.autograd import (
+    enable_grad,
+    set_grad_enabled,
+    no_grad,
+    inference_mode,
+    is_grad_enabled,
+)
 import oneflow.nn.image
 
 from oneflow.framework.check_point_v2 import load
@@ -315,6 +331,7 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
+from oneflow.nn.modules.empty import new_empty_op as new_empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
@@ -327,7 +344,6 @@ from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
 from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
 from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
-from oneflow.nn.modules.index_select import index_select_op as index_select
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
 from oneflow.nn.modules.math_ops import topk_op as topk
@@ -335,6 +351,7 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.random_ops import normal_op as normal
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
@@ -347,7 +364,6 @@ from oneflow.nn.modules.reduce_ops import any_op as any
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
-from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.slice import logical_slice_op as logical_slice
 from oneflow.nn.modules.sort import sort_op as sort
@@ -357,6 +373,8 @@ from oneflow.nn.modules.tensor_buffer import (
 )
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
+from oneflow.nn.modules.global_cast import local_to_global_op as local_to_global
+from oneflow.nn.modules.global_cast import global_to_global_op as global_to_global
 from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
