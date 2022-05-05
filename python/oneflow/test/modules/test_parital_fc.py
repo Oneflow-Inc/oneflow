@@ -20,7 +20,8 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@unittest.skip("fail in multi gpu")
+# TODO: guoran, fix this on multi gpu
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestParitalFC(flow.unittest.TestCase):
     def test_parital_fc(test_case):
