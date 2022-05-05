@@ -1,6 +1,9 @@
 ## Iree Scheme
 
 ### 1. Oneflow Graph -> Oneflow Dialect
+> **input**: nn.graph [delete at the end of this stage]
+
+> **output**: oneflow dialect
   - [x] using flags in python
 ```python
 import os
@@ -16,8 +19,12 @@ backend = module_utils.BackendInfo(backend_choice)
 iree_module = backend.compile_from_class(ResNetModule, ["predict"])
 ```
 
+
 ### 2. Oneflow Dialect -> Iree Support Input Dialect
 
+> **input**: oneflow dialect [delete at the end of this stage]
+
+> **output**: tosa dialect
 #### 2.1 Iree Suport Input Dialect 
   - [x] tosa
   - [] mhlo
@@ -28,7 +35,12 @@ iree_module = backend.compile_from_class(ResNetModule, ["predict"])
   - [?] pybind11
   - [?] subprocess
 
+
 ### 3. Iree Load Module
+> **input**: tosa dialect [delete at the end of this stage]
+
+> **output**: iree bytecode on dylib driver
+
  - [x] using iree package
 ```python
 import numpy as np
@@ -49,6 +61,9 @@ vm_module = ireert.VmModule.from_flatbuffer(compiled_flatbuffer)
 ```
 
 ### 4. Iree Runtime Module
+> **input**: iree bytecode on dylib driver [delete at the end of this stage]
+
+> **output**: result of module
  - [x] using iree package
 ``` python
 import numpy as np

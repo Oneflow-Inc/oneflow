@@ -21,8 +21,6 @@ class GraphToRun(flow.nn.Graph):
         return self.fw(x)
 
 graph_to_run = GraphToRun()
-x = flow.tensor([-1.], dtype=flow.float32)
-y_lazy = graph_to_run(x)
 
 
 from iree import runtime as ireert
@@ -52,8 +50,9 @@ ctx = ireert.SystemContext(config=config)
 ctx.add_vm_module(vm_module)
 print("INVOKE simple_relu")
 
-import numpy as np
-arg0 = np.array([-1.], dtype=np.float32)
+# import numpy as np
+# arg0 = np.array([-1.], dtype=np.float32)
+arg0 = flow.tensor([-1.]).cpu().detach().numpy()
 
 f = ctx.modules.module['GraphToRun_0']
 results = f(arg0)
