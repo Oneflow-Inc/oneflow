@@ -146,7 +146,7 @@ class TestAsTensor(flow.unittest.TestCase):
                         pass
 
     def test_numpy_dtype_bug(test_case):
-        test_case.assertEqual(flow.as_tensor([1.]).dtype, flow.float32)
+        test_case.assertEqual(flow.as_tensor([1.0]).dtype, flow.float32)
         x = np.random.randn(10)
         y1 = flow.as_tensor(x, dtype=flow.int64)
         y2 = flow.as_tensor(x, dtype=flow.float64)

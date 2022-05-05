@@ -13,21 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/eager/blob_instruction_type.h"
-#include "oneflow/core/vm/cpu_stream_type.h"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AUTONHWC_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AUTONHWC_H_
+
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
 
 namespace oneflow {
-namespace vm {
 
-class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
- public:
-  CpuAccessBlobByCallbackInstructionType() = default;
-  ~CpuAccessBlobByCallbackInstructionType() override = default;
+std::unique_ptr<mlir::Pass> createAutoNhwcPass();
 
-  using stream_type = vm::CpuStreamType;
-};
-COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
-    "cpu.AccessBlobByCallback"));
-
-}  // namespace vm
 }  // namespace oneflow
+
+}  // namespace mlir
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AUTONHWC_H_
