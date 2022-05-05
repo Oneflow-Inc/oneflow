@@ -97,21 +97,27 @@ void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& de
   }
 }
 
+void TestSoftmax(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
+                 int num_rows, int num_cols) {
+  TestSoftmax<DataType::kFloat, float>(registry, device_types, num_rows, num_cols, true);
+  TestSoftmax<DataType::kFloat, float>(registry, device_types, num_rows, num_cols, false);
+  TestSoftmax<DataType::kDouble, double>(registry, device_types, num_rows, num_cols, true);
+  TestSoftmax<DataType::kDouble, double>(registry, device_types, num_rows, num_cols, false);
+  TestSoftmax<DataType::kFloat16, Eigen::half>(registry, device_types, num_rows, num_cols, true);
+  TestSoftmax<DataType::kFloat16, Eigen::half>(registry, device_types, num_rows, num_cols, false);
+}
+
 }  // namespace
 
 TEST_F(PrimitiveTest, TestSoftmax) {
-  TestSoftmax<DataType::kFloat, float>(&device_manager_registry_, available_device_types_, 32, 16,
-                                       true);
-  TestSoftmax<DataType::kFloat, float>(&device_manager_registry_, available_device_types_, 32, 16,
-                                       false);
-  TestSoftmax<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 32, 16,
-                                         true);
-  TestSoftmax<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 32, 16,
-                                         false);
-  TestSoftmax<DataType::kFloat16, Eigen::half>(&device_manager_registry_, available_device_types_,
-                                               32, 16, true);
-  TestSoftmax<DataType::kFloat16, Eigen::half>(&device_manager_registry_, available_device_types_,
-                                               32, 16, false);
+  std::vector<int> num_rows = {32, 33, 512, 511};
+  std::vector<int> num_cols = {15, 16, 32, 768, 1536};
+  for (int i = 0; i < num_rows.size(); ++i) {
+    for (int j = 0; j < num_cols.size(); ++j) {
+      TestSoftmax(&device_manager_registry_, available_device_types_, num_rows.at(i),
+                  num_cols.at(j));
+    }
+  }
 }
 
 }  // namespace test
