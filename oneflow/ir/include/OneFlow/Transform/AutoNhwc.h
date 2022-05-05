@@ -13,27 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_ALLOCATOR_H_
-#define ONEFLOW_CORE_VM_ALLOCATOR_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AUTONHWC_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AUTONHWC_H_
 
-#include <cstddef>
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
 
 namespace oneflow {
-namespace vm {
 
-class Allocator {
- public:
-  virtual ~Allocator() = default;
+std::unique_ptr<mlir::Pass> createAutoNhwcPass();
 
-  virtual void Allocate(char** mem_ptr, std::size_t size) = 0;
-  virtual void Deallocate(char* mem_ptr, std::size_t size) = 0;
-  virtual void DeviceReset() {}
-
- protected:
-  Allocator() = default;
-};
-
-}  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_ALLOCATOR_H_
+}  // namespace mlir
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_AUTONHWC_H_
