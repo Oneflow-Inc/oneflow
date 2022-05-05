@@ -319,20 +319,11 @@ class TensorDotFunctor {
     std::vector<int32_t> dot_dims_a(dims_a.begin(), dims_a.end());
     std::vector<int32_t> dot_dims_b(dims_b.begin(), dims_b.end());
     for (int64_t i = 0; i < dot_dims_a.size(); i++) {
-      CHECK_LT_OR_RETURN(dot_dims_a[i], a->ndim())
-          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+      CHECK_OR_RETURN(dot_dims_a[i] >= -a->ndim() && dot_dims_a[i] < a->ndim()) << Error::IndexError() << "Dimension out of range (expected to be in range of ["
           << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dot_dims_a[i] << ")";
-      CHECK_GE_OR_RETURN(dot_dims_a[i], -a->ndim())
-          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-          << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dot_dims_a[i] << ")";
+      CHECK_OR_RETURN(dot_dims_b[i] >= -b->ndim() && dot_dims_b[i] < b->ndim()) << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dot_dims_b[i] << ")";
       dot_dims_a[i] = dot_dims_a[i] < 0 ? dot_dims_a[i] + a->ndim() : dot_dims_a[i];
-
-      CHECK_LT_OR_RETURN(dot_dims_b[i], b->ndim())
-          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dot_dims_b[i] << ")";
-      CHECK_GE_OR_RETURN(dot_dims_b[i], -b->ndim())
-          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dot_dims_b[i] << ")";
       dot_dims_b[i] = dot_dims_b[i] < 0 ? dot_dims_b[i] + b->ndim() : dot_dims_b[i];
     }
     std::vector<bool> if_dot_dims_a(a->ndim(), false);
@@ -374,7 +365,7 @@ class TensorDotFunctor {
     if (!broadcast_dims_b.empty())
       reduced_sum_b = JUST(functional::ReduceSum(b, broadcast_dims_b, true));
 
-    int64_t non_dot_size_a = 1, non_dot_size_b = 1;
+    // int64_t non_dot_size_a = 1, non_dot_size_b = 1;
     std::vector<int32_t> non_dot_shape_a, non_dot_shape_b;
     non_dot_shape_a.reserve(a->ndim() - dot_dims_a.size() + b->ndim() - dot_dims_b.size());
     non_dot_shape_b.reserve(b->ndim() - dot_dims_b.size());
@@ -386,7 +377,7 @@ class TensorDotFunctor {
     for (int32_t i = 0; i < a->ndim(); i++) {
       if (!if_dot_dims_a[i]) {
         permuted_dims_a.emplace_back(i);
-        non_dot_size_a *= reduced_sum_a->shape()->At(i);
+        // non_dot_size_a *= reduced_sum_a->shape()->At(i);
         non_dot_shape_a.emplace_back(reduced_sum_a->shape()->At(i));
       }
     }
@@ -397,7 +388,7 @@ class TensorDotFunctor {
     for (int32_t i = 0; i < b->ndim(); i++) {
       if (!if_dot_dims_b[i]) {
         permuted_dims_b.emplace_back(i);
-        non_dot_size_b *= reduced_sum_b->shape()->At(i);
+        // non_dot_size_b *= reduced_sum_b->shape()->At(i);
         non_dot_shape_b.emplace_back(reduced_sum_b->shape()->At(i));
       }
     }
