@@ -59,8 +59,8 @@ class TensorImpl {
   virtual ~TensorImpl() = default;
 
   // Getters
-  virtual const std::shared_ptr<const Shape>& shape() const = 0;
-  virtual const std::shared_ptr<const Stride>& stride() const = 0;
+  virtual std::shared_ptr<const Shape> shape() const = 0;
+  virtual std::shared_ptr<const Stride> stride() const = 0;
   virtual DataType dtype() const = 0;
   virtual bool is_lazy() const = 0;
 
@@ -142,8 +142,8 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual ~ConsistentTensorImpl() = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape_ptr(); }
-  const std::shared_ptr<const Stride>& stride() const override {
+  std::shared_ptr<const Shape> shape() const override { return tensor_meta_->shape_ptr(); }
+  std::shared_ptr<const Stride> stride() const override {
     return tensor_meta_->stride_ptr();
   }
   DataType dtype() const override { return tensor_meta_->dtype(); }
@@ -203,8 +203,8 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   ~LazyMirroredTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return tensor_meta()->shape_ptr(); }
-  const std::shared_ptr<const Stride>& stride() const override {
+  std::shared_ptr<const Shape> shape() const override { return tensor_meta()->shape_ptr(); }
+  std::shared_ptr<const Stride> stride() const override {
     return tensor_meta()->stride_ptr();
   }
   bool is_lazy() const override { return true; }
@@ -236,8 +236,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   ~EagerMirroredTensorImpl() override;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override;
-  const std::shared_ptr<const Stride>& stride() const override;
+  std::shared_ptr<const Shape> shape() const override;
+  std::shared_ptr<const Stride> stride() const override;
   Maybe<MirroredTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
   bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
@@ -297,7 +297,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   ~EagerConsistentTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Stride>& stride() const override;
+  std::shared_ptr<const Stride> stride() const override;
   bool is_lazy() const override { return false; }
 
   bool is_contiguous() const override {

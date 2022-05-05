@@ -30,6 +30,10 @@
     ]
   bind_python: true
 
+- name: "amin"
+  signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amin"
+  bind_python: True
+
 - name: "sub"
   signature:
     [
@@ -187,6 +191,14 @@
 - name: "pow_y_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGrad"
   bind_python: False
+
+- name: "searchsorted"
+  signature:
+    [
+      'Tensor (Tensor sorted_sequence, Tensor values, Bool out_int32=False, Bool right=False) => SearchSorted',
+      'Tensor (Tensor sorted_sequence, Scalar values, Bool out_int32=False, Bool right=False) => SearchSortedScalar',
+    ]
+  bind_python: True
 
 - name: "scalar_pow_grad"
   signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
@@ -605,6 +617,15 @@
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
 
+- name: "normal"
+  signature: [
+    "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None, 
+    Generator generator=None, Bool requires_grad=False) => Normal",
+    "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
+    Generator generator=None, Bool requires_grad=False) => ConsistentNormal",
+    ]
+  bind_python: True
+
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
@@ -911,6 +932,11 @@
     "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => CublasBiasAddReluMatmulGrad"
   bind_python: False
 
+- name: "cublas_matmul_bias_add_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor x) => CublasMatmulBiasAddGrad"
+  bind_python: False
+
 - name: "broadcast_matmul_grad_b"
   signature: "Tensor (Tensor a, Tensor b, Double alpha=1.0) => BroadcastMatmulGradB"
   bind_python: False
@@ -1118,7 +1144,7 @@
   signature:
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
     Int32List padding_before, Int32List padding_after,
-    String data_format="channels_first", Bool ceil_mode=False) => AvgPool2D'
+    String data_format="channels_first", Bool ceil_mode=False) => TFAvgPool2D'
   bind_python: True
 
 - name: "ctc_loss_grad"
@@ -1142,11 +1168,11 @@
 - name: "adaptive_pool_grad"
   signature: "Tensor (Tensor x, Tensor dy, String mode, Int32 ndims) => AdaptivePoolNdGrad"
 
-- name: "pool_grad"
+- name: "tf_pool_grad"
   signature:
     "Tensor (Tensor x, Tensor y, Tensor dy, String mode, Int32 ndims, String data_format,
     String padding, Int32List padding_before, Int32List padding_after, Int32List pool_size,
-    Int32List strides, Bool ceil_mode) => PoolNdGrad"
+    Int32List strides, Bool ceil_mode) => TFPoolNdGrad"
   bind_python: False
 
 - name: "max_pool1d"
@@ -1154,7 +1180,7 @@
     'TensorTuple (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None,
     Int32List[1] padding=0, Int32List[1] dilation=1,
     Bool return_indices=True, Bool ceil_mode=False,
-    String data_format="channels_first") => Maxpool1D'
+    String data_format="channels_first") => MaxPool1D'
   bind_python: True
 
 - name: "max_pool2d"
@@ -1162,7 +1188,7 @@
     'TensorTuple (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None,
     Int32List[2] padding=0, Int32List[2] dilation=1,
     Bool return_indices=True, Bool ceil_mode=False,
-    String data_format="channels_first") => Maxpool2D'
+    String data_format="channels_first") => MaxPool2D'
   bind_python: True
 
 - name: "max_pool3d"
@@ -1170,14 +1196,14 @@
     'TensorTuple (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None,
     Int32List[3] padding=0, Int32List[3] dilation=1,
     Bool return_indices=True, Bool ceil_mode=False,
-    String data_format="channels_first") => Maxpool3D'
+    String data_format="channels_first") => MaxPool3D'
   bind_python: True
 
-- name: "pooling_grad"
+- name: "max_pool_grad"
   signature:
-    "Tensor (Tensor x, Tensor indice, Tensor dy, String mode, Int32 ndims,
+    "Tensor (Tensor x, Tensor indice, Tensor dy, Int32 ndims,
     String data_format, Int32List padding, Int32List kernel_size,
-    Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode) => PoolingNdGrad"
+    Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode) => MaxPoolNdGrad"
   bind_python: False
 
 - name: "prelu"
@@ -1229,7 +1255,7 @@
   bind_python: True
 
 - name: "logical_slice_assign"
-  signature: "Void (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
+  signature: "Tensor (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
   bind_python: True
 
 - name: "copy"
@@ -1692,28 +1718,28 @@
   signature:
     'Tensor (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None, 
              Int32List[1] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int32 divisor_override=0, String data_format="channels_first") => Avgpool1D'
+             Int32 divisor_override=0, String data_format="channels_first") => AvgPool1D'
   bind_python: True
 
 - name: "avg_pool2d"
   signature:
     'Tensor (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None, 
              Int32List[2] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int32 divisor_override=0, String data_format="channels_first") => Avgpool2D'
+             Int32 divisor_override=0, String data_format="channels_first") => AvgPool2D'
   bind_python: True
 
 - name: "avg_pool3d"
   signature:
     'Tensor (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None, 
              Int32List[3] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int32 divisor_override=0, String data_format="channels_first") => Avgpool3D'
+             Int32 divisor_override=0, String data_format="channels_first") => AvgPool3D'
   bind_python: True
 
-- name: "avg_pooling_grad"
+- name: "avg_pool_grad"
   signature:
     "Tensor (Tensor x, Tensor dy, Int32 ndims, String data_format, Int32List padding,
     Int32List kernel_size, Int32List stride, Bool ceil_mode, Bool count_include_pad,
-    Int32 divisor_override=0) => AvgPoolingNdGrad"
+    Int32 divisor_override=0) => AvgPoolNdGrad"
   bind_python: False
 
 - name: "minimum"
