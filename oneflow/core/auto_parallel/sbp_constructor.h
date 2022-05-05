@@ -39,7 +39,8 @@ class SbpConstructor final {
         use_sbp_collector_(!Global<ResourceDesc, ForSession>::Get()
                                 ->resource()
                                 .disable_group_boxing_by_dst_parallel()
-                           && job->job_conf().enable_auto_parallel_sbp_collector()) {
+                           && job->job_conf().enable_auto_parallel_sbp_collector()
+                           && !take_curr_sbp) {
     sbp_graph_.SetWaitTime(job->job_conf().auto_parallel_wait_time());
     sbp_graph_.SetTransferCost(job->job_conf().auto_parallel_transfer_cost());
     CHECK_JUST(Init(op_graph, job, take_curr_sbp));
@@ -54,8 +55,10 @@ class SbpConstructor final {
   // Print the graph with SBP in order
   void PrintSBPGraphDebugInfo();
 
-  // Algorithms for straightening
+  // Explicitly connect the control edges in the sbp graph
   void ExposeCtrlEdges();
+  // Algorithms for straightening
+  Maybe<void> StraightenNodes(const std::function<Maybe<void>(OpNode*, OpNode*)>& add_control_edge);
 
  private:
   Maybe<void> InitSbpGraph(const OpGraph& op_graph, const Job& job, bool take_curr_sbp);

@@ -29,6 +29,21 @@ Maybe<void> StraightenNodes(const OpGraph& op_graph, Job* job) {
   if (GlobalProcessCtx::Rank() == 0) { std::cout << "Start straightening operators" << std::endl; }
   auto_parallel::SbpConstructor sbp_constructor(op_graph, job, /*take_curr_sbp=*/true);
   sbp_constructor.ExposeCtrlEdges();
+  // Add control edge
+  JobBuilder job_builder(job);
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+  // Add a control edge from the previous node to this node
+  auto add_control_edge = [&](OpNode* previous_node, OpNode* this_node) -> Maybe<void> {
+    const auto& previous_name = previous_node->op().op_conf().name();
+    const auto& this_conf = this_node->op().op_conf();
+    if (!IsReachable(previous_name, this_conf.name())) {
+      OperatorConf mutable_consumer_op_conf(this_conf);
+      mutable_consumer_op_conf.add_ctrl_in_op_name(previous_name);
+      JUST(job_builder.MutOpOnlyOnce(mutable_consumer_op_conf));
+    }
+    return Maybe<void>::Ok();
+  };
+  JUST(sbp_constructor.StraightenNodes(add_control_edge));
 
   return Maybe<void>::Ok();
 }

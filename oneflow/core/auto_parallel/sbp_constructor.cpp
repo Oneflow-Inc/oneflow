@@ -39,7 +39,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job, take_curr_sbp));
   JUST(InitComputationCost(op_graph));
-  if (enable_mainstem_algo_ && !take_curr_sbp) { JUST(ApplyMainstemAlgo()); }
+  if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
   if (use_sbp_collector_) {
     // Load logical blobs on all sbp edges.
     LoadLbi2SbpEdge(op_graph);
@@ -439,6 +439,116 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
 // Explicitly show the control edges
 void SbpConstructor::ExposeCtrlEdges() {
   for (auto* sbp_node : sbp_graph_.NodeList) { sbp_node->ExposeCtrlEdges(op_name2sbp_node_); }
+}
+
+// Algorithms for straightening
+Maybe<void> SbpConstructor::StraightenNodes(
+    const std::function<Maybe<void>(OpNode*, OpNode*)>& add_control_edge) {
+  // Set the counter to be the number of producer
+  for (auto* sbp_node : sbp_graph_.NodeList) { sbp_node->counter = sbp_node->EdgesIn.size(); }
+  // The time passed before finishing the current transfer
+  double acc_comp_time = 0.0;
+  // The transfer happening at this moment
+  std::queue<std::pair<SbpNode<NdSbpSignature>*, double>> waiting_transfer;
+  // Decide which node should run first
+  struct comp {
+    bool operator()(const SbpNode<NdSbpSignature>* a, const SbpNode<NdSbpSignature>* b) const {
+      if (a->TributaryLayer == b->TributaryLayer) {
+        if (a->MinLayer == b->MinLayer) {
+          // the order does not matter right now
+          // return a->Cost[0] < b->Cost[0];
+          // we need a strict order
+          return a->NodeListId < b->NodeListId;
+        } else {
+          // the node that shows up first has higher priority
+          return a->MinLayer < b->MinLayer;
+        }
+      } else {
+        // the urgent node has the higher priority
+        return a->TributaryLayer < b->TributaryLayer;
+      }
+    }
+  };
+  // The computation ready for execution
+  std::set<SbpNode<NdSbpSignature>*, comp> waiting_computation;
+  // Finish the transfer of one producer
+  auto finish_one_transfer = [&](SbpNode<NdSbpSignature>* sbp_node) {
+    sbp_node->counter--;
+    if (sbp_node->counter == 0) { waiting_computation.insert(sbp_node); }
+  };
+  // Finish the front of the waiting transfer list
+  auto pop_waiting_transfer = [&]() {
+    SbpNode<NdSbpSignature>* sbp_node = waiting_transfer.front().first;
+    for (auto* edge_out : sbp_node->EdgesOut) {
+      if (!edge_out->Cost.empty() && edge_out->Cost[0][0] > 0.0) {
+        finish_one_transfer(edge_out->EndNode);
+      }
+    }
+    waiting_transfer.pop();
+  };
+  // The previous node that just finished the execution
+  SbpNode<NdSbpSignature>* previous_node = nullptr;
+
+  // Node execution
+  auto execute = [&](SbpNode<NdSbpSignature>* sbp_node) -> Maybe<void> {
+    // NOTE: I am not sure whether the source ops have execution time
+    // Assume the source operators have no execution time
+    // No overlaps for the source operators
+    if (!sbp_node->EdgesIn.empty()) {
+      // Add a control edge from the previous node to this node
+      // The aim of the straightening algorithm
+      JUST(add_control_edge(previous_node->op_node, sbp_node->op_node));
+      // Delete it from the waiting list if exists
+      auto it = waiting_computation.find(sbp_node);
+      if (it != waiting_computation.end()) { waiting_computation.erase(it); }
+      // Transfer happens during computation
+      acc_comp_time += sbp_node->Cost[0];
+      while (!waiting_transfer.empty() && acc_comp_time > waiting_transfer.front().second) {
+        // Finish the front of the waiting transfer list as the time pass
+        acc_comp_time -= waiting_transfer.front().second;
+        pop_waiting_transfer();
+      }
+      // Waist the computation time because no transfer is waiting
+      if (waiting_transfer.empty()) { acc_comp_time = 0.0; }
+    }
+    // Finish execution of this node
+    previous_node = sbp_node;
+    // Add the consumer into waiting list, either transfer or computation
+    for (auto* edge_out : sbp_node->EdgesOut) {
+      double total_copy_cost = 0.0;
+      if (edge_out->Cost.empty() || edge_out->Cost[0][0] == 0.0) {
+        // No transfer, wait for computation immediately
+        finish_one_transfer(edge_out->EndNode);
+      } else {
+        total_copy_cost += edge_out->Cost[0][0];
+      }
+      // wait for transfer
+      if (total_copy_cost > 0.0) { waiting_transfer.push({sbp_node, total_copy_cost}); }
+    }
+    return Maybe<void>::Ok();
+  };
+  // Execute all the source op
+  for (auto* sbp_node : sbp_graph_.NodeList) {
+    if (sbp_node->EdgesIn.size() == 0) { execute(sbp_node); }
+  }
+  // Execute nodes or transfer as time pass
+  while (true) {
+    if (waiting_computation.empty()) {
+      // if we have no nodes waiting in the list
+      if (waiting_transfer.empty()) {
+        // No nodes waiting, no transfer waiting, done
+        break;
+      } else {
+        // Take some time for transfer. At this moment, no overlap occurs
+        acc_comp_time = 0.0;
+        pop_waiting_transfer();
+      }
+    } else {
+      // if we have nodes waiting in the list, execute the first one
+      execute(*waiting_computation.begin());
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace auto_parallel
