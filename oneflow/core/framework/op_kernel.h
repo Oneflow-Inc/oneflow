@@ -278,7 +278,6 @@ class OpKernelCache {
 
   static const int32_t kAllMayChanged = 0;
   static const int32_t kShapeNotChanged = 1 << 0;
-  static const int32_t kStrideNotChanged = 1 << 0;
   static const int32_t kAttrNotChanged = 1 << 1;
 
  protected:
