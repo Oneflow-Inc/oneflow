@@ -89,7 +89,7 @@ void TestElementwise(DeviceManagerRegistry* registry, const std::set<DeviceType>
     ASSERT_TRUE(d2h.operator bool());
     ASSERT_TRUE(h2d.operator bool());
     Src* eigen_src_data = eigen_src.data();
-    std::memcpy(host_src.ptr<Src>(), eigen_src_data, src_data_size);
+    std::memcpy(host_src.ptr(), eigen_src_data, src_data_size);
     h2d->Launch(stream.stream(), device_src.ptr<Src>(), host_src.ptr<Src>(), src_data_size);
     elementwise_primitive->Launch(stream.stream(), device_src.ptr<Dst>(), device_dst.ptr<Dst>(),
                                   elem_cnt);

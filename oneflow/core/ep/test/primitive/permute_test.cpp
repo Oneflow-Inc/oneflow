@@ -53,7 +53,7 @@ void TestPermute2D(DeviceManagerRegistry* registry, const std::set<DeviceType>& 
     ASSERT_TRUE(d2h.operator bool());
     ASSERT_TRUE(h2d.operator bool());
     T* mat_data = mat.data();
-    std::memcpy(host_src.ptr<T>(), mat_data, matrix_size);
+    std::memcpy(host_src.ptr(), mat_data, matrix_size);
     h2d->Launch(stream.stream(), device_src.ptr<T>(), host_src.ptr<T>(), matrix_size);
     const int64_t src_dims[NumDims] = {dims[0], dims[1]};
     permute->Launch(stream.stream(), dtype, /*num_dims=*/NumDims, src_dims, device_src.ptr<T>(),
@@ -98,7 +98,7 @@ void TestPermute3D(DeviceManagerRegistry* registry, const std::set<DeviceType>& 
     ASSERT_TRUE(d2h.operator bool());
     ASSERT_TRUE(h2d.operator bool());
     T* mat_data = mat.data();
-    std::memcpy(host_src.ptr<T>(), mat_data, matrix_size);
+    std::memcpy(host_src.ptr(), mat_data, matrix_size);
     h2d->Launch(stream.stream(), device_src.ptr<T>(), host_src.ptr<T>(), matrix_size);
     const int64_t src_dims[NumDims] = {dims[0], dims[1], dims[2]};
     permute->Launch(stream.stream(), dtype, /*num_dims=*/NumDims, src_dims, device_src.ptr<T>(),
