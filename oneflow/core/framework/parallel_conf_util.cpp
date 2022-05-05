@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/common/shape.pb.h"
-#include "oneflow/core/common/stride.pb.h"
 
 namespace oneflow {
 

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.pb.h"
-#include "oneflow/core/common/stride.pb.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 #include <google/protobuf/io/coded_stream.h>

@@ -24,7 +24,6 @@ limitations under the License.
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape.cfg.h"
-#include "oneflow/core/common/stride.cfg.h"
 #include "oneflow/core/register/logical_blob_id.cfg.h"
 #include "oneflow/core/operator/interface_blob_conf.cfg.h"
 #include "oneflow/core/register/blob_desc.cfg.h"

@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/stride.h"
-#include "oneflow/core/common/stride.cfg.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {

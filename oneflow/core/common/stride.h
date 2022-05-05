@@ -18,7 +18,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
 #include "oneflow/core/common/shape.cfg.h"
-#include "oneflow/core/common/stride.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 
