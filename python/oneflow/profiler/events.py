@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import json
-from dataclasses import dataclass
 from typing import Tuple, Dict
 from collections import OrderedDict
 from prettytable import PrettyTable
@@ -29,14 +28,22 @@ def format_event_type(event_type):
     raise ValueError(f"Undefined event type {event_type}.")
 
 
-@dataclass
 class Event:
-    name: str
-    cpu_time: int
-    cpu_time_total: int
-    count: int
-    input_shapes: str
-    event_type: int
+    def __init__(
+        self,
+        name: str,
+        cpu_time: int,
+        cpu_time_total: int,
+        count: int,
+        input_shapes: str,
+        event_type: int,
+    ) -> None:
+        self.name = name
+        self.cpu_time = cpu_time
+        self.cpu_time_total = cpu_time_total
+        self.count = count
+        self.input_shapes = input_shapes
+        self.event_type = event_type
 
     def update(self, event):
         self.cpu_time_total += event.cpu_time
