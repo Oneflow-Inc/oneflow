@@ -72,7 +72,7 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
     NdSbp nd_sbp(nd_sbp_it->second);
     const auto& tensor = JUST(ConsistentTensor::MakeTensor(
-        shape, stride, dtype, SymbolOf(nd_sbp), SymbolOf(*parallel_desc), is_lazy,
+        shape, dtype, SymbolOf(nd_sbp), SymbolOf(*parallel_desc), is_lazy,
         /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
@@ -817,7 +817,7 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
     parallel_conf.set_device_tag(device_type);
     ParallelDesc parallel_desc(parallel_conf);
     (*outputs)[0] = JUST(ConsistentTensor::MakeTensor(
-        input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
+        input_tensor->shape(), input_tensor->dtype()->data_type(),
         JUST(input_tensor->nd_sbp()), SymbolOf(parallel_desc),
         /* is_lazy= */ true,
         /*requires_grad=*/false, /*is_leaf=*/true));
@@ -994,7 +994,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
     // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
     // create a proxy input with the parallel_desc that is the same as op's
     input_proxy = JUST(ConsistentTensor::MakeTensor(
-        input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
+        input_tensor->shape(), input_tensor->dtype()->data_type(),
         JUST(input_tensor->nd_sbp()), parallel_desc_sym,
         /* is_lazy= */ true,
         /*requires_grad=*/false, /*is_leaf=*/true));

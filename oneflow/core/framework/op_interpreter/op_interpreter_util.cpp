@@ -181,7 +181,7 @@ template<>
     const auto& nd_sbp = std::make_shared<NdSbp>();
     *nd_sbp->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
     const auto& tensor = JUST(ConsistentTensor::MakeTensor(
-        blob_attr->shape(), blob_attr->stride(), dtype, SymbolOf(*nd_sbp),
+        blob_attr->shape(), dtype, SymbolOf(*nd_sbp),
         SymbolOf(*parallel_attr->parallel_desc_symbol()), is_lazy,
         /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);

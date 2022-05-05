@@ -97,14 +97,13 @@ Maybe<Tensor> ConsistentTensor::clone() const {
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                     const std::shared_ptr<const Stride>& stride,
                                                      DataType dtype, Symbol<NdSbp> nd_sbp,
                                                      Symbol<ParallelDesc> parallel_desc,
                                                      bool is_lazy, bool requires_grad,
                                                      bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
   Symbol<ConsistentTensorMeta> consistent_tensor_meta(
-      ConsistentTensorMeta(shape, stride, dtype, nd_sbp, parallel_desc));
+      ConsistentTensorMeta(shape, dtype, nd_sbp, parallel_desc));
   if (is_lazy) {
     impl =
         std::make_shared<LazyConsistentTensorImpl>(consistent_tensor_meta, requires_grad, is_leaf);

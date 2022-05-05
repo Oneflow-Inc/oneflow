@@ -313,10 +313,8 @@ Maybe<void> RawLocalToConsistent(const CastToConsistentOpExpr& op_expr, const Te
     const auto& nd_sbp = JUST(ctx.nd_sbp);
     const auto& parallel_desc = JUST(ctx.parallel_desc);
     const auto& logical_shape = JUST(ctx.attrs.GetAttr<Shape>("shape"));
-    const auto& logical_stride = Stride(logical_shape);
     DataType dtype = JUST(ctx.attrs.GetAttr<DataType>("dtype"));
-    ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape),
-                                     std::make_shared<const Stride>(logical_stride), dtype, nd_sbp,
+    ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(logical_shape), dtype, nd_sbp,
                                      parallel_desc);
     Optional<int64_t> parallel_id{};
     const auto& device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));

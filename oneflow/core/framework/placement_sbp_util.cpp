@@ -332,13 +332,12 @@ namespace {
 Maybe<std::pair<Symbol<one::ConsistentTensorMeta>, Symbol<NdSbp>>> CalcDecomposableEquivalent(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
   std::shared_ptr<const Shape> shape = tensor_meta->shape_ptr();
-  std::shared_ptr<const Stride> stride = tensor_meta->stride_ptr();
   Symbol<NdSbp> src_nd_sbp = tensor_meta->nd_sbp();
   const auto& hierarchy = tensor_meta->parallel_desc()->hierarchy();
   std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(
       CalcDecomposableEquivalentShapeAndNdSbpPair(*shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
 
-  one::ConsistentTensorMeta decomposible_tensor_meta(shape, stride, tensor_meta->dtype(),
+  one::ConsistentTensorMeta decomposible_tensor_meta(shape, tensor_meta->dtype(),
                                                      src_nd_sbp, tensor_meta->parallel_desc());
   return std::make_pair(SymbolOf(decomposible_tensor_meta), dst_nd_sbp);
 }
@@ -529,9 +528,8 @@ Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<NdSbp> sub_nd_sbp) {
   CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& logical_shape = JUST(GetSubLogicalShape(tensor_meta, sub_parallel_desc, sub_nd_sbp));
-  const auto& logical_stride = std::make_shared<Stride>(Stride(logical_shape));
   one::ConsistentTensorMeta sub_consistent_tensor_meta(
-      logical_shape, logical_stride, tensor_meta->dtype(), sub_nd_sbp, sub_parallel_desc);
+      logical_shape, tensor_meta->dtype(), sub_nd_sbp, sub_parallel_desc);
   return SymbolOf(sub_consistent_tensor_meta);
 }
 
@@ -550,8 +548,7 @@ Maybe<Symbol<NdSbp>> ReplaceNdSbpComponent(Symbol<NdSbp> nd_sbp, int64_t axis,
 
 Maybe<Symbol<one::ConsistentTensorMeta>> ReplaceNdSbp(Symbol<one::ConsistentTensorMeta> tensor_meta,
                                                       Symbol<NdSbp> nd_sbp) {
-  one::ConsistentTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->stride_ptr(),
-                                            tensor_meta->dtype(), nd_sbp,
+  one::ConsistentTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->dtype(), nd_sbp,
                                             tensor_meta->parallel_desc());
   return SymbolOf(new_tensor_meta);
 }

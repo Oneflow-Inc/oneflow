@@ -627,7 +627,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Tensor> clone() const override;
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                            const std::shared_ptr<const Stride>& stride,
                                             DataType dtype, Symbol<NdSbp> nd_sbp,
                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                             bool requires_grad, bool is_leaf);

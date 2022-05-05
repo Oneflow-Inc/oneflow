@@ -228,8 +228,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       sub_logical_shape = physical_shape;
     }
   } else {
-    one::ConsistentTensorMeta tensor_meta(input->shape(), JUST(input->stride()),
-                                          input->dtype()->data_type(), out_nd_sbp,
+    one::ConsistentTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
                                           out_parallel_desc);
     const auto& tensor_impl = JUST(
         one::EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));

@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_FRAMEWORK_TENSOR_META_H_
 #define ONEFLOW_FRAMEWORK_TENSOR_META_H_
 
+#include <memory>
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -33,6 +34,12 @@ bool IsContiguous(const Shape& shape, const Stride& stride);
 
 class TensorMeta : public user_op::TensorDesc {
  public:
+  TensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
+      : shape_(shape),
+        stride_(std::make_shared<Stride>(*shape_)),
+        data_type_(dtype),
+        is_dynamic_(false),
+        is_contiguous_(IsContiguous(*shape_, *stride_)) {}
   TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
              DataType dtype)
       : shape_(shape),
@@ -102,10 +109,9 @@ class MirroredTensorMeta : public TensorMeta {
 
 class ConsistentTensorMeta : public TensorMeta {
  public:
-  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape,
-                       const std::shared_ptr<const Stride>& stride, DataType dtype,
+  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                        Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
-      : TensorMeta(shape, stride, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
+      : TensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
   ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
   virtual ~ConsistentTensorMeta() = default;
