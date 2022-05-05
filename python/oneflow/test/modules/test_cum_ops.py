@@ -54,7 +54,7 @@ class TestCumOp(flow.unittest.TestCase):
         dim = random(0, x.ndim.pytorch).to(int)
         y = x.cumsum(dim)
         return y
-        
+
     @autotest(n=5, check_graph=True)
     def test_cumprod_with_user_dy(test_case):
         device = random_device()
