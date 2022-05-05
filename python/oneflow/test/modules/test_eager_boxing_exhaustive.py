@@ -38,12 +38,11 @@ def _test_eager_boxing_normal_1d_exhaustive_testing(
     ]
     in_placement = flow.placement(type=in_device, ranks=in_device_list)
     out_placement = flow.placement(type=out_device, ranks=out_device_list)
+    rand_tensor = random_tensor(len(shape), *shape, requires_grad=False).oneflow
     for elem in itertools.product(sbps, sbps):
-        x = random_tensor(len(shape), *shape, requires_grad=False).oneflow.to_global(
-            placement=in_placement, sbp=elem[0]
-        )
+        x = rand_tensor.to_global(placement=in_placement, sbp=elem[0])
         y = x.to_global(placement=out_placement, sbp=elem[1])
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-3, 1e-3))
 
 
 def _test_eager_boxing_symmetric_2d_exhaustive_testing(
@@ -61,12 +60,11 @@ def _test_eager_boxing_symmetric_2d_exhaustive_testing(
     shape = (32, 96, 64)
     in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
     out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
+    rand_tensor = random_tensor(len(shape), *shape, requires_grad=False).oneflow
     for elem in nd_sbps:
-        x = random_tensor(len(shape), *shape, requires_grad=False).oneflow.to_global(
-            placement=in_placement, sbp=elem[0]
-        )
+        x = rand_tensor.to_global(placement=in_placement, sbp=elem[0])
         y = x.to_global(placement=out_placement, sbp=elem[1])
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-3, 1e-3))
 
 
 def _test_eager_boxing_1d_special_split_axis(
@@ -81,12 +79,11 @@ def _test_eager_boxing_1d_special_split_axis(
     shape = (16, 16, 5, 7)
     in_placement = flow.placement(type=in_device, ranks=in_device_list)
     out_placement = flow.placement(type=out_device, ranks=out_device_list)
+    rand_tensor = random_tensor(len(shape), *shape, requires_grad=False).oneflow
     for elem in itertools.product(sbps, sbps):
-        x = random_tensor(len(shape), *shape, requires_grad=False).oneflow.to_global(
-            placement=in_placement, sbp=elem[0]
-        )
+        x = rand_tensor.to_global(placement=in_placement, sbp=elem[0])
         y = x.to_global(placement=out_placement, sbp=elem[1])
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-3, 1e-3))
 
 
 def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
@@ -102,12 +99,11 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
     shape = (8, 16, 4, 8, 12)
     in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
     out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
+    rand_tensor = random_tensor(len(shape), *shape, requires_grad=False).oneflow
     for elem in nd_sbps:
-        x = random_tensor(len(shape), *shape, requires_grad=False).oneflow.to_global(
-            placement=in_placement, sbp=elem[0]
-        )
+        x = rand_tensor.to_global(placement=in_placement, sbp=elem[0])
         y = x.to_global(placement=out_placement, sbp=elem[1])
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-3, 1e-3))
 
 
 @flow.unittest.skip_unless_1n4d()
