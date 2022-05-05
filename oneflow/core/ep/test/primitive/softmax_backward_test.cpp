@@ -31,7 +31,7 @@ namespace test {
 
 namespace {
 
-template<DataType data_type, typename T>
+template<DataType data_type, typename T, typename ComputeType>
 void TestSoftmaxBackward(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
                          int num_rows, int num_cols, bool log_softmax) {
   const int elem_cnt = num_rows * num_cols;
@@ -45,18 +45,24 @@ void TestSoftmaxBackward(DeviceManagerRegistry* registry, const std::set<DeviceT
   Eigen::array<int, 2> reduced_shape = {num_rows, 1};
   Eigen::array<int, 2> broadcast_shape = {1, num_cols};
 
+  Eigen::Tensor<ComputeType, 2, Eigen::RowMajor> compute_y = softmax_y.template cast<ComputeType>();
+  Eigen::Tensor<ComputeType, 2, Eigen::RowMajor> compute_dy =
+      softmax_dy.template cast<ComputeType>();
+  Eigen::Tensor<ComputeType, 2, Eigen::RowMajor> compute_dx;
+
   if (log_softmax) {
-    softmax_dx =
-        softmax_dy
-        - softmax_y.exp()
-              * softmax_dy.sum(reduce_dim).eval().reshape(reduced_shape).broadcast(broadcast_shape);
+    compute_dx =
+        compute_dy
+        - compute_y.exp()
+              * compute_dy.sum(reduce_dim).eval().reshape(reduced_shape).broadcast(broadcast_shape);
   } else {
-    Eigen::Tensor<T, 2, Eigen::RowMajor> row_buf = softmax_dy * softmax_y;
-    softmax_dx =
-        (softmax_dy
+    Eigen::Tensor<ComputeType, 2, Eigen::RowMajor> row_buf = compute_dy * compute_y;
+    compute_dx =
+        (compute_dy
          - row_buf.sum(reduce_dim).eval().reshape(reduced_shape).broadcast(broadcast_shape))
-        * softmax_y;
+        * compute_y;
   }
+  softmax_dx = compute_dx.template cast<T>();
 
   for (const auto& device_type : device_types) {
     if (device_type == DeviceType::kCPU && data_type == DataType::kFloat16) {
@@ -98,20 +104,25 @@ void TestSoftmaxBackward(DeviceManagerRegistry* registry, const std::set<DeviceT
                                                                                 softmax_dx.size());
     Eigen::Map<Eigen::Matrix<T, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
         reinterpret_cast<T*>(output_dx.ptr()), softmax_dx.size());
+
     ASSERT_TRUE(eigen_out.template isApprox(of_out, static_cast<T>(0.001)));
   }
 }
 
 void TestSoftmaxBackward(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
                          int num_rows, int num_cols) {
-  TestSoftmaxBackward<DataType::kFloat, float>(registry, device_types, num_rows, num_cols, true);
-  TestSoftmaxBackward<DataType::kFloat, float>(registry, device_types, num_rows, num_cols, false);
-  TestSoftmaxBackward<DataType::kDouble, double>(registry, device_types, num_rows, num_cols, true);
-  TestSoftmaxBackward<DataType::kDouble, double>(registry, device_types, num_rows, num_cols, false);
-  TestSoftmaxBackward<DataType::kFloat16, Eigen::half>(registry, device_types, num_rows, num_cols,
-                                                       true);
-  TestSoftmaxBackward<DataType::kFloat16, Eigen::half>(registry, device_types, num_rows, num_cols,
-                                                       false);
+  TestSoftmaxBackward<DataType::kFloat, float, float>(registry, device_types, num_rows, num_cols,
+                                                      true);
+  TestSoftmaxBackward<DataType::kFloat, float, float>(registry, device_types, num_rows, num_cols,
+                                                      false);
+  TestSoftmaxBackward<DataType::kDouble, double, double>(registry, device_types, num_rows, num_cols,
+                                                         true);
+  TestSoftmaxBackward<DataType::kDouble, double, double>(registry, device_types, num_rows, num_cols,
+                                                         false);
+  TestSoftmaxBackward<DataType::kFloat16, Eigen::half, float>(registry, device_types, num_rows,
+                                                              num_cols, true);
+  TestSoftmaxBackward<DataType::kFloat16, Eigen::half, float>(registry, device_types, num_rows,
+                                                              num_cols, false);
 }
 
 }  // namespace
