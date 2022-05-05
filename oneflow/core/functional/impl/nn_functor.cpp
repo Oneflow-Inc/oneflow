@@ -302,7 +302,12 @@ class TensorDotFunctor {
                            const std::vector<int32_t>& dims_b) const {
     // dims_a and dims_b represent dim indices to calculate dot, and are copied to variables
     // dot_dims_a and dot_dims_b when they need to be modified
-    if (dims_a.empty() && dims_b.empty()) {
+    CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
+        << Error::RuntimeError() << "both dimension lists should have same length, got "
+        << dims_a.size() << " and " << dims_b.size();
+
+    // dims_a.size() == dims_b.size(), and specially treat if both are empty
+    if (dims_a.empty()) {
       DimVector shape_sum(a->ndim() + b->ndim());
       for (int64_t i = 0; i < a->ndim(); i++) { shape_sum[i] = a->shape()->At(i); }
       for (int64_t i = 0; i < b->ndim(); i++) { shape_sum[i + a->ndim()] = b->shape()->At(i); }
@@ -311,9 +316,6 @@ class TensorDotFunctor {
       return JUST(Reshape(JUST(functional::MatMul(reshape_a, reshape_b, false, false, 1.0)),
                           Shape(DimVector(shape_sum.begin(), shape_sum.end()))));
     }
-    CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
-        << Error::RuntimeError() << "both dimension lists should have same length, got "
-        << dims_a.size() << " and " << dims_b.size();
     std::vector<int32_t> dot_dims_a(dims_a.begin(), dims_a.end());
     std::vector<int32_t> dot_dims_b(dims_b.begin(), dims_b.end());
     for (int64_t i = 0; i < dot_dims_a.size(); i++) {
