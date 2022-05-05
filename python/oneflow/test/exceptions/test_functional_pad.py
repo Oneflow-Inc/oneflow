@@ -14,32 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+
 import oneflow as flow
 import oneflow.unittest
-import oneflow.nn.functional as F
-import torch
+
+from oneflow.test_utils.automated_test_util import *
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestPad(flow.unittest.TestCase):
-    def test_torch_type(test_case):
-        with test_case.assertRaises(RuntimeError) as exp:
-            F.pad(torch.randn(2, 2))
-        test_case.assertTrue(
-            "pad(): argument 'x' must be tensor, not <class 'torch.Tensor'>"
-            in str(exp.exception)
-        )
-
-    def test_numpy_type(test_case):
-        import numpy as np
-
-        with test_case.assertRaises(RuntimeError) as exp:
-            F.pad(np.random.randn(2, 2))
-        test_case.assertTrue(
-            "pad(): argument 'x' must be tensor, not <class 'numpy.ndarray'>"
-            in str(exp.exception)
-        )
-
+class TestPadError(flow.unittest.TestCase):
     def test_pad_ndim_limit_error(test_case):
         with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((1, 1, 1, 1, 1, 1), dtype=flow.float32)

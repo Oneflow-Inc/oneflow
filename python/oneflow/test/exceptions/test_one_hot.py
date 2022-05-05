@@ -21,23 +21,13 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-class TestPixelShuffleError(flow.unittest.TestCase):
-    def test_pixel_shuffle_4D_input_error(test_case):
+class TestOnehotError(flow.unittest.TestCase):
+    def test_onehot_error(test_case):
         with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 8, 4, 4, 1), dtype=flow.float32)
-            out = flow._C.pixel_shuffle(x, 2, 2)
-
+            x = flow.ones((3, 3), dtype=flow.float32)
+            out = flow._C.one_hot(x, 3, 0.9, 0)
         test_case.assertTrue(
-            "Check failed: x->ndim() == 4 Only Accept 4D Tensor" in str(ctx.exception)
-        )
-
-    def test_pixel_shuffle_channel_divisble_error(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 8, 4, 4), dtype=flow.float32)
-            out = flow._C.pixel_shuffle(x, 2, 3)
-
-        test_case.assertTrue(
-            "Check failed: channel % (h_upscale_factor * w_upscale_factor) == 0 The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or (h_upscale_factor * w_upscale_factor)"
+            "RuntimeError : one_hot is only applicable to index tensor."
             in str(ctx.exception)
         )
 

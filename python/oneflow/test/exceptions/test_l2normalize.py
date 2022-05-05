@@ -21,23 +21,22 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-class TestPixelShuffleError(flow.unittest.TestCase):
-    def test_pixel_shuffle_4D_input_error(test_case):
+class TestL2NormalizeError(flow.unittest.TestCase):
+    def test_l2normalize_axis_error1(test_case):
         with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 8, 4, 4, 1), dtype=flow.float32)
-            out = flow._C.pixel_shuffle(x, 2, 2)
-
+            x = flow.ones((3, 3), dtype=flow.float32)
+            out = flow._C.normalize(x, dim=3, use_l2_norm_kernel=True)
         test_case.assertTrue(
-            "Check failed: x->ndim() == 4 Only Accept 4D Tensor" in str(ctx.exception)
+            "Check failed: (axis_) <= (final_dim) (3 vs 1) Axis should <2 but axis is 3 now."
+            in str(ctx.exception)
         )
 
-    def test_pixel_shuffle_channel_divisble_error(test_case):
+    def test_l2normalize_axis_error2(test_case):
         with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 8, 4, 4), dtype=flow.float32)
-            out = flow._C.pixel_shuffle(x, 2, 3)
-
+            x = flow.ones((3, 3), dtype=flow.float32)
+            out = flow._C.normalize(x, dim=-3, use_l2_norm_kernel=True)
         test_case.assertTrue(
-            "Check failed: channel % (h_upscale_factor * w_upscale_factor) == 0 The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or (h_upscale_factor * w_upscale_factor)"
+            "Check failed: (axis_) >= (0) (-1 vs 0) Axis should >=0 but axis is -1 now."
             in str(ctx.exception)
         )
 

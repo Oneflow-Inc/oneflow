@@ -15,11 +15,6 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
-import os
-import numpy as np
-import time
 import oneflow as flow
 import oneflow.unittest
 

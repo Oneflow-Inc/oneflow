@@ -14,11 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
 
-import os
-import numpy as np
-import time
 import oneflow as flow
 import oneflow.unittest
 
@@ -27,9 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 class TestNormalizationError(flow.unittest.TestCase):
     def test_normalization_moving_mean_error(test_case):
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.Exception
-        ) as ctx:
+        with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((1, 4, 2, 2), dtype=flow.float32)
             moving_mean = flow.ones((4,), dtype=flow.float32)
             weight = flow.ones((4,), dtype=flow.float32)
@@ -45,9 +39,7 @@ class TestNormalizationError(flow.unittest.TestCase):
         )
 
     def test_normalization_x_input_axes_error(test_case):
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.Exception
-        ) as ctx:
+        with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((1,), dtype=flow.float32)
             weight = flow.ones((4,), dtype=flow.float32)
             bias = flow.ones((4,), dtype=flow.float32)
@@ -62,9 +54,7 @@ class TestNormalizationError(flow.unittest.TestCase):
         )
 
     def test_normalization_eval_need_moving_statistic_error(test_case):
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.Exception
-        ) as ctx:
+        with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((1, 2,), dtype=flow.float32)
             weight = flow.ones((2,), dtype=flow.float32)
             bias = flow.ones((2,), dtype=flow.float32)

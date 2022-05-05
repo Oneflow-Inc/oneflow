@@ -14,11 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
 
-import os
-import numpy as np
-import time
 import oneflow as flow
 import oneflow.unittest
 
@@ -27,9 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 class TestBatchMatmulError(flow.unittest.TestCase):
     def test_batch_matmul_dimension_error1(test_case):
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.Exception
-        ) as ctx:
+        with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((4, 4), dtype=flow.float32)
             w = flow.ones((4, 1, 1), dtype=flow.float32)
             out = flow._C.batch_matmul(x, w, False, False, 1.0)

@@ -14,11 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
 
-import os
-import numpy as np
-import time
 import oneflow as flow
 import oneflow.unittest
 
@@ -27,9 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 class TestCTCLossError(flow.unittest.TestCase):
     def test_ctcloss_reduction_type_error(test_case):
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.Exception
-        ) as ctx:
+        with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((5, 2, 3), dtype=flow.float32)
             targets = flow.tensor([[1, 2, 2], [1, 2, 2]], dtype=flow.int32)
             input_lengths = flow.tensor([5, 5], dtype=flow.int32)
