@@ -322,7 +322,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
       std::string new_split_signature = "";
       int64_t split_dim = 0;
       if (new_var_op_conf.variable_conf().nd_sbp_size() == 1
-          && new_var_op_conf.variable_conf().nd_sbp(i) == "B") {
+          && new_var_op_conf.variable_conf().nd_sbp(0) == "B") {
         new_split_signature = "S(0)";
         split_dim = 0;
       } else {
