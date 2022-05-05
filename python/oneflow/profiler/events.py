@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import json
+import copy
 from typing import Tuple, Dict
 from collections import OrderedDict
 from prettytable import PrettyTable
@@ -87,14 +88,14 @@ class Events(list):
         stats: Dict[Tuple[str, ...], Event] = OrderedDict()
 
         def get_key(event: Event) -> Tuple[str, ...]:
-            return tuple([event.name, event.input_shapes])
+            return event.name, event.input_shapes
 
         for event in self:
             key = get_key(event=event)
             if key in stats:
                 stats[key].update(event)
             else:
-                stats[key] = event
+                stats[key] = copy.deepcopy(event)
         results = Events()
         results.extend(stats.values())
         return results

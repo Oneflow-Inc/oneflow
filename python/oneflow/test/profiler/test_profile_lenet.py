@@ -42,6 +42,13 @@ class LeNet(nn.Module):
         return out
 
 
+def get_event(events, name: str, input_shapes: str = "-"):
+    for item in events:
+        if item.name == name and item.input_shapes == input_shapes:
+            return item
+    return None
+
+
 class TestProfileLenet(flow.unittest.TestCase):
     def test_lenet(test_case):
         x = flow.randn(2, 3, 32, 32)
@@ -55,14 +62,23 @@ class TestProfileLenet(flow.unittest.TestCase):
                     eager_res = lenet(x)
             with oneflow.profiler.record_function("lenet_backward_total_time") as f:
                 eager_res.sum().backward()
-        events_avg = prof.key_averages()
-        test_case.assertEqual(len(events_avg), 42)
-        test_case.assertEqual(events_avg[0].name, "lenet_forward_total_time")
-        test_case.assertEqual(events_avg[1].count, 2)
-        test_case.assertEqual(events_avg[17].name, "lenet_backward_total_time")
-        test_case.assertEqual(events_avg[18].count, 1)
-        test_case.assertEqual(events_avg[0].input_shapes, "-")
-        test_case.assertNotEqual(events_avg[1].input_shapes, "-")
+
+        events = prof.key_averages()
+
+        conv_event = get_event(events, "conv2d", "[(2,3,32,32), (6,3,5,5)]")
+        test_case.assertIsNotNone(conv_event)
+        test_case.assertGreater(conv_event.cpu_time, 0)
+        test_case.assertGreater(conv_event.cpu_time_total, 0)
+        test_case.assertEqual(conv_event.count, 2)
+
+        relu_grad_event = get_event(events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]")
+        test_case.assertIsNotNone(relu_grad_event)
+        test_case.assertGreater(relu_grad_event.cpu_time, 0)
+        test_case.assertGreater(relu_grad_event.cpu_time_total, 0)
+        test_case.assertEqual(relu_grad_event.count, 1)
+
+        test_case.assertIsNotNone(get_event(events, "lenet_forward_total_time"))
+        test_case.assertIsNotNone(get_event(events, "lenet_backward_total_time"))
 
 
 if __name__ == "__main__":
