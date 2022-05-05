@@ -142,6 +142,11 @@ from oneflow._C import max
 from oneflow._C import min
 from oneflow._C import median
 from oneflow._C import pow
+from oneflow._C import reduce_prod as prod
+from oneflow._C import reduce_sum as sum
+from oneflow._C import reduce_mean as mean
+from oneflow._C import reduce_all as all
+from oneflow._C import reduce_any as any
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
@@ -355,11 +360,6 @@ from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
 from oneflow.nn.modules.random_ops import randperm_op as randperm
-from oneflow.nn.modules.reduce_ops import sum_op as sum
-from oneflow.nn.modules.reduce_ops import mean_op as mean
-from oneflow.nn.modules.reduce_ops import prod_op as prod
-from oneflow.nn.modules.reduce_ops import all_op as all
-from oneflow.nn.modules.reduce_ops import any_op as any
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
