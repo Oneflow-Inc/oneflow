@@ -1295,7 +1295,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
+        dim (int or tuple of ints): the dimension or dimensions to reduce.
         unbiased (bool): whether to use the unbiased estimation or not
         keepdim (bool): whether the output tensor has `dim` retained or not.
 
@@ -1325,7 +1325,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        dim (int or tuple of ints): the dimension or dimensions to reduce. Defaults to None.
         unbiased (bool, optional): whether to use Bessel’s correction (:math:`\delta N = 1`). Defaults to True.
         keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
 
