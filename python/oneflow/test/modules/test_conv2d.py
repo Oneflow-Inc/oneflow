@@ -1850,6 +1850,26 @@ class TestConv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(check_graph=False)
+    def test_conv2d_0size_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=4, dim0=0, dim1=channels).to(device)
+        y = m(x)
+        return y
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=30, check_allclose=False)
     def test_conv2d_group_with_random_data(test_case):

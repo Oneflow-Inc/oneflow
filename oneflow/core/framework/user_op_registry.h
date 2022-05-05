@@ -60,12 +60,17 @@ using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTime
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 
 struct OpRegistryResult {
-  OpRegistryResult() : cpu_only_supported(false), no_grad(false), same_output_regst_num(-1) {}
+  OpRegistryResult()
+      : cpu_only_supported(false),
+        no_grad(false),
+        non_contiguous_supported(false),
+        same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
   bool no_grad;
+  bool non_contiguous_supported;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
@@ -102,6 +107,7 @@ class OpRegistry final {
   OpRegistry& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
   OpRegistry& SupportCpuOnly();
+  OpRegistry& SupportNonContiguous();
   OpRegistry& NoGrad();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
