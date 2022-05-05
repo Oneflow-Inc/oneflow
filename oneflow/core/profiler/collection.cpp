@@ -52,13 +52,13 @@ std::shared_ptr<IEvent> IEvent::Create(EventType type, const std::string& name) 
 nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kKernel;
-  j["input_shapes"] = __FormatShapes();
+  j["input_shapes"] = FormatShapes();
   return j;
 }
 
-std::string KernelEvent::Key() { return name_ + "." + __FormatShapes(); }
+std::string KernelEvent::Key() { return name_ + "." + FormatShapes(); }
 
-std::string KernelEvent::__FormatShapes(size_t max_num_to_format) {
+std::string KernelEvent::FormatShapes(size_t max_num_to_format) {
   if (input_shapes_.size() == 0) { return "-"; }
   std::string result("[");
   for (size_t i = 0; i < std::min(input_shapes_.size(), max_num_to_format); ++i) {
@@ -87,7 +87,7 @@ std::string CustomEvent::Key() { return name_; }
 
 std::string ProfileMgr::RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,
                                               const std::string& name) {
-  std::string recorder_key = __GetNextEventRecorderKey(name);
+  std::string recorder_key = GetNextEventRecorderKey(name);
   event_recorders_.emplace(recorder_key, event_recorder);
   return recorder_key;
 }
@@ -98,11 +98,11 @@ void ProfileMgr::UnregisterEventRecorder(const std::string& event_recorder_key) 
 }
 
 std::string ProfileMgr::DumpResultsJson() {
-  const json j = __ExportEvents();
+  const json j = ExportEvents();
   return j.dump();
 }
 
-std::vector<std::shared_ptr<IEvent>> ProfileMgr::__ExportEvents() {
+std::vector<std::shared_ptr<IEvent>> ProfileMgr::ExportEvents() {
   std::vector<std::shared_ptr<IEvent>> events;
   while (!events_.empty()) {
     auto e = events_.front();
@@ -112,7 +112,7 @@ std::vector<std::shared_ptr<IEvent>> ProfileMgr::__ExportEvents() {
   return events;
 }
 
-std::string ProfileMgr::__GetNextEventRecorderKey(const std::string& name) {
+std::string ProfileMgr::GetNextEventRecorderKey(const std::string& name) {
   if (event_recorders_last_id_.find(name) == event_recorders_last_id_.end()) {
     event_recorders_last_id_[name] = 0;
   } else {
