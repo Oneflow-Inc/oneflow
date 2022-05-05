@@ -148,7 +148,8 @@ std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
 
 std::shared_ptr<const Stride> EagerMirroredTensorImpl::stride() const {
   if (!eager_blob_object_) { return tensor_meta()->stride_ptr(); }
-  return eager_blob_object_->stride_ptr();;
+  return eager_blob_object_->stride_ptr();
+  ;
 }
 
 Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {

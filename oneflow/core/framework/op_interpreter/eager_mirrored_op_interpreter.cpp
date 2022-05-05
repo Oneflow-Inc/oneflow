@@ -59,7 +59,9 @@ Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>&
 
 class MutMirroredTensorMeta : public TensorMeta {
  public:
-  MutMirroredTensorMeta() : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(), kInvalidDataType) {}
+  MutMirroredTensorMeta()
+      : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
+                   kInvalidDataType) {}
   MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
   MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
   ~MutMirroredTensorMeta() override = default;

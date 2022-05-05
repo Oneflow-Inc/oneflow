@@ -264,7 +264,8 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
                                                      dense_attr_list.end()};
       attr_vec.emplace_back(
           GetBuilder().getNamedAttr(name, GetBuilder().getArrayAttr(dense_attr_vector)));
-    } else if (value.has_at_list_stride()) {
+    }
+    else if (value.has_at_list_stride()) {
       auto dense_attr_list =
           llvm::map_range(value.at_list_stride().val(),
                           [&](const ::oneflow::ShapeProto& s) { return GetAttrFromStride(s); });
@@ -272,7 +273,8 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
                                                      dense_attr_list.end()};
       attr_vec.emplace_back(
           GetBuilder().getNamedAttr(name, GetBuilder().getArrayAttr(dense_attr_vector)));
-    } else {
+    }
+    else {
       GetModule().emitError("can't handle user op attr: " + name + ", op name: " + op.name()
                             + ", op type name: " + op.user_conf().op_type_name());
       return failure();

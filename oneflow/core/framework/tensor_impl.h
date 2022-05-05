@@ -143,9 +143,7 @@ class ConsistentTensorImpl : public TensorImpl {
 
   // Getters
   std::shared_ptr<const Shape> shape() const override { return tensor_meta_->shape_ptr(); }
-  std::shared_ptr<const Stride> stride() const override {
-    return tensor_meta_->stride_ptr();
-  }
+  std::shared_ptr<const Stride> stride() const override { return tensor_meta_->stride_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
   Symbol<NdSbp> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
@@ -204,9 +202,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters
   std::shared_ptr<const Shape> shape() const override { return tensor_meta()->shape_ptr(); }
-  std::shared_ptr<const Stride> stride() const override {
-    return tensor_meta()->stride_ptr();
-  }
+  std::shared_ptr<const Stride> stride() const override { return tensor_meta()->stride_ptr(); }
   bool is_lazy() const override { return true; }
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,

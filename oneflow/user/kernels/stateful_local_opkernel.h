@@ -114,9 +114,7 @@ class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
 
   const Stride& stride() const override { return consistent_tensor_meta_()->stride(); }
 
-  Stride* mut_stride() override {
-    UNIMPLEMENTED();
-  }
+  Stride* mut_stride() override { UNIMPLEMENTED(); }
 
   DataType data_type() const override { return consistent_tensor_meta_()->data_type(); }
 
