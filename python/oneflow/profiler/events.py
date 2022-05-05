@@ -50,6 +50,18 @@ class Event:
         self.count += 1
         self.cpu_time = self.cpu_time_total / self.count
 
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.cpu_time == other.cpu_time
+            and self.cpu_time_total == other.cpu_time_total
+            and self.count == other.count
+            and self.input_shapes == other.input_shapes
+            and self.event_type == other.event_type
+        )
+
     @classmethod
     def from_dict(cls, d: dict):
         return cls(
