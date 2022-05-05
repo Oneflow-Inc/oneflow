@@ -114,6 +114,21 @@ typename std::remove_const<typename std::remove_reference<T>::type>::type&& Remo
   })(__FUNCTION__)                                                                                 \
       .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
+// template<typename T>
+// auto CHECK_JUST(
+//     T&& val, const ::oneflow::source_location& location = ::oneflow::source_location::current())
+//     {
+//   return [val = std::tuple<T>(std::forward<T>(val)), location]() mutable {
+//     if (!::oneflow::private_details::JustIsOk(std::get<0>(val))) {
+//       LOG(FATAL) << ::oneflow::GetFormatedSerializedError(
+//           ::oneflow::private_details::JustErrorAddStackFrame(
+//               ::oneflow::private_details::JustGetError(std::get<0>(val)), location.file_name(),
+//               location.line(), location.function_name(), ""));
+//     }
+//     return std::get<0>(val).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+//   }();
+// }
+
 #define JUST_MSG(value, ...)                                                                \
   ::oneflow::private_details::RemoveRValConst(({                                            \
     auto&& _just_value_to_check_ = (value);                                                 \
