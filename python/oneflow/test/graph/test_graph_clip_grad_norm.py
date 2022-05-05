@@ -210,8 +210,8 @@ def _compare_with_eager(
     max_norm=1.0,
     device="cuda",
     parallel_mode=None,
-    rtol=1e-05,
-    atol=1e-08,
+    rtol=1e-03,
+    atol=1e-05,
 ):
     gen = TensorGenerator(
         batch_size=batch_size, device=device, parallel_mode=parallel_mode
