@@ -87,9 +87,6 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
   op_graph.ForEachNode([&](const OpNode* node) -> void {
     SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[node->op().op_name()];
     // Update NdSbpSignature
-    // sbp_node->FinalSbpSignature()->ToProto(
-    //     &(*job->mutable_job_parallel_view_conf()
-    //            ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]);
     (*job->mutable_job_parallel_view_conf()
           ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]
         .CopyFrom(*sbp_node->FinalSbpSignature());
@@ -291,8 +288,9 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
 }
 
 Maybe<void> SbpConstructor::ApplyMainstemAlgo() {
+  auto op_node2mutable_op_ctrl_deps = JUST(GetMutableOpCtrlDeps(*op_graph_));
   // Compute layer number for each node
-  int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_);
+  int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_, *op_node2mutable_op_ctrl_deps);
   // Accumulate cost on the mainstem after initializing computation cost
   sbp_graph_.FindMainstem(max_MinLayer, op_name2sbp_node_);
   return Maybe<void>::Ok();
@@ -349,6 +347,52 @@ Maybe<void> SbpConstructor::CheckSbpAgreement(const Job& job) {
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
+}
+
+Maybe<HashMap<const OpNode*, HashSet<std::string>>> SbpConstructor::GetMutableOpCtrlDeps(
+    const OpGraph& op_graph) {
+  auto IsMutableConsumedLbi = [](const Operator& op, const LogicalBlobId& lbi) -> bool {
+    for (const std::string& bn : op.input_bns()) {
+      if (op.BnInOp2Lbi(bn) == lbi && op.InputBlobModifier4Ibn(bn).is_mutable()) { return true; }
+    }
+    return false;
+  };
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+  HashMap<const OpNode*, HashSet<std::string>> op_node2ctrl_in_op_names;
+  JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+    if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
+    if (op_node->out_edges().size() <= 1) { return Maybe<void>::Ok(); }
+    const Operator& variable_op = op_node->op();
+    const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
+    const OpNode* mutable_consumer = nullptr;
+    std::vector<const OperatorConf*> naive_consumers;
+    naive_consumers.reserve(op_node->out_edges().size());
+    for (OpEdge* edge : op_node->out_edges()) {
+      const auto& op_conf = edge->dst_node()->op().op_conf();
+      if (IsMutableConsumedLbi(edge->dst_node()->op(), variable_lbi)) {
+        CHECK_OR_RETURN(mutable_consumer == nullptr);
+        mutable_consumer = edge->dst_node();
+      } else {
+        naive_consumers.emplace_back(&op_conf);
+      }
+    }
+    if (mutable_consumer == nullptr) { return Maybe<void>::Ok(); }
+    for (const auto* fw_bw_op : naive_consumers) {
+      op_node2ctrl_in_op_names[mutable_consumer].insert(fw_bw_op->name());
+    }
+    return Maybe<void>::Ok();
+  }));
+  // Filter ctrl edges if all ctrl_in_op_names are reachable
+  HashMap<const OpNode*, HashSet<std::string>> filter_op_ctrl_deps;
+  for (const auto& pair : op_node2ctrl_in_op_names) {
+    const OpNode* op_node = pair.first;
+    for (const auto& fw_bw_op_name : pair.second) {
+      if (!IsReachable(fw_bw_op_name, op_node->op().op_name())) {
+        filter_op_ctrl_deps[op_node].insert(fw_bw_op_name);
+      }
+    }
+  }
+  return filter_op_ctrl_deps;
 }
 
 // Print the graph with SBP in order
