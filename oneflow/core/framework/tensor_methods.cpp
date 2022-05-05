@@ -75,7 +75,8 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
       tensor_meta, JUST(input->tensor_storage()), requires_grad,
       /*is_leaf=*/!requires_grad);
-  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), /*pin_memory=*/false));
+  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()),
+                                        /*pin_memory=*/false));
 
   auto view_tensor = std::make_shared<MirroredTensor>(tensor_impl);
 
@@ -376,7 +377,7 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                         JUST(input->device()),  /*pin_memory=*/false));
+                                         JUST(input->device()), /*pin_memory=*/false));
       in_grads->resize(1);
       (*in_grads)[0] =
           JUST(functional::AsStridedGrad(out_grads[0], like, size, stride, storage_offset));

@@ -2875,7 +2875,6 @@ class TransposeAllDimFunctionFunctor {
   }
 };
 
-
 class PinMemoryFunctor {
  public:
   PinMemoryFunctor() {
@@ -2899,12 +2898,12 @@ class PinMemoryFunctor {
     // TODO: remove this requires_grad
     JUST(empty->set_requires_grad(requires_grad));
     const int32_t ndim = input->ndim();
-    if(ndim == 0){
+    if (ndim == 0) {
       // for 0-dim case only
       // TODO:(zhaoluyang) use TensorSetItem replace AssignLocalTensor
       JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {empty, input}));
       // if requires_grad, set backward function-node 'copy_backward'
-      if(autograd::GradMode::is_enabled() && requires_grad){
+      if (autograd::GradMode::is_enabled() && requires_grad) {
         auto backward_fn = std::make_shared<BackwardFunction>();
         backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                                 bool create_graph) -> Maybe<void> {
@@ -2912,13 +2911,14 @@ class PinMemoryFunctor {
           CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
           in_grads->resize(1);
           const Symbol<Device>& device = JUST(out_grads[0]->device());
-          (*in_grads)[0] = JUST(functional::Copy(out_grads[0], device->type(), device->device_id()););
+          (*in_grads)[0] =
+              JUST(functional::Copy(out_grads[0], device->type(), device->device_id()););
           return Maybe<void>::Ok();
         };
         backward_fn->status = []() { return true; };
         TensorTuple outputs{empty};
         JUST(GetThreadLocalAutogradEngine()->AddNode("copy_backward", backward_fn, {input},
-                                                    &outputs));
+                                                     &outputs));
       }
       return empty;
     } else {

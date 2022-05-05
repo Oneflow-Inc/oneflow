@@ -168,7 +168,8 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false); }
 
   const auto& sizes = InferArraySizes(object);
-  const auto& tensor = JUST(functional::Empty(sizes, CHECK_JUST(DType::Get(dtype)), device, /*pin_memory=*/false));
+  const auto& tensor =
+      JUST(functional::Empty(sizes, CHECK_JUST(DType::Get(dtype)), device, /*pin_memory=*/false));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));

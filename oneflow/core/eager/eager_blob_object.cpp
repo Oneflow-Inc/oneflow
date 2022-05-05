@@ -53,7 +53,8 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   const bool pin_memory = EagerBlobObject::pin_memory();
   vm::Allocator* allocator = nullptr;
   if (pin_memory) {
-    CHECK_EQ_OR_RETURN(device_ctx->device_type(), DeviceType::kCPU) << Error::RuntimeError() <<  "cannot pin tensor with device: " << device_ctx->device_type()
+    CHECK_EQ_OR_RETURN(device_ctx->device_type(), DeviceType::kCPU)
+        << Error::RuntimeError() << "cannot pin tensor with device: " << device_ctx->device_type()
         << ", only dense CPU tensors can be pinned.";
     // only CpuDeviceCtx support pin_memory allocator
     allocator = dynamic_cast<CpuDeviceCtx*>(device_ctx)->mut_pin_memory_allocator();
