@@ -129,8 +129,7 @@ class SrcOpConsistentTensorMetaInferArgs final {
 class OpArgMutConsistentTensorMeta final {
  public:
   OpArgMutConsistentTensorMeta()
-      : tensor_meta_(std::make_shared<Shape>(), std::make_shared<Stride>(),
-                     DataType::kInvalidDataType) {}
+      : tensor_meta_(std::make_shared<Shape>(), DataType::kInvalidDataType) {}
 
   OpArgMutConsistentTensorMeta(const OpArgMutConsistentTensorMeta&) = default;
   OpArgMutConsistentTensorMeta(OpArgMutConsistentTensorMeta&&) = default;

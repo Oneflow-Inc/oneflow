@@ -166,7 +166,6 @@ class ConsistentTensorImpl : public TensorImpl {
   }
 
   ConsistentTensorMeta* mut_tensor_meta() {
-    // return const_cast<ConsistentTensorMeta*>(tensor_meta_.get());
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
