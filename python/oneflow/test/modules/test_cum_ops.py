@@ -32,14 +32,13 @@ class TestCumOp(flow.unittest.TestCase):
         z = torch.cumsum(x, dim)
         return z
 
-    @unittest.skip("Different algorithm causes accumulative error!")
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_cumprod(test_case):
         device = random_device()
         x = random_tensor().to(device)
         dim = random(0, x.ndim.pytorch).to(int)
-        z = torch.cumprod(x, dim)
-        return z
+        y = torch.cumprod(x, dim)
+        return y
 
     def test_cumop_with_dtype(test_case):
         x = flow.tensor([2, 3, 4])
@@ -55,6 +54,15 @@ class TestCumOp(flow.unittest.TestCase):
         dim = random(0, x.ndim.pytorch).to(int)
         y = x.cumsum(dim)
         return y
+        
+    @autotest(n=5, check_graph=True)
+    def test_cumprod_with_user_dy(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        dim = random(0, x.ndim.pytorch).to(int)
+        y = torch.cumprod(x, dim)
+        z = y * 2
+        return z
 
 
 if __name__ == "__main__":
