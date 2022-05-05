@@ -28,7 +28,8 @@ y_lazy = graph_to_run(x)
 from iree import runtime as ireert
 from iree.compiler import compile_str
 
-SIMPLE_RELU_ONEFLOW_DIALECT = '?'
+oneflow_dialect = 'log/oneflow-21/ir_pass/after_ad/GraphToRun_0/RoundTripOneFlowJob.optimized.mlir'
+SIMPLE_RELU_ONEFLOW_DIALECT = open(oneflow_dialect).read()
 
 import subprocess
 run_args = {}
@@ -52,8 +53,8 @@ ctx.add_vm_module(vm_module)
 print("INVOKE simple_relu")
 
 import numpy as np
-arg0 = np.array([[-1., -1.], [0., 1.]], dtype=np.float32)
+arg0 = np.array([-1.], dtype=np.float32)
 
-f = ctx.modules.module['main']
+f = ctx.modules.module['GraphToRun_0']
 results = f(arg0)
 print("Results:", results)

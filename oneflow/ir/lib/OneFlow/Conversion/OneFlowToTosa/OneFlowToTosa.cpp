@@ -74,6 +74,51 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
   }
 };
 
+struct JobLowering final : public OpConversionPattern<Job> {
+ public:
+  using OpConversionPattern<Job>::OpConversionPattern;
+  LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(),
+                                                    op.getFunctionType());
+    rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct ReturnOpLowering final : public OpConversionPattern<ReturnOp> {
+ public:
+  using OpConversionPattern<ReturnOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(op,
+                                                      /* operands */ op.operands());
+    return success();
+  }
+};
+
+struct InputOpLowering final : public OpConversionPattern<InputOp> {
+ public:
+  using OpConversionPattern<InputOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(InputOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+
+    rewriter.replaceOpWithNewOp<tosa::CastOp>(op, op.input().getType(), op.input());
+    return success();
+  }
+};
+
+struct OutputOpLowering final : public OpConversionPattern<OutputOp> {
+ public:
+  using OpConversionPattern<OutputOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(OutputOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<tosa::CastOp>(op, op.input().getType(), op.input());
+    return success();
+  }
+};
+
 struct CastOpLowering final : public OpConversionPattern<CastOp> {
  public:
   using OpConversionPattern<CastOp>::OpConversionPattern;
@@ -139,6 +184,8 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
   patterns.insert<ReluOpLowering>(&getContext());
   patterns.insert<MatmulOpLowering>(&getContext());
+  patterns.insert<JobLowering, ReturnOpLowering>(&getContext());
+  patterns.insert<InputOpLowering, OutputOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
