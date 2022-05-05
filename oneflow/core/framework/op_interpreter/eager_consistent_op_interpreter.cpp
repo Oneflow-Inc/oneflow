@@ -85,8 +85,8 @@ Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSb
   const auto& logical_shape = input->shape();
   // If the input is a tensor of size 0, construct the output directly.
   if (unlikely(logical_shape->elem_cnt() == 0)) {
-    ConsistentTensorMeta tensor_meta(logical_shape, input->dtype()->data_type(),
-                                     out_nd_sbp, out_parallel_desc);
+    ConsistentTensorMeta tensor_meta(logical_shape, input->dtype()->data_type(), out_nd_sbp,
+                                     out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
     std::shared_ptr<Tensor> output = std::make_shared<ConsistentTensor>(tensor_impl);
@@ -234,7 +234,8 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
     CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
     outputs->at(0) = tensor;
   } else {
-    ConsistentTensorMeta tensor_meta(tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp, out_parallel_desc);
+    ConsistentTensorMeta tensor_meta(tensor->shape(), tensor->dtype()->data_type(), out_nd_sbp,
+                                     out_parallel_desc);
     const auto& tensor_impl =
         JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), tensor->requires_grad(), false));
     outputs->at(0).reset(new ConsistentTensor(tensor_impl));

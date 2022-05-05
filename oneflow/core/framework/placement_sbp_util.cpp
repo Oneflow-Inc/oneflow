@@ -337,8 +337,8 @@ Maybe<std::pair<Symbol<one::ConsistentTensorMeta>, Symbol<NdSbp>>> CalcDecomposa
   std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(
       CalcDecomposableEquivalentShapeAndNdSbpPair(*shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
 
-  one::ConsistentTensorMeta decomposible_tensor_meta(shape, tensor_meta->dtype(),
-                                                     src_nd_sbp, tensor_meta->parallel_desc());
+  one::ConsistentTensorMeta decomposible_tensor_meta(shape, tensor_meta->dtype(), src_nd_sbp,
+                                                     tensor_meta->parallel_desc());
   return std::make_pair(SymbolOf(decomposible_tensor_meta), dst_nd_sbp);
 }
 
@@ -528,8 +528,8 @@ Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<NdSbp> sub_nd_sbp) {
   CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& logical_shape = JUST(GetSubLogicalShape(tensor_meta, sub_parallel_desc, sub_nd_sbp));
-  one::ConsistentTensorMeta sub_consistent_tensor_meta(
-      logical_shape, tensor_meta->dtype(), sub_nd_sbp, sub_parallel_desc);
+  one::ConsistentTensorMeta sub_consistent_tensor_meta(logical_shape, tensor_meta->dtype(),
+                                                       sub_nd_sbp, sub_parallel_desc);
   return SymbolOf(sub_consistent_tensor_meta);
 }
 

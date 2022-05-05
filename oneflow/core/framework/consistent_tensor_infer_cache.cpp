@@ -300,10 +300,10 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
         infer_args.input_consistent_tensor_metas().at(i).tensor_meta();
     const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(ibn)));
-    ConsistentTensorMeta consistent_tensor_meta(
-        old_consistent_tensor_meta->shape_ptr(),
-        // old_consistent_tensor_meta->stride_ptr(),
-        old_consistent_tensor_meta->dtype(), nd_sbp, old_consistent_tensor_meta->parallel_desc());
+    ConsistentTensorMeta consistent_tensor_meta(old_consistent_tensor_meta->shape_ptr(),
+                                                // old_consistent_tensor_meta->stride_ptr(),
+                                                old_consistent_tensor_meta->dtype(), nd_sbp,
+                                                old_consistent_tensor_meta->parallel_desc());
     input_metas->at(i) = SymbolOf(consistent_tensor_meta);
   }
   auto* output_metas = result->mut_output_tensor_metas();
