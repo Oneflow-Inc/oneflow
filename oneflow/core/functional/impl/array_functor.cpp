@@ -609,9 +609,9 @@ class ExpandFunctor {
   ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     CHECK_GE_OR_RETURN(shape.NumAxes(), x->shape()->NumAxes())
-        << Error::RuntimeError()
-        << "expand(tensor{" << x->shape()->ToString() << "}, size=" << x->shape()->NumAxes()
-        << "): the number of sizes provided (" << shape.NumAxes() << ") "
+        << Error::RuntimeError() << "expand(tensor{" << x->shape()->ToString()
+        << "}, size=" << x->shape()->NumAxes() << "): the number of sizes provided ("
+        << shape.NumAxes() << ") "
         << "must be greater or equal to the number of dimensions in the tensor ("
         << x->shape()->NumAxes() << ")";
     std::vector<int32_t> in_shape(x->shape()->NumAxes());

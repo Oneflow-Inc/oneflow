@@ -17,6 +17,7 @@ import unittest
 import oneflow.unittest
 import oneflow as flow
 
+
 class TestArrayError(flow.unittest.TestCase):
     def test_argmax_index_error(test_case):
         with test_case.assertRaises(Exception) as context:
@@ -88,7 +89,7 @@ class TestArrayError(flow.unittest.TestCase):
             x2 = flow.ones((2), dtype=flow.float32, requires_grad=True)
             y = flow.expand(x1, x2.shape)
         test_case.assertTrue(
-            "The desired expanded dims should not be less than the input dims"
+            "be greater or equal to the number of dimensions in the tensor"
             in str(context.exception)
         )
 
@@ -97,14 +98,18 @@ class TestArrayError(flow.unittest.TestCase):
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2, 4), dtype=flow.float32, requires_grad=True)
             y = flow.expand(x1, x2.shape)
-        test_case.assertTrue("Invalid expand shape" in str(context.exception))
+        test_case.assertTrue(
+            "The expanded size of the tensor" in str(context.exception)
+        )
 
     def test_expand_l_shape_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x1 = flow.ones((2, 2), dtype=flow.float32, requires_grad=True)
             x2 = flow.ones((2, 0), dtype=flow.float32, requires_grad=True)
             y = flow.expand(x1, x2.shape)
-        test_case.assertTrue("Invalid expand shape" in str(context.exception))
+        test_case.assertTrue(
+            "The expanded size of the tensor" in str(context.exception)
+        )
 
     def test_squeeze_index_error(test_case):
         with test_case.assertRaises(Exception) as context:
