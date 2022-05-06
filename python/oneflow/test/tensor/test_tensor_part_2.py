@@ -34,9 +34,7 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor(ndim=4).to(device)
         permute_list = [0, 1, 2, 3]
         np.random.shuffle(permute_list)
-        y = x.permute(
-            permute_list
-        )
+        y = x.permute(permute_list)
         return y
 
     @autotest(n=5)
@@ -197,7 +195,7 @@ class TestTensor(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_clamp_inplace_tensor_no_grad_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-2, high=2).to(device)
@@ -219,7 +217,7 @@ class TestTensor(flow.unittest.TestCase):
         return y
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_clamp_minnone_tensor_no_grad_with_random_data(test_case):
         device = random_device()
         input = random_tensor(low=-2, high=2).to(device)
@@ -240,7 +238,7 @@ class TestTensor(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(, auto_backward=False)
+    @autotest(auto_backward=False)
     def test_clamp_inplace_minnone_tensor_no_grad_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-2, high=2).to(device)
@@ -697,7 +695,7 @@ class TestTensor(flow.unittest.TestCase):
         return x.erfc()
 
     @autotest(
-        , auto_backward=False
+        auto_backward=False
     )  # Todo: After add gradient func, you should set `auto_backward` as True
     def test_erfinv_tensor_with_random_data(test_case):
         device = random_device()
