@@ -97,4 +97,3 @@ TEST_F(PrimitiveTest, TestFill) {
 }  // namespace ep
 
 }  // namespace oneflow
-
