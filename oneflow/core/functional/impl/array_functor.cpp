@@ -1915,38 +1915,11 @@ class TensorGetItemFunctor {
     op_ = CHECK_JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    if (x->is_local() && index.size() == 1) {
+    if (x->is_local() && index.size() == 1 && index.at(0).IsInteger()) {
       // NOTE: speed up in special case, e.g. dataloader(refer to torch)
       // function call chain of pytorch : tensor getitem -> select -> as_strided
       // function call chain of oneflow : tensor getitem -> as_strided
-      auto index_item = index.at(0);
-      if (index_item.IsInteger()) {
-        const int32_t index = index_item.integer();
-        const int32_t ndim = x->ndim();
-        CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
-        int32_t pos_dim = 0;
-        auto size = x->dim(pos_dim);
-        CHECK_OR_RETURN((index >= -size) && (index < size))
-            << "Index out of range (expected to be in range of [" << -size << "," << size - 1
-            << "], but got " << index << ")";
-        int32_t pos_index = index >= 0 ? index : index + size;
-        std::vector<int32_t> sizes(x->shape()->dim_vec().begin(), x->shape()->dim_vec().end());
-        const auto& stride = JUST(x->stride())->StrideVec();
-        std::vector<int32_t> strides(stride.begin(), stride.end());
-        auto storage_offset = JUST(x->storage_offset()) + pos_index * strides[pos_dim];
-        sizes.erase(sizes.begin() + pos_dim);
-        strides.erase(strides.begin() + pos_dim);
-
-        if (view::IsViewApplicable(x)) {
-          return view::AsStrided(x, sizes, strides, storage_offset);
-        } else {
-          MutableAttrMap attrs;
-          JUST(attrs.SetAttr<std::vector<int32_t>>("size", sizes));
-          JUST(attrs.SetAttr<std::vector<int32_t>>("stride", strides));
-          JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
-          return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-        }
-      }
+      return SelectGetItem(x, index);
     }
 
     std::vector<detail::Slice> slice_indices;
