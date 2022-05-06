@@ -39,7 +39,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(id(x.oneflow) != id(x2.oneflow))
         test_case.assertTrue(id(x3.oneflow) == id(x2.oneflow))
         return x3
-    
+
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_0_dim_tensor_pin_memory(test_case):
