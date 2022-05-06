@@ -28,13 +28,7 @@ Stride::Stride(const Shape& shape) {
   }
 }
 
-Stride::Stride(const std::shared_ptr<Shape>& shape) {
-  if (shape->is_initialized() && shape->NumAxes() > 0) {
-    stride_vec_.resize(shape->NumAxes());
-    std::exclusive_scan(shape->dim_vec().rbegin(), shape->dim_vec().rend(), stride_vec_.begin(), 1,
-                        std::multiplies<>{});
-  }
-}
+Stride::Stride(const std::shared_ptr<Shape>& shape) : Stride(*shape) {}
 
 Stride::Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(const DimVector& stride_vec) : stride_vec_(stride_vec) {}
