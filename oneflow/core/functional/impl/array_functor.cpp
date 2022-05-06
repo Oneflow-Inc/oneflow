@@ -1915,12 +1915,12 @@ class TensorGetItemFunctor {
     op_ = CHECK_JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    if(x->is_local() && index.size()==1){
+    if (x->is_local() && index.size() == 1) {
       // NOTE: speed up in special case, e.g. dataloader(refer to torch)
       // function call chain of pytorch : tensor getitem -> select -> as_strided
       // function call chain of oneflow : tensor getitem -> as_strided
       auto index_item = index.at(0);
-      if(index_item.IsInteger()){
+      if (index_item.IsInteger()) {
         const int32_t index = index_item.integer();
         const int32_t ndim = x->ndim();
         CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
@@ -2011,7 +2011,6 @@ class TensorGetItemFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-
 };
 
 class TensorSetItemFunctor {
