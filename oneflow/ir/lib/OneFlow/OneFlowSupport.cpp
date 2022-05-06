@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
-#include "oneflow/user/kernels/avg_pooling_kernel_util.h"
 
 namespace mlir {
 
@@ -74,13 +73,14 @@ template<typename T>
 mlir::DenseElementsAttr __TensorToDenseElementsAttr(
     const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::FloatType& float_type) {
   ::oneflow::LazyMode::Guard guard{false};
-  auto shape = tensor->shape();
+  const auto tensor_ = ::oneflow::one::functional::ToContiguous(tensor).GetPtrOrThrow();
+  auto shape = tensor_->shape();
   std::vector<int64_t> shape_vec(shape->dim_vec().begin(), shape->dim_vec().end());
   std::vector<T> data(shape->elem_cnt());
   const auto& callback = [&](uint64_t ofblob_ptr) {
     CHECK_JUST(::oneflow::BlobBufferCopyUtil<T>::To(ofblob_ptr, data.data(), data.size()));
   };
-  ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "const").GetOrThrow();
+  ::oneflow::one::SyncAccessTensorWithTimeOut(tensor_, callback, "const").GetOrThrow();
   return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, float_type),
                                       llvm::makeArrayRef(data));
 }

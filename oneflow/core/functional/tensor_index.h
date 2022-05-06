@@ -47,6 +47,11 @@ class Slice {
   int64_t start() const { return start_; }
   int64_t end() const { return end_; }
   int64_t step() const { return step_; }
+  std::string ToString() const {
+    std::stringstream ss;
+    ss << "[" << start_ << ":" << end_ << ":" << step_ << "]\n";
+    return ss.str();
+  }
 
  private:
   int64_t start_;

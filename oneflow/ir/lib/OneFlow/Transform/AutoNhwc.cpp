@@ -13,22 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include <iostream>
+#include <string>
+#include "OneFlow/Passes.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+using namespace mlir;
+
+namespace {
+
+class AutoNhwcPass : public AutoNhwcPassBase<AutoNhwcPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    oneflow::populateAutoNhwcPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+}  // namespace
+
+namespace mlir {
 
 namespace oneflow {
 
-template<>
-void Memcpy<DeviceType::kCUDA>(ep::Stream* stream, void* dst, const void* src, size_t sz) {
-  if (dst == src) { return; }
-  OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault,
-                                stream->As<ep::CudaStream>()->cuda_stream()));
-}
-
-template<>
-void Memset<DeviceType::kCUDA>(ep::Stream* stream, void* dst, const char value, size_t sz) {
-  OF_CUDA_CHECK(cudaMemsetAsync(dst, value, sz, stream->As<ep::CudaStream>()->cuda_stream()));
-}
+std::unique_ptr<Pass> createAutoNhwcPass() { return std::make_unique<AutoNhwcPass>(); }
 
 }  // namespace oneflow
+
+}  // namespace mlir
