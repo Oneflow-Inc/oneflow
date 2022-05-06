@@ -2020,12 +2020,24 @@ class TensorSetItemFunctor {
     for (auto& tensor : tensor_indices) {
       if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }
-    if (tensor_indices.size() == ndims) {  // advance indexing
-      std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
-      if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
-      indices = JUST(functional::Transpose(indices, {1, 0}));
-      value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
-      JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
+    if (tensor_indices.size() == ndims) { 
+      if(ndims == 0 && index[0].IsEllipsis()){
+        // for scalar input tensor setitem, only support ellipsis indexing type
+        Shape tmp_shape{1};
+        const auto& value_tensor = JUST(functional::View(value, tmp_shape));
+        const auto& input_tensor = JUST(functional::View(x, tmp_shape));
+        std::vector<int64_t> starts(1, 0);
+        std::vector<int64_t> stops(1, 1);
+        std::vector<int64_t> steps(1, 1);
+        JUST(SliceUpdate(input_tensor, value_tensor, starts, stops, steps, /*inplace=*/true));
+      } else {
+        // advance indexing
+        std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
+        if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
+        indices = JUST(functional::Transpose(indices, {1, 0}));
+        value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
+        JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
+      }
     } else {                              // slice update
       if (target_shape.NumAxes() != 0 &&  // NOLINT
           /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
@@ -2899,13 +2911,10 @@ class PinMemoryFunctor {
     const int32_t ndim = input->ndim();
     if (ndim == 0) {
       // for 0-dim case only
-      Shape tmp_shape{1};
-      auto viewed_input = JUST(functional::Reshape(input, tmp_shape));
       TensorIndex tensor_index;
       tensor_index.emplace_back(functional::detail::IndexItem(functional::detail::EllipsisIndex{}));
-      auto output = JUST(functional::Empty(tmp_shape, input->dtype(), device, /*pin_memory=*/true));
-      JUST(functional::TensorSetItem(output, tensor_index, viewed_input));
-      return JUST(functional::View(output, *shape.get()));
+      JUST(functional::TensorSetItem(empty, tensor_index, input));
+      return empty;
     } else {
       MutableAttrMap attrs;
       std::vector<int64_t> starts(ndim, 0);

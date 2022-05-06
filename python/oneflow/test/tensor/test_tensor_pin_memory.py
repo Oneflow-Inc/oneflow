@@ -41,7 +41,7 @@ class TestTensor(flow.unittest.TestCase):
         return x3
     
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=1, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=False)
     def test_0_dim_tensor_pin_memory(test_case):
         device = random_device()
         x = random_tensor(ndim=1).to(device)
