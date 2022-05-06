@@ -1956,7 +1956,7 @@ class TensorGetItemFunctor {
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) {
-      UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices);
+      JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
       result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
     }
 
