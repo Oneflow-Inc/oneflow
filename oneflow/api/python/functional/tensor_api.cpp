@@ -33,8 +33,6 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace oneflow {
 namespace one {

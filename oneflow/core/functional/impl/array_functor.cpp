@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <memory>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
@@ -2910,7 +2909,7 @@ class PinMemoryFunctor {
     JUST(empty->set_requires_grad(requires_grad));
     const int32_t ndim = input->ndim();
     if (ndim == 0) {
-      // for 0-dim case only
+      // for 0-dim tensor
       TensorIndex tensor_index;
       tensor_index.emplace_back(functional::detail::IndexItem(functional::detail::EllipsisIndex{}));
       JUST(functional::TensorSetItem(empty, tensor_index, input));
