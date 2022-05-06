@@ -69,10 +69,10 @@ class TestApiCompatibility(flow.unittest.TestCase):
             test_case, "pytorch_rexnetv1_lite.py", "rexnet_lite_1_0", "cuda", 16, 224
         )
 
-    def test_res2net_compatibility(test_case):
-        do_test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_res2net.py", "res2net50", "cuda", 16, 224
-        )
+    # def test_res2net_compatibility(test_case):
+    #     do_test_train_loss_oneflow_pytorch(
+    #         test_case, "pytorch_res2net.py", "res2net50", "cuda", 16, 224
+    #     )
 
     def test_shufflenetv2_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
@@ -89,15 +89,15 @@ class TestApiCompatibility(flow.unittest.TestCase):
             test_case, "pytorch_convnext.py", "convnext_tiny", "cuda", 8, 224
         )
 
-    def test_crossformer_compatibility(test_case):
-        do_test_train_loss_oneflow_pytorch(
-            test_case,
-            "pytorch_crossformer.py",
-            "crossformer_tiny_patch4_group7_224",
-            "cuda",
-            8,
-            224,
-        )
+    # def test_crossformer_compatibility(test_case):
+    #     do_test_train_loss_oneflow_pytorch(
+    #         test_case,
+    #         "pytorch_crossformer.py",
+    #         "crossformer_tiny_patch4_group7_224",
+    #         "cuda",
+    #         8,
+    #         224,
+    #     )
 
     # def test_efficientnet_compatibility(test_case):
     #     do_test_train_loss_oneflow_pytorch(
