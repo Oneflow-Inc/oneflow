@@ -35,13 +35,14 @@ void TestBroadcastMatmul(DeviceManagerRegistry* registry, const std::set<DeviceT
                          int batch_size, int m, int k, int n, bool transpose_a, bool transpose_b,
                          bool broadcast_a, bool broadcast_b, bool reduce_c) {
   using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-  CHECK(broadcast_a || broadcast_b);
+  CHECK((!broadcast_a) || (!broadcast_b));
   int a_batch_dims = broadcast_a ? 1 : batch_size;
   int b_batch_dims = broadcast_b ? 1 : batch_size;
-  int c_batch_dims = batch_size;
+  int c_batch_dims = reduce_c ? 1 : batch_size;
   Eigen::Tensor<T, 3, Eigen::RowMajor> in_a_buffer(a_batch_dims, m, k);
   Eigen::Tensor<T, 3, Eigen::RowMajor> in_b_buffer(b_batch_dims, k, n);
   Eigen::Tensor<T, 3, Eigen::RowMajor> out_c_buffer(c_batch_dims, m, n);
+  Eigen::Tensor<T, 3, Eigen::RowMajor> broadcast_c_buffer(batch_size, m, n);
   in_a_buffer.setRandom();
   in_b_buffer.setRandom();
   for (int i = 0; i < batch_size; ++i) {
@@ -49,30 +50,26 @@ void TestBroadcastMatmul(DeviceManagerRegistry* registry, const std::set<DeviceT
     int64_t b_offset = broadcast_b ? 0 : i * k * n;
     Eigen::Map<Matrix, Eigen::Unaligned> a(in_a_buffer.data() + a_offset, m, k);
     Eigen::Map<Matrix, Eigen::Unaligned> b(in_b_buffer.data() + b_offset, k, n);
-    Eigen::Map<Matrix, Eigen::Unaligned> c(out_c_buffer.data() + i * m * n, m, n);
+    Eigen::Map<Matrix, Eigen::Unaligned> c(broadcast_c_buffer.data() + i * m * n, m, n);
     c = a * b;
+  }
+  if (reduce_c) {
+    Eigen::array<int, 1> reduce_dim = {0};
+    Eigen::array<int, 3> reduce_shape = {c_batch_dims, m, n};
+    out_c_buffer = broadcast_c_buffer.sum(reduce_dim).eval().reshape(reduce_shape);
+  } else {
+    out_c_buffer = broadcast_c_buffer;
   }
   int64_t a_size = a_batch_dims * m * k * sizeof(T);
   int64_t b_size = b_batch_dims * k * n * sizeof(T);
   int64_t c_size = c_batch_dims * m * n * sizeof(T);
-
   Eigen::array<int, 3> shuffling({0, 2, 1});
   Eigen::Tensor<T, 3, Eigen::RowMajor> in_a_transposed = in_a_buffer.shuffle(shuffling);
   Eigen::Tensor<T, 3, Eigen::RowMajor> in_b_transposed = in_b_buffer.shuffle(shuffling);
 
-  size_t num_a_dims;
+  size_t num_a_dims = broadcast_a ? 2 : 3;
   std::vector<int64_t> a_dims;
-  size_t num_b_dims;
-  std::vector<int64_t> b_dims;
-  size_t num_c_dims = 3;
-  std::vector<int64_t> c_dims = {batch_size, m, n};
-  if (broadcast_a) {
-    num_a_dims = 0;
-  } else {
-    num_a_dims = 1;
-    a_dims.push_back(batch_size);
-  }
-  num_a_dims += 2;
+  if (!broadcast_a) { a_dims.push_back(batch_size); }
   if (transpose_a) {
     a_dims.push_back(k);
     a_dims.push_back(m);
@@ -80,13 +77,9 @@ void TestBroadcastMatmul(DeviceManagerRegistry* registry, const std::set<DeviceT
     a_dims.push_back(m);
     a_dims.push_back(k);
   }
-  if (broadcast_b) {
-    num_b_dims = 0;
-  } else {
-    num_b_dims = 1;
-    b_dims.push_back(batch_size);
-  }
-  num_b_dims += 2;
+  size_t num_b_dims = broadcast_b ? 2 : 3;
+  std::vector<int64_t> b_dims;
+  if (!broadcast_b) { b_dims.push_back(batch_size); }
   if (transpose_b) {
     b_dims.push_back(n);
     b_dims.push_back(k);
@@ -94,6 +87,11 @@ void TestBroadcastMatmul(DeviceManagerRegistry* registry, const std::set<DeviceT
     b_dims.push_back(k);
     b_dims.push_back(n);
   }
+  size_t num_c_dims = reduce_c ? 2 : 3;
+  std::vector<int64_t> c_dims;
+  if (!reduce_c) { c_dims.push_back(batch_size); }
+  c_dims.push_back(m);
+  c_dims.push_back(n);
 
   for (const auto& device_type : device_types) {
     if (device_type == DeviceType::kCPU && data_type == DataType::kFloat16) {
@@ -138,9 +136,6 @@ void TestBroadcastMatmul(DeviceManagerRegistry* registry, const std::set<DeviceT
         out_c_buffer.data(), out_c_buffer.size());
     Eigen::Map<Eigen::Matrix<T, 1, Eigen::Dynamic>, Eigen::Unaligned> of_out(
         reinterpret_cast<T*>(output.ptr()), out_c_buffer.size());
-    LOG(ERROR) << "device " << device_type << " " << data_type << data_type;
-    std::cout << "eigen out" << eigen_out(0) << std::endl;
-    std::cout << "of_out out" << of_out(0) << std::endl;
     ASSERT_TRUE(eigen_out.template isApprox(of_out, static_cast<T>(0.001)));
   }
 }
@@ -149,7 +144,15 @@ template<DataType data_type, typename T>
 void TestBroadcastMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
                          int m, int k, int n, bool transpose_a, bool transpose_b) {
   TestBroadcastMatmul<data_type, T>(registry, device_types, 10, m, k, n, transpose_a, transpose_b,
+                                    false, false, true);
+  TestBroadcastMatmul<data_type, T>(registry, device_types, 10, m, k, n, transpose_a, transpose_b,
+                                    false, false, false);
+  TestBroadcastMatmul<data_type, T>(registry, device_types, 10, m, k, n, transpose_a, transpose_b,
+                                    false, true, true);
+  TestBroadcastMatmul<data_type, T>(registry, device_types, 10, m, k, n, transpose_a, transpose_b,
                                     false, true, false);
+  TestBroadcastMatmul<data_type, T>(registry, device_types, 12, m, k, n, transpose_a, transpose_b,
+                                    true, false, true);
   TestBroadcastMatmul<data_type, T>(registry, device_types, 12, m, k, n, transpose_a, transpose_b,
                                     true, false, false);
 }
