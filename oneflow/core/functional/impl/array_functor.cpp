@@ -44,7 +44,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/autograd/autograd_engine.h"
 
 namespace oneflow {
 namespace one {
@@ -2876,7 +2875,6 @@ class TransposeAllDimFunctionFunctor {
   }
 };
 
-
 class PinMemoryFunctor {
  public:
   PinMemoryFunctor() {
@@ -2899,7 +2897,7 @@ class PinMemoryFunctor {
     // TODO: remove this requires_grad
     JUST(empty->set_requires_grad(requires_grad));
     const int32_t ndim = input->ndim();
-    if(ndim == 0){
+    if (ndim == 0) {
       // for 0-dim case only
       Shape tmp_shape{1};
       auto viewed_input = JUST(functional::Reshape(input, tmp_shape));

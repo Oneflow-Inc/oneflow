@@ -158,7 +158,9 @@ class StaticZerosTensor final : public Tensor {
     return *(TensorMeta*)nullptr;
   }
   Maybe<Tensor> data() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  std::shared_ptr<Tensor> pin_memory() const override { return std::const_pointer_cast<Tensor>(shared_from_this()); }
+  std::shared_ptr<Tensor> pin_memory() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }

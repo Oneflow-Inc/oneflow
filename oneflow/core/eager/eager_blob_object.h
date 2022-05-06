@@ -136,7 +136,7 @@ class EagerBlobObject final {
   void set_last_used_stream(Symbol<Stream> last_used_stream) {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
-  
+
   void set_pin_memory(const bool pin_memory) { pin_memory_ = pin_memory; }
 
   bool pin_memory() const { return pin_memory_; }
