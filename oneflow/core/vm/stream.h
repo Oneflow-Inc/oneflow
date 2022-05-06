@@ -27,8 +27,8 @@ class Device;
 
 namespace vm {
 
-struct ThreadCtx;
-struct StreamType;
+class ThreadCtx;
+class StreamType;
 
 class Stream final : public intrusive::Base {
  public:

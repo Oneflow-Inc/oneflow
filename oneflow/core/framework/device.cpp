@@ -36,8 +36,7 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 
 void CheckDeviceType(const std::string& type) {
   if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
-    std::string error_msg =
-        "Expected one of cpu, cuda device type at start of device string " + type;
+    std::string error_msg = "Device type `" + type + "` not found.";
     throw std::runtime_error(error_msg);
   }
 }
@@ -55,7 +54,7 @@ Maybe<void> Device::Init() {
   enum_type_ = JUST(DeviceType4DeviceTag(type()));
   {
     DeviceType dev_type = enum_type_;
-    if (dev_type == kMockDevice || dev_type == kControlDevice) { dev_type = DeviceType::kCPU; }
+    if (dev_type == kMockDevice) { dev_type = DeviceType::kCPU; }
     mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
   }
   return Maybe<void>::Ok();

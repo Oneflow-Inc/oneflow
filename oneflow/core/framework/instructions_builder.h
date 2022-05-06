@@ -100,9 +100,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> AccessBlobByCallback(const T tensor, const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
 
-  template<typename T>
-  Maybe<void> TensorView(const T input_tensor, const T view_tensor);
-
   Maybe<void> GlobalSync();
   Maybe<void> Barrier(const std::function<void()>& callback);
 

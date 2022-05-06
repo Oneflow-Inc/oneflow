@@ -41,7 +41,7 @@ class VirtualMachine final {
                                                          StreamRole stream_role);
   vm::MirroredObject* FindOrCreateTransportLocalDepObject();
 
-  bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
+  bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
   std::string GetBlockingDebugString();
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
@@ -66,7 +66,7 @@ class VirtualMachine final {
   Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
 
   bool disable_vm_threads_;
-  bool scheduler_stoped_;
+  bool scheduler_stopped_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
 
   // for asynchronized execution

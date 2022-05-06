@@ -31,7 +31,7 @@ struct StreamOnIndependentThread {
   static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kBarrier>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return true; }
   static bool Case(StreamRoleCase<StreamRole::kLazyJobLauncher>) { return true; }
 };
 

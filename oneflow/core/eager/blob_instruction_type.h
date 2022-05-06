@@ -31,19 +31,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class TensorViewInstructionType final : public vm::InstructionType {
- public:
-  TensorViewInstructionType() = default;
-  ~TensorViewInstructionType() override = default;
-
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "TensorView"; }
-  void Compute(vm::Instruction* instruction) const override;
-  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
-
- private:
-  void ComputeInstrMsg(const vm::InstructionMsg& instr_msg) const;
-};
-
 class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
  public:
   AccessBlobByCallbackInstructionType() = default;

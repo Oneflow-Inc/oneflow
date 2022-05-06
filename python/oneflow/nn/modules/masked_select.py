@@ -42,9 +42,6 @@ def masked_select_op(input, mask):
         tensor([0.3139, 0.3898], dtype=oneflow.float32)
     """
 
-    assert len(input.shape) == len(
-        mask.shape
-    ), f"The dim of masked_select module's inputs can not match, please check!"
     assert input.is_global == mask.is_global, (
         f"input tensor is %s tensor, but mask is %s tensor"
         % (

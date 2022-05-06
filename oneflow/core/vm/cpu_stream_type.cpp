@@ -48,11 +48,10 @@ bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
 }
 
 void CpuStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH("S:" + instruction->instr_msg().DebugName());
+  OF_PROFILER_RANGE_GUARD("S:" + instruction->instr_msg().DebugName());
   instruction->instr_msg().instruction_type().Compute(instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
-  OF_PROFILER_RANGE_POP();
 }
 
 }  // namespace vm

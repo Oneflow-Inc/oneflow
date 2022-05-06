@@ -59,10 +59,9 @@ class DimGatherKernel final : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_vec.data(), ndim);
     shape2dims(index_tensor->shape());
     DimOpIndexNdHelper<IDX_T> index_nd_helper(shape_vec.data(), ndim);
-
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->stream(), input_nd_helper, index_nd_helper,
-                                                 ndim, index_tensor->shape().elem_cnt(), dim, index,
-                                                 input, output);
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(
+        ctx->stream(), input_nd_helper, index_nd_helper, ndim, index_tensor->shape().elem_cnt(),
+        input_tensor->shape().At(dim), dim, index, input, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
