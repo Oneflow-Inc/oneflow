@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -45,7 +44,7 @@ class CpuEmbeddingRenormKernel final : public user_op::OpKernel {
     const index_T* indices_buf = indices->dptr<index_T>();
     T* out_buf = out->mut_dptr<T>();
     const int32_t num_indices = indices->shape().elem_cnt();
-    EmbeddingRenormFunctor<DeviceType::kCPU, T, index_T>()(ctx->stream(), in_buf, indices_buf,
+    EmbeddingReNormFunctor<DeviceType::kCPU, T, index_T>()(ctx->stream(), in_buf, indices_buf,
                                                            out_buf, max_norm, norm_type,
                                                            num_indices, emb_size, emb_dim, nullptr);
   }

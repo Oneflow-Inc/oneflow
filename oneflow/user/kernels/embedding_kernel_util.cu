@@ -111,7 +111,7 @@ __global__ void embedding_renorm_kernel(const T* in_buf, T* out_buf, int32_t* in
 }  // namespace
 
 template<typename T, typename index_T>
-struct EmbeddingRenormFunctor<DeviceType::kCUDA, T, index_T> final {
+struct EmbeddingReNormFunctor<DeviceType::kCUDA, T, index_T> final {
   void operator()(ep::Stream* stream, const T* in_buf, const index_T* indices_buf, T* out_buf,
                   const double max_norm, const double norm_type, const int32_t num_indices,
                   const int32_t emb_size, const int32_t emb_dim, int32_t* tmp_buf) {
@@ -159,7 +159,7 @@ struct EmbeddingGradFunctor<DeviceType::kCUDA, T, index_T> final {
 };
 
 #define INITIATE_EMBEDDING_KERNEL_UTIL_CUDA_IMPL(in_type_pair, index_type_pair)             \
-  template struct EmbeddingRenormFunctor<DeviceType::kCUDA, OF_PP_PAIR_FIRST(in_type_pair), \
+  template struct EmbeddingReNormFunctor<DeviceType::kCUDA, OF_PP_PAIR_FIRST(in_type_pair), \
                                          OF_PP_PAIR_FIRST(index_type_pair)>;                \
   template struct EmbeddingFunctor<DeviceType::kCUDA, OF_PP_PAIR_FIRST(in_type_pair),       \
                                    OF_PP_PAIR_FIRST(index_type_pair)>;                      \

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -49,7 +48,7 @@ class GpuEmbeddingRenormKernel final : public user_op::OpKernel {
     int32_t* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<int32_t>();
     Memset<DeviceType::kCUDA>(ctx->stream(), tmp_buf, 0,
                               GetCudaAlignedSize(sizeof(int32_t) * emb_size));
-    EmbeddingRenormFunctor<DeviceType::kCUDA, T, index_T>()(
+    EmbeddingReNormFunctor<DeviceType::kCUDA, T, index_T>()(
         ctx->stream(), in_buf, indices_buf, out_buf, max_norm, norm_type, num_indices, emb_size,
         emb_dim, tmp_buf);
   }

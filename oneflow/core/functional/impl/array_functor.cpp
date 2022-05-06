@@ -747,9 +747,9 @@ class GatherFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class EmbeddingRenormFunctor {
+class EmbeddingReNormFunctor {
  public:
-  EmbeddingRenormFunctor() {
+  EmbeddingReNormFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("embedding_renorm").Input("in").Input("indices").Output("out").Build());
   }
@@ -757,7 +757,8 @@ class EmbeddingRenormFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& indices, const double& max_norm,
                            const double& norm_type) const {
-    CHECK_EQ_OR_RETURN(in->ndim(), 2) << "The dimension of input should be 2";
+    CHECK_EQ_OR_RETURN(in->ndim(), 2)
+        << Error::RuntimeError() << "The dimension of input should be 2.";
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = in;
 
@@ -784,9 +785,10 @@ class EmbeddingFunctor {
                            const Optional<int32_t>& padding_idx,
                            const bool& scale_grad_by_freq) const {
     CHECK_EQ_OR_RETURN(weight->ndim(), 2) << "The dimension of weight should be 2";
-    int32_t padding_idx_ = padding_idx ? JUST(padding_idx) : -1;
+    int32_t new_padding_idx = -1;
+    if (padding_idx.has_value()) { new_padding_idx = JUST(padding_idx); }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("padding_idx", padding_idx_));
+    JUST(attrs.SetAttr<int32_t>("padding_idx", new_padding_idx));
     JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {weight, indices}, attrs);
   }
@@ -2874,7 +2876,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");
-  m.add_functor<impl::EmbeddingRenormFunctor>("EmbeddingRenorm");
+  m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingRenorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::EmbeddingGradFunctor>("EmbeddingGrad");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
