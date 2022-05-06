@@ -356,7 +356,12 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   return result;
 }
 
+<<<<<<< HEAD
 Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input, const TensorIndex& tensor_index){
+=======
+Maybe<Tensor> SelectGetItem(const std::shared_ptr<one::Tensor>& input,
+                            const TensorIndex& tensor_index) {
+>>>>>>> bdf3166d41013077ecb00ebd6b540b18428777c8
   auto index_item = tensor_index.at(0);
   const int32_t index = index_item.integer();
   const int32_t ndim = input->ndim();
@@ -381,7 +386,8 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input, con
     JUST(attrs.SetAttr<std::vector<int32_t>>("size", sizes));
     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", strides));
     JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
-    std::shared_ptr<OpExpr> op_ = CHECK_JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
+    std::shared_ptr<OpExpr> op_ =
+        CHECK_JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
     return one::OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 }
