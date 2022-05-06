@@ -19,32 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-void ConstantInitializer(const T& value, Blob* blob) {
-  T* dptr = blob->mut_dptr<T>();
-  const int64_t elem_cnt = blob->shape().elem_cnt();
-  CHECK(elem_cnt);
-  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
-}
-
-}  // namespace
-
-void ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(
-    ep::Stream* stream, const ConstantInitializerConf& initializer_conf, Blob* blob) {
-  DataType dtype = blob->data_type();
-  if (dtype == DataType::kFloat) {
-    ConstantInitializer<float>(initializer_conf.value(), blob);
-  } else if (dtype == DataType::kDouble) {
-    ConstantInitializer<double>(static_cast<double>(initializer_conf.value()), blob);
-  } else if (dtype == DataType::kFloat16) {
-    ConstantInitializer<float16>(static_cast<float16>(initializer_conf.value()), blob);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
 #define MUL_BY_SCALAR(T)                                                                 \
   void ArithemeticIf<DeviceType::kCPU>::MulByScalar(ep::Stream* stream, const int64_t n, \
                                                     const T* x, const T y, T* z) {       \

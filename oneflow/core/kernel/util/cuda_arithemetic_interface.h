@@ -25,13 +25,9 @@ limitations under the License.
 namespace oneflow {
 
 class Blob;
-class ConstantInitializerConf;
 
 template<>
 struct ArithemeticIf<DeviceType::kCUDA> {
-  static void InitializeWithConstConf(ep::Stream* stream,
-                                      const ConstantInitializerConf& initializer_conf, Blob* blob);
-
   static void MulByScalar(ep::Stream* stream, const int64_t n, const float* x, const float y,
                           float* z);
   static void MulByScalar(ep::Stream* stream, const int64_t n, const double* x, const double y,

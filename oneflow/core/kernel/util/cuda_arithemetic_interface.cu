@@ -24,13 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-void ArithemeticIf<DeviceType::kCUDA>::InitializeWithConstConf(
-    ep::Stream* stream, const ConstantInitializerConf& initializer_conf, Blob* blob) {
-  WithHostBlobAndStreamSynchronizeEnv(stream, blob, [&](Blob* host_blob) {
-    ArithemeticIf<DeviceType::kCPU>::InitializeWithConstConf(nullptr, initializer_conf, host_blob);
-  });
-}
-
 namespace {
 
 template<typename T>
