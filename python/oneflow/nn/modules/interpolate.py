@@ -195,7 +195,7 @@ def interpolate(
 ):
     """The interface is consistent with PyTorch.    
     
-    The documentation is referenced from: https://pytorch.org/docs/1.9.0/_modules/torch/nn/functional.html#interpolate
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/functional.html#interpolate.
     
 
     Down/up samples the input to either the given :attr:`size` or the given
