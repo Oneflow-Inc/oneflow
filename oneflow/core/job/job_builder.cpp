@@ -196,29 +196,27 @@ void JobBuilder::AddOps(const ParallelConf& parallel_conf,
 
 void JobBuilder::AddOpToModuleConf(const OperatorConf& op_conf) {
     // set up the module config
-    if (!Global<symbol::Storage<Scope>>::Get()->Has(op_conf.scope_symbol_id())) {
-      VLOG(3) << "op " << op_conf.name() << " has a scope symbol id that has no scope data.";
-      return;
-    }
-    const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
-    if (scope.scope_proto().has_module_name()) {
-      const auto& module_name = scope.scope_proto().module_name();
-      auto* module_name2module_conf = job_->mutable_module_name2module_conf();
-      if (!(*module_name2module_conf)[module_name].has_name()) {
-        (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
-      }
+    if (Global<symbol::Storage<Scope>>::Get()->Has(op_conf.scope_symbol_id())) {
+      const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf.scope_symbol_id());
+      if (scope.scope_proto().has_module_name()) {
+        const auto& module_name = scope.scope_proto().module_name();
+        auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+        if (!(*module_name2module_conf)[module_name].has_name()) {
+          (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
+        }
 
-      *((*module_name2module_conf)[module_name].add_ops()) = op_conf.name();
-    } else {
-      LOG(INFO) << "op " << op_conf.name() << " has no module name, so use job name.";
-      const auto& module_name = job_->job_conf().job_name();
-      auto* module_name2module_conf = job_->mutable_module_name2module_conf();
-      if (!(*module_name2module_conf)[module_name].has_name()) {
-        (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
+        *((*module_name2module_conf)[module_name].add_ops()) = op_conf.name();
+        return;
       }
-
-      *((*module_name2module_conf)[module_name].add_ops()) = op_conf.name();
     }
+    LOG(INFO) << "op " << op_conf.name() << " has no module name, so use job name.";
+    const auto& module_name = job_->job_conf().job_name();
+    auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+    if (!(*module_name2module_conf)[module_name].has_name()) {
+      (*module_name2module_conf)[module_name].set_name(module_name);
+    }
+
+    *((*module_name2module_conf)[module_name].add_ops()) = op_conf.name();
 }
 
 void JobBuilder::AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
