@@ -52,6 +52,7 @@ static void emitCudaError(const llvm::Twine& expr, const char* buffer, CUresult 
 namespace {
 class SerializeToCubinPass : public PassWrapper<SerializeToCubinPass, gpu::SerializeToBlobPass> {
  public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SerializeToCubinPass)
   SerializeToCubinPass();
 
   StringRef getArgument() const override { return "out-of-tree-gpu-to-cubin"; }

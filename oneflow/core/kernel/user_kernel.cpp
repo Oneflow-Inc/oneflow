@@ -411,15 +411,14 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     CHECK(it != arg2tensor_.end()) << "Arg (" << arg_name << "," << arg_index << ") is not found";
     return it->second.get();
   }
-  const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                             int32_t arg_index) override {
+  ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
     return arg_tensor->shape();
   }
-  MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                             int32_t arg_index) override {
+  MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                            int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
@@ -720,9 +719,9 @@ void UserKernel::ForwardShape(KernelContext* ctx) const {
     std::shared_ptr<const OpInferCacheValue> cache_value_ptr = infer_cache_->GetCacheValue();
     FOR_RANGE(int, i, 0, infer_ctx_->outputs().size()) {
       const auto& out_arg_pair = infer_ctx_->outputs().at(i);
-      MutShapeView* mut_shape_view =
+      MutShapeView mut_shape_view =
           infer_ctx_->MutShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-      if (mut_shape_view) { mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i)); }
+      mut_shape_view.set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i));
     }
   }
 }
