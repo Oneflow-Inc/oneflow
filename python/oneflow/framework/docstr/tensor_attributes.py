@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 oneflow.device.__doc__ = r"""
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/tensor_attributes.html#torch.torch.device
+    https://pytorch.org/docs/1.10/tensor_attributes.html#torch.torch.device.
 
     A :class:`oneflow.device` is an object representing the device on which a :class:`oneflow.Tensor` is or will be allocated.
 

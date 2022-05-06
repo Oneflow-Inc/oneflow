@@ -19,6 +19,7 @@ import inspect
 import copy
 import os
 import warnings
+import gc
 
 import numpy as np
 import oneflow as flow
@@ -336,7 +337,7 @@ def get_functional_graph_res(
                 print(
                     "Run graph of function: ", repr(oneflow),
                 )
-                test_g.debug(3)
+                test_g.debug(2)
             test_g_res = test_g()
             if verbose:
                 print(
@@ -366,7 +367,7 @@ def get_tensor_graph_res(
         test_g = TestGraphOfTensorMethod()
         if verbose:
             print("Run graph of method: ", repr(oneflow))
-            test_g.debug(3)
+            test_g.debug(2)
         test_g_res = test_g()
         if verbose:
             print(
@@ -437,7 +438,7 @@ def oneflow_eager_run_with_graph_check(
             test_g = get_module_graph_test(graph_train_oneflow, oneflow, *args)
             if verbose:
                 print("Run graph of module: ", repr(oneflow))
-                test_g.debug(3)
+                test_g.debug(2)
             # When testing module methods, kwargs are not considered.
             test_g_res = test_g(*graph_args)
             if verbose:
@@ -450,7 +451,10 @@ def oneflow_eager_run_with_graph_check(
         # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
         # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
         elif (
-            ("oneflow.nn.modules" not in oneflow.__module__)
+            (
+                oneflow.__module__ is not None
+                and ("oneflow.nn.modules" not in oneflow.__module__)
+            )
             or inspect.isfunction(oneflow)
             or (
                 inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__
@@ -843,6 +847,14 @@ class DualObject:
         else:
             return self.pytorch == other
 
+    def __del__(self):
+        # force running gc to avoid the periodic gc related to metaclass
+        # 'gc' will be None if Python is shutting down
+        try:
+            gc.collect()
+        except AttributeError:
+            pass
+
 
 dual_modules_to_test = []
 dual_objects_to_test = []
@@ -929,6 +941,33 @@ def check_basetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return a == b
 
 
+@equality_checker(tuple, tuple)
+@equality_checker(list, list)
+def check_basetype_equality(a, b, rtol=0.0001, atol=1e-05, check_dtype=False):
+    if len(a) != len(b):
+        equality_res = False
+    else:
+        for i in range(len(a)):
+            torch_np = a[i].detach().cpu().numpy()
+            flow_np = b[i].detach().cpu().numpy()
+            equality_res = np.allclose(
+                torch_np, flow_np, rtol=rtol, atol=atol, equal_nan=True,
+            )
+            if check_dtype:
+                equality_res = equality_res and (torch_np.dtype == flow_np.dtype)
+            if equality_res == False:
+                print_note_fake_program()
+                print("---------Tensor Shape--------")
+                print(a[i].shape)
+                print(b[i].shape)
+                print("---------Tensor dtype--------")
+                print(a[i].dtype)
+                print(b[i].dtype)
+                break
+
+    return equality_res
+
+
 @equality_checker(type(None), type(None))
 def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return True
@@ -956,6 +995,8 @@ def autotest(
             loop_limit = successful_runs_needed * 20
             current_run = 0
             while successful_runs_needed > 0:
+                # force running gc to avoid the periodic gc related to metaclass
+                gc.collect()
                 clear_note_fake_program()
                 if current_run > loop_limit:
                     raise ValueError(

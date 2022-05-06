@@ -26,45 +26,39 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                                  const std::shared_ptr<Shape>& shape, DataType data_type,
                                  const std::shared_ptr<TensorStorage>& tensor_storage,
                                  const intrusive::shared_ptr<LocalDepObject>& dep_object)
-    : BlobObject(mem_case, shape, data_type),
+    : is_dynamic_(false),
+      mem_case_(mem_case),
+      data_type_(data_type),
+      shape_(shape),
+      storage_offset_(0),
       tensor_storage_(tensor_storage),
       is_shape_synced_(true),
-      compute_local_dep_object_(dep_object) {
+      compute_local_dep_object_(dep_object),
+      blob_desc_(shape, data_type) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_storage));
 }
 
-Maybe<void> EagerBlobObject::TryInitBlob() {
-  if (!blob_) { JUST(InitBlob()); }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerBlobObject::InitBlob() { return InitBlobWithOffset(0); }
-
-Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
-  CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-  if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
-  {
-    header_buffer_.reset();
-    int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
-    header_buffer_ = std::make_unique<char[]>(header_byte_size);
+Blob* EagerBlobObject::blob() {
+  if (!blob_) {
+    blob_.reset(new Blob(*mem_case_, &blob_desc_, mut_header_ptr(), mut_dptr<char>()));
   }
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, offset));
-  return Maybe<void>::Ok();
+  return blob_.get();
 }
+
+void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
 Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL_OR_RETURN(allocator);
-  Blob* blob = mut_blob();
-  CHECK_NOTNULL_OR_RETURN(blob);
-  size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
+  size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
     return Maybe<void>::Ok();
   }
   if (tensor_storage_->blob_dptr() != nullptr) {
-    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
+    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), ByteSizeOfBlobBody())
+        << "This blob has been allocated memory, but less than needed space.";
     return Maybe<void>::Ok();
   }
   {
@@ -78,8 +72,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
 
-    blob->reset_dptr(dptr);
-    InitNonPODTypeBlobIfNeed(tensor_storage_->non_pod_allocator(), blob_.get());
+    InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
   }
   return Maybe<void>::Ok();
 }

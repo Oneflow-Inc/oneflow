@@ -139,30 +139,27 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;
-  CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
-                  == tensor_meta()->shape_ptr().get());
-  CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
+  CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get() == tensor_meta()->shape_ptr().get())
+      << kOfBugIssueUploadPrompt;
+  CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype())
+      << kOfBugIssueUploadPrompt;
   JUST(UpdateTensorStorage());
   return Maybe<void>::Ok();
 }
 
-const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
+std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
   if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
-  if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
-
-  const auto& shape_ptr = eager_blob_object_->blob_desc().shape_ptr();
-  const auto& Callback = [&shape_ptr](uint64_t of_blob_ptr) {
-    const auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->blob().shape_view().ToShape(const_cast<Shape*>(shape_ptr.get()));
-  };
-  auto btb = std::make_shared<BlockingThenBusy>(1);
-  CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->SyncAccessBlobByCallback(this, btb, Callback, "const");
-  }));
-  TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
-      .GetOrThrow();
-  eager_blob_object_->set_is_shape_synced(true);
-  return shape_ptr;
+  if (!eager_blob_object_->is_shape_synced()) {
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(
+          this, btb, [](uint64_t) {}, "const");
+    }));
+    TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
+        .GetOrThrow();
+    eager_blob_object_->set_is_shape_synced(true);
+  }
+  return eager_blob_object_->shape_ptr();
 }
 
 Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
@@ -225,9 +222,9 @@ Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(const intrusive::sha
 Maybe<void> DTREagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::DTREagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;
-  CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
+  CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get()
                   == tensor_meta()->shape_ptr().get());
-  CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
+  CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype());
   JUST(UpdateTensorStorage());
   JUST(UpdateEvictTrigger());
   return Maybe<void>::Ok();

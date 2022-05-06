@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-struct InstructionMsg;
+class InstructionMsg;
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
 Maybe<void> ClusterSync();

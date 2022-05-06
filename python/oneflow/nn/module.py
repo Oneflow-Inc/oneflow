@@ -343,7 +343,7 @@ class Module(object):
                         p.grad.detach_()
                     else:
                         p.grad.requires_grad_(False)
-                    p.grad.zeros_()
+                    p.grad.zero_()
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         for (name, param) in self._parameters.items():
@@ -633,6 +633,17 @@ class Module(object):
             Module: self
         """
         return self._apply(lambda t: t.double() if t.is_floating_point() else t)
+
+    def half(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``half`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.half() if t.is_floating_point() else t)
 
     def _get_name(self):
         return self.__class__.__name__

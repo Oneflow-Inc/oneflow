@@ -19,7 +19,8 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/device/cuda_event.h"
-#include "oneflow/core/vm/cuda_allocator.h"
+#include "oneflow/core/vm/bin_allocator.h"
+#include "oneflow/core/vm/cuda_backend_allocator.h"
 #include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/vm/dtr_naive_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
@@ -41,7 +42,7 @@ inline Allocator* GetAllocator(int64_t device_id) {
     if (ParseBooleanFromEnv("OF_DTR_ALLO", true)) { return Global<DtrCudaAllocator>::Get(); }
     return new DtrNaiveCudaAllocator(device_id);
   }
-  return new CudaAllocator(device_id);
+  return new CudaBackendAllocator(device_id);
 }
 
 class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEventProvider {

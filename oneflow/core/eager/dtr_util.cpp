@@ -107,9 +107,9 @@ namespace {
 Maybe<void> CheckInMemory(const std::vector<std::shared_ptr<DTREagerBlobObject>>& vec) {
   int i = 0;
   for (auto& dtr_blob_object : vec) {
-    if (dtr_blob_object->blob().shape().elem_cnt() > 0) {
+    if (dtr_blob_object->shape().elem_cnt() > 0) {
       CHECK_OR_RETURN(dtr_blob_object->is_in_memory());
-      CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object->dptr());
     }
     i++;
   }

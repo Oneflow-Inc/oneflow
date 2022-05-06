@@ -17,18 +17,16 @@ namespace vm {
 Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL_OR_RETURN(allocator);
-  Blob* blob = mut_blob();
-  CHECK_NOTNULL_OR_RETURN(blob);
-  const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
+  size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
-    CHECK_ISNULL_OR_RETURN(blob->dptr());
+    CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
     if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "ebo " << this << " has no body";
-      LOG(INFO) << blob->shape();
+      LOG(INFO) << shape();
     }
     return Maybe<void>::Ok();
   }
-  if (blob->dptr() != nullptr) {
+  if (tensor_storage_->blob_dptr() != nullptr) {
     CHECK_EQ_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
     if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "ebo " << this
@@ -67,7 +65,6 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
     CHECK_NOTNULL_OR_RETURN(dptr);
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
-    blob->reset_dptr(dptr);
     InitNonPODTypeBlobIfNeed(tensor_storage_->non_pod_allocator(), blob_.get());
   }
   // rewrite it
@@ -111,9 +108,9 @@ void DTREagerBlobObject::unpin() {
 Maybe<void> DTREagerBlobObject::evict() {
   CHECK_OR_RETURN(is_evictable());
   if (dtr::is_enabled_and_debug()) { LOG(INFO) << "evict " << this; }
-  if (blob().shape().elem_cnt() == 0) {
+  if (shape().elem_cnt() == 0) {
     if (dtr::is_enabled_and_debug()) {
-      LOG(INFO) << "but elem_cnt is 0, shape is " << blob().shape() << ", skip";
+      LOG(INFO) << "but elem_cnt is 0, shape is " << shape() << ", skip";
     }
     return Maybe<void>::Ok();
   }
@@ -158,7 +155,7 @@ void DTREagerBlobObject::AppendUserOp(vm::LocalCallOpKernelPhyInstrOperand* oper
 
 bool DTREagerBlobObject::is_in_memory() const {
   // return !evict_flag_;
-  return tensor_storage_->blob_dptr() != nullptr || blob().shape().elem_cnt() == 0;
+  return tensor_storage_->blob_dptr() != nullptr || shape().elem_cnt() == 0;
 }
 
 int DTREagerBlobObject::parent_depth() const {

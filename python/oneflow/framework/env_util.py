@@ -24,8 +24,6 @@ import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.scope_util as scope_util
-import oneflow.framework.session_context as session_ctx
 
 
 def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.placement:
@@ -43,7 +41,7 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
         # Runs on 4 ranks
         import oneflow as flow
-        
+
         p = flow.env.all_device_placement("cuda") # oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
         p = flow.env.all_device_placement("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 
@@ -115,7 +113,7 @@ def create_env():
     CompleteEnvProto(default_env_proto)
     if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
         check_non_localhost_proxy_and_print_warning()
-    return c_api_util.CreateEnv(default_env_proto)
+    return c_api_util.GetEnvContext(default_env_proto)
 
 
 def CompleteEnvProto(env_proto):
@@ -232,6 +230,34 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     if os.getenv("GLOG_logbuflevel"):
         cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
+
+
+class EnvHolder(object):
+    def __init__(self):
+        if not HasAllMultiClientEnvVars():
+            SetDefaultMultiClientEnvVars()
+        self._env_cxt = create_env()
+        self._shutting_down = [False]
+
+    def is_shutting_down(self):
+        """
+        Whether the interpreter is currently shutting down.
+        For use in finalizers, __del__ methods, and similar; it is advised
+        to early bind this function rather than look it up when calling it,
+        since at shutdown module globals may be cleared.
+
+        Please refer to: https://github.com/Oneflow-Inc/OneTeam/issues/1219#issuecomment-1092370402
+        This solution is obtained from cupy code: https://github.com/cupy/cupy/pull/2809
+        """
+        return self._shutting_down[0]
+
+    def switch_to_shutting_down(self, is_normal_exit=True):
+        self._shutting_down[0] = True
+        self._env_cxt.SwitchToShuttingDownPhase(is_normal_exit)
+
+
+def GetEnv():
+    return EnvHolder()
 
 
 device_tag2default_parallel_conf = {}

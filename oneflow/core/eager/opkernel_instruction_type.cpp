@@ -65,26 +65,22 @@ struct LocalCallOpKernelUtil final {
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorageBlobMemory");
+      OF_PROFILER_RANGE_GUARD("TryAllocateTempStorageBlobMemory");
       InferTempStorageBlobDesc(operand);
-      JUST(ResetTempStorageBlob(operand));
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
-      OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
-      OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
+      OF_PROFILER_RANGE_GUARD("TryInitOpKernelStateAndCache");
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
-      OF_PROFILER_RANGE_POP();
     }
 
     if (dtr::is_enabled()) { JUST(CheckInputInMemory(operand)); }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
+      OF_PROFILER_RANGE_GUARD("DeallocateTempStorageBlobMemory");
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
-      OF_PROFILER_RANGE_POP();
     }
     if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << operand->shared_opkernel()->op_type_name() << " ComputeOperand done";
@@ -102,20 +98,16 @@ struct LocalCallOpKernelUtil final {
  private:
   static inline void InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
     const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
-    auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
-    CHECK(temp_blob_desc->data_type() == DataType::kChar);
+    auto* temp_eager_blob_object = operand->mut_opkernel()->mut_temp_blob_object();
+    CHECK(temp_eager_blob_object->data_type() == DataType::kChar);
     one::LocalUserOpInferContext* op_infer_ctx =
         operand->opkernel().op_infer_ctx_for_scheduler_thread();
     op_infer_ctx->Update(operand->inputs().get(), operand->outputs().get(),
                          operand->consistent_tensor_infer_result().get());
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
-    temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
-    temp_blob_desc->set_is_dynamic(true);
+    temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+    temp_eager_blob_object->set_is_dynamic(true);
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
-  }
-
-  static inline Maybe<void> ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
   }
 
   static inline void TryInitOpKernelStateAndCache(LocalCallOpKernelPhyInstrOperand* operand,
@@ -138,7 +130,6 @@ struct LocalCallOpKernelUtil final {
     Global<dtr::TensorPool>::Get()->set_current_op_type_name(operand->opkernel().op_type_name());
 
     for (const auto& blob_object : *operand->outputs()) {
-      JUST(blob_object->TryInitBlob());
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
 
@@ -178,9 +169,9 @@ struct LocalCallOpKernelUtil final {
       for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
         const auto& mut_input = operand->inputs()->at(i);
         if (mut_input->mem_case().has_device_cuda_mem()) {
-          size_t bytes = mut_input->blob_desc().ByteSizeOfBlobBody();
+          size_t bytes = mut_input->ByteSizeOfBlobBody();
           std::vector<float> tmp(bytes / 4);
-          cudaMemcpy(tmp.data(), mut_input->blob().dptr(), bytes,
+          cudaMemcpy(tmp.data(), mut_input->dptr(), bytes,
                      cudaMemcpyKind::cudaMemcpyDeviceToHost);
           float x = 0;
           for (float f : tmp) { x += f; }
@@ -198,10 +189,10 @@ struct LocalCallOpKernelUtil final {
         if (base_class_output->mem_case().has_device_cuda_mem()) {
           if (const auto output =
                   std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
-            size_t bytes = base_class_output->blob_desc().ByteSizeOfBlobBody();
+            size_t bytes = base_class_output->ByteSizeOfBlobBody();
             CHECK_EQ(bytes % 4, 0) << "compute op: " << output->compute_op_type_name();
             std::vector<float> tmp(bytes / 4);
-            cudaMemcpy(tmp.data(), base_class_output->blob().dptr(), bytes,
+            cudaMemcpy(tmp.data(), base_class_output->dptr(), bytes,
                        cudaMemcpyKind::cudaMemcpyDeviceToHost);
             float x = 0;
             for (float f : tmp) { x += f; }
@@ -213,7 +204,7 @@ struct LocalCallOpKernelUtil final {
                           << ", old hash: " << output->hash_ << ", new hash: " << x
                           << ", old data[0]: " << output->backup_data_[0]
                           << ", new data[0]: " << tmp[0]
-                          << ", shape: " << output->blob_desc().shape() << std::endl;
+                          << ", shape: " << output->shape() << std::endl;
 
                 // compare hash of inputs
                 compare_input_hash = true;
@@ -239,10 +230,10 @@ struct LocalCallOpKernelUtil final {
         for (const auto& base_class_input : *operand->inputs()) {
           if (const auto input = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_input)) {
             if (input->mem_case().has_device_cuda_mem()) {
-              size_t bytes = input->blob_desc().ByteSizeOfBlobBody();
+              size_t bytes = input->ByteSizeOfBlobBody();
               CHECK_EQ(bytes % 4, 0);
               std::vector<float> tmp(bytes / 4);
-              cudaMemcpy(tmp.data(), input->blob().dptr(), bytes,
+              cudaMemcpy(tmp.data(), input->dptr(), bytes,
                          cudaMemcpyKind::cudaMemcpyDeviceToHost);
               float x = 0;
               for (float f : tmp) { x += f; }
@@ -252,10 +243,10 @@ struct LocalCallOpKernelUtil final {
                             << ", old hash: " << input->hash_ << ", new hash: " << x
                             << ", old data[0]: " << input->backup_data_[0]
                             << ", new data[0]: " << tmp[0]
-                            << ", shape: " << input->blob_desc().shape() << std::endl;
+                            << ", shape: " << input->shape() << std::endl;
                 } else {
                   LOG(INFO) << "input hash correct :)"
-                            << ", shape: " << input->blob_desc().shape() << std::endl;
+                            << ", shape: " << input->shape() << std::endl;
                 }
               } else {
                 LOG(INFO) << "input not initialized!!!!!" << x << std::endl;
@@ -413,7 +404,7 @@ Maybe<void> _RecursivelyCompute(
       if (dtr::is_enabled_and_debug()) {
         LOG(INFO) << "going to recompute " << input->compute_op() << "("
                   << input->compute_op_type_name() << ") for " << input << ", whose dptr is "
-                  << input->blob().dptr() << ", is in memory: " << input->is_in_memory()
+                  << input->dptr() << ", is in memory: " << input->is_in_memory()
                   << std::endl;
       }
       // TODO for each ptr rather than shared_ptr
@@ -452,8 +443,8 @@ Maybe<void> _RecursivelyCompute(
         && Global<dtr::TensorPool>::Get()->need_eager_eviction_ebos_.count(input.get()) > 0) {
       if (dtr::is_enabled_and_debug()) {
         LOG(INFO) << "going to evict " << input << " in recomputation, whose dptr is "
-                  << input->blob().dptr() << ", compute op: " << input->compute_op_type_name()
-                  << ", size: " << input->blob().ByteSizeOfBlobBody()
+                  << input->dptr() << ", compute op: " << input->compute_op_type_name()
+                  << ", size: " << input->ByteSizeOfBlobBody()
                   << ", is in memory: " << input->is_in_memory() << std::endl;
       }
       Global<dtr::TensorPool>::Get()->need_eager_eviction_ebos_.erase(input.get());

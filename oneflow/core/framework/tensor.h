@@ -50,7 +50,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   int64_t nelement() const { return shape()->elem_cnt(); }
   int64_t ndim() const { return shape()->NumAxes(); }
 
-  virtual const std::shared_ptr<const Shape>& shape() const = 0;
+  virtual std::shared_ptr<const Shape> shape() const = 0;
   virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<TransportToken> transport_token() const = 0;
   virtual Maybe<Symbol<NdSbp>> nd_sbp() const = 0;
@@ -118,8 +118,17 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
+  // The same tensor instance should share the python object to ensure that
+  // their id are consistent in Python. That is if x and y are hold the same tensor,
+  // then `id(x)` should equal to `id(y)`
+  void* pyobject() const { return pyobject_; }
+  void set_pyobject(void* object) { pyobject_ = object; }
+
  protected:
-  Tensor() = default;
+  Tensor() : pyobject_(nullptr) {}
+
+ private:
+  void* pyobject_;
 };
 
 class StaticZerosTensor final : public Tensor {
@@ -129,7 +138,7 @@ class StaticZerosTensor final : public Tensor {
     return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
   }
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
+  std::shared_ptr<const Shape> shape() const override { return shape_; }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -286,7 +295,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   ProxyTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
   virtual ~ProxyTensor() = default;
 
-  virtual const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
+  virtual std::shared_ptr<const Shape> shape() const override { return tensor_->shape(); }
   virtual Symbol<DType> dtype() const override { return tensor_->dtype(); }
   virtual Maybe<Symbol<NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
@@ -425,7 +434,7 @@ class MirroredTensor : public TensorIf<MirroredTensor> {
   virtual ~MirroredTensor() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
+  std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override {
     OF_RUNTIME_ERROR() << "Only global tensors have 'global_id', global id is used to "
@@ -586,7 +595,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   ~ConsistentTensor() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
+  std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }

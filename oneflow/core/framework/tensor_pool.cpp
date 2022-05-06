@@ -40,7 +40,7 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
             << ", is evictable: " << (debo->is_evictable()) << ", compute op: " << compute_op
             << ", shape: " << debo->mut_blob_desc()->shape() << ", memory: " << mem << "MB"
             << ", ebo address: " << debo.get() << ", blob dptr: "
-            << debo->blob().dptr()
+            << debo->dptr()
             // << ", parent_depth: " << debo->parent_depth()
             // << ", child_depth: " << debo->child_depth()
             << ", tensor buffer dptr: "
@@ -130,7 +130,7 @@ Maybe<void> TensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_obje
   // if ((blob_object->is_evictable()) && (blob_object->memory() > thres)) {
   // if (true) {
   if (blob_object->compute_op()->shared_opkernel()->op_type_name() != "copy"
-      && blob_object->blob().mem_case().has_device_cuda_mem()) {
+      && blob_object->mem_case().has_device_cuda_mem()) {
     // // for set version
     // candidates_.insert(blob_object);
 
@@ -309,7 +309,7 @@ Maybe<void> TensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, c
     if (auto tmp = inputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory() && obj->blob().dptr() > start_id && obj->blob().dptr() < end_id) { pesudo_merge(dtr_blob_object->node, obj->node); }
+      if (!dtr_blob_object->is_in_memory() && obj->dptr() > start_id && obj->dptr() < end_id) { pesudo_merge(dtr_blob_object->node, obj->node); }
     }
   }
 
@@ -317,7 +317,7 @@ Maybe<void> TensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, c
     if (auto tmp = outputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory() && obj->blob().dptr() > start_id && obj->blob().dptr() < end_id) { pesudo_merge(obj->node, dtr_blob_object->node); }
+      if (!dtr_blob_object->is_in_memory() && obj->dptr() > start_id && obj->dptr() < end_id) { pesudo_merge(obj->node, dtr_blob_object->node); }
     }
   }
   return Maybe<void>::Ok();

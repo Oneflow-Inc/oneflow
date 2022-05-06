@@ -17,7 +17,6 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
@@ -36,7 +35,9 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
 
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
+
+COMMAND(
+    vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("cuda.LocalCallOpKernel"));
 
 class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:
@@ -46,7 +47,7 @@ class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernel
   using stream_type = vm::AsyncCudaStreamType;
 };
 COMMAND(vm::RegisterInstructionType<AsyncCudaLocalCallOpKernelInstructionType>(
-    "async.gpu.LocalCallOpKernel"));
+    "async.cuda.LocalCallOpKernel"));
 
 class CudaH2DLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:

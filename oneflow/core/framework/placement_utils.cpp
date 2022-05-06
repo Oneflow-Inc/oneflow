@@ -23,10 +23,9 @@ namespace oneflow {
 
 Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
                                                       const std::string& device_type) {
-  static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
   std::shared_ptr<cfg::ParallelConf> parallel_conf =
       std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
-  parallel_conf->set_device_tag(JUST(MapAt(type2device_tag, device_type)));
+  parallel_conf->set_device_tag(device_type);
   std::shared_ptr<ParallelDesc> out_parallel_desc;
   JUST(PhysicalRun(
       [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {

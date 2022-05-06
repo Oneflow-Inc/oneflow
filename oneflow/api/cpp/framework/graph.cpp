@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/api/common/ofblob.h"
+#include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/dtype.h"
 #include "oneflow/api/cpp/framework/graph.h"
@@ -54,6 +55,7 @@ limitations under the License.
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow_api {
 
@@ -107,13 +109,7 @@ std::shared_ptr<of::one::TensorTuple> ConvertToTensorTuple(
   return tensor_tuple;
 }
 
-std::string GetDeviceTag(const Device& device) {
-  if (device.type() == "cuda") {
-    return "gpu";
-  } else {
-    return "cpu";
-  }
-}
+std::string GetDeviceTag(const Device& device) { return device.type(); }
 
 template<class T1, class T2>
 const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2>& hash_map) {
@@ -140,7 +136,7 @@ class Graph::GraphImpl final {
   GraphImpl(const GraphImpl& graph) = delete;
   GraphImpl(GraphImpl&& graph) = default;
 
-  ~GraphImpl() = default;
+  ~GraphImpl();
 
   GraphImpl& operator=(const GraphImpl& graph) = delete;
   GraphImpl& operator=(GraphImpl&& graph) = default;
@@ -234,8 +230,9 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) { LOG(ERROR) << job_.DebugString(); }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
-  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
-  of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
+  CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
+  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(),
+                                         of::Global<OneFlowEnv>::Get()->GetSessionCtx());
 }
 
 InputOutputInfos Graph::GraphImpl::GetInputInfos() { return input_infos_; }
@@ -408,5 +405,7 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
   }
   return of::Maybe<void>::Ok();
 }
+
+Graph::GraphImpl::~GraphImpl() { of::vm::ClusterSync().GetOrThrow(); }
 
 }  // namespace oneflow_api

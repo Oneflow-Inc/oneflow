@@ -41,5 +41,7 @@ unittest-log-*
 /data-test
 /tmp
 /python/oneflow/test/dataloader/data-test/
-/python/oneflow/include/
 !/tools/test_parser.txt
+/target
+saved_model
+/devcontainer-cache

@@ -140,7 +140,21 @@ bool CommNetIBEnabled() {
 
 }  // namespace
 
+EnvGlobalObjectsScope::EnvGlobalObjectsScope(const std::string& env_proto_str) {
+  EnvProto env_proto;
+  CHECK(TxtString2PbMessage(env_proto_str, &env_proto))
+      << "failed to parse env_proto" << env_proto_str;
+  CHECK_JUST(Init(env_proto));
+}
+
+EnvGlobalObjectsScope::EnvGlobalObjectsScope(const EnvProto& env_proto) {
+  CHECK_JUST(Init(env_proto));
+}
+
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+  CHECK(Global<EnvGlobalObjectsScope>::Get() == nullptr);
+  Global<EnvGlobalObjectsScope>::SetAllocated(this);
+
   InitLogging(env_proto.cpp_logging_conf());
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
@@ -231,12 +245,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  VLOG(2) << "Try to close env global objects scope." << std::endl;
+  OF_ENV_BARRIER();
   if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
-  auto session_ctx = Global<MultiClientSessionContext>::Get();
-  if (session_ctx != nullptr) {
-    VLOG(1) << "Multi client session has not closed , env close it at env scope destruction.";
-    CHECK_JUST(session_ctx->TryClose());
-  }
   TensorBufferPool::Delete();
   Global<KernelObserver>::Delete();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -271,6 +282,10 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EnvDesc>::Delete();
   Global<dtr::TensorPool>::Delete();
   ClearAllSymbolAndIdCache();
+  if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
+    Global<EnvGlobalObjectsScope>::SetAllocated(nullptr);
+  }
+  VLOG(2) << "Finish closing env global objects scope." << std::endl;
   google::ShutdownGoogleLogging();
 }
 

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -109,20 +110,9 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
   return Maybe<void>::Ok();
 }
 
-std::string GetDeviceTagOfTensor(const std::shared_ptr<Tensor>& tensor) {
-  if (tensor->is_cuda()) {
-    return "gpu";
-  } else {
-    return "cpu";
-  }
-}
-
-std::string GetDeviceTagByDeviceTypeStr(const std::string& device_type) {
-  if (device_type == "cuda") {
-    return "gpu";
-  } else {
-    return "cpu";
-  }
+Maybe<const std::string&> GetDeviceTagOfTensor(const std::shared_ptr<Tensor>& tensor) {
+  if (tensor->is_consistent()) { return JUST(tensor->parallel_desc())->device_tag(); }
+  return JUST(tensor->device())->type();
 }
 
 bool GetIsDynamicOfTensor(const std::shared_ptr<Tensor>& tensor) {
@@ -311,7 +301,7 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
                                     .Output("out")
                                     .Attr<int32_t>("pack_num", grad_acc_step)
                                     .ScopeSymbolId(JUST(scope->symbol_id()))
-                                    .DeviceTag(GetDeviceTagOfTensor(output_tensor))
+                                    .DeviceTag(JUST(GetDeviceTagOfTensor(output_tensor)))
                                     .Build();
 
     int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(output_pack_op.op_conf()));
@@ -432,7 +422,7 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(input_tensor));
   OperatorConf op_conf;
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  op_conf.set_device_tag(JUST(GetDeviceTagOfTensor(input_tensor)));
   VariableOpConf* var_conf = op_conf.mutable_variable_conf();
   var_conf->set_out("out");
   input_tensor->shape()->ToProto(var_conf->mutable_shape());
@@ -488,7 +478,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
   OperatorConf op_conf;
   op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  op_conf.set_device_tag(JUST(GetDeviceTagOfTensor(input_tensor)));
   // NOTE(chengcheng):
   //   We contruct InputOpConf instead of FeedInputOpConf because FeedInputOpExpr JUST for getting
   //   input EagerTensor.
@@ -544,7 +534,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
   OperatorConf op_conf;
   op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf.set_device_tag(GetDeviceTagOfTensor(input_tensor));
+  op_conf.set_device_tag(JUST(GetDeviceTagOfTensor(input_tensor)));
   // NOTE(chengcheng):
   //   We contruct VariableOpConf instead of FeedVariableOpConf because FeedVariableOpExpr JUST
   //   for getting input EagerTensor.
@@ -621,7 +611,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
   OperatorConf op_conf;
   op_conf.set_name(op_expr.op_name());  // construct by python nn.Graph
   op_conf.set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf.set_device_tag(GetDeviceTagOfTensor(output_tensor));
+  op_conf.set_device_tag(JUST(GetDeviceTagOfTensor(input_tensor)));
   // NOTE(chengcheng):
   //   We contruct OutputOpConf instead of FetchOutputOpConf because FetchOutputOpExpr JUST
   //   for get nn.Graph output LazyTensor.
@@ -674,7 +664,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
   if (IsCpuOnly(*op_conf)) {
     device_tag = "cpu";
   } else {
-    device_tag = "gpu";
+    device_tag = "cuda";
   }
 
   std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
@@ -729,7 +719,7 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     CHECK_OR_RETURN(!ctx.device.has_value());
     const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
     parallel_desc = parallel_desc_sym.shared_from_symbol();
-    JUST(MetaInfoConsistencyCheck(parallel_desc_sym, ctx.nd_sbp, 1));
+    JUST(MetaInfoConsistencyCheck(parallel_desc_sym, ctx.nd_sbp, 1, /* force_check */ false));
     is_local = false;
   } else {
     // NOTE(chengcheng): local
@@ -823,7 +813,7 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
                                         /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
-    parallel_conf.set_device_tag(GetDeviceTagByDeviceTypeStr(device_type));
+    parallel_conf.set_device_tag(device_type);
     ParallelDesc parallel_desc(parallel_conf);
     (*outputs)[0] =
         JUST(ConsistentTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
@@ -868,9 +858,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   //   Normal UserOp inputs size >= 1 for infer parallel_desc.
   CHECK_GE_OR_RETURN(inputs.size(), 1);
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
-  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(inputs.at(0)));
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(JUST(VectorAt(inputs, 0))));
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
-  const std::string device_tag = GetDeviceTagOfTensor(inputs.at(0));
+  const std::string device_tag = JUST(GetDeviceTagOfTensor(JUST(VectorAt(inputs, 0))));
   const bool is_local = inputs.at(0)->is_local();
   const std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(GetParallelDescOfTensor(inputs.at(0)));
@@ -883,18 +873,29 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_tensor = inputs.at(i);
-    CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor))
-        << " Lazy nn.Graph name : " << graph_name << " encountered ERROR where multi-input tensor"
-        << " has different device types in module/op_name: " << new_op_name
-        << ". Please use tensor.to() or tensor.to_global() to synchronize all the input with the "
-           "same device.";
-    // TODO: Print out all the placement
-    CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))))
-        << " Lazy nn.Graph name : " << graph_name << " encountered ERROR where multi-input tensor"
-        << " has different placements in module/op_name: " << new_op_name
-        << ". Please use tensor.to() or tensor.to_global() to synchronize all the input with the "
-           "same placement.";
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
+    if (is_local) {
+      CHECK_OR_RETURN(device_tag == JUST(GetDeviceTagOfTensor(input_tensor)))
+          << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
+          << " encountered ERROR in module/op_name: " << new_op_name
+          << ". Expected all tensors to be on the same device, but found at least two devices, "
+          << JUST(JUST(VectorAt(inputs, 0))->device())->ToString() << " (positional 0) and "
+          << JUST(JUST(VectorAt(inputs, i))->device())->ToString() << " (positional " << i
+          << ")! Please use tensor.to() to synchronize all the input with the same device.";
+    } else {
+      // TODO: Print out all the placement
+      CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))))
+          << Error::RuntimeError() << "Lazy nn.Graph name: " << graph_name
+          << " encountered ERROR in module/op_name: " << new_op_name
+          << ". Expected all tensors to be on the same placement, but found at least two "
+             "placements, "
+          << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, 0))->parallel_desc())))
+          << " (positional 0) and "
+          << *JUST(PlacementToString(JUST(JUST(VectorAt(inputs, i))->parallel_desc())))
+          << " (positional " << i
+          << ")! Please use tensor.to_global() to synchronize all the input with the same "
+             "placement.";
+    }
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     std::string lbn = TensorNameScope::Global()->Lookup(input_tensor);
     if (lbn.empty()) {
