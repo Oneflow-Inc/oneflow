@@ -992,6 +992,7 @@ def autotest(
     check_graph=True,
     check_allclose=True,
     check_dtype=False,
+    check_grad_use_random_data=False
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1044,7 +1045,15 @@ def autotest(
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
-                                x.sum().backward()
+                                if check_grad_use_random_data:
+                                    x_shape = list(x.pytorch.shape)
+                                    x.backward(
+                                        random_tensor(len(x_shape), *x_shape).to(
+                                            x.device
+                                        )
+                                    )
+                                else:
+                                    x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
                     for key in x.pytorch.state_dict().keys():
