@@ -18,7 +18,6 @@ import copy
 import os
 import unittest
 from collections import OrderedDict
-from random import shuffle
 
 import numpy as np
 import oneflow as flow
@@ -34,7 +33,7 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         permute_list = [0, 1, 2, 3]
-        shuffle(permute_list)
+        np.random.shuffle(permute_list)
         y = x.permute(
             permute_list
         )
@@ -45,7 +44,7 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         permute_list = np.random.permutation(4)
-        y = x.transpose(dim0=permute_list[0], dim1=permute_list[1])
+        y = x.transpose(permute_list[0], permute_list[1])
         return y
 
     @autotest(n=5)
@@ -744,11 +743,7 @@ class TestTensor(flow.unittest.TestCase):
         dim_size[random_index] = expand_size
         return x.expand(*dim_size)
 
-<<<<<<< Updated upstream
-    @autotest(check_graph=True)
-=======
     @autotest(n=5)
->>>>>>> Stashed changes
     def test_flow_tensor_expand_with_random_data(test_case):
         random_expand_size = random(1, 6).to(int).value()
         x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
@@ -760,9 +755,6 @@ class TestTensor(flow.unittest.TestCase):
         y = torch.ones(dim_size)
         return x.expand_as(y)
 
-<<<<<<< Updated upstream
-    @autotest(check_graph=True)
-=======
     @autotest(n=5)
     def test_flow_tensor_view_with_random_data(test_case):
         dim0_ = random(2, 4).to(int)
@@ -779,7 +771,6 @@ class TestTensor(flow.unittest.TestCase):
         return x.view_as(other)
 
     @autotest()
->>>>>>> Stashed changes
     def test_tensor_diag_other_dim(test_case):
         device = random_device()
         x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
