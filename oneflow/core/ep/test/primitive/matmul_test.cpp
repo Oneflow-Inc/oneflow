@@ -30,18 +30,17 @@ namespace test {
 
 namespace {
 
-template<DataType data_type, typename T, int m, int k, int n>
-void TestMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
-                bool transpose_a, bool transpose_b) {
-  using SrcAMatrix = Eigen::Matrix<T, m, k, Eigen::RowMajor>;
-  using SrcATransMatrix = Eigen::Matrix<T, k, m, Eigen::RowMajor>;
-  using SrcBMatrix = Eigen::Matrix<T, k, n, Eigen::RowMajor>;
-  using SrcBTransMatrix = Eigen::Matrix<T, n, k, Eigen::RowMajor>;
-  using DstMatrix = Eigen::Matrix<T, m, n, Eigen::RowMajor>;
-  SrcAMatrix a = SrcAMatrix::Random();
-  SrcBMatrix b = SrcBMatrix::Random();
-  DstMatrix c;
-  c = a * b;
+template<DataType data_type, typename T>
+void TestMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types, int m,
+                int k, int n, bool transpose_a, bool transpose_b) {
+  using SrcAMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+  using SrcATransMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+  using SrcBMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+  using SrcBTransMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+  using DstMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+  SrcAMatrix a = SrcAMatrix::Random(m, k);
+  SrcBMatrix b = SrcBMatrix::Random(k, n);
+  DstMatrix c = a * b;
   SrcATransMatrix a_transpose = a.transpose();
   SrcBTransMatrix b_transpose = b.transpose();
 
@@ -92,18 +91,19 @@ void TestMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& dev
   }
 }
 
-template<DataType data_type, typename T, int m, int k, int n>
-void TestMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
-  TestMatmul<data_type, T, m, k, n>(registry, device_types, false, false);
-  TestMatmul<data_type, T, m, k, n>(registry, device_types, true, false);
-  TestMatmul<data_type, T, m, k, n>(registry, device_types, false, true);
-  TestMatmul<data_type, T, m, k, n>(registry, device_types, true, true);
+template<DataType data_type, typename T>
+void TestMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types, int m,
+                int k, int n) {
+  TestMatmul<data_type, T>(registry, device_types, m, k, n, false, false);
+  TestMatmul<data_type, T>(registry, device_types, m, k, n, true, false);
+  TestMatmul<data_type, T>(registry, device_types, m, k, n, false, true);
+  TestMatmul<data_type, T>(registry, device_types, m, k, n, true, true);
 }
 
 template<DataType data_type, typename T>
 void TestMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
-  TestMatmul<data_type, T, 64, 16, 8>(registry, device_types);
-  TestMatmul<data_type, T, 16, 7, 12>(registry, device_types);
+  TestMatmul<data_type, T>(registry, device_types, 64, 16, 8);
+  TestMatmul<data_type, T>(registry, device_types, 16, 7, 12);
 }
 
 }  // namespace
