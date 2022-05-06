@@ -2905,7 +2905,8 @@ class PinMemoryFunctor {
       tensor_index.emplace_back(functional::detail::IndexItem(functional::detail::EllipsisIndex{}));
       auto output = JUST(functional::Empty(tmp_shape, input->dtype(), device, /*pin_memory=*/true));
       JUST(functional::TensorSetItem(output, tensor_index, viewed_input));
-      return JUST(functional::View(output, *shape.get()));;
+      return JUST(functional::View(output, *shape.get()));
+      ;
     } else {
       MutableAttrMap attrs;
       std::vector<int64_t> starts(ndim, 0);
