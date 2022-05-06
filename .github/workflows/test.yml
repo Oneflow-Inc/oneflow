@@ -161,11 +161,11 @@ jobs:
       - name: Wait for GPU slot
         uses: Oneflow-Inc/get-oneflow/wait-for-gpu@update-open-vino-img
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 120
+        timeout-minutes: 150
         continue-on-error: true
         with:
           token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
-          timeout-minutes: 4
+          timeout-minutes: 5
           max-try-times: 30
 
   find-build-cache:
@@ -485,6 +485,7 @@ jobs:
     needs: [wait_for_gpu_slot, find-benchmark-cache]
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    timeout-minutes: 120
     strategy:
       fail-fast: true
       max-parallel: 1
@@ -644,6 +645,7 @@ jobs:
     name: Distributed test suite
     needs: [wait_for_gpu_slot, find-test-cache-distributed]
     runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 120
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
@@ -814,6 +816,7 @@ jobs:
   test:
     name: Test suite
     needs: [wait_for_gpu_slot, find-test-cache]
+    timeout-minutes: 120
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     strategy:
@@ -960,7 +963,7 @@ jobs:
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
-            sleep 3600
+            sleep 7200
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 10
@@ -1072,7 +1075,7 @@ jobs:
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Module API test
-        timeout-minutes: 60
+        timeout-minutes: 140
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
