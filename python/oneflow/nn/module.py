@@ -341,7 +341,7 @@ class Module(object):
                         p.grad.detach_()
                     else:
                         p.grad.requires_grad_(False)
-                    p.grad.zeros_()
+                    p.grad.zero_()
 
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         for (name, param) in self._parameters.items():

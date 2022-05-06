@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
 
 namespace oneflow {
 
@@ -239,6 +240,25 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   }));
   return Maybe<void>::Ok();
 }
+Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
+  std::set<std::string> variable_names = [&]() -> Maybe<std::set<std::string>> {
+    std::set<std::string> variable_names_;
+    OpGraph op_graph(job_);
+    JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+      if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
+      variable_names_.insert(op_node->op().op_name());
+      return Maybe<void>::Ok();
+    }));
+    return variable_names_;
+  }()
+                                                      .GetOrThrow();
+
+  auto mgr = Global<VariableTensorMgr>::Get();
+  for (auto& name : mgr->DumpNames()) {
+    if (variable_names.find(name) == variable_names.end()) { mgr->Delete(name); }
+  }
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
@@ -248,6 +268,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
+  JUST(DeleteOutdatedVariableInVariableTensorMgr());
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
@@ -310,7 +331,20 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     Blob* var_blob = nullptr;
-    if (/*is_null=*/!tensor) {
+
+    if (plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().find(var_name)
+        == plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().end()) {
+      // Deal with variable tensor not used in nn.Graph build.
+      CHECK(tensor != NULL)
+          << "the tensor of " << var_name
+          << " is not existed in job, so it's not created in nn.Graph and cannot be NULL.";
+      if (tensor->is_consistent()) {
+        const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+        var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+      } else {
+        var_blob = JUST(tensor->eager_blob_object())->mut_blob();
+      }
+    } else if (/*is_null=*/!tensor) {
       // Deal with tensors which are not in the nn.Module.
       // We can call these tensors as additional variables.
       const auto& op_attribute =
@@ -348,8 +382,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
         std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
         // To consistent from a local or consistent tensor.
+        bool check_meta = load_tensor_iter->second->is_consistent() ? false : true;
         tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple,
-                                                    grad_sbp_tuple));
+                                                    grad_sbp_tuple, check_meta));
         JUST(vm::CurrentRankSync());
         VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
                 << " created in JobPass, nn.Graph has loaded the tensor from state dict for this "
@@ -382,8 +417,9 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
         }
         {
           auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
-          const auto& new_tensor = JUST(one::functional::ToConsistent(
-              tensor, JUST(tensor->parallel_desc()), optimized_sbp_parallels, {}));
+          const auto& new_tensor = JUST(
+              one::functional::ToConsistent(tensor, JUST(tensor->parallel_desc()),
+                                            optimized_sbp_parallels, {}, /* check_meta */ false));
           JUST(vm::CurrentRankSync());
           // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
           JUST(tensor->set_data(new_tensor));
