@@ -2014,14 +2014,14 @@ class CosineSimilarityFunctor {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x_extend, y_extend}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
-    const auto common_dtype = input_vec.at(0)->dtype();
+    const auto common_dtype = JUST(oneflow::VectorAt(input_vec, 0))->dtype();
     if (!IsFloatingDataType(common_dtype->data_type())) {
       return Error::RuntimeError()
              << "expected common dtype to be floating point, yet common dtype is "
              << common_dtype->name();
     }
-    auto& x_ = input_vec.at(0);
-    auto& y_ = input_vec.at(1);
+    auto& x_ = JUST(oneflow::VectorAt(input_vec, 0));
+    auto& y_ = JUST(oneflow::VectorAt(input_vec, 1));
     std::shared_ptr<Tensor> w12 =
         JUST(functional::ReduceSum(JUST(functional::Mul(x_, y_)), {dim}, false));
     std::shared_ptr<Tensor> w1 =
