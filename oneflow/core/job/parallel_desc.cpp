@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <algorithm>
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -283,7 +282,6 @@ void ParallelDesc::ClearUp() {
       parallel_id += 1;
     }
   }
-  cfg_parallel_conf_.reset(new cfg::ParallelConf(parallel_conf_));
 }
 
 void ParallelDesc::set_device_type(DeviceType device_type) {

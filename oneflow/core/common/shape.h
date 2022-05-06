@@ -27,10 +27,6 @@ namespace oneflow {
 
 class ShapeView;
 
-namespace cfg {
-class ShapeProto;
-}
-
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
@@ -38,7 +34,6 @@ class Shape final {
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
-  explicit Shape(const cfg::ShapeProto& shape_proto);
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);

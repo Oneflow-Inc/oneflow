@@ -17,15 +17,11 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
-#include "oneflow/core/job/job_conf.cfg.h"
-#include "oneflow/core/job/placement.cfg.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/framework/object_storage.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/id_util.h"
-#include "oneflow/core/operator/interface_blob_conf.cfg.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/common/container_util.h"
@@ -196,63 +192,62 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
   return Maybe<void>::Ok();
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const cfg::JobConfigProto& job_conf) {
+Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const JobConfigProto& job_conf) {
   int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<cfg::JobConfigProto, JobConfigProto, JobDesc>(symbol_id, job_conf));
+  JUST(AddSymbol<JobConfigProto, JobDesc>(symbol_id, job_conf));
   return symbol_id;
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const cfg::ParallelConf& parallel_conf) {
+Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const ParallelConf& parallel_conf) {
   int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<cfg::ParallelConf, ParallelConf, ParallelDesc>(symbol_id, parallel_conf));
+  JUST(AddSymbol<ParallelConf, ParallelDesc>(symbol_id, parallel_conf));
   return symbol_id;
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const cfg::ScopeProto& scope_proto) {
+Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const ScopeProto& scope_proto) {
   int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<cfg::ScopeProto, ScopeProto, Scope>(symbol_id, scope_proto));
+  JUST(AddSymbol<ScopeProto, Scope>(symbol_id, scope_proto));
   return symbol_id;
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const cfg::OperatorConf& op_conf) {
+Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const OperatorConf& op_conf) {
   int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<cfg::OperatorConf, OperatorConf, OperatorConfSymbol>(symbol_id, op_conf));
+  JUST(AddSymbol<OperatorConf, OperatorConfSymbol>(symbol_id, op_conf));
   return symbol_id;
 }
 
 Maybe<JobDesc> InstructionsBuilder::GetJobConfSymbol(
-    const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
+    const std::shared_ptr<JobConfigProto>& job_conf) {
   int64_t symbol_id = JUST(FindOrCreateSymbolId(*job_conf));
   return Global<symbol::Storage<JobDesc>>::Get()->MaybeGetPtr(symbol_id);
 }
 
 Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(
-    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+    const std::shared_ptr<ParallelConf>& parallel_conf) {
   int64_t symbol_id = JUST(FindOrCreateSymbolId(*parallel_conf));
   return Global<symbol::Storage<ParallelDesc>>::Get()->MaybeGetPtr(symbol_id);
 }
 
-Maybe<Scope> InstructionsBuilder::GetScopeSymbol(
-    const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const std::shared_ptr<ScopeProto>& scope_proto) {
   int64_t symbol_id = JUST(FindOrCreateSymbolId(*scope_proto));
   return Global<symbol::Storage<Scope>>::Get()->MaybeGetPtr(symbol_id);
 }
 
 Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(
-    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+    const std::shared_ptr<OperatorConf>& op_conf) {
   int64_t symbol_id = JUST(FindOrCreateSymbolId(*op_conf));
   return Global<symbol::Storage<OperatorConfSymbol>>::Get()->MaybeGetPtr(symbol_id);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildInitialScope(
-    int64_t session_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+    int64_t session_id, const std::shared_ptr<JobConfigProto>& job_conf,
     const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
     const std::shared_ptr<Shape>& hierarchy, bool is_mirrored) {
-  std::shared_ptr<cfg::ScopeProto> scope_proto = std::make_shared<cfg::ScopeProto>();
+  std::shared_ptr<ScopeProto> scope_proto = std::make_shared<ScopeProto>();
   scope_proto->set_session_id(session_id);
   std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
   scope_proto->set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
-  std::shared_ptr<cfg::ParallelConf> parallel_conf =
+  std::shared_ptr<ParallelConf> parallel_conf =
       JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
   std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
       JUST(GetParallelDescSymbol(parallel_conf));
@@ -269,20 +264,20 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
 }
 
 Maybe<Scope> InstructionsBuilder::BuildInitialScopeWithPlacement(
-    int64_t session_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+    int64_t session_id, const std::shared_ptr<JobConfigProto>& job_conf,
     Symbol<ParallelDesc> placement, bool is_mirrored) {
-  std::shared_ptr<cfg::ScopeProto> scope_proto = std::make_shared<cfg::ScopeProto>();
+  std::shared_ptr<ScopeProto> scope_proto = std::make_shared<ScopeProto>();
   scope_proto->set_session_id(session_id);
   std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
   scope_proto->set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
 
   std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
-      JUST(GetParallelDescSymbol(placement->cfg_parallel_conf()));
+      JUST(GetParallelDescSymbol(std::make_shared<ParallelConf>(placement->parallel_conf())));
   scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
 
   Symbol<ParallelDesc> new_placement = JUST(ReplaceDeviceType(placement, DeviceType::kCPU));
   std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
-      JUST(GetParallelDescSymbol(new_placement->cfg_parallel_conf()));
+      JUST(GetParallelDescSymbol(std::make_shared<ParallelConf>(new_placement->parallel_conf())));
   scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
   if (is_mirrored) {
     scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
@@ -296,8 +291,8 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     const std::shared_ptr<Scope>& scope, const std::string& device_tag,
     const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy) {
   const auto SetScopeProto = [this, &device_tag, &machine_device_ids,
-                              &hierarchy](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
-    std::shared_ptr<cfg::ParallelConf> parallel_conf =
+                              &hierarchy](const std::shared_ptr<ScopeProto>& scope_proto) {
+    std::shared_ptr<ParallelConf> parallel_conf =
         CHECK_JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
         CHECK_JUST(GetParallelDescSymbol(parallel_conf));
@@ -313,16 +308,13 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
-    const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
-  const std::shared_ptr<
-      std::tuple<std::string, std::vector<std::string>, std::shared_ptr<cfg::ShapeProto>>>&
-      tag_and_dev_ids_and_hierarchy =
-          JUST(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf));
+    const std::shared_ptr<Scope>& scope, const std::shared_ptr<ParallelConf>& parallel_conf) {
+  const std::shared_ptr<std::tuple<std::string, std::vector<std::string>,
+                                   std::shared_ptr<ShapeProto>>>& tag_and_dev_ids_and_hierarchy =
+      JUST(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf));
   std::shared_ptr<Shape> hierarchy;
   if (std::get<2>(*tag_and_dev_ids_and_hierarchy)) {
-    ShapeProto hierarchy_proto;
-    parallel_conf->hierarchy().ToProto(&hierarchy_proto);
-    hierarchy.reset(new Shape(hierarchy_proto));
+    hierarchy.reset(new Shape(parallel_conf->hierarchy()));
   }
   return BuildScopeWithNewParallelDesc(scope, std::get<0>(*tag_and_dev_ids_and_hierarchy),
                                        std::get<1>(*tag_and_dev_ids_and_hierarchy), hierarchy);
@@ -330,7 +322,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,
                                                               bool is_mirrored) {
-  const auto SetScopeProto = [is_mirrored](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+  const auto SetScopeProto = [is_mirrored](const std::shared_ptr<ScopeProto>& scope_proto) {
     if (is_mirrored) {
       scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
     } else {
@@ -343,7 +335,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
                                                              std::string scope_name) {
-  const auto SetScopeProto = [&scope_name](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
+  const auto SetScopeProto = [&scope_name](const std::shared_ptr<ScopeProto>& scope_proto) {
     scope_proto->add_scope_op_name_prefixes(scope_name);
   };
 
@@ -352,8 +344,8 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_p
 
 Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
     const std::shared_ptr<Scope>& scope,
-    const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter) {
-  std::shared_ptr<cfg::ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
+    const std::function<void(const std::shared_ptr<ScopeProto>&)>& Setter) {
+  std::shared_ptr<ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
   Setter(scope_proto);
   return GetScopeSymbol(scope_proto);
 }
@@ -361,14 +353,12 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
 Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
     const std::shared_ptr<Scope>& scope,
     const std::function<std::string(const std::string&)>& StrSetter) {
-  std::shared_ptr<cfg::ScopeProto> cfg_scope_proto = JUST(scope->MakeChildScopeProto());
-  ScopeProto scope_proto;
-  cfg_scope_proto->ToProto(&scope_proto);
-  std::string serialized_scope_proto = PbMessage2TxtString(scope_proto);
+  std::shared_ptr<ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
+  std::string serialized_scope_proto = PbMessage2TxtString(*scope_proto);
   std::string new_serialized_scope_proto = StrSetter(serialized_scope_proto);
-  CHECK_OR_RETURN(TxtString2PbMessage(new_serialized_scope_proto, &scope_proto))
+  CHECK_OR_RETURN(TxtString2PbMessage(new_serialized_scope_proto, scope_proto.get()))
       << "scope_proto parse failed";
-  return GetScopeSymbol(std::make_shared<cfg::ScopeProto>(scope_proto));
+  return GetScopeSymbol(scope_proto);
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(

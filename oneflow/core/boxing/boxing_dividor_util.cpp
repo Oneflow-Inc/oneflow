@@ -230,7 +230,7 @@ decltype(OutPlacementAndSplit) OutPlacementAndSplit =
 namespace {
 
 Maybe<Symbol<ParallelDesc>> GetFisrtDeviceOfPlacement(Symbol<ParallelDesc> placement) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+  std::shared_ptr<ParallelConf> parallel_conf = std::make_shared<ParallelConf>();
   int64_t machine_id = JUST(placement->MachineId4ParallelId(0));
   int64_t device_id = JUST(placement->DeviceId4ParallelId(0));
   parallel_conf->set_device_tag(placement->device_tag());

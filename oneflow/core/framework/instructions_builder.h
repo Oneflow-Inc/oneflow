@@ -18,13 +18,11 @@ limitations under the License.
 
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
-#include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
@@ -35,9 +33,6 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/framework/opkernel_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
-#include "oneflow/core/operator/op_attribute.cfg.h"
-#include "oneflow/core/operator/arg_modifier_signature.cfg.h"
-#include "oneflow/core/job/parallel_signature.cfg.h"
 
 namespace oneflow {
 
@@ -76,22 +71,21 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> SoftSyncNNGraphBuffers(const one::EagerBlobObjectListPtr& eager_blob_objects,
                                      const std::shared_ptr<NNGraphIf>& nn_graph);
 
-  Maybe<int64_t> CreateSymbolId(const cfg::JobConfigProto& job_conf);
+  Maybe<int64_t> CreateSymbolId(const JobConfigProto& job_conf);
 
-  Maybe<int64_t> CreateSymbolId(const cfg::ParallelConf& parallel_conf);
+  Maybe<int64_t> CreateSymbolId(const ParallelConf& parallel_conf);
 
-  Maybe<int64_t> CreateSymbolId(const cfg::ScopeProto& scope_proto);
+  Maybe<int64_t> CreateSymbolId(const ScopeProto& scope_proto);
 
-  Maybe<int64_t> CreateSymbolId(const cfg::OperatorConf& op_conf);
+  Maybe<int64_t> CreateSymbolId(const OperatorConf& op_conf);
 
-  Maybe<JobDesc> GetJobConfSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+  Maybe<JobDesc> GetJobConfSymbol(const std::shared_ptr<JobConfigProto>& job_conf);
 
-  Maybe<ParallelDesc> GetParallelDescSymbol(
-      const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+  Maybe<ParallelDesc> GetParallelDescSymbol(const std::shared_ptr<ParallelConf>& parallel_conf);
 
-  Maybe<Scope> GetScopeSymbol(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+  Maybe<Scope> GetScopeSymbol(const std::shared_ptr<ScopeProto>& scope_proto);
 
-  Maybe<OperatorConfSymbol> GetOpConfSymbol(const std::shared_ptr<cfg::OperatorConf>& op_conf);
+  Maybe<OperatorConfSymbol> GetOpConfSymbol(const std::shared_ptr<OperatorConf>& op_conf);
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
@@ -110,13 +104,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> ComputeGlobalFrontSeqBarrier();
 
   Maybe<Scope> BuildInitialScope(int64_t session_id,
-                                 const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                                 const std::shared_ptr<JobConfigProto>& job_conf,
                                  const std::string& device_tag,
                                  const std::vector<std::string>& machine_device_ids,
                                  const std::shared_ptr<Shape>& hierarchy, bool is_mirrored);
 
   Maybe<Scope> BuildInitialScopeWithPlacement(int64_t session_id,
-                                              const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                                              const std::shared_ptr<JobConfigProto>& job_conf,
                                               Symbol<ParallelDesc> placement, bool is_mirrored);
 
   Maybe<Scope> BuildScopeWithNewParallelDesc(const std::shared_ptr<Scope>& scope,
@@ -124,8 +118,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                              const std::vector<std::string>& machine_device_ids,
                                              const std::shared_ptr<Shape>& hierarchy);
 
-  Maybe<Scope> BuildScopeWithNewParallelConf(
-      const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+  Maybe<Scope> BuildScopeWithNewParallelConf(const std::shared_ptr<Scope>& scope,
+                                             const std::shared_ptr<ParallelConf>& parallel_conf);
 
   Maybe<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope, bool is_mirrored);
 
@@ -134,7 +128,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<Scope> BuildScopeByProtoSetter(
       const std::shared_ptr<Scope>& scope,
-      const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter);
+      const std::function<void(const std::shared_ptr<ScopeProto>&)>& Setter);
 
   Maybe<Scope> BuildScopeByProtoStrSetter(
       const std::shared_ptr<Scope>& scope,

@@ -163,7 +163,7 @@ Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>&
 }
 
 Maybe<Scope> NewScopeWithParallelConfAndCurScope(
-    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+    const std::shared_ptr<ParallelConf>& parallel_conf) {
   std::shared_ptr<Scope> new_scope;
   const auto& old_scope = JUST(GetCurrentScope());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -177,8 +177,8 @@ Maybe<Scope> NewScopeWithParallelConfAndCurScope(
 }
 
 Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& tensor) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
-  parallel_conf->InitFromProto(JUST(GetParallelDescOfTensor(tensor))->parallel_conf());
+  std::shared_ptr<ParallelConf> parallel_conf =
+      std::make_shared<ParallelConf>(JUST(GetParallelDescOfTensor(tensor))->parallel_conf());
   return NewScopeWithParallelConfAndCurScope(parallel_conf);
 }
 
@@ -305,8 +305,7 @@ Maybe<Tensor> GradAccTryInsertPackBeforeOutput(const std::shared_ptr<Scope>& sco
                                     .Build();
 
     int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(output_pack_op.op_conf()));
-    auto blob_parallel_desc =
-        JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+    auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
     OpAttribute pack_op_attr = *JUST(infer_ctx->AddAndInferConsistentOp(output_pack_op.op_conf()));
     VLOG(2) << "Lazy nn.Graph name " << infer_ctx->job().job_conf().job_name() << " add op: \n"
@@ -505,7 +504,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedInputOpExpr& op_expr, const Ten
           << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
-  auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+  auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
@@ -563,7 +562,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FeedVariableOpExpr& op_expr, const 
           << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
-  auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+  auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
@@ -638,7 +637,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FetchOutputOpExpr& op_expr, const T
           << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(op_conf));
-  auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+  auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
@@ -667,8 +666,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
     device_tag = "cuda";
   }
 
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
-  parallel_conf->InitFromProto(JUST(GetParallelDescOfTensor(input_tensor))->parallel_conf());
+  std::shared_ptr<ParallelConf> parallel_conf =
+      std::make_shared<ParallelConf>(JUST(GetParallelDescOfTensor(input_tensor))->parallel_conf());
   parallel_conf->set_device_tag(device_tag);  // NOTE(chengcheng): only support gpu decode.
   const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
 
@@ -693,7 +692,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
           << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
-  auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+  auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
@@ -736,8 +735,8 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     }
     is_local = true;
   }
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
-  parallel_conf->InitFromProto(parallel_desc->parallel_conf());
+  std::shared_ptr<ParallelConf> parallel_conf =
+      std::make_shared<ParallelConf>(parallel_desc->parallel_conf());
   const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
@@ -772,7 +771,7 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
           << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
-  auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+  auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
   CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
@@ -942,7 +941,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
           << op_attr.DebugString() << std::endl;
 
   int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
-  auto blob_parallel_desc = JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
+  auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
   for (int i = 0; i < op_expr.output_size(); ++i) {
     const std::string& obn = op_expr.indexed_obns().at(i);
     if (!(*outputs)[i]) {

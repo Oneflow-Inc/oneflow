@@ -1324,8 +1324,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         if (*pair.second == *op_parallel_desc_) {
           (*symbol_map)[pair.first] = parallel_desc_symbol_id;
         } else {
-          const auto parallel_conf =
-              std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf());
+          const auto parallel_conf = std::make_shared<ParallelConf>(pair.second->parallel_conf());
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
             int64_t symbol_id;
             const auto BuildInstruction =
