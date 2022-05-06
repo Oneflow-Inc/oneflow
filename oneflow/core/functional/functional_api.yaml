@@ -1317,7 +1317,7 @@
   bind_python: False
 
 - name: "upsample_nearest_1d"
-  signature: 'Tensor (Tensor x, Float scale_factor,
+  signature: 'Tensor (Tensor x, Float scale_factor, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleNearest1D'
   bind_python: True
 

@@ -128,10 +128,10 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float height_scale = ctx->Attr<float>("scale_factor");
     const int64_t elem_cnt = y_tensor->shape().elem_cnt();
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
+    const float height_scale = out_height * 1.0 / in_height;
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
@@ -163,10 +163,10 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                               dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float height_scale = ctx->Attr<float>("scale_factor");
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(2);
+    const float height_scale = out_height * 1.0 / in_height;
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
