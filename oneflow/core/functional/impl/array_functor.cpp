@@ -2020,8 +2020,8 @@ class TensorSetItemFunctor {
     for (auto& tensor : tensor_indices) {
       if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }
-    if (tensor_indices.size() == ndims) { 
-      if(ndims == 0 && index[0].IsEllipsis()){
+    if (tensor_indices.size() == ndims) {
+      if (ndims == 0 && index[0].IsEllipsis()) {
         // for scalar input tensor setitem, only support ellipsis indexing type
         Shape tmp_shape{1};
         const auto& value_tensor = JUST(functional::View(value, tmp_shape));
