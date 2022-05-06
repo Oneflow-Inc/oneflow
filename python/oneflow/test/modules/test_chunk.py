@@ -19,7 +19,6 @@ from collections import OrderedDict
 from random import shuffle
 
 import numpy as np
-from random import shuffle
 
 import oneflow as flow
 import oneflow.unittest
