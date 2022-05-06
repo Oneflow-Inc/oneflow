@@ -306,6 +306,7 @@ class TestTensorIndexing(flow.unittest.TestCase):
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         _test_basic_slice(test_case, numpy_x)
+    
 
     def test_advanced_indexing(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
@@ -420,6 +421,15 @@ class TestTensorIndexing(flow.unittest.TestCase):
         ranges.append(torch.zeros(1, 3).to(torch.int64))
         res = data[ranges]
         return res
+    
+    @autotest(n=1)
+    def test_dataloader_indexing_with_1_dim_tensor(test_case):
+        device = random_device()
+        x = random_tensor(ndim=1, dim0=1024).to(device)
+        batch_data = list()
+        for i in range(1024):
+            batch_data.append(x[i])
+        return torch.stack(batch_data)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_indecies_on_different_devices(test_case):
