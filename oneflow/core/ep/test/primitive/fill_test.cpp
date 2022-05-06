@@ -41,9 +41,11 @@ template<DataType data_type, typename T, size_t n>
 void TestFill(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
   const size_t vector_size = n * sizeof(T);
   for (const auto& device_type : device_types) {
+#ifdef WITH_CUDA
 #if CUDA_VERSION >= 11000
     if (device_type == DeviceType::kCPU && data_type == DataType::kBFloat16) { continue; }
 #endif  // CUDA_VERSION >= 11000
+#endif  // WITH_CUDA
     auto device = registry->GetDevice(device_type, 0);
     ep::test::DeviceMemoryGuard device_mem(device.get(), vector_size);
     ep::test::PinnedMemoryGuard host_mem(device.get(), vector_size);
@@ -79,10 +81,12 @@ TEST_F(PrimitiveTest, TestFill) {
   TestFill<DataType::kInt64, int64_t, 1024>(&device_manager_registry_, available_device_types_);
   TestFill<DataType::kUInt8, uint8_t, 1024>(&device_manager_registry_, available_device_types_);
   TestFill<DataType::kFloat16, half, 1024>(&device_manager_registry_, available_device_types_);
+#ifdef WITH_CUDA
 #if CUDA_VERSION >= 11000
   TestFill<DataType::kBFloat16, nv_bfloat16, 1024>(&device_manager_registry_,
                                                    available_device_types_);
 #endif  // CUDA_VERSION >= 11000
+#endif  // WITH_CUDA
   TestFill<DataType::kBool, bool, 1024>(&device_manager_registry_, available_device_types_);
 }
 
