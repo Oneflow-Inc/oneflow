@@ -358,7 +358,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
 
 Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
                                   const TensorIndex& tensor_index) {
-  auto index_item = tensor_index.at(0);
+  auto index_item = tensor_index[0];
   const int32_t index = index_item.integer();
   const int32_t ndim = input->ndim();
   CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
