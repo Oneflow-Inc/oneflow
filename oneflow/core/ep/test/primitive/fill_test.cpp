@@ -73,7 +73,7 @@ void TestFill(DeviceManagerRegistry* registry, const std::set<DeviceType>& devic
 }  // namespace
 
 TEST_F(PrimitiveTest, TestFill) {
-  TestFill<DataType::kChar, char>(&device_manager_registry_, available_device_types_， 1024);
+  TestFill<DataType::kChar, char>(&device_manager_registry_, available_device_types_, 1024);
   TestFill<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 1024);
   TestFill<DataType::kFloat, float>(&device_manager_registry_, available_device_types_, 1024);
   TestFill<DataType::kInt8, int8_t>(&device_manager_registry_, available_device_types_, 1024);
