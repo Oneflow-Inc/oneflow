@@ -852,8 +852,24 @@ void PlanUtil::GenRegisterHint(Plan* plan) {
   }
 }
 
+
+namespace {
+
+struct MemBlockDebugInfo {
+  int64_t mem_block_id;
+  int64_t chunk_id;
+  int64_t device_id;
+  int64_t mem_size;
+  int64_t regst_desc_num;
+  HashSet<std::string> op_names;
+};
+
+
+}
+
 void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   HashMap<std::pair<int64_t, int64_t>, int64_t> rank_device2size;
+  HashMap<int64_t, int64_t> chunk_id2size;
   auto AddMemSizeByRankDeviceIds = [&](int64_t rank_id, int64_t device_id, int64_t mem_size) {
     auto key = std::make_pair(rank_id, device_id);
     auto it = rank_device2size.find(key);
@@ -866,6 +882,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
       AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_cuda_mem().device_id(),
                                 chunk.mem_size());
     }
+    chunk_id2size[chunk.chunk_id()] = chunk.mem_size();
   }
 
   for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
@@ -883,6 +900,56 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     double mem_size = pair.second * 1.0 / 1000000.0;
     LOG(INFO) << "Graph name " << plan_name << " needs to allocate [ " << mem_size
               << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << ".";
+  }
+
+  HashMap<int64_t, MemBlockDebugInfo> mem_block_id2info;
+  HashMap<int64_t, std::vector<int64_t>> chunk_id2non_trival_mem_block_ids; 
+  for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
+    if (mem_block.mem_case().has_device_cuda_mem()
+        && mem_block.has_chunk_id() 
+        && mem_block.has_chunk_offset()) {
+      int64_t mem_block_id = mem_block.mem_block_id();
+      auto& info = mem_block_id2info[mem_block_id];
+      info.device_id = mem_block.mem_case().device_cuda_mem().device_id();
+      info.mem_block_id = mem_block_id;
+      info.chunk_id = mem_block.chunk_id();
+      info.mem_size = mem_block.mem_size();
+      info.regst_desc_num = 0;
+    }
+  }
+
+  for (const TaskProto& task : plan->task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      const auto& regst = pair.second;
+      if (regst.regst_desc_type().has_data_regst_desc()) {
+        const auto data_regst = regst.regst_desc_type().data_regst_desc();
+        std::string op_name = data_regst.lbi2blob_desc(0).lbi().op_name();
+        mem_block_id2info[regst.mem_block_id()].op_names.insert(op_name);
+        mem_block_id2info[regst.mem_block_id()].regst_desc_num += 1;
+      }
+    }
+  }
+
+  for(const auto& pair : mem_block_id2info) {
+    const auto& info = pair.second;
+    if (info.regst_desc_num > 2) {
+      chunk_id2non_trival_mem_block_ids[info.chunk_id].push_back(info.mem_block_id);
+    }
+  }
+
+  for(const auto& pair : chunk_id2non_trival_mem_block_ids) {
+    LOG(INFO) << " In Chunk id: " << pair.first << " has num = "
+      << pair.second.size() << " non-trival mem_block with size : "
+      << (chunk_id2size[pair.first] * 1.0 / 1000000.0) << " MiB.";
+    for (int64_t mem_block_id : pair.second) {
+      const auto& info = mem_block_id2info[mem_block_id];
+      LOG(INFO) << " mem_block_id: " << mem_block_id << 
+        " has mem_size = " << (info.mem_size * 1.0 / 1000000.0) 
+        << " MiB , and has regst desc num = " << info.regst_desc_num << " They are: \n\n ";
+      for (const auto& op_name : info.op_names) {
+        LOG(INFO)  << " in mem_block_id: " << mem_block_id << " op_name: " << op_name;
+      }
+    }
   }
 }
 
