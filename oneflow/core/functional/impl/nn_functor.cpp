@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
@@ -37,6 +38,8 @@ limitations under the License.
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -451,10 +454,10 @@ class PixelShuffleFunctor {
   }
 };
 
-class PoolNDFunctor {
+class TFPoolNDFunctor {
  public:
-  PoolNDFunctor() = default;
-  virtual ~PoolNDFunctor() = default;
+  TFPoolNDFunctor() = default;
+  virtual ~TFPoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& strides, const std::string& padding,
@@ -476,10 +479,10 @@ class PoolNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class PoolingNDFunctor {
+class MaxPoolNDFunctor {
  public:
-  PoolingNDFunctor() = default;
-  virtual ~PoolingNDFunctor() = default;
+  MaxPoolNDFunctor() = default;
+  virtual ~MaxPoolNDFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::vector<int32_t>& kernel_size,
                                 const Optional<std::vector<int32_t>>& stride,
@@ -532,32 +535,32 @@ class PoolingNDFunctor {
   std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
-class TFAvgPool2DFunctor : public PoolNDFunctor {
+class TFAvgPool2DFunctor : public TFPoolNDFunctor {
  public:
   TFAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class Maxpool1DFunctor : public PoolingNDFunctor {
+class MaxPool1DFunctor : public MaxPoolNDFunctor {
  public:
-  Maxpool1DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("maxpool_1d").Input("x").Output("y").Output("indice").Build());
+  MaxPool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("max_pool_1d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
-class Maxpool2DFunctor : public PoolingNDFunctor {
+class MaxPool2DFunctor : public MaxPoolNDFunctor {
  public:
-  Maxpool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
+  MaxPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Output("indice").Build());
     tf_maxpool_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class Maxpool3DFunctor : public PoolingNDFunctor {
+class MaxPool3DFunctor : public MaxPoolNDFunctor {
  public:
-  Maxpool3DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("maxpool_3d").Input("x").Output("y").Output("indice").Build());
+  MaxPool3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("max_pool_3d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
@@ -1366,6 +1369,133 @@ class GridSampleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class NormalFunctor {
+ public:
+  NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
+                           const Optional<one::Tensor>& out,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<Symbol<Device>>& optional_device,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
+    Symbol<DType> dtype = DType::Float();
+    if (optional_dtype.has_value()) {
+      dtype = JUST(optional_dtype);
+      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+      }
+    }
+    Symbol<Device> device = JUST(Device::New("cpu"));
+    if (optional_device.has_value()) { device = JUST(optional_device); }
+
+    if (out.has_value()) {
+      auto out_tensor = JUST(out);
+      Symbol<DType> output_tensor_dtype = out_tensor->dtype();
+      if (optional_dtype.has_value()) {
+        CHECK_OR_RETURN(output_tensor_dtype == dtype)
+            << Error::RuntimeError() << "data type " << dtype->name()
+            << " does not match data type of out parameter (" << output_tensor_dtype->name();
+      }
+      dtype = output_tensor_dtype;
+      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
+      if (optional_device.has_value()) {
+        CHECK_OR_RETURN(out_tensor_device == JUST(optional_device))
+            << Error::RuntimeError() << "device type " << device->ToString()
+            << " does not match device type of out parameter (" << out_tensor_device->ToString();
+      }
+      device = out_tensor_device;
+    }
+
+    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("mean", mean));
+    JUST(attrs.SetAttr<double>("std", std));
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    OpExprInterpContext ctx(attrs, distribution_state);
+    ctx.device = device;
+    if (out.has_value()) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      (*outputs)[0] = JUST(out);
+      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+      return (*outputs)[0];
+    }
+
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentNormalFunctor {
+ public:
+  ConsistentNormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
+                           const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
+
+    Symbol<DType> dtype = DType::Float();
+    if (optional_dtype.has_value()) {
+      dtype = JUST(optional_dtype);
+      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+      }
+    }
+
+    if (out.has_value()) {
+      auto out_tensor = JUST(out);
+      Symbol<DType> output_tensor_dtype = out_tensor->dtype();
+      if (optional_dtype.has_value()) {
+        CHECK_OR_RETURN(output_tensor_dtype == dtype)
+            << Error::RuntimeError() << "data type " << dtype->name()
+            << " does not match data type of out parameter (" << output_tensor_dtype->name();
+      }
+      dtype = output_tensor_dtype;
+    }
+
+    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("mean", mean));
+    JUST(attrs.SetAttr<double>("std", std));
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    if (LazyMode::is_enabled()) {
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+    }
+
+    if (out.has_value()) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      (*outputs)[0] = JUST(out);
+      JUST(OpInterpUtil::Dispatch(
+          *op_, {}, outputs.get(),
+          OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
+      return (*outputs)[0];
+    }
+
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -1699,10 +1829,10 @@ class DropoutGradFunctor {
   std::shared_ptr<OpExpr> dropout_grad_op_;
 };
 
-class AvgPoolingNDFunctor {
+class AvgPoolNDFunctor {
  public:
-  AvgPoolingNDFunctor() = default;
-  virtual ~AvgPoolingNDFunctor() = default;
+  AvgPoolNDFunctor() = default;
+  virtual ~AvgPoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const Optional<std::vector<int32_t>>& stride,
@@ -1729,24 +1859,24 @@ class AvgPoolingNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Avgpool1DFunctor : public AvgPoolingNDFunctor {
+class AvgPool1DFunctor : public AvgPoolNDFunctor {
  public:
-  Avgpool1DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avgpool_1d").Input("x").Output("y").Build());
+  AvgPool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_1d").Input("x").Output("y").Build());
   }
 };
 
-class Avgpool2DFunctor : public AvgPoolingNDFunctor {
+class AvgPool2DFunctor : public AvgPoolNDFunctor {
  public:
-  Avgpool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avgpool_2d").Input("x").Output("y").Build());
+  AvgPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class Avgpool3DFunctor : public AvgPoolingNDFunctor {
+class AvgPool3DFunctor : public AvgPoolNDFunctor {
  public:
-  Avgpool3DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avgpool_3d").Input("x").Output("y").Build());
+  AvgPool3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_3d").Input("x").Output("y").Build());
   }
 };
 
@@ -2700,6 +2830,46 @@ class OneEmbeddingAdagradUpdateFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class OneEmbeddingFtrlUpdateFunctor {
+ public:
+  OneEmbeddingFtrlUpdateFunctor() {
+    // This functor is just for unittest
+    op_ = CHECK_JUST(one::OpBuilder("ftrl_embedding_update")
+                         .Input("num_unique_ids")
+                         .Input("unique_embeddings")
+                         .Input("embedding_grad")
+                         .Input("learning_rate")
+                         .Input("down_scale_by_tensor")
+                         .Input("skip_if")
+                         .Output("updated_unique_embeddings")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
+                           const std::shared_ptr<one::Tensor>& unique_embeddings,
+                           const std::shared_ptr<one::Tensor>& embedding_grad,
+                           const std::shared_ptr<one::Tensor>& learning_rate,
+                           const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
+                           const std::shared_ptr<one::Tensor>& skip_if, const double scale,
+                           const float weight_decay, const float lr_power, const float lambda1,
+                           const float lambda2, const float beta) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    JUST(attrs.SetAttr<float>("lr_power", lr_power));
+    JUST(attrs.SetAttr<float>("lambda1", lambda1));
+    JUST(attrs.SetAttr<float>("lambda2", lambda2));
+    JUST(attrs.SetAttr<float>("beta", beta));
+    return OpInterpUtil::Dispatch<Tensor>(*op_,
+                                          {num_unique_ids, unique_embeddings, embedding_grad,
+                                           learning_rate, down_scale_by_tensor, skip_if},
+                                          attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class RocAucScoreFunctor {
  public:
   RocAucScoreFunctor() {
@@ -2731,10 +2901,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
-  m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");
-  m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
-  m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
-  m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
+  m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
+  m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
+  m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
+  m.add_functor<impl::MaxPool3DFunctor>("MaxPool3D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
@@ -2763,9 +2933,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
   m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");
-  m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
-  m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
-  m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
+  m.add_functor<impl::AvgPool1DFunctor>("AvgPool1D");
+  m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
+  m.add_functor<impl::AvgPool3DFunctor>("AvgPool3D");
   m.add_functor<impl::UnfoldFunctor>("Unfold");
   m.add_functor<impl::FoldFunctor>("Fold");
   m.add_functor<impl::OneHotFunctor>("OneHot");
@@ -2793,11 +2963,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "OneEmbeddingEmbeddingGradientShuffle");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
+  m.add_functor<impl::NormalFunctor>("Normal");
+  m.add_functor<impl::ConsistentNormalFunctor>("ConsistentNormal");
   m.add_functor<impl::OneEmbeddingSgdUpdateFunctor>("OneEmbeddingSgdUpdate");
   m.add_functor<impl::OneEmbeddingAdamUpdateFunctor>("OneEmbeddingAdamUpdate");
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
+  m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
-};
+}
 
 }  // namespace functional
 }  // namespace one

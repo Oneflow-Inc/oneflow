@@ -66,7 +66,7 @@ class StackKernel final : public user_op::OpKernel {
       }
     }
 
-    ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(out_dim_vec));
+    ctx->MutShapeView4ArgNameAndIndex("out", 0).set_shape(Shape(out_dim_vec));
   }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -157,11 +157,10 @@ class StackGradKernel final : public user_op::OpKernel {
       }
 
       if (ctx->TensorDesc4ArgNameAndIndex("out", i)->is_dynamic()) {
-        auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
-        CHECK_NOTNULL(mut_shape_view);
+        auto mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
         DimVector out_i_dim_vec;
         like_shape_view.ToDimVector(&out_i_dim_vec);
-        mut_shape_view->set_shape(Shape(out_i_dim_vec));
+        mut_shape_view.set_shape(Shape(out_i_dim_vec));
       }
     }
     CHECK_EQ(total_dim_size, in_shape_view.Count(axis))
