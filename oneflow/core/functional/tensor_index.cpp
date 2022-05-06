@@ -356,12 +356,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   return result;
 }
 
-<<<<<<< HEAD
 Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input, const TensorIndex& tensor_index){
-=======
-Maybe<Tensor> SelectGetItem(const std::shared_ptr<one::Tensor>& input,
-                            const TensorIndex& tensor_index) {
->>>>>>> bdf3166d41013077ecb00ebd6b540b18428777c8
   auto index_item = tensor_index.at(0);
   const int32_t index = index_item.integer();
   const int32_t ndim = input->ndim();
