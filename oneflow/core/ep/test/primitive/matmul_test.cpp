@@ -33,16 +33,12 @@ namespace {
 template<DataType data_type, typename T>
 void TestMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types, int m,
                 int k, int n, bool transpose_a, bool transpose_b) {
-  using SrcAMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-  using SrcATransMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-  using SrcBMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-  using SrcBTransMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-  using DstMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
-  SrcAMatrix a = SrcAMatrix::Random(m, k);
-  SrcBMatrix b = SrcBMatrix::Random(k, n);
-  DstMatrix c = a * b;
-  SrcATransMatrix a_transpose = a.transpose();
-  SrcBTransMatrix b_transpose = b.transpose();
+  using Matrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+  Matrix a = Matrix::Random(m, k);
+  Matrix b = Matrix::Random(k, n);
+  Matrix c = a * b;
+  Matrix a_transpose = a.transpose();
+  Matrix b_transpose = b.transpose();
 
   int64_t a_size = m * k * sizeof(T);
   int64_t b_size = k * n * sizeof(T);
@@ -86,7 +82,7 @@ void TestMatmul(DeviceManagerRegistry* registry, const std::set<DeviceType>& dev
                    device_c.ptr());
     d2h->Launch(stream.stream(), output.ptr(), device_c.ptr(), c_size);
     CHECK_JUST(stream.stream()->Sync());
-    auto res = Eigen::Map<DstMatrix, Eigen::Unaligned>(reinterpret_cast<T*>(output.ptr()), m, n);
+    auto res = Eigen::Map<Matrix, Eigen::Unaligned>(reinterpret_cast<T*>(output.ptr()), m, n);
     ASSERT_TRUE(c.template isApprox(res, static_cast<T>(0.001)));
   }
 }
