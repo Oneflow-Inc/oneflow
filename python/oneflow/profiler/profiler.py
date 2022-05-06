@@ -57,4 +57,3 @@ class record_function:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         oneflow._oneflow_internal.profiler.EndRecord(self.__event_recorder_key)
-
