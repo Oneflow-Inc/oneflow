@@ -75,8 +75,11 @@ Maybe<BoxingExprIf> SymmetricNDimToOneDimBoxingExpr() {
 
 Maybe<BoxingExprIf> NToOneBoxingExpr() {
   return JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
-                         JUST(BoxingExpr("ccl-p-to-b")) | JUST(SymmetricOneDimSxToBBoxingExpr())
-                             | JUST(SymmetricNDimToNDimBoxingExpr()) | JUST(BoxingExpr("identity")),
+                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-p-to-b"))
+                             | JUST(SymmetricOneDimSxToBBoxingExpr())
+                             | JUST(BoxingExpr("naive-p-to-b")) | JUST(BoxingExpr("naive-s-to-b"))
+                             | JUST(SymmetricNDimToNDimBoxingExpr())
+                             | JUST(BoxingExpr("generic-symmetric-nd-sbp-to-nd-sbp")),
                          JUST(BoxingExpr("naive-b-to-1"))));
 }
 
@@ -84,7 +87,9 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
                          JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-p-to-b"))
                              | JUST(SymmetricOneDimPToSxBoxingExpr())
-                             | JUST(SymmetricNDimToNDimBoxingExpr())));
+                             | JUST(BoxingExpr("naive-p-to-b")) | JUST(BoxingExpr("naive-p-to-s"))
+                             | JUST(SymmetricNDimToNDimBoxingExpr())
+                             | JUST(BoxingExpr("generic-symmetric-nd-sbp-to-nd-sbp"))));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimXToBBoxingExpr() {
@@ -142,6 +147,7 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(BoxingExpr("naive-s-to-p"))
                      | JUST(BoxingExpr("nd-sbp-dim-reduce"))
                      | JUST(SymmetricNDimToNDimBoxingExpr())
+                     | JUST(BoxingExpr("generic-symmetric-nd-sbp-to-nd-sbp"))
                      | JUST(SymmetricOneDimToNDimBoxingExpr())
                      | JUST(SymmetricNDimToOneDimBoxingExpr())
                      | JUST(GenericBoxingExpr());

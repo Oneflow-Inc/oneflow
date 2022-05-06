@@ -100,9 +100,9 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 
-  const Blob& blob = JUST(tensor->eager_blob_object())->blob();
-  const Shape& blob_shape = blob.static_shape();
-  const auto* tensor_buffer_ptr = blob.dptr<TensorBuffer>();
+  const auto& eager_blob_object = JUST(tensor->eager_blob_object());
+  const Shape& blob_shape = eager_blob_object->shape();
+  const auto* tensor_buffer_ptr = eager_blob_object->dptr<TensorBuffer>();
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
     shapes.emplace_back(tensor_buffer->shape());
@@ -249,8 +249,8 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
       local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
 
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  auto consistent_tensor =
-      JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple));
+  auto consistent_tensor = JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple,
+                                                         grad_sbp_tuple, /* check_meta */ false));
   JUST(consistent_tensor->set_requires_grad(requires_grad));
   return consistent_tensor;
 }
@@ -261,10 +261,10 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
     return functional::Copy(other, device->type(), device->device_id());
   } else {
     const Symbol<NdSbp>& nd_sbp = JUST(other->nd_sbp());
-    std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
-    for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
+    const std::vector<Symbol<SbpParallel>>& sbp_tuple = *JUST(GetSbpList(nd_sbp));
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple);
+    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
+                                    /* check_meta */ false);
   }
 }
 
@@ -297,8 +297,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                         const bool& requires_grad) {
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
+  bool check_meta = other->is_consistent() ? false : true;
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple));
+      JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple, check_meta));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
