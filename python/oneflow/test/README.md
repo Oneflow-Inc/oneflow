@@ -200,7 +200,6 @@
 | oneflow.sin_ |  |  |  |
 | oneflow.sinh | [oneflow.Tensor.arcsinh](https://github.com/Oneflow-Inc/oneflow/blob/8e2da64b33b59cc907195de423dc7fa632c1fee6/python/oneflow/test/../../../python/oneflow/framework/docstr/tensor.py#L1020)   |  |  |
 | oneflow.slice |  | [slice](https://github.com/Oneflow-Inc/oneflow/blob/8e2da64b33b59cc907195de423dc7fa632c1fee6/python/oneflow/test/../../../python/oneflow/test/modules/test_slice.py#L133)   |  |
-| oneflow.slice_update |  |  |  |
 | oneflow.softmax | [oneflow.Tensor.softmax](https://github.com/Oneflow-Inc/oneflow/blob/8e2da64b33b59cc907195de423dc7fa632c1fee6/python/oneflow/test/../../../python/oneflow/framework/docstr/tensor.py#L1141)   | [softmax_module_with_random_data](https://github.com/Oneflow-Inc/oneflow/blob/8e2da64b33b59cc907195de423dc7fa632c1fee6/python/oneflow/test/../../../python/oneflow/test/modules/test_activation.py#L395)   |  |
 | oneflow.softplus | [oneflow.softplus](https://github.com/Oneflow-Inc/oneflow/blob/8e2da64b33b59cc907195de423dc7fa632c1fee6/python/oneflow/test/../../../python/oneflow/framework/docstr/activation.py#L133)   | [softplus](https://github.com/Oneflow-Inc/oneflow/blob/8e2da64b33b59cc907195de423dc7fa632c1fee6/python/oneflow/test/../../../python/oneflow/test/modules/test_activation.py#L502)   |  |
 | oneflow.softshrink |  | [softshrink_module](https://github.com/Oneflow-Inc/oneflow/blob/8e2da64b33b59cc907195de423dc7fa632c1fee6/python/oneflow/test/../../../python/oneflow/test/modules/test_consistent_activation.py#L207)   |  |

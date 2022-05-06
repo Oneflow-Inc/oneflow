@@ -156,6 +156,9 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
     OneFlow_Tensor:$ref,
     OneFlow_Tensor:$value
   );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
   let attrs = (ins
     SI64ArrayAttr:$start,
     SI64ArrayAttr:$stop,
@@ -165,7 +168,6 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_input_arg_modify_fn = 1;
 }
 
 #endif // GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
@@ -2621,7 +2623,7 @@ def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, No
   let output = (outs AnyType:$out);
 }
 
-def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
+def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {}
 
 def OneFlow_RintOp : OneFlow_IdempotentBaseOp<"rint", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
 
