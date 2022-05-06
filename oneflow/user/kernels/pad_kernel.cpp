@@ -114,7 +114,8 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
 
     // for (int i = 0; i < ndims; ++i) {
     //   if (dst_pos_vec[i] < 0) {
-    //     // When padding[i] < 0 , dst_pos_vec[i] will < 0 too , src_pos_vec[i] should adjust coords
+    //     // When padding[i] < 0 , dst_pos_vec[i] will < 0 too , src_pos_vec[i] should adjust
+    //     coords
     //     // relative and dst_pos_vec[i] will == 0
     //     src_pos_vec[i] -= dst_pos_vec[i];
     //     dst_pos_vec[i] = 0;
@@ -139,12 +140,8 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
 
     std::unique_ptr<ep::primitive::Pad> pad_primitive = NewPadPrimitive(ctx);
     CHECK(pad_primitive);
-    pad_primitive->Launch(ctx->stream(), ndims, y->mut_dptr(), y->shape().ptr(), 
-                          x->dptr(), x->shape().ptr(), 
-                          padding_before.data(), padding_after.data(), 
-                          value);
-
-
+    pad_primitive->Launch(ctx->stream(), ndims, y->mut_dptr(), y->shape().ptr(), x->dptr(),
+                          x->shape().ptr(), padding_before.data(), padding_after.data(), value);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
