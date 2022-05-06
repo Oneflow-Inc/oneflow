@@ -217,8 +217,8 @@ class UpsampleNearest2DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
 
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
+    const float height_scale = out_height * 1.0 / in_height;
+    const float width_scale = out_width * 1.0 / in_width;
     const int64_t elem_cnt = y_tensor->shape().elem_cnt();
 
     if (in_height == out_height && in_width == out_width) {
@@ -258,8 +258,8 @@ class UpsampleNearest2DGradCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_tensor->shape().At(2);
     const int64_t out_width = dy_tensor->shape().At(3);
 
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
+    const float height_scale = out_height * 1.0 / in_height;
+    const float width_scale = out_width * 1.0 / in_width;
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
 
     if (in_height == out_height && in_width == out_width) {

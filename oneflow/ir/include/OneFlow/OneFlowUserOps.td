@@ -9268,7 +9268,8 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideE
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
     DefaultValuedAttr<F32Attr, "0.">:$width_scale,
-    StrAttr:$data_format
+    StrAttr:$data_format,
+    SI64ArrayAttr:$output_size
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

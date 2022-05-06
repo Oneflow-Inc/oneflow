@@ -128,6 +128,7 @@ class Interpolate(Module):
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
+                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 5 and self.mode == "nearest":

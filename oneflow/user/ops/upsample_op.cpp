@@ -18,8 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 
-const float eps = 1e-5;
-
 /*static*/ Maybe<void> UpsampleLinear1DOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("y", 0), 0).Build();
   return Maybe<void>::Ok();
@@ -33,7 +31,7 @@ const float eps = 1e-5;
                   && x_desc.shape().NumAxes() == 3)
       << "upsample_linear_1d only supports NCH";
   *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(scale_factor * x_desc.shape().At(2) + eps)});
+                                static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleLinear1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -56,7 +54,7 @@ const float eps = 1e-5;
                   && x_desc.shape().NumAxes() == 3)
       << "upsample_nearest_1d only supports NCH";
   *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(scale_factor * x_desc.shape().At(2) + eps)});
+                                static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -79,9 +77,17 @@ const float eps = 1e-5;
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
                   && x_desc.shape().NumAxes() == 4)
       << "upsample_nearest_2d only supports NCHW";
-  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(height_scale * x_desc.shape().At(2) + eps),
-                                static_cast<int32_t>(width_scale * x_desc.shape().At(3) + eps)});
+  std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+  if (output_size.size()) {
+    const int64_t output_height = output_size[0];
+    const int64_t output_width = output_size[1];
+    *y_desc->mut_shape() =
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), output_height, output_width});
+  } else {
+    *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                  static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                  static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
+  }
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -105,8 +111,8 @@ const float eps = 1e-5;
                   && x_desc.shape().NumAxes() == 4)
       << "upsample_bilinear_2d only supports NCHW";
   *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(height_scale * x_desc.shape().At(2) + eps),
-                                static_cast<int32_t>(width_scale * x_desc.shape().At(3) + eps)});
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBilinear2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -130,8 +136,8 @@ const float eps = 1e-5;
                   && x_desc.shape().NumAxes() == 4)
       << "upsample_bicubic_2d only supports NCHW";
   *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(height_scale * x_desc.shape().At(2) + eps),
-                                static_cast<int32_t>(width_scale * x_desc.shape().At(3) + eps)});
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBicubic2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -155,8 +161,8 @@ const float eps = 1e-5;
     LOG(FATAL) << "upsample only supports NCHW";
   }
   *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(height_scale * x_desc.shape().At(2) + eps),
-                                static_cast<int32_t>(width_scale * x_desc.shape().At(3) + eps)});
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -181,9 +187,9 @@ const float eps = 1e-5;
                   && x_desc.shape().NumAxes() == 5)
       << "upsample_nearest_3d only supports NCDHW";
   *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(depth_scale * x_desc.shape().At(2) + eps),
-                                static_cast<int32_t>(height_scale * x_desc.shape().At(3) + eps),
-                                static_cast<int32_t>(width_scale * x_desc.shape().At(4) + eps)});
+                                static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(3)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(4))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -208,9 +214,9 @@ const float eps = 1e-5;
                   && x_desc.shape().NumAxes() == 5)
       << "upsample_trilinear_3d only supports NCDHW";
   *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(depth_scale * x_desc.shape().At(2) + eps),
-                                static_cast<int32_t>(height_scale * x_desc.shape().At(3) + eps),
-                                static_cast<int32_t>(width_scale * x_desc.shape().At(4) + eps)});
+                                static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(3)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(4))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleTrilinear3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
