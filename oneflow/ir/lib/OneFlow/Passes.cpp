@@ -623,6 +623,9 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
     if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
       oneflow::UserOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
+      if (op->getOperands()[0].getType().cast<mlir::RankedTensorType>().getShape().size() != 4) {
+        return failure();
+      }
       if (op_adaptor.device_tagAttr().str() == "cpu") { return failure(); }
     }
     llvm::SmallVector<int32_t> perm = getChannelLastTransposePerm();
@@ -675,17 +678,23 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   }
 };
 
-bool IsRedundantTransposeMatch(ArrayAttr pre, ArrayAttr afe) {
-  const auto prePerm = pre.getValue();
-  const auto afePerm = afe.getValue();
+bool IsRedundantTransposeMatch(ArrayAttr pre, ArrayAttr afe, mlir::PatternRewriter& rewriter) {
+  const auto prePerm = pre.getValue().vec();
+  const auto afePerm = afe.getValue().vec();
   if (prePerm.size() == 4 && afePerm.size() == 4) {
     // handle nchw->nhwc->nchw: (0, 2, 3, 1) -> (0, 3, 1, 2)
     if (prePerm[0] == afePerm[0] && prePerm[1] == afePerm[3] && prePerm[2] == afePerm[1]
-        && prePerm[3] == afePerm[2])
+        && prePerm[3] == afePerm[2] && prePerm[0] == rewriter.getSI32IntegerAttr(0)
+        && prePerm[1] == rewriter.getSI32IntegerAttr(2)
+        && prePerm[2] == rewriter.getSI32IntegerAttr(3)
+        && prePerm[3] == rewriter.getSI32IntegerAttr(1))
       return true;
     // handle nhwc->nchw->nhwc: (0, 3, 1, 2) -> (0, 2, 3, 1)
     if (prePerm[0] == afePerm[0] && prePerm[1] == afePerm[2] && prePerm[2] == afePerm[3]
-        && prePerm[3] == afePerm[1])
+        && prePerm[3] == afePerm[1] && prePerm[0] == rewriter.getSI32IntegerAttr(0)
+        && prePerm[1] == rewriter.getSI32IntegerAttr(3)
+        && prePerm[2] == rewriter.getSI32IntegerAttr(1)
+        && prePerm[3] == rewriter.getSI32IntegerAttr(2))
       return true;
   }
   return false;
@@ -700,7 +709,7 @@ struct AutoNhwcEliminateRedundantTransposePattern : public mlir::OpRewritePatter
     TransposeOp transposeInputOp = transposeInput.getDefiningOp<TransposeOp>();
 
     if (!transposeInputOp
-        || !IsRedundantTransposeMatch(op.permAttr(), transposeInputOp.permAttr())) {
+        || !IsRedundantTransposeMatch(op.permAttr(), transposeInputOp.permAttr(), rewriter)) {
       return failure();
     }
     rewriter.replaceOp(op, {transposeInputOp.getOperand()});

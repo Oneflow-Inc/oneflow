@@ -484,11 +484,7 @@ llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> va
   return results;
 }
 
-bool NormalizationOp::IsNCHW() {
-  SmallVector<Value, 4> operands = this->getOperands();
-  const int32_t input_ndim = operands[0].getType().cast<mlir::RankedTensorType>().getShape().size();
-  return this->axisAttr().getValue().getSExtValue() == 1 && input_ndim == 4;
-}
+bool NormalizationOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
 
 llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() { return {this->x()}; }
 
