@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/get-oneflow/priority-pr@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/priority-pr@update-open-vino-img
         name: Check priority PR closed
         id: save-cache
         timeout-minutes: 5
@@ -47,7 +47,7 @@ jobs:
             exit 0
           fi
           python3 -m pip install -U pip setuptools wheel
-          python3 -m pip install oss2
+          python3 -m pip install 'cryptography<2.2' oss2
           python3 tools/package_mirror.py -i $PWD
 
   check_license_and_format:
@@ -158,13 +158,13 @@ jobs:
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
       - name: Wait for GPU slot
-        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@fix-benchmark-typo
+        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@update-open-vino-img
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 120
+        timeout-minutes: 150
         continue-on-error: true
         with:
           token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
-          timeout-minutes: 4
+          timeout-minutes: 5
           max-try-times: 30
 
   find-build-cache:
@@ -182,7 +182,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@update-open-vino-img
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -231,7 +231,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -245,7 +245,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -266,7 +266,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
         name: Build manylinux ${{ matrix.entry }}
         id: build-openvino
         if: ${{ matrix.entry =='openvino' && !matrix.cache-hit }}
@@ -287,7 +287,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
-      - uses: Oneflow-Inc/get-oneflow@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -307,7 +307,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
-      - uses: Oneflow-Inc/get-oneflow@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
         name: Build manylinux ${{ matrix.entry }}
         id: build-xla
         if: ${{ matrix.entry =='cu102_xla' && !matrix.cache-hit }}
@@ -327,7 +327,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.6
-      - uses: Oneflow-Inc/get-oneflow@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm13' && !matrix.cache-hit }}
         with:
@@ -366,7 +366,7 @@ jobs:
             })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@fix-benchmark-typo
+        uses: Oneflow-Inc/get-oneflow/digest/upload@update-open-vino-img
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -377,7 +377,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@fix-benchmark-typo
+        uses: Oneflow-Inc/get-oneflow/digest/upload@update-open-vino-img
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -402,7 +402,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@update-open-vino-img
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -433,7 +433,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@update-open-vino-img
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -465,7 +465,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@update-open-vino-img
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -484,6 +484,7 @@ jobs:
     needs: [wait_for_gpu_slot, find-benchmark-cache]
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    timeout-minutes: 120
     strategy:
       fail-fast: true
       max-parallel: 1
@@ -518,7 +519,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -534,7 +535,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@fix-benchmark-typo
+        uses: Oneflow-Inc/get-oneflow/digest/download@update-open-vino-img
         id: download-digest
         timeout-minutes: 10
         with:
@@ -602,7 +603,7 @@ jobs:
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
-        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@fix-benchmark-typo
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@update-open-vino-img
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -643,6 +644,7 @@ jobs:
     name: Distributed test suite
     needs: [wait_for_gpu_slot, find-test-cache-distributed]
     runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 120
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
@@ -673,7 +675,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -689,7 +691,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@fix-benchmark-typo
+        uses: Oneflow-Inc/get-oneflow/digest/download@update-open-vino-img
         id: download-digest
         timeout-minutes: 10
         with:
@@ -699,7 +701,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Get primary node
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/master-address@fix-benchmark-typo
+        uses: Oneflow-Inc/get-oneflow/master-address@update-open-vino-img
         id: get-primary-node
         with:
           rank: ${{ matrix.rank }}
@@ -813,6 +815,7 @@ jobs:
   test:
     name: Test suite
     needs: [wait_for_gpu_slot, find-test-cache]
+    timeout-minutes: 120
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     strategy:
@@ -859,7 +862,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -875,7 +878,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@fix-benchmark-typo
+        uses: Oneflow-Inc/get-oneflow/digest/download@update-open-vino-img
         id: download-digest
         timeout-minutes: 10
         with:
@@ -959,7 +962,7 @@ jobs:
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
-            sleep 3600
+            sleep 7200
       - name: Exe test
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
         timeout-minutes: 10
@@ -1071,7 +1074,7 @@ jobs:
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Module API test
-        timeout-minutes: 45
+        timeout-minutes: 140
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
@@ -1157,7 +1160,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@update-open-vino-img
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5

@@ -24,13 +24,14 @@ namespace {
 template<typename T, typename G, typename IDX>
 __global__ void SGDUpdateKernel(const int64_t embedding_size, T scale, float l1, float l2,
                                 float weight_decay, const IDX* num_unique_ids,
-                                const float* learning_rate, const T* down_scale_by_ptr,
-                                const int64_t* skip_if, const G* model_diff, const T* model,
-                                T* updated_model) {
+                                const float* learning_rate, const T* scale_by_ptr,
+                                const T* down_scale_by_ptr, const int64_t* skip_if,
+                                const G* model_diff, const T* model, T* updated_model) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * embedding_size;
     CUDA_1D_KERNEL_LOOP(i, n) { updated_model[i] = model[i]; }
   } else {
+    if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
     if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
     float learning_rate_val = *learning_rate;
     const int64_t n = *num_unique_ids * embedding_size;
@@ -55,9 +56,9 @@ template<typename T, typename G, typename IDX>
 __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embedding_size, T scale,
                                      float l1, float l2, float weight_decay, float beta,
                                      const IDX* num_unique_ids, const float* learning_rate,
-                                     const T* down_scale_by_ptr, const int64_t* skip_if,
-                                     const G* model_diff, const T* unique_values,
-                                     T* updated_unique_values) {
+                                     const T* scale_by_ptr, const T* down_scale_by_ptr,
+                                     const int64_t* skip_if, const G* model_diff,
+                                     const T* unique_values, T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
     CUDA_1D_KERNEL_LOOP(i, n) {
@@ -68,6 +69,7 @@ __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embe
       updated_unique_values[momentum_offset] = unique_values[momentum_offset];
     }
   } else {
+    if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
     if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
     float learning_rate_val = *learning_rate;
     const int64_t n = *num_unique_ids * embedding_size;
@@ -99,9 +101,10 @@ __global__ void AdamUpdateKernel(const int32_t line_size, const int32_t embeddin
                                  float l1, float l2, float weight_decay, float beta1, float beta2,
                                  float epsilon, const float* bias_correction1_ptr,
                                  const float* bias_correction2_ptr, const IDX* num_unique_ids,
-                                 const float* learning_rate, const T* down_scale_by_ptr,
-                                 const int64_t* skip_if, const G* model_diff,
-                                 const T* unique_values, T* updated_unique_values) {
+                                 const float* learning_rate, const T* scale_by_ptr,
+                                 const T* down_scale_by_ptr, const int64_t* skip_if,
+                                 const G* model_diff, const T* unique_values,
+                                 T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
     CUDA_1D_KERNEL_LOOP(i, n) {
@@ -114,6 +117,7 @@ __global__ void AdamUpdateKernel(const int32_t line_size, const int32_t embeddin
       updated_unique_values[v_offset] = unique_values[v_offset];
     }
   } else {
+    if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
     if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
     float bias_correction1_val = 1.0;
     float bias_correction2_val = 1.0;
@@ -142,9 +146,9 @@ __global__ void AdagradUpdateKernel(const int64_t line_size, const int64_t embed
                                     float l1, float l2, float weight_decay, float lr_decay,
                                     float epsilon, const IDX* num_unique_ids,
                                     const float* learning_rate, const int64_t* train_step_ptr,
-                                    const T* down_scale_by_ptr, const int64_t* skip_if,
-                                    const G* model_diff, const T* unique_values,
-                                    T* updated_unique_values) {
+                                    const T* scale_by_ptr, const T* down_scale_by_ptr,
+                                    const int64_t* skip_if, const G* model_diff,
+                                    const T* unique_values, T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
     CUDA_1D_KERNEL_LOOP(i, n) {
@@ -156,6 +160,7 @@ __global__ void AdagradUpdateKernel(const int64_t line_size, const int64_t embed
     }
   } else {
     int64_t train_step = *train_step_ptr + 1;
+    if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
     if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
     float learning_rate_val = *learning_rate;
     learning_rate_val = learning_rate_val / (1 + (train_step - 1) * lr_decay);
@@ -169,6 +174,55 @@ __global__ void AdagradUpdateKernel(const int64_t line_size, const int64_t embed
       AdagradUpdateFunctor<T, G>()(model_diff + i, updated_unique_values + model_offset,
                                    updated_unique_values + sum_offset, scale, l1, l2, epsilon,
                                    weight_decay, learning_rate_val);
+    }
+  }
+}
+
+__device__ void GetFtrlOffset(const int32_t line_size, const int32_t embedding_size,
+                              int64_t model_diff_offset, int64_t* model_offset,
+                              int64_t* accumulate_offset, int64_t* z_offset) {
+  const int32_t row = model_diff_offset / embedding_size;
+  const int32_t col = model_diff_offset - row * embedding_size;
+  *model_offset = row * line_size + col;
+  *accumulate_offset = *model_offset + embedding_size;
+  *z_offset = *model_offset + 2 * embedding_size;
+}
+
+template<typename T, typename G, typename IDX>
+__global__ void FtrlUpdateKernel(const int32_t line_size, const int32_t embedding_size, T scale,
+                                 float l1, float l2, float weight_decay, float lr_power,
+                                 float lambda1, float lambda2, float beta,
+                                 const IDX* num_unique_ids, const float* learning_rate,
+                                 const T* down_scale_by_ptr, const int64_t* skip_if,
+                                 const G* model_diff, const T* unique_values,
+                                 T* updated_unique_values) {
+  if (skip_if != nullptr && *skip_if != 0) {
+    const int64_t n = *num_unique_ids * line_size;
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      int64_t model_offset;
+      int64_t accumulate_offset;
+      int64_t z_offset;
+      GetFtrlOffset(line_size, embedding_size, i, &model_offset, &accumulate_offset, &z_offset);
+      updated_unique_values[model_offset] = unique_values[model_offset];
+      updated_unique_values[accumulate_offset] = unique_values[accumulate_offset];
+      updated_unique_values[z_offset] = unique_values[z_offset];
+    }
+  } else {
+    if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
+    float learning_rate_val = *learning_rate;
+    const int64_t n = *num_unique_ids * embedding_size;
+    CUDA_1D_KERNEL_LOOP(i, n) {
+      int64_t model_offset;
+      int64_t accumulate_offset;
+      int64_t z_offset;
+      GetFtrlOffset(line_size, embedding_size, i, &model_offset, &accumulate_offset, &z_offset);
+      updated_unique_values[model_offset] = unique_values[model_offset];
+      updated_unique_values[accumulate_offset] = unique_values[accumulate_offset];
+      updated_unique_values[z_offset] = unique_values[z_offset];
+      FtrlUpdateFunctor<T, G>()(model_diff + i, updated_unique_values + model_offset,
+                                updated_unique_values + accumulate_offset,
+                                updated_unique_values + z_offset, scale, l1, l2, lr_power, lambda1,
+                                lambda2, beta, weight_decay, learning_rate_val);
     }
   }
 }
@@ -200,6 +254,13 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const float* learning_rate_ptr = learning_rate->dptr<float>();
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), unique_embeddings->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     const T* down_scale_by_ptr = nullptr;
     if (ctx->has_input("down_scale_by_tensor", 0)) {
       const user_op::Tensor* down_scale_by_tensor =
@@ -219,7 +280,7 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             embedding_size, scale, l1, l2, weight_decay,
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
+            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
             down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
             updated_unique_embeddings->mut_dptr<T>());
   }
@@ -269,6 +330,13 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const auto beta = ctx->Attr<float>("beta");
     const auto scale = ctx->Attr<double>("scale");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), unique_embeddings->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     const T* down_scale_by_ptr = nullptr;
     if (ctx->has_input("down_scale_by_tensor", 0)) {
       const user_op::Tensor* down_scale_by_tensor =
@@ -290,7 +358,7 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
         <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, scale, l1, l2, weight_decay, beta,
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
+            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
             down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
             updated_unique_embeddings->mut_dptr<T>());
   }
@@ -341,6 +409,13 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
     const auto scale = ctx->Attr<double>("scale");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), unique_embeddings->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     const T* down_scale_by_ptr = nullptr;
     if (ctx->has_input("down_scale_by_tensor", 0)) {
       const user_op::Tensor* down_scale_by_tensor =
@@ -371,7 +446,7 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, beta1, beta2,
             epsilon, bias_correction1_ptr, bias_correction2_ptr,
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
+            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
             down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
             updated_unique_embeddings->mut_dptr<T>());
   }
@@ -419,6 +494,13 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
     const auto lr_decay = ctx->Attr<float>("lr_decay");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto scale = ctx->Attr<double>("scale");
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), unique_embeddings->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
     const T* down_scale_by_ptr = nullptr;
     if (ctx->has_input("down_scale_by_tensor", 0)) {
       const user_op::Tensor* down_scale_by_tensor =
@@ -442,7 +524,7 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, lr_decay,
             epsilon, reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
-            train_step_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
+            train_step_ptr, scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
             unique_embeddings->dptr<T>(), updated_unique_embeddings->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -462,5 +544,80 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ADAGRAD_EMBEDDING_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  IDX_DATA_TYPE_SEQ)
+
+template<typename T, typename G, typename IDX>
+class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
+ public:
+  FtrlEmbeddingUpdateKernel() = default;
+  ~FtrlEmbeddingUpdateKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
+    const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
+    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
+    user_op::Tensor* updated_unique_embeddings =
+        ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
+    CHECK_EQ(unique_embeddings->shape().NumAxes(), 2)
+        << "The NumAxes of unique_embedding should be equal to 2. ";
+    CHECK_EQ(embedding_grad->shape().NumAxes(), 2)
+        << "The NumAxes of embedding_grad should be equal to 2. ";
+    const int64_t num_keys = unique_embeddings->shape().At(0);
+    const int64_t line_size = unique_embeddings->shape().At(1);
+    const int64_t embedding_size = embedding_grad->shape().At(1);
+    CHECK_EQ(line_size, embedding_size * 3)
+        << "The line_size should be equal to 3 x embedding_size. ";
+    const float l1 = 0.0;
+    const float l2 = 0.0;
+    const float weight_decay = ctx->Attr<float>("weight_decay");
+    // TODO(zhengzekang): Undefined behavior for ftrl optimizer with weight_decay in `abs(new_z_val)
+    // < lambda1` condition.
+    CHECK_EQ(weight_decay, static_cast<float>(0.0))
+        << "Currently not support for setting weight decay. ";
+    const float lr_power = ctx->Attr<float>("lr_power");
+    const float lambda1 = ctx->Attr<float>("lambda1");
+    const float lambda2 = ctx->Attr<float>("lambda2");
+    const float beta = ctx->Attr<float>("beta");
+    const double scale = ctx->Attr<double>("scale");
+    const T* down_scale_by_ptr = nullptr;
+    if (ctx->has_input("down_scale_by_tensor", 0)) {
+      const user_op::Tensor* down_scale_by_tensor =
+          ctx->Tensor4ArgNameAndIndex("down_scale_by_tensor", 0);
+      CHECK_EQ(down_scale_by_tensor->data_type(), unique_embeddings->data_type());
+      CHECK_EQ(down_scale_by_tensor->shape().elem_cnt(), 1);
+      down_scale_by_ptr = down_scale_by_tensor->dptr<T>();
+    }
+    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+    const float* learning_rate_ptr = learning_rate->dptr<float>();
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
+    // update kernel
+    FtrlUpdateKernel<T, G, IDX>
+        <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, lr_power,
+            lambda1, lambda2, beta, reinterpret_cast<const IDX*>(num_unique_ids->dptr()),
+            learning_rate_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
+            unique_embeddings->dptr<T>(), updated_unique_embeddings->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+#define REGISTER_CUDA_FTRL_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)      \
+  REGISTER_USER_KERNEL("ftrl_embedding_update")                                                    \
+      .SetCreateFn<                                                                                \
+          FtrlEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair), OF_PP_PAIR_FIRST(g_type_pair), \
+                                    OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                           \
+      .SetIsMatchedHob(                                                                            \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                          \
+          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))      \
+          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))         \
+          && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_FTRL_EMBEDDING_UPDATE_KERNEL, FLOATING_DATA_TYPE_SEQ,
+                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
