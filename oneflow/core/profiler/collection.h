@@ -76,7 +76,7 @@ class KernelEvent final : public IEvent {
 
  private:
   std::vector<Shape> input_shapes_;
-  std::string __FormatShapes();
+  std::string FormatShapes(size_t max_num_to_format = 4);
 };
 
 class EventRecorder;
@@ -97,8 +97,8 @@ class ProfileMgr {
   // To prevent releasing EventRecorders of the same name.
   std::unordered_map<std::string, int64_t> event_recorders_last_id_;
 
-  std::string __GetNextEventRecorderKey(const std::string& name);
-  std::vector<std::shared_ptr<IEvent>> __ExportEvents();
+  std::string GetNextEventRecorderKey(const std::string& name);
+  std::vector<std::shared_ptr<IEvent>> ExportEvents();
 };
 
 class EventRecorder {

@@ -100,12 +100,10 @@ std::string DisableProfilerAndReturnResult() {
   CHECK_JUST(vm::ClusterSync());
 
   auto pmgr = Global<ProfileMgr>::Get();
-  if (pmgr != nullptr) {
-    std::string results = pmgr->DumpResultsJson();
-    Global<ProfileMgr>::Delete();
-    return results;
-  }
-  return "";
+  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
+  std::string results = pmgr->DumpResultsJson();
+  Global<ProfileMgr>::Delete();
+  return results;
 }
 
 Maybe<std::string> StartRecord(const std::string& name) {

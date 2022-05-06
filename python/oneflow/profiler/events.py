@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import json
-from dataclasses import dataclass
+import copy
 from typing import Tuple, Dict
 from collections import OrderedDict
 from prettytable import PrettyTable
@@ -29,19 +29,39 @@ def format_event_type(event_type):
     raise ValueError(f"Undefined event type {event_type}.")
 
 
-@dataclass
 class Event:
-    name: str
-    cpu_time: int
-    cpu_time_total: int
-    count: int
-    input_shapes: str
-    event_type: int
+    def __init__(
+        self,
+        name: str,
+        cpu_time: int,
+        cpu_time_total: int,
+        count: int,
+        input_shapes: str,
+        event_type: int,
+    ) -> None:
+        self.name = name
+        self.cpu_time = cpu_time
+        self.cpu_time_total = cpu_time_total
+        self.count = count
+        self.input_shapes = input_shapes
+        self.event_type = event_type
 
     def update(self, event):
         self.cpu_time_total += event.cpu_time
         self.count += 1
         self.cpu_time = self.cpu_time_total / self.count
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.cpu_time == other.cpu_time
+            and self.cpu_time_total == other.cpu_time_total
+            and self.count == other.count
+            and self.input_shapes == other.input_shapes
+            and self.event_type == other.event_type
+        )
 
     @classmethod
     def from_dict(cls, d: dict):
@@ -68,14 +88,14 @@ class Events(list):
         stats: Dict[Tuple[str, ...], Event] = OrderedDict()
 
         def get_key(event: Event) -> Tuple[str, ...]:
-            return tuple([event.name, event.input_shapes])
+            return event.name, event.input_shapes
 
         for event in self:
             key = get_key(event=event)
             if key in stats:
                 stats[key].update(event)
             else:
-                stats[key] = event
+                stats[key] = copy.deepcopy(event)
         results = Events()
         results.extend(stats.values())
         return results
