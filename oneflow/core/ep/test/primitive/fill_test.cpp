@@ -37,8 +37,8 @@ namespace test {
 
 namespace {
 
-template<DataType data_type, typename T, size_t n>
-void TestFill(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types) {
+template<DataType data_type, typename T>
+void TestFill(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types, size_t n) {
   const size_t vector_size = n * sizeof(T);
   for (const auto& device_type : device_types) {
 #ifdef WITH_CUDA
@@ -73,21 +73,21 @@ void TestFill(DeviceManagerRegistry* registry, const std::set<DeviceType>& devic
 }  // namespace
 
 TEST_F(PrimitiveTest, TestFill) {
-  TestFill<DataType::kChar, char, 1024>(&device_manager_registry_, available_device_types_);
-  TestFill<DataType::kDouble, double, 1024>(&device_manager_registry_, available_device_types_);
-  TestFill<DataType::kFloat, float, 1024>(&device_manager_registry_, available_device_types_);
-  TestFill<DataType::kInt8, int8_t, 1024>(&device_manager_registry_, available_device_types_);
-  TestFill<DataType::kInt32, int32_t, 1024>(&device_manager_registry_, available_device_types_);
-  TestFill<DataType::kInt64, int64_t, 1024>(&device_manager_registry_, available_device_types_);
-  TestFill<DataType::kUInt8, uint8_t, 1024>(&device_manager_registry_, available_device_types_);
-  TestFill<DataType::kFloat16, half, 1024>(&device_manager_registry_, available_device_types_);
+  TestFill<DataType::kChar, char>(&device_manager_registry_, available_device_types_， 1024);
+  TestFill<DataType::kDouble, double>(&device_manager_registry_, available_device_types_, 1024);
+  TestFill<DataType::kFloat, float>(&device_manager_registry_, available_device_types_, 1024);
+  TestFill<DataType::kInt8, int8_t>(&device_manager_registry_, available_device_types_, 1024);
+  TestFill<DataType::kInt32, int32_t>(&device_manager_registry_, available_device_types_, 1024);
+  TestFill<DataType::kInt64, int64_t>(&device_manager_registry_, available_device_types_, 1024);
+  TestFill<DataType::kUInt8, uint8_t>(&device_manager_registry_, available_device_types_, 1024);
+  TestFill<DataType::kFloat16, half>(&device_manager_registry_, available_device_types_, 1024);
 #ifdef WITH_CUDA
 #if CUDA_VERSION >= 11000
-  TestFill<DataType::kBFloat16, nv_bfloat16, 1024>(&device_manager_registry_,
-                                                   available_device_types_);
+  TestFill<DataType::kBFloat16, nv_bfloat16>(&device_manager_registry_,
+                                                   available_device_types_, 1024);
 #endif  // CUDA_VERSION >= 11000
 #endif  // WITH_CUDA
-  TestFill<DataType::kBool, bool, 1024>(&device_manager_registry_, available_device_types_);
+  TestFill<DataType::kBool, bool>(&device_manager_registry_, available_device_types_, 1024);
 }
 
 }  // namespace test
