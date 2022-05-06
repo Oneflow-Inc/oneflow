@@ -42,11 +42,10 @@ add_docstr(
     r"""
     oneflow.add(input, other, *, alpha=1) -> Tensor
     
-    Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
-    The formula is:
+    Adds `other`, scaled by `alpha`, to `input`. Scalar and broadcast promotation are supported.
 
     .. math::
-        out = input + other
+        out = input + alpha \times other
         
     Args:
         input (Union[int, float, oneflow.Tensor]): the input tensor.
@@ -85,6 +84,14 @@ add_docstr(
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
+        
+        # use alpha
+        >>> x = flow.zeros(2, 3)
+        >>> y = flow.ones(2, 3)
+        >>> out = flow.add(x, y, alpha=10)
+        >>> out
+        tensor([[10., 10., 10.],
+                [10., 10., 10.]], dtype=oneflow.float32)
 
     """,
 )
