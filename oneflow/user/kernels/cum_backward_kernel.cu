@@ -79,7 +79,7 @@ __global__ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr,
       const size_t cur_index = space - j - 1;
       const size_t data_offset = cur_index * down_space;
       if (cumsum_zero_number[cur_index] > 0) { continue; }
-      reverse_cumsum += output_ptr_base[data_offset];
+      reverse_cumsum += output_ptr_base[data_offset] * dy_ptr_base[data_offset];
       dx_ptr_base[data_offset] = reverse_cumsum / input_ptr_base[data_offset];
     }
 
