@@ -120,7 +120,7 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices);
 
-Maybe<Tensor> SelectGetItem(const std::shared_ptr<one::Tensor>& input, const TensorIndex& index);
+Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input, const TensorIndex& index);
 
 }  // namespace functional
 }  // namespace one

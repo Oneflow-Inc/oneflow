@@ -1911,15 +1911,13 @@ class SliceView1dContiguousFunctor {
 
 class TensorGetItemFunctor {
  public:
-  TensorGetItemFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
-  }
+  TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
     if (x->is_local() && index.size() == 1 && index.at(0).IsInteger()) {
       // NOTE: speed up in special case, e.g. dataloader(refer to torch)
       // function call chain of pytorch : tensor getitem -> select -> as_strided
       // function call chain of oneflow : tensor getitem -> as_strided
-      return SelectGetItem(x, index);
+      return ApplySelectIndexing(x, index);
     }
 
     std::vector<detail::Slice> slice_indices;
@@ -1981,9 +1979,6 @@ class TensorGetItemFunctor {
     if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
-
- private:
-  std::shared_ptr<OpExpr> op_;
 };
 
 class TensorSetItemFunctor {
