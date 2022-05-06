@@ -137,7 +137,8 @@ add_docstr(
 
 add_docstr(
     oneflow.argmax,
-    r"""The op computes the index with the largest value of a Tensor at specified axis.
+    r"""oneflow.argmax(input, dim, keepdim)
+    The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
         input (oneflow.Tensor): Input Tensor
@@ -167,7 +168,8 @@ add_docstr(
 
 add_docstr(
     oneflow.argmin,
-    r"""The op computes the index with the largest value of a Tensor at specified axis.
+    r"""oneflow.argmin(input, dim, keepdim)
+    The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
         input (oneflow.Tensor): Input Tensor
@@ -197,7 +199,8 @@ add_docstr(
 
 add_docstr(
     oneflow.batch_gather,
-    r"""Gather the element in batch dims. 
+    r"""batch_gather(in, indices)
+    Gather the element in batch dims. 
     
     Args:
         in (Tensor): the input tensor. 

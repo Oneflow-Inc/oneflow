@@ -18,7 +18,9 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow._C.ctc_greedy_decoder,
-    """Performs greedy decoding on the logits given in input (best path).
+    """
+    oneflow._C.ctc_greedy_decoder(log_probs, input_lengths, merge_repeated)
+    Performs greedy decoding on the logits given in input (best path).
 
     Args:
         log_probs(oneflow.Tensor): A Tensor of shape [input_length, batch_size, num_labels]. The logarithmized probabilities of the outputs (e.g. obtained with flow.nn.logsoftmax()).
