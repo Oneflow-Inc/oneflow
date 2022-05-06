@@ -230,6 +230,15 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 
 }  // namespace
 
+Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
+  if (unlikely(pthread_fork::IsForkedSubProcess() || disable_vm_threads_)) {
+    ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
+  } else {
+    pending_notifier_.Notify();
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
   CHECK_OR_RETURN(vm_->SchedulerEmpty()) << "vm scheduler not empty. May be a fatal error occured";
   CHECK_OR_RETURN(vm_->CallbackEmpty())
@@ -361,7 +370,7 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
       *thread_ctx_ptr = thread_ctx.Mutable();
       bc->Decrease();
     });
-    pending_notifier_.Notify();
+    JUST(NotifyOrRunScheduler());
     JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   }
   auto* thread_ctx = *thread_ctx_ptr;
@@ -397,7 +406,7 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
     *stream_ptr = stream.Mutable();
     bc->Decrease();
   });
-  pending_notifier_.Notify();
+  JUST(NotifyOrRunScheduler());
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return *stream_ptr;
 }
