@@ -95,8 +95,6 @@ def _test_embedding_renorm(test_case, device):
         requires_grad=False,
     )
     output = embedding(indices)
-    print(embedding.weight)
-    print(output.data.norm(p=2, dim=2))
     test_case.assertTrue(output.data.norm(p=2, dim=2).le(1).all())
 
 
