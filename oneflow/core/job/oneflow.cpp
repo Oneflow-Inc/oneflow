@@ -1010,8 +1010,8 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     exit(0);
   }
 
-  HashMap<std::string, Blob*> variable_op_name2eager_blob;
-  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob));
+  HashMap<std::string, vm::EagerBlobObject*> variable_op_name2eager_blob_object;
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
