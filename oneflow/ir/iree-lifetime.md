@@ -82,3 +82,4 @@ res50_nn_graph(image_tensor)
 ## Other remaining questions?
 
 - How IREE's asynchronous execution works with oneflow? Are there CUDA stream involved?
+- iree是否可以直接使用外部资源
