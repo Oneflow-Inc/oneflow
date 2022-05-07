@@ -71,6 +71,19 @@ class Interpolate(Module):
             raise ValueError('interpolation "nearest" does not support align_corners.')
 
     def forward(self, x):
+        if len(x.shape) == 3 and self.mode == "bilinear":
+            raise NotImplementedError("Got 3D input, but bilinear mode needs 4D input")
+        if len(x.shape) == 3 and self.mode == "trilinear":
+            raise NotImplementedError("Got 3D input, but trilinear mode needs 5D input")
+        if len(x.shape) == 4 and self.mode == "linear":
+            raise NotImplementedError("Got 4D input, but linear mode needs 3D input")
+        if len(x.shape) == 4 and self.mode == "trilinear":
+            raise NotImplementedError("Got 4D input, but trilinear mode needs 5D input")
+        if len(x.shape) == 5 and self.mode == "linear":
+            raise NotImplementedError("Got 5D input, but linear mode needs 3D input")
+        if len(x.shape) == 5 and self.mode == "bilinear":
+            raise NotImplementedError("Got 5D input, but bilinear mode needs 4D input")
+
         dim = len(x.shape) - 2
         if self.size is not None and self.scale_factor is not None:
             raise ValueError("only one of size or scale_factor should be defined")
@@ -192,6 +205,12 @@ class Interpolate(Module):
                 output_size=output_size,
                 data_format="channels_first",
             )
+        
+        raise NotImplementedError(
+            "Input Error: Only 3D, 4D and 5D input Tensors supported"
+            " (got {}D) for the modes: nearest | linear | bilinear | bicubic | trilinear | area | nearest-exact"
+            " (got {})".format(len(x.shape), self.mode)
+        )
 
 
 def interpolate(
