@@ -23,7 +23,7 @@ namespace oneflow {
 Stride::Stride(const Shape& shape) {
   if (shape.is_initialized() && shape.NumAxes() > 0) {
     stride_vec_.resize(shape.NumAxes());
-    std::exclusive_scan(shape.dim_vec().rbegin(), shape.dim_vec().rend(), stride_vec_.begin(), 1,
+    std::exclusive_scan(shape.dim_vec().rbegin(), shape.dim_vec().rend(), stride_vec_.rbegin(), 1,
                         std::multiplies<>{});
   }
 }
