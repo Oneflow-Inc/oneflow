@@ -68,15 +68,16 @@ class ScalarByTensorKernel final : public user_op::OpKernel, public user_op::Cud
 
 }  // namespace
 
-#define REGISTER_SCALAR_BY_TENSOR_KERNEL(op_name, binary_op)                                    \
-  REGISTER_USER_KERNEL(op_name)                                                                 \
-      .SetCreateFn<ScalarByTensorKernel<binary_op>>()                                           \
-      .SetIsMatchedHob(BroadcastElementwiseBinaryPrimitiveExists<binary_op>())                  \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_SCALAR_BY_TENSOR_KERNEL(op_name, binary_op)                         \
+  REGISTER_USER_KERNEL(op_name)                                                      \
+      .SetCreateFn<ScalarByTensorKernel<binary_op>>()                                \
+      .SetIsMatchedHob(BroadcastElementwiseBinaryPrimitiveExists<binary_op>())       \
+      .SetInplaceProposalFn(                                                         \
+          [](const user_op::InferContext&,                                           \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> { \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));           \
+            return Maybe<void>::Ok();                                                \
+          });
 
 #define SCALAR_BY_TENSOR_SEQ                                                  \
   OF_PP_MAKE_TUPLE_SEQ("scalar_add_by_tensor", ep::primitive::BinaryOp::kAdd) \
