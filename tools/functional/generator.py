@@ -447,10 +447,12 @@ class Generator:
         header_fmt = ""
         for name, blocks in self._blocks.items():
             schema_types = []
+            max_args_count = 0
             for block in blocks:
                 if not block._bind_python:
                     continue
                 signature = block._signature
+                max_args_count = max(max_args_count, signature._max_args_count)
                 schema_types.append(
                     "functional::{0}".format(signature.get_schema_name())
                 )
@@ -520,16 +522,41 @@ class Generator:
                 )
 
             if len(schema_types) > 0:
-                module_fmt += '  m.def("{0}", &functional::PyFunction<{1}>);\n'.format(
-                    name, ", ".join(schema_types)
+                module_fmt += '    {{"{0}", (PyCFunction)functional::{1}, METH_VARARGS | METH_KEYWORDS, NULL}},\n'.format(
+                    name, name
                 )
 
-                header_fmt += "\npy::object {0}(const py::args& args, const py::kwargs& kwargs);\n".format(
+                header_fmt += "\n"
+                header_fmt += "PyObject* {0}(PyObject* self, PyObject* args, PyObject* kwargs);\n".format(
                     name
                 )
-                schema_fmt += "\npy::object {0}(const py::args& args, const py::kwargs& kwargs) {{\n  return functional::PyFunction<{1}>(args, kwargs);\n}}\n".format(
-                    name, ", ".join(schema_types)
+                schema_fmt += "\n"
+                schema_fmt += "PyObject* {0}(PyObject* self, PyObject* args, PyObject* kwargs) {{\n".format(
+                    name
                 )
+                schema_fmt += "  HANDLE_ERRORS\n"
+                schema_fmt += "  PythonFrameGuard pf;\n"
+                schema_fmt += '  static PythonArgParser<{0}> parser("{1}");\n'.format(
+                    ", ".join(schema_types), name
+                )
+                schema_fmt += "  ParsedArgs<{0}> r;\n".format(max_args_count)
+                schema_fmt += "  int idx = parser.Parse(args, kwargs, &r);\n"
+                i = 0
+                for block in blocks:
+                    signature = block._signature
+                    schema_fmt += "  if (idx == {0}) {{\n".format(i)
+                    params = []
+                    for j in range(len(signature._args)):
+                        cpp_type = _std_decay(signature._args[j]._cpp_type)
+                        params.append("r[{0}].As<{1}>()".format(j, cpp_type))
+                    schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(
+                        signature._name, ", ".join(params)
+                    )
+                    schema_fmt += "  }\n"
+                    i += 1
+                schema_fmt += "  Py_RETURN_NONE;\n"
+                schema_fmt += "  END_HANDLE_ERRORS\n"
+                schema_fmt += "}\n"
 
         render_file_if_different(
             target_pybind_header_file, pybind_header_fmt.format(header_fmt)

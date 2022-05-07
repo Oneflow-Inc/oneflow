@@ -125,7 +125,7 @@ class Optimizer(object):
         r"""
         Load the state of the optimizer which is created by `state_dict` function.
 
-        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict
+        It almost copied from: https://pytorch.org/docs/1.10/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict.
         """
 
         # Validate the state_dict
@@ -199,7 +199,7 @@ class Optimizer(object):
           differs between optimizer classes.
         * param_group - a dict containing all parameter groups.
 
-        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.state_dict
+        It almost copied from: https://pytorch.org/docs/1.10/_modules/torch/optim/optimizer.html#Optimizer.state_dict.
         """
 
         # Save order indices instead of Tensors
@@ -291,7 +291,7 @@ class Optimizer(object):
                     if set_to_none:
                         param.grad = None
                     else:
-                        param.grad.zeros_()
+                        param.grad.zero_()
 
     def _parse_input_parameters(self, parameters):
         """

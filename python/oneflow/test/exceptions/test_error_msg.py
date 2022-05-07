@@ -23,14 +23,14 @@ import torch
 @flow.unittest.skip_unless_1n1d()
 class TestErrorMsg(flow.unittest.TestCase):
     def test_torch_error_msg(test_case):
-        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+        with test_case.assertRaises(RuntimeError) as exp:
             F.pad(torch.randn(2, 2))
         test_case.assertTrue("torch.Tensor" in str(exp.exception))
 
     def test_numpy_error_msg(test_case):
         import numpy as np
 
-        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+        with test_case.assertRaises(RuntimeError) as exp:
             F.pad(np.random.randn(2, 2))
         test_case.assertTrue("numpy" in str(exp.exception))
 
