@@ -208,7 +208,7 @@ class Interpolate(Module):
         
         raise NotImplementedError(
             "Input Error: Only 3D, 4D and 5D input Tensors supported"
-            " (got {}D) for the modes: nearest | linear | bilinear | bicubic | trilinear | area | nearest-exact"
+            " (got {}D) for the modes: nearest | linear | bilinear | bicubic | trilinear | area"
             " (got {})".format(len(x.shape), self.mode)
         )
 
