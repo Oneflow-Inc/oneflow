@@ -37,6 +37,10 @@ def _check_sbp(sbp):
 
 
 def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True):
+    # convert None to a tensor with shape 0, in order to input it into flow._C.to_global
+    if input is None:
+        input = flow.tensor(())
+
     assert isinstance(input, Tensor)
     assert input.is_local, "input must be a local tensor"
     if placement is None or sbp is None:
@@ -77,6 +81,10 @@ def global_to_global_op(
 
 
 def _to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
+    # specific operation for None
+    if input_tensor is None:
+        return local_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
+    
     if input_tensor.is_global:
         return global_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
     else:
@@ -131,7 +139,7 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         True
         True
     """
-    if isinstance(input, Tensor):
+    if isinstance(input, Tensor) or input is None:
         return _to_global_tensor(input, placement, sbp, **kwargs)
     else:
         input_tree = IONode(value=input)
