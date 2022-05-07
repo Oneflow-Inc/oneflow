@@ -29,7 +29,7 @@ class Res50(flow.nn.Graph):
         ...
 
 res50_nn_graph = ReluGraph()
-compiled_res50(image_tensor)
+res50_nn_graph(image_tensor)
 ```
 
 - this could introduce big change to `nn.graph`. We need to refactor `nn.graph` to become multi-backend, a default-backend, iree-backend, xrt-backend, etc.
