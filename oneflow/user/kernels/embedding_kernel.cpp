@@ -112,7 +112,7 @@ class CpuEmbeddingGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_EMBEDDING_KERNEL(in_type, indices_type)                                      \
+#define REGISTER_CPU_EMBEDDING_KERNEL(in_type, indices_type)                                     \
   REGISTER_USER_KERNEL("embedding_renorm")                                                       \
       .SetCreateFn<                                                                              \
           CpuEmbeddingRenormKernel<OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
