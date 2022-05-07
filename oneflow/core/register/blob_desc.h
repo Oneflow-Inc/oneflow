@@ -86,7 +86,6 @@ class BlobDesc final {
   }
   DataType data_type_;
   bool is_dynamic_;
-  bool is_contiguous_;
 };
 
 bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs);
