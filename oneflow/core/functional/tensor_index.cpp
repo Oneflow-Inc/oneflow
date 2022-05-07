@@ -362,18 +362,16 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
   const int32_t index = index_item.integer();
   const int32_t ndim = input->ndim();
   CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
-  int32_t pos_dim = 0;
+  const int32_t pos_dim = 0;
   auto size = input->dim(pos_dim);
   CHECK_OR_RETURN((index >= -size) && (index < size))
       << "Index out of range (expected to be in range of [" << -size << "," << size - 1
       << "], but got " << index << ")";
   int32_t pos_index = index >= 0 ? index : index + size;
-  std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+  std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1, input->shape()->dim_vec().end());
   const auto& stride = JUST(input->stride())->StrideVec();
-  std::vector<int32_t> strides(stride.begin(), stride.end());
-  auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
-  sizes.erase(sizes.begin() + pos_dim);
-  strides.erase(strides.begin() + pos_dim);
+  const int32_t storage_offset = JUST(input->storage_offset()) + pos_index * stride[pos_dim];
+  std::vector<int32_t> strides(stride.begin() + 1, stride.end());
 
   if (view::IsViewApplicable(input)) {
     return view::AsStrided(input, sizes, strides, storage_offset);
