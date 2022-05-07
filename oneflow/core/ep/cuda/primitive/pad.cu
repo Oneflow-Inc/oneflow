@@ -54,8 +54,6 @@ __global__ void PadKernel(PadParams<num_dims, IndexType> params, T pad_value) {
   LoadStoreType* dst = reinterpret_cast<LoadStoreType*>(params.dst);
   IndexType src_index[num_dims];
   IndexType dst_index[num_dims];
-  // for (IndexType linear_index = global_thread_id * pack_size; linear_index < params.elem_cnt;
-  //      linear_index += gridDim.x * blockDim.x * pack_size) {
   for (IndexType linear_index = global_thread_id; linear_index < params.elem_cnt;
     linear_index += gridDim.x * blockDim.x) {
     params.dst_index_helper.OffsetToNdIndex(linear_index, dst_index);
@@ -114,10 +112,16 @@ size_t GetLaunchPackSize(size_t elem_size, size_t num_dims, void* dst, const int
   auto src_ptr = reinterpret_cast<std::uintptr_t>(src);
   auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
   for (size_t size = max_pack_size; size > 1; size /= 2) {
-    if (last_dst_dim_size % size == 0 && last_src_dim_size % size == 0
-        && last_padding_before_size % size == 0 && last_padding_after_size % size == 0 
-        && src_ptr % size == 0 && dst_ptr % size == 0) {
-      return size;
+    if(last_padding_before_size == 0 && last_padding_after_size == 0){
+      if (last_src_dim_size % size == 0 && src_ptr % size == 0 && dst_ptr % size == 0) {
+        return size;
+      }
+    } else {
+      if (last_dst_dim_size % size == 0 && last_src_dim_size % size == 0
+          && last_padding_before_size % size == 0 && last_padding_after_size % size == 0 
+          && src_ptr % size == 0 && dst_ptr % size == 0) {
+        return size;
+      }
     }
   }
   return 1;
@@ -184,6 +188,33 @@ template<typename T>
 constexpr int32_t GetMaxPackSize(){
   return Min(128 / sizeof(T), 8); 
 }
+
+// void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims, 
+//   const int64_t* src_dims, const int64_t* padding_before, const int64_t* padding_after,
+//   size_t* simplified_num_dims, 
+//   int64_t* simplified_dst_dims, int64_t* simplified_src_dims,
+//   int64_t* simplified_padding_before, int64_t* simplified_padding_after) {
+//   CHECK_NE(num_dims, 0);
+//   size_t valid_num_dims = 0;
+//   FOR_RANGE(size_t, i, 0, num_dims) {
+//   if ((i != 0) && (dst_dims[i] == src_dims[i]) && (dst_dims[i] == extent[i]) && (src_pos[i] == 0)
+//   && (dst_pos[i] == 0)) {
+//     simplified_dst_dims[valid_num_dims - 1] *= extent[i];
+//     simplified_dst_pos[valid_num_dims - 1] *= extent[i];
+//     simplified_src_dims[valid_num_dims - 1] *= extent[i];
+//     simplified_src_pos[valid_num_dims - 1] *= extent[i];
+//     simplified_extent[valid_num_dims - 1] *= extent[i];
+//   } else {
+//     simplified_dst_dims[valid_num_dims] = dst_dims[i];
+//     simplified_dst_pos[valid_num_dims] = dst_pos[i];
+//     simplified_src_dims[valid_num_dims] = src_dims[i];
+//     simplified_src_pos[valid_num_dims] = src_pos[i];
+//     simplified_extent[valid_num_dims] = extent[i];
+//     valid_num_dims += 1;
+//     }
+//   }
+//   *simplified_num_dims = valid_num_dims;
+// }
 
 template<size_t num_dims, typename T>
 void DispatchPackSize(Stream* stream, void* dst, const int64_t* dst_dims,
