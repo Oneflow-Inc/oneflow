@@ -360,11 +360,13 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
                                   const TensorIndex& tensor_index) {
   const int32_t index = tensor_index[0].integer();
   const int32_t ndim = input->ndim();
-  CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError << "select() cannot be applied to a 0-dim tensor.";
+  CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError
+                            << "select() cannot be applied to a 0-dim tensor.";
   const int32_t pos_dim = 0;
   auto size = input->dim(pos_dim);
-  CHECK_OR_RETURN(index >= -size && index < size) << Error::IndexError() << "Index out of range (expected to be in range of [" << -size << "," << size - 1
-      << "], but got " << index << ")";
+  CHECK_OR_RETURN(index >= -size && index < size)
+      << Error::IndexError() << "Index out of range (expected to be in range of [" << -size << ","
+      << size - 1 << "], but got " << index << ")";
   int32_t pos_index = index >= 0 ? index : index + size;
   std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1,
                              input->shape()->dim_vec().end());
