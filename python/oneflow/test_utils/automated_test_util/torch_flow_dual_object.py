@@ -1065,7 +1065,8 @@ def autotest(
                                             np_arr,
                                             dtype=x.oneflow.dtype,
                                             placement=x.oneflow.placement,
-                                            sbp=len(x.oneflow.sbp) * [flow.sbp.broadcast],
+                                            sbp=len(x.oneflow.sbp)
+                                            * [flow.sbp.broadcast],
                                         )
                                     else:
                                         flow_tensor = flow.tensor(
