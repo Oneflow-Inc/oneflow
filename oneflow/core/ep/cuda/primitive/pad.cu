@@ -172,10 +172,11 @@ void DispatchIndexType(Stream* stream, void* dst, const int64_t* dst_dims, const
 }
 
 constexpr int32_t Min(int32_t a, int32_t b) { return a < b ? a : b; }
+constexpr int32_t kMaxPackBytes = 128 / 8;
 
 template<typename T>
 constexpr int32_t GetMaxPackSize(){
-  return Min(128 / sizeof(T), 8); 
+  return Min(kMaxPackBytes / sizeof(T), 8); 
 }
 
 void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims, 
