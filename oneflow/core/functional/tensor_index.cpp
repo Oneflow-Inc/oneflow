@@ -360,7 +360,7 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
                                   const TensorIndex& tensor_index) {
   const int32_t index = tensor_index[0].integer();
   const int32_t ndim = input->ndim();
-  CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError
+  CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError()
                             << "select() cannot be applied to a 0-dim tensor.";
   const int32_t pos_dim = 0;
   auto size = input->dim(pos_dim);
