@@ -258,7 +258,7 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
 
     const float height_scale = out_height * 1.0 / in_height;
     const float width_scale = out_width * 1.0 / in_width;
-    
+
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),

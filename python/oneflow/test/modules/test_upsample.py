@@ -419,7 +419,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         m = torch.nn.Upsample(size=(13), mode="nearest")
         y = m(x)
         return y
-    
+
     @autotest(n=5, atol=1e-5)
     def test_upsample2d_nearest_output_size(test_case):
         device = random_device()
@@ -427,6 +427,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         m = torch.nn.Upsample(size=(38, 30), mode="nearest")
         y = m(x)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
