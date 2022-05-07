@@ -49,11 +49,16 @@ class AddFunctor {
       return Error::RuntimeError()
              << "For integral input tensors, argument alpha must not be a floating point number.";
     }
+    CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()))
+        << Error::RuntimeError()
+        << "Expected all tensors to be on the same device, but found at least two devices, "
+        << JUST(input->device())->ToString() << " and " << JUST(other->device())->ToString() << "!";
+
     bool input_static_zeros = IsStaticZerosTensor(input);
     if (input_static_zeros || IsStaticZerosTensor(other)) {
-      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
-      CHECK_OR_RETURN(*input->shape() == *other->shape());
-      CHECK_OR_RETURN(input->dtype() == other->dtype());
+      CHECK_OR_RETURN(*input->shape() == *other->shape())
+          << "The size of tensor a " << input->shape()->ToString()
+          << " must match the size of tensor b " << other->shape();
       if (input_static_zeros) {
         if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
             || (alpha.IsFloatingPoint()
@@ -94,6 +99,7 @@ class AddFunctor {
       JUST(CheckShapeCanExpandTo(*other_cast->shape(), *input_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = input_cast;
+      std::cout << "enter here" << std::endl;
       JUST(OpInterpUtil::Dispatch(*op, input_vec, outputs.get()));
       return outputs->at(0);
     }

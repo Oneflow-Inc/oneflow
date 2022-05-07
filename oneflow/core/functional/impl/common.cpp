@@ -66,7 +66,7 @@ Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
 Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
                                   const std::shared_ptr<Tensor>& x_cast) {
   CHECK_OR_RETURN(*x->dtype() == *x_cast->dtype())
-      << "RuntimeError: result type " << x_cast->dtype()->name()
+      << Error::RuntimeError() << "result type " << x_cast->dtype()->name()
       << " can't be cast to the desired output type " << x->dtype()->name();
   return Maybe<void>::Ok();
 }
@@ -90,7 +90,8 @@ bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
 
 Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
   CHECK_OR_RETURN(IsShapeCanExpandTo(shape, expand_shape))
-      << "Can not expand shape " << shape.ToString() << " to " << expand_shape.ToString();
+      << Error::RuntimeError() << "Can not expand shape " << shape.ToString() << " to "
+      << expand_shape.ToString();
   return Maybe<void>::Ok();
 }
 
