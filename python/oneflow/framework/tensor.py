@@ -231,16 +231,16 @@ def _rmul(self, other):
     return self.mul(other)
 
 
-def _add(self, other):
-    return flow._C.add(self, other)
+def _add(self, other, *, alpha=1):
+    return flow._C.add(self, other, alpha=alpha)
 
 
 def _addmm(self, mat1, mat2, alpha=1, beta=1):
     return flow.addmm(self, mat1, mat2, alpha, beta)
 
 
-def _add_inplace(self, other):
-    return flow._C.add(self, other, inplace=True)
+def _add_inplace(self, other, *, alpha=1):
+    return flow._C.add(self, other, alpha=alpha, inplace=True)
 
 
 def _iadd(self, other):
@@ -713,11 +713,11 @@ def _unbind(self, dim=0):
     return flow._C.unbind(self, dim)
 
 
-def _all(self, dim=None, keepdim=False):
+def _all(self, dim=[], keepdim=False):
     return flow.all(self, dim, keepdim)
 
 
-def _any(self, dim=None, keepdim=False):
+def _any(self, dim=[], keepdim=False):
     return flow.any(self, dim, keepdim)
 
 
@@ -998,15 +998,15 @@ def _median(self, *args, **kwargs):
     return flow.median(self, *args, **kwargs)
 
 
-def _sum(self, dim=None, keepdim=False):
+def _sum(self, dim=[], keepdim=False):
     return flow.sum(self, dim, keepdim)
 
 
-def _mean(self, dim=None, keepdim=False):
+def _mean(self, dim=[], keepdim=False):
     return flow.mean(self, dim, keepdim)
 
 
-def _prod(self, dim=None, keepdim=False):
+def _prod(self, dim=[], keepdim=False):
     return flow.prod(self, dim, keepdim)
 
 
