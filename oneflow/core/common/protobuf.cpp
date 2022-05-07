@@ -133,7 +133,6 @@ PbMessage* MutableMessageInPbMessage(PbMessage* msg, int field_index) {
   }
 
 DEFINE_MESSAGE_VAL_GETTER_AND_SETTER(ShapeProto);
-DEFINE_MESSAGE_VAL_GETTER_AND_SETTER(Int64ListProto);
 
 #define DEFINE_ENUM_VAL_GETTER_AND_SETTER(enum_type)         \
   DECLARE_GETTER_FUNC_HEADER(enum_type) {                    \
