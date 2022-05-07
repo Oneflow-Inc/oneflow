@@ -1051,7 +1051,7 @@ def autotest(
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
-                                if check_grad_use_random_data and True:
+                                if check_grad_use_random_data:
                                     np_arr = rng.uniform(
                                         low=0, high=1, size=list(x.pytorch.shape)
                                     )
@@ -1065,7 +1065,8 @@ def autotest(
                                             np_arr,
                                             dtype=x.oneflow.dtype,
                                             placement=x.oneflow.placement,
-                                            sbp=len(x.oneflow.sbp) * [flow.sbp.broadcast],
+                                            sbp=len(x.oneflow.sbp)
+                                            * [flow.sbp.broadcast],
                                         )
                                     else:
                                         flow_tensor = flow.tensor(
