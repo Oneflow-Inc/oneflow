@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, typename index_T>
+template<typename T, typename IndexType>
 class GpuEmbeddingRenormKernel final : public user_op::OpKernel {
  public:
   GpuEmbeddingRenormKernel() = default;
@@ -42,20 +42,20 @@ class GpuEmbeddingRenormKernel final : public user_op::OpKernel {
     const int32_t emb_size = in_shape.At(0);
     const int32_t emb_dim = in_shape.At(1);
     const T* in_buf = in->dptr<T>();
-    const index_T* indices_buf = indices->dptr<index_T>();
+    const IndexType* indices_buf = indices->dptr<IndexType>();
     T* out_buf = out->mut_dptr<T>();
     const int32_t num_indices = indices->shape().elem_cnt();
     int32_t* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<int32_t>();
     Memset<DeviceType::kCUDA>(ctx->stream(), tmp_buf, 0,
                               GetCudaAlignedSize(sizeof(int32_t) * emb_size));
-    EmbeddingReNormFunctor<DeviceType::kCUDA, T, index_T>()(
+    EmbeddingReNormFunctor<DeviceType::kCUDA, T, IndexType>()(
         ctx->stream(), in_buf, indices_buf, out_buf, max_norm, norm_type, num_indices, emb_size,
         emb_dim, tmp_buf);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T, typename index_T>
+template<typename T, typename IndexType>
 class GpuEmbeddingKernel final : public user_op::OpKernel {
  public:
   GpuEmbeddingKernel() = default;
@@ -75,17 +75,17 @@ class GpuEmbeddingKernel final : public user_op::OpKernel {
     const int32_t emb_size = weight->shape().At(0);
     const int32_t emb_dim = out_shape.At(out_shape.NumAxes() - 1);
     const T* weight_buf = weight->dptr<T>();
-    const index_T* indices_buf = indices->dptr<index_T>();
+    const IndexType* indices_buf = indices->dptr<IndexType>();
     T* out_buf = out->mut_dptr<T>();
 
-    EmbeddingFunctor<DeviceType::kCUDA, T, index_T>()(ctx->stream(), weight_buf, indices_buf,
-                                                      out_buf, padding_idx, scale_grad_by_freq,
-                                                      num_indices, emb_size, emb_dim);
+    EmbeddingFunctor<DeviceType::kCUDA, T, IndexType>()(ctx->stream(), weight_buf, indices_buf,
+                                                        out_buf, padding_idx, scale_grad_by_freq,
+                                                        num_indices, emb_size, emb_dim);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T, typename index_T>
+template<typename T, typename IndexType>
 class GpuEmbeddingGradKernel final : public user_op::OpKernel {
  public:
   GpuEmbeddingGradKernel() = default;
@@ -107,15 +107,15 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
     const int32_t emb_dim = dy_shape.At(dy_shape.NumAxes() - 1);
 
     const T* dy_buf = dy->dptr<T>();
-    const index_T* indices_buf = indices->dptr<index_T>();
+    const IndexType* indices_buf = indices->dptr<IndexType>();
     T* dx_buf = dx->mut_dptr<T>();
     int32_t* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<int32_t>();
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_buf, 0, dx->shape().Count(0) * sizeof(T));
     Memset<DeviceType::kCUDA>(ctx->stream(), tmp_buf, 0,
                               GetCudaAlignedSize(sizeof(int32_t) * emb_size));
-    EmbeddingGradFunctor<DeviceType::kCUDA, T, index_T>()(ctx->stream(), dy_buf, indices_buf,
-                                                          dx_buf, padding_idx, scale_grad_by_freq,
-                                                          num_indices, emb_size, emb_dim, tmp_buf);
+    EmbeddingGradFunctor<DeviceType::kCUDA, T, IndexType>()(
+        ctx->stream(), dy_buf, indices_buf, dx_buf, padding_idx, scale_grad_by_freq, num_indices,
+        emb_size, emb_dim, tmp_buf);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

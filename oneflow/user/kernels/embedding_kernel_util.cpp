@@ -18,12 +18,12 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, typename index_T>
-struct EmbeddingReNormFunctor<DeviceType::kCPU, T, index_T> final {
-  void operator()(ep::Stream* stream, const T* in_buf, const index_T* indices_buf, T* out_buf,
+template<typename T, typename IndexType>
+struct EmbeddingReNormFunctor<DeviceType::kCPU, T, IndexType> final {
+  void operator()(ep::Stream* stream, const T* in_buf, const IndexType* indices_buf, T* out_buf,
                   const double max_norm, const double norm_type, const int32_t num_indices,
                   const int32_t emb_size, const int32_t emb_dim, int32_t* tmp_buf) {
-    auto sorted_indices = std::vector<index_T>(indices_buf, indices_buf + num_indices);
+    auto sorted_indices = std::vector<IndexType>(indices_buf, indices_buf + num_indices);
     std::sort(sorted_indices.begin(), sorted_indices.end());
 
     for (auto i = 0; i < num_indices; i++) {
@@ -44,13 +44,13 @@ struct EmbeddingReNormFunctor<DeviceType::kCPU, T, index_T> final {
   }
 };
 
-template<typename T, typename index_T>
-struct EmbeddingFunctor<DeviceType::kCPU, T, index_T> final {
-  void operator()(ep::Stream* stream, const T* weight_buf, const index_T* indices_buf, T* out_buf,
+template<typename T, typename IndexType>
+struct EmbeddingFunctor<DeviceType::kCPU, T, IndexType> final {
+  void operator()(ep::Stream* stream, const T* weight_buf, const IndexType* indices_buf, T* out_buf,
                   const int32_t padding_idx, const bool scale_grad_by_freq,
                   const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim) {
     for (int32_t i = 0; i < num_indices; i++) {
-      index_T indice = indices_buf[i];
+      IndexType indice = indices_buf[i];
       CHECK(indice >= 0 && indice < emb_size);
       const T* from = weight_buf + indice * emb_dim;
       T* to = out_buf + i * emb_dim;
@@ -59,9 +59,9 @@ struct EmbeddingFunctor<DeviceType::kCPU, T, index_T> final {
   }
 };
 
-template<typename T, typename index_T>
-struct EmbeddingGradFunctor<DeviceType::kCPU, T, index_T> final {
-  void operator()(ep::Stream* stream, const T* dy_buf, const index_T* indices_buf, T* dx_buf,
+template<typename T, typename IndexType>
+struct EmbeddingGradFunctor<DeviceType::kCPU, T, IndexType> final {
+  void operator()(ep::Stream* stream, const T* dy_buf, const IndexType* indices_buf, T* dx_buf,
                   const int32_t padding_idx, const bool scale_grad_by_freq,
                   const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim,
                   int32_t* tmp_buf) {
@@ -75,7 +75,7 @@ struct EmbeddingGradFunctor<DeviceType::kCPU, T, index_T> final {
     }
 
     if (scale_grad_by_freq) {
-      std::vector<index_T> indice_freq(emb_size, 0);
+      std::vector<IndexType> indice_freq(emb_size, 0);
       for (int32_t i = 0; i < num_indices; i++) { indice_freq[indices_buf[i]]++; }
 
       for (int32_t i = 0; i < emb_size; i++) {

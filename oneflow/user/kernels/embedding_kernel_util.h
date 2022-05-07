@@ -21,23 +21,23 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, typename index_T>
+template<DeviceType device_type, typename T, typename IndexType>
 struct EmbeddingReNormFunctor final {
-  void operator()(ep::Stream* stream, const T* in_buf, const index_T* indices_buf, T* out_buf,
+  void operator()(ep::Stream* stream, const T* in_buf, const IndexType* indices_buf, T* out_buf,
                   const double max_norm, const double norm_type, const int32_t num_indices,
                   const int32_t emb_size, const int32_t emb_dim, int32_t* tmp_buf);
 };
 
-template<DeviceType device_type, typename T, typename index_T>
+template<DeviceType device_type, typename T, typename IndexType>
 struct EmbeddingFunctor final {
-  void operator()(ep::Stream* stream, const T* weight_buf, const index_T* indices_buf, T* out_buf,
+  void operator()(ep::Stream* stream, const T* weight_buf, const IndexType* indices_buf, T* out_buf,
                   const int32_t padding_idx, const bool scale_grad_by_freq,
                   const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim);
 };
 
-template<DeviceType device_type, typename T, typename index_T>
+template<DeviceType device_type, typename T, typename IndexType>
 struct EmbeddingGradFunctor final {
-  void operator()(ep::Stream* stream, const T* dy_buf, const index_T* indices_buf, T* dx_buf,
+  void operator()(ep::Stream* stream, const T* dy_buf, const IndexType* indices_buf, T* dx_buf,
                   const int32_t padding_idx, const bool scale_grad_by_freq,
                   const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim,
                   int32_t* tmp_buf);
