@@ -28,6 +28,7 @@ namespace oneflow {
 class ShapeView;
 
 namespace cfg {
+// TODO: use Int64ListProto replace ShapeProto
 class ShapeProto;
 }
 
