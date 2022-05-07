@@ -101,6 +101,7 @@ bool IsTaskNodeProducedRegstHasMultiRegstNum(const TaskNode* node) {
 }
 
 bool CanBeMergedInChain(const TaskNode* node) {
+  if (!node) return false;  // for clang-tidy
   // NOTE(chengcheng): GradAcc NOT change time shape, and can be handled as NormalForward.
   if (dynamic_cast<const GradAccCompTaskNode*>(node)) { return true; }
   // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.

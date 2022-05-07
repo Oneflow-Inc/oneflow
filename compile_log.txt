@@ -1,0 +1,1048 @@
+[1/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/third_party_install/libjpeg-turbo/include
+[2/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/third_party_install/half/include
+[3/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/third_party_install/cocoapi/lib
+[4/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/third_party_install/cocoapi/include
+[5/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/third_party_install/lz4/include
+[6/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/third_party_install/lz4/lib
+[7/1524] Performing update step for 'flatbuffers'
+[8/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/of_git_version
+[9/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/of_proto_python
+[10/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E make_directory /home/chengcheng/oneflow/build/third_party_install/libjpeg-turbo/lib
+[11/1524] Running utility command for libjpeg_copy_headers_to_destination
+[12/1524] Running utility command for half_copy_headers_to_destination
+[13/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E copy_if_different /home/chengcheng/oneflow/build/cocoapi/src/cocoapi/libcocoapi_static.a /home/chengcheng/oneflow/build/third_party_install/cocoapi/lib
+[14/1524] Running utility command for cocoapi_copy_headers_to_destination
+[15/1524] Running utility command for lz4_copy_headers_to_destination
+[16/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E copy_if_different /home/chengcheng/oneflow/build/lz4/src/lz4/lib/liblz4.a /home/chengcheng/oneflow/build/third_party_install/lz4/lib
+[17/1524] No patch step for 'flatbuffers'
+[18/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E copy_if_different /home/chengcheng/oneflow/build/libjpeg-turbo/src/libjpeg-turbo/libturbojpeg.a /home/chengcheng/oneflow/build/third_party_install/libjpeg-turbo/lib
+[19/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -DCMAKE_INSTALL_COMPONENT=libpng_headers -DCMAKE_INSTALL_PREFIX="/home/chengcheng/oneflow/build/third_party_install/libpng" -DCMAKE_INSTALL_MESSAGE=LAZY -P /home/chengcheng/oneflow/build/cmake_install.cmake
+-- Install configuration: "RelWithDebInfo"
+[20/1524] cd /home/chengcheng/oneflow/build && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E touch /home/chengcheng/oneflow/build/of_proto_python/oneflow/core/__init__.py && /usr/local/cmake-3.21.3-linux-x86_64/bin/cmake -E create_symlink /home/chengcheng/oneflow/build/of_proto_python/oneflow/core /home/chengcheng/oneflow/python/oneflow/core && /usr/bin/python3 /home/chengcheng/oneflow/tools/generate_pip_version.py --cuda=11.2.67 --src=/home/chengcheng/oneflow --out=/home/chengcheng/oneflow/python/oneflow/version.py
+-- Generating pip version: 0.8.0+cu112.git.8e6e752abe, writing to: /home/chengcheng/oneflow/python/oneflow/version.py
+[21/1524] Generating of_git_version/_version.cpp
+[22/1524] Performing configure step for 'flatbuffers'
+fatal: No annotated tags can describe '8e6e752abe68f7a69714a0af812ee54a9327cfe5'.
+However, there were unannotated tags: try --tags.
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/chengcheng/oneflow/build/flatbuffers/src/flatbuffers
+[23/1524] Performing build step for 'flatbuffers'
+ninja: no work to do.
+[24/1524] Performing install step for 'flatbuffers'
+[0/1] Install the project...
+-- Install configuration: "RelWithDebInfo"
+[25/1524] Completed 'flatbuffers'
+[26/1524] cd /home/chengcheng/oneflow/build && /usr/bin/python3 /home/chengcheng/oneflow/ci/check/run_license_format.py -i /home/chengcheng/oneflow/oneflow --fix && /usr/bin/python3 /home/chengcheng/oneflow/ci/check/run_license_format.py -i /home/chengcheng/oneflow/python --fix --exclude="oneflow/include" --exclude="oneflow/core" && /usr/bin/python3 /home/chengcheng/oneflow/ci/check/run_clang_format.py --source_dir /home/chengcheng/oneflow/oneflow --fix --quiet && /usr/bin/python3 /home/chengcheng/oneflow/ci/check/run_py_format.py --source_dir /home/chengcheng/oneflow/python --fix && /usr/bin/python3 /home/chengcheng/oneflow/ci/check/run_clang_format.py --source_dir /home/chengcheng/oneflow/tools/oneflow-tblgen --fix --quiet
+[files] 2515
+[files] 797
+clang-format version 10.0.0-4ubuntu1 
+
+clang-format version 11.0.0
+
+2497 files checked
+All done! ✨ 🍰 ✨
+798 files left unchanged.
+clang-format version 10.0.0-4ubuntu1 
+
+clang-format version 11.0.0
+
+3 files checked
+[27/1524] cd /home/chengcheng/oneflow/build && /usr/bin/python3 /home/chengcheng/oneflow/ci/check/run_clang_tidy.py --build_dir /home/chengcheng/oneflow/build
+FAILED: CMakeFiles/of_tidy /home/chengcheng/oneflow/build/CMakeFiles/of_tidy 
+cd /home/chengcheng/oneflow/build && /usr/bin/python3 /home/chengcheng/oneflow/ci/check/run_clang_tidy.py --build_dir /home/chengcheng/oneflow/build
+ warning: file `oneflow/core/common/shape.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/common/shape.cpp` instead
+ warning: file `oneflow/core/eager/blob_instruction_type.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/eager/blob_instruction_type.cpp` instead
+ warning: file `oneflow/core/eager/blob_object.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/eager/blob_object.cpp` instead
+ warning: file `oneflow/core/eager/eager_blob_object.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/eager/eager_blob_object.cpp` instead
+ warning: file `oneflow/core/eager/lazy_ref_blob_object.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/core/framework/instructions_builder.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/framework/instructions_builder.cpp` instead
+ warning: file `oneflow/core/framework/nn_graph.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/framework/nn_graph.cpp` instead
+ warning: file `oneflow/core/framework/op_kernel.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/framework/op_kernel.cpp` instead
+ warning: file `oneflow/core/framework/tensor.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/framework/tensor.cpp` instead
+ warning: file `oneflow/core/framework/tensor_impl.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/framework/tensor_impl.cpp` instead
+ warning: file `oneflow/core/framework/user_op_tensor.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/core/functional/impl/common.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/functional/impl/common.cpp` instead
+ warning: file `oneflow/core/graph/compute_task_node.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/graph/compute_task_node.cpp` instead
+ warning: file `oneflow/core/graph/grad_acc_compute_task_node.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/core/graph/task_node.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/graph/task_node.cpp` instead
+ warning: file `oneflow/core/intrusive/struct_traits.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/intrusive/struct_traits_test.cpp` instead
+ warning: file `oneflow/core/job/runtime.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/job/runtime.cpp` instead
+ warning: file `oneflow/core/job_rewriter/autograd.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/job_rewriter/autograd.cpp` instead
+ warning: file `oneflow/core/kernel/blob_tensor_view.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/kernel/blob_tensor_view.cpp` instead
+ warning: file `oneflow/core/kernel/new_kernel_util.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/kernel/new_kernel_util.cpp` instead
+ warning: file `oneflow/core/lazy/actor/actor.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/lazy/actor/actor.cpp` instead
+ warning: file `oneflow/core/register/blob_desc.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/register/blob_desc.cpp` instead
+ warning: file `oneflow/core/register/register_desc.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/register/register_desc.cpp` instead
+ warning: file `oneflow/core/register/register_manager.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/register/register_manager.cpp` instead
+ warning: file `oneflow/core/vm/cuda_allocator.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/vm/cuda_allocator.cpp, /home/chengcheng/oneflow/oneflow/core/vm/cuda_allocator_test.cpp` instead
+ warning: file `oneflow/core/vm/cuda_stream_handle_device_context.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/core/vm/tensor_view_operand.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/core/vm/tensor_view_operand.cpp` instead
+ warning: file `oneflow/ir/lib/OneFlow/OneFlowOps.cpp` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/ir/lib/OneFlow/OneFlowSupport.cpp` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/ir/lib/OneFlow/Passes.cpp` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/ir/oneflow-translate/lib/OneFlow/Importer.cpp` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/user/data/ofrecord_parser.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/user/kernels/avg_pooling_kernel_util.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/user/kernels/avg_pooling_kernel_util.cpp` instead
+ warning: file `oneflow/user/kernels/constantpad_kernel_util.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/user/kernels/constantpad_kernel_util.cpp` instead
+ warning: file `oneflow/user/kernels/distributions/uniform_kernel.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/user/kernels/distributions/uniform_kernel.cpp` instead
+ warning: file `oneflow/user/kernels/pad2d_kernels_util.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/user/kernels/pad2d_kernels_util.cpp` instead
+ warning: file `oneflow/user/kernels/pooling_kernel_util.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/user/kernels/pooling_kernel_util.cpp` instead
+ warning: file `oneflow/user/kernels/stateful_local_opkernel.h` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, use `/home/chengcheng/oneflow/oneflow/user/kernels/stateful_local_opkernel.cpp` instead
+ warning: file `oneflow/xrt/api.cpp` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ warning: file `oneflow/xrt/tensorrt/ops/pooling_op.cpp` is not found in compile command database `/home/chengcheng/oneflow/build/compile_commands.json`, skip it
+ 1325 warnings generated.
+ Suppressed 1340 warnings (1325 in non-user code, 15 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1498 warnings generated.
+ Suppressed 1501 warnings (1497 in non-user code, 1 due to line filter, 3 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1621 warnings generated.
+ Suppressed 1623 warnings (1621 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1630 warnings generated.
+ Suppressed 1632 warnings (1630 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/common/flat_shape.cpp:34:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(this->dim_size(), shape.NumAxes());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/flat_shape.cpp:34:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ CHECK_EQ_OR_RETURN(this->dim_size(), shape.NumAxes());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:315:29: note: expanded from macro 'CHECK_EQ_OR_RETURN'
+ CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+ ^~~
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^~~~
+ 1292 warnings generated.
+ Suppressed 1291 warnings (1283 in non-user code, 6 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 1439 warnings generated.
+ Suppressed 1441 warnings (1439 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1523 warnings generated.
+ Suppressed 1525 warnings (1522 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/eager/blob_object.cpp:34:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(
+ ^
+ 1523 warnings generated.
+ Suppressed 1524 warnings (1522 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 1439 warnings generated.
+ Suppressed 1441 warnings (1439 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1701 warnings generated.
+ Suppressed 1703 warnings (1701 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1685 warnings generated.
+ Suppressed 1687 warnings (1685 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1605 warnings generated.
+ Suppressed 1607 warnings (1605 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1291 warnings generated.
+ Suppressed 1291 warnings (1291 in non-user code).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1613 warnings generated.
+ Suppressed 1615 warnings (1612 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1949 warnings generated.
+ Suppressed 1951 warnings (1945 in non-user code, 4 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/eager/eager_blob_object.cpp:45:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/eager/eager_blob_object.cpp:60:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_NOTNULL_OR_RETURN(blob);
+ ^
+ 1949 warnings generated.
+ Suppressed 1949 warnings (1945 in non-user code, 2 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2 warnings treated as errors
+ 2097 warnings generated.
+ Suppressed 2099 warnings (2097 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1649 warnings generated.
+ Suppressed 1653 warnings (1649 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/api/python/symbol/sbp_symbol.cpp:42:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_LT_OR_RETURN(axis, kMaxSplitAxis);
+ ^
+ 2088 warnings generated.
+ Suppressed 2089 warnings (2085 in non-user code, 2 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 2097 warnings generated.
+ Suppressed 2099 warnings (2097 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1619 warnings generated.
+ Suppressed 1621 warnings (1619 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1338 warnings generated.
+ Suppressed 1340 warnings (1335 in non-user code, 3 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1526 warnings generated.
+ Suppressed 1528 warnings (1526 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1338 warnings generated.
+ Suppressed 1340 warnings (1335 in non-user code, 3 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1526 warnings generated.
+ Suppressed 1528 warnings (1526 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1517 warnings generated.
+ Suppressed 1519 warnings (1516 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1517 warnings generated.
+ Suppressed 1519 warnings (1516 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1211 warnings generated.
+ Suppressed 1211 warnings (1211 in non-user code).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1828 warnings generated.
+ Suppressed 1830 warnings (1828 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1951 warnings generated.
+ Suppressed 1953 warnings (1951 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/avg_pooling.cpp:28:8: error: constructor does not initialize these fields: requires_grad, input_index, ceil_mode, count_include_pad, divisor_override [cppcoreguidelines-pro-type-member-init,-warnings-as-errors]
+ struct AvgPoolingCaptureState : public AutoGradCaptureState {
+ ^
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/avg_pooling.cpp:89:13: error: Unsafe method `std::vector<std::shared_ptr<oneflow::one::Tensor>>::at` is called in function `oneflow::one::(anonymous namespace)::AvgPoolingNdGrad::Apply` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, (*in_grads)[0] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ in_grads->at(0) = JUST(functional::AvgPoolingNdGrad(
+ ~~~~~~~~~~^~~~~
+ *JUST(oneflow::VectorAt(in_grads, 0))
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/avg_pooling.cpp:90:24: error: Unsafe method `std::vector<std::shared_ptr<oneflow::one::Tensor>>::at` is called in function `oneflow::one::(anonymous namespace)::AvgPoolingNdGrad::Apply` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, out_grads[0] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ input, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size, ctx->stride,
+ ~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(out_grads, 0))
+ /home/chengcheng/oneflow/oneflow/core/common/just.h:95:62: note: expanded from macro 'JUST'
+ auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                     \
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/just.h:88:40: note: expanded from macro '__JustStackCheckWrapper__'
+ #define __JustStackCheckWrapper__(...) __VA_ARGS__
+ ^
+ 3518 warnings generated.
+ Suppressed 3517 warnings (3510 in non-user code, 5 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3 warnings treated as errors
+ 1828 warnings generated.
+ Suppressed 1830 warnings (1828 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/pooling.cpp:29:8: error: constructor does not initialize these fields: requires_grad, input_index, indice_index, return_indices, ceil_mode [cppcoreguidelines-pro-type-member-init,-warnings-as-errors]
+ struct PoolingCaptureState : public AutoGradCaptureState {
+ ^
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/pooling.cpp:97:13: error: Unsafe method `std::vector<std::shared_ptr<oneflow::one::Tensor>>::at` is called in function `oneflow::one::(anonymous namespace)::PoolingNdGrad::Apply` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, (*in_grads)[0] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ in_grads->at(0) = JUST(functional::PoolingNdGrad(
+ ~~~~~~~~~~^~~~~
+ *JUST(oneflow::VectorAt(in_grads, 0))
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/pooling.cpp:98:32: error: Unsafe method `std::vector<std::shared_ptr<oneflow::one::Tensor>>::at` is called in function `oneflow::one::(anonymous namespace)::PoolingNdGrad::Apply` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, out_grads[0] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ input, indice, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
+ ~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(out_grads, 0))
+ /home/chengcheng/oneflow/oneflow/core/common/just.h:95:62: note: expanded from macro 'JUST'
+ auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                     \
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/just.h:88:40: note: expanded from macro '__JustStackCheckWrapper__'
+ #define __JustStackCheckWrapper__(...) __VA_ARGS__
+ ^
+ 3518 warnings generated.
+ Suppressed 3517 warnings (3508 in non-user code, 7 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3 warnings treated as errors
+ 1372 warnings generated.
+ Suppressed 1374 warnings (1368 in non-user code, 4 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1361 warnings generated.
+ Suppressed 1363 warnings (1356 in non-user code, 5 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/pool.cpp:28:8: error: constructor does not initialize these fields: requires_grad, input_index, output_index, ceil_mode [cppcoreguidelines-pro-type-member-init,-warnings-as-errors]
+ struct PoolCaptureState : public AutoGradCaptureState {
+ ^
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/pool.cpp:96:13: error: Unsafe method `std::vector<std::shared_ptr<oneflow::one::Tensor>>::at` is called in function `oneflow::one::(anonymous namespace)::PoolNdGrad::Apply` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, (*in_grads)[0] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ in_grads->at(0) = JUST(functional::PoolNdGrad(
+ ~~~~~~~~~~^~~~~
+ *JUST(oneflow::VectorAt(in_grads, 0))
+ /home/chengcheng/oneflow/oneflow/core/autograd/gradient_funcs/pool.cpp:97:32: error: Unsafe method `std::vector<std::shared_ptr<oneflow::one::Tensor>>::at` is called in function `oneflow::one::(anonymous namespace)::PoolNdGrad::Apply` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, out_grads[0] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ input, output, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
+ ~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(out_grads, 0))
+ /home/chengcheng/oneflow/oneflow/core/common/just.h:95:62: note: expanded from macro 'JUST'
+ auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                     \
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/just.h:88:40: note: expanded from macro '__JustStackCheckWrapper__'
+ #define __JustStackCheckWrapper__(...) __VA_ARGS__
+ ^
+ 3518 warnings generated.
+ Suppressed 3517 warnings (3508 in non-user code, 7 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3 warnings treated as errors
+ 1372 warnings generated.
+ Suppressed 1374 warnings (1368 in non-user code, 4 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3456 warnings generated.
+ Suppressed 3458 warnings (3451 in non-user code, 5 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1808 warnings generated.
+ Suppressed 1810 warnings (1806 in non-user code, 2 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/common.cpp:32:18: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ int32_t ndim = shape.NumAxes();
+ ^~~~~~~~~~~~~~~
+ 1808 warnings generated.
+ Suppressed 1809 warnings (1806 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1949 warnings generated.
+ Suppressed 1953 warnings (1947 in non-user code, 2 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1836 warnings generated.
+ Suppressed 1838 warnings (1836 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3428 warnings generated.
+ Suppressed 3430 warnings (3402 in non-user code, 26 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1634 warnings generated.
+ Suppressed 1636 warnings (1634 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3270 warnings generated.
+ Suppressed 3274 warnings (3269 in non-user code, 1 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1871 warnings generated.
+ Suppressed 1873 warnings (1871 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1536 warnings generated.
+ Suppressed 1540 warnings (1534 in non-user code, 2 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1593 warnings generated.
+ Suppressed 1608 warnings (1593 in non-user code, 15 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1637 warnings generated.
+ Suppressed 1641 warnings (1637 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/framework/consistent_tensor_infer_cache.cpp:168:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(first_parallel_desc == input_meta.tensor_meta()->parallel_desc());
+ ^
+ 1934 warnings generated.
+ Suppressed 1937 warnings (1906 in non-user code, 27 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 1593 warnings generated.
+ Suppressed 1608 warnings (1593 in non-user code, 15 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2040 warnings generated.
+ Suppressed 2042 warnings (2032 in non-user code, 8 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1662 warnings generated.
+ Suppressed 1664 warnings (1661 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3794 warnings generated.
+ Suppressed 3796 warnings (3792 in non-user code, 2 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1628 warnings generated.
+ Suppressed 1630 warnings (1627 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2098 warnings generated.
+ Suppressed 2100 warnings (2095 in non-user code, 3 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/framework/tensor_impl.cpp:124:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
+ ^
+ /home/chengcheng/oneflow/oneflow/core/framework/tensor_impl.cpp:126:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
+ ^
+ 3426 warnings generated.
+ Suppressed 3426 warnings (3421 in non-user code, 3 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2 warnings treated as errors
+ 1446 warnings generated.
+ Suppressed 1448 warnings (1437 in non-user code, 9 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1483 warnings generated.
+ Suppressed 1483 warnings (1483 in non-user code).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1477 warnings generated.
+ Suppressed 1479 warnings (1467 in non-user code, 10 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1945 warnings generated.
+ Suppressed 1947 warnings (1945 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1483 warnings generated.
+ Suppressed 1483 warnings (1483 in non-user code).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3426 warnings generated.
+ Suppressed 3428 warnings (3421 in non-user code, 5 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1477 warnings generated.
+ Suppressed 1479 warnings (1467 in non-user code, 10 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1945 warnings generated.
+ Suppressed 1947 warnings (1945 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:95:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(this->dtype(), dtype);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:132:9: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:184:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_GE_OR_RETURN(concat_axis, 0);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:185:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_LT_OR_RETURN(concat_axis, first_flat_shape_dtype->NumAxes());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:189:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->NumAxes(), first_flat_shape_dtype->NumAxes());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:193:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(first_flat_shape_dtype->At(concat_axis), bs.At(0).size());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:199:25: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ for (int i = 0; i < logical_shape->NumAxes(); ++i) {
+ ^~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:201:9: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), bs.At(parallel_id).size());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:203:9: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), logical_shape->At(i));
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:206:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(*dtype, rank_flat_shape_dtype->dtype());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:283:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/consistent_cast.cpp:344:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(x->is_local());
+ ^
+ 3601 warnings generated.
+ Suppressed 3591 warnings (3582 in non-user code, 7 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 11 warnings treated as errors
+ 1600 warnings generated.
+ Suppressed 1602 warnings (1600 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1600 warnings generated.
+ Suppressed 1602 warnings (1600 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/job_rewriter/gradient_accumulation_rewrite_pass.cpp:55:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ const std::string variable_lbn = GenLogicalBlobName(variable_lbi);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/just.h:95:62: note: expanded from macro 'JUST'
+ auto&& _just_value_to_check_ = __JustStackCheckWrapper__(__VA_ARGS__);                     \
+ ^~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/common/just.h:88:40: note: expanded from macro '__JustStackCheckWrapper__'
+ #define __JustStackCheckWrapper__(...) __VA_ARGS__
+ ^~~~~~~~~~~
+ 1514 warnings generated.
+ Suppressed 1517 warnings (1513 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1635 warnings generated.
+ Suppressed 1639 warnings (1635 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3578 warnings generated.
+ Suppressed 3580 warnings (3577 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3352 warnings generated.
+ Suppressed 3354 warnings (3345 in non-user code, 7 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1642 warnings generated.
+ Suppressed 1644 warnings (1638 in non-user code, 4 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1635 warnings generated.
+ Suppressed 1639 warnings (1635 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1644 warnings generated.
+ Suppressed 1648 warnings (1644 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1454 warnings generated.
+ Suppressed 1458 warnings (1454 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1590 warnings generated.
+ Suppressed 1594 warnings (1590 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1655 warnings generated.
+ Suppressed 1659 warnings (1655 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1651 warnings generated.
+ Suppressed 1655 warnings (1651 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1468 warnings generated.
+ Suppressed 1470 warnings (1468 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1651 warnings generated.
+ Suppressed 1655 warnings (1651 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1468 warnings generated.
+ Suppressed 1470 warnings (1468 in non-user code, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1600 warnings generated.
+ Suppressed 1602 warnings (1595 in non-user code, 5 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1646 warnings generated.
+ Suppressed 1648 warnings (1643 in non-user code, 3 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/job_rewriter/replace_embedding_ops_pass.cpp:48:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_GT_OR_RETURN(gradient_lbns.size(), 0);
+ ^
+ 1664 warnings generated.
+ Suppressed 1677 warnings (1662 in non-user code, 1 due to line filter, 14 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 1600 warnings generated.
+ Suppressed 1602 warnings (1595 in non-user code, 5 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:27:35: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, in_shape[i + 1] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ original_stride[i] = in_shape.at(i + 1) * original_stride.at(i + 1);
+ ~~~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(in_shape, i + 1))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:27:63: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, original_stride[i + 1] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ original_stride[i] = in_shape.at(i + 1) * original_stride.at(i + 1);
+ ~~~~~~~~~~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(original_stride, i + 1))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:37:24: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, expand_shape[i] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ if (expand_shape.at(i) == -1 || expand_shape.at(i) == in_shape.at(index)) {
+ ~~~~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(expand_shape, i))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:37:52: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, expand_shape[i] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ if (expand_shape.at(i) == -1 || expand_shape.at(i) == in_shape.at(index)) {
+ ~~~~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(expand_shape, i))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:37:70: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, in_shape[index] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ if (expand_shape.at(i) == -1 || expand_shape.at(i) == in_shape.at(index)) {
+ ~~~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(in_shape, index))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:38:33: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, in_shape[index] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ out_shape[i] = in_shape.at(index);
+ ~~~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(in_shape, index))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:39:37: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, original_stride[index] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ stride[i] = original_stride.at(index);
+ ~~~~~~~~~~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(original_stride, index))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:41:38: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, expand_shape[i] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ CHECK_OR_RETURN(expand_shape.at(i) > 0 && in_shape.at(index) == 1)
+ ~~~~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(expand_shape, i))
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:41:60: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, in_shape[index] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ CHECK_OR_RETURN(expand_shape.at(i) > 0 && in_shape.at(index) == 1)
+ ~~~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(in_shape, index))
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:43:37: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, expand_shape[i] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ out_shape[i] = expand_shape.at(i);
+ ~~~~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(expand_shape, i))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:47:39: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, expand_shape[i] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ CHECK_GT_OR_RETURN(expand_shape.at(i), 0) << "Invalid expand shape ";
+ ~~~~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(expand_shape, i))
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:321:20: note: expanded from macro 'CHECK_GT_OR_RETURN'
+ CHECK_OR_RETURN((lhs) > (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:48:35: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, expand_shape[i] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ out_shape[i] = expand_shape.at(i);
+ ~~~~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(expand_shape, i))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:49:24: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, expand_shape[i] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ if (expand_shape.at(i) == 1 && i < out_shape.size() - 1) {
+ ~~~~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(expand_shape, i))
+ /home/chengcheng/oneflow/oneflow/user/kernels/expand_kernel_utils.cpp:50:28: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::getOutShapeAndStride` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, stride[i + 1] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ stride[i] = stride.at(i + 1);
+ ~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(stride, i + 1))
+ 1462 warnings generated.
+ Suppressed 1451 warnings (1447 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 14 warnings treated as errors
+ 1742 warnings generated.
+ Suppressed 1754 warnings (1742 in non-user code, 12 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.cpp:95:7: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(*default_device == *input_device) << Error::InputDeviceNotMatchError();
+ ^
+ 3615 warnings generated.
+ Suppressed 3618 warnings (3572 in non-user code, 42 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 1596 warnings generated.
+ Suppressed 1600 warnings (1595 in non-user code, 1 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1635 warnings generated.
+ Suppressed 1639 warnings (1635 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1635 warnings generated.
+ Suppressed 1639 warnings (1635 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1451 warnings generated.
+ Suppressed 1455 warnings (1451 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/user/ops/grad_acc_op.cpp:24:28: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/util.h:174:72: note: expanded from macro 'FOR_RANGE'
+ #define FOR_RANGE(type, i, begin, end) for (type i = (begin), __end = (end); i < __end; ++i)
+ ^~~
+ /home/chengcheng/oneflow/oneflow/user/ops/grad_acc_op.cpp:48:28: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ FOR_RANGE(int64_t, i, 0, in.shape().NumAxes()) {
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/util.h:174:72: note: expanded from macro 'FOR_RANGE'
+ #define FOR_RANGE(type, i, begin, end) for (type i = (begin), __end = (end); i < __end; ++i)
+ ^~~
+ 1492 warnings generated.
+ Suppressed 1494 warnings (1490 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1454 warnings generated.
+ Suppressed 1458 warnings (1454 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1671 warnings generated.
+ Suppressed 1675 warnings (1671 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1451 warnings generated.
+ Suppressed 1455 warnings (1450 in non-user code, 1 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1454 warnings generated.
+ Suppressed 1458 warnings (1454 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/activation_functor.cpp:335:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_GE_OR_RETURN(dim_, 0);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/activation_functor.cpp:336:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_LT_OR_RETURN(dim_, num_axes);
+ ^
+ 3550 warnings generated.
+ Suppressed 3550 warnings (3542 in non-user code, 6 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2 warnings treated as errors
+ 3576 warnings generated.
+ Suppressed 3578 warnings (3570 in non-user code, 6 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1635 warnings generated.
+ Suppressed 1639 warnings (1631 in non-user code, 4 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1503 warnings generated.
+ Suppressed 1507 warnings (1502 in non-user code, 1 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1740 warnings generated.
+ Suppressed 1744 warnings (1740 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2043 warnings generated.
+ Suppressed 2045 warnings (2002 in non-user code, 41 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3535 warnings generated.
+ Suppressed 3537 warnings (3462 in non-user code, 73 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/job_rewriter/insert_nccl_logical_op_pass.cpp:88:11: warning: unused variable 'i' [clang-diagnostic-unused-variable]
+ int32_t i = 0;
+ ^
+ /home/chengcheng/oneflow/oneflow/core/job_rewriter/insert_nccl_logical_op_pass.cpp:869:7: warning: CHECK should not be used in functions returning Maybe. Use CHECK_OR_RETURN(..) instead. [maybe-glog-fatal]
+ CHECK(this_parallel_desc.EqualsIgnoringHierarchy(*info.seed_parallel_desc));
+ ^~~~~
+ CHECK_OR_RETURN
+ /home/chengcheng/oneflow/oneflow/core/job_rewriter/insert_nccl_logical_op_pass.cpp:872:7: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ InitInsertNcclSubGraphInfoFromSet(nccl_subgraph_info, subgraph, op_node2global_order,
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/job_rewriter/insert_nccl_logical_op_pass.cpp:874:7: warning: CHECK_GT should not be used in functions returning Maybe. Use CHECK_GT_OR_RETURN(..) instead. [maybe-glog-fatal]
+ CHECK_GT(info.ordered_subgraph.size(), 0);
+ ^~~~~~~~
+ CHECK_GT_OR_RETURN
+ 3393 warnings generated.
+ Suppressed 3393 warnings (3372 in non-user code, 17 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2089 warnings generated.
+ Suppressed 2093 warnings (2089 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3354 warnings generated.
+ Suppressed 3357 warnings (3339 in non-user code, 15 due to line filter, 3 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2051 warnings generated.
+ Suppressed 2055 warnings (2045 in non-user code, 6 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1639 warnings generated.
+ Suppressed 1643 warnings (1639 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2051 warnings generated.
+ Suppressed 2055 warnings (2045 in non-user code, 6 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3389 warnings generated.
+ Suppressed 3391 warnings (3382 in non-user code, 7 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/user/ops/pooling_op.cpp:75:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(kernel_size.size(), dim);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/pooling_op.cpp:76:44: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ for (int32_t pool_dim : kernel_size) { CHECK_GT_OR_RETURN(pool_dim, 0); }
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/pooling_op.cpp:77:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(stride.size(), dim);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/pooling_op.cpp:78:41: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ for (int32_t stride_dim : stride) { CHECK_GT_OR_RETURN(stride_dim, 0); }
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/pooling_op.cpp:108:45: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes() - 2)) {
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/util.h:174:72: note: expanded from macro 'FOR_RANGE'
+ #define FOR_RANGE(type, i, begin, end) for (type i = (begin), __end = (end); i < __end; ++i)
+ ^~~
+ /home/chengcheng/oneflow/oneflow/user/ops/pooling_op.cpp:139:73: error: the parameter 'AddOp' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param,-warnings-as-errors]
+ return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
+ ^
+ const           &
+ 1660 warnings generated.
+ Suppressed 1658 warnings (1648 in non-user code, 6 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 5 warnings treated as errors
+ 3389 warnings generated.
+ Suppressed 3391 warnings (3382 in non-user code, 7 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:238:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 3);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:238:22: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 3);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:315:20: note: expanded from macro 'CHECK_EQ_OR_RETURN'
+ CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+ ^~~
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:239:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(padding.size(), 2);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:244:23: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ DimVector y_dim_vec(x_shape.NumAxes());
+ ^~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:264:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_NOTNULL_OR_RETURN(x_modifier);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:275:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 3);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:275:22: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 3);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:315:20: note: expanded from macro 'CHECK_EQ_OR_RETURN'
+ CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+ ^~~
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:276:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(padding.size(), 2);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:281:24: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ DimVector dx_dim_vec(dy_shape.NumAxes());
+ ^~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:301:49: error: the parameter 'AddOp' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param,-warnings-as-errors]
+ user_op::AddOpFn AddOp) -> Maybe<void> {
+ ^
+ const           &
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:324:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:324:38: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:315:29: note: expanded from macro 'CHECK_EQ_OR_RETURN'
+ CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+ ^~~
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:330:23: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ DimVector y_dim_vec(x_shape.NumAxes());
+ ^~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:352:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_NOTNULL_OR_RETURN(x_modifier);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:363:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:363:38: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:315:29: note: expanded from macro 'CHECK_EQ_OR_RETURN'
+ CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+ ^~~
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:369:24: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ DimVector dx_dim_vec(dy_shape.NumAxes());
+ ^~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:391:49: error: the parameter 'AddOp' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param,-warnings-as-errors]
+ user_op::AddOpFn AddOp) -> Maybe<void> {
+ ^
+ const           &
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:414:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 5);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:414:22: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ CHECK_EQ_OR_RETURN(x_shape.NumAxes(), 5);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:315:20: note: expanded from macro 'CHECK_EQ_OR_RETURN'
+ CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+ ^~~
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:423:23: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ DimVector y_dim_vec(x_shape.NumAxes());
+ ^~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:447:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_NOTNULL_OR_RETURN(x_modifier);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:458:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 5);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:458:22: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 5);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:315:20: note: expanded from macro 'CHECK_EQ_OR_RETURN'
+ CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+ ^~~
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:465:24: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ DimVector dx_dim_vec(dy_shape.NumAxes());
+ ^~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/user/ops/padding_ops.cpp:489:49: error: the parameter 'AddOp' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param,-warnings-as-errors]
+ user_op::AddOpFn AddOp) -> Maybe<void> {
+ ^
+ const           &
+ 1518 warnings generated.
+ Suppressed 1490 warnings (1458 in non-user code, 28 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 14 warnings treated as errors
+ /home/chengcheng/oneflow/oneflow/core/framework/placement_sbp_util.cpp:61:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(strides.size(), indexes.size());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/framework/placement_sbp_util.cpp:227:33: error: Unsafe method `std::vector<oneflow::fixed_vector<long, 20>>::at` is called in function `oneflow::private_details::(anonymous namespace)::InitShapAxis2ExpandedDim` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, shape_axis2required_dim[i] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ if (shape_axis2required_dim.at(i).empty()) {
+ ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+ JUST(oneflow::VectorAt(shape_axis2required_dim, i))
+ 1638 warnings generated.
+ Suppressed 1638 warnings (1552 in non-user code, 84 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2 warnings treated as errors
+ /home/chengcheng/oneflow/oneflow/core/framework/nn_graph.cpp:324:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
+ ^
+ /home/chengcheng/oneflow/oneflow/core/framework/nn_graph.cpp:420:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(var_blob != nullptr);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/framework/nn_graph.cpp:421:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+ ^
+ 3729 warnings generated.
+ Suppressed 3728 warnings (3693 in non-user code, 33 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3 warnings treated as errors
+ 3729 warnings generated.
+ Suppressed 3731 warnings (3693 in non-user code, 36 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1998 warnings generated.
+ Suppressed 2002 warnings (1987 in non-user code, 11 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1998 warnings generated.
+ Suppressed 2002 warnings (1987 in non-user code, 11 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/user/ops/slice_op.cpp:201:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(ref_modifier != nullptr);
+ ^
+ /home/chengcheng/oneflow/oneflow/user/ops/slice_op.cpp:204:3: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_OR_RETURN(value_modifier != nullptr);
+ ^
+ 1558 warnings generated.
+ Suppressed 1560 warnings (1495 in non-user code, 61 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2 warnings treated as errors
+ 3699 warnings generated.
+ Suppressed 3701 warnings (3697 in non-user code, 2 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:97:27: error: Called C++ object pointer is null [clang-analyzer-core.CallAndMessage,-warnings-as-errors]
+ for (const auto& pair : node->produced_regsts()) {
+ ^
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:132:11: note: Value assigned to 'next_node'
+ if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:132:11: note: Calling 'operator==<oneflow::TaskNode *, false>'
+ if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/hashtable_policy.h:307:14: note: Assuming '__x._M_cur' is equal to '__y._M_cur'
+ { return __x._M_cur == __y._M_cur; }
+ ^~~~~~~~~~~~~~~~~~~~~~~~
+ /usr/bin/../lib/gcc/x86_64-linux-gnu/9/../../../../include/c++/9/bits/hashtable_policy.h:307:7: note: Returning the value 1, which participates in a condition later
+ { return __x._M_cur == __y._M_cur; }
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:132:11: note: Returning from 'operator==<oneflow::TaskNode *, false>'
+ if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:132:11: note: Left side of '&&' is true
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:132:86: note: Passing 'next_node' via 1st parameter 'node'
+ if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
+ ^~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:132:67: note: Calling 'CanBeMergedInChain'
+ if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:105:7: note: Assuming 'node' is null
+ if (dynamic_cast<const GradAccCompTaskNode*>(node)) { return true; }
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:105:3: note: Taking false branch
+ if (dynamic_cast<const GradAccCompTaskNode*>(node)) { return true; }
+ ^
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:107:47: note: Passing null pointer value via 1st parameter 'node'
+ if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
+ ^~~~
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:107:7: note: Calling 'IsTaskNodeProducedRegstHasMultiRegstNum'
+ if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/graph/task_graph.cpp:97:27: note: Called C++ object pointer is null
+ for (const auto& pair : node->produced_regsts()) {
+ ^~~~
+ 1652 warnings generated.
+ Suppressed 1653 warnings (1650 in non-user code, 1 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 3408 warnings generated.
+ Suppressed 3414 warnings (3399 in non-user code, 9 due to line filter, 6 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1638 warnings generated.
+ Suppressed 1642 warnings (1638 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1638 warnings generated.
+ Suppressed 1642 warnings (1638 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1667 warnings generated.
+ Suppressed 1671 warnings (1667 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1667 warnings generated.
+ Suppressed 1671 warnings (1667 in non-user code, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/operator/operator.cpp:1560:7: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0);
+ ^
+ 3494 warnings generated.
+ Suppressed 3497 warnings (3390 in non-user code, 103 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 3752 warnings generated.
+ Suppressed 3756 warnings (3676 in non-user code, 76 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 2199 warnings generated.
+ Suppressed 2211 warnings (2117 in non-user code, 82 due to line filter, 12 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:322:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:346:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:463:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:490:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:514:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:687:5: error: This function maybe return error but without any error message, please specify an error message. [maybe-need-error-msg,-warnings-as-errors]
+ CHECK_GT_OR_RETURN(reduce_count, 0);
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:778:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:830:26: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ const int64_t ndim = input->shape()->NumAxes();
+ ^~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1172:40: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1182:43: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ dim.emplace_back(dim_check[i] + x->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1186:29: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ if ((int)dim.size() < x->shape()->NumAxes()) { full_dim_flag = false; }
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1251:21: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ auto num_dims = x->shape()->NumAxes();
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1336:21: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ auto num_dims = x->shape()->NumAxes();
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1411:25: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ CHECK_OR_RETURN(x->shape()->NumAxes() <= 2)
+ ^
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1413:13: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ if (x->shape()->NumAxes() == 1) {
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1435:30: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ std::vector<int32_t> dim(x->shape()->NumAxes());
+ ^~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1858:26: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ const int32_t ndim = input->shape()->NumAxes();
+ ^~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:1955:22: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ const int ndim = input->shape()->NumAxes();
+ ^~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:2018:20: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ int32_t ndim = input->shape()->NumAxes();
+ ^~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:2189:20: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ int32_t ndim = input->shape()->NumAxes();
+ ^~~~~~~~~~~~~~~~~~~~~~~~~
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/math_functor.cpp:2831:37: warning: This function contains glog CHECK and is called in a function returning Maybe. [maybe-glog-fatal]
+ } else if (sum_dims.size() == result->shape()->NumAxes()) {
+ ^~~~~~~~~~~~~~~~~~~~~~~~~~
+ 3661 warnings generated.
+ Suppressed 3642 warnings (3624 in non-user code, 16 due to line filter, 2 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 1 warning treated as error
+ 1635 warnings generated.
+ Suppressed 1639 warnings (1634 in non-user code, 1 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/array_functor.cpp:604:58: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::one::functional::impl::ExpandFunctor::operator()` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, in_shape[index] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ if (shape.At(i) != -1 && shape.At(i) != in_shape.at(index)) {
+ ~~~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(in_shape, index))
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/array_functor.cpp:605:55: error: Unsafe method `std::vector<int>::at` is called in function `oneflow::one::functional::impl::ExpandFunctor::operator()` which returns `oneflow::Maybe`, please try to replace it with `oneflow::VectorAt`. However, if you are very sure that no bound-checking is needed here, in_shape[index] is the better choice. [maybe-use-safe-methods,-warnings-as-errors]
+ CHECK_OR_RETURN(shape.At(i) > 0 && in_shape.at(index) == 1)
+ ~~~~~~~~~^~~~~~~~~
+ JUST(oneflow::VectorAt(in_shape, index))
+ /home/chengcheng/oneflow/oneflow/core/common/maybe.h:310:9: note: expanded from macro 'CHECK_OR_RETURN'
+ if (!(expr))                                                                     \
+ ^
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/array_functor.cpp:941:46: error: the const qualified parameter 'direction' is copied for each invocation; consider making it a reference [performance-unnecessary-value-param,-warnings-as-errors]
+ const std::string direction) const {
+ ^
+ &
+ /home/chengcheng/oneflow/oneflow/core/functional/impl/array_functor.cpp:2577:10: warning: unused variable 'old_placement' [clang-diagnostic-unused-variable]
+ auto old_placement = JUST(x->parallel_desc());
+ ^
+ 3761 warnings generated.
+ Suppressed 3760 warnings (3686 in non-user code, 71 due to line filter, 3 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ 3 warnings treated as errors
+ 1718 warnings generated.
+ Suppressed 1722 warnings (1588 in non-user code, 130 due to line filter, 4 NOLINT).
+ Use -header-filter=.* to display errors from all non-system headers. Use -system-headers to display errors from system headers as well.
+ninja: build stopped: subcommand failed.
