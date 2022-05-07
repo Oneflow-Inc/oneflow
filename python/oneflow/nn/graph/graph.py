@@ -207,13 +207,7 @@ class Graph(object):
             Donot override this function.
         """
         if not self._is_compiled:
-            with graph_build_util.DebugScopeContext(
-                self._debug_min_s_level,
-                self._debug_max_v_level,
-                self._debug,
-                self._debug_max_py_stack_depth,
-            ):
-                self._compile(*args, **kwargs)
+            self._compile(*args, **kwargs)
 
         return self.__run(*args, **kwargs)
 
@@ -558,7 +552,7 @@ class Graph(object):
 
     @property
     def _full_graph_proto(self):
-        if not self._is_compiled:
+        if self._full_job_proto is None:
             self.__print(
                 2,
                 0,
@@ -566,6 +560,10 @@ class Graph(object):
                 " You can call the graph to trigger it's compilation.",
             )
         return self._full_job_proto
+
+    def restore_full_job(self, full_job):
+        self._full_job_proto = full_job
+        self._c_nn_graph.job = full_job.SerializeToString()
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -696,6 +694,11 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        _, eager_outputs = self.build_graph(*args, **kwargs)
+        self.finish_complie_and_init_runtime()
+        return eager_outputs
+
+    def build_graph(self, *args, **kwargs):
         # Build graph
         try:
             self.__print(0, 0, self._shallow_repr() + " start building graph.")
@@ -703,7 +706,13 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            eager_outputs = self.__build_graph(*args, **kwargs)
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug,
+                self._debug_max_py_stack_depth,
+            ):
+                outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
             self.__print(
                 0,
@@ -714,6 +723,7 @@ class Graph(object):
                 + "s."
                 + "\n",
             )
+            return outputs
         except:
             self.__print(
                 2,
@@ -725,13 +735,20 @@ class Graph(object):
             )
             raise
 
+    def finish_complie_and_init_runtime(self):
         # Complie graph to execution plan and init Runtime
         try:
             self.__print(
                 0, 0, self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
-            self._c_nn_graph.complie_and_init_runtime()
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug,
+                self._debug_max_py_stack_depth,
+            ):
+                self._c_nn_graph.complie_and_init_runtime()
             compile_and_init_end = time.perf_counter()
             self.__print(
                 0,
@@ -761,7 +778,6 @@ class Graph(object):
         self._is_compiled = True
         # After compile, _additional_variable_tobe_loaded is useless.
         self._additional_variable_tobe_loaded.clear()
-        return eager_outputs
 
     def __build_graph(self, *args, **kwargs):
         # Filter to get unique states in graph
@@ -842,6 +858,10 @@ class Graph(object):
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
+            self._c_nn_graph.job = self._full_job_proto.SerializeToString()
+            self._c_nn_graph.job_id = (
+                oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobId()
+            )
             self.__print(
                 0, 1, self._shallow_repr() + " end building graph with compile passes."
             )
@@ -881,7 +901,10 @@ class Graph(object):
             )
 
         # Always pack outputs to remain type of outputs
-        return seq_to_func_return(self._eager_outputs_buffer[0], True)
+        return (
+            self._full_job_proto,
+            seq_to_func_return(self._eager_outputs_buffer[0], True),
+        )
 
     def __rebuild_outputs(self, out2name=None):
         # NOTE(chengcheng):

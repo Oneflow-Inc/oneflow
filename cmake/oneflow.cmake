@@ -495,6 +495,8 @@ if(BUILD_PYTHON)
     REGEX "oneflow/core/kernel/util/.+(h|hpp)$"
     REGEX "oneflow/core/persistence/.+(h|hpp)$"
     REGEX "oneflow/core/ep/include/.+(h|hpp)$"
+    REGEX "oneflow/core/.+(h|hpp)$"
+    REGEX "oneflow/core/.+(proto)$"
     PATTERN "oneflow/core/kernel/new_kernel_util.h"
     PATTERN "oneflow/core/kernel/kernel_context.h"
     PATTERN "oneflow/core/kernel/kernel_observer.h"

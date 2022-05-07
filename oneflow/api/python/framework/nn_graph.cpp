@@ -48,6 +48,19 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "CNNGraph")
       .def(py::init<const std::string&, const std::shared_ptr<MultiClientSessionContext>&>())
       .def_property_readonly("name", &NNGraph::job_name)
+      .def_property(
+          "job", /*getter*/
+          [](const NNGraph& nn_graph) { return py::bytes(nn_graph.job().SerializeAsString()); },
+          /*setter*/
+          [](NNGraph& nn_graph, const std::string& serialized_job) {
+            Job job;
+            if (!job.ParseFromString(serialized_job)) {
+              PyErr_SetString(PyExc_TypeError, "the value is not a valid job");
+            }
+            nn_graph.restore_job(job);
+          })
+      .def_property("job_id", &NNGraph::job_id,
+                    [](NNGraph& nn_graph, int64_t job_id) { nn_graph.restore_job_id(job_id); })
       .def("register_input_op_names_and_tensors", &NNGraph::RegisterInputOpNamesAndTensors)
       .def("register_output_op_names_and_tensors", &NNGraph::RegisterOutputOpNamesAndTensors)
       .def("register_variable_op_names_and_tensors", &NNGraph::RegisterVariableOpNamesAndTensors)
