@@ -1051,27 +1051,32 @@ def autotest(
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
-                                if check_grad_use_random_data:
+                                if check_grad_use_random_data and True:
                                     np_arr = rng.uniform(
                                         low=0, high=1, size=list(x.pytorch.shape)
                                     )
-                                    pytorch_tensor = torch_original.Tensor(np_arr)
+                                    pytorch_tensor = torch_original.tensor(
+                                        np_arr,
+                                        dtype=x.pytorch.dtype,
+                                        device=x.pytorch.device,
+                                    )
                                     if is_global():
                                         flow_tensor = flow.tensor(
                                             np_arr,
-                                            placement=flow.env.all_device_placement(
-                                                "cpu"
-                                            ),
-                                            sbp=flow.sbp.broadcast,
+                                            dtype=x.oneflow.dtype,
+                                            placement=x.oneflow.placement,
+                                            sbp=len(x.oneflow.sbp) * [flow.sbp.broadcast],
                                         )
                                     else:
                                         flow_tensor = flow.tensor(
-                                            np_arr, dtype=flow.float
+                                            np_arr,
+                                            dtype=x.oneflow.dtype,
+                                            device=x.oneflow.device,
                                         )
                                     diff_output = GetDualObject(
                                         "unused", pytorch_tensor, flow_tensor
                                     )
-                                    x.backward(diff_output.to(x.device, x.dtype))
+                                    x.backward(diff_output)
                                 else:
                                     x.sum().backward()
                         dual_objects_to_test.append(x)
