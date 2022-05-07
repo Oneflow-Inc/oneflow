@@ -30,7 +30,7 @@ class ShapeView;
 namespace cfg {
 // TODO: use Int64ListProto replace ShapeProto
 class ShapeProto;
-}
+}  // namespace cfg
 
 class Shape final {
  public:
