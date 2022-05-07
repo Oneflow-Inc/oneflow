@@ -9308,6 +9308,7 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideE
     DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
     DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size, 
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;

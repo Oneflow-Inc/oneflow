@@ -191,10 +191,17 @@ namespace oneflow {
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
                   && x_desc.shape().NumAxes() == 5)
       << "upsample_nearest_3d only supports NCDHW";
-  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
-                                static_cast<int32_t>(height_scale * x_desc.shape().At(3)),
-                                static_cast<int32_t>(width_scale * x_desc.shape().At(4))});
+  std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+  if (output_size.size()) {
+    *y_desc->mut_shape() =
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0]),
+               static_cast<int32_t>(output_size[1]), static_cast<int32_t>(output_size[2])});
+  } else {
+    *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                  static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
+                                  static_cast<int32_t>(height_scale * x_desc.shape().At(3)),
+                                  static_cast<int32_t>(width_scale * x_desc.shape().At(4))});
+  }
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest3DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

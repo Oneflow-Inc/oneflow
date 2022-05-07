@@ -301,9 +301,15 @@ class UpsampleNearest3DCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float depth_scale = ctx->Attr<float>("depth_scale");
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
+    const int64_t in_depth = x_blob->shape().At(2);
+    const int64_t in_height = x_blob->shape().At(3);
+    const int64_t in_width = x_blob->shape().At(4);
+    const int64_t out_depth = y_blob->shape().At(2);
+    const int64_t out_height = y_blob->shape().At(3);
+    const int64_t out_width = y_blob->shape().At(4);
+    const float depth_scale = out_depth * 1.0 / in_depth;
+    const float height_scale = out_height * 1.0 / in_height;
+    const float width_scale = out_width * 1.0 / in_width;
     const int64_t elem_cnt = y_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
                                               x_blob->shape().At(2), x_blob->shape().At(3),
@@ -332,9 +338,15 @@ class UpsampleNearestGrad3DCPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float depth_scale = ctx->Attr<float>("depth_scale");
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
+    const int64_t in_depth = dx_blob->shape().At(2);
+    const int64_t in_height = dx_blob->shape().At(3);
+    const int64_t in_width = dx_blob->shape().At(4);
+    const int64_t out_depth = dy_blob->shape().At(2);
+    const int64_t out_height = dy_blob->shape().At(3);
+    const int64_t out_width = dy_blob->shape().At(4);
+    const float depth_scale = out_depth * 1.0 / in_depth;
+    const float height_scale = out_height * 1.0 / in_height;
+    const float width_scale = out_width * 1.0 / in_width;
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
                                               dy_blob->shape().At(2), dy_blob->shape().At(3),

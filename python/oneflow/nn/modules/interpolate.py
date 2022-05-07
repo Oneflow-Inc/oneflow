@@ -140,6 +140,7 @@ class Interpolate(Module):
                 depth_scale=scale_factors[0],
                 height_scale=scale_factors[1],
                 width_scale=scale_factors[2],
+                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 3 and self.mode == "area":
