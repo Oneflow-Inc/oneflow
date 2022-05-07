@@ -363,9 +363,9 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
   CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
   const int32_t pos_dim = 0;
   auto size = input->dim(pos_dim);
-  if(!(index >= -size && index < size)){
-    return Error::IndexError() << "Index out of range (expected to be in range of [" << -size << "," << size - 1
-      << "], but got " << index << ")";
+  if (!(index >= -size && index < size)) {
+    return Error::IndexError() << "Index out of range (expected to be in range of [" << -size << ","
+                               << size - 1 << "], but got " << index << ")";
   }
   int32_t pos_index = index >= 0 ? index : index + size;
   std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1,
