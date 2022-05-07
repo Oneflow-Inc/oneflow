@@ -39,7 +39,13 @@ except ImportError:
 
 from .util import broadcast
 from .global_scope import *
-from .generators import Nothing, generator, random_pytorch_tensor, choice_pytorch_tensor
+from .generators import (
+    Nothing,
+    generator,
+    random_pytorch_tensor,
+    choice_pytorch_tensor,
+    rng,
+)
 
 postulate = [".rand", ".Tensor"]
 
@@ -992,7 +998,7 @@ def autotest(
     check_graph=True,
     check_allclose=True,
     check_dtype=False,
-    check_grad_use_random_data=True
+    check_grad_use_random_data=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1046,12 +1052,26 @@ def autotest(
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
                                 if check_grad_use_random_data:
-                                    x_shape = list(x.pytorch.shape)
-                                    x.backward(
-                                        random_tensor(len(x_shape), *x_shape).to(
-                                            x.device
-                                        )
+                                    np_arr = rng.uniform(
+                                        low=0, high=1, size=list(x.pytorch.shape)
                                     )
+                                    pytorch_tensor = torch_original.Tensor(np_arr)
+                                    if is_global():
+                                        flow_tensor = flow.tensor(
+                                            np_arr,
+                                            placement=flow.env.all_device_placement(
+                                                "cpu"
+                                            ),
+                                            sbp=flow.sbp.broadcast,
+                                        )
+                                    else:
+                                        flow_tensor = flow.tensor(
+                                            np_arr, dtype=flow.float
+                                        )
+                                    diff_output = GetDualObject(
+                                        "unused", pytorch_tensor, flow_tensor
+                                    )
+                                    x.backward(diff_output.to(x.device, x.dtype))
                                 else:
                                     x.sum().backward()
                         dual_objects_to_test.append(x)
