@@ -622,11 +622,14 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
     if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
-      oneflow::UserOpAdaptor op_adaptor(op->getOperands(), op->getAttrDictionary());
       if (op->getOperands()[0].getType().cast<mlir::RankedTensorType>().getShape().size() != 4) {
         return failure();
       }
-      if (op_adaptor.device_tagAttr().str() == "cpu") { return failure(); }
+      const auto device_name = OpTrait::IsOpConfCompatible<void>::getDeviceTag(op)
+                                   .cast<mlir::StringAttr>()
+                                   .getValue()
+                                   .str();
+      if (device_name == "cpu") { return failure(); }
     }
     llvm::SmallVector<int32_t> perm = getChannelLastTransposePerm();
     llvm::SmallVector<int32_t> result_perm = getChannelFirstTransposePerm();
