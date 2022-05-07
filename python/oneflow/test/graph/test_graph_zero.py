@@ -119,18 +119,37 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
         S0 = flow.sbp.split(0)
         S1 = flow.sbp.split(1)
 
-        linear_dp_mp = flow.nn.Linear(800, 400, bias=False)
-        linear_dp_mp = linear_dp_mp.to_global(placement=P, sbp=[B, S0])
-        flow.nn.init.constant_(linear_dp_mp.weight, 2.068758)
+        def get_mixed_linear():
+            linear_dp_mp = flow.nn.Linear(800, 400, bias=False)
+            linear_dp_mp = linear_dp_mp.to_global(placement=P, sbp=[B, S0])
+            flow.nn.init.constant_(linear_dp_mp.weight, 2.068758)
 
-        linear_mp_dp = flow.nn.Linear(800, 500, bias=False)
-        linear_mp_dp = linear_mp_dp.to_global(placement=P, sbp=[S0, B])
-        flow.nn.init.constant_(linear_mp_dp.weight, 2.068758)
+            linear_mp_dp = flow.nn.Linear(800, 400, bias=False)
+            linear_mp_dp = linear_mp_dp.to_global(placement=P, sbp=[S0, B])
+            flow.nn.init.constant_(linear_mp_dp.weight, 2.068758)
+
+            class MixedLinear(flow.nn.Module):
+                def __init__(self):
+                    super().__init__()
+                    self.dp_mp = linear_dp_mp
+                    self.mp_dp = linear_mp_dp
+                
+                def forward(self, x):
+                    x = self.dp_mp(x)
+                    x = flow.relu(x)
+                    x = self.mp_dp(x)
+                    x = flow.relu(x)
+                    return x
+            
+            return MixedLinear()
+
+        mixed_linear0 = get_mixed_linear()
+        mixed_linear1 = get_mixed_linear()
 
         of_sgd = flow.optim.SGD(
             [
-                {"params": linear_dp_mp.parameters()},
-                {"params": linear_mp_dp.parameters()},
+                {"params": mixed_linear0.parameters()},
+                {"params": mixed_linear1.parameters()},
             ],
             lr=0.001,
             momentum=0.9,
@@ -139,11 +158,14 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         x = flow.randint(1, 100, (6, 800), dtype=flow.float32, placement=P, sbp=[S0, B])
 
+        #flow.boxing.nccl.enable_use_compute_stream(True)
         class LinearTrainGraph2DWithZeRO(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.linear_dp_mp = linear_dp_mp
-                self.linear_mp_dp = linear_mp_dp
+                self.mixed_linear0 = mixed_linear0
+                self.mixed_linear0.config.activation_checkpointing = True
+                self.mixed_linear1 = mixed_linear1
+                self.mixed_linear1.config.activation_checkpointing = True
                 self.add_optimizer(of_sgd)
 
                 self.config.enable_amp(True)
@@ -152,13 +174,13 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
                     True,
                     stage=zero_stage,
                     min_shard_size=1,
-                    parameter_consumer_limit_level=0,
+                    parameter_consumer_limit_level=1,
                 )
                 self.debug(1)
 
             def build(self, x):
-                out = self.linear_dp_mp(x)
-                out = self.linear_mp_dp(out)
+                out = self.mixed_linear0(x)
+                out = self.mixed_linear1(out)
                 loss = out.sum()
                 loss.backward()
                 return out
@@ -166,15 +188,14 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
         class LinearEvalGraph2DWithZeRO(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.linear_dp_mp = linear_dp_mp
-                self.linear_mp_dp = linear_mp_dp
+                self.mixed_linear0 = mixed_linear0 
+                self.mixed_linear1 = mixed_linear1 
 
                 self.config.enable_amp(True)
 
             def build(self, x):
-                out = self.linear_dp_mp(x)
-                # out = out.to_global(placement=P, sbp=[B, S0])
-                out = self.linear_mp_dp(out)
+                out = self.mixed_linear0(x)
+                out = self.mixed_linear1(out)
                 return out
 
         linear_t_g = LinearTrainGraph2DWithZeRO()
