@@ -241,6 +241,10 @@ class InplaceDivFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    CHECK_OR_RETURN(JUST(x->device()) == JUST(y->device()))
+        << Error::RuntimeError()
+        << "Expected all tensors to be on the same device, but found at least two devices, "
+        << JUST(x->device())->ToString() << " and " << JUST(y->device())->ToString() << "!";
     TensorProcessor tensor_processor;
     if (y->requires_grad()) {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
