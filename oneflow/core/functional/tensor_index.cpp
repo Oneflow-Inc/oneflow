@@ -368,7 +368,8 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
       << "Index out of range (expected to be in range of [" << -size << "," << size - 1
       << "], but got " << index << ")";
   int32_t pos_index = index >= 0 ? index : index + size;
-  std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1, input->shape()->dim_vec().end());
+  std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1,
+                             input->shape()->dim_vec().end());
   const auto& stride = JUST(input->stride())->StrideVec();
   const int32_t storage_offset = JUST(input->storage_offset()) + pos_index * stride[pos_dim];
   std::vector<int32_t> strides(stride.begin() + 1, stride.end());
