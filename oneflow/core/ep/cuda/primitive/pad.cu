@@ -112,16 +112,10 @@ size_t GetLaunchPackSize(size_t elem_size, size_t num_dims, void* dst, const int
   auto src_ptr = reinterpret_cast<std::uintptr_t>(src);
   auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
   for (size_t size = max_pack_size; size > 1; size /= 2) {
-    if(last_padding_before_size == 0 && last_padding_after_size == 0){
-      if (last_src_dim_size % size == 0 && src_ptr % size == 0 && dst_ptr % size == 0) {
-        return size;
-      }
-    } else {
-      if (last_dst_dim_size % size == 0 && last_src_dim_size % size == 0
-          && last_padding_before_size % size == 0 && last_padding_after_size % size == 0 
-          && src_ptr % size == 0 && dst_ptr % size == 0) {
-        return size;
-      }
+    if (last_dst_dim_size % size == 0 && last_src_dim_size % size == 0
+        && last_padding_before_size % size == 0 && last_padding_after_size % size == 0 
+        && src_ptr % size == 0 && dst_ptr % size == 0) {
+      return size;
     }
   }
   return 1;
