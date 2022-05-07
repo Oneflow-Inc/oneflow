@@ -452,5 +452,13 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(n=5, atol=1e-5)
+    def test_upsample2d_bicubic_output_size(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to(device)
+        m = torch.nn.Upsample(size=(38, 30), mode="bicubic")
+        y = m(x)
+        return y
+
 if __name__ == "__main__":
     unittest.main()
