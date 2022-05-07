@@ -126,7 +126,7 @@ template<size_t num_dims, typename IndexType, typename T, size_t pack_size>
 void LaunchKernel(Stream* stream, PadParams<num_dims, IndexType> params, T pad_val) {
   cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
   PadKernel<num_dims, IndexType, T, pack_size>
-      <<<BlocksNum4ThreadsNum(params.elem_cnt), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params,
+      <<<BlocksNum4ThreadsNum(params.elem_cnt / pack_size), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params,
                                                                                            pad_val);
 }
 
