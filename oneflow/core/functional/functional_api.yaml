@@ -1306,7 +1306,7 @@
   bind_python: False
 
 - name: "upsample_linear_1d"
-  signature: 'Tensor (Tensor x, Float scale_factor, Bool align_corners,
+  signature: 'Tensor (Tensor x, Float scale_factor, Bool align_corners, Int64List[1] output_size=None, 
     String data_format="channels_first") => UpsampleLinear1D'
   bind_python: True
 

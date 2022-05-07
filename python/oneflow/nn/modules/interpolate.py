@@ -158,6 +158,7 @@ class Interpolate(Module):
                 x,
                 scale_factor=scale_factors[0],
                 align_corners=self.align_corners,
+                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 4 and self.mode == "bilinear":
