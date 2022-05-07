@@ -128,15 +128,18 @@ struct LocalCallOpKernelUtil final {
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
     {
-      auto er_guard = profiler::EventRecorder::CreateKernelEventRecorder(
-          opkernel->op_type_name(), [&]() -> std::vector<Shape> {
-            std::vector<Shape> shapes;
-            for (const auto& pair : compute_ctx->inputs()) {
-              shapes.push_back(
-                  compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
-            }
-            return shapes;
-          });
+      std::shared_ptr<profiler::EventRecorder> er_guard;
+      if (Global<profiler::ProfileMgr>::Get() != nullptr) {
+        er_guard = profiler::EventRecorder::CreateKernelEventRecorder(
+            opkernel->op_type_name(), [&]() -> std::vector<Shape> {
+              std::vector<Shape> shapes;
+              for (const auto& pair : compute_ctx->inputs()) {
+                shapes.push_back(
+                    compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
+              }
+              return shapes;
+            });
+      }
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
     }
     OF_PROFILER_RANGE_POP();
