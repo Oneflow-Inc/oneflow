@@ -142,7 +142,7 @@ class TestSubModule(flow.unittest.TestCase):
         out4 = torch.sub(x, y)
         return out1, out2, out3, out4
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=5)
     def test_sub_with_alpha(test_case):
         device = random_device()
         x1 = random_tensor(2, 2, 3).to(device)
