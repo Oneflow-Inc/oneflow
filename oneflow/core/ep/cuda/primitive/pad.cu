@@ -152,18 +152,7 @@ void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const void
     params.out_size[i] = dst_dims[i];
     elem_cnt *= params.out_size[i];
   }
-  // params.elem_cnt = elem_cnt * pack_size;
   params.elem_cnt = elem_cnt;
-  printf("Elem count is: %ld \n", params.elem_cnt); 
-  for(int i = 0; i < num_dims; i++){
-    printf("padding before %d is: %ld \n", i, params.padding_before[i]); 
-  }
-  for(int i = 0; i < num_dims; i++){
-    printf("padding after %d is: %ld \n", i, params.padding_after[i]); 
-  }
-  for(int i = 0; i < num_dims; i++){
-    printf("outsize %d is: %ld \n", i, params.out_size[i]); 
-  }
   LaunchKernel<num_dims, IndexType, T, pack_size>(stream, params, pad_val);
 }
 
@@ -189,64 +178,62 @@ constexpr int32_t GetMaxPackSize(){
   return Min(128 / sizeof(T), 8); 
 }
 
-// void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims, 
-//   const int64_t* src_dims, const int64_t* padding_before, const int64_t* padding_after,
-//   size_t* simplified_num_dims, 
-//   int64_t* simplified_dst_dims, int64_t* simplified_src_dims,
-//   int64_t* simplified_padding_before, int64_t* simplified_padding_after) {
-//   CHECK_NE(num_dims, 0);
-//   size_t valid_num_dims = 0;
-//   FOR_RANGE(size_t, i, 0, num_dims) {
-//   if ((i != 0) && (dst_dims[i] == src_dims[i]) && (dst_dims[i] == extent[i]) && (src_pos[i] == 0)
-//   && (dst_pos[i] == 0)) {
-//     simplified_dst_dims[valid_num_dims - 1] *= extent[i];
-//     simplified_dst_pos[valid_num_dims - 1] *= extent[i];
-//     simplified_src_dims[valid_num_dims - 1] *= extent[i];
-//     simplified_src_pos[valid_num_dims - 1] *= extent[i];
-//     simplified_extent[valid_num_dims - 1] *= extent[i];
-//   } else {
-//     simplified_dst_dims[valid_num_dims] = dst_dims[i];
-//     simplified_dst_pos[valid_num_dims] = dst_pos[i];
-//     simplified_src_dims[valid_num_dims] = src_dims[i];
-//     simplified_src_pos[valid_num_dims] = src_pos[i];
-//     simplified_extent[valid_num_dims] = extent[i];
-//     valid_num_dims += 1;
-//     }
-//   }
-//   *simplified_num_dims = valid_num_dims;
-// }
+void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims, 
+  const int64_t* src_dims, const int64_t* padding_before, const int64_t* padding_after,
+  size_t* simplified_num_dims, 
+  int64_t* simplified_dst_dims, int64_t* simplified_src_dims,
+  int64_t* simplified_padding_before, int64_t* simplified_padding_after) {
+  CHECK_NE(num_dims, 0);
+  size_t valid_num_dims = 0;
+  FOR_RANGE(size_t, i, 0, num_dims) {
+    if ((i != 0) && (dst_dims[i] == src_dims[i])) {
+      simplified_dst_dims[valid_num_dims - 1] *= dst_dims[i];
+      simplified_src_dims[valid_num_dims - 1] *= src_dims[i];
+      simplified_padding_before[valid_num_dims - 1] *= src_dims[i];
+      simplified_padding_after[valid_num_dims - 1] *= src_dims[i];
+    } else {
+      simplified_dst_dims[valid_num_dims] = dst_dims[i];
+      simplified_src_dims[valid_num_dims] = src_dims[i];
+      simplified_padding_before[valid_num_dims] = padding_before[i];
+      simplified_padding_after[valid_num_dims] = padding_after[i];
+      valid_num_dims += 1;
+    }
+  }
+  *simplified_num_dims = valid_num_dims;
+}
 
 template<size_t num_dims, typename T>
-void DispatchPackSize(Stream* stream, void* dst, const int64_t* dst_dims,
-                      const void* src, const int64_t* src_dims, const int64_t* padding_before,
-                      const int64_t* padding_after, T pad_val) {
-  // max pack size wrong
+void DispatchPackSize(Stream* stream, void* dst, int64_t* dst_dims,
+                      const void* src, int64_t* src_dims, int64_t* padding_before,
+                      int64_t* padding_after, T pad_val) {
   constexpr int32_t max_packsize = GetMaxPackSize<T>(); 
   size_t launch_pack_size = GetLaunchPackSize<max_packsize>(sizeof(T), num_dims, dst, dst_dims,
                                         src, src_dims,
-                                        padding_before, padding_after); 
-  int64_t simplify_dst_dims[num_dims]; 
-  int64_t simplify_src_dims[num_dims]; 
-  int64_t simplify_padding_before[num_dims]; 
-  int64_t simplify_padding_after[num_dims]; 
-  for(int i = 0; i < num_dims; i++){
-    simplify_dst_dims[i] = dst_dims[i]; 
-    simplify_src_dims[i] = src_dims[i]; 
-    simplify_padding_before[i] = padding_before[i]; 
-    simplify_padding_after[i] = padding_after[i]; 
-
-    if(i == num_dims-1){
-      simplify_dst_dims[i] /= launch_pack_size; 
-      simplify_src_dims[i] /= launch_pack_size; 
-      simplify_padding_before[i] /= launch_pack_size; 
-      simplify_padding_after[i] /= launch_pack_size; 
-    }
-  }
+                                        padding_before, padding_after);
   
+  printf("simplified num dims is: %ld \n", num_dims); 
+  printf("Launch pack size is: %ld \n", launch_pack_size); 
+  for(int i = 0; i < num_dims; i++){
+    printf("simplified_dst_dims %d is: %ld \n", i, dst_dims[i]); 
+  }
+  for(int i = 0; i < num_dims; i++){
+    printf("simplified_src_dims %d is: %ld \n", i, src_dims[i]); 
+  }
+  for(int i = 0; i < num_dims; i++){
+    printf("padding before %d is: %ld \n", i, padding_before[i]); 
+  }
+  for(int i = 0; i < num_dims; i++){
+    printf("padding after %d is: %ld \n", i, padding_after[i]); 
+  }
+
+  dst_dims[num_dims-1] /= launch_pack_size; 
+  src_dims[num_dims-1] /= launch_pack_size; 
+  padding_before[num_dims-1] /= launch_pack_size; 
+  padding_after[num_dims-1] /= launch_pack_size; 
+
   void (*func)(Stream* /*stream*/, void* /*dst*/, const int64_t* /*dst_dims*/, const void* /*src*/,
                const int64_t* /*src_dims*/, const int64_t* /*padding_before*/,
                const int64_t* /*padding_after*/, T) = nullptr;
-  printf("Here launch pack size is: %ld \n", launch_pack_size); 
   if (launch_pack_size == 1) {
     func = DispatchIndexType<num_dims, T, 1>;
   } else if (launch_pack_size == 2) {
@@ -260,19 +247,16 @@ void DispatchPackSize(Stream* stream, void* dst, const int64_t* dst_dims,
   } else {
     UNIMPLEMENTED();
   }
-  // func(stream, dst, dst_dims, src, src_dims, padding_before, padding_after, pad_val);
-  func(stream, dst, simplify_dst_dims, src, simplify_src_dims, simplify_padding_before, simplify_padding_after, pad_val);
-
+  func(stream, dst, dst_dims, src, src_dims, padding_before, padding_after, pad_val);
 }
 
-
 template<typename T>
-void LaunchWithSimplified(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims,
-                          const void* src, const int64_t* src_dims, const int64_t* padding_before,
-                          const int64_t* padding_after, T pad_val) {
-  void (*func)(Stream* /*stream*/, void* /*dst*/, const int64_t* /*dst_dims*/, const void* /*src*/,
-               const int64_t* /*src_dims*/, const int64_t* /*padding_before*/,
-               const int64_t* /*padding_after*/, T) = nullptr;
+void LaunchWithSimplified(Stream* stream, size_t num_dims, void* dst, int64_t* dst_dims,
+                          const void* src, int64_t* src_dims, int64_t* padding_before,
+                          int64_t* padding_after, T pad_val) {
+  void (*func)(Stream* /*stream*/, void* /*dst*/, int64_t* /*dst_dims*/, const void* /*src*/,
+               int64_t* /*src_dims*/, int64_t* /*padding_before*/,
+               int64_t* /*padding_after*/, T) = nullptr;
   if (num_dims == 1) {
     func = DispatchPackSize<1, T>;
   } else if (num_dims == 2) {
@@ -295,6 +279,26 @@ void LaunchWithSimplified(Stream* stream, size_t num_dims, void* dst, const int6
   func(stream, dst, dst_dims, src, src_dims, padding_before, padding_after, pad_val);
 }
 
+constexpr int32_t kMaxNumDims = 8; 
+
+template<typename T>
+void SimplifyThenLaunch(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims,
+                          const void* src, const int64_t* src_dims, const int64_t* padding_before,
+                          const int64_t* padding_after, T pad_val){
+  CHECK_LE(num_dims, kMaxNumDims);
+  int64_t simplified_dst_dims[kMaxNumDims]; 
+  int64_t simplified_src_dims[kMaxNumDims]; 
+  int64_t simplified_padding_before[kMaxNumDims]; 
+  int64_t simplified_padding_after[kMaxNumDims]; 
+  size_t simplified_num_dims = 1; 
+  SimplifyPadDims(num_dims, dst_dims, src_dims, padding_before, padding_after, &simplified_num_dims, 
+                  simplified_dst_dims, simplified_src_dims,
+                  simplified_padding_before, simplified_padding_after);  
+  LaunchWithSimplified<T>(stream, simplified_num_dims, dst, simplified_dst_dims, src, simplified_src_dims, 
+                          simplified_padding_before, simplified_padding_after, pad_val);                
+}
+
+
 template<typename T>
 class PadImpl : public Pad {
  public:
@@ -305,7 +309,7 @@ class PadImpl : public Pad {
   void Launch(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims, const void* src,
               const int64_t* src_dims, const int64_t* padding_before, const int64_t* padding_after,
               Scalar pad_val) override {
-    LaunchWithSimplified<T>(stream, num_dims, dst, dst_dims, src, src_dims, padding_before,
+    SimplifyThenLaunch<T>(stream, num_dims, dst, dst_dims, src, src_dims, padding_before,
                             padding_after, GetValue<T>(pad_val));
   }
 };
