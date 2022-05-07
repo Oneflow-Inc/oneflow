@@ -1339,7 +1339,7 @@
 
 - name: "upsample_bilinear_2d"
   signature:
-    'Tensor (Tensor x, Float height_scale, Float width_scale, Bool align_corners,
+    'Tensor (Tensor x, Float height_scale, Float width_scale, Bool align_corners, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleBilinear2D'
   bind_python: True
 

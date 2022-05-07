@@ -1611,12 +1611,16 @@ class UpsampleBilinear2DFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
+                           const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    if (output_size.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", *JUST(output_size)));
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
