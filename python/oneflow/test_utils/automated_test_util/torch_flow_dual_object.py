@@ -1036,6 +1036,10 @@ def autotest(
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
                                 x.sum().backward()
+                            if isinstance(x.pytorch, tuple):
+                                x = x[0] + x[1]
+                                call_tensor_id.append(id(x.pytorch))
+                                x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
                     for key in x.pytorch.state_dict().keys():

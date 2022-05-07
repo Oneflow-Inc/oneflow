@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import math
+from typing import List, Tuple, Optional
+
 import oneflow as flow
 from oneflow import nn
-from oneflow.nn import Module
-from math import sqrt
+from oneflow.framework.tensor import Tensor
 
 
-class RNN(Module):
+class RNN(nn.Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.RNN.html.
 
@@ -187,7 +189,7 @@ class RNN(Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        stdv = 1.0 / sqrt(self.hidden_size)
+        stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.uniform_(-stdv, stdv)
 
@@ -344,7 +346,7 @@ class RNN(Module):
         return hidden_seq, h_t
 
 
-class GRU(Module):
+class GRU(nn.Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/modules/rnn.html#GRU.
 
@@ -512,7 +514,7 @@ class GRU(Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        stdv = 1.0 / sqrt(self.hidden_size)
+        stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.uniform_(-stdv, stdv)
 
@@ -894,7 +896,7 @@ class LSTM(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        stdv = 1.0 / sqrt(self.hidden_size)
+        stdv = 1.0 / math.sqrt(self.hidden_size)
         for weight in self.parameters():
             weight.uniform_(-stdv, stdv)
 
@@ -1121,6 +1123,294 @@ class LSTM(nn.Module):
             hidden_seq = self.permute_tensor(hidden_seq)
 
         return hidden_seq, (h_t, c_t)
+
+
+# NOTE(Liang Depeng): The implementation of rnn modules are modified from
+#                     https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/rnn.py
+class RNNCellBase(nn.Module):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        bias: bool,
+        num_chunks: int,
+        device=None,
+        dtype=None,
+    ):
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.bias = bias
+        self.weight_ih = nn.Parameter(
+            flow.empty(num_chunks * hidden_size, input_size, **factory_kwargs)
+        )
+        self.weight_hh = nn.Parameter(
+            flow.empty(num_chunks * hidden_size, hidden_size, **factory_kwargs)
+        )
+        if bias:
+            self.bias_ih = nn.Parameter(
+                flow.empty(num_chunks * hidden_size, **factory_kwargs)
+            )
+            self.bias_hh = nn.Parameter(
+                flow.empty(num_chunks * hidden_size, **factory_kwargs)
+            )
+        else:
+            self.register_parameter("bias_ih", None)
+            self.register_parameter("bias_hh", None)
+
+        self.reset_parameters()
+
+    def extra_repr(self) -> str:
+        s = "{input_size}, {hidden_size}"
+        if "bias" in self.__dict__ and self.bias is not True:
+            s += ", bias={bias}"
+        if "nonlinearity" in self.__dict__ and self.nonlinearity != "tanh":
+            s += ", nonlinearity={nonlinearity}"
+        return s.format(**self.__dict__)
+
+    def reset_parameters(self) -> None:
+        stdv = 1.0 / math.sqrt(self.hidden_size) if self.hidden_size > 0 else 0
+        for weight in self.parameters():
+            nn.init.uniform_(weight, -stdv, stdv)
+
+
+class RNNCell(RNNCellBase):
+    """An Elman RNN cell with tanh or ReLU non-linearity.
+
+    .. math::
+
+        h' = \tanh(W_{ih} x + b_{ih}  +  W_{hh} h + b_{hh})
+
+    If :attr:`nonlinearity` is `'relu'`, then ReLU is used in place of tanh.
+
+    Args:
+        input_size: The number of expected features in the input `x`
+        hidden_size: The number of features in the hidden state `h`
+        bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+            Default: ``True``
+        nonlinearity: The non-linearity to use. Can be either ``'tanh'`` or ``'relu'``. Default: ``'tanh'``
+
+    Inputs: input, hidden
+        - **input**: tensor containing input features
+        - **hidden**: tensor containing the initial hidden state
+          Defaults to zero if not provided.
+
+    Outputs: h'
+        - **h'** of shape `(batch, hidden_size)`: tensor containing the next hidden state
+          for each element in the batch
+
+    Shape:
+        - input: :math:`(N, H_{in})` or :math:`(H_{in})` tensor containing input features where
+          :math:`H_{in}` = `input_size`.
+        - hidden: :math:`(N, H_{out})` or :math:`(H_{out})` tensor containing the initial hidden
+          state where :math:`H_{out}` = `hidden_size`. Defaults to zero if not provided.
+        - output: :math:`(N, H_{out})` or :math:`(H_{out})` tensor containing the next hidden state.
+
+    Attributes:
+        weight_ih: the learnable input-hidden weights, of shape
+            `(hidden_size, input_size)`
+        weight_hh: the learnable hidden-hidden weights, of shape
+            `(hidden_size, hidden_size)`
+        bias_ih: the learnable input-hidden bias, of shape `(hidden_size)`
+        bias_hh: the learnable hidden-hidden bias, of shape `(hidden_size)`
+
+    .. note::
+        All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
+        where :math:`k = \frac{1}{\text{hidden\_size}}`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+
+        >>> rnn = nn.RNNCell(10, 20)
+        >>> input = flow.randn(6, 3, 10)
+        >>> hx = flow.randn(3, 20)
+        >>> output = []
+        >>> for i in range(6):
+                hx = rnn(input[i], hx)
+                output.append(hx)
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        bias: bool = True,
+        nonlinearity: str = "tanh",
+        device=None,
+        dtype=None,
+    ):
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super(RNNCell, self).__init__(
+            input_size, hidden_size, bias, num_chunks=1, **factory_kwargs
+        )
+        self.nonlinearity = nonlinearity
+
+    def forward(self, input: Tensor, hx: Optional[Tensor] = None) -> Tensor:
+        assert input.dim() in (
+            1,
+            2,
+        ), f"RNNCell: Expected input to be 1-D or 2-D but received {input.dim()}-D tensor"
+        is_batched = input.dim() == 2
+        if not is_batched:
+            input = input.unsqueeze(0)
+
+        if hx is None:
+            if input.is_global():
+                hx = flow.zeros(
+                    input.size(0),
+                    self.hidden_size,
+                    dtype=input.dtype,
+                    sbp=input.sbp,
+                    placement=input.placement,
+                )
+            else:
+                hx = flow.zeros(
+                    input.size(0),
+                    self.hidden_size,
+                    dtype=input.dtype,
+                    device=input.device,
+                )
+        else:
+            hx = hx.unsqueeze(0) if not is_batched else hx
+
+        if self.nonlinearity == "tanh":
+            ret = flow._C.rnn_tanh_cell(
+                input, hx, self.weight_ih, self.weight_hh, self.bias_ih, self.bias_hh,
+            )
+        elif self.nonlinearity == "relu":
+            ret = flow._C.rnn_relu_cell(
+                input, hx, self.weight_ih, self.weight_hh, self.bias_ih, self.bias_hh,
+            )
+        else:
+            raise RuntimeError("Unknown nonlinearity: {}".format(self.nonlinearity))
+
+        if not is_batched:
+            ret = ret.squeeze(0)
+
+        return ret
+
+
+class LSTMCell(RNNCellBase):
+    """A long short-term memory (LSTM) cell.
+
+    .. math::
+
+        \begin{array}{ll}
+        i = \sigma(W_{ii} x + b_{ii} + W_{hi} h + b_{hi}) \\
+        f = \sigma(W_{if} x + b_{if} + W_{hf} h + b_{hf}) \\
+        g = \tanh(W_{ig} x + b_{ig} + W_{hg} h + b_{hg}) \\
+        o = \sigma(W_{io} x + b_{io} + W_{ho} h + b_{ho}) \\
+        c' = f * c + i * g \\
+        h' = o * \tanh(c') \\
+        \end{array}
+
+    where :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product.
+
+    Args:
+        input_size: The number of expected features in the input `x`
+        hidden_size: The number of features in the hidden state `h`
+        bias: If ``False``, then the layer does not use bias weights `b_ih` and
+            `b_hh`. Default: ``True``
+
+    Inputs: input, (h_0, c_0)
+        - **input** of shape `(batch, input_size)` or `(input_size)`: tensor containing input features
+        - **h_0** of shape `(batch, hidden_size)` or `(hidden_size)`: tensor containing the initial hidden state
+        - **c_0** of shape `(batch, hidden_size)` or `(hidden_size)`: tensor containing the initial cell state
+
+          If `(h_0, c_0)` is not provided, both **h_0** and **c_0** default to zero.
+
+    Outputs: (h_1, c_1)
+        - **h_1** of shape `(batch, hidden_size)` or `(hidden_size)`: tensor containing the next hidden state
+        - **c_1** of shape `(batch, hidden_size)` or `(hidden_size)`: tensor containing the next cell state
+
+    Attributes:
+        weight_ih: the learnable input-hidden weights, of shape
+            `(4*hidden_size, input_size)`
+        weight_hh: the learnable hidden-hidden weights, of shape
+            `(4*hidden_size, hidden_size)`
+        bias_ih: the learnable input-hidden bias, of shape `(4*hidden_size)`
+        bias_hh: the learnable hidden-hidden bias, of shape `(4*hidden_size)`
+
+    .. note::
+        All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
+        where :math:`k = \frac{1}{\text{hidden\_size}}`
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn as nn
+
+        >>> rnn = nn.LSTMCell(10, 20) # (input_size, hidden_size)
+        >>> input = flow.randn(2, 3, 10) # (time_steps, batch, input_size)
+        >>> hx = flow.randn(3, 20) # (batch, hidden_size)
+        >>> cx = flow.randn(3, 20)
+        >>> output = []
+        >>> for i in range(input.size()[0]):
+                hx, cx = rnn(input[i], (hx, cx))
+                output.append(hx)
+        >>> output = flow.stack(output, dim=0)
+    """
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        bias: bool = True,
+        device=None,
+        dtype=None,
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super(LSTMCell, self).__init__(
+            input_size, hidden_size, bias, num_chunks=4, **factory_kwargs
+        )
+
+    def forward(
+        self, input: Tensor, hx: Optional[Tuple[Tensor, Tensor]] = None
+    ) -> Tuple[Tensor, Tensor]:
+        assert input.dim() in (
+            1,
+            2,
+        ), f"LSTMCell: Expected input to be 1-D or 2-D but received {input.dim()}-D tensor"
+        is_batched = input.dim() == 2
+        if not is_batched:
+            input = input.unsqueeze(0)
+
+        if hx is None:
+            if input.is_global():
+                zeros = flow.zeros(
+                    input.size(0),
+                    self.hidden_size,
+                    dtype=input.dtype,
+                    sbp=input.sbp,
+                    placement=input.placement,
+                    requires_grad=True,
+                )
+            else:
+                zeros = flow.zeros(
+                    input.size(0),
+                    self.hidden_size,
+                    dtype=input.dtype,
+                    device=input.device,
+                    requires_grad=True,
+                )
+            hx = (zeros, zeros)
+        else:
+            hx = (hx[0].unsqueeze(0), hx[1].unsqueeze(0)) if not is_batched else hx
+
+        ret = flow._C.lstm_cell(
+            input, hx, self.weight_ih, self.weight_hh, self.bias_ih, self.bias_hh,
+        )
+
+        if not is_batched:
+            ret = (ret[0].squeeze(0), ret[1].squeeze(0))
+        return ret
 
 
 if __name__ == "__main__":

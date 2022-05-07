@@ -2886,6 +2886,307 @@ class RocAucScoreFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+// NOTE(Liang Depeng): The implementation of rnn related functors are modified from
+//                     https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/RNN.cpp
+struct tanh_f {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& t) const {
+    return JUST(functional::Tanh(t));
+  }
+};
+struct relu_f {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& t) const {
+    return JUST(functional::Relu(t, false));
+  }
+};
+
+Maybe<Tensor> linear(const std::shared_ptr<one::Tensor>& input,
+                     const std::shared_ptr<one::Tensor>& weight,
+                     const Optional<one::Tensor>& bias) {
+  // TODO(Liang Depeng): add implementation of addmm fuse op
+  //                     refer to:
+  //                     https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Linear.cpp#L35
+  if (bias.has_value()) {
+    std::shared_ptr<Tensor> output = JUST(functional::MatMul(input, weight, false, true, 1.0));
+    return functional::Add(output, JUST(bias), 1.0, true);
+  } else {
+    return functional::MatMul(input, weight, false, true, 1.0);
+  }
+}
+
+struct CellParams {
+  CellParams(const std::shared_ptr<one::Tensor>& _w_ih, const std::shared_ptr<one::Tensor>& _w_hh,
+             const Optional<one::Tensor>& _b_ih, const Optional<one::Tensor>& _b_hh,
+             const Optional<one::Tensor>& _w_hr)
+      : w_ih(_w_ih), w_hh(_w_hh), b_ih_(_b_ih), b_hh_(_b_hh), w_hr(_w_hr){};
+
+  const std::shared_ptr<one::Tensor>& w_ih;
+  const std::shared_ptr<one::Tensor>& w_hh;
+  const Optional<one::Tensor>& b_ih_; /* optional */
+  const Optional<one::Tensor>& b_hh_; /* optional */
+  const Optional<one::Tensor>& w_hr;  /* only defined for LSTMs with projections */
+
+  Maybe<Tensor> matmul_ih(const std::shared_ptr<one::Tensor>& input) const {
+    return functional::MatMul(input, w_ih, false, true, 1.0);
+  }
+
+  Maybe<Tensor> matmul_hh(const std::shared_ptr<one::Tensor>& h) const {
+    return functional::MatMul(h, w_hh, false, true, 1.0);
+  }
+
+  Maybe<Tensor> matmul_hr(const std::shared_ptr<one::Tensor>& h) const {
+    if (w_hr.has_value()) { return functional::MatMul(h, JUST(w_hr), false, true, 1.0); }
+    return h;
+  }
+
+  Maybe<Tensor> linear_ih(const std::shared_ptr<one::Tensor>& input) const {
+    return linear(input, w_ih, b_ih_);
+  }
+
+  Maybe<Tensor> linear_hh(const std::shared_ptr<one::Tensor>& h) const {
+    return linear(h, w_hh, b_hh_);
+  }
+
+  const Optional<one::Tensor>& b_ih() const { return b_ih_; }
+  const Optional<one::Tensor>& b_hh() const { return b_hh_; }
+};
+
+template<typename nonlinearity, typename cell_params>
+struct SimpleCell {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& hidden, const cell_params& params,
+                           bool pre_compute_input = false) const {
+    std::shared_ptr<one::Tensor> hh = JUST(params.linear_hh(hidden));
+    std::shared_ptr<one::Tensor> output;
+    if (pre_compute_input) {
+      output = JUST(functional::Add(hh, input, 1.0, true));
+    } else {
+      std::shared_ptr<one::Tensor> ih = JUST(params.linear_ih(input));
+      output = JUST(functional::Add(hh, ih, 1.0, true));
+    }
+    return nonlinearity{}(output);
+  }
+};
+
+template<typename cell_params>
+struct LSTMCell {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
+                                const one::TensorTuple& hidden, const cell_params& params,
+                                bool pre_compute_input = false) const {
+    const std::shared_ptr<Tensor>& hx = hidden[0];
+    const std::shared_ptr<Tensor>& cx = hidden[1];
+
+    DeviceType input_device{};
+    if (input->is_consistent()) {
+      input_device = JUST(input->parallel_desc())->device_type();
+    } else {
+      input_device = JUST(input->device())->enum_type();
+    }
+
+    if (input_device == DeviceType::kCUDA) {
+      CHECK_OR_RETURN(!pre_compute_input);
+
+      std::shared_ptr<one::Tensor> igates = JUST(params.matmul_ih(input));
+      std::shared_ptr<one::Tensor> hgates = JUST(params.matmul_hh(hx));
+
+      std::shared_ptr<TensorTuple> result =
+          JUST(functional::FusedLstmCell(igates, hgates, cx, params.b_ih(), params.b_hh()));
+
+      auto outputs = std::make_shared<TensorTuple>(2);
+      (*outputs)[0] = JUST(params.matmul_hr(result->at(0)));
+      (*outputs)[1] = result->at(1);
+      return outputs;
+    }
+
+    std::shared_ptr<one::Tensor> gates = JUST(params.linear_hh(hx));
+    if (pre_compute_input) {
+      gates = JUST(functional::Add(gates, input, 1.0, true));
+    } else {
+      std::shared_ptr<one::Tensor> gates_ih = JUST(params.linear_ih(input));
+      gates = JUST(functional::Add(gates, gates_ih, 1.0, true));
+    }
+    std::shared_ptr<one::TensorTuple> chunked_gates = JUST(functional::Chunk(gates, 4, 1));
+    std::shared_ptr<one::Tensor> ingate = JUST(functional::Sigmoid((*chunked_gates)[0]));
+    std::shared_ptr<one::Tensor> forgetgate = JUST(functional::Sigmoid((*chunked_gates)[1]));
+    std::shared_ptr<one::Tensor> cellgate = JUST(functional::Tanh((*chunked_gates)[2]));
+    std::shared_ptr<one::Tensor> outgate = JUST(functional::Sigmoid((*chunked_gates)[3]));
+    std::shared_ptr<one::Tensor> cy = JUST(functional::Mul(forgetgate, cx));
+    cellgate = JUST(functional::Mul(ingate, cellgate));
+    cy = JUST(functional::Add(cy, cellgate, 1.0, true));
+    std::shared_ptr<one::Tensor> tanh_cy = JUST(functional::Tanh(cy));
+    std::shared_ptr<one::Tensor> hy = JUST(functional::Mul(outgate, tanh_cy));
+    auto outputs = std::make_shared<TensorTuple>(2);
+    (*outputs)[0] = JUST(params.matmul_hr(hy));
+    (*outputs)[1] = cy;
+    return outputs;
+  }
+};
+
+Maybe<void> check_rnn_cell_forward_input(const std::shared_ptr<one::Tensor>& input,
+                                         int64_t input_size) {
+  CHECK_OR_RETURN(input->shape()->At(1) == input_size)
+      << "input has inconsistent input_size: got " << input->shape()->At(1) << " expected "
+      << input_size;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> check_rnn_cell_forward_hidden(const std::shared_ptr<one::Tensor>& input,
+                                          const std::shared_ptr<one::Tensor>& hx,
+                                          int64_t hidden_size, int64_t hidden_label) {
+  CHECK_OR_RETURN(input->shape()->At(0) == hx->shape()->At(0))
+      << "Input batch size " << input->shape()->At(0) << " doesn't match hidden" << hidden_label
+      << " batch size " << hx->shape()->At(0);
+
+  CHECK_OR_RETURN(hx->shape()->At(1) == hidden_size)
+      << "hidden" << hidden_label << " has inconsistent hidden_size: got " << hx->shape()->At(1)
+      << ", expected " << hidden_size;
+  return Maybe<void>::Ok();
+}
+
+class RnnTanhCellFunctor {
+ public:
+  RnnTanhCellFunctor() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& hx,
+                           const std::shared_ptr<one::Tensor>& w_ih,
+                           const std::shared_ptr<one::Tensor>& w_hh,
+                           const Optional<one::Tensor>& b_ih,
+                           const Optional<one::Tensor>& b_hh) const {
+    // static at::Tensor undefined;
+    JUST(check_rnn_cell_forward_input(input, w_ih->shape()->At(1)));
+    JUST(check_rnn_cell_forward_hidden(input, hx, w_hh->shape()->At(1), 0));
+    return SimpleCell<tanh_f, CellParams>{}(input, hx, CellParams{w_ih, w_hh, b_ih, b_hh, nullptr});
+  }
+};
+
+class RnnReluCellFunctor {
+ public:
+  RnnReluCellFunctor() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& hx,
+                           const std::shared_ptr<one::Tensor>& w_ih,
+                           const std::shared_ptr<one::Tensor>& w_hh,
+                           const Optional<one::Tensor>& b_ih,
+                           const Optional<one::Tensor>& b_hh) const {
+    JUST(check_rnn_cell_forward_input(input, w_ih->shape()->At(1)));
+    JUST(check_rnn_cell_forward_hidden(input, hx, w_hh->shape()->At(1), 0));
+    return SimpleCell<relu_f, CellParams>{}(input, hx, CellParams{w_ih, w_hh, b_ih, b_hh, nullptr});
+  }
+};
+
+class LstmCellFunctor {
+ public:
+  LstmCellFunctor() {}
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
+                                const one::TensorTuple& hx,
+                                const std::shared_ptr<one::Tensor>& w_ih,
+                                const std::shared_ptr<one::Tensor>& w_hh,
+                                const Optional<one::Tensor>& b_ih,
+                                const Optional<one::Tensor>& b_hh) const {
+    CHECK_OR_RETURN(hx.size() == 2) << "lstm_cell expects two hidden states";
+    JUST(check_rnn_cell_forward_input(input, w_ih->shape()->At(1)));
+    auto hidden_size = w_hh->shape()->At(1);
+    JUST(check_rnn_cell_forward_hidden(input, hx[0], hidden_size, 0));
+    JUST(check_rnn_cell_forward_hidden(input, hx[1], hidden_size, 0));
+    return LSTMCell<CellParams>{}(input, hx, CellParams{w_ih, w_hh, b_ih, b_hh, nullptr});
+  }
+};
+
+class FusedLstmCellFunctor {
+ public:
+  FusedLstmCellFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell")
+                                   .Input("input_gates")
+                                   .Input("hidden_gates")
+                                   .Input("cx")
+                                   .Input("input_bias")
+                                   .Input("hidden_bias")
+                                   .Output("hy")
+                                   .Output("cy")
+                                   .Output("workspace")
+                                   .Build());
+    op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell")
+                                      .Input("input_gates")
+                                      .Input("hidden_gates")
+                                      .Input("cx")
+                                      .Output("hy")
+                                      .Output("cy")
+                                      .Output("workspace")
+                                      .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& igates,
+                                const std::shared_ptr<one::Tensor>& hgates,
+                                const std::shared_ptr<one::Tensor>& cx,
+                                const Optional<one::Tensor>& b_ih,
+                                const Optional<one::Tensor>& b_hh) const {
+    std::shared_ptr<TensorTuple> kernel_result;
+    if (b_ih.has_value() && b_hh.has_value()) {
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_with_bias_, {igates, hgates, cx, JUST(b_ih), JUST(b_hh)}));
+    } else {
+      kernel_result =
+          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_without_bias_, {igates, hgates, cx}));
+    }
+    return kernel_result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_with_bias_;
+  std::shared_ptr<OpExpr> op_without_bias_;
+};
+
+class FusedLstmCellGradFunctor {
+ public:
+  FusedLstmCellGradFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell_grad")
+                                   .Input("grad_hy")
+                                   .Input("grad_cy")
+                                   .Input("cx")
+                                   .Input("cy")
+                                   .Input("workspace")
+                                   .Output("grad_input_gates")
+                                   .Output("grad_hidden_gates")
+                                   .Output("grad_cx")
+                                   .Output("grad_input_bias")
+                                   .Output("grad_hidden_bias")
+                                   .Build());
+    op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell_grad")
+                                      .Input("grad_hy")
+                                      .Input("grad_cy")
+                                      .Input("cx")
+                                      .Input("cy")
+                                      .Input("workspace")
+                                      .Output("grad_input_gates")
+                                      .Output("grad_hidden_gates")
+                                      .Output("grad_cx")
+                                      .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& grad_hy,
+                                const std::shared_ptr<one::Tensor>& grad_cy,
+                                const std::shared_ptr<one::Tensor>& cx,
+                                const std::shared_ptr<one::Tensor>& cy,
+                                const std::shared_ptr<one::Tensor>& workspace,
+                                bool has_bias) const {
+    std::shared_ptr<TensorTuple> kernel_result;
+    if (has_bias) {
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_with_bias_, {grad_hy, grad_cy, cx, cy, workspace}));
+    } else {
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_without_bias_, {grad_hy, grad_cy, cx, cy, workspace}));
+    }
+    return kernel_result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_with_bias_;
+  std::shared_ptr<OpExpr> op_without_bias_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2970,6 +3271,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
+  m.add_functor<impl::RnnTanhCellFunctor>("RnnTanhCell");
+  m.add_functor<impl::RnnReluCellFunctor>("RnnReluCell");
+  m.add_functor<impl::LstmCellFunctor>("LstmCell");
+  m.add_functor<impl::FusedLstmCellFunctor>("FusedLstmCell");
+  m.add_functor<impl::FusedLstmCellGradFunctor>("FusedLstmCellGrad");
 }
 
 }  // namespace functional
