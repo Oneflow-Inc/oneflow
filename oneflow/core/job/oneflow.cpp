@@ -903,12 +903,6 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
                                 &var_op_name2parallel_blob_conf);
-  auto AppendJob = [&](Job* job) {
-    JobDesc job_desc(job->job_conf(), jobs.size());
-    CHECK(!job_desc.Bool("__is_user_function__"));
-    jobs.emplace_back(new Job(*job));
-  };
-
   std::vector<std::shared_ptr<Job>> function_jobs;
   function_jobs.reserve(jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) {
