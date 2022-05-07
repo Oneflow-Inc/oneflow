@@ -1375,8 +1375,8 @@
 
 - name: "upsample_trilinear_3d"
   signature:
-    'Tensor (Tensor x, Float depth_scale, Float height_scale, Float width_scale,
-    Bool align_corners, String data_format="channels_first") => UpsampleTrilinear3D'
+    'Tensor (Tensor x, Float depth_scale, Float height_scale, Float width_scale, Bool align_corners, 
+    Int64List[3] output_size=None, String data_format="channels_first") => UpsampleTrilinear3D'
   bind_python: True
 
 - name: "upsample_trilinear_3d_grad"

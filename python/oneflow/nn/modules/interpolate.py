@@ -189,6 +189,7 @@ class Interpolate(Module):
                 height_scale=scale_factors[1],
                 width_scale=scale_factors[2],
                 align_corners=self.align_corners,
+                output_size=output_size,
                 data_format="channels_first",
             )
 

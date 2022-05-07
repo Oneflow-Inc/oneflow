@@ -9352,6 +9352,7 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoS
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
     DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
