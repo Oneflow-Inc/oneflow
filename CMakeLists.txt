@@ -15,6 +15,7 @@ option(BUILD_PYTHON "" ON)
 option(BUILD_CPP_API "Option to build OneFlow C++ API (beta)" OFF)
 option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
+option(BUILD_ROCM "" OFF)
 option(BUILD_TESTING "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
@@ -34,6 +35,16 @@ option(MAYBE_NEED_ERROR_MSG_CHECK "" OFF)
 # Reference:
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
 option(OF_FORCE_COLORED_DIAGNOSTICS "Always produce ANSI-colored diagnostics (GNU/Clang only)." ON)
+
+if (BUILD_CUDA AND BUILD_ROCM)
+  message(FATAL_ERROR "Compile with cuda and rocm enabled simultaneously are not supported right now.")
+endif()
+
+if (BUILD_ROCM)
+  # Search for rocm in common locations
+  list(APPEND CMAKE_PREFIX_PATH /opt/rocm/hip /opt/rocm)
+endif()
+
 
 set(ONEFLOW_CURRENT_VERSION 0.7.0.dev CACHE STRING "")
 if(BUILD_FOR_CI)
