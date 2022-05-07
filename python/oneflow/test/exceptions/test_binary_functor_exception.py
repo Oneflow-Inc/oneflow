@@ -55,6 +55,43 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             "Can not expand shape (2,4) to (2,3)"
             in str(context.exception)
         )
+    def test_mul_device_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.ones((4, 4))
+            y = flow.ones((4, 4)).cuda()
+            z = flow.mul(x, y)
+        test_case.assertTrue(
+            "Expected all tensors to be on the same device, but found at least two devices, cpu:0 and cuda:0!"
+            in str(context.exception)
+        )
+
+    def test_mul_inplace_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.ones((4, 4))
+            y = flow.ones((4, 4)).cuda()
+            x.mul_(y)
+        test_case.assertTrue(
+            "Expected all tensors to be on the same device, but found at least two devices, cpu:0 and cuda:0!"
+            in str(context.exception)
+        )
+
+        with test_case.assertRaises(Exception) as context:
+            x = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
+            y = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
+            x.mul_(y)
+        test_case.assertTrue(
+            "a leaf Tensor that requires grad is being used in an in-place operation"
+            in str(context.exception)
+        )
+
+        with test_case.assertRaises(Exception) as context:
+            x = flow.ones((2, 3))
+            y = flow.ones((2, 4))
+            x.mul_(y)
+        test_case.assertTrue(
+            "Can not expand shape (2,4) to (2,3)"
+            in str(context.exception)
+        )
 
 
 if __name__ == "__main__":
