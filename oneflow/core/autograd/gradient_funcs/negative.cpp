@@ -38,9 +38,7 @@ class Negative : public OpExprGradFunction<NegativeCaptureState> {
   Maybe<void> Apply(const NegativeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
-
-    const auto& x = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(functional::Negative(x));
+    in_grads->at(0) = JUST(functional::Negative(out_grads.at(0)));
     return Maybe<void>::Ok();
   }
 };
