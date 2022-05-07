@@ -23,7 +23,7 @@ namespace oneflow {
 Stride::Stride(const Shape& shape) {
   if (shape.is_initialized() && shape.NumAxes() > 0) {
     stride_vec_.resize(shape.NumAxes());
-    std::exclusive_scan(shape.dim_vec().rbegin(), shape.dim_vec().rend(), stride_vec_.begin(), 1,
+    std::exclusive_scan(shape.dim_vec().rbegin(), shape.dim_vec().rend(), stride_vec_.rbegin(), 1,
                         std::multiplies<>{});
   }
 }
@@ -33,10 +33,10 @@ Stride::Stride(const std::shared_ptr<Shape>& shape) : Stride(*shape) {}
 Stride::Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(const DimVector& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(DimVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
-Stride::Stride(const ShapeProto& stride_proto) {
+Stride::Stride(const Int64ListProto& stride_proto) {
   stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
-Stride::Stride(const cfg::ShapeProto& stride_proto) {
+Stride::Stride(const cfg::Int64ListProto& stride_proto) {
   stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
 
@@ -70,7 +70,7 @@ std::string Stride::ToString() const {
   return ss.str();
 }
 
-void Stride::ToProto(ShapeProto* ret) const {
+void Stride::ToProto(Int64ListProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(stride_vec_.begin(), stride_vec_.end());
 }
 

@@ -23,7 +23,7 @@ OpArgBlobAttribute::OpArgBlobAttribute(const std::shared_ptr<cfg::BlobDescProto>
                                        const std::string& logical_blob_name)
     : blob_desc_(blob_desc), logical_blob_name_(logical_blob_name) {
   ShapeProto shape_proto;
-  ShapeProto stride_proto;
+  Int64ListProto stride_proto;
   blob_desc_->shape().ToProto(&shape_proto);
   blob_desc_->stride().ToProto(&stride_proto);
   shape_ = std::make_shared<Shape>(shape_proto);

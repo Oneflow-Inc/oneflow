@@ -167,7 +167,7 @@ ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
       shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
 }
 
-ArrayAttr Importer::GetAttrFromStride(const ::oneflow::ShapeProto& stride) {
+ArrayAttr Importer::GetAttrFromStride(const ::oneflow::Int64ListProto& stride) {
   return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
       stride.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
 }
@@ -178,7 +178,7 @@ void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
   }
 }
 
-void WriteAttrToStride(mlir::Attribute& attr, ::oneflow::ShapeProto* stride) {
+void WriteAttrToStride(mlir::Attribute& attr, ::oneflow::Int64ListProto* stride) {
   for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
     stride->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
   }
@@ -268,7 +268,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
     else if (value.has_at_list_stride()) {
       auto dense_attr_list =
           llvm::map_range(value.at_list_stride().val(),
-                          [&](const ::oneflow::ShapeProto& s) { return GetAttrFromStride(s); });
+                          [&](const ::oneflow::Int64ListProto& s) { return GetAttrFromStride(s); });
       std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
                                                      dense_attr_list.end()};
       attr_vec.emplace_back(
@@ -864,7 +864,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
         }
       } else if (attr_type == ::oneflow::kAtListStride) {
         for (auto stride_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
-          ::oneflow::ShapeProto* stride_ptr = user_attr.mutable_at_list_stride()->add_val();
+          ::oneflow::Int64ListProto* stride_ptr = user_attr.mutable_at_list_stride()->add_val();
           WriteAttrToShape(stride_attr, stride_ptr);
         }
       } else if (attr_type == ::oneflow::kAtListString) {

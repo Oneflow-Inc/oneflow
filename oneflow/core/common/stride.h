@@ -26,7 +26,7 @@ namespace oneflow {
 class StrideView;
 
 namespace cfg {
-class ShapeProto;
+class Int64ListProto;
 }
 
 class Stride final {
@@ -36,8 +36,8 @@ class Stride final {
   explicit Stride(const std::shared_ptr<Shape>& shape);
   explicit Stride(DimVector&& stride_vec);
   explicit Stride(const DimVector& stride_vec);
-  explicit Stride(const ShapeProto& stride_proto);
-  explicit Stride(const cfg::ShapeProto& stride_proto);
+  explicit Stride(const Int64ListProto& stride_proto);
+  explicit Stride(const cfg::Int64ListProto& stride_proto);
   Stride(const std::initializer_list<int64_t>& stride_vec);
   Stride& operator=(const Stride& stride);
   Stride& assign(const DimVector& stride_vec);
@@ -48,7 +48,7 @@ class Stride final {
   bool operator!=(const Stride& rhs) const { return !(*this == rhs); }
 
   std::string ToString() const;
-  void ToProto(ShapeProto*) const;
+  void ToProto(Int64ListProto*) const;
 
   // Getters and Setters
   const DimVector& StrideVec() const { return stride_vec_; }

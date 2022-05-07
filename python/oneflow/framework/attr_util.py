@@ -128,7 +128,7 @@ def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
         )
         for x in attr_value:
             assert isinstance(x, (tuple, list))
-            stride = shape_cfg.StrideProto()
+            stride = shape_cfg.Int64ListProto()
             for dim in x:
                 assert isinstance(dim, int)
                 stride.add_dim(dim)
