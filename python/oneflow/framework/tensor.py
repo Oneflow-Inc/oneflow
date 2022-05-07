@@ -231,16 +231,16 @@ def _rmul(self, other):
     return self.mul(other)
 
 
-def _add(self, other):
-    return flow._C.add(self, other)
+def _add(self, other, *, alpha=1):
+    return flow._C.add(self, other, alpha=alpha)
 
 
 def _addmm(self, mat1, mat2, alpha=1, beta=1):
     return flow.addmm(self, mat1, mat2, alpha, beta)
 
 
-def _add_inplace(self, other):
-    return flow._C.add(self, other, inplace=True)
+def _add_inplace(self, other, *, alpha=1):
+    return flow._C.add(self, other, alpha=alpha, inplace=True)
 
 
 def _iadd(self, other):
@@ -581,6 +581,12 @@ def _neg(self):
     return flow._C.negative(self)
 
 
+def _new_empty(
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+):
+    return flow.new_empty(self, size, dtype, device, placement, sbp, requires_grad)
+
+
 def _new_ones(
     self,
     size=None,
@@ -659,8 +665,12 @@ def _to_local(self):
     return flow.to_local(self)
 
 
-def _relu(self, inplace=False):
-    return flow.relu(self, inplace=inplace)
+def _relu(self):
+    return flow._C.relu(self)
+
+
+def _relu_inplace(self):
+    return flow.relu(self, inplace=True)
 
 
 def _softmax(self, dim=None):
@@ -703,11 +713,11 @@ def _unbind(self, dim=0):
     return flow._C.unbind(self, dim)
 
 
-def _all(self, dim=None, keepdim=False):
+def _all(self, dim=[], keepdim=False):
     return flow.all(self, dim, keepdim)
 
 
-def _any(self, dim=None, keepdim=False):
+def _any(self, dim=[], keepdim=False):
     return flow.any(self, dim, keepdim)
 
 
@@ -988,15 +998,15 @@ def _median(self, *args, **kwargs):
     return flow.median(self, *args, **kwargs)
 
 
-def _sum(self, dim=None, keepdim=False):
+def _sum(self, dim=[], keepdim=False):
     return flow.sum(self, dim, keepdim)
 
 
-def _mean(self, dim=None, keepdim=False):
+def _mean(self, dim=[], keepdim=False):
     return flow.mean(self, dim, keepdim)
 
 
-def _prod(self, dim=None, keepdim=False):
+def _prod(self, dim=[], keepdim=False):
     return flow.prod(self, dim, keepdim)
 
 
@@ -1030,6 +1040,10 @@ def _view(self, *shape):
     else:
         new_shape = shape
     return flow._C.view(self, new_shape)
+
+
+def _view_as(self, other):
+    return _view(self, *other.size())
 
 
 def _sort(self, dim: int = -1, descending: bool = False):
@@ -1283,6 +1297,7 @@ def RegisterMethods():
     Tensor.log = _log
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
+    Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
     Tensor.pow = _pow
@@ -1304,6 +1319,7 @@ def RegisterMethods():
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
     Tensor.relu = _relu
+    Tensor.relu_ = _relu_inplace
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
     Tensor.logical_and = _and
@@ -1342,6 +1358,7 @@ def RegisterMethods():
     Tensor.reshape = _reshape
     Tensor.reshape_as = _reshape_as
     Tensor.view = _view
+    Tensor.view_as = _view_as
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
