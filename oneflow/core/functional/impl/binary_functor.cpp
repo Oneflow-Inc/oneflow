@@ -57,7 +57,7 @@ class AddFunctor {
     bool input_static_zeros = IsStaticZerosTensor(input);
     if (input_static_zeros || IsStaticZerosTensor(other)) {
       CHECK_OR_RETURN(*input->shape() == *other->shape())
-          << "The size of tensor a " << input->shape()->ToString()
+          << Error::RuntimeError() << "The size of tensor a " << input->shape()->ToString()
           << " must match the size of tensor b " << other->shape();
       if (input_static_zeros) {
         if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
