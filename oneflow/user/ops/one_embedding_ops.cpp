@@ -355,4 +355,34 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  JUST(CheckDataShape(ctx));
+  const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
+  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 3 * ctx->InputShape("embedding_grad", 0).At(1))
+      << "please adjust size_factor of MultiTableEmbedding's store_options to 3";
+  *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FtrlEmbeddingUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> FtrlEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Broadcast(ctx->inputs())
+      .Broadcast(user_op::OpArg("num_unique_ids", 0))
+      .Split(user_op::OpArg("unique_embeddings", 0), 0)
+      .Split(user_op::OpArg("embedding_grad", 0), 0)
+      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  JUST(CheckDataType(ctx));
+  *ctx->OutputDType("updated_unique_embeddings", 0) = ctx->InputDType("unique_embeddings", 0);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
