@@ -18,8 +18,11 @@ limitations under the License.
 
 #include <Python.h>
 #include <object.h>
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 namespace one {
@@ -28,57 +31,38 @@ namespace one {
 // extern PyTypeObject* PyParameterObject_Type;
 extern PyTypeObject* PyTensortypeObject_Type;
 
-extern PyTypeObject* PyByteTensortypeObject_Type;   // uint8
-extern PyTypeObject* PyCharTensortypeObject_Type;   // int8
-extern PyTypeObject* PyShortTensortypeObject_Type;  // int16
-extern PyTypeObject* PyIntTensortypeObject_Type;    // int32
-extern PyTypeObject* PyLongTensortypeObject_Type;   // int64
+extern PyHeapTypeObject* PyTensortypeMetaclass_Type;  // cpu Tensor
+extern PyTypeObject* PyByteTensortypeObject_Type;     // uint8
+extern PyTypeObject* PyCharTensortypeObject_Type;     // int8
+extern PyTypeObject* PyShortTensortypeObject_Type;    // int16
+extern PyTypeObject* PyIntTensortypeObject_Type;      // int32
+extern PyTypeObject* PyLongTensortypeObject_Type;     // int64
+extern PyTypeObject* PyHalfTensortypeObject_Type;     // float16
+extern PyTypeObject* PyFloatTensortypeObject_Type;    // float32
+extern PyTypeObject* PyDoubleTensortypeObject_Type;   // float64
 
-extern PyTypeObject* PyHalfTensortypeObject_Type;    // float16
-extern PyTypeObject* PyFloatTensortypeObject_Type;   // float32
-extern PyTypeObject* PyDoubleTensortypeObject_Type;  // float64
+extern PyHeapTypeObject* PyCudaTensortypeMetaclass_Type;  // cuda Tensor
+extern PyTypeObject* PyCudaByteTensortypeObject_Type;     // cuda.uint8
+extern PyTypeObject* PyCudaCharTensortypeObject_Type;     // cuda.int8
+extern PyTypeObject* PyCudaShortTensortypeObject_Type;    // cuda.int16
+extern PyTypeObject* PyCudaIntTensortypeObject_Type;      // cuda.int32
+extern PyTypeObject* PyCudaLongTensortypeObject_Type;     // cuda.int64
+extern PyTypeObject* PyCudaHalfTensortypeObject_Type;     // cuda.float16
+extern PyTypeObject* PyCudaFloatTensortypeObject_Type;    // cuda.float32
+extern PyTypeObject* PyCudaDoubleTensortypeObject_Type;   // cuda.float64
 
 inline bool PyTensortype_Check(PyObject* op) {
-  // return PyObject_TypeCheck(op, PyTensortypeObject_Type);
-  return op == (PyObject*)PyByteTensortypeObject_Type
-         || op == (PyObject*)PyCharTensortypeObject_Type
-         || op == (PyObject*)PyShortTensortypeObject_Type
-         || op == (PyObject*)PyIntTensortypeObject_Type
-         || op == (PyObject*)PyLongTensortypeObject_Type
-         || op == (PyObject*)PyHalfTensortypeObject_Type
-         || op == (PyObject*)PyFloatTensortypeObject_Type
-         || op == (PyObject*)PyDoubleTensortypeObject_Type;
+  return PyObject_TypeCheck(op, &PyTensortypeMetaclass_Type->ht_type)
+         || PyObject_TypeCheck(op, &PyCudaTensortypeMetaclass_Type->ht_type);
 };
-inline bool PyTensortype_CheckExact(PyObject* op) { return op->ob_type == PyTensortypeObject_Type; }
+inline bool PyTensortype_CheckExact(PyObject* op) {
+  return op->ob_type == &PyTensortypeMetaclass_Type->ht_type
+         || op->ob_type == &PyCudaTensortypeMetaclass_Type->ht_type;
+}
 
 Symbol<DType> TensortypeToDType(PyObject*);
-PyObject* DTypeToTensortype(Symbol<DType>);
-
-inline bool PyByteTensor_Check(PyObject* op) {
-  return PyObject_TypeCheck(op, PyByteTensortypeObject_Type);
-}
-inline bool PyCharTensor_Check(PyObject* op) {
-  return PyObject_TypeCheck(op, PyCharTensortypeObject_Type);
-}
-inline bool PyShortTensor_Check(PyObject* op) {
-  return PyObject_TypeCheck(op, PyShortTensortypeObject_Type);
-}
-inline bool PyIntTensor_Check(PyObject* op) {
-  return PyObject_TypeCheck(op, PyIntTensortypeObject_Type);
-}
-inline bool PyLongTensor_Check(PyObject* op) {
-  return PyObject_TypeCheck(op, PyLongTensortypeObject_Type);
-}
-
-inline bool PyHalfTensor_Check(PyObject* op) {
-  return PyObject_TypeCheck(op, PyHalfTensortypeObject_Type);
-}
-inline bool PyFloatTensor_Check(PyObject* op) {
-  return PyObject_TypeCheck(op, PyFloatTensortypeObject_Type);
-}
-inline bool PyDoubleTensor_Check(PyObject* op) {
-  return PyObject_TypeCheck(op, PyDoubleTensortypeObject_Type);
-}
+DeviceType TensortypeToDevice(PyObject*);
+PyObject* GetTensortype(const Symbol<DType>&, const Maybe<Symbol<Device>>&);
 
 }  // namespace one
 }  // namespace oneflow

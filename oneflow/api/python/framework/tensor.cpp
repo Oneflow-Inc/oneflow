@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/device.h"
@@ -36,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace py = pybind11;
 
@@ -285,14 +287,16 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
       const auto& tt = functional::To(t, functional::PyUnpackDType(dtype), false);
       return functional::CastToPyObject(tt);
     } else if (PyTensortype_Check(dtype)) {
-      const auto& tt = functional::To(t, TensortypeToDType(dtype), false);
+      Optional<std::string> device =
+          TensortypeToDevice(dtype) == DeviceType::kCPU ? "cpu" : "cuda";
+      const auto& tt = functional::To(t, device, TensortypeToDType(dtype), false);
       return functional::CastToPyObject(tt);
     } else {
       return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
     }
   }
 
-  PyObject* result = DTypeToTensortype(t->dtype());
+  PyObject* result = GetTensortype(t->dtype(), t->device());
   return result;
   END_HANDLE_ERRORS
 }
