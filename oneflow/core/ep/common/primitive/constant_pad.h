@@ -13,11 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_PRIMITIVE_PAD_ND_H_
-#define ONEFLOW_CORE_EP_PRIMITIVE_PAD_ND_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_PAD_H_
+#define ONEFLOW_CORE_PRIMITIVE_COMMON_PAD_H_
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
-#include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 
@@ -25,24 +25,16 @@ namespace ep {
 
 namespace primitive {
 
-class Pad : public Primitive {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(Pad);
-  Pad() = default;
-  ~Pad() override = default;
-
-  virtual void Launch(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims,
-                      const void* src, const int64_t* src_dims, const int64_t* padding_before,
-                      const int64_t* padding_after, Scalar pad_val) = 0;
-};
-
-class PadFactory : public Factory<Pad> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(PadFactory);
-  PadFactory() = default;
-  ~PadFactory() override = default;
-
-  virtual std::unique_ptr<Pad> New(DataType data_type) = 0;
+template<size_t num_dims, typename IndexType>
+struct ConstantPadParams {
+  NdIndexOffsetHelper<IndexType, num_dims> src_index_helper;
+  NdIndexOffsetHelper<IndexType, num_dims> dst_index_helper;
+  IndexType padding_before[num_dims];
+  IndexType padding_after[num_dims];
+  IndexType out_size[num_dims];
+  IndexType elem_cnt{};
+  const void* src{};
+  void* dst{};
 };
 
 }  // namespace primitive
@@ -51,4 +43,4 @@ class PadFactory : public Factory<Pad> {
 
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_PRIMITIVE_COMMON_PAD_H_

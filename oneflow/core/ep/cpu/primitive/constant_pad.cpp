@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/include/primitive/pad.h"
-#include "oneflow/core/ep/common/primitive/pad.h"
+#include "oneflow/core/ep/include/primitive/constant_pad.h"
+#include "oneflow/core/ep/common/primitive/constant_pad.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 
 namespace oneflow {
@@ -45,7 +45,7 @@ union Pack {
 };
 
 template<size_t num_dims, typename IndexType, typename T, int pack_size>
-void PadKernel(PadParams<num_dims, IndexType> params, T pad_value) {
+void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, T pad_value) {
   using LoadStoreType = PackType<T, pack_size>;
   const LoadStoreType* src = reinterpret_cast<const LoadStoreType*>(params.src);
   LoadStoreType* dst = reinterpret_cast<LoadStoreType*>(params.dst);
@@ -85,15 +85,15 @@ float16 GetValue<float16>(Scalar value) {
 }
 
 template<size_t num_dims, typename IndexType, typename T>
-void LaunchKernel(Stream* stream, PadParams<num_dims, IndexType> params, T pad_val) {
-  PadKernel<num_dims, IndexType, T, /*pack_size*/ 1>(params, pad_val);
+void LaunchKernel(Stream* stream, ConstantPadParams<num_dims, IndexType> params, T pad_val) {
+  ConstantPadKernel<num_dims, IndexType, T, /*pack_size*/ 1>(params, pad_val);
 }
 
 template<size_t num_dims, typename IndexType, typename T>
 void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const void* src,
                   const int64_t* src_dims, const int64_t* padding_before,
                   const int64_t* padding_after, T pad_val) {
-  PadParams<num_dims, IndexType> params;
+  ConstantPadParams<num_dims, IndexType> params;
   params.dst_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(dst_dims);
   params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
   params.dst = dst;
@@ -154,11 +154,11 @@ void LaunchWithSimplified(Stream* stream, size_t num_dims, void* dst, const int6
 }
 
 template<typename T>
-class PadImpl : public Pad {
+class ConstantPadImpl : public ConstantPad {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PadImpl);
-  PadImpl() = default;
-  ~PadImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConstantPadImpl);
+  ConstantPadImpl() = default;
+  ~ConstantPadImpl() override = default;
 
   void Launch(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims, const void* src,
               const int64_t* src_dims, const int64_t* padding_before, const int64_t* padding_after,
@@ -169,32 +169,33 @@ class PadImpl : public Pad {
 };
 
 template<typename T>
-std::unique_ptr<Pad> NewPad() {
-  return std::unique_ptr<Pad>(new PadImpl<T>());
+std::unique_ptr<ConstantPad> NewConstantPad() {
+  return std::unique_ptr<ConstantPad>(new ConstantPadImpl<T>());
 }
 
-#define CPU_PAD_PRIMITIVE_TYPE_SEQ \
-  CPU_PRIMITIVE_INT32_TYPE_SEQ     \
-  CPU_PRIMITIVE_INT64_TYPE_SEQ     \
-  CPU_PRIMITIVE_FLOAT_TYPE_SEQ     \
+#define CPU_CONSTANT_PAD_PRIMITIVE_TYPE_SEQ \
+  CPU_PRIMITIVE_INT32_TYPE_SEQ              \
+  CPU_PRIMITIVE_INT64_TYPE_SEQ              \
+  CPU_PRIMITIVE_FLOAT_TYPE_SEQ              \
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ
 
-class PadFactoryImpl : public PadFactory {
+class ConstantPadFactoryImpl : public ConstantPadFactory {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PadFactoryImpl);
-  PadFactoryImpl() = default;
-  ~PadFactoryImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConstantPadFactoryImpl);
+  ConstantPadFactoryImpl() = default;
+  ~ConstantPadFactoryImpl() override = default;
 
-  std::unique_ptr<Pad> New(DataType data_type) override {
-#define MAKE_NEW_Pad_ENTRY(type_cpp, type_proto) {type_proto, NewPad<type_cpp>},
+  std::unique_ptr<ConstantPad> New(DataType data_type) override {
+#define MAKE_NEW_CONSTANT_PAD_ENTRY(type_cpp, type_proto) {type_proto, NewConstantPad<type_cpp>},
 
-    static const std::map<DataType, std::function<std::unique_ptr<Pad>()>> new_Pad_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_Pad_ENTRY, CPU_PAD_PRIMITIVE_TYPE_SEQ)};
+    static const std::map<DataType, std::function<std::unique_ptr<ConstantPad>()>>
+        new_constant_pad_handle{
+            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_CONSTANT_PAD_ENTRY, CPU_CONSTANT_PAD_PRIMITIVE_TYPE_SEQ)};
 
-#undef MAKE_NEW_Pad_ENTRY
+#undef MAKE_NEW_CONSTANT_PAD_ENTRY
 
-    const auto it = new_Pad_handle.find(data_type);
-    if (it != new_Pad_handle.end()) {
+    const auto it = new_constant_pad_handle.find(data_type);
+    if (it != new_constant_pad_handle.end()) {
       return it->second();
     } else {
       return nullptr;
@@ -202,7 +203,7 @@ class PadFactoryImpl : public PadFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, PadFactory, PadFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, ConstantPadFactory, ConstantPadFactoryImpl);
 
 }  // namespace
 

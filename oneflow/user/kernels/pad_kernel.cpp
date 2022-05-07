@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
-#include "oneflow/core/ep/include/primitive/pad.h"
+#include "oneflow/core/ep/include/primitive/constant_pad.h"
 
 namespace oneflow {
 
@@ -42,9 +42,10 @@ std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
 }
 
 template<typename Context>
-std::unique_ptr<ep::primitive::Pad> NewPadPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::ConstantPad> NewConstantPadPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("y", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::PadFactory>(ctx->device_type(), data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::ConstantPadFactory>(ctx->device_type(),
+                                                                        data_type);
 }
 
 template<typename Context>
@@ -54,7 +55,7 @@ std::unique_ptr<ep::primitive::Memset> NewMemsetPrimitive(Context* ctx) {
 
 auto PadPrimitiveExists() {
   return hob::make_custom("PadPrimitiveExists", [](const KernelRegContext& ctx) {
-    return NewPadPrimitive(&ctx).operator bool();
+    return NewConstantPadPrimitive(&ctx).operator bool();
   });
 }
 
@@ -138,7 +139,7 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
     //                           y->shape().ptr(), dst_pos_vec.data(), x->dptr(), x->shape().ptr(),
     //                           src_pos_vec.data(), extent_vec.data());
 
-    std::unique_ptr<ep::primitive::Pad> pad_primitive = NewPadPrimitive(ctx);
+    std::unique_ptr<ep::primitive::ConstantPad> pad_primitive = NewConstantPadPrimitive(ctx);
     CHECK(pad_primitive);
     pad_primitive->Launch(ctx->stream(), ndims, y->mut_dptr(), y->shape().ptr(), x->dptr(),
                           x->shape().ptr(), padding_before.data(), padding_after.data(), value);

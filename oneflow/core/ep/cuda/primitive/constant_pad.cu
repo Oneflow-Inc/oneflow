@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/include/primitive/pad.h"
-#include "oneflow/core/ep/common/primitive/pad.h"
+#include "oneflow/core/ep/include/primitive/constant_pad.h"
+#include "oneflow/core/ep/common/primitive/constant_pad.h"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda_runtime.h>
@@ -47,7 +47,7 @@ union Pack {
 };
 
 template<size_t num_dims, typename IndexType, typename T, int pack_size>
-__global__ void PadKernel(PadParams<num_dims, IndexType> params, T pad_value) {
+__global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, T pad_value) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   using LoadStoreType = PackType<T, pack_size>;
   const LoadStoreType* src = reinterpret_cast<const LoadStoreType*>(params.src);
@@ -55,7 +55,7 @@ __global__ void PadKernel(PadParams<num_dims, IndexType> params, T pad_value) {
   IndexType src_index[num_dims];
   IndexType dst_index[num_dims];
   for (IndexType linear_index = global_thread_id; linear_index < params.elem_cnt;
-    linear_index += gridDim.x * blockDim.x) {
+       linear_index += gridDim.x * blockDim.x) {
     params.dst_index_helper.OffsetToNdIndex(linear_index, dst_index);
     bool if_pad = false;
 #pragma unroll
@@ -99,8 +99,8 @@ nv_bfloat16 GetValue<nv_bfloat16>(Scalar value) {
 
 template<size_t max_pack_size>
 size_t GetLaunchPackSize(size_t elem_size, size_t num_dims, void* dst, const int64_t* dst_dims,
-                   const void* src, const int64_t* src_dims,
-                   const int64_t* padding_before, const int64_t* padding_after) {
+                         const void* src, const int64_t* src_dims, const int64_t* padding_before,
+                         const int64_t* padding_after) {
   static_assert(max_pack_size > 0 && (max_pack_size & (max_pack_size - 1)) == 0, "");
   CHECK_GT(elem_size, 0);
   CHECK_EQ((elem_size & (elem_size - 1)), 0);
@@ -113,7 +113,7 @@ size_t GetLaunchPackSize(size_t elem_size, size_t num_dims, void* dst, const int
   auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
   for (size_t size = max_pack_size; size > 1; size /= 2) {
     if (last_dst_dim_size % size == 0 && last_src_dim_size % size == 0
-        && last_padding_before_size % size == 0 && last_padding_after_size % size == 0 
+        && last_padding_before_size % size == 0 && last_padding_after_size % size == 0
         && src_ptr % size == 0 && dst_ptr % size == 0) {
       return size;
     }
@@ -121,20 +121,19 @@ size_t GetLaunchPackSize(size_t elem_size, size_t num_dims, void* dst, const int
   return 1;
 }
 
-
 template<size_t num_dims, typename IndexType, typename T, size_t pack_size>
-void LaunchKernel(Stream* stream, PadParams<num_dims, IndexType> params, T pad_val) {
+void LaunchKernel(Stream* stream, ConstantPadParams<num_dims, IndexType> params, T pad_val) {
   cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
-  PadKernel<num_dims, IndexType, T, pack_size>
-      <<<BlocksNum4ThreadsNum(params.elem_cnt / pack_size), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(params,
-                                                                                           pad_val);
+  ConstantPadKernel<num_dims, IndexType, T, pack_size>
+      <<<BlocksNum4ThreadsNum(params.elem_cnt / pack_size), kCudaThreadsNumPerBlock, 0,
+         cuda_stream>>>(params, pad_val);
 }
 
 template<size_t num_dims, typename IndexType, typename T, size_t pack_size>
 void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const void* src,
                   const int64_t* src_dims, const int64_t* padding_before,
                   const int64_t* padding_after, T pad_val) {
-  PadParams<num_dims, IndexType> params;
+  ConstantPadParams<num_dims, IndexType> params;
   params.dst_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(dst_dims);
   params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
   params.dst = dst;
@@ -157,11 +156,11 @@ void DispatchIndexType(Stream* stream, void* dst, const int64_t* dst_dims, const
   size_t elem_cnt = 1;
   for (size_t i = 0; i < num_dims; ++i) { elem_cnt *= dst_dims[i]; }
   if (elem_cnt < GetMaxVal<int32_t>()) {
-    LaunchKernel<num_dims, int32_t, T, pack_size>(stream, dst, dst_dims, src, src_dims, padding_before,
-                                       padding_after, pad_val);
+    LaunchKernel<num_dims, int32_t, T, pack_size>(stream, dst, dst_dims, src, src_dims,
+                                                  padding_before, padding_after, pad_val);
   } else {
-    LaunchKernel<num_dims, int64_t, T, pack_size>(stream, dst, dst_dims, src, src_dims, padding_before,
-                                       padding_after, pad_val);
+    LaunchKernel<num_dims, int64_t, T, pack_size>(stream, dst, dst_dims, src, src_dims,
+                                                  padding_before, padding_after, pad_val);
   }
 }
 
@@ -169,15 +168,15 @@ constexpr int32_t Min(int32_t a, int32_t b) { return a < b ? a : b; }
 constexpr int32_t kMaxPackBytes = 128 / 8;
 
 template<typename T>
-constexpr int32_t GetMaxPackSize(){
-  return Min(kMaxPackBytes / sizeof(T), 8); 
+constexpr int32_t GetMaxPackSize() {
+  return Min(kMaxPackBytes / sizeof(T), 8);
 }
 
-void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims, 
-  const int64_t* src_dims, const int64_t* padding_before, const int64_t* padding_after,
-  size_t* simplified_num_dims, 
-  int64_t* simplified_dst_dims, int64_t* simplified_src_dims,
-  int64_t* simplified_padding_before, int64_t* simplified_padding_after) {
+void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims, const int64_t* src_dims,
+                     const int64_t* padding_before, const int64_t* padding_after,
+                     size_t* simplified_num_dims, int64_t* simplified_dst_dims,
+                     int64_t* simplified_src_dims, int64_t* simplified_padding_before,
+                     int64_t* simplified_padding_after) {
   CHECK_NE(num_dims, 0);
   size_t valid_num_dims = 0;
   FOR_RANGE(size_t, i, 0, num_dims) {
@@ -198,33 +197,30 @@ void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims,
 }
 
 template<size_t num_dims, typename T>
-void DispatchPackSize(Stream* stream, void* dst, int64_t* dst_dims,
-                      const void* src, int64_t* src_dims, int64_t* padding_before,
-                      int64_t* padding_after, T pad_val) {
-  constexpr int32_t max_packsize = GetMaxPackSize<T>(); 
-  size_t launch_pack_size = GetLaunchPackSize<max_packsize>(sizeof(T), num_dims, dst, dst_dims,
-                                        src, src_dims,
-                                        padding_before, padding_after);
-  
-  printf("simplified num dims is: %ld \n", num_dims); 
-  printf("Launch pack size is: %ld \n", launch_pack_size); 
-  for(int i = 0; i < num_dims; i++){
-    printf("simplified_dst_dims %d is: %ld \n", i, dst_dims[i]); 
-  }
-  for(int i = 0; i < num_dims; i++){
-    printf("simplified_src_dims %d is: %ld \n", i, src_dims[i]); 
-  }
-  for(int i = 0; i < num_dims; i++){
-    printf("padding before %d is: %ld \n", i, padding_before[i]); 
-  }
-  for(int i = 0; i < num_dims; i++){
-    printf("padding after %d is: %ld \n", i, padding_after[i]); 
-  }
+void DispatchPackSize(Stream* stream, void* dst, int64_t* dst_dims, const void* src,
+                      int64_t* src_dims, int64_t* padding_before, int64_t* padding_after,
+                      T pad_val) {
+  constexpr int32_t max_packsize = GetMaxPackSize<T>();
+  size_t launch_pack_size = GetLaunchPackSize<max_packsize>(
+      sizeof(T), num_dims, dst, dst_dims, src, src_dims, padding_before, padding_after);
 
-  dst_dims[num_dims-1] /= launch_pack_size; 
-  src_dims[num_dims-1] /= launch_pack_size; 
-  padding_before[num_dims-1] /= launch_pack_size; 
-  padding_after[num_dims-1] /= launch_pack_size; 
+  printf("simplified num dims is: %ld \n", num_dims);
+  printf("Launch pack size is: %ld \n", launch_pack_size);
+  for (int i = 0; i < num_dims; i++) {
+    printf("simplified_dst_dims %d is: %ld \n", i, dst_dims[i]);
+  }
+  for (int i = 0; i < num_dims; i++) {
+    printf("simplified_src_dims %d is: %ld \n", i, src_dims[i]);
+  }
+  for (int i = 0; i < num_dims; i++) {
+    printf("padding before %d is: %ld \n", i, padding_before[i]);
+  }
+  for (int i = 0; i < num_dims; i++) { printf("padding after %d is: %ld \n", i, padding_after[i]); }
+
+  dst_dims[num_dims - 1] /= launch_pack_size;
+  src_dims[num_dims - 1] /= launch_pack_size;
+  padding_before[num_dims - 1] /= launch_pack_size;
+  padding_after[num_dims - 1] /= launch_pack_size;
 
   void (*func)(Stream* /*stream*/, void* /*dst*/, const int64_t* /*dst_dims*/, const void* /*src*/,
                const int64_t* /*src_dims*/, const int64_t* /*padding_before*/,
@@ -250,8 +246,8 @@ void LaunchWithSimplified(Stream* stream, size_t num_dims, void* dst, int64_t* d
                           const void* src, int64_t* src_dims, int64_t* padding_before,
                           int64_t* padding_after, T pad_val) {
   void (*func)(Stream* /*stream*/, void* /*dst*/, int64_t* /*dst_dims*/, const void* /*src*/,
-               int64_t* /*src_dims*/, int64_t* /*padding_before*/,
-               int64_t* /*padding_after*/, T) = nullptr;
+               int64_t* /*src_dims*/, int64_t* /*padding_before*/, int64_t* /*padding_after*/, T) =
+      nullptr;
   if (num_dims == 1) {
     func = DispatchPackSize<1, T>;
   } else if (num_dims == 2) {
@@ -274,67 +270,68 @@ void LaunchWithSimplified(Stream* stream, size_t num_dims, void* dst, int64_t* d
   func(stream, dst, dst_dims, src, src_dims, padding_before, padding_after, pad_val);
 }
 
-constexpr int32_t kMaxNumDims = 8; 
+constexpr int32_t kMaxNumDims = 8;
 
 template<typename T>
 void SimplifyThenLaunch(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims,
-                          const void* src, const int64_t* src_dims, const int64_t* padding_before,
-                          const int64_t* padding_after, T pad_val){
+                        const void* src, const int64_t* src_dims, const int64_t* padding_before,
+                        const int64_t* padding_after, T pad_val) {
   CHECK_LE(num_dims, kMaxNumDims);
-  int64_t simplified_dst_dims[kMaxNumDims]; 
-  int64_t simplified_src_dims[kMaxNumDims]; 
-  int64_t simplified_padding_before[kMaxNumDims]; 
-  int64_t simplified_padding_after[kMaxNumDims]; 
-  size_t simplified_num_dims = 1; 
-  SimplifyPadDims(num_dims, dst_dims, src_dims, padding_before, padding_after, &simplified_num_dims, 
-                  simplified_dst_dims, simplified_src_dims,
-                  simplified_padding_before, simplified_padding_after);  
-  LaunchWithSimplified<T>(stream, simplified_num_dims, dst, simplified_dst_dims, src, simplified_src_dims, 
-                          simplified_padding_before, simplified_padding_after, pad_val);                
+  int64_t simplified_dst_dims[kMaxNumDims];
+  int64_t simplified_src_dims[kMaxNumDims];
+  int64_t simplified_padding_before[kMaxNumDims];
+  int64_t simplified_padding_after[kMaxNumDims];
+  size_t simplified_num_dims = 1;
+  SimplifyPadDims(num_dims, dst_dims, src_dims, padding_before, padding_after, &simplified_num_dims,
+                  simplified_dst_dims, simplified_src_dims, simplified_padding_before,
+                  simplified_padding_after);
+  LaunchWithSimplified<T>(stream, simplified_num_dims, dst, simplified_dst_dims, src,
+                          simplified_src_dims, simplified_padding_before, simplified_padding_after,
+                          pad_val);
 }
 
-
 template<typename T>
-class PadImpl : public Pad {
+class ConstantPadImpl : public ConstantPad {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PadImpl);
-  PadImpl() = default;
-  ~PadImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConstantPadImpl);
+  ConstantPadImpl() = default;
+  ~ConstantPadImpl() override = default;
 
   void Launch(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims, const void* src,
               const int64_t* src_dims, const int64_t* padding_before, const int64_t* padding_after,
               Scalar pad_val) override {
     SimplifyThenLaunch<T>(stream, num_dims, dst, dst_dims, src, src_dims, padding_before,
-                            padding_after, GetValue<T>(pad_val));
+                          padding_after, GetValue<T>(pad_val));
   }
 };
 
 template<typename T>
-std::unique_ptr<Pad> NewPad() {
-  return std::unique_ptr<Pad>(new PadImpl<T>());
+std::unique_ptr<ConstantPad> NewConstantPad() {
+  return std::unique_ptr<ConstantPad>(new ConstantPadImpl<T>());
 }
 
-#define CUDA_PAD_PRIMITIVE_TYPE_SEQ \
-  CUDA_PRIMITIVE_INT32_TYPE_SEQ     \
-  CUDA_PRIMITIVE_INT64_TYPE_SEQ     \
+#define CUDA_CONSTANT_PAD_PRIMITIVE_TYPE_SEQ \
+  CUDA_PRIMITIVE_INT32_TYPE_SEQ              \
+  CUDA_PRIMITIVE_INT64_TYPE_SEQ              \
   CUDA_PRIMITIVE_FLOAT_TYPE_SEQ
 
-class PadFactoryImpl : public PadFactory {
+class ConstantPadFactoryImpl : public ConstantPadFactory {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PadFactoryImpl);
-  PadFactoryImpl() = default;
-  ~PadFactoryImpl() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConstantPadFactoryImpl);
+  ConstantPadFactoryImpl() = default;
+  ~ConstantPadFactoryImpl() override = default;
 
-  std::unique_ptr<Pad> New(DataType data_type) override {
-#define MAKE_NEW_PAD_ENTRY(type_cpp, type_proto) {type_proto, NewPad<type_cpp>},
+  std::unique_ptr<ConstantPad> New(DataType data_type) override {
+#define MAKE_NEW_CONSTANT_PAD_ENTRY(type_cpp, type_proto) {type_proto, NewConstantPad<type_cpp>},
 
-    static const std::map<DataType, std::function<std::unique_ptr<Pad>()>> new_pad_handle{
-        OF_PP_FOR_EACH_TUPLE(MAKE_NEW_PAD_ENTRY, CUDA_PAD_PRIMITIVE_TYPE_SEQ)};
+    static const std::map<DataType, std::function<std::unique_ptr<ConstantPad>()>>
+        new_constant_pad_handle{OF_PP_FOR_EACH_TUPLE(MAKE_NEW_CONSTANT_PAD_ENTRY,
+                                                     CUDA_CONSTANT_PAD_PRIMITIVE_TYPE_SEQ)};
 
-#undef MAKE_NEW_PAD_ENTRY
+#undef MAKE_NEW_CONSTANT_PAD_ENTRY
 
-    const auto it = new_pad_handle.find(data_type);
-    if (it != new_pad_handle.end()) {
+    const auto it = new_constant_pad_handle.find(data_type);
+    if (it != new_constant_pad_handle.end()) {
       return it->second();
     } else {
       return nullptr;
@@ -342,7 +339,7 @@ class PadFactoryImpl : public PadFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, PadFactory, PadFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, ConstantPadFactory, ConstantPadFactoryImpl);
 
 }  // namespace
 
