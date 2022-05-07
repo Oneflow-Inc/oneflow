@@ -424,9 +424,9 @@ class TestTensorIndexing(flow.unittest.TestCase):
     @autotest(n=1)
     def test_dataloader_indexing_with_1_dim_tensor(test_case):
         device = random_device()
-        x = random_tensor(ndim=1, dim0=1024).to(device)
+        x = random_tensor(ndim=1, dim0=512).to(device)
         batch_data = list()
-        for i in range(1024):
+        for i in range(512):
             batch_data.append(x[i])
         return torch.stack(batch_data)
 
