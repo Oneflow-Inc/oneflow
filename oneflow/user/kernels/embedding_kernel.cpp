@@ -112,7 +112,7 @@ class CpuEmbeddingGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPUEMBEDDING_KERNEL(in_type, indices_type)                                      \
+#define REGISTER_CPU_EMBEDDING_KERNEL(in_type, indices_type)                                      \
   REGISTER_USER_KERNEL("embedding_renorm")                                                       \
       .SetCreateFn<                                                                              \
           CpuEmbeddingRenormKernel<OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
@@ -135,8 +135,8 @@ class CpuEmbeddingGradKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(in_type))                   \
           && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CPUEMBEDDING_KERNEL, EMBEDDING_DATA_TYPE_SEQ_CPU,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CPU_EMBEDDING_KERNEL, EMBEDDING_DATA_TYPE_SEQ_CPU,
                                  INDEX_DATA_TYPE_SEQ)
-#undef REGISTER_CPUEMBEDDING_KERNEL
+#undef REGISTER_CPU_EMBEDDING_KERNEL
 
 }  // namespace oneflow

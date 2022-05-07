@@ -120,7 +120,7 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDAEMBEDDING_KERNEL(in_type, indices_type)                                       \
+#define REGISTER_CUDA_EMBEDDING_KERNEL(in_type, indices_type)                                       \
   REGISTER_USER_KERNEL("embedding_renorm")                                                         \
       .SetCreateFn<                                                                                \
           GpuEmbeddingRenormKernel<OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>()   \
@@ -151,8 +151,8 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
         return GetCudaAlignedSize(sizeof(int32_t) * emb_size);                                     \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDAEMBEDDING_KERNEL, EMBEDDING_DATA_TYPE_SEQ_CUDA,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_KERNEL, EMBEDDING_DATA_TYPE_SEQ_CUDA,
                                  INDEX_DATA_TYPE_SEQ)
-#undef REGISTER_CUDAEMBEDDING_KERNEL
+#undef REGISTER_CUDA_EMBEDDING_KERNEL
 
 }  // namespace oneflow
