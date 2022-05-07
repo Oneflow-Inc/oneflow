@@ -411,23 +411,25 @@ class StatefulLocalOpKernel final {
 
   const OperatorConf& op_conf() const { return *op_conf_; }
 
- private:
-  friend struct vm::LocalCallOpKernelUtil;
-  StatefulLocalOpKernel() = default;
-  LocalUserKernelComputeContext* UpdateComputeContext(
-      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx);
-
-  user_op::TensorDescInferFn TensorDescInferFn() const;
-  user_op::DataTypeInferFn DataTypeInferFn() const;
-
   void TryInitOpKernelStateAndCache(
       const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
       EagerBlobObjectListRawPtr outputs,
       ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
       user_op::OpKernelState** state, user_op::OpKernelCache** cache);
-
+  
+  LocalUserKernelComputeContext* UpdateComputeContext(
+      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
+      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx);
+  
   vm::EagerBlobObject* mut_temp_blob_object();
+  const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
+
+ private:
+  friend struct vm::LocalCallOpKernelUtil;
+  StatefulLocalOpKernel() = default;
+
+  user_op::TensorDescInferFn TensorDescInferFn() const;
+  user_op::DataTypeInferFn DataTypeInferFn() const;
 
   user_op::OpKernelState* mut_opkernel_state(const user_op::OpKernel* opkernel) {
     return op_kernel_state_map_.at(opkernel).get();
@@ -435,7 +437,6 @@ class StatefulLocalOpKernel final {
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
 
-  const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;

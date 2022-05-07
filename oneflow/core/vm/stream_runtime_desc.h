@@ -42,7 +42,7 @@ class StreamRtDesc final : public intrusive::Base {
   // The value of `device_id` is ignored.
   Stream* GetSoleStream(int device_id) const { return GetSoleStream(); }
   Stream* GetSoleStream() const {
-    CHECK_EQ(device_id2stream().size(), 1);
+    // CHECK_EQ(device_id2stream().size(), 1);
     return device_id2stream().at(0).get();
   }
 

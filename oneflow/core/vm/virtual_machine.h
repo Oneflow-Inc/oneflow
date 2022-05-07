@@ -42,6 +42,7 @@ class VirtualMachine final {
   const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
   Maybe<void> CloseVMThreads();
+  vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
 
  private:
   friend class InstructionsBuilder;
@@ -49,7 +50,7 @@ class VirtualMachine final {
   void ScheduleLoop(const std::function<void()>& Initializer);
   void CallbackLoop(const std::function<void()>& Initializer);
 
-  vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
+  // vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
 
   Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);

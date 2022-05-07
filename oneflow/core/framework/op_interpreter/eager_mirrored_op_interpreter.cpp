@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
@@ -41,6 +42,10 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/framework/stream_get_call_instruction_name.h"
+#include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 namespace one {
@@ -82,6 +87,34 @@ std::vector<TensorMeta*>* ThreadLocalDefaultOutputMutTensorMetas(int64_t size) {
 }
 
 }  // namespace
+
+using EagerBlobObjectListPtr =
+    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
+
+Maybe<void> SoftSyncStream(
+    const one::EagerBlobObjectListPtr& eager_blob_objects, Symbol<Stream> stream) {
+  SmallSet<Symbol<Stream>> last_used_streams;
+  for (const auto& eager_blob_object : *eager_blob_objects) {
+    const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
+    if (unlikely(!opt_last_used_stream.has_value())) { continue; }
+    const auto& last_used_stream = JUST(opt_last_used_stream);
+    if (last_used_stream != stream) { SmallSetInsert(&last_used_streams, last_used_stream); }
+  }
+  for (const auto& last_used_stream : last_used_streams) {
+    std::vector<intrusive::shared_ptr<LocalDepObject>> dep_objects;
+    dep_objects.reserve(eager_blob_objects->size());
+    for (const auto& eager_blob_object : *eager_blob_objects) {
+      const auto& opt_last_used_stream = eager_blob_object->last_used_stream();
+      if (unlikely(!opt_last_used_stream.has_value())) { continue; }
+      if (JUST(opt_last_used_stream) == last_used_stream) {
+        dep_objects.emplace_back(JUST(eager_blob_object->compute_local_dep_object()));
+      }
+      eager_blob_object->set_last_used_stream(stream);
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                            const Symbol<Device>& default_device, TensorTuple* outputs,
@@ -164,12 +197,85 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, stream);
-  }));
+  // JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+  //   return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+  //                                     ctx, stream);
+  // }));
+
+  // LocalCallOpKernel
+  JUST(SoftSyncStream(output_eager_blob_objects, stream));
+  JUST(SoftSyncStream(input_eager_blob_objects, stream));
+  const auto& instruction_name = JUST(StreamRoleSwitch<GetCallInstructionName>(
+      stream->stream_role(), stream->device()->enum_type()));
+  for (const auto& output : *output_eager_blob_objects) {
+    if (!output->producer_stream().has_value()) { JUST(output->init_producer_stream(stream)); }
+    output->set_last_used_stream(stream);
+  }
+  // VirtualMachineEngine::GetInstrTypeIdAndSoleStream
+  auto* vm = Global<VirtualMachine>::Get()->mut_vm();
+  const auto& stream_type = vm::LookupInstrTypeId(instruction_name).stream_type();
+  auto* stream_rt_desc = vm->mut_stream_type2stream_rt_desc()->FindPtr(&stream_type);
+  auto vm_stream = stream_rt_desc->GetSoleStream();
+  // AllocateOutputBlobsMemory
+  DeviceCtx* device_ctx = vm_stream->device_ctx().get();
+  for (const auto& blob_object : *output_eager_blob_objects) {
+    JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
+  }
+  // LocalCallOpKernelPhyInstrOperand::Init()
+  bool need_temp_storage = false;
+  const user_op::OpKernel* user_opkernel = nullptr;
+  JUST(kernel.get()->ChooseOpKernel(&user_opkernel, &need_temp_storage, attrs, input_eager_blob_objects.get(),
+                                      output_eager_blob_objects.get(), nullptr));
+  
+  // TryAllocateTempStorageBlobMemory
+  if (need_temp_storage) {
+    // InferTempStorageBlobDesc
+    const auto& InferTmpSizeFn = kernel.get()->GetInferTmpSizeFn(user_opkernel);
+    auto* temp_eager_blob_object = kernel.get()->mut_temp_blob_object();
+    CHECK(temp_eager_blob_object->data_type() == DataType::kChar);
+    one::LocalUserOpInferContext* op_infer_ctx =
+         kernel.get()->op_infer_ctx_for_scheduler_thread();
+    op_infer_ctx->Update(input_eager_blob_objects.get(), output_eager_blob_objects.get(),
+                         nullptr);
+    size_t temp_size = InferTmpSizeFn(op_infer_ctx);
+    temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+    temp_eager_blob_object->set_is_dynamic(true);
+    op_infer_ctx->Update(nullptr, nullptr, nullptr);
+    // TryAllocateTempStorageBlobMemory
+    kernel.get()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
+  }
+  // TryInitOpKernelStateAndCache
+  user_op::OpKernelState* state = nullptr;
+  user_op::OpKernelCache* cache = nullptr;
+  if(user_opkernel->has_state_or_cache()){
+    if (ctx.state) {
+      *state = *(ctx.state);
+      // set state to nullptr so that state initialization in TryInitOpKernelStateAndCache will be
+      // skipped.
+      state = nullptr;
+    }
+    kernel.get()->TryInitOpKernelStateAndCache(
+        user_opkernel, device_ctx, input_eager_blob_objects.get(), output_eager_blob_objects.get(),
+        nullptr, &state, &cache);
+  }
+  // OpKernelCompute
+  auto* compute_ctx =
+      kernel.get()->UpdateComputeContext(input_eager_blob_objects.get(), output_eager_blob_objects.get(),
+                                      nullptr, device_ctx);
+  user_opkernel->Compute(compute_ctx, state, cache);
+  // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
+  kernel.get()->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
+
+  // DeallocateTempStorageBlobMemory
+  if (need_temp_storage) {
+    return kernel.get()->mut_temp_blob_object()->DeallocateBlobDataPtr();
+  }
   return Maybe<void>::Ok();
 }
+
+
+
+
 
 Maybe<void> RunEmptyOp(TensorTuple* outputs) {
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
