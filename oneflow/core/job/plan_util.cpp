@@ -861,6 +861,8 @@ struct MemBlockMemoryInfo {
   int64_t mem_block_id;
   int64_t mem_block_mem_size;
   std::vector<std::string> ordered_op_names;
+  std::vector<int64_t> ordered_regst_mem_size;
+  std::vector<int64_t> ordered_regst_mem_offset_in_block;
   MemBlockMemoryInfo() : mem_block_id(-1), mem_block_mem_size(-1) {}
 };
 
@@ -878,6 +880,7 @@ struct RankDeviceMemoryInfo {
   int64_t total_mem_size;
   int64_t not_reused_mem_size;
   int64_t eager_variable_total_mem_size;
+  std::vector<int64_t> independent_mem_block_ids;
   std::vector<int64_t> eager_variable_mem_block_ids;
   RankDeviceMemoryInfo()
       : rank_id(-1),
@@ -930,6 +933,8 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
         if (mem_block.has_variable_op_name()) {
           rank_memory_info.eager_variable_mem_block_ids.push_back(mem_block_id);
           rank_memory_info.eager_variable_total_mem_size += mem_block.mem_size();
+        } else {
+          rank_memory_info.independent_mem_block_ids.push_back(mem_block_id);
         }
       }
     }
@@ -942,13 +947,17 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
           && mem_block_id2info.find(regst.mem_block_id()) != mem_block_id2info.end()) {
         const auto data_regst = regst.regst_desc_type().data_regst_desc();
         std::string op_name = data_regst.lbi2blob_desc(0).lbi().op_name();
-        mem_block_id2info.at(regst.mem_block_id()).ordered_op_names.push_back(op_name);
+
+        auto& info = mem_block_id2info.at(regst.mem_block_id());
+        info.ordered_op_names.push_back(op_name);
+        info.ordered_regst_mem_size.push_back(RtRegstDesc(regst).TotalMainByteSize4AllRegst());
+        info.ordered_regst_mem_offset_in_block.push_back(regst.mem_block_offset());
       }
     }
   }
 
   auto CompMemBlock = [&](int64_t a, int64_t b) {
-    return mem_block_id2info[a].mem_block_mem_size > mem_block_id2info[b].mem_block_mem_size;
+    return mem_block_id2info[a].mem_block_mem_size < mem_block_id2info[b].mem_block_mem_size;
   };
 
   auto B2MiB = [](int64_t val) { return val * 1.0 / 1000000.0; };
@@ -956,7 +965,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   for (auto& rank_memory_info : rank_device_memory_infos) {
     std::sort(rank_memory_info.chunk_info.mem_block_ids.begin(),
               rank_memory_info.chunk_info.mem_block_ids.end(), CompMemBlock);
-    LOG(INFO) << " Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
+    LOG(INFO) << " \n Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
               << ", Device: " << rank_memory_info.device_id << " needs to allocate [ "
               << B2MiB(rank_memory_info.total_mem_size)
               << " MiB ] device memory. \n In general, Chunk id: "
@@ -964,7 +973,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
               << B2MiB(rank_memory_info.chunk_info.chunk_mem_size)
               << " MiB ]; \n Memory out of Chunk is  [ "
               << B2MiB(rank_memory_info.not_reused_mem_size)
-              << " MiB ]; and in particular: Eager Variable Tensor total memory is [ "
+              << " MiB ]; \n And in particular: Eager Variable Tensor total memory is [ "
               << B2MiB(rank_memory_info.eager_variable_total_mem_size) << " MiB ].";
   }
 
@@ -984,7 +993,9 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
         CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
         const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
         for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
-          LOG(INFO) << " In MemBlock id: " << mem_block_id << " order: " << i
+          LOG(INFO) << " MemBlock: " << mem_block_id << " order: " << i <<
+            " mem_size: " << mem_block_info.ordered_regst_mem_size.at(i)
+            << " mem_offset: " << mem_block_info.ordered_regst_mem_offset_in_block.at(i)
                   << " op_name: " << mem_block_info.ordered_op_names.at(i);
         }
       }
