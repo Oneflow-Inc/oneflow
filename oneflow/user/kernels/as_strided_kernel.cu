@@ -138,7 +138,7 @@ class GpuAsStridedKernel final : public user_op::OpKernel {
     const int64_t* dest_dims = output->shape().ptr();
     const size_t input_num = input->shape().Count(0);
     const size_t output_num = output->shape().Count(0);
-    if(input_num == 0){
+    if (input_num == 0) {
       // 0-size tensor
       return;
     }
