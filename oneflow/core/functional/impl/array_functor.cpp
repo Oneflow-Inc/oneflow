@@ -2884,7 +2884,7 @@ class PinMemoryFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     // TODO:(zhaoluyang) support consistent tensor.pin_memory()
-    CHECK_OR_RETURN(input->is_local())
+    CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     // if tensor already pinned, then just return
     if (JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory()) { return input; }
