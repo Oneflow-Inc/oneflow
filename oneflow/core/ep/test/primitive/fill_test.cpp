@@ -80,8 +80,8 @@ TEST_F(PrimitiveTest, TestFill) {
   TestFill<DataType::kInt32, int32_t>(&device_manager_registry_, available_device_types_, 1024);
   TestFill<DataType::kInt64, int64_t>(&device_manager_registry_, available_device_types_, 1024);
   TestFill<DataType::kUInt8, uint8_t>(&device_manager_registry_, available_device_types_, 1024);
-  TestFill<DataType::kFloat16, half>(&device_manager_registry_, available_device_types_, 1024);
 #ifdef WITH_CUDA
+  TestFill<DataType::kFloat16, half>(&device_manager_registry_, available_device_types_, 1024);
 #if CUDA_VERSION >= 11000
   TestFill<DataType::kBFloat16, nv_bfloat16>(&device_manager_registry_, available_device_types_,
                                              1024);
