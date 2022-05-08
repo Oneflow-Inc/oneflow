@@ -70,16 +70,18 @@ class FusedLstmCellGrad : public OpExprGradFunction<FusedLstmCellGradCaptureStat
     } else {
       in_grads->resize(3);
     }
-    if (ctx->need_grad_cx) {
-      for (int i = 0; i < results->size(); ++i) { in_grads->at(i) = results->at(i); }
-    } else {
-      if (ctx->has_bias) {
-        in_grads->at(0) = results->at(0);
-        in_grads->at(1) = results->at(1);
+    in_grads->at(0) = results->at(0);
+    in_grads->at(1) = results->at(0);
+
+    if (ctx->need_grad_cx) { in_grads->at(2) = results->at(1); }
+
+    if (ctx->has_bias) {
+      if (ctx->need_grad_cx) {
         in_grads->at(3) = results->at(2);
-        in_grads->at(4) = results->at(3);
+        in_grads->at(4) = results->at(2);
       } else {
-        for (int i = 0; i < results->size(); ++i) { in_grads->at(i) = results->at(i); }
+        in_grads->at(3) = results->at(1);
+        in_grads->at(4) = results->at(1);
       }
     }
     return Maybe<void>::Ok();

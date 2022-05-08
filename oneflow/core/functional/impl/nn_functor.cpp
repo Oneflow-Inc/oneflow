@@ -3196,11 +3196,9 @@ class FusedLstmCellGradFunctor {
                                    .Input("cx")
                                    .Input("cy")
                                    .Input("workspace")
-                                   .Output("grad_input_gates")
-                                   .Output("grad_hidden_gates")
+                                   .Output("grad_gates")
                                    .Output("grad_cx")
-                                   .Output("grad_input_bias")
-                                   .Output("grad_hidden_bias")
+                                   .Output("grad_bias")
                                    .Build());
     op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell_grad")
                                       .Input("grad_hy")
@@ -3208,8 +3206,7 @@ class FusedLstmCellGradFunctor {
                                       .Input("cx")
                                       .Input("cy")
                                       .Input("workspace")
-                                      .Output("grad_input_gates")
-                                      .Output("grad_hidden_gates")
+                                      .Output("grad_gates")
                                       .Output("grad_cx")
                                       .Build());
     op_with_bias_no_grad_cx_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell_grad")
@@ -3218,10 +3215,8 @@ class FusedLstmCellGradFunctor {
                                               .Input("cx")
                                               .Input("cy")
                                               .Input("workspace")
-                                              .Output("grad_input_gates")
-                                              .Output("grad_hidden_gates")
-                                              .Output("grad_input_bias")
-                                              .Output("grad_hidden_bias")
+                                              .Output("grad_gates")
+                                              .Output("grad_bias")
                                               .Build());
     op_without_bias_no_grad_cx_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell_grad")
                                                  .Input("grad_hy")
@@ -3229,8 +3224,7 @@ class FusedLstmCellGradFunctor {
                                                  .Input("cx")
                                                  .Input("cy")
                                                  .Input("workspace")
-                                                 .Output("grad_input_gates")
-                                                 .Output("grad_hidden_gates")
+                                                 .Output("grad_gates")
                                                  .Build());
   }
 

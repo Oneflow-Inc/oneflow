@@ -136,8 +136,8 @@ __global__ void lstm_cell_forward(const IDX_TYPE numel, const IDX_TYPE hidden_si
 template<typename T, typename ACC_T, typename IDX_TYPE>
 __global__ void lstm_cell_backward(const IDX_TYPE numel, const IDX_TYPE hidden_size,
                                    const T* grad_hy_ptr, const T* grad_cy_ptr, const T* cx_ptr,
-                                   const T* cy_ptr, const T* workspace_ptr, T* grad_input_gates_ptr,
-                                   T* grad_hidden_gates_ptr, T* grad_cx_ptr) {
+                                   const T* cy_ptr, const T* workspace_ptr, T* grad_gates_ptr,
+                                   T* grad_cx_ptr) {
   for (IDX_TYPE linearIndex = blockIdx.x * blockDim.x + threadIdx.x; linearIndex < numel;
        linearIndex += gridDim.x * blockDim.x) {
     IDX_TYPE offset = (linearIndex / hidden_size) * 4 * hidden_size + linearIndex % hidden_size;
@@ -147,15 +147,10 @@ __global__ void lstm_cell_backward(const IDX_TYPE numel, const IDX_TYPE hidden_s
     T cg = workspace_ptr[offset + 2 * hidden_size];
     T og = workspace_ptr[offset + 3 * hidden_size];
 
-    T* ii = &(grad_input_gates_ptr[offset + 0 * hidden_size]);
-    T* fi = &(grad_input_gates_ptr[offset + 1 * hidden_size]);
-    T* ci = &(grad_input_gates_ptr[offset + 2 * hidden_size]);
-    T* oi = &(grad_input_gates_ptr[offset + 3 * hidden_size]);
-
-    T* ih = &(grad_hidden_gates_ptr[offset + 0 * hidden_size]);
-    T* fh = &(grad_hidden_gates_ptr[offset + 1 * hidden_size]);
-    T* ch = &(grad_hidden_gates_ptr[offset + 2 * hidden_size]);
-    T* oh = &(grad_hidden_gates_ptr[offset + 3 * hidden_size]);
+    T* ih = &(grad_gates_ptr[offset + 0 * hidden_size]);
+    T* fh = &(grad_gates_ptr[offset + 1 * hidden_size]);
+    T* ch = &(grad_gates_ptr[offset + 2 * hidden_size]);
+    T* oh = &(grad_gates_ptr[offset + 3 * hidden_size]);
 
     // will return hidden grads here
     T cx = cx_ptr[linearIndex];
@@ -182,10 +177,6 @@ __global__ void lstm_cell_backward(const IDX_TYPE numel, const IDX_TYPE hidden_s
     *fh = F2H(gfg);
     *ch = F2H(gcg);
     *oh = F2H(gog);
-    *ii = F2H(gig);
-    *fi = F2H(gfg);
-    *ci = F2H(gcg);
-    *oi = F2H(gog);
 
     if (grad_cx_ptr != nullptr) {
       gcx = gcx * H2F(fg);
@@ -244,18 +235,18 @@ template<typename T>
 struct FusedLstmCellGradFunctor final {
   void operator()(ep::Stream* stream, const int64_t cx_numel, const int64_t workspace_numel,
                   const int64_t hidden_size, const T* grad_hy_ptr, const T* grad_cy_ptr,
-                  const T* cx_ptr, const T* cy_ptr, const T* workspace_ptr, T* grad_input_gates_ptr,
-                  T* grad_hidden_gates_ptr, T* grad_cx_ptr) {
+                  const T* cx_ptr, const T* cy_ptr, const T* workspace_ptr, T* grad_gates_ptr,
+                  T* grad_cx_ptr) {
     using ACC_T = acc_type<T>;
     if (workspace_numel < std::numeric_limits<int32_t>::max()) {
       RUN_CUDA_KERNEL((lstm_cell_backward<T, ACC_T, int32_t>), stream, cx_numel,
                       static_cast<int32_t>(cx_numel), static_cast<int32_t>(hidden_size),
-                      grad_hy_ptr, grad_cy_ptr, cx_ptr, cy_ptr, workspace_ptr, grad_input_gates_ptr,
-                      grad_hidden_gates_ptr, grad_cx_ptr);
+                      grad_hy_ptr, grad_cy_ptr, cx_ptr, cy_ptr, workspace_ptr, grad_gates_ptr,
+                      grad_cx_ptr);
     } else {
       RUN_CUDA_KERNEL((lstm_cell_backward<T, ACC_T, int64_t>), stream, cx_numel, cx_numel,
                       hidden_size, grad_hy_ptr, grad_cy_ptr, cx_ptr, cy_ptr, workspace_ptr,
-                      grad_input_gates_ptr, grad_hidden_gates_ptr, grad_cx_ptr);
+                      grad_gates_ptr, grad_cx_ptr);
     }
   }
 };
@@ -265,22 +256,22 @@ void FusedLstmCellGradFunctor<float16>::operator()(
     ep::Stream* stream, const int64_t cx_numel, const int64_t workspace_numel,
     const int64_t hidden_size, const float16* grad_hy_ptr, const float16* grad_cy_ptr,
     const float16* cx_ptr, const float16* cy_ptr, const float16* workspace_ptr,
-    float16* grad_input_gates_ptr, float16* grad_hidden_gates_ptr, float16* grad_cx_ptr) {
+    float16* grad_gates_ptr, float16* grad_cx_ptr) {
   if (workspace_numel < std::numeric_limits<int32_t>::max()) {
-    RUN_CUDA_KERNEL(
-        (lstm_cell_backward<half, float, int32_t>), stream, cx_numel,
-        static_cast<int32_t>(cx_numel), static_cast<int32_t>(hidden_size),
-        reinterpret_cast<const half*>(grad_hy_ptr), reinterpret_cast<const half*>(grad_cy_ptr),
-        reinterpret_cast<const half*>(cx_ptr), reinterpret_cast<const half*>(cy_ptr),
-        reinterpret_cast<const half*>(workspace_ptr), reinterpret_cast<half*>(grad_input_gates_ptr),
-        reinterpret_cast<half*>(grad_hidden_gates_ptr), reinterpret_cast<half*>(grad_cx_ptr));
+    RUN_CUDA_KERNEL((lstm_cell_backward<half, float, int32_t>), stream, cx_numel,
+                    static_cast<int32_t>(cx_numel), static_cast<int32_t>(hidden_size),
+                    reinterpret_cast<const half*>(grad_hy_ptr),
+                    reinterpret_cast<const half*>(grad_cy_ptr),
+                    reinterpret_cast<const half*>(cx_ptr), reinterpret_cast<const half*>(cy_ptr),
+                    reinterpret_cast<const half*>(workspace_ptr),
+                    reinterpret_cast<half*>(grad_gates_ptr), reinterpret_cast<half*>(grad_cx_ptr));
   } else {
-    RUN_CUDA_KERNEL(
-        (lstm_cell_backward<half, float, int64_t>), stream, cx_numel, cx_numel, hidden_size,
-        reinterpret_cast<const half*>(grad_hy_ptr), reinterpret_cast<const half*>(grad_cy_ptr),
-        reinterpret_cast<const half*>(cx_ptr), reinterpret_cast<const half*>(cy_ptr),
-        reinterpret_cast<const half*>(workspace_ptr), reinterpret_cast<half*>(grad_input_gates_ptr),
-        reinterpret_cast<half*>(grad_hidden_gates_ptr), reinterpret_cast<half*>(grad_cx_ptr));
+    RUN_CUDA_KERNEL((lstm_cell_backward<half, float, int64_t>), stream, cx_numel, cx_numel,
+                    hidden_size, reinterpret_cast<const half*>(grad_hy_ptr),
+                    reinterpret_cast<const half*>(grad_cy_ptr),
+                    reinterpret_cast<const half*>(cx_ptr), reinterpret_cast<const half*>(cy_ptr),
+                    reinterpret_cast<const half*>(workspace_ptr),
+                    reinterpret_cast<half*>(grad_gates_ptr), reinterpret_cast<half*>(grad_cx_ptr));
   }
 }
 
@@ -338,11 +329,10 @@ class GpuFusedLstmCellKernel final : public user_op::OpKernel {
 REGISTER_FUSED_LSTM_CELL_KERNEL(float);
 REGISTER_FUSED_LSTM_CELL_KERNEL(float16);
 
-template<typename T>
-class GpuFusedLstmCellGradKernel final : public user_op::OpKernel {
+class GpuFusedLstmCellGradFloatKernel final : public user_op::OpKernel {
  public:
-  GpuFusedLstmCellGradKernel() = default;
-  ~GpuFusedLstmCellGradKernel() = default;
+  GpuFusedLstmCellGradFloatKernel() = default;
+  ~GpuFusedLstmCellGradFloatKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -352,45 +342,37 @@ class GpuFusedLstmCellGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* cx = ctx->Tensor4ArgNameAndIndex("cx", 0);
     const user_op::Tensor* cy = ctx->Tensor4ArgNameAndIndex("cy", 0);
     const user_op::Tensor* workspace = ctx->Tensor4ArgNameAndIndex("workspace", 0);
-    user_op::Tensor* grad_input_gates = ctx->Tensor4ArgNameAndIndex("grad_input_gates", 0);
-    user_op::Tensor* grad_hidden_gates = ctx->Tensor4ArgNameAndIndex("grad_hidden_gates", 0);
+    user_op::Tensor* grad_gates = ctx->Tensor4ArgNameAndIndex("grad_gates", 0);
     user_op::Tensor* grad_cx = ctx->Tensor4ArgNameAndIndex("grad_cx", 0);
 
-    const T* grad_hy_ptr = grad_hy->dptr<T>();
-    const T* grad_cy_ptr = grad_cy->dptr<T>();
-    const T* cx_ptr = cx->dptr<T>();
-    const T* cy_ptr = cy->dptr<T>();
-    const T* workspace_ptr = workspace->dptr<T>();
+    const float* grad_hy_ptr = grad_hy->dptr<float>();
+    const float* grad_cy_ptr = grad_cy->dptr<float>();
+    const float* cx_ptr = cx->dptr<float>();
+    const float* cy_ptr = cy->dptr<float>();
+    const float* workspace_ptr = workspace->dptr<float>();
 
-    T* grad_input_gates_ptr = grad_input_gates->mut_dptr<T>();
-    T* grad_hidden_gates_ptr = grad_hidden_gates->mut_dptr<T>();
-    T* grad_cx_ptr = nullptr;
+    float* grad_gates_ptr = grad_gates->mut_dptr<float>();
+    float* grad_cx_ptr = nullptr;
 
-    if (ctx->has_output("grad_cx", 0)) { grad_cx_ptr = grad_cx->mut_dptr<T>(); }
+    if (ctx->has_output("grad_cx", 0)) { grad_cx_ptr = grad_cx->mut_dptr<float>(); }
 
     const int64_t cx_numel = cx->shape().elem_cnt();
     const int64_t workspace_numel = workspace->shape().elem_cnt();
     const int64_t hidden_size = cx->shape().At(cx->shape().NumAxes() - 1);
-    FusedLstmCellGradFunctor<T>()(ctx->stream(), cx_numel, workspace_numel, hidden_size,
-                                  grad_hy_ptr, grad_cy_ptr, cx_ptr, cy_ptr, workspace_ptr,
-                                  grad_input_gates_ptr, grad_hidden_gates_ptr, grad_cx_ptr);
+    FusedLstmCellGradFunctor<float>()(ctx->stream(), cx_numel, workspace_numel, hidden_size,
+                                      grad_hy_ptr, grad_cy_ptr, cx_ptr, cy_ptr, workspace_ptr,
+                                      grad_gates_ptr, grad_cx_ptr);
 
-    if (ctx->has_output("grad_input_bias", 0)) {
-      CHECK(ctx->has_output("grad_hidden_bias", 0));
-      T* grad_input_bias_ptr = ctx->Tensor4ArgNameAndIndex("grad_input_bias", 0)->mut_dptr<T>();
-      T* grad_hidden_bias_ptr = ctx->Tensor4ArgNameAndIndex("grad_hidden_bias", 0)->mut_dptr<T>();
+    if (ctx->has_output("grad_bias", 0)) {
+      float* grad_bias_ptr = ctx->Tensor4ArgNameAndIndex("grad_bias", 0)->mut_dptr<float>();
       std::vector<int32_t> axis;
       axis.push_back(0);
       const Shape& reduced_shape =
           CreateReducedShape(workspace->shape(), {axis.begin(), axis.end()});
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
-          ctx->stream(), XpuVarNdarray<float>(reduced_shape, grad_input_bias_ptr),
-          XpuVarNdarray<const float>(grad_input_gates->shape(), grad_input_gates->dptr<float>()),
-          XpuVarNdarray<float>(tmp_buffer->shape(), tmp_buffer->mut_dptr<float>()));
-      NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
-          ctx->stream(), XpuVarNdarray<float>(reduced_shape, grad_hidden_bias_ptr),
-          XpuVarNdarray<const float>(grad_input_gates->shape(), grad_input_gates->dptr<float>()),
+          ctx->stream(), XpuVarNdarray<float>(reduced_shape, grad_bias_ptr),
+          XpuVarNdarray<const float>(grad_gates->shape(), grad_gates->dptr<float>()),
           XpuVarNdarray<float>(tmp_buffer->shape(), tmp_buffer->mut_dptr<float>()));
     }
   }
@@ -399,7 +381,7 @@ class GpuFusedLstmCellGradKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("fused_lstm_cell_grad")
-    .SetCreateFn<GpuFusedLstmCellGradKernel<float>>()
+    .SetCreateFn<GpuFusedLstmCellGradFloatKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      && (user_op::HobDataType("grad_hy", 0) == GetDataType<float>::value)
                      && (user_op::HobDataType("grad_cy", 0) == GetDataType<float>::value)
@@ -407,11 +389,109 @@ REGISTER_USER_KERNEL("fused_lstm_cell_grad")
                      && (user_op::HobDataType("cy", 0) == GetDataType<float>::value)
                      && (user_op::HobDataType("workspace", 0) == GetDataType<float>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
-      const Shape& in_shape = ctx->InputTensorDesc("workspace", 0).shape();
-      return GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
+      size_t tmp_bytes = 0;
+      if (ctx->has_output("grad_bias", 0)) {
+        const Shape& in_shape = ctx->InputTensorDesc("workspace", 0).shape();
+        tmp_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
+      } else {
+        tmp_bytes = 0;
+      }
+      return tmp_bytes;
     });
 
-// REGISTER_FUSED_LSTM_CELL_GRAD_KERNEL(float);
-// REGISTER_FUSED_LSTM_CELL_GRAD_KERNEL(float16);
+class GpuFusedLstmCellGradHalfKernel final : public user_op::OpKernel {
+ public:
+  GpuFusedLstmCellGradHalfKernel() = default;
+  ~GpuFusedLstmCellGradHalfKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* grad_hy = ctx->Tensor4ArgNameAndIndex("grad_hy", 0);
+    const user_op::Tensor* grad_cy = ctx->Tensor4ArgNameAndIndex("grad_cy", 0);
+    const user_op::Tensor* cx = ctx->Tensor4ArgNameAndIndex("cx", 0);
+    const user_op::Tensor* cy = ctx->Tensor4ArgNameAndIndex("cy", 0);
+    const user_op::Tensor* workspace = ctx->Tensor4ArgNameAndIndex("workspace", 0);
+    user_op::Tensor* grad_gates = ctx->Tensor4ArgNameAndIndex("grad_gates", 0);
+    user_op::Tensor* grad_cx = ctx->Tensor4ArgNameAndIndex("grad_cx", 0);
+
+    const float16* grad_hy_ptr = grad_hy->dptr<float16>();
+    const float16* grad_cy_ptr = grad_cy->dptr<float16>();
+    const float16* cx_ptr = cx->dptr<float16>();
+    const float16* cy_ptr = cy->dptr<float16>();
+    const float16* workspace_ptr = workspace->dptr<float16>();
+
+    float16* grad_gates_ptr = grad_gates->mut_dptr<float16>();
+    float16* grad_cx_ptr = nullptr;
+
+    if (ctx->has_output("grad_cx", 0)) { grad_cx_ptr = grad_cx->mut_dptr<float16>(); }
+
+    const int64_t cx_numel = cx->shape().elem_cnt();
+    const int64_t workspace_numel = workspace->shape().elem_cnt();
+    const int64_t hidden_size = cx->shape().At(cx->shape().NumAxes() - 1);
+    FusedLstmCellGradFunctor<float16>()(ctx->stream(), cx_numel, workspace_numel, hidden_size,
+                                        grad_hy_ptr, grad_cy_ptr, cx_ptr, cy_ptr, workspace_ptr,
+                                        grad_gates_ptr, grad_cx_ptr);
+
+    if (ctx->has_output("grad_bias", 0)) {
+      std::vector<int32_t> axis;
+      axis.push_back(0);
+      user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+      const ShapeView& in_shape = grad_gates->shape();
+      const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
+      float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
+      const size_t in_tmp_buffer_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
+      float* out_tmp_buffer =
+          reinterpret_cast<float*>(tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes);
+      const size_t out_tmp_buffer_bytes =
+          GetCudaAlignedSize(reduced_shape.elem_cnt() * sizeof(float));
+      float* reduce_tmp_buffer = reinterpret_cast<float*>(
+          tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes + out_tmp_buffer_bytes);
+      const size_t reduce_tmp_buffer_bytes =
+          GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
+      CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
+               tmp_buffer->shape().elem_cnt());
+      auto h2f = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+          ctx->device_type(), DataType::kFloat16, DataType::kFloat);
+      CHECK(h2f);
+      auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+          ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+      CHECK(f2h);
+      h2f->Launch(ctx->stream(), grad_gates->dptr<float16>(), in_tmp_buffer, in_shape.elem_cnt());
+
+      NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
+          ctx->stream(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
+          XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
+          XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
+
+      user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("grad_bias", 0);
+      f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
+                  output_tensor->shape().elem_cnt());
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("fused_lstm_cell_grad")
+    .SetCreateFn<GpuFusedLstmCellGradHalfKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobDataType("grad_hy", 0) == GetDataType<float16>::value)
+                     && (user_op::HobDataType("grad_cy", 0) == GetDataType<float16>::value)
+                     && (user_op::HobDataType("cx", 0) == GetDataType<float16>::value)
+                     && (user_op::HobDataType("cy", 0) == GetDataType<float16>::value)
+                     && (user_op::HobDataType("workspace", 0) == GetDataType<float16>::value))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
+      size_t tmp_bytes = 0;
+      if (ctx->has_output("grad_bias", 0)) {
+        const Shape& in_shape = ctx->InputTensorDesc("workspace", 0).shape();
+        const Shape& out_shape = ctx->OutputTensorDesc("grad_bias", 0)->shape();
+        tmp_bytes = (2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float))
+                     + GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float)));
+      } else {
+        tmp_bytes = 0;
+      }
+      return tmp_bytes;
+    });
 
 }  // namespace oneflow
