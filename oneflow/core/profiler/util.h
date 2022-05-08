@@ -13,22 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+
+#ifndef ONEFLOW_CORE_PROFILER_UTIL_H_
+#define ONEFLOW_CORE_PROFILER_UTIL_H_
+
+#include <cstdint>
+#include <time.h>
 
 namespace oneflow {
 
-template<>
-void Memcpy<DeviceType::kCUDA>(ep::Stream* stream, void* dst, const void* src, size_t sz) {
-  if (dst == src) { return; }
-  OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, sz, cudaMemcpyDefault,
-                                stream->As<ep::CudaStream>()->cuda_stream()));
+namespace profiler {
+
+using time_t = int64_t;
+
+inline time_t GetTimeNow(bool allow_monotonic = false) {
+  struct timespec t {};
+  auto mode = CLOCK_REALTIME;
+  if (allow_monotonic) { mode = CLOCK_MONOTONIC; }
+  clock_gettime(mode, &t);
+  return static_cast<time_t>(t.tv_sec) * 1000000000 + static_cast<time_t>(t.tv_nsec);
 }
 
-template<>
-void Memset<DeviceType::kCUDA>(ep::Stream* stream, void* dst, const char value, size_t sz) {
-  OF_CUDA_CHECK(cudaMemsetAsync(dst, value, sz, stream->As<ep::CudaStream>()->cuda_stream()));
-}
-
+}  // namespace profiler
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_PROFILER_UTIL_H_
