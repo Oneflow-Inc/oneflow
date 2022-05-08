@@ -2201,5 +2201,5 @@
   bind_python: False
 
 - name: "_fused_lstm_cell_grad"
-  signature: "TensorTuple (Tensor grad_hy, Tensor grad_cy, Tensor cx, Tensor cy, Tensor workspace, Bool has_bias) => FusedLstmCellGrad"
+  signature: "TensorTuple (Tensor grad_hy, Tensor grad_cy, Tensor cx, Tensor cy, Tensor workspace, Bool need_cx_grad, Bool has_bias) => FusedLstmCellGrad"
   bind_python: False

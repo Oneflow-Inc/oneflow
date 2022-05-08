@@ -277,7 +277,12 @@ def get_module_graph_test(graph_train_oneflow, oneflow, *args):
             res = self.test_module(*args)
             forward_res = res
             if global_backward and graph_train_parameters_len:
-                res = res.sum()
+                if isinstance(self.test_module.origin, flow.nn.LSTMCell) and isinstance(
+                    res, tuple
+                ):
+                    res = (res[0] + res[1]).sum()
+                else:
+                    res = res.sum()
                 res.backward()
             return forward_res
 
@@ -1043,10 +1048,6 @@ def autotest(
                             continue
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
-                                call_tensor_id.append(id(x.pytorch))
-                                x.sum().backward()
-                            if isinstance(x.pytorch, tuple):
-                                x = x[0] + x[1]
                                 call_tensor_id.append(id(x.pytorch))
                                 x.sum().backward()
                         dual_objects_to_test.append(x)

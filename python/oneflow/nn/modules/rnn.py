@@ -1390,7 +1390,6 @@ class LSTMCell(RNNCellBase):
                     dtype=input.dtype,
                     sbp=input.sbp,
                     placement=input.placement,
-                    requires_grad=True,
                 )
             else:
                 zeros = flow.zeros(
@@ -1398,7 +1397,6 @@ class LSTMCell(RNNCellBase):
                     self.hidden_size,
                     dtype=input.dtype,
                     device=input.device,
-                    requires_grad=True,
                 )
             hx = (zeros, zeros)
         else:

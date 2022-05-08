@@ -9749,7 +9749,7 @@ def OneFlow_FusedLstmCellGradOp : OneFlow_BaseOp<"fused_lstm_cell_grad", [NoSide
   let output = (outs
     OneFlow_Tensor:$grad_input_gates,
     OneFlow_Tensor:$grad_hidden_gates,
-    OneFlow_Tensor:$grad_cx,
+    Optional<OneFlow_Tensor>:$grad_cx,
     Optional<OneFlow_Tensor>:$grad_input_bias,
     Optional<OneFlow_Tensor>:$grad_hidden_bias
   );

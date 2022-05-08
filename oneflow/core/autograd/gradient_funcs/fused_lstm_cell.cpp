@@ -23,6 +23,7 @@ namespace one {
 
 struct FusedLstmCellGradCaptureState : public AutoGradCaptureState {
   bool has_bias;
+  bool need_grad_cx;
 };
 
 class FusedLstmCellGrad : public OpExprGradFunction<FusedLstmCellGradCaptureState> {
@@ -41,6 +42,11 @@ class FusedLstmCellGrad : public OpExprGradFunction<FusedLstmCellGradCaptureStat
       CHECK_EQ_OR_RETURN(inputs.size(), 5);
       ctx->has_bias = true;
     }
+    if (inputs.at(2)->requires_grad()) {
+      ctx->need_grad_cx = true;
+    } else {
+      ctx->need_grad_cx = false;
+    }
     ctx->SaveTensorForBackward(inputs.at(2));   // cx
     ctx->SaveTensorForBackward(outputs.at(1));  // cy
     ctx->SaveTensorForBackward(outputs.at(2));  // workspace
@@ -56,17 +62,26 @@ class FusedLstmCellGrad : public OpExprGradFunction<FusedLstmCellGradCaptureStat
     const auto& grad_hy = out_grads.at(0);
     const auto& grad_cy = out_grads.at(1);
 
-    const auto& results =
-        JUST(functional::FusedLstmCellGrad(grad_hy, grad_cy, cx, cy, workspace, ctx->has_bias));
+    const auto& results = JUST(functional::FusedLstmCellGrad(grad_hy, grad_cy, cx, cy, workspace,
+                                                             ctx->need_grad_cx, ctx->has_bias));
 
     if (ctx->has_bias) {
-      CHECK_EQ_OR_RETURN(results->size(), 5);
       in_grads->resize(5);
     } else {
-      CHECK_EQ_OR_RETURN(results->size(), 3);
       in_grads->resize(3);
     }
-    for (int i = 0; i < results->size(); ++i) { in_grads->at(i) = results->at(i); }
+    if (ctx->need_grad_cx) {
+      for (int i = 0; i < results->size(); ++i) { in_grads->at(i) = results->at(i); }
+    } else {
+      if (ctx->has_bias) {
+        in_grads->at(0) = results->at(0);
+        in_grads->at(1) = results->at(1);
+        in_grads->at(3) = results->at(2);
+        in_grads->at(4) = results->at(3);
+      } else {
+        for (int i = 0; i < results->size(); ++i) { in_grads->at(i) = results->at(i); }
+      }
+    }
     return Maybe<void>::Ok();
   }
 };

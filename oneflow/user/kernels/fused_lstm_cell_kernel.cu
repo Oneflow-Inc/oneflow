@@ -161,8 +161,6 @@ __global__ void lstm_cell_backward(const IDX_TYPE numel, const IDX_TYPE hidden_s
     T cx = cx_ptr[linearIndex];
     T cy = cy_ptr[linearIndex];
 
-    T* gi = &(grad_cx_ptr[linearIndex]);
-
     ACC_T go = H2F(grad_hy_ptr[linearIndex]);
     ACC_T goc = H2F(grad_cy_ptr[linearIndex]);
 
@@ -174,8 +172,6 @@ __global__ void lstm_cell_backward(const IDX_TYPE numel, const IDX_TYPE hidden_s
     ACC_T gig = gcx * H2F(cg);
     ACC_T gfg = gcx * H2F(cx);
     ACC_T gcg = gcx * H2F(ig);
-
-    gcx = gcx * H2F(fg);
 
     gig = gig * (1 - H2F(ig)) * H2F(ig);
     gfg = gfg * (1 - H2F(fg)) * H2F(fg);
@@ -191,7 +187,11 @@ __global__ void lstm_cell_backward(const IDX_TYPE numel, const IDX_TYPE hidden_s
     *ci = F2H(gcg);
     *oi = F2H(gog);
 
-    *gi = F2H(gcx);
+    if (grad_cx_ptr != nullptr) {
+      gcx = gcx * H2F(fg);
+      T* gi = &(grad_cx_ptr[linearIndex]);
+      *gi = F2H(gcx);
+    }
   }
 }
 
@@ -364,7 +364,10 @@ class GpuFusedLstmCellGradKernel final : public user_op::OpKernel {
 
     T* grad_input_gates_ptr = grad_input_gates->mut_dptr<T>();
     T* grad_hidden_gates_ptr = grad_hidden_gates->mut_dptr<T>();
-    T* grad_cx_ptr = grad_cx->mut_dptr<T>();
+    T* grad_cx_ptr = nullptr;
+
+    if (ctx->has_output("grad_cx", 0)) { grad_cx_ptr = grad_cx->mut_dptr<T>(); }
+
     const int64_t cx_numel = cx->shape().elem_cnt();
     const int64_t workspace_numel = workspace->shape().elem_cnt();
     const int64_t hidden_size = cx->shape().At(cx->shape().NumAxes() - 1);

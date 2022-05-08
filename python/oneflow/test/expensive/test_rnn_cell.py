@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestRNN(flow.unittest.TestCase):
-    @autotest(n=10, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_rnn_tanh_cell(test_case):
         device = random_device()
         batch_size = random(1, 6)
@@ -43,7 +43,7 @@ class TestRNN(flow.unittest.TestCase):
             hx = m(input[i], hx)
         return hx
 
-    @autotest(n=10, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_rnn_relu_cell(test_case):
         device = random_device()
         batch_size = random(1, 6)
@@ -64,7 +64,7 @@ class TestRNN(flow.unittest.TestCase):
             hx = m(input[i], hx)
         return hx
 
-    @autotest(n=10, check_graph=False)
+    @autotest(n=10, check_graph=True)
     def test_lstm_cell(test_case):
         device = random_device()
         batch_size = random(1, 6)
@@ -72,19 +72,25 @@ class TestRNN(flow.unittest.TestCase):
         input_size = random(1, 6) * 2
         hidden_size = random(1, 6) * 2
         has_bias = random().to(bool)
+        cx_requires_grad = random().to(bool)
         m = torch.nn.LSTMCell(
             input_size=input_size, hidden_size=hidden_size, bias=has_bias,
         ).to(device)
         input = random_tensor(
             ndim=3, dim0=time_steps, dim1=batch_size, dim2=input_size
         ).to(device)
-        hx = random_tensor(ndim=2, dim0=batch_size, dim1=hidden_size).to(device)
-        cx = random_tensor(ndim=2, dim0=batch_size, dim1=hidden_size).to(device)
+        hx = random_tensor(
+            ndim=2, dim0=batch_size, dim1=hidden_size, requires_grad=False
+        ).to(device)
+        cx = random_tensor(
+            ndim=2, dim0=batch_size, dim1=hidden_size, requires_grad=cx_requires_grad
+        ).to(device)
+
         for i in range(time_steps.to(int).value()):
             res = m(input[i], (hx, cx))
             hx = res[0]
             cx = res[1]
-        return res
+        return res[0]
 
 
 if __name__ == "__main__":

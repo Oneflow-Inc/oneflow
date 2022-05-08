@@ -3102,7 +3102,6 @@ class RnnTanhCellFunctor {
                            const std::shared_ptr<one::Tensor>& w_hh,
                            const Optional<one::Tensor>& b_ih,
                            const Optional<one::Tensor>& b_hh) const {
-    // static at::Tensor undefined;
     JUST(check_rnn_cell_forward_input(input, w_ih->shape()->At(1)));
     JUST(check_rnn_cell_forward_hidden(input, hx, w_hh->shape()->At(1), 0));
     return SimpleCell<tanh_f, CellParams>{}(input, hx, CellParams{w_ih, w_hh, b_ih, b_hh, nullptr});
@@ -3213,28 +3212,60 @@ class FusedLstmCellGradFunctor {
                                       .Output("grad_hidden_gates")
                                       .Output("grad_cx")
                                       .Build());
+    op_with_bias_no_grad_cx_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell_grad")
+                                              .Input("grad_hy")
+                                              .Input("grad_cy")
+                                              .Input("cx")
+                                              .Input("cy")
+                                              .Input("workspace")
+                                              .Output("grad_input_gates")
+                                              .Output("grad_hidden_gates")
+                                              .Output("grad_input_bias")
+                                              .Output("grad_hidden_bias")
+                                              .Build());
+    op_without_bias_no_grad_cx_ = CHECK_JUST(one::OpBuilder("fused_lstm_cell_grad")
+                                                 .Input("grad_hy")
+                                                 .Input("grad_cy")
+                                                 .Input("cx")
+                                                 .Input("cy")
+                                                 .Input("workspace")
+                                                 .Output("grad_input_gates")
+                                                 .Output("grad_hidden_gates")
+                                                 .Build());
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& grad_hy,
                                 const std::shared_ptr<one::Tensor>& grad_cy,
                                 const std::shared_ptr<one::Tensor>& cx,
                                 const std::shared_ptr<one::Tensor>& cy,
-                                const std::shared_ptr<one::Tensor>& workspace,
+                                const std::shared_ptr<one::Tensor>& workspace, bool need_cx_grad,
                                 bool has_bias) const {
     std::shared_ptr<TensorTuple> kernel_result;
     if (has_bias) {
-      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_with_bias_, {grad_hy, grad_cy, cx, cy, workspace}));
+      if (need_cx_grad) {
+        kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+            *op_with_bias_, {grad_hy, grad_cy, cx, cy, workspace}));
+      } else {
+        kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+            *op_with_bias_no_grad_cx_, {grad_hy, grad_cy, cx, cy, workspace}));
+      }
     } else {
-      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_without_bias_, {grad_hy, grad_cy, cx, cy, workspace}));
+      if (need_cx_grad) {
+        kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+            *op_without_bias_, {grad_hy, grad_cy, cx, cy, workspace}));
+      } else {
+        kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+            *op_without_bias_no_grad_cx_, {grad_hy, grad_cy, cx, cy, workspace}));
+      }
     }
     return kernel_result;
   }
 
  private:
   std::shared_ptr<OpExpr> op_with_bias_;
+  std::shared_ptr<OpExpr> op_with_bias_no_grad_cx_;
   std::shared_ptr<OpExpr> op_without_bias_;
+  std::shared_ptr<OpExpr> op_without_bias_no_grad_cx_;
 };
 
 }  // namespace impl

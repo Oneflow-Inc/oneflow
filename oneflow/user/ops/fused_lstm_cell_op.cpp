@@ -46,7 +46,8 @@ namespace oneflow {
 /* static */ Maybe<void> FusedLstmCellGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("grad_input_gates", 0) = ctx->InputShape("workspace", 0);
   *ctx->OutputShape("grad_hidden_gates", 0) = ctx->InputShape("workspace", 0);
-  *ctx->OutputShape("grad_cx", 0) = ctx->InputShape("cx", 0);
+
+  if (ctx->has_output("grad_cx", 0)) { *ctx->OutputShape("grad_cx", 0) = ctx->InputShape("cx", 0); }
 
   if (ctx->has_output("grad_input_bias", 0) && ctx->has_output("grad_hidden_bias", 0)) {
     std::vector<int32_t> bias_shape;
@@ -71,7 +72,7 @@ namespace oneflow {
   const oneflow::DataType& in_types = ctx->InputDType("grad_hy", 0);
   *ctx->OutputDType("grad_input_gates", 0) = in_types;
   *ctx->OutputDType("grad_hidden_gates", 0) = in_types;
-  *ctx->OutputDType("grad_cx", 0) = in_types;
+  if (ctx->has_output("grad_cx", 0)) { *ctx->OutputDType("grad_cx", 0) = in_types; }
   if (ctx->has_output("grad_input_bias", 0) && ctx->has_output("grad_hidden_bias", 0)) {
     *ctx->OutputDType("grad_input_bias", 0) = in_types;
     *ctx->OutputDType("grad_hidden_bias", 0) = in_types;
@@ -90,8 +91,10 @@ REGISTER_USER_OP_GRAD("fused_lstm_cell")
             .InputBind("cy", ctx->FwOp().output("cy", 0))
             .InputBind("workspace", ctx->FwOp().output("workspace", 0))
             .Output("grad_input_gates")
-            .Output("grad_hidden_gates")
-            .Output("grad_cx");
+            .Output("grad_hidden_gates");
+
+        if (ctx->FwOp().NeedGenGradTensor4OpInput("cx", 0)) { builder.Output("grad_cx"); }
+
         if (ctx->FwOp().user_op_conf().has_input("input_bias", 0)
             && ctx->FwOp().user_op_conf().has_input("hidden_bias", 0)) {
           builder.Output("grad_input_bias");
@@ -108,10 +111,13 @@ REGISTER_USER_OP_GRAD("fused_lstm_cell")
                                 [&ctx, &grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(grad_op_name).output("grad_hidden_gates", 0);
                                 });
-      ctx->FwOp().InputGradBind(user_op::OpArg("cx", 0),
-                                [&ctx, &grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(grad_op_name).output("grad_cx", 0);
-                                });
+
+      if (ctx->FwOp().NeedGenGradTensor4OpInput("cx", 0)) {
+        ctx->FwOp().InputGradBind(user_op::OpArg("cx", 0),
+                                  [&ctx, &grad_op_name]() -> const std::string& {
+                                    return ctx->GetOp(grad_op_name).output("grad_cx", 0);
+                                  });
+      }
 
       if (ctx->FwOp().user_op_conf().has_input("input_bias", 0)) {
         ctx->FwOp().InputGradBind(user_op::OpArg("input_bias", 0),
