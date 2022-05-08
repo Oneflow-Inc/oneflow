@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/symbol.h"
@@ -224,6 +225,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   const auto& stream_type = vm::LookupInstrTypeId(instruction_name).stream_type();
   auto* stream_rt_desc = vm->mut_stream_type2stream_rt_desc()->FindPtr(&stream_type);
   auto vm_stream = stream_rt_desc->GetSoleStream();
+  // auto vm_stream = stream_rt_desc->GetDeviceStream(/*device_id=*/0);
 
   // AllocateOutputBlobsMemory
   DeviceCtx* device_ctx = vm_stream->device_ctx().get();
@@ -234,6 +236,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   bool need_temp_storage = false;
   const user_op::OpKernel* user_opkernel = nullptr;
   printf("\n new runtime >>>>>>>>>>> kernel->op_type_name():%s", kernel->op_type_name().c_str());
+  // composed_attrs_for_main_thread
   JUST(kernel.get()->ChooseOpKernel(&user_opkernel, &need_temp_storage, attrs, input_eager_blob_objects.get(),
                                       output_eager_blob_objects.get(), nullptr));
   
@@ -279,6 +282,14 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   auto* compute_ctx =
       kernel.get()->UpdateComputeContext(input_eager_blob_objects.get(), output_eager_blob_objects.get(),
                                       nullptr, device_ctx);
+
+  if(kernel->op_type_name() == "pad"){
+    printf("\n simplified runtime >>>>>>>>>>> padding_before >>> size:%d; padding_after >>> size:%d", 
+    int(compute_ctx->Attr<std::vector<int64_t>>("padding_before").size()),
+    int(compute_ctx->Attr<std::vector<int64_t>>("padding_after").size())
+    );
+  }
+  printf("\n simplified runtime >>>> 2 kernel->op_type_name() >>>>>>>> %s", kernel->op_type_name().c_str());
   user_opkernel->Compute(compute_ctx, state, cache);
   // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
   kernel.get()->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);

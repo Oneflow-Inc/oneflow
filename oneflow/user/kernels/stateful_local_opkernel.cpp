@@ -426,6 +426,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
     EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
   OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
+  printf("\n ChooseOpKernel >>>>>>>>>>>> reg_ctx_->Update");
   reg_ctx_->Update(attrs, inputs, outputs, consistent_tensor_infer_result);
 
   DataType primary_dtype = kInvalidDataType;
@@ -449,6 +450,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
   OF_PROFILER_RANGE_GUARD("fallback");
 
   const auto& op_type_name = user_op_conf_->op_type_name();
+  printf("\n ChooseOpKernel >>>>>>>>>>>> get kernel_reg_val");
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);

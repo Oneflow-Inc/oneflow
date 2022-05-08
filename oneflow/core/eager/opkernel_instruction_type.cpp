@@ -58,6 +58,7 @@ struct LocalCallOpKernelUtil final {
     } else { printf("\n vm runtime >>>>>>>>>>> need_temp_storage false!"); }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
+    
     if (operand->user_opkernel()->has_state_or_cache()) {
       printf("\n vm runtime >>>>>>>>>>> user_opkernel has_state_or_cache true!");
       
@@ -134,6 +135,12 @@ struct LocalCallOpKernelUtil final {
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
+    if(operand->opkernel().op_type_name() == "pad"){
+      printf("\n simplified runtime >>>>>>>>>>> padding_before >>> size:%d; padding_after >>> size:%d", 
+      int(compute_ctx->Attr<std::vector<int64_t>>("padding_before").size()),
+      int(compute_ctx->Attr<std::vector<int64_t>>("padding_after").size())
+      );
+    }
     operand->user_opkernel()->Compute(compute_ctx, state, cache);
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
