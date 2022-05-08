@@ -13,20 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import oneflow._oneflow_internal
+from oneflow.profiler.profiler import profile, record_function
+
+__all__ = [
+    "range_push",
+    "range_pop",
+    "profiler_start",
+    "profiler_stop",
+    "profile",
+    "record_function",
+]
 
 
-def RangePush(range_name):
+def range_push(range_name):
     oneflow._oneflow_internal.profiler.RangePush(range_name)
 
 
-def RangePop():
+def range_pop():
     oneflow._oneflow_internal.profiler.RangePop()
 
 
-def ProfilerStart():
+def profiler_start():
     oneflow._oneflow_internal.profiler.ProfilerStart()
 
 
-def ProfilerStop():
+def profiler_stop():
     oneflow._oneflow_internal.profiler.ProfilerStop()
