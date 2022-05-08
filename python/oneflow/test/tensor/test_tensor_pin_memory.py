@@ -27,6 +27,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, auto_backward=True, check_graph=False)
     def test_tensor_pin_memory(test_case):
@@ -39,7 +40,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(id(x.oneflow) != id(x2.oneflow))
         test_case.assertTrue(id(x3.oneflow) == id(x2.oneflow))
         return x3
-
+    
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, auto_backward=False, check_graph=False)
     def test_0_dim_tensor_pin_memory(test_case):
