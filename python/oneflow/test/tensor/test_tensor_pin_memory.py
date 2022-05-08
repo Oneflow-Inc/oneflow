@@ -28,7 +28,7 @@ from oneflow.test_utils.automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=10, auto_backward=True, check_graph=False)
+    @autotest(n=5, auto_backward=True, check_graph=False)
     def test_tensor_pin_memory(test_case):
         device = random_device()
         x = random_tensor(ndim=3).to(device)
