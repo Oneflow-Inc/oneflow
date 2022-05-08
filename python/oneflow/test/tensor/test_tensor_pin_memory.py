@@ -40,7 +40,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(id(x.oneflow) != id(x2.oneflow))
         test_case.assertTrue(id(x3.oneflow) == id(x2.oneflow))
         return x3
-    
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, auto_backward=False, check_graph=False)
