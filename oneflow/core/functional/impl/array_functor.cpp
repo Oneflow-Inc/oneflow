@@ -1913,7 +1913,7 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    if (x->is_local() && index.size() == 1 && index[0].IsInteger()) {
+    if (x->is_local() && !(LazyMode::is_enabled()) && index.size() == 1 && index[0].IsInteger()) {
       // NOTE: speed up in special case, e.g. dataloader(refer to torch)
       // function call chain of pytorch : tensor getitem -> select -> as_strided
       // function call chain of oneflow : tensor getitem -> as_strided
