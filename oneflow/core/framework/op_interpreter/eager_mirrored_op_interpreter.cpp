@@ -46,6 +46,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 namespace one {
@@ -197,11 +198,18 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  // JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-  //   return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-  //                                     ctx, stream);
-  // }));
-
+  static const bool disable_vm_runtime = EnvToBool(ONEFLOW_DISABLE_VM_RUNTIME, false);
+  if(!disable_vm_runtime){
+    printf("\n ===================use vm rumtime===================== ");
+    printf("\n vm runtime >>>>>>>>>>> kernel->op_type_name():%s", kernel->op_type_name().c_str());
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+                                        ctx, stream);
+    }));
+    return Maybe<void>::Ok();
+  } 
+  printf("\n ===================use simplified rumtime===================== ");
+  // =====================================================================
   // LocalCallOpKernel
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
@@ -216,6 +224,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   const auto& stream_type = vm::LookupInstrTypeId(instruction_name).stream_type();
   auto* stream_rt_desc = vm->mut_stream_type2stream_rt_desc()->FindPtr(&stream_type);
   auto vm_stream = stream_rt_desc->GetSoleStream();
+
   // AllocateOutputBlobsMemory
   DeviceCtx* device_ctx = vm_stream->device_ctx().get();
   for (const auto& blob_object : *output_eager_blob_objects) {
@@ -224,11 +233,13 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   // LocalCallOpKernelPhyInstrOperand::Init()
   bool need_temp_storage = false;
   const user_op::OpKernel* user_opkernel = nullptr;
+  printf("\n new runtime >>>>>>>>>>> kernel->op_type_name():%s", kernel->op_type_name().c_str());
   JUST(kernel.get()->ChooseOpKernel(&user_opkernel, &need_temp_storage, attrs, input_eager_blob_objects.get(),
                                       output_eager_blob_objects.get(), nullptr));
   
   // TryAllocateTempStorageBlobMemory
   if (need_temp_storage) {
+    printf("\n simplified runtime >>>>>>>>>>> need_temp_storage true!");
     // InferTempStorageBlobDesc
     const auto& InferTmpSizeFn = kernel.get()->GetInferTmpSizeFn(user_opkernel);
     auto* temp_eager_blob_object = kernel.get()->mut_temp_blob_object();
@@ -243,21 +254,27 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
     // TryAllocateTempStorageBlobMemory
     kernel.get()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
-  }
-  // TryInitOpKernelStateAndCache
+  } else { printf("\n simplified runtime >>>>>>>>>>> need_temp_storage false!"); }
+
   user_op::OpKernelState* state = nullptr;
   user_op::OpKernelCache* cache = nullptr;
   if(user_opkernel->has_state_or_cache()){
+    printf("\n simplified runtime >>>>>>>>>>> user_opkernel has_state_or_cache true!");
     if (ctx.state) {
       *state = *(ctx.state);
       // set state to nullptr so that state initialization in TryInitOpKernelStateAndCache will be
       // skipped.
       state = nullptr;
     }
+    if (state != nullptr){
+      printf("\n simplified runtime >>>>>>>>>>> state != nullptr!");
+    }else{
+      printf("\n simplified runtime >>>>>>>>>>> state == nullptr!");
+    }
     kernel.get()->TryInitOpKernelStateAndCache(
         user_opkernel, device_ctx, input_eager_blob_objects.get(), output_eager_blob_objects.get(),
         nullptr, &state, &cache);
-  }
+  } else { printf("\n simplified runtime >>>>>>>>>>> user_opkernel has_state_or_cache false!"); }
   // OpKernelCompute
   auto* compute_ctx =
       kernel.get()->UpdateComputeContext(input_eager_blob_objects.get(), output_eager_blob_objects.get(),
@@ -270,6 +287,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   if (need_temp_storage) {
     return kernel.get()->mut_temp_blob_object()->DeallocateBlobDataPtr();
   }
+
+  // =====================================================================
   return Maybe<void>::Ok();
 }
 

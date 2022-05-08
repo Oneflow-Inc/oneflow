@@ -468,14 +468,17 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
     EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
     user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
+  printf("\n vm runtime >>>>>>>>>>> TryInitOpKernelStateAndCache!");
   LocalUserKernelInitAndCacheContext init_and_cache_ctx(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
       inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
   if (state != nullptr) {
+    printf("\n vm runtime >>>>>>>>>>> TryInitOpKernelStateAndCache >>> state != nullptr");
     auto it = op_kernel_state_map_.find(op_kernel);
     if (it != op_kernel_state_map_.end()) {
       *state = it->second.get();
     } else {
+      printf("\n vm runtime >>>>>>>>>>> TryInitOpKernelStateAndCache >>> state == nullptr");
       auto created_state = op_kernel->CreateOpKernelState(&init_and_cache_ctx);
       op_kernel_state_map_.emplace(op_kernel, created_state);
       *state = created_state.get();

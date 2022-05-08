@@ -51,15 +51,20 @@ struct LocalCallOpKernelUtil final {
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
+      printf("\n vm runtime >>>>>>>>>>> need_temp_storage true!");
       OF_PROFILER_RANGE_GUARD("TryAllocateTempStorageBlobMemory");
       InferTempStorageBlobDesc(operand);
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
-    }
+    } else { printf("\n vm runtime >>>>>>>>>>> need_temp_storage false!"); }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
+      printf("\n vm runtime >>>>>>>>>>> user_opkernel has_state_or_cache true!");
+      
       OF_PROFILER_RANGE_GUARD("TryInitOpKernelStateAndCache");
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+    }else{
+      printf("\n vm runtime >>>>>>>>>>> user_opkernel has_state_or_cache false!");
     }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
@@ -95,10 +100,13 @@ struct LocalCallOpKernelUtil final {
                                                   user_op::OpKernelState** state,
                                                   user_op::OpKernelCache** cache) {
     if (likely(operand->op_interp_ctx().state)) {
+      printf("\n vm runtime >>>>>>>>>>> user_opkernel has_state true!");
       *state = operand->op_interp_ctx().state.get();
       // set state to nullptr so that state initialization in TryInitOpKernelStateAndCache will be
       // skipped.
       state = nullptr;
+    }else{
+      printf("\n vm runtime >>>>>>>>>>> user_opkernel has_state false!");
     }
     operand->mut_opkernel()->TryInitOpKernelStateAndCache(
         operand->user_opkernel(), device_ctx, operand->inputs().get(), operand->outputs().get(),
