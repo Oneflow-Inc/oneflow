@@ -865,7 +865,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
       } else if (attr_type == ::oneflow::kAtListStride) {
         for (auto stride_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::Int64ListProto* stride_ptr = user_attr.mutable_at_list_stride()->add_val();
-          WriteAttrToShape(stride_attr, stride_ptr);
+          WriteAttrToStride(stride_attr, stride_ptr);
         }
       } else if (attr_type == ::oneflow::kAtListString) {
         // attr like nd_sbp requires the existence of list even it is empty
