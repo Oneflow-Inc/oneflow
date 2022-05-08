@@ -66,7 +66,8 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "fused_scale_mask_softmax",
                               "fused_bias_add_gelu",
                               "fused_bias_add_mask_scale",
-                              "acc"};
+                              "acc",
+                              "_grad_acc"};
   return gray_list;
 }
 
@@ -99,7 +100,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "pack",
                                "nvtx_start",
                                "nvtx_end",
-                               "narrow"};
+                               "narrow",
+                               "_grad_acc_forward_placeholder"};
 
   return clear_list;
 }

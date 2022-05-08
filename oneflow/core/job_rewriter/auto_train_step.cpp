@@ -35,16 +35,24 @@ class AutoTrainStep final : public JobPass {
 Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
   if (!ctx->job_desc().IsTrain()) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
-  const TrainConf& train_conf = job->job_conf().train_conf();
+  const JobConfigProto& job_conf = job->job_conf();
+  const TrainConf& train_conf = job_conf.train_conf();
   if (train_conf.has_train_step_lbn()) {
     CHECK_OR_RETURN(!train_conf.has_dynamic_loss_scale_policy());
     return Maybe<void>::Ok();
   }
+  int32_t exec_interval = 1;
+  if (job_conf.has_num_gradient_accumulation_steps()) {
+    exec_interval = job_conf.num_gradient_accumulation_steps();
+  }
+
   OperatorConf variable_op_conf{};
+  if (exec_interval > 1) { variable_op_conf.set_exec_interval(exec_interval); }
   const std::string train_step_name = "System-Train-TrainStep";
   variable_op_conf.set_name(train_step_name);
   VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
   variable_conf->set_out("out");
+
   *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
   variable_conf->set_data_type(DataType::kInt64);
   variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);

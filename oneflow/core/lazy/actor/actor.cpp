@@ -132,6 +132,10 @@ void Actor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_id_ = task_proto.task_id();
   thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
+  // NOTE(chengcheng):
+  //   act_cnt_ begin from 1 NOT 0. for act_cnt_ % exec_interval_ == 0 to do act.
+  act_cnt_ = 1;
+  exec_interval_ = task_proto.exec_interval();
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
@@ -421,7 +425,8 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
-    Act();
+    if (act_cnt_ % exec_interval_ == 0) { Act(); }
+    act_cnt_ += 1;
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();

@@ -475,6 +475,7 @@ message OperatorConf {
   optional string stream_name_hint = 9;
   optional string pass_tag = 10;
   optional string loc = 11 [default = ""];
+  optional int32 exec_interval = 12 [default = 1];
   oneof op_type {
     // system op
     CopyHdOpConf copy_hd_conf = 105;

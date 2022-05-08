@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/grad_acc_compute_task_node.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/vm/symbol_storage.h"
@@ -66,17 +67,6 @@ std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
   return scope.scope_proto().calculation_pass_name();
 }
 
-bool IsOptimizerPassOp(const Operator* op) {
-  // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
-  // ops with fw/bw ops
-  if (!op->op_conf().has_scope_symbol_id()) {
-    // NOTE(chengcheng): Some system op insert to OpGraph may not set scope_symbol_id, it MUST NOT
-    // optimizer subgraph ops.
-    return false;
-  }
-  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
-}
-
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
   return op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf();
 }
@@ -100,15 +90,10 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
       return true;
     }
   }
-  // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
-  if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
-      && IsOptimizerPassOp(op)) {
-    return true;
-  }
   return false;
 }
 
-bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
+bool IsTaskNodeProducedRegstHasMultiRegstNum(const TaskNode* node) {
   for (const auto& pair : node->produced_regsts()) {
     if (pair.second->min_register_num() > 1) { return true; }
   }
@@ -116,8 +101,11 @@ bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
 }
 
 bool CanBeMergedInChain(const TaskNode* node) {
+  if (!node) return false;  // for clang-tidy
+  // NOTE(chengcheng): GradAcc NOT change time shape, and can be handled as NormalForward.
+  if (dynamic_cast<const GradAccCompTaskNode*>(node)) { return true; }
   // ONLY the node which is NormalForward and in GPU and NOT variable can be merged.
-  if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
+  if (IsTaskNodeProducedRegstHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
   if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
@@ -126,17 +114,10 @@ bool CanBeMergedInChain(const TaskNode* node) {
   return true;
 }
 
-std::shared_ptr<const Shape> GetTaskNodeTimeShape(const TaskNode* node) {
-  const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
-  CHECK(fw_comp_node != nullptr);
-  return CHECK_JUST(fw_comp_node->op()->GetOpTimeShape());
-}
-
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
   CHECK_NE(this_chain_id, -1);
   CHECK_EQ(this_node->chain_id(), -1);
   // bfs search all node can be merged in this chain
-  std::shared_ptr<const Shape> seed_time_shape = GetTaskNodeTimeShape(this_node);
   HashSet<TaskNode*> visited_nodes;
   std::queue<TaskNode*> queued_nodes;
   queued_nodes.push(this_node);
@@ -150,8 +131,7 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
 
     cur_node->ForEachNodeOnInOutDataEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
-          && this_node->thrd_id() == next_node->thrd_id()
-          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
+          && this_node->thrd_id() == next_node->thrd_id()) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);

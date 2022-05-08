@@ -39,7 +39,12 @@ void ForEachDataEdge(const std::unordered_set<TaskEdge*>& edges,
 }  // namespace
 
 TaskNode::TaskNode()
-    : machine_id_(-1), thrd_id_(-1), task_id_(-1), chain_id_(-1), order_in_graph_(-1) {}
+    : machine_id_(-1),
+      thrd_id_(-1),
+      task_id_(-1),
+      chain_id_(-1),
+      order_in_graph_(-1),
+      exec_interval_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -98,6 +103,43 @@ void TaskNode::PinConsumedRegst() {
       PinConsumedRegstMemCase(regst->mut_mem_case());
     }
   }
+}
+
+void TaskNode::set_exec_interval(int32_t val) {
+  CHECK_GT(val, 0);
+  exec_interval_ = val;
+}
+
+void TaskNode::InferExecInterval() {
+  int32_t exec_interval = 1;
+  ForEachConsumedDataRegst([&](const std::string& name, const RegstDesc* regst) {
+    int32_t src_exec_interval = regst->exec_interval();
+    CHECK(src_exec_interval >= 1);
+    if (src_exec_interval == 1) { return; }  // NOTE(chengcheng): skip trivial interval
+    if (exec_interval == 1) {
+      exec_interval = src_exec_interval;
+    } else {
+      CHECK_EQ(exec_interval, src_exec_interval)
+          << " RuntimeError! TaskNode: " << task_id_
+          << " multi-input has different non-trivial interval.";
+    }
+  });
+
+  // NOTE(chengcheng): For normal forward ops set exec_interval like TrainStep.
+  int32_t this_exec_interval = TryGetNonTrivialExecIntervalOfSoleOp();
+  if (this_exec_interval > 1) {
+    if (exec_interval == 1) {
+      exec_interval = this_exec_interval;
+    } else {
+      CHECK_EQ(exec_interval, this_exec_interval);
+    }
+  }
+
+  ForEachProducedDataRegst([exec_interval](const std::string& name, RegstDesc* regst) {
+    regst->set_exec_interval(exec_interval);
+  });
+
+  exec_interval_ = exec_interval;
 }
 
 void TaskNode::NaiveInferProducedDataRegstTimeShape() {
@@ -204,11 +246,13 @@ bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_reg
 void TaskNode::ToProto(TaskProto* task_proto) const {
   // Step1: process some scalar items.
   CHECK_NE(chain_id_, -1);
+  // CHECK_NE(exec_interval_, -1);
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   task_proto->set_job_id(GlobalJobDesc().job_id());
+  task_proto->set_exec_interval(exec_interval_);
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
 

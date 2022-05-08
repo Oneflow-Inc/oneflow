@@ -51,6 +51,10 @@ class CompTaskNode : public TaskNode {
 
   void InferProducedDataRegstTimeShape() override;
 
+  int32_t TryGetNonTrivialExecIntervalOfSoleOp() const override {
+    return op()->op_conf().exec_interval();
+  }
+
  private:
   ParallelContext parallel_ctx_;
   const OpNode* op_node_;

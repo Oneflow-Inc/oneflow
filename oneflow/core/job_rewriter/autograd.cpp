@@ -952,28 +952,32 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
   std::function<OpNode*(const std::string&)> LossOpNode4OpName;
   JUST(MakeGetterLossOpNode4OpName(op_graph, &LossOpNode4OpName));
   const auto& train_conf = GetTrainConf();
+  const auto& job_conf = GlobalJobDesc().job_conf();
+  int32_t acc_num = 1;
+  if (job_conf.has_num_gradient_accumulation_steps()
+      && job_conf.num_gradient_accumulation_steps() > 1) {
+    acc_num = job_conf.num_gradient_accumulation_steps();
+  }
   HashMap<LogicalBlobId, OpNode*> loss_lbi2op_node;
   for (const auto& loss_lbn : train_conf.loss_lbn()) {
     const auto& lbi = GenLogicalBlobId(loss_lbn);
-    CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
+    CHECK_OR_RETURN(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second)
+        << Error::RuntimeError() << " duplicate loss name: " << loss_lbn;
   }
-  const Shape src_time_shape({1, 1});
-  const int64_t source_time_shape_elem_cnt = src_time_shape.elem_cnt();
-  bool all_loss_time_shape_eq_src = true;
-  for (const auto& pair : loss_lbi2op_node) {
-    const int64_t time_shape_elem_cnt = JUST(pair.second->op().GetOpTimeShape())->elem_cnt();
-    if (time_shape_elem_cnt != source_time_shape_elem_cnt) {
-      CHECK_EQ(time_shape_elem_cnt % source_time_shape_elem_cnt, 0);
-      all_loss_time_shape_eq_src = false;
-    }
-  }
-  if (all_loss_time_shape_eq_src) {
+
+  if (acc_num == 1) {
     const BlobDesc* blob_desc = nullptr;
     for (const auto& pair : loss_lbi2op_node) {
       const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
-      if (blob_desc != nullptr) { CHECK(*blob_desc == *cur_blob_desc); }
+      if (blob_desc != nullptr) {
+        CHECK_OR_RETURN(*blob_desc == *cur_blob_desc)
+            << Error::RuntimeError()
+            << " multi-loss has different shape with: " << blob_desc->shape().DebugStr() << " and "
+            << cur_blob_desc->shape().DebugStr();
+      }
       blob_desc = cur_blob_desc;
     }
+    CHECK_OR_RETURN(blob_desc) << Error::RuntimeError() << " no loss in graph";
     if (blob_desc->is_dynamic()) {
       ScaleModelDiffByDynamicLossInstanceNum(op_graph, job_builder, lbi2diff_lbi, loss_lbi2op_node);
     } else {
@@ -985,15 +989,21 @@ Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder*
     for (const auto& pair : loss_lbi2op_node) {
       const BlobDesc* cur_blob_desc = &pair.second->LogicalBlobDesc4Lbi(pair.first);
       // TODO: support dynamic
-      CHECK(!cur_blob_desc->is_dynamic());
+      CHECK_OR_RETURN(!cur_blob_desc->is_dynamic())
+          << Error::RuntimeError()
+          << " sorry, now we NOT support grad acc with dynamic loss count. ";
       const DataType loss_data_type = cur_blob_desc->data_type();
-      const int64_t time_shape_elem_cnt = JUST(pair.second->op().GetOpTimeShape())->elem_cnt();
       // TODO: consider sbp
-      const int64_t loss_elem_cnt =
-          cur_blob_desc->shape().elem_cnt() * time_shape_elem_cnt / source_time_shape_elem_cnt;
+      const int64_t loss_elem_cnt = cur_blob_desc->shape().elem_cnt() * acc_num;
       if (blob_desc) {
-        CHECK_EQ(blob_desc->data_type(), loss_data_type);
-        CHECK_EQ(blob_desc->shape().elem_cnt(), loss_elem_cnt);
+        CHECK_EQ_OR_RETURN(blob_desc->data_type(), loss_data_type)
+            << Error::RuntimeError()
+            << " multi-loss has different dtype with: " << blob_desc->data_type() << " and "
+            << loss_data_type;
+        CHECK_EQ_OR_RETURN(blob_desc->shape().elem_cnt(), loss_elem_cnt)
+            << Error::RuntimeError()
+            << " multi-loss has different elem_cnt with: " << blob_desc->shape().elem_cnt()
+            << " and " << loss_elem_cnt;
       } else {
         blob_desc.reset(new BlobDesc(Shape({loss_elem_cnt}), loss_data_type));
       }

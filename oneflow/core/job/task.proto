@@ -13,6 +13,7 @@ enum TaskType {
   kDeviceTick = 27;
   kPack = 30;
   kUnpack = 32;
+  kGradAcc = 33;
   kRepeat = 34;
   kAcc = 37;
   kSrcSubsetTick = 38;
@@ -61,6 +62,7 @@ message TaskProto {
   map<string, RegstDescProto> produced_regst_desc = 8;
   map<string, RegstDescIdSet> consumed_regst_desc_id = 9;
   optional bool all_register_num_eq_one_hint = 10 [default = false];
+  required int32 exec_interval = 11;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
 };

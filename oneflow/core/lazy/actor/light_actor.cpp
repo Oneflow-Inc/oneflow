@@ -245,6 +245,11 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
     ready_consumed_ = 0;
     max_ready_consumed_ = 0;
 
+    // NOTE(chengcheng):
+    //   act_cnt_ begin from 1 NOT 0. for act_cnt_ % exec_interval_ == 0 to do act.
+    act_cnt_ = 1;
+    exec_interval_ = task_proto.exec_interval();
+
     const IndexType regst_cnt = GetRegstDescCount(task_proto);
     regst_desc_id_index_.Reserve(regst_cnt);
     index2state_.Resize(regst_cnt);
@@ -453,7 +458,8 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       InitBnInOp2Blob();
       InitActMsg();
     }
-    if (exec_kernel) { LaunchKernel(); }
+    if (exec_kernel && act_cnt_ % exec_interval_ == 0) { LaunchKernel(); }
+    act_cnt_ += 1;
     ResetState();
     thread_->EnqueueActorMsg(sync_post_act_msgs_.cbegin(), sync_post_act_msgs_.cend());
     if (!async_post_act_msgs_.empty()) {
@@ -591,6 +597,8 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
   std::vector<ActorMsg> sync_post_act_msgs_;
   std::vector<ActorMsg> async_post_act_msgs_;
   KernelObserver* stream_kernel_observer_;
+  int64_t act_cnt_;
+  int64_t exec_interval_;
 };
 
 template<int kernel_exec, int inplace, typename IndexType, typename RegstIndex,

@@ -101,6 +101,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   RegstDesc* BuildCtrlRegstDesc(TaskNode* dst_node, std::string* name);
   std::shared_ptr<Shape> GetFastestInputOutputTimeShape() const;
 
+  virtual void InferExecInterval();
+  int32_t exec_interval() const { return exec_interval_; }
+
   void ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
   void ForEachOutDataEdge(const std::function<void(TaskEdge*)>& Handler) const;
 
@@ -114,6 +117,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   size_t out_data_edges_size() const;
 
  protected:
+  void set_exec_interval(int32_t val);
+  virtual int32_t TryGetNonTrivialExecIntervalOfSoleOp() const { return 1; }
+
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_reuse_mem,
                                           int32_t min_register_num, int32_t max_register_num);
@@ -150,6 +156,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t order_in_graph_;
   std::unique_ptr<TaskId> new_task_id_;
 
+  int32_t exec_interval_;
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
   HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>> consumed_regsts_;

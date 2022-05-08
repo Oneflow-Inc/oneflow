@@ -46,4 +46,5 @@ message RegstDescProto {
   }
   // NOTE(chengcheng): mark this regst memory is shared with EagerParameter.
   optional string variable_op_name = 16 [default = ""];
+  optional int32 exec_interval = 20 [default = 1];
 }
