@@ -136,7 +136,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   JUST(user_op_expr.InferPhysicalTensorDesc(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
+        return CHECK_JUST(TensorImpl4Tensor(inputs[i]))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
         // using thread_local TensorMeta pointer if inplace.
