@@ -757,11 +757,6 @@ class Graph(object):
                 + " building plan Done! Cost time: "
                 + str(round(compile_and_init_end - compile_and_init_start, 2))
                 + "s."
-                + "\n"
-                + self._shallow_repr()
-                + "'s total time to build graph and plan : "
-                + str(round(compile_and_init_end - build_graph_start, 2))
-                + "s."
                 + "\n",
             )
         except:
