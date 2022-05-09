@@ -13,20 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow._oneflow_internal
+US_IN_MS = 1000.0
+US_IN_SECOND = US_IN_MS * 1000.0
 
 
-def RangePush(range_name):
-    oneflow._oneflow_internal.profiler.RangePush(range_name)
-
-
-def RangePop():
-    oneflow._oneflow_internal.profiler.RangePop()
-
-
-def ProfilerStart():
-    oneflow._oneflow_internal.profiler.ProfilerStart()
-
-
-def ProfilerStop():
-    oneflow._oneflow_internal.profiler.ProfilerStop()
+def format_time(time_us):
+    if time_us >= US_IN_SECOND:
+        return "{:.3f}s".format(time_us / US_IN_SECOND)
+    if time_us >= US_IN_MS:
+        return "{:.3f}ms".format(time_us / US_IN_MS)
+    return "{:.3f}us".format(time_us)
