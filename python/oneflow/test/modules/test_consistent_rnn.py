@@ -22,8 +22,7 @@ import oneflow as flow
 import oneflow.unittest
 import torch
 from oneflow.test_utils.automated_test_util.generators import *
-from oneflow.test_utils.automated_test_util.torch_flow_dual_object import \
-    globaltest
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import globaltest
 from oneflow.test_utils.test_util import GenArgDict
 
 
