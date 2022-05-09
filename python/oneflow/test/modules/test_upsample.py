@@ -354,24 +354,24 @@ def _test_upsample_bilinear_align_corners(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestUpsample2d(flow.unittest.TestCase):
-    # def test_upsample2d(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [
-    #         _test_upsample2d_bilinear,
-    #         _test_upsample2d_bilinear_aligncorner,
-    #         _test_UpsamplingNearest2d,
-    #         _test_UpsamplingBilinear2d,
-    #         _test_upsample2d_4dim,
-    #         _test_upsample2d_bilinear_4dim,
-    #         _test_upsample2d_backward,
-    #         _test_upsample2d_bilinear_aligncorner_backward,
-    #         _test_interpolate_nearest_float_scale,
-    #         _test_interpolate_bilinear_float_scale,
-    #         _test_upsample_bilinear_align_corners,
-    #     ]
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
+    def test_upsample2d(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_upsample2d_bilinear,
+            _test_upsample2d_bilinear_aligncorner,
+            _test_UpsamplingNearest2d,
+            _test_UpsamplingBilinear2d,
+            _test_upsample2d_4dim,
+            _test_upsample2d_bilinear_4dim,
+            _test_upsample2d_backward,
+            _test_upsample2d_bilinear_aligncorner_backward,
+            _test_interpolate_nearest_float_scale,
+            _test_interpolate_bilinear_float_scale,
+            _test_upsample_bilinear_align_corners,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
     @unittest.skip(
         "The nearest interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
@@ -384,10 +384,9 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    # # The forward and backward result in cpu and cuda of bilinear interpolate operation in PyTorch is different
-    # # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
-    # # So here we only test cuda device forward result.
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    # The forward and backward result in cpu and cuda of bilinear interpolate operation in PyTorch is different
+    # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
+    # So here we only test cuda device forward result.
     # @autotest(n=10, auto_backward=False, atol=1e-8)
     # def test_upsample2d_bilinear(test_case):
     #     x = random_tensor(ndim=4).to("cuda")
@@ -400,7 +399,6 @@ class TestUpsample2d(flow.unittest.TestCase):
     #     y = m(x)
     #     return y
 
-    # @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     # @autotest(atol=1e-5)
     # def test_upsample2d_bicubic(test_case):
     #     x = random_tensor(ndim=4, dim0=16, dim1=8).to("cuda")
@@ -441,28 +439,26 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    # @autotest(n=5, atol=1e-5)
-    # def test_upsample2d_bilinear_output_size(test_case):
-    #     x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
-    #     m = torch.nn.Upsample(size=(38, 30), mode="bilinear")
-    #     y = m(x)
-    #     return y
+    @autotest(n=5, atol=1e-5)
+    def test_upsample2d_bilinear_output_size(test_case):
+        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
+        m = torch.nn.Upsample(size=(38, 30), mode="bilinear")
+        y = m(x)
+        return y
 
-    # @autotest(n=5, atol=1e-5)
-    # def test_upsample2d_bicubic_output_size(test_case):
-    #     device = random_device()
-    #     x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to(device)
-    #     m = torch.nn.Upsample(size=(38, 30), mode="bicubic")
-    #     y = m(x)
-    #     return y
+    @autotest(n=5, atol=1e-5)
+    def test_upsample2d_bicubic_output_size(test_case):
+        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
+        m = torch.nn.Upsample(size=(38, 30), mode="bicubic")
+        y = m(x)
+        return y
 
-    # @autotest(n=5, atol=1e-5)
-    # def test_upsample3d_trilinear_output_size(test_case):
-    #     device = random_device()
-    #     x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=12, dim3=937, dim4=32).to(device)
-    #     m = torch.nn.Upsample(size=(38, 30, 30), mode="trilinear")
-    #     y = m(x)
-    #     return y
+    @autotest(n=5, atol=1e-5)
+    def test_upsample3d_trilinear_output_size(test_case):
+        x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=12, dim3=937, dim4=32).to("cuda")
+        m = torch.nn.Upsample(size=(38, 30, 30), mode="trilinear")
+        y = m(x)
+        return y
 
 
 if __name__ == "__main__":

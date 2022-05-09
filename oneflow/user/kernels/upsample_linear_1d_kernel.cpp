@@ -119,7 +119,7 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
     const int64_t channels = dx_tensor->shape().At(1);
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(2);
-    const float height_scale = out_height * 1.0 / in_height;
+    const double height_scale = out_height * 1.0 / in_height;
     if (in_height == out_height) {
       memcpy(dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
              sizeof(T) * nbatch * channels * in_height);

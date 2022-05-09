@@ -35,13 +35,13 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int nbatch = x_tensor->shape().At(0);
     const int channels = x_tensor->shape().At(1);
-    
+
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t in_width = x_tensor->shape().At(3);
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
-    const float height_scale = out_height * 1.0 / in_height;
-    const float width_scale = out_width * 1.0 / in_width;
+    const double height_scale = out_height * 1.0 / in_height;
+    const double width_scale = out_width * 1.0 / in_width;
 
     if (in_height == out_height && in_width == out_width) {
       memcpy(out_ptr, in_ptr, sizeof(T) * nbatch * channels * in_height * in_width);
@@ -117,8 +117,8 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
     const int64_t in_width = dx_tensor->shape().At(3);
     const int64_t out_height = dy_tensor->shape().At(2);
     const int64_t out_width = dy_tensor->shape().At(3);
-    const float height_scale = out_height * 1.0 / in_height;
-    const float width_scale = out_width * 1.0 / in_width;
+    const double height_scale = out_height * 1.0 / in_height;
+    const double width_scale = out_width * 1.0 / in_width;
 
     if (in_height == out_height && in_width == out_width) {
       memcpy(in_ptr, out_ptr, sizeof(T) * channels * in_height * in_width);

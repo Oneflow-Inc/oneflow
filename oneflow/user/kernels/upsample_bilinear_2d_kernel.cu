@@ -101,8 +101,8 @@ class UpsampleBilinear2DGPUKernel final : public user_op::OpKernel {
     const int64_t in_width = x_tensor->shape().At(3);
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
-    const float height_scale = out_height * 1.0 / in_height;
-    const float width_scale = out_width * 1.0 / in_width;
+    const double height_scale = out_height * 1.0 / in_height;
+    const double width_scale = out_width * 1.0 / in_width;
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
@@ -142,8 +142,8 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
     const int64_t in_width = dx_tensor->shape().At(3);
     const int64_t out_height = dy_tensor->shape().At(2);
     const int64_t out_width = dy_tensor->shape().At(3);
-    const float height_scale = out_height * 1.0 / in_height;
-    const float width_scale = out_width * 1.0 / in_width;
+    const double height_scale = out_height * 1.0 / in_height;
+    const double width_scale = out_width * 1.0 / in_width;
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
