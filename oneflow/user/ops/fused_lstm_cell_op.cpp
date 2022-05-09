@@ -32,6 +32,33 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedLstmCellOp::GetSbp(user_op::SbpContext* ctx) {
+  // input_gates shape:  [batch_size, hidden_size * 4]
+  // hidden_gates shape: [batch_size, hidden_size * 4]
+  // cx shape:           [batch_size, hidden_size]
+  // input_bias shape:   [hidden_size * 4]
+  // hidden_bias shape:  [hidden_size * 4]
+
+  // hy shape:           [batch_size, hidden_size]
+  // cy shape:           [batch_size, hidden_size]
+  // workspace shape:    [batch_size, hidden_size * 4]
+
+  std::vector<user_op::OpArg> broadcast_args;
+  if (ctx->user_op_conf().has_input("input_bias", 0)) {
+    broadcast_args.emplace_back("input_bias", 0);
+  }
+  if (ctx->user_op_conf().has_input("hidden_bias", 0)) {
+    broadcast_args.emplace_back("hidden_bias", 0);
+  }
+
+  std::vector<user_op::OpArg> split_args;
+  split_args.emplace_back("input_gates", 0);
+  split_args.emplace_back("hidden_gates", 0);
+  split_args.emplace_back("cx", 0);
+  split_args.emplace_back("hy", 0);
+  split_args.emplace_back("cy", 0);
+  split_args.emplace_back("workspace", 0);
+
+  ctx->NewBuilder().Split(split_args, 0).Broadcast(broadcast_args).Build();
   return Maybe<void>::Ok();
 }
 
@@ -62,7 +89,46 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 
+// let input = (ins
+//   OneFlow_Tensor:$grad_hy,
+//   OneFlow_Tensor:$grad_cy,
+//   OneFlow_Tensor:$cx,
+//   OneFlow_Tensor:$cy,
+//   OneFlow_Tensor:$workspace
+// );
+// let output = (outs
+//   OneFlow_Tensor:$grad_gates,
+//   Optional<OneFlow_Tensor>:$grad_cx,
+//   Optional<OneFlow_Tensor>:$grad_bias
+// );
+
 /* static */ Maybe<void> FusedLstmCellGradOp::GetSbp(user_op::SbpContext* ctx) {
+  // grad_hy shape:       [batch_size, hidden_size]
+  // grad_cy shape:       [batch_size, hidden_size]
+  // cx shape:            [batch_size, hidden_size]
+  // cy shape:            [batch_size, hidden_size]
+  // workspace shape:     [batch_size, hidden_size * 4]
+
+  // grad_gates shape:    [batch_size, hidden_size * 4]
+  // grad_cx shape:       [batch_size, hidden_size]
+  // grad_bias shape:     [hidden_size * 4]
+
+  std::vector<user_op::OpArg> partial_sum_args;
+  if (ctx->user_op_conf().has_output("grad_bias", 0)) {
+    partial_sum_args.emplace_back("grad_bias", 0);
+  }
+
+  std::vector<user_op::OpArg> split_args;
+  split_args.emplace_back("grad_hy", 0);
+  split_args.emplace_back("grad_cy", 0);
+  split_args.emplace_back("cx", 0);
+  split_args.emplace_back("cy", 0);
+  split_args.emplace_back("workspace", 0);
+  split_args.emplace_back("grad_gates", 0);
+
+  if (ctx->user_op_conf().has_output("grad_cx", 0)) { split_args.emplace_back("grad_cx", 0); }
+
+  ctx->NewBuilder().Split(split_args, 0).PartialSum(partial_sum_args).Build();
   return Maybe<void>::Ok();
 }
 
