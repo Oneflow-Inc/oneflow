@@ -178,7 +178,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
     device_ = JUST(Device::New("cpu"));
   }
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_));
+      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_, /*pin_memory=*/false));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
   Py_DECREF(array);
@@ -235,7 +235,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
     device = JUST(Device::New("cuda"));
   }
   std::shared_ptr<Tensor> local_tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device));
+      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), local_tensor, array));
 
   Py_DECREF(array);

@@ -191,13 +191,14 @@ class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
-                           const Optional<Symbol<Device>>& device) const {
+                           const Optional<Symbol<Device>>& device, const bool pin_memory) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {},
+                                            OpExprInterpContext(attrs, device_symbol, pin_memory));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
     }
@@ -2009,12 +2010,24 @@ class TensorSetItemFunctor {
     for (auto& tensor : tensor_indices) {
       if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }
-    if (tensor_indices.size() == ndims) {  // advance indexing
-      std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
-      if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
-      indices = JUST(functional::Transpose(indices, {1, 0}));
-      value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
-      JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
+    if (tensor_indices.size() == ndims) {
+      if (ndims == 0 && index[0].IsEllipsis()) {
+        // for scalar input tensor setitem, only support ellipsis indexing type
+        Shape tmp_shape{1};
+        const auto& value_tensor = JUST(functional::View(value, tmp_shape));
+        const auto& input_tensor = JUST(functional::View(x, tmp_shape));
+        std::vector<int64_t> starts(1, 0);
+        std::vector<int64_t> stops(1, 1);
+        std::vector<int64_t> steps(1, 1);
+        JUST(SliceUpdate(input_tensor, value_tensor, starts, stops, steps, /*inplace=*/true));
+      } else {
+        // advance indexing
+        std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
+        if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
+        indices = JUST(functional::Transpose(indices, {1, 0}));
+        value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));
+        JUST(functional::TensorScatterNdUpdate(x, indices, value_tensor, /*inplace=*/true));
+      }
     } else {                              // slice update
       if (target_shape.NumAxes() != 0 &&  // NOLINT
           /*need_expand=*/value_shape->Count(0) != target_shape.Count(0)) {
@@ -2868,6 +2881,54 @@ class TransposeAllDimFunctionFunctor {
   }
 };
 
+class PinMemoryFunctor {
+ public:
+  PinMemoryFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("slice_update").Input("x").Input("update").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
+    // TODO:(zhaoluyang) support consistent tensor.pin_memory()
+    CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
+        << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
+    // if tensor already pinned, then just return
+    if (JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory()) { return input; }
+    auto shape = input->shape();
+    auto device = JUST(input->device());
+    const bool requires_grad = input->requires_grad();
+    CHECK_EQ_OR_RETURN(device->enum_type(), DeviceType::kCPU)
+        << Error::RuntimeError() << "cannot pin tensor with device: " << device->ToString()
+        << ", only dense CPU tensors can be pinned.";
+
+    auto empty = JUST(functional::Empty(*shape.get(), input->dtype(), device, /*pin_memory=*/true));
+    // TODO: remove this requires_grad
+    JUST(empty->set_requires_grad(requires_grad));
+    const int32_t ndim = input->ndim();
+    if (ndim == 0) {
+      // for 0-dim tensor
+      TensorIndex tensor_index;
+      tensor_index.emplace_back(functional::detail::IndexItem(functional::detail::EllipsisIndex{}));
+      JUST(functional::TensorSetItem(empty, tensor_index, input));
+      return empty;
+    } else {
+      MutableAttrMap attrs;
+      std::vector<int64_t> starts(ndim, 0);
+      std::vector<int64_t> stops(ndim);
+      std::vector<int64_t> steps(ndim, 1);
+      for (int i = 0; i < ndim; ++i) { stops[i] = input->shape()->At(i); }
+      JUST(attrs.SetAttr<std::vector<int64_t>>("start", starts));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stops));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("step", steps));
+      JUST(empty->set_requires_grad(requires_grad));
+      auto outputs = TensorTuple{empty};
+      JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{empty, input}, &outputs, attrs));
+      return outputs[0];
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2982,6 +3043,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TileFunctor>("Tile");
   m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
+  m.add_functor<impl::PinMemoryFunctor>("PinMemory");
 };
 
 }  // namespace functional
