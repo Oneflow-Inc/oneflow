@@ -96,7 +96,7 @@ union Pack {
 constexpr int32_t kWarpSize = 32; 
 
 template<size_t num_dims, typename IndexType, typename T, int pack_size>
-__global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, T pad_value) {
+__global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, T pad_value, IndexType col_per_thread) {
   IndexType num_total_warp = gridDim.x * blockDim.y; 
   IndexType global_warp_id = blockIdx.x * blockDim.y + threadIdx.y; 
   IndexType lane_id = threadIdx.x;  
@@ -105,15 +105,15 @@ __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
   LoadStoreType* dst = reinterpret_cast<LoadStoreType*>(params.dst);
   IndexType src_index[num_dims];
   IndexType dst_index[num_dims];
-  // round up
-  IndexType col_per_thread = (params.elem_cnt + num_total_warp*kWarpSize-1) / (num_total_warp*kWarpSize); 
+  
+  IndexType global_warp_index = global_warp_id*kWarpSize*col_per_thread; 
+  params.dst_index_helper.OffsetToNdIndex(global_warp_index + lane_id, dst_index); 
   for (IndexType col = 0; col < col_per_thread; col++) {
-    IndexType linear_index = global_warp_id*kWarpSize*col_per_thread + kWarpSize*col; 
+    IndexType linear_index =  global_warp_index + kWarpSize*col; 
     if(linear_index >= params.elem_cnt){
       break; 
     }
     // printf("linear index is: %ld \n", linear_index); 
-    params.dst_index_helper.OffsetToNdIndex(linear_index + lane_id, dst_index); 
     bool if_pad = false;
     // out of bound. 
     if (dst_index[num_dims-1] >= params.out_size[num_dims-1]){
@@ -230,9 +230,12 @@ void LaunchKernel(Stream* stream, ConstantPadParams<num_dims, IndexType> params,
   int num_blocks = 0; 
   dim3 warpBlockDim(32, 8); 
   GetNumBlocks(params.elem_cnt / pack_size, &num_blocks); 
+  // round up
+  IndexType num_total_warp = num_blocks * 8; 
+  IndexType col_per_thread = (params.elem_cnt + num_total_warp*kWarpSize-1) / (num_total_warp*kWarpSize); 
   ConstantPadKernel<num_dims, IndexType, T, pack_size>
       <<<num_blocks, warpBlockDim, 0,
-         cuda_stream>>>(params, pad_val);
+         cuda_stream>>>(params, pad_val, col_per_thread);
 }
 
 template<size_t num_dims, typename IndexType, typename T, size_t pack_size>
