@@ -110,15 +110,49 @@ def _test_roi_align(test_case, placement, rois_sbp):
     )
 
 
-class TestRoiAlign(flow.unittest.TestCase):
-    @globaltest
-    def test_roi_align(test_case):
+def _test_roi_align_in_fixed_data_impl(test_case, placement, sbp):
+    from test_roi_align import input_np, rois_np, input_grad_np
+
+    input = (
+        flow.tensor(input_np, dtype=flow.float32)
+        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(placement, sbp)
+        .requires_grad_()
+    )
+    rois = (
+        flow.tensor(rois_np, dtype=flow.float32)
+        .to_global(flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,])
+        .to_global(
+            placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
+        )
+    )
+    of_out = flow.roi_align(input, rois, 2.0, 5, 5, 2, True)
+    of_out.sum().backward()
+    test_case.assertTrue(
+        np.allclose(input.grad.numpy(), input_grad_np, rtol=1e-04, atol=1e-4)
+    )
+
+
+class TestConsistentRoiAlign(flow.unittest.TestCase):
+    # TODO(wyg): It is a bug in pytorch-1.9.0, torchvision-0.10.0 and python3.7.10.
+    #            Open this test after updating the versions of pytorch in CI.
+
+    #  @globaltest
+    #  def test_consistent_roi_align(test_case):
+    #      for placement in all_placement():
+    #          # TODO: roi_align only support gpu
+    #          if placement.type == "cpu":
+    #              continue
+    #          for rois_sbp in all_sbp(placement, max_dim=0, except_partial_sum=True):
+    #              _test_roi_align(test_case, placement, rois_sbp)
+
+    def test_consistent_roi_align_in_fixed_data(test_case):
         for placement in all_placement():
             # TODO: roi_align only support gpu
             if placement.type == "cpu":
                 continue
             for rois_sbp in all_sbp(placement, max_dim=0, except_partial_sum=True):
-                _test_roi_align(test_case, placement, rois_sbp)
+                _test_roi_align_in_fixed_data_impl(test_case, placement, rois_sbp)
 
 
 if __name__ == "__main__":
