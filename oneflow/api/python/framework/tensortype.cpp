@@ -14,17 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <Python.h>
-#include <dictobject.h>
-#include <methodobject.h>
 #include <object.h>
 #include <objimpl.h>
 #include <pybind11/pybind11.h>
-#include <strings.h>
-#include <algorithm>
 #include <cstring>
-#include <functional>
-#include <unordered_map>
-#include <vector>
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/of_api_registry.h"
@@ -61,10 +54,10 @@ static PyTypeObject PyTensortypeTemplate{
 std::vector<PyTensortype*> tensortype_list;
 
 std::unordered_map<DataType, std::string> datatype_to_string_dict{
-    {kChar, "CharTensor"},
+    // {kChar, "CharTensor"},
     {kFloat, "FloatTensor"},
     {kDouble, "DoubleTensor"},
-    {kInt8, "Int8Tensor"},
+    {kInt8, "CharTensor"},
     {kInt32, "IntTensor"},
     {kInt64, "LongTensor"},
     {kUInt8, "ByteTensor"},
@@ -91,67 +84,82 @@ static PyObject* TensortypeType_call(PyObject* self, PyObject* args, PyObject* k
   if (!PyTensor_Check(tensor)) { return NULL; }
 
   Symbol<oneflow::DType> dtype = TensortypeToDType(self);
-  Optional<std::string> device_str = ((PyTensortype*)self)->is_cuda ? "cuda" : "cpu";
+  Maybe<std::string> device = DeviceTag4DeviceType(TensortypeToDevice(self));
+  Optional<std::string> device_str = CHECK_JUST(device);
   const auto& t = PyTensor_Unpack(tensor);
   const auto& cast_t = functional::To(t, device_str, dtype, false);
   return functional::CastToPyObject(cast_t);
   END_HANDLE_ERRORS
 }
 
-std::string datatype_to_string(DataType datatype) {
+static std::string datatype_to_string(DataType datatype) {
   CHECK_OR_THROW(datatype_to_string_dict.find(datatype) != datatype_to_string_dict.end())
       << "unsupported datatype";
   return datatype_to_string_dict.at(datatype);
 }
 
-std::string device_to_string(DeviceType dtype) {
+static std::string device_to_string(DeviceType dtype) {
   CHECK_OR_THROW(devicetype_to_string_dict.find(dtype) != devicetype_to_string_dict.end())
       << "unsupported devicetype";
   return devicetype_to_string_dict.at(dtype);
 }
 
-void tensortype_from_string(const std::string& tensortype_str) {
-  std::string prefix("oneflow.");
-  CHECK_OR_THROW(std::mismatch(prefix.begin(), prefix.end(), tensortype_str.begin()).first
-                 == prefix.end())
-      << "invalid type: " << tensortype_str;
+PyObject* tensortype_from_string(const std::string& tensortype_str) {
+// PyObject* tensortype_from_string(const char* tensortype_str) {
+  std::string oneflow_prefix = "oneflow.";
+  // const char* oneflow_prefix = "oneflow.";
+  std::cout << "tensortype string " << tensortype_str << std::endl;
+  // std::cout << "std::string tensortype string " << std::string(tensortype_str) << std::endl;
+  std::cout << "oneflow prefix string " << oneflow_prefix << std::endl;
+  // std::cout << "std::string oneflow prefix string " << std::string(oneflow_prefix) << std::endl;
+  // CHECK_OR_THROW(strncmp(oneflow_prefix, tensortype_str, 8)) << "invalid type" << tensortype_str;
+  auto mismatch_pair = std::mismatch(oneflow_prefix.begin(), oneflow_prefix.end(), tensortype_str.begin());
+  CHECK_OR_THROW(mismatch_pair.first == oneflow_prefix.end()) << "invalid type: " << tensortype_str;
+  std::cout << "oneflow_prefix.size() " << oneflow_prefix.size() << std::endl;
+  std::string dtype_str = tensortype_str.substr(oneflow_prefix.size());
+  std::cout << "dtype_str " << dtype_str << std::endl;
+
+  auto it = std::find_if(tensortype_list.begin(), tensortype_list.end(), [dtype_str](PyTensortype* type){
+    return std::string(type->name) == dtype_str;
+  });
+  CHECK_OR_THROW(it != tensortype_list.end()) << "invalid type: " << tensortype_str;
+  return (PyObject*)(*it);
 }
 
 static std::string get_name(DataType datatype, DeviceType device) {
   auto device_string = device_to_string(device);
   if (device_string.empty()) return datatype_to_string(datatype);
   return device_string + "." + datatype_to_string(datatype);
-  // return datatype_to_string(datatype);
 }
 
-void init_metaclass(PyTypeObject& metaclass) {
+static void init_metaclass(PyTypeObject& metaclass) {
   metaclass.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
   metaclass.tp_base = &PyType_Type;
   metaclass.tp_call = TensortypeType_call;
   if (PyType_Ready(&metaclass) < 0) { return; }
 }
 
-void init_tensortype(PyTypeObject& type, PyTypeObject& type_template, const std::string& name) {
+static void init_tensortype(PyTypeObject& type, PyTypeObject& type_template, const std::string& name) {
   memcpy(&type, &type_template, sizeof(PyTypeObject));
   char* tp_name = new char[64]{'\0'};
+
   // name.c_str() has bug here, so convert with iterating
   for (int i = 0; i < name.size(); i++) tp_name[i] = name[i];
   type.tp_name = tp_name;
-  // type.tp_new = TensortypeType_call;
   type.tp_call = TensortypeType_call;
   type.tp_flags = Py_TPFLAGS_DEFAULT;
   // type.tp_new = PyType_Type.tp_new;
   if (PyType_Ready(&type) < 0) { std::cout << "error in init tensortype" << std::endl; }
 }
 
-void generalize_tensortype_list() {
+static void generalize_tensortype_list() {
   init_metaclass(PyTensortypeMetaClass);
-  for (const auto& datatype_string : datatype_to_string_dict) {
-    for (const auto& devicetype_string : devicetype_to_string_dict) {
+  for (const auto& datatype_string_pair : datatype_to_string_dict) {
+    for (const auto& devicetype_string_pair : devicetype_to_string_dict) {
       PyTensortype* tensortype = new PyTensortype();
 
       // set name
-      std::string name = get_name(datatype_string.first, devicetype_string.first);
+      std::string name = get_name(datatype_string_pair.first, devicetype_string_pair.first);
 
       size_t n = sizeof(tensortype->name);
       strncpy(tensortype->name, name.c_str(), n);
@@ -161,8 +169,8 @@ void generalize_tensortype_list() {
       init_tensortype(tensortype->py_type, PyTensortypeTemplate, name);
 
       // set type
-      tensortype->datatype = datatype_string.first;
-      tensortype->device = devicetype_string.first;
+      tensortype->datatype = datatype_string_pair.first;
+      tensortype->device = devicetype_string_pair.first;
       tensortype->is_cuda = tensortype->device == DeviceType::kCUDA;
       tensortype_list.push_back(tensortype);
     }

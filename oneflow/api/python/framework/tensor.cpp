@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include <Python.h>
+#include <unicodeobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/framework/tensortype.h"
@@ -28,7 +29,6 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/device.h"
@@ -37,7 +37,6 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
-#include "oneflow/core/common/maybe.h"
 
 namespace py = pybind11;
 
@@ -285,19 +284,23 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
   if (tensortype == NULL) {
     PyObject* result =
         GetTensortype(tensor->dtype()->data_type(), CHECK_JUST(tensor->device())->enum_type());
-    return result;
+    std::string tensortype_string = "oneflow." + std::string(((PyTensortype*)result)->name);
+    return PyUnicode_FromString(tensortype_string.c_str());
   }
-  if (functional::PyDTypeCheck(tensortype)) {
+  if (PyUnicode_Check(tensortype)) { 
+    std::string tensortype_string = PyUnicode_AsUTF8(tensortype);
+    tensortype = tensortype_from_string(tensortype_string);
+  };
+  if (PyTensortype_Check(tensortype)) {
+    Maybe<std::string> device = DeviceTag4DeviceType(TensortypeToDevice(tensortype));
+    Optional<std::string> device_str = CHECK_JUST(device);
+    const auto& t = functional::To(tensor, device_str, TensortypeToDType(tensortype), false);
+    return functional::CastToPyObject(t);
+  } else if (functional::PyDTypeCheck(tensortype)) {
     const auto& t = functional::To(tensor, functional::PyUnpackDType(tensortype), false);
     return functional::CastToPyObject(t);
-  } else if (PyTensortype_Check(tensortype)) {
-    Optional<std::string> device =
-        TensortypeToDevice(tensortype) == DeviceType::kCPU ? "cpu" : "cuda";
-    const auto& t = functional::To(tensor, device, TensortypeToDType(tensortype), false);
-    return functional::CastToPyObject(t);
-  } else {
-    return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
   }
+  return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
   END_HANDLE_ERRORS
 }
 

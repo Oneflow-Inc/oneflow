@@ -42,6 +42,7 @@ inline Symbol<DType> TensortypeToDType(PyObject* self) {
 
 bool PyTensortype_Check(PyObject*);
 PyObject* GetTensortype(DataType, DeviceType);
+PyObject* tensortype_from_string(const std::string&) ;
 
 }  // namespace one
 }  // namespace oneflow
