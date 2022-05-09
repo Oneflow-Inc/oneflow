@@ -873,11 +873,11 @@
   bind_python: True
 
 - name: "embedding"
-  signature: " Tensor (Tensor weight, Tensor indices, Int32 padding_idx=None, Bool scale_grad_by_freq=False) => Embedding"
+  signature: " Tensor (Tensor weight, Tensor indices, Int64 padding_idx=None, Bool scale_grad_by_freq=False) => Embedding"
   bind_python: True
 
 - name: "embedding_grad"
-  signature: " Tensor (Tensor dy, Tensor weight, Tensor indices, Int32 padding_idx, Bool scale_grad_by_freq=False) => EmbeddingGrad"
+  signature: " Tensor (Tensor dy, Tensor weight, Tensor indices, Int64 padding_idx, Bool scale_grad_by_freq=False) => EmbeddingGrad"
   bind_python: False
 
 - name: "arg_sort"

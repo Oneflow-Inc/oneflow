@@ -21,22 +21,22 @@ namespace oneflow {
 template<typename T, typename IndexType>
 struct EmbeddingReNormFunctor<DeviceType::kCPU, T, IndexType> final {
   void operator()(ep::Stream* stream, const T* in_buf, const IndexType* indices_buf, T* out_buf,
-                  const double max_norm, const double norm_type, const int32_t num_indices,
-                  const int32_t emb_size, const int32_t emb_dim, int32_t* tmp_buf) {
+                  const double max_norm, const double norm_type, const int64_t num_indices,
+                  const int64_t emb_size, const int64_t emb_dim, int32_t* tmp_buf) {
     auto sorted_indices = std::vector<IndexType>(indices_buf, indices_buf + num_indices);
     std::sort(sorted_indices.begin(), sorted_indices.end());
 
-    for (auto i = 0; i < num_indices; i++) {
+    for (int64_t i = 0; i < num_indices; i++) {
       if (i > 0 && sorted_indices[i] == sorted_indices[i - 1]) { continue; }
       CHECK(sorted_indices[i] >= 0 && sorted_indices[i] < emb_size);
       double norm = 0;
-      for (int j = emb_dim * sorted_indices[i]; j < emb_dim * (sorted_indices[i] + 1); j++) {
+      for (int64_t j = emb_dim * sorted_indices[i]; j < emb_dim * (sorted_indices[i] + 1); j++) {
         norm += std::pow(std::abs(in_buf[j]), norm_type);
       }
       norm = std::pow(norm, (1.0 / norm_type));
       if (norm > max_norm) {
         double scale = max_norm / (norm + 1e-7);
-        for (int j = emb_dim * sorted_indices[i]; j < emb_dim * (sorted_indices[i] + 1); j++) {
+        for (int64_t j = emb_dim * sorted_indices[i]; j < emb_dim * (sorted_indices[i] + 1); j++) {
           out_buf[j] = in_buf[j] * scale;
         }
       }
@@ -47,9 +47,9 @@ struct EmbeddingReNormFunctor<DeviceType::kCPU, T, IndexType> final {
 template<typename T, typename IndexType>
 struct EmbeddingFunctor<DeviceType::kCPU, T, IndexType> final {
   void operator()(ep::Stream* stream, const T* weight_buf, const IndexType* indices_buf, T* out_buf,
-                  const int32_t padding_idx, const bool scale_grad_by_freq,
-                  const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim) {
-    for (int32_t i = 0; i < num_indices; i++) {
+                  const int64_t padding_idx, const bool scale_grad_by_freq,
+                  const int64_t num_indices, const int64_t emb_size, const int64_t emb_dim) {
+    for (int64_t i = 0; i < num_indices; i++) {
       IndexType indice = indices_buf[i];
       CHECK(indice >= 0 && indice < emb_size);
       const T* from = weight_buf + indice * emb_dim;
@@ -62,11 +62,11 @@ struct EmbeddingFunctor<DeviceType::kCPU, T, IndexType> final {
 template<typename T, typename IndexType>
 struct EmbeddingGradFunctor<DeviceType::kCPU, T, IndexType> final {
   void operator()(ep::Stream* stream, const T* dy_buf, const IndexType* indices_buf, T* dx_buf,
-                  const int32_t padding_idx, const bool scale_grad_by_freq,
-                  const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim,
+                  const int64_t padding_idx, const bool scale_grad_by_freq,
+                  const int64_t num_indices, const int64_t emb_size, const int64_t emb_dim,
                   int32_t* tmp_buf) {
-    for (int32_t i = 0; i < num_indices; i++) {
-      int32_t indice = indices_buf[i];
+    for (int64_t i = 0; i < num_indices; i++) {
+      IndexType indice = indices_buf[i];
       if (indice != padding_idx) {
         const T* from = dy_buf + i * emb_dim;
         T* to = dx_buf + indice * emb_dim;
@@ -76,12 +76,12 @@ struct EmbeddingGradFunctor<DeviceType::kCPU, T, IndexType> final {
 
     if (scale_grad_by_freq) {
       std::vector<IndexType> indice_freq(emb_size, 0);
-      for (int32_t i = 0; i < num_indices; i++) { indice_freq[indices_buf[i]]++; }
+      for (int64_t i = 0; i < num_indices; i++) { indice_freq[indices_buf[i]]++; }
 
-      for (int32_t i = 0; i < emb_size; i++) {
+      for (int64_t i = 0; i < emb_size; i++) {
         if (indice_freq[i] > 1) {
           T* from = dx_buf + i * emb_dim;
-          for (int32_t j = 0; j < emb_dim; j++) { from[j] /= indice_freq[i]; }
+          for (int64_t j = 0; j < emb_dim; j++) { from[j] /= indice_freq[i]; }
         }
       }
     }

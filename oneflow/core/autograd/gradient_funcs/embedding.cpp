@@ -23,7 +23,7 @@ namespace oneflow {
 namespace one {
 
 struct EmbeddingCaptureState : public AutoGradCaptureState {
-  int32_t padding_idx = -1;
+  int64_t padding_idx = -1;
   bool scale_grad_by_freq = false;
   bool requires_grad = false;
 };
@@ -56,7 +56,7 @@ Maybe<void> Embedding::Capture(EmbeddingCaptureState* ctx, const TensorTuple& in
   ctx->SaveTensorForBackward(inputs.at(1));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->padding_idx = JUST(composed_attrs.GetAttr<int32_t>("padding_idx"));
+  ctx->padding_idx = JUST(composed_attrs.GetAttr<int64_t>("padding_idx"));
   ctx->scale_grad_by_freq = JUST(composed_attrs.GetAttr<bool>("scale_grad_by_freq"));
   return Maybe<void>::Ok();
 }
@@ -68,7 +68,7 @@ Maybe<void> Embedding::Apply(const EmbeddingCaptureState* ctx, const TensorTuple
 
   const auto& weight = ctx->SavedTensors().at(0);
   const auto& indices = ctx->SavedTensors().at(1);
-  int32_t padding_idx = ctx->padding_idx;
+  int64_t padding_idx = ctx->padding_idx;
   bool scale_grad_by_freq = ctx->scale_grad_by_freq;
 
   in_grads->at(0) = JUST(

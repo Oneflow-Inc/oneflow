@@ -122,10 +122,10 @@ class EmbeddingGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& indices, const int32_t& padding_idx,
+                           const std::shared_ptr<one::Tensor>& indices, const int64_t& padding_idx,
                            const bool& scale_grad_by_freq) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("padding_idx", padding_idx));
+    JUST(attrs.SetAttr<int64_t>("padding_idx", padding_idx));
     JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, indices}, attrs);
   }

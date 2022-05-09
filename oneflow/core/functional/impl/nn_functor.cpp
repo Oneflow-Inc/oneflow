@@ -238,13 +238,13 @@ class EmbeddingFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& indices,
-                           const Optional<int32_t>& padding_idx,
+                           const Optional<int64_t>& padding_idx,
                            const bool& scale_grad_by_freq) const {
     CHECK_EQ_OR_RETURN(weight->ndim(), 2) << "The dimension of weight should be 2";
-    int32_t new_padding_idx = -1;
+    int64_t new_padding_idx = -1;
     if (padding_idx.has_value()) { new_padding_idx = JUST(padding_idx); }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("padding_idx", new_padding_idx));
+    JUST(attrs.SetAttr<int64_t>("padding_idx", new_padding_idx));
     JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {weight, indices}, attrs);
   }

@@ -123,7 +123,7 @@ REGISTER_USER_OP_GRAD("embedding")
                 .Input("weight", op.input("weight", 0))
                 .Input("indices", op.input("indices", 0))
                 .Output("dx")
-                .Attr("padding_idx", op.attr<int32_t>("padding_idx"))
+                .Attr("padding_idx", op.attr<int64_t>("padding_idx"))
                 .Attr("scale_grad_by_freq", op.attr<bool>("scale_grad_by_freq"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "weight", 0);

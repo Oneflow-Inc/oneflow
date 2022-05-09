@@ -47,25 +47,25 @@ struct Pow<half> {
 
 template<typename T, typename IndexType>
 __global__ void embedding_kernel(const T* weight_buf, const IndexType* indices_buf, T* out_buf,
-                                 const int32_t num_indices, const int32_t emb_size,
-                                 const int32_t emb_dim) {
-  CUDA_1D_KERNEL_LOOP(i, num_indices * emb_dim) {
-    int32_t indices_index = i / emb_dim;
-    int32_t emb_dim_index = i - indices_index * emb_dim;
-    int32_t emb_size_index = indices_buf[indices_index];
+                                 const int64_t num_indices, const int64_t emb_size,
+                                 const int64_t emb_dim) {
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_indices * emb_dim) {
+    IndexType indices_index = i / emb_dim;
+    IndexType emb_dim_index = i - indices_index * emb_dim;
+    IndexType emb_size_index = indices_buf[indices_index];
     assert(emb_size_index >= 0 && emb_size_index < emb_size);
-    int32_t from_index = emb_size_index * emb_dim + emb_dim_index;
+    IndexType from_index = emb_size_index * emb_dim + emb_dim_index;
     out_buf[i] = weight_buf[from_index];
   }
 }
 
 template<typename T, typename IndexType>
 __global__ void embedding_grad_kernel(const T* dy_buf, const IndexType* indices_buf, T* dx_buf,
-                                      const int32_t padding_idx, const int32_t num_indices,
-                                      const int32_t emb_dim) {
-  CUDA_1D_KERNEL_LOOP(i, num_indices * emb_dim) {
+                                      const int64_t padding_idx, const int64_t num_indices,
+                                      const int64_t emb_dim) {
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_indices * emb_dim) {
     IndexType indices_index = i / emb_dim;
-    int32_t emb_dim_index = i - indices_index * emb_dim;
+    IndexType emb_dim_index = i - indices_index * emb_dim;
     IndexType emb_size_index = indices_buf[indices_index];
     if (emb_size_index != padding_idx) {
       IndexType from_index = emb_size_index * emb_dim + emb_dim_index;
@@ -75,9 +75,9 @@ __global__ void embedding_grad_kernel(const T* dy_buf, const IndexType* indices_
 }
 
 template<typename IndexType>
-__global__ void renorm_indices_freq_kernel(const IndexType* indices_buf, const int32_t num_indices,
-                                           int32_t* indices_freq, const int32_t emb_size) {
-  CUDA_1D_KERNEL_LOOP(i, num_indices) {
+__global__ void renorm_indices_freq_kernel(const IndexType* indices_buf, const int64_t num_indices,
+                                           int32_t* indices_freq, const int64_t emb_size) {
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_indices) {
     IndexType index = indices_buf[i];
     assert(index >= 0 && index < emb_size);
     cuda::atomic::Add(indices_freq + index, 1);
@@ -85,16 +85,18 @@ __global__ void renorm_indices_freq_kernel(const IndexType* indices_buf, const i
 }
 
 template<typename IndexType>
-__global__ void grad_indices_freq_kernel(const IndexType* indices_buf, const int32_t num_indices,
+__global__ void grad_indices_freq_kernel(const IndexType* indices_buf, const int64_t num_indices,
                                          int32_t* indices_freq) {
-  CUDA_1D_KERNEL_LOOP(i, num_indices) { cuda::atomic::Add(indices_freq + indices_buf[i], 1); }
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_indices) {
+    cuda::atomic::Add(indices_freq + indices_buf[i], 1);
+  }
 }
 
 template<typename T, typename IndexType>
-__global__ void emb_scale_kernel(T* dx_buf, const int32_t emb_size, const int32_t emb_dim,
+__global__ void emb_scale_kernel(T* dx_buf, const int64_t emb_size, const int64_t emb_dim,
                                  int32_t* tmp_buf) {
-  CUDA_1D_KERNEL_LOOP(i, emb_size * emb_dim) {
-    int32_t emb_size_index = i / emb_dim;
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, emb_size * emb_dim) {
+    IndexType emb_size_index = i / emb_dim;
     if (tmp_buf[emb_size_index] > 1) { dx_buf[i] /= tmp_buf[emb_size_index]; }
   }
 }
@@ -102,15 +104,15 @@ __global__ void emb_scale_kernel(T* dx_buf, const int32_t emb_size, const int32_
 template<typename T, typename IndexType>
 __global__ void embedding_renorm_kernel(const T* in_buf, T* out_buf, int32_t* indices_freq,
                                         const double max_norm, const double norm_type,
-                                        const int32_t emb_dim) {
+                                        const int64_t emb_dim) {
   if (indices_freq[blockIdx.x] == 0) { return; }
 
-  int tid = threadIdx.x;
-  int base_index = blockIdx.x * emb_dim;
+  int64_t tid = threadIdx.x;
+  int64_t base_index = blockIdx.x * emb_dim;
 
   T v = 0;
 #pragma unroll
-  for (int i = tid; i < emb_dim; i += blockDim.x) {
+  for (int64_t i = tid; i < emb_dim; i += blockDim.x) {
     v += Pow<T>()(Abs<T>()(in_buf[base_index + i]), static_cast<T>(norm_type));
   }
 
@@ -125,7 +127,7 @@ __global__ void embedding_renorm_kernel(const T* in_buf, T* out_buf, int32_t* in
   if (norm > static_cast<T>(max_norm)) {
     T scale = static_cast<T>(max_norm) / (norm + static_cast<T>(1e-7));
 #pragma unroll
-    for (int i = tid; i < emb_dim; i += blockDim.x) {
+    for (int64_t i = tid; i < emb_dim; i += blockDim.x) {
       out_buf[base_index + i] = in_buf[base_index + i] * scale;
     }
   }
@@ -136,8 +138,8 @@ __global__ void embedding_renorm_kernel(const T* in_buf, T* out_buf, int32_t* in
 template<typename T, typename IndexType>
 struct EmbeddingReNormFunctor<DeviceType::kCUDA, T, IndexType> final {
   void operator()(ep::Stream* stream, const T* in_buf, const IndexType* indices_buf, T* out_buf,
-                  const double max_norm, const double norm_type, const int32_t num_indices,
-                  const int32_t emb_size, const int32_t emb_dim, int32_t* tmp_buf) {
+                  const double max_norm, const double norm_type, const int64_t num_indices,
+                  const int64_t emb_size, const int64_t emb_dim, int32_t* tmp_buf) {
     renorm_indices_freq_kernel<IndexType>
         <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
            stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf,
@@ -151,8 +153,8 @@ struct EmbeddingReNormFunctor<DeviceType::kCUDA, T, IndexType> final {
 template<typename T, typename IndexType>
 struct EmbeddingFunctor<DeviceType::kCUDA, T, IndexType> final {
   void operator()(ep::Stream* stream, const T* weight_buf, const IndexType* indices_buf, T* out_buf,
-                  const int32_t padding_idx, const bool scale_grad_by_freq,
-                  const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim) {
+                  const int64_t padding_idx, const bool scale_grad_by_freq,
+                  const int64_t num_indices, const int64_t emb_size, const int64_t emb_dim) {
     embedding_kernel<T, IndexType>
         <<<BlocksNum4ThreadsNum(num_indices * emb_dim), kCudaThreadsNumPerBlock, 0,
            stream->As<ep::CudaStream>()->cuda_stream()>>>(weight_buf, indices_buf, out_buf,
@@ -163,8 +165,8 @@ struct EmbeddingFunctor<DeviceType::kCUDA, T, IndexType> final {
 template<typename T, typename IndexType>
 struct EmbeddingGradFunctor<DeviceType::kCUDA, T, IndexType> final {
   void operator()(ep::Stream* stream, const T* dy_buf, const IndexType* indices_buf, T* dx_buf,
-                  const int32_t padding_idx, const bool scale_grad_by_freq,
-                  const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim,
+                  const int64_t padding_idx, const bool scale_grad_by_freq,
+                  const int64_t num_indices, const int64_t emb_size, const int64_t emb_dim,
                   int32_t* tmp_buf) {
     embedding_grad_kernel<T, IndexType>
         <<<BlocksNum4ThreadsNum(num_indices * emb_dim), kCudaThreadsNumPerBlock, 0,

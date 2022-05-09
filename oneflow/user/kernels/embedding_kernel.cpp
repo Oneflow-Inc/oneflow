@@ -35,12 +35,12 @@ class CpuEmbeddingRenormKernel final : public user_op::OpKernel {
     const double norm_type = ctx->Attr<double>("norm_type");
 
     const ShapeView& in_shape = in->shape();
-    const int32_t emb_size = in_shape.At(0);
-    const int32_t emb_dim = in_shape.At(1);
+    const int64_t emb_size = in_shape.At(0);
+    const int64_t emb_dim = in_shape.At(1);
     const T* in_buf = in->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
     T* out_buf = out->mut_dptr<T>();
-    const int32_t num_indices = indices->shape().elem_cnt();
+    const int64_t num_indices = indices->shape().elem_cnt();
     EmbeddingReNormFunctor<DeviceType::kCPU, T, IndexType>()(
         ctx->stream(), in_buf, indices_buf, out_buf, max_norm, norm_type, num_indices, emb_size,
         emb_dim, nullptr);
@@ -59,13 +59,13 @@ class CpuEmbeddingKernel final : public user_op::OpKernel {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int32_t padding_idx = ctx->Attr<int32_t>("padding_idx");
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
     const ShapeView& out_shape = out->shape();
-    const int32_t num_indices = out_shape.Count(0, out_shape.NumAxes() - 1);
-    const int32_t emb_size = weight->shape().At(0);
-    const int32_t emb_dim = out_shape.At(out_shape.NumAxes() - 1);
+    const int64_t num_indices = out_shape.Count(0, out_shape.NumAxes() - 1);
+    const int64_t emb_size = weight->shape().At(0);
+    const int64_t emb_dim = out_shape.At(out_shape.NumAxes() - 1);
     const T* weight_buf = weight->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
     T* out_buf = out->mut_dptr<T>();
@@ -89,13 +89,13 @@ class CpuEmbeddingGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int32_t padding_idx = ctx->Attr<int32_t>("padding_idx");
+    const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
     const ShapeView& dy_shape = dy->shape();
-    const int32_t num_indices = dy_shape.Count(0, dy_shape.NumAxes() - 1);
-    const int32_t emb_size = weight->shape().At(0);
-    const int32_t emb_dim = dy_shape.At(dy_shape.NumAxes() - 1);
+    const int64_t num_indices = dy_shape.Count(0, dy_shape.NumAxes() - 1);
+    const int64_t emb_size = weight->shape().At(0);
+    const int64_t emb_dim = dy_shape.At(dy_shape.NumAxes() - 1);
 
     const T* dy_buf = dy->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
