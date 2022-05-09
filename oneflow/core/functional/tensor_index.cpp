@@ -321,7 +321,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   JUST(TransposeFront(input, *expanded_indices, &transposed_input, &valid_indices));
   if (valid_indices.empty()) { return input; }
   int index_ndim = valid_indices.at(0)->ndim();
-  auto packed_indices = JUST(Stack(valid_indices, 0));
+  auto packed_indices = JUST(Stack(valid_indices, 0, /*out=*/nullptr));
   int packed_ndim = packed_indices->ndim();
   CHECK_GT_OR_RETURN(packed_ndim, 0) << "Index array dimension should be greater than 0.";
   std::vector<int> permute(packed_ndim);

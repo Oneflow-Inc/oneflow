@@ -280,6 +280,7 @@ add_docstr(
     Args:
         inputs (List[oneflow.Tensor]): the list of input tensors. Each tensor should have the same shape.
         dim (int): the index at which to insert the concatenated dimension.
+        out (Tensor, optional): the output tensor.
 
     Returns:
         A `Tensor`

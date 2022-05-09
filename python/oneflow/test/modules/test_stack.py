@@ -43,6 +43,23 @@ class TestStackModule(flow.unittest.TestCase):
         )
         out = torch.stack((x, y), dim=random(low=1, high=4).to(int))
         return out
+    
+    @autotest(n=10, auto_backward=False, check_graph=False)
+    # stack with out don't support autodiff, and only support eager local tensor
+    def test_stack_with_output_tensor(test_case):
+        device = random_device()
+        x1 = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5, requires_grad=False).to(
+            device
+        )
+        x2 = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5, requires_grad=False).to(
+            device
+        )
+        y = random_tensor(
+            ndim=5, dim0=2, dim1=1, dim2=3, dim3=4, dim4=5, requires_grad=False
+        ).to(device)
+        out = torch.stack((x1, x2), out=y)
+        return out
+
 
 
 if __name__ == "__main__":

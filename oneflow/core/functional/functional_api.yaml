@@ -1772,7 +1772,7 @@
   bind_python: False
 
 - name: "stack"
-  signature: "Tensor (TensorTuple inputs, Int64 dim=0) => Stack"
+  signature: "Tensor (TensorTuple inputs, Int64 dim=0, Tensor out=None) => Stack"
   bind_python: True
 
 - name: "stack_grad"

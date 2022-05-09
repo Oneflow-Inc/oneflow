@@ -77,8 +77,12 @@ def default_collate(batch):
     elem = batch[0]
     elem_type = type(elem)
     if isinstance(elem, (flow.Tensor, flow._oneflow_internal.Tensor)):
-        # TODO: tensor.storage()._new_shared(numel)
-        return flow._C.stack(batch, dim=0)
+        out = None
+        if flow.utils.data.get_worker_info() is not None:
+            batch_shape = list(elem.shape)
+            batch_shape.insert(0, len(batch))
+            out = flow._C.empty(*batch_shape, dtype=elem.dtype)
+        return flow._C.stack(batch, dim=0, out=out)
     elif (
         elem_type.__module__ == "numpy"
         and elem_type.__name__ != "str_"

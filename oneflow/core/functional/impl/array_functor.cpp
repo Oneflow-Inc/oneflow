@@ -520,10 +520,12 @@ class StackFunctor {
       ops_[n] = CHECK_JUST(one::OpBuilder("stack").Input("in", n + 1).Output("out").Build());
     }
   }
-  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim,
+                           const Optional<Tensor>& out) const {
     const int64_t ninput = inputs.size();
     int64_t ndims = inputs[0]->ndim();
     int64_t stack_dim = dim;
+    const bool has_output = out ? true : false;
     if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
     CHECK_OR_RETURN(stack_dim >= 0 && stack_dim <= ndims)
         << "Index Error: Dimension out of range (expected in range of [" << -ndims - 1 << ", "
@@ -538,6 +540,15 @@ class StackFunctor {
             << first_in_shape->ToString() << " at first input and " << input->shape()->ToString()
             << " which index is " << i;
       }
+      if (has_output) {
+        CHECK_EQ_OR_RETURN(input->requires_grad(), false)
+            << Error::RuntimeError()
+            << "stack(): functions with out=... arguments don't support automatic differentiation, "
+               "but one of the arguments requires grad.";
+        CHECK_OR_RETURN(input->is_local())
+            << Error::RuntimeError()
+            << "stack(): functions with out=... arguments don't support global input tensor!";
+      }
     }
     int64_t max_dim_size = ninput;
     MutableAttrMap attrs;
@@ -548,8 +559,16 @@ class StackFunctor {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
       TensorTuple partial_inputs(size);
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
-      outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+      if (has_output) {
+        // NOTE:(use to optimize dataloader)
+        auto output = std::make_shared<TensorTuple>(1);
+        output->at(0) = JUST(out);
+        JUST(OpInterpUtil::Dispatch(*ops_.at(size - 1), partial_inputs, output.get(), attrs));
+        outputs.emplace_back(output->at(0));
+      } else {
+        outputs.emplace_back(
+            JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+      }
     }
     if (outputs.size() == 1) { return outputs.at(0); }
     return Concat(outputs, stack_dim);
@@ -2010,7 +2029,7 @@ class TensorSetItemFunctor {
       if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
     }
     if (tensor_indices.size() == ndims) {  // advance indexing
-      std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
+      std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0, /*out=*/nullptr));
       if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
       indices = JUST(functional::Transpose(indices, {1, 0}));
       value_tensor = JUST(functional::Expand(value_tensor, {indices->shape()->At(0)}));

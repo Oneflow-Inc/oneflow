@@ -96,7 +96,7 @@ def reduce_parameter(tensor):
     requires_grad = tensor.requires_grad
 
     if tensor_data.nbytes == 0:
-        return (rebuild_empty_parameter, (tensor, shape, tensor.dtype, requires_grad))
+        return (rebuild_empty_parameter, (tensor.shape, tensor.dtype, requires_grad))
     else:
         shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
         shm_numpy = np.ndarray(
