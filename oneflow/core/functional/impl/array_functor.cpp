@@ -592,8 +592,11 @@ class StackGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
                                 const int64_t& axis) const {
-    CHECK_GE_OR_RETURN(like.size(), 2) << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
-    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount) << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount << ", but got " << like.size();
+    CHECK_GE_OR_RETURN(like.size(), 2)
+        << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount)
+        << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount
+        << ", but got " << like.size();
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
@@ -2370,8 +2373,12 @@ class SplitLikeFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
                                 const int64_t& axis) const {
-    CHECK_GE_OR_RETURN(like.size(), 2) << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
-    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount) << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount << ", but got " << like.size();;
+    CHECK_GE_OR_RETURN(like.size(), 2)
+        << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount)
+        << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount
+        << ", but got " << like.size();
+    ;
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
