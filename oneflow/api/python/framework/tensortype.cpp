@@ -75,21 +75,25 @@ std::unordered_map<DeviceType, std::string> devicetype_to_string_dict{
 
 static PyObject* PyTensortypeMetaCls_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* tensor = NULL;
-  static const char* keywords[2] = {"tensor", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", const_cast<char**>(keywords), &tensor)) {
-    return NULL;
-  }
-  if (!PyTensor_Check(tensor)) { return NULL; }
+  auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  PyTensorObject* tensor = (PyTensorObject*) PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
+  tensor->data = PyTensor_Unpack(temp);
+  tensor->data->set_pyobject(self);
 
-  Symbol<oneflow::DType> dtype = PyTensortype_AsDType(self);
-  Maybe<std::string> device = DeviceTag4DeviceType(PyTensortype_AsDevice(self));
+  PyTensortype* tensortype = (PyTensortype*) self;
+  Maybe<std::string> device = DeviceTag4DeviceType(PyTensortype_AsDevice((PyObject*)tensortype));
   Optional<std::string> device_str = CHECK_JUST(device);
-  const auto& t = PyTensor_Unpack(tensor);
-  const auto& cast_t = functional::To(t, device_str, dtype, false);
-  return functional::CastToPyObject(cast_t);
+  const auto& t = functional::To(tensor->data, device_str, PyTensortype_AsDType((PyObject*)tensortype), false);
+  tensor->data = CHECK_JUST(t);
+
+  // reset temp data to prevent clearing the pyobject
+  // when the temp is deallocated
+  ((PyTensorObject*)temp)->data.reset();
+  Py_XDECREF(temp);
+  return (PyObject*)tensor;
   END_HANDLE_ERRORS
-}
+};
 
 static std::string datatype_to_string(DataType datatype) {
   CHECK_OR_THROW(datatype_to_string_dict.find(datatype) != datatype_to_string_dict.end())
