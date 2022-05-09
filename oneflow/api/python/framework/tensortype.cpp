@@ -175,7 +175,7 @@ static void binding(pybind11::module_& m) {
   generalize_tensortype_list();
   for (PyTensortype* tensortype : tensortype_list) {
     Py_INCREF(tensortype);
-    auto module = m;
+    auto module = m.def_submodule("_C");
     if (tensortype->is_cuda) module = m.def_submodule("cuda");
 
     std::string type_name = std::string(tensortype->name);
