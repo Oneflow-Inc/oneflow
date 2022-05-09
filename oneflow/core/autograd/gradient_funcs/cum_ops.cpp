@@ -13,15 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
 
 struct CumCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
-  int64_t dim = 0;
+  int32_t dim = 0;
 };
 
 template<typename StateT>
@@ -55,7 +57,11 @@ class CumsumGrad : public CumGrad<CumCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) = JUST(functional::CumsumGrad(out_grads.at(0), ctx->dim));
+      std::vector<int32_t> flip_dim(1, ctx->dim);
+      in_grads->at(0) = JUST(functional::Flip(
+          JUST(functional::Cumsum(JUST(functional::Flip(out_grads.at(0), flip_dim)), ctx->dim,
+                                  out_grads.at(0)->dtype())),
+          flip_dim));
     }
     return Maybe<void>::Ok();
   }

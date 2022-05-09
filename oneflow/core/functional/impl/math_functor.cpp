@@ -2342,19 +2342,6 @@ class CumGradBaseFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class CumsumGradFunctor : public CumGradBaseFunctor {
- public:
-  CumsumGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    // No need to check dim validation here, while CumsumFunctor handled already
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-  }
-};
-
 class CumProdGradFunctor : public CumGradBaseFunctor {
  public:
   CumProdGradFunctor() {
@@ -3041,7 +3028,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvFunctor>("Erfinv");
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
-  m.add_functor<CumsumGradFunctor>("CumsumGrad");
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
