@@ -482,6 +482,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
   ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
                                         ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::VariableOp>(op0);
+    if (!op) return failure();
     NamedAttrList attrs;
     attrs.set(StringAttr::get(getContext(), "value"),
               support::TensorToDenseElementsAttr(
@@ -506,6 +507,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
   ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
                                         ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::FrozenVariableOp>(op0);
+    if (!op) return failure();
     NamedAttrList attrs;
     const auto tensor_attr = op.value();
     attrs.set(StringAttr::get(getContext(), "shape"),
@@ -528,11 +530,13 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
-
+    const std::string tensor_name = op.op_nameAttr().str();
     ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Set(
-        op.op_nameAttr().str(),
+        tensor_name,  // tensor_name can't be replaced by op_new.op_name().str() directly when
+                      // compiling with gcc and I has no idea why.
+                      // But it works when compiling with clang.
+                      // Maybe temporary objects would be released more early using gcc.
         support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()));
-
     return ::mlir::success();
   }
 };
