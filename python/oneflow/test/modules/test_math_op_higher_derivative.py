@@ -21,44 +21,33 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
+def _test_math_op_grad_grad_impl(test_case, op_name):
+    x = random_tensor(ndim=2).requires_grad_(True)
+    y = eval(f"x.{op_name}().sum()")
+    x_grad = torch.autograd.grad(y, x, create_graph=True)[0]
+    test_case.assertTrue(
+        np.allclose(
+            x_grad.pytorch.detach().cpu().numpy(), x_grad.oneflow.detach().numpy()
+        )
+    )
+    x_grad_grad = torch.autograd.grad(
+        x_grad, x, torch.ones_like(x), create_graph=True
+    )[0]
+    test_case.assertTrue(
+        np.allclose(
+            x_grad_grad.pytorch.detach().cpu().numpy(),
+            x_grad_grad.oneflow.detach().numpy(),
+        )
+    )
+
+
+
 class TestMathOpHigherDerivative(flow.unittest.TestCase):
     def test_sin_grad_grad(test_case):
-        x = random_tensor(ndim=2).requires_grad_(True)
-        y = x.sin().sum()
-        x_grad = torch.autograd.grad(y, x, create_graph=True)[0]
-        test_case.assertTrue(
-            np.allclose(
-                x_grad.pytorch.detach().cpu().numpy(), x_grad.oneflow.detach().numpy()
-            )
-        )
-        x_grad_grad = torch.autograd.grad(
-            x_grad, x, torch.ones_like(x), create_graph=True
-        )[0]
-        test_case.assertTrue(
-            np.allclose(
-                x_grad_grad.pytorch.detach().cpu().numpy(),
-                x_grad_grad.oneflow.detach().numpy(),
-            )
-        )
+        _test_math_op_grad_grad_impl(test_case, "sin")
 
     def test_cos_grad_grad(test_case):
-        x = random_tensor(ndim=2).requires_grad_(True)
-        y = x.cos().sum()
-        x_grad = torch.autograd.grad(y, x, create_graph=True)[0]
-        test_case.assertTrue(
-            np.allclose(
-                x_grad.pytorch.detach().cpu().numpy(), x_grad.oneflow.detach().numpy()
-            )
-        )
-        x_grad_grad = torch.autograd.grad(
-            x_grad, x, torch.ones_like(x), create_graph=True
-        )[0]
-        test_case.assertTrue(
-            np.allclose(
-                x_grad_grad.pytorch.detach().cpu().numpy(),
-                x_grad_grad.oneflow.detach().numpy(),
-            )
-        )
+        _test_math_op_grad_grad_impl(test_case, "cos")
 
 
 if __name__ == "__main__":
