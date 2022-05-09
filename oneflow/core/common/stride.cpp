@@ -21,10 +21,21 @@ limitations under the License.
 namespace oneflow {
 
 Stride::Stride(const Shape& shape) {
-  if (shape.is_initialized() && shape.NumAxes() > 0) {
+  if(shape.is_initialized()){
+    const int64_t ndim = shape.NumAxes();
     stride_vec_.resize(shape.NumAxes());
-    std::exclusive_scan(shape.dim_vec().rbegin(), shape.dim_vec().rend(), stride_vec_.rbegin(), 1,
-                        std::multiplies<>{});
+    if(ndim > 0 && shape.elem_cnt() > 0){
+      std::exclusive_scan(shape.dim_vec().rbegin(), shape.dim_vec().rend(), stride_vec_.rbegin(), 1,
+                          std::multiplies<>{});
+    }else if(ndim > 0 && shape.elem_cnt() == 0 ){
+      // 0-size shape
+      std::vector<int64_t> tmp_shape(ndim);
+      for(int64_t i=0; i<ndim; ++i){
+        tmp_shape[i] = shape.At(i) > 0 ? shape.At(i) : 1; 
+      }
+      std::exclusive_scan(tmp_shape.rbegin(), tmp_shape.rend(), stride_vec_.rbegin(), 1,
+                          std::multiplies<>{});
+    }
   }
 }
 
