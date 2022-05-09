@@ -35,14 +35,14 @@ typedef struct {
 
 bool PyTensortype_Check(PyObject*);
 
-inline DeviceType TensortypeToDevice(PyObject* self) { return ((PyTensortype*)self)->device; }
-inline Symbol<DType> TensortypeToDType(PyObject* self) {
+inline DeviceType PyTensortype_AsDevice(PyObject* self) { return ((PyTensortype*)self)->device; }
+inline Symbol<DType> PyTensortype_AsDType(PyObject* self) {
   return CHECK_JUST(DType::Get(((PyTensortype*)self)->datatype));
 }
 
 bool PyTensortype_Check(PyObject*);
-PyObject* GetTensortype(DataType, DeviceType);
-PyObject* tensortype_from_string(const std::string&);
+PyObject* PyTensortype_FromDTypeDeviceType(DataType, DeviceType);
+PyObject* PyTensortype_FromString(const std::string&);
 
 }  // namespace one
 }  // namespace oneflow

@@ -73,7 +73,7 @@ std::unordered_map<DeviceType, std::string> devicetype_to_string_dict{
     {kCUDA, "cuda"},
 };
 
-static PyObject* TensortypeType_call(PyObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyTensortypeMetaCls_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* tensor = NULL;
   static const char* keywords[2] = {"tensor", NULL};
@@ -82,8 +82,8 @@ static PyObject* TensortypeType_call(PyObject* self, PyObject* args, PyObject* k
   }
   if (!PyTensor_Check(tensor)) { return NULL; }
 
-  Symbol<oneflow::DType> dtype = TensortypeToDType(self);
-  Maybe<std::string> device = DeviceTag4DeviceType(TensortypeToDevice(self));
+  Symbol<oneflow::DType> dtype = PyTensortype_AsDType(self);
+  Maybe<std::string> device = DeviceTag4DeviceType(PyTensortype_AsDevice(self));
   Optional<std::string> device_str = CHECK_JUST(device);
   const auto& t = PyTensor_Unpack(tensor);
   const auto& cast_t = functional::To(t, device_str, dtype, false);
@@ -103,7 +103,7 @@ static std::string device_to_string(DeviceType dtype) {
   return devicetype_to_string_dict.at(dtype);
 }
 
-PyObject* tensortype_from_string(const std::string& tensortype_str) {
+PyObject* PyTensortype_FromString(const std::string& tensortype_str) {
   std::string oneflow_prefix = "oneflow.";
   auto mismatch_pair =
       std::mismatch(oneflow_prefix.begin(), oneflow_prefix.end(), tensortype_str.begin());
@@ -126,7 +126,7 @@ static std::string get_name(DataType datatype, DeviceType device) {
 static void init_metaclass(PyTypeObject& metaclass) {
   metaclass.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
   metaclass.tp_base = &PyType_Type;
-  metaclass.tp_call = TensortypeType_call;
+  metaclass.tp_call = PyTensortypeMetaCls_call;
   if (PyType_Ready(&metaclass) < 0) { return; }
 }
 
@@ -138,7 +138,6 @@ static void init_tensortype(PyTypeObject& type, PyTypeObject& type_template,
   // name.c_str() has bug here, so convert with iterating
   for (int i = 0; i < name.size(); i++) tp_name[i] = name[i];
   type.tp_name = tp_name;
-  type.tp_call = TensortypeType_call;
   type.tp_flags = Py_TPFLAGS_DEFAULT;
   if (PyType_Ready(&type) < 0) {
     CHECK_OR_THROW(false) << "tensortype initialization failed";
@@ -194,7 +193,7 @@ bool PyTensortype_Check(PyObject* obj) {
   return it != tensortype_list.end();
 }
 
-PyObject* GetTensortype(DataType datatype, DeviceType device) {
+PyObject* PyTensortype_FromDTypeDeviceType(DataType datatype, DeviceType device) {
   auto it = std::find_if(tensortype_list.begin(), tensortype_list.end(),
                          [datatype, device](PyTensortype* x) {
                            return (x->datatype == datatype) && (x->device == device);
