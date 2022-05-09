@@ -175,6 +175,7 @@ class Interpolate(Module):
                 data_format="channels_first",
             )
         if len(x.shape) == 4 and self.mode == "bilinear":
+            assert self.align_corners is not None
             return flow._C.upsample_bilinear_2d(
                 x,
                 height_scale=scale_factors[0],

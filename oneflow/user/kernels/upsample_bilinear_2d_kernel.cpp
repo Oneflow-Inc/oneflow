@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <iterator>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
@@ -141,6 +142,7 @@ class UpsampleBilinear2DGradCPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_tensor->shape().At(3);
     const float height_scale = out_height * 1.0 / in_height;
     const float width_scale = out_width * 1.0 / in_width;
+    
     if (in_height == out_height && in_width == out_width) {
       memcpy(dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
              sizeof(T) * nbatch * channels * in_height * in_width);
