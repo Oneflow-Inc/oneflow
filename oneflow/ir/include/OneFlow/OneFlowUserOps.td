@@ -9078,7 +9078,6 @@ def OneFlow_UpsampleOp : OneFlow_BaseOp<"upsample", [NoSideEffect, DeclareOpInte
     DefaultValuedAttr<F32Attr, "0.">:$height_scale,
     DefaultValuedAttr<F32Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
-    SI64ArrayAttr:$output_size,
     StrAttr:$data_format,
     StrAttr:$interpolation
   );
