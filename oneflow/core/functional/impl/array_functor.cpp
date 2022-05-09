@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
@@ -484,7 +485,7 @@ class ConcatFunctor {
     int64_t axis = dim;
     int64_t ndim = inputs[0]->ndim();
     int64_t max_dim_size = 0;
-    CHECK_GE_OR_RETURN(ninput, 1);
+    CHECK_GE_OR_RETURN(ninput, 1) << Error::RuntimeError() << "inputs size must greater than 0";
     CHECK_OR_RETURN((-(ndim) <= dim) && (dim <= (ndim - 1)))
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
         << ", " << ndim - 1 << "], but got " << dim << ")";
@@ -590,8 +591,8 @@ class StackGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
                                 const int64_t& axis) const {
-    CHECK_GE_OR_RETURN(like.size(), 2);
-    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount);
+    CHECK_GE_OR_RETURN(like.size(), 2) << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount) << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount << ", but got " << like.size();
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
@@ -2365,8 +2366,8 @@ class SplitLikeFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
                                 const int64_t& axis) const {
-    CHECK_GE_OR_RETURN(like.size(), 2);
-    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount);
+    CHECK_GE_OR_RETURN(like.size(), 2) << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount) << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount << ", but got " << like.size();;
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
