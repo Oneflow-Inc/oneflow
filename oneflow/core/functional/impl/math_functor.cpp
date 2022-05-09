@@ -3015,7 +3015,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
-  m.add_functor<CastFunctor, PinMemoryCastFunctor>("Cast");
+  m.add_functor<CastFunctor>("Cast");
+  m.add_functor<PinMemoryCastFunctor>("PinMemoryCast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
   m.add_functor<ClipFunctor>("Clip");

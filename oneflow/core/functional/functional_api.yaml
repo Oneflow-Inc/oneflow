@@ -722,7 +722,7 @@
 - name: "cast"
   signature: [
     "Tensor (Tensor x, DataType dtype) => Cast",
-    "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
+    "Tensor (Tensor x, *, DataType dtype, Bool pin_memory=False) => PinMemoryCast"
   ]
   bind_python: True
 

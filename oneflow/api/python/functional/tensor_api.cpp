@@ -167,9 +167,8 @@ class ConsistentTensorWithDataCtorFunctor {
     const auto& dtype = DType::Float();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
-      const bool pin_memory = JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory();
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
-                                       /*requires_grad=*/false, /*pin_memory=*/pin_memory);
+                                       /*requires_grad=*/false);
     }
     // Make consistent tensor from python sequence or numpy array.
     return MakeConsistentTensorFromData(data, dtype, placement, sbp_tuple, /*requires_grad=*/false);

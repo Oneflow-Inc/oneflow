@@ -175,7 +175,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   } else if (!dtype && data_type == DataType::kDouble && !PyArray_Check(data)) {
     dtype_ = DType::Float();
   }
-  if (dtype_) { tensor = JUST(functional::Cast(tensor, dtype_, pin_memory)); }
+  if (dtype_) { tensor = JUST(functional::PinMemoryCast(tensor, dtype_, pin_memory)); }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
 }
@@ -286,7 +286,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
   }
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
-    if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_, pin_memory)); }
+    if (tensor->dtype() != dtype_) { tensor = JUST(functional::PinMemoryCast(tensor, dtype_, pin_memory)); }
   }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
