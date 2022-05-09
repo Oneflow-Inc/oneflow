@@ -39,11 +39,23 @@ add_docstr(
 
 add_docstr(
     oneflow.add,
-    r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
-    The formula is:
+    r"""
+    oneflow.add(input, other, *, alpha=1) -> Tensor
+    
+    Adds `other`, scaled by `alpha`, to `input`. Scalar and broadcast promotation are supported.
 
     .. math::
-        out = input + other
+        out = input + alpha \times other
+        
+    Args:
+        input (Union[int, float, oneflow.Tensor]): the input tensor.
+        other (Union[int, float, oneflow.Tensor]): the tensor or number to add to input.
+    
+    Keyword args:
+        alpha (Number, optional): the multiplier for `other`.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
 
     For example:
 
@@ -72,6 +84,14 @@ add_docstr(
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
+        
+        # use alpha
+        >>> x = flow.zeros(2, 3)
+        >>> y = flow.ones(2, 3)
+        >>> out = flow.add(x, y, alpha=10)
+        >>> out
+        tensor([[10., 10., 10.],
+                [10., 10., 10.]], dtype=oneflow.float32)
 
     """,
 )
@@ -1295,7 +1315,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
+        dim (int or tuple of ints): the dimension or dimensions to reduce.
         unbiased (bool): whether to use the unbiased estimation or not
         keepdim (bool): whether the output tensor has `dim` retained or not.
 
@@ -1325,7 +1345,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        dim (int or tuple of ints): the dimension or dimensions to reduce. Defaults to None.
         unbiased (bool, optional): whether to use Bessel’s correction (:math:`\delta N = 1`). Defaults to True.
         keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
 
@@ -1435,7 +1455,7 @@ add_docstr(
     Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
     Other dimensions of input that are not explicitly moved remain in their original order and appear at the positions not specified in destination.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.movedim.html#torch.movedim.
+    https://pytorch.org/docs/1.10/generated/torch.movedim.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1467,7 +1487,7 @@ add_docstr(
     r"""
     Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.as_strided.html#torch.as_strided.
+    https://pytorch.org/docs/1.10/generated/torch.as_strided.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1573,7 +1593,7 @@ add_docstr(
     Splits a tensor into multiple sub-tensors, all of which are views of input, along dimension
     dim according to the indices or number of sections specified by indices_or_sections .
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.tensor_split.html#torch.tensor_split
+    https://pytorch.org/docs/1.10/generated/torch.tensor_split.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1617,7 +1637,7 @@ add_docstr(
     oneflow.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
     is an integer it must evenly divide the split dimension or a runtime error will be thrown.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.hsplit.html#torch.hsplit
+    https://pytorch.org/docs/1.10/generated/torch.hsplit.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1658,7 +1678,7 @@ add_docstr(
     This is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
     except that if indices_or_sections is an integer it must evenly divide the split dimension or a runtime error will be thrown.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.vsplit.html#torch.vsplit
+    https://pytorch.org/docs/1.10/generated/torch.vsplit.html.
 
     Args:
         input (Tensor): the input tensor.

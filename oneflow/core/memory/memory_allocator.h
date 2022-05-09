@@ -21,6 +21,10 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace vm {
+class EagerBlobObject;
+}
+
 class MemoryAllocator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
@@ -40,6 +44,8 @@ class MemoryAllocator final {
 
 class Blob;
 void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr);
+void InitNonPODTypeEagerBlobObjectIfNeed(MemoryAllocator* allocator,
+                                         vm::EagerBlobObject* eager_blob_object_ptr);
 
 template<typename T>
 T* MemoryAllocator::PlacementNew(T* mem_ptr) {

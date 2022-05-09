@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/model_io_v2_job.h"
@@ -1010,8 +1009,8 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     exit(0);
   }
 
-  HashMap<std::string, Blob*> variable_op_name2eager_blob;
-  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob));
+  HashMap<std::string, vm::EagerBlobObject*> variable_op_name2eager_blob_object;
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }
