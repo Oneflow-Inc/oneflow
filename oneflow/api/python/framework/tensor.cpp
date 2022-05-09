@@ -17,7 +17,6 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include <Python.h>
-#include <unicodeobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/framework/tensortype.h"
