@@ -785,7 +785,7 @@ def clear_note_fake_program():
     flow.set_printoptions(profile="full")
 
 
-gc_interval = int(os.getenv("ONEFLOW_TEST_GC_INTERVAL", 10))
+gc_interval = int(os.getenv("ONEFLOW_TEST_GC_INTERVAL", 999999999999))
 gc_counter = 0
 
 
