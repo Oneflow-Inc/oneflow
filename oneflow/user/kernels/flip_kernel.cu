@@ -32,16 +32,16 @@ struct VIS {
 
 template<typename T>
 __global__ void FlipGpuForward(const int32_t element, const int64_t total_dims,
-                               const SIZE_V stride_contiguous_v, const SIZE_V sizes_v,
-                               const VIS vis, SIZE_V strides_v, const T* in_dptr, T* out_dptr) {
+                               const SIZE_V sizes_v, const VIS vis, SIZE_V strides_v,
+                               const T* in_dptr, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(i, element) {
     int32_t cur_indices = i;
     int32_t rem = 0;
     int32_t dst_offset = 0;
     for (int32_t d = 0; d < total_dims; d++) {
       int32_t temp = cur_indices;
-      cur_indices = cur_indices / stride_contiguous_v.val[d];
-      rem = temp - cur_indices * stride_contiguous_v.val[d];
+      cur_indices = cur_indices / strides_v.val[d];
+      rem = temp - cur_indices * strides_v.val[d];
       dst_offset += vis.val[d] ? (sizes_v.val[d] - 1 - cur_indices) * strides_v.val[d]
                                : cur_indices * strides_v.val[d];
       cur_indices = rem;
@@ -80,20 +80,8 @@ class FlipGpuKernel final : public user_op::OpKernel {
     for (int32_t i = total_dims - 2; i >= 0; i--) {
       strides_v.val[i] = strides_v.val[i + 1] * y_tensor->shape().At(i + 1);
     }
-
-    SIZE_V stride_contiguous_v;
-
-    for (int32_t i = total_dims - 1; i >= 0; i--) {
-      if (i == total_dims - 1) {
-        stride_contiguous_v.val[i] = 1;
-      } else {
-        stride_contiguous_v.val[i] =
-            std::max<int32_t>(x_tensor->shape().At(i + 1), 1) * stride_contiguous_v.val[i + 1];
-      }
-    }
-    RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->stream(), elem_cnt, elem_cnt, total_dims,
-                    stride_contiguous_v, sizes_v, vis, strides_v, x_tensor->dptr<T>(),
-                    y_tensor->mut_dptr<T>());
+    RUN_CUDA_KERNEL((FlipGpuForward<T>), ctx->stream(), elem_cnt, elem_cnt, total_dims, sizes_v,
+                    vis, strides_v, x_tensor->dptr<T>(), y_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
