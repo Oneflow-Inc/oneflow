@@ -144,12 +144,13 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return output_tensor_metas->at(i);
       }));
 
+  const bool pin_memory = ctx.pin_memory.value_or(false);
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
       tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
       const auto& dep_object = NewLocalDepObject();
-      JUST(tensor_impl->InitEagerBlobObject(dep_object));
+      JUST(tensor_impl->InitEagerBlobObject(dep_object, pin_memory));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
       // output i is inplaced.
@@ -173,16 +174,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, stream);
   }));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> RunEmptyOp(TensorTuple* outputs) {
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(0)));
-  const auto& shape = tensor_impl->tensor_meta()->shape_ptr();
-  const auto& data_type = tensor_impl->dtype();
-  const auto& device = tensor_impl->device();
-  outputs->at(0) = JUST(functional::Empty(*shape, DType(data_type), device));
   return Maybe<void>::Ok();
 }
 

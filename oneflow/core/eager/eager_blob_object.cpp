@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 namespace vm {
@@ -52,8 +53,25 @@ Blob* EagerBlobObject::blob() {
 void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
 Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
-  vm::Allocator* allocator = device_ctx->mut_allocator();
-  CHECK_NOTNULL_OR_RETURN(allocator);
+  const bool pin_memory = EagerBlobObject::pin_memory();
+  vm::Allocator* allocator = nullptr;
+  if (pin_memory) {
+    CHECK_EQ_OR_RETURN(device_ctx->device_type(), DeviceType::kCPU)
+        << Error::RuntimeError() << "cannot pin tensor with device: " << device_ctx->device_type()
+        << ", only dense CPU tensors can be pinned.";
+    allocator = dynamic_cast<CpuDeviceCtx*>(device_ctx)->mut_pin_memory_allocator();
+    if (allocator == nullptr) {
+      // for some reason, the pin_memory_allocator will fail to create
+      // e.g. with no CUDA library support and only can use oneflow in cpu only mode
+      return Error::RuntimeError()
+             << "create pin_memory allocator failed for some reason. mostly, this error has "
+                "occurred because you are trying to use some CUDA functionality, but the CUDA "
+                "library has not been loaded by the dynamic linker for some reason.";
+    }
+  } else {
+    allocator = device_ctx->mut_allocator();
+  }
+  CHECK_NOTNULL_OR_RETURN(allocator) << Error::RuntimeError() << "allocator created failed!";
   size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
