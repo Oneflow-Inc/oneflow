@@ -97,6 +97,10 @@ jobs:
             cmake_generator: "Unix Makefiles"
             cmake_build_type: "Release"
     steps:
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 5
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}

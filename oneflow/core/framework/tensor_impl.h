@@ -254,7 +254,8 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
-  virtual Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
+  virtual Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object,
+                                          const bool pin_memory);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
   int eager_blob_object_count() { return eager_blob_object_.use_count(); }
 
@@ -283,14 +284,10 @@ class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
                              bool is_leaf)
       : EagerMirroredTensorImpl(tensor_meta, tensor_storage, requires_grad, is_leaf),
         evict_trigger_(evict_trigger) {}
-  // ~DTREagerMirroredTensorImpl() {}
   ~DTREagerMirroredTensorImpl() override {}
 
   Maybe<MirroredTensorImpl> detach() const override;
-  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object) override;
-  // Maybe<void> InitEagerBlobObjectAndTensorStorage(
-  //     const std::shared_ptr<vm::DTREagerBlobObject>& eager_blob_object,
-  //     const std::shared_ptr<TensorStorage>& tensor_storage);
+  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object, const bool pin_memory) override;
 
  private:
   Maybe<void> UpdateEvictTrigger();

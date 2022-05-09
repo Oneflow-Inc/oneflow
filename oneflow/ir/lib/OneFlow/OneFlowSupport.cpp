@@ -97,7 +97,7 @@ std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
   std::shared_ptr<::oneflow::one::Tensor> tensor =
       ::oneflow::one::functional::Empty(
           ::oneflow::Shape(::oneflow::DimVector(shape.begin(), shape.end())),
-          ::oneflow::DType::Get(dtype).GetOrThrow(), device)
+          ::oneflow::DType::Get(dtype).GetOrThrow(), device, /*pin_memory=*/false)
           .GetPtrOrThrow();
 
   std::vector<T> data(dense_attr.getValues<T>().begin(), dense_attr.getValues<T>().end());
