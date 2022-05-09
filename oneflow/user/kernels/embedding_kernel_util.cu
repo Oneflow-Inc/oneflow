@@ -24,25 +24,13 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-struct Abs {
-  __device__ __forceinline__ T operator()(T x) { return abs(x); }
+struct AccumulateType {
+  using type = T;
 };
 
 template<>
-struct Abs<half> {
-  __device__ __forceinline__ half operator()(half x) { return __habs(x); }
-};
-
-template<typename T>
-struct Pow {
-  __device__ __forceinline__ T operator()(T x, T base) { return pow(x, base); }
-};
-
-template<>
-struct Pow<half> {
-  __device__ __forceinline__ half operator()(half x, half base) {
-    return static_cast<half>(pow(static_cast<float>(x), static_cast<float>(base)));
-  }
+struct AccumulateType<half> {
+  using type = float;
 };
 
 template<typename T, typename IndexType>
@@ -101,31 +89,31 @@ __global__ void emb_scale_kernel(T* dx_buf, const int64_t emb_size, const int64_
   }
 }
 
-template<typename T, typename IndexType>
+template<typename T, typename IndexType, typename AccumType>
 __global__ void embedding_renorm_kernel(const T* in_buf, T* out_buf, int32_t* indices_freq,
-                                        const double max_norm, const double norm_type,
+                                        const AccumType max_norm, const AccumType norm_type,
                                         const int64_t emb_dim) {
   if (indices_freq[blockIdx.x] == 0) { return; }
 
   int64_t tid = threadIdx.x;
   int64_t base_index = blockIdx.x * emb_dim;
 
-  T v = 0;
+  AccumType v = 0;
 #pragma unroll
   for (int64_t i = tid; i < emb_dim; i += blockDim.x) {
-    v += Pow<T>()(Abs<T>()(in_buf[base_index + i]), static_cast<T>(norm_type));
+    v += pow(abs(static_cast<AccumType>(in_buf[base_index + i])), norm_type);
   }
 
-  using BlockReduce = cub::BlockReduce<T, kCudaThreadsNumPerBlock>;
+  using BlockReduce = cub::BlockReduce<AccumType, kCudaThreadsNumPerBlock>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
-  __shared__ T norm;
+  __shared__ AccumType norm;
   v = BlockReduce(temp_storage).Sum(v);
 
-  if (tid == 0) { norm = Pow<T>()(v, static_cast<T>(1.0 / norm_type)); }
+  if (tid == 0) { norm = pow(v, static_cast<AccumType>(1.0 / norm_type)); }
   __syncthreads();
 
-  if (norm > static_cast<T>(max_norm)) {
-    T scale = static_cast<T>(max_norm) / (norm + static_cast<T>(1e-7));
+  if (norm > max_norm) {
+    auto scale = static_cast<T>(max_norm / (norm + 1e-7));
 #pragma unroll
     for (int64_t i = tid; i < emb_dim; i += blockDim.x) {
       out_buf[base_index + i] = in_buf[base_index + i] * scale;
@@ -144,9 +132,12 @@ struct EmbeddingReNormFunctor<DeviceType::kCUDA, T, IndexType> final {
         <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
            stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf,
                                                           emb_size);
-    embedding_renorm_kernel<T, IndexType>
+
+    using AccumType = typename AccumulateType<T>::type;
+    embedding_renorm_kernel<T, IndexType, AccumType>
         <<<emb_size, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            in_buf, out_buf, tmp_buf, max_norm, norm_type, emb_dim);
+            in_buf, out_buf, tmp_buf, static_cast<AccumType>(max_norm),
+            static_cast<AccumType>(norm_type), emb_dim);
   }
 };
 
