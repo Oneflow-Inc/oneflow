@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <Python.h>
 #include <object.h>
-#include <objimpl.h>
 #include <pybind11/pybind11.h>
 #include <cstring>
 #include "oneflow/api/python/framework/tensor.h"
@@ -33,7 +32,6 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/api/python/exception/exception.h"
-namespace py = pybind11;
 
 namespace oneflow {
 namespace one {
@@ -54,6 +52,7 @@ static PyTypeObject PyTensortypeTemplate{
 std::vector<PyTensortype*> tensortype_list;
 
 std::unordered_map<DataType, std::string> datatype_to_string_dict{
+    // functional::To failed when dtype->datatype() == kChar
     // {kChar, "CharTensor"},
     {kFloat, "FloatTensor"},
     {kDouble, "DoubleTensor"},
@@ -105,20 +104,11 @@ static std::string device_to_string(DeviceType dtype) {
 }
 
 PyObject* tensortype_from_string(const std::string& tensortype_str) {
-// PyObject* tensortype_from_string(const char* tensortype_str) {
   std::string oneflow_prefix = "oneflow.";
-  // const char* oneflow_prefix = "oneflow.";
-  std::cout << "tensortype string " << tensortype_str << std::endl;
-  // std::cout << "std::string tensortype string " << std::string(tensortype_str) << std::endl;
-  std::cout << "oneflow prefix string " << oneflow_prefix << std::endl;
-  // std::cout << "std::string oneflow prefix string " << std::string(oneflow_prefix) << std::endl;
-  // CHECK_OR_THROW(strncmp(oneflow_prefix, tensortype_str, 8)) << "invalid type" << tensortype_str;
   auto mismatch_pair = std::mismatch(oneflow_prefix.begin(), oneflow_prefix.end(), tensortype_str.begin());
   CHECK_OR_THROW(mismatch_pair.first == oneflow_prefix.end()) << "invalid type: " << tensortype_str;
-  std::cout << "oneflow_prefix.size() " << oneflow_prefix.size() << std::endl;
-  std::string dtype_str = tensortype_str.substr(oneflow_prefix.size());
-  std::cout << "dtype_str " << dtype_str << std::endl;
 
+  std::string dtype_str = tensortype_str.substr(oneflow_prefix.size());
   auto it = std::find_if(tensortype_list.begin(), tensortype_list.end(), [dtype_str](PyTensortype* type){
     return std::string(type->name) == dtype_str;
   });
@@ -148,8 +138,7 @@ static void init_tensortype(PyTypeObject& type, PyTypeObject& type_template, con
   type.tp_name = tp_name;
   type.tp_call = TensortypeType_call;
   type.tp_flags = Py_TPFLAGS_DEFAULT;
-  // type.tp_new = PyType_Type.tp_new;
-  if (PyType_Ready(&type) < 0) { std::cout << "error in init tensortype" << std::endl; }
+  if (PyType_Ready(&type) < 0) { CHECK_OR_THROW(false) << "tensortype initialization failed"; return; }
 }
 
 static void generalize_tensortype_list() {
