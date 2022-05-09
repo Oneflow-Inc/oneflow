@@ -101,6 +101,11 @@ std::shared_ptr<Tensor> Parameter::contiguous() const {
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
+std::shared_ptr<Tensor> Parameter::pin_memory() const {
+  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+  return CHECK_JUST(functional::PinMemory(tensor));
+}
+
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
     bool is_lazy, bool requires_grad, bool is_leaf) {
@@ -154,6 +159,11 @@ std::shared_ptr<Tensor> MirroredTensor::contiguous() const {
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
+std::shared_ptr<Tensor> MirroredTensor::pin_memory() const {
+  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+  return CHECK_JUST(functional::PinMemory(tensor));
+}
+
 Maybe<Tensor> MirroredTensor::clone() const {
   const auto& device_type = JUST(this->device())->type();
   int64_t device_id = JUST(this->device())->device_id();
@@ -165,6 +175,11 @@ std::shared_ptr<Tensor> ConsistentTensor::contiguous() const {
   std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
   if (tensor->is_contiguous()) { return tensor; }
   return CHECK_JUST(functional::ToContiguous(tensor));
+}
+
+std::shared_ptr<Tensor> ConsistentTensor::pin_memory() const {
+  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+  return CHECK_JUST(functional::PinMemory(tensor));
 }
 
 Maybe<Tensor> ConsistentTensor::clone() const {

@@ -277,31 +277,44 @@
   bind_python: True
 
 - name: "reduce_max"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdim=False) => ReduceMax"
   bind_python: True
 
 - name: "reduce_min"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMin"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdim=False) => ReduceMin"
   bind_python: True
 
 - name: "reduce_sum"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceSum"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceSum", 
+    "Tensor (Tensor x) => ReduceSumWhole"
+  ]
   bind_python: True
 
 - name: "reduce_mean"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMean"
+  signature: ["Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceMean",
+  "Tensor (Tensor x) => ReduceMeanWhole"]
   bind_python: True
 
 - name: "reduce_all"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAll"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceAll",
+    "Tensor (Tensor x) => ReduceAllWhole"
+  ]
   bind_python: True
 
 - name: "reduce_any"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAny"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceAny",
+    "Tensor (Tensor x) => ReduceAnyWhole"
+  ]
   bind_python: True
 
 - name: "reduce_prod"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False, *, DataType dtype=None) => ReduceProd"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False, *, DataType dtype=None) => ReduceProd",
+    "Tensor (Tensor x, *, DataType dtype=None) => ReduceProdWhole",
+  ]
   bind_python: True
 
 - name: "reduce_min_device_stage"
@@ -725,8 +738,7 @@
   bind_python: True
 
 - name: "empty"
-  signature:
-    ["Tensor (Shape shape, *, DataType dtype, Device device=None) => Empty"]
+  signature: "Tensor (Shape shape, *, DataType dtype, Device device=None, Bool pin_memory=False) => Empty"
   bind_python: True
 
 - name: "global_empty"
@@ -1946,6 +1958,10 @@
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => SplitLike"
   bind_python: True
 
+- name: "cosine_similarity"
+  signature: "Tensor (Tensor x, Tensor y, Int32 dim=1, Double eps=1e-8) => CosineSimilarity"
+  bind_python: True
+
 - name: "normalize"
   signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12, Bool use_l2_norm_kernel=True) => Normalize"
   bind_python: True
@@ -2166,3 +2182,8 @@
 - name: "roc_auc_score"
   signature: "Tensor (Tensor label, Tensor pred) => RocAucScore"
   bind_python: True
+
+- name: "pin_memory"
+  signature: "Tensor (Tensor input) => PinMemory"
+  bind_python: True
+
