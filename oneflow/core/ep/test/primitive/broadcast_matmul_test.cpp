@@ -55,8 +55,7 @@ void TestBroadcastMatmul(DeviceManagerRegistry* registry, const std::set<DeviceT
   }
   if (reduce_c) {
     Eigen::array<int, 1> reduce_dim = {0};
-    Eigen::array<int, 3> reduce_shape = {c_batch_dims, m, n};
-    out_c_buffer = broadcast_c_buffer.sum(reduce_dim).eval().reshape(reduce_shape);
+    out_c_buffer = broadcast_c_buffer.sum(reduce_dim).eval().reshape(out_c_buffer.dimensions());
   } else {
     out_c_buffer = broadcast_c_buffer;
   }
