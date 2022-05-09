@@ -535,7 +535,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
         tensor_name,  // tensor_name can't be replaced by op_new.op_name().str() directly when
                       // compiling with gcc and I has no idea why.
                       // But it works when compiling with clang.
-                      // Maybe temporary objects would be released more early using gcc.
+                      // Maybe temporary objects would be released earlier when using gcc.
         support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()));
     return ::mlir::success();
   }
