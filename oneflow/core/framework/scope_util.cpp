@@ -50,8 +50,8 @@ Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device)
     std::string device_tag = "cpu";
     std::string machine_ids = "0";
     std::string device_ids = "0";
-    if (device.type() == "cuda") {
-      device_tag = "cuda";
+    if (device.type() != "cpu") {
+      device_tag = device.type();
       device_ids = std::to_string(device.device_id());
     }
     scope = JUST(builder->BuildInitialScope(session_id, cfg_config_proto, device_tag,
