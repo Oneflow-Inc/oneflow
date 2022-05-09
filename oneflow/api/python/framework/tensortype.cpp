@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/api/python/functional/common.h"
@@ -120,7 +121,6 @@ Symbol<DType> TensortypeToDType(PyObject* type) {
   return DType::UInt8();
 }
 
-
 static PyObject* TensortypeType_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* tensor = NULL;
@@ -153,7 +153,6 @@ static PyHeapTypeObject* MakeTensortypeMetaclass() {
   type->tp_name = "tensortype";
   type->tp_base = PY_XINCREF(&PyType_Type);
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
-
   type->tp_call = TensortypeType_call;
   type->tp_dealloc = PyType_Type.tp_dealloc;
 
@@ -175,8 +174,9 @@ static PyTypeObject* MakeTensortypeType(const char* tensortype_name, const Devic
   type->tp_base = (PyTypeObject*)PyTensortypeMetaclass_Type;
   type->tp_name = tensortype_name;
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
-
+  ((PyObject*)type)->ob_type = &PyTensortypeMetaclass_Type->ht_type;
   if (PyType_Ready(type) < 0) { return NULL; }
+
   PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow"));
   if (device == DeviceType::kCUDA) {
     PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow.cuda"));
@@ -187,7 +187,6 @@ static PyTypeObject* MakeTensortypeType(const char* tensortype_name, const Devic
       return NULL;
     }
   } else {
-    ((PyObject*)type)->ob_type = &PyTensortypeMetaclass_Type->ht_type;
     if (type && PyModule_AddObject(m.ptr(), tensortype_name, (PyObject*)type) < 0) { return NULL; }
   }
   return type;

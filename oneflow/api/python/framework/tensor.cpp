@@ -287,8 +287,7 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
       const auto& tt = functional::To(t, functional::PyUnpackDType(dtype), false);
       return functional::CastToPyObject(tt);
     } else if (PyTensortype_Check(dtype)) {
-      Optional<std::string> device =
-          TensortypeToDevice(dtype) == DeviceType::kCPU ? "cpu" : "cuda";
+      Optional<std::string> device = TensortypeToDevice(dtype) == DeviceType::kCPU ? "cpu" : "cuda";
       const auto& tt = functional::To(t, device, TensortypeToDType(dtype), false);
       return functional::CastToPyObject(tt);
     } else {
