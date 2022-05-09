@@ -975,6 +975,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     delete_op_names.push_back(embedding_op.op_name());
 
     const LogicalBlobId out = GenLogicalBlobId(embedding_op.output("embeddings", 0));
+    std::string cast_out_lbn;
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       if (consumer->op().op_conf().has_user_conf()
@@ -987,7 +988,23 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
           UpdateConsumerOpConf(cast_consumer, cast_out_lbi, new_embeddings_lbn, &op_name2op_conf);
         }
       } else {
-        UpdateConsumerOpConf(consumer, out, new_embeddings_lbn, &op_name2op_conf);
+        if (ctx->job_desc().enable_auto_mixed_precision()) {
+          if (cast_out_lbn.empty()) {
+            auto cast_op =
+                user_op::UserOpConfWrapperBuilder(embedding_op.op_name() + "_cast_embedding_h2f")
+                    .Op("cast")
+                    .Input("in", new_embeddings_lbn)
+                    .Output("out")
+                    .Attr<DataType>("dtype", embedding_op.attr<DataType>("dtype"))
+                    .ScopeSymbolId(embedding_scope_symbol_id)
+                    .Build();
+            cast_out_lbn = cast_op.output("out", 0);
+            add_ops.push_back(cast_op.op_conf());
+          }
+          UpdateConsumerOpConf(consumer, out, cast_out_lbn, &op_name2op_conf);
+        } else {
+          UpdateConsumerOpConf(consumer, out, new_embeddings_lbn, &op_name2op_conf);
+        }
       }
     }
 
