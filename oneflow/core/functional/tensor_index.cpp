@@ -353,6 +353,24 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   return result;
 }
 
+Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
+                                               TensorTuple& tensor_indices) {
+  if (!x->is_consistent()) {
+    const auto x_device = JUST(x->device());
+    for (int64_t i = 0; i < tensor_indices.size(); ++i) {
+      const auto tensor_index = tensor_indices[i];
+      if (tensor_index == nullptr) { continue; }
+      if (tensor_index->is_consistent()) { return Maybe<void>::Ok(); }
+      const auto tensor_index_device = JUST(tensor_index->device());
+      if ((tensor_index_device->type() != x_device->type())
+          || (tensor_index_device->device_id() != x_device->device_id())) {
+        tensor_indices[i] = JUST(Copy(tensor_index, x_device->type(), x_device->device_id()));
+      }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
