@@ -16,6 +16,7 @@ limitations under the License.
 import sys
 from collections import OrderedDict
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.common.data_type_pb2 as data_type_util
 from oneflow.framework.tensor import Tensor
 from string import Template
 
@@ -44,7 +45,41 @@ def _blob_desc_repr(blob_desc):
     desc_str += ")"
     return desc_str
 
-def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
+def _get_blob_size(blob_desc):
+    if len(blob_desc.shape.dim) == 0:
+        return 0
+
+    size = 1
+    for i in range(len(blob_desc.shape.dim)):
+        size *= blob_desc.shape.dim[i]
+    if blob_desc.data_type == data_type_util.DataType.kFloat:
+        size *= 4
+    elif blob_desc.data_type == data_type_util.DataType.kDouble: 
+        size *= 8
+    elif blob_desc.data_type == data_type_util.DataType.kFloat16: 
+        size *= 2
+    elif blob_desc.data_type == data_type_util.DataType.kInt32: 
+        size *= 4
+    elif blob_desc.data_type == data_type_util.DataType.kInt64: 
+        size *= 8
+    else:
+        # TODO: add support for more type
+        size *= -1
+    return size
+
+
+def _mem_desc_repr(reg_desc):
+    block_info = reg_desc[0]
+    blob_info = reg_desc[1]
+    desc_str = "mem=("
+    desc_str += "block=" + str(block_info.mem_block_id)
+    desc_str += ", life=[" + str(block_info.alloc_before_actor) + "]to[" + str(block_info.free_after_actor) + "]in[" + str(block_info.mem_block_total_actor_count) + "]"
+    desc_str += ", offset=" + str(block_info.mem_block_offset)
+    desc_str += ", size=" + str(_get_blob_size(blob_info)) + "B"
+    desc_str += ")"
+    return desc_str
+
+def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc, lbn2regst):
     arg_repr_list = []
     for bn in ordered_bn:
         lbns = list(bn2lbn[bn].s)
@@ -63,10 +98,21 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
         for bn_idx in range(len(lbns)):
             sub_bns_desc.append(_blob_desc_repr(lbn2blob_desc[lbns[bn_idx]]))
 
+        if lbn2regst is not None:
+            sub_bns_mem = []
+            for bn_idx in range(len(lbns)):
+                sub_bns_mem.append(_mem_desc_repr(lbn2regst[lbns[bn_idx]]))
+
         # sub arg repr
         sub_arg_repr_list = []
         for bn_idx in range(len(lbns)):
-            sub_arg_repr_list.append(lbns[bn_idx] + ":(" + sub_bns_sbp[bn_idx] + ", " + sub_bns_desc[bn_idx] + ")")
+            arg_repr = lbns[bn_idx] + ":(";
+            arg_repr += sub_bns_desc[bn_idx]
+            arg_repr += ", " + sub_bns_sbp[bn_idx]
+            if lbn2regst is not None:
+                arg_repr += ", " + sub_bns_mem[bn_idx]
+            arg_repr += ")"
+            sub_arg_repr_list.append(arg_repr)
 
 
         if len(lbns) > 1:  # arg of multiple tensors
@@ -77,29 +123,49 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
 
     return arg_repr_list
 
-def _get_user_op_io_repr(user_op_conf, bn2nd_sbp, lbn2blob_desc):
-    input_sig_str = ", ".join(_get_args_repr(user_op_conf.input_order, user_op_conf.input, bn2nd_sbp, lbn2blob_desc))
-    output_sig_str = ", ".join(_get_args_repr(user_op_conf.output_order, user_op_conf.output, bn2nd_sbp, lbn2blob_desc))
+def _get_user_op_io_repr(user_op_conf, bn2nd_sbp, lbn2blob_desc, lbn2regst):
+    input_sig_str = ", ".join(_get_args_repr(user_op_conf.input_order, user_op_conf.input, bn2nd_sbp, lbn2blob_desc, None))
+    output_sig_str = ", ".join(_get_args_repr(user_op_conf.output_order, user_op_conf.output, bn2nd_sbp, lbn2blob_desc, lbn2regst))
     return input_sig_str, output_sig_str
 
-def _get_var_op_io_repr(var_op_conf, bn2nd_sbp):
+def _get_var_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc, lbn2regst):
     input_sig_str = ""
-    #output_sig_str = op.name + "/" + var_op_conf.out
+    var_op_conf = op_conf.variable_conf
+    output_lbn = op_conf.name + "/" + var_op_conf.out
     output_sig_str = var_op_conf.out
     nd_sbp = bn2nd_sbp[var_op_conf.out]
-    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)
+    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn]) + ", " + _mem_desc_repr(lbn2regst[output_lbn])
     return input_sig_str, output_sig_str
 
 
-def operators_repr(ops, graph_proto):
+def operators_repr(ops, graph):
     r"""Generate operators' string representation of this module
     """
+    graph_proto = graph._compiled_graph_proto
     if len(ops) > 0:
         op_confs = dict()
         for op_conf in graph_proto.net.op:
             op_confs[op_conf.name] = op_conf
 
-    def _op_signature(op):
+    plan_proto = graph._exe_plan_proto
+    if len(ops) > 0:
+        lbn2regst = dict()
+        for task in plan_proto.task:
+            # only show rank 0 mem at the moment
+            if task.machine_id != 0:
+                continue
+            for key in task.produced_regst_desc:
+                reg_desc = task.produced_regst_desc[key]
+                regst_desc_type = reg_desc.regst_desc_type
+                if not regst_desc_type.HasField("data_regst_desc"):
+                    continue
+                for lbi_desc in regst_desc_type.data_regst_desc.lbi2blob_desc:
+                    lbi = lbi_desc.lbi
+                    lbn = lbi.op_name + "/" + lbi.blob_name
+                    lbn2regst[lbn] = (reg_desc, lbi_desc.blob_desc)
+
+
+    def _op_signature(op, lbn2regst):
         bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[op.name].bn_in_op2nd_sbp
         lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
         signature_template = Template(op.name + "($input) -> ($output)")
@@ -108,9 +174,9 @@ def operators_repr(ops, graph_proto):
 
         # Only deal with UserOpConf and VariableOpConf for now.
         if op.HasField("user_conf"):
-            input_sig_str, output_sig_str = _get_user_op_io_repr(op.user_conf, bn2nd_sbp, lbn2blob_desc)
+            input_sig_str, output_sig_str = _get_user_op_io_repr(op.user_conf, bn2nd_sbp, lbn2blob_desc, lbn2regst)
         elif op.HasField("variable_conf"):
-            input_sig_str, output_sig_str = _get_var_op_io_repr(op.variable_conf, bn2nd_sbp)
+            input_sig_str, output_sig_str = _get_var_op_io_repr(op, bn2nd_sbp, lbn2blob_desc,lbn2regst)
 
         return signature_template.substitute(input=input_sig_str, output=output_sig_str)
 
@@ -120,7 +186,7 @@ def operators_repr(ops, graph_proto):
         op_conf = op_confs[op]
         assert isinstance(op_conf, op_conf_util.OperatorConf)
         op_str = "(OPERATOR: "
-        op_str += _op_signature(op_conf)
+        op_str += _op_signature(op_conf, lbn2regst)
         op_str += ")"
         ops_strs.append(op_str)
     return ops_strs

@@ -63,6 +63,7 @@ class NNGraph final : public NNGraphIf {
   Maybe<std::vector<std::shared_ptr<one::Tensor>>> GetAdditionalVarOpTensors() const;
   Maybe<void> CompileAndInitRuntime();
   Maybe<Job> GetCompiledJob() { return job_; }
+  Maybe<Plan> GetExePlan() { return plan_; }
   Maybe<void> Close();
 
  private:

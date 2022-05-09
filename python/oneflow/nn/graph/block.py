@@ -555,7 +555,7 @@ class ModuleBlock(Block):
                 module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
                     self.name_prefix + self.name
                 ]
-                return operators_repr(module_conf.ops, self._belonged_graph._compiled_graph_proto)
+                return operators_repr(module_conf.ops, self._belonged_graph)
 
         return []
 

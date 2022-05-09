@@ -47,6 +47,11 @@ Maybe<py::bytes> APINNGraphGetCompiledSerializedJob(const std::shared_ptr<NNGrap
   const auto job = *JUST(graph->GetCompiledJob());
   return py::bytes(job.SerializeAsString());
 }
+
+Maybe<py::bytes> APINNGraphGetSerializedPlan(const std::shared_ptr<NNGraph>& graph) {
+  const auto plan = *JUST(graph->GetExePlan());
+  return py::bytes(plan.SerializeAsString());
+}
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
@@ -62,7 +67,8 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
       .def_property_readonly("additional_var_names", &APINNGraphAdditionalVarNames)
       .def_property_readonly("additional_var_tensors", &APINNGraphAdditionalVarTensors)
       .def("complie_and_init_runtime", &NNGraph::CompileAndInitRuntime)
-      .def("get_compiled_job_str", &APINNGraphGetCompiledSerializedJob);
+      .def("get_compiled_job_str", &APINNGraphGetCompiledSerializedJob)
+      .def("get_plan_str", &APINNGraphGetSerializedPlan);
 
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
