@@ -167,4 +167,150 @@ cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_HIP
+
+#include <hipblas.h>
+#include <hip/hip_runtime.h>
+#include <miopen/miopen.h>
+#include <hiprand.h>
+#include <rccl.h>
+#include <hip/hip_fp16.h>
+#include "oneflow/core/device/cuda_pseudo_half.h"
+#include "oneflow/core/ep/hip/hip_stream.h"
+
+// #if CUDA_VERSION >= 10020
+
+// #include <nvjpeg.h>
+
+// #endif
+
+namespace oneflow {
+
+const char* CublasGetErrorString(hipblasStatus_t error);
+
+const char* CurandGetErrorString(hiprandStatus_t error);
+
+// #if CUDA_VERSION >= 10020
+
+// const char* NvjpegGetErrorString(nvjpegStatus_t error);
+
+// #endif
+
+#define OF_CUDA_CHECK(condition)                                                               \
+  for (hipError_t _of_cuda_check_status = (condition); _of_cuda_check_status != hipSuccess;) \
+  LOG(FATAL) << "Check failed: " #condition " : " << hipGetErrorString(_of_cuda_check_status) \
+             << " (" << _of_cuda_check_status << ") "
+
+#define OF_CUDNN_CHECK(condition)                                                                \
+  for (hipdnnStatus_t _of_cudnn_check_status = (condition);                                       \
+       _of_cudnn_check_status != HIPDNN_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << miopenGetErrorString(_of_cudnn_check_status) \
+             << " (" << _of_cudnn_check_status << ") "
+
+#define OF_CUBLAS_CHECK(condition)                                                                 \
+  for (hipblasStatus_t _of_cublas_check_status = (condition);                                       \
+       _of_cublas_check_status != HIPBLAS_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << CublasGetErrorString(_of_cublas_check_status) \
+             << " (" << _of_cublas_check_status << ") "
+
+#define OF_CURAND_CHECK(condition)                                                                 \
+  for (hiprandStatus_t _of_curand_check_status = (condition);                                       \
+       _of_curand_check_status != HIPRAND_STATUS_SUCCESS;)                                          \
+  LOG(FATAL) << "Check failed: " #condition " : " << CurandGetErrorString(_of_curand_check_status) \
+             << " (" << _of_curand_check_status << ") "
+
+#define OF_NCCL_CHECK(condition)                                                                \
+  for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;) \
+  LOG(FATAL) << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status)  \
+             << " (" << _of_nccl_check_status << "). "                                          \
+             << "To see more detail, please run OneFlow with system variable NCCL_DEBUG=INFO"
+
+#define OF_NCCL_CHECK_OR_RETURN(condition)                                                         \
+  for (ncclResult_t _of_nccl_check_status = (condition); _of_nccl_check_status != ncclSuccess;)    \
+  return Error::CheckFailedError().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)                 \
+         << "Check failed: " #condition " : " << ncclGetErrorString(_of_nccl_check_status) << " (" \
+         << _of_nccl_check_status << ") "
+
+// #if CUDA_VERSION >= 10020
+
+// #define OF_NVJPEG_CHECK(condition)                                                                 \
+//   for (nvjpegStatus_t _of_nvjpeg_check_status = (condition);                                       \
+//        _of_nvjpeg_check_status != NVJPEG_STATUS_SUCCESS;)                                          \
+//   LOG(FATAL) << "Check failed: " #condition " : " << NvjpegGetErrorString(_of_nvjpeg_check_status) \
+//              << " (" << _of_nvjpeg_check_status << ") "
+
+// #endif
+
+// CUDA: grid stride looping
+#define CUDA_1D_KERNEL_LOOP(i, n)                                                                 \
+  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
+       i += step)
+
+#define CUDA_1D_KERNEL_LOOP_T(type, i, n)                                                      \
+  for (type i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < (n); \
+       i += step)
+
+const int32_t kCudaThreadsNumPerBlock = 512;
+const int32_t kCudaMaxBlocksNum = 8192;
+const int32_t kCudaWarpSize = 32;
+
+// 48KB, max byte size of shared memroy per thread block
+// TODO: limit of shared memory should be different for different arch
+const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
+
+inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
+  CHECK_GT(n, 0);
+  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
+}
+
+#define RUN_CUDA_KERNEL(func, stream, elem_cnt, ...) \
+  stream->As<ep::CudaStream>()->LaunchKernel(func, elem_cnt, 1, __VA_ARGS__)
+
+size_t GetAvailableGpuMemSize(int dev_id);
+
+hipError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
+
+class CudaCurrentDeviceGuard final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaCurrentDeviceGuard);
+  explicit CudaCurrentDeviceGuard(int32_t dev_id);
+  CudaCurrentDeviceGuard();
+  ~CudaCurrentDeviceGuard();
+
+ private:
+  int32_t saved_dev_id_ = -1;
+};
+
+// class CublasMathModeGuard final {
+//  public:
+//   OF_DISALLOW_COPY_AND_MOVE(CublasMathModeGuard);
+//   CublasMathModeGuard(hipblasHandle_t handle, cublasMath_t new_mode);
+//   explicit CublasMathModeGuard(hipblasHandle_t handle);
+//   ~CublasMathModeGuard();
+
+//   void SetMathMode(cublasMath_t new_mode);
+
+//  private:
+//   hipblasHandle_t handle_{};
+//   cublasMath_t saved_mode_{};
+//   cublasMath_t new_mode_{};
+// };
+
+// int GetCudaSmVersion();
+
+// int GetCudaPtxVersion();
+
+int GetCudaDeviceIndex();
+
+int GetCudaDeviceCount();
+
+void InitCudaContextOnce(int device_id);
+
+// hipError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
+
+}  // namespace oneflow
+
+
+#endif // WITH_HIP
+
 #endif  // ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_

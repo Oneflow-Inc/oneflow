@@ -21,6 +21,9 @@ limitations under the License.
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #endif
+#if defined(WITH_HIP)
+#include <hip/hip_fp16.h>
+#endif
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
@@ -44,6 +47,13 @@ template<>
 struct IsFloat16<half> : std::true_type {};
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_HIP
+
+template<>
+struct IsFloat16<half> : std::true_type {};
+
+#endif  // WITH_HIP
 
 template<typename T>
 struct IsFloat16 : std::false_type {};
@@ -103,6 +113,8 @@ template<DataType type>
 using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
 
 #if defined(__CUDACC__)
+#define OF_DEVICE_FUNC __device__ __host__ __forceinline__
+#elif defined(__HIPCC__)
 #define OF_DEVICE_FUNC __device__ __host__ __forceinline__
 #else
 #define OF_DEVICE_FUNC inline
@@ -222,6 +234,14 @@ struct DevDType {
 };
 
 #if defined(WITH_CUDA)
+template<>
+struct DevDType<DeviceType::kCUDA, float16> {
+  static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
+  typedef half type;
+};
+#endif
+
+#if defined(WITH_HIP)
 template<>
 struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");

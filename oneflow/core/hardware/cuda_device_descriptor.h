@@ -60,4 +60,43 @@ class CudaDeviceDescriptor : public DeviceDescriptor {
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_HIP
+
+namespace oneflow {
+
+namespace hardware {
+
+constexpr char kCudaDeviceDescriptorClassName[] = "cuda";
+
+class CudaDeviceDescriptor : public DeviceDescriptor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaDeviceDescriptor);
+  ~CudaDeviceDescriptor() override;
+
+  int32_t Ordinal() const;
+  const std::string& Name() const;
+  size_t GlobalMemorySizeBytes() const;
+  int32_t ClockRateKHz() const;
+  int32_t ComputeCapabilityMajor() const;
+  int32_t ComputeCapabilityMinor() const;
+  int32_t MemoryClockRateKHz() const;
+  int32_t MemoryBusWidthBit() const;
+  const std::string& PCIBusID() const;
+  void Serialize(std::string* serialized) const;
+  static std::shared_ptr<const CudaDeviceDescriptor> Query(int32_t ordinal);
+  static std::shared_ptr<const CudaDeviceDescriptor> Deserialize(const std::string& serialized);
+
+ private:
+  CudaDeviceDescriptor();
+
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
+};
+
+}  // namespace hardware
+
+}  // namespace oneflow
+
+#endif  // WITH_HIP
+
 #endif  // ONEFLOW_CORE_HARDWARE_CUDA_DEVICE_DESCRIPTOR_H_

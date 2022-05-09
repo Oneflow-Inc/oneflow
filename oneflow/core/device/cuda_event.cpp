@@ -34,4 +34,21 @@ bool CudaEvent::Query() const { return cudaEventQuery(event_) != cudaErrorNotRea
 
 #endif
 
+#ifdef WITH_HIP
+
+CudaEvent::CudaEvent(int device_id, unsigned int flags) : device_id_(device_id) {
+  CudaCurrentDeviceGuard guard(device_id_);
+  OF_CUDA_CHECK(hipEventCreateWithFlags(&event_, flags));
+}
+
+CudaEvent::~CudaEvent() {
+  CudaCurrentDeviceGuard guard(device_id_);
+  OF_CUDA_CHECK(hipEventDestroy(event_));
+}
+
+bool CudaEvent::Query() const { return hipEventQuery(event_) != hipErrorNotReady; }
+
+
+#endif
+
 }  // namespace oneflow
