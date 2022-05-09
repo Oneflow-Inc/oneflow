@@ -347,7 +347,7 @@ Maybe<vm::ThreadCtx*> VirtualMachine::FindOrCreateThreadCtx(Symbol<Device> devic
                                                             StreamRole stream_role) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   vm::ThreadCtx** thread_ctx_ptr = nullptr;
-  if (StreamRoleSwitch<StreamOnIndependentThread>(stream_role)) {
+  if (StreamOnIndependentThread::Visit(stream_role)) {
     auto key = std::make_pair(device->enum_type(), stream_role);
     thread_ctx_ptr = &devcie_type_stream_role_2independent_thread_ctx_[key];
   } else {
@@ -379,7 +379,7 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
       int device_type_value = static_cast<int>(device->enum_type());
       CHECK_GT(device_type_value, 0);
       std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
-      if (!StreamRoleSwitch<StreamOnIndependentThread>(stream_role)) {
+      if (!StreamOnIndependentThread::Visit(stream_role)) {
         CHECK_JUST(InitThisThreadConsistentId(device_type_value + kThreadConsistentIdScheduler,
                                               device_tag));
       }
@@ -400,12 +400,13 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   // stream_ptr may be used after timout.
   auto stream_ptr = std::make_shared<vm::Stream*>(nullptr);
   auto bc = std::make_shared<BlockingCounter>(1);
-  vm_->InsertSchedulerProbe([stream_ptr, thread_ctx, device, stream_role, bc](vm::VirtualMachineEngine* vm) {
-    auto stream = intrusive::make_shared<vm::Stream>(thread_ctx, device, stream_role);
-    thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
-    *stream_ptr = stream.Mutable();
-    bc->Decrease();
-  });
+  vm_->InsertSchedulerProbe(
+      [stream_ptr, thread_ctx, device, stream_role, bc](vm::VirtualMachineEngine* vm) {
+        auto stream = intrusive::make_shared<vm::Stream>(thread_ctx, device, stream_role);
+        thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
+        *stream_ptr = stream.Mutable();
+        bc->Decrease();
+      });
   JUST(NotifyOrRunScheduler());
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return *stream_ptr;

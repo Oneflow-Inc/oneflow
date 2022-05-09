@@ -81,41 +81,32 @@ class CudaRecordEventInstructionType final : public vm::InstructionType {
 
 }  // namespace vm
 
-struct GetRecordEventInstructionType {
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kInvalid>,
-                                                DeviceType device_type) {  // NOLINT
+struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventInstructionType> {
+  static Maybe<const vm::InstructionType*> VisitInvalid(DeviceType device_type) {  // NOLINT
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kCompute>,
-                                                DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitCompute(DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kHost2Device>,
-                                                DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitHost2Device(DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kDevice2Host>,
-                                                DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitDevice2Host(DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
-                                                DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitSyncedLaunchedCommNet(DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
-                                                DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitAsyncedLaunchedCommNet(DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kBarrier>,
-                                                DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitBarrier(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kCriticalSection>,
-                                                DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitCriticalSection(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kLazyJobLauncher>,
-                                                DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
 

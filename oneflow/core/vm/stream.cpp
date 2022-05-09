@@ -27,7 +27,7 @@ void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole s
   set_thread_ctx(thread_ctx);
   device_ = device;
   stream_role_ = stream_role;
-  stream_type_ = CHECK_JUST(StreamRoleSwitch<GetStreamType>(stream_role, device->enum_type()));
+  stream_type_ = CHECK_JUST(GetStreamType::Visit(stream_role, device->enum_type()));
   stream_type_->InitDeviceCtx(mut_device_ctx(), this);
 }
 

@@ -39,7 +39,7 @@ void CallPhyInstrOperand::ForEachConstMirroredObject(
 void CallPhyInstrOperand::InitStreamSequentialDependence() {
   const auto& stream = opkernel().stream();
   auto* device_schedule_dep_object = stream->mut_schedule_local_dep_object();
-  if (StreamRoleSwitch<IsCommNetStream>(stream->stream_role())) {
+  if (IsCommNetStream::Visit(stream->stream_role())) {
     // Sequantialize nccl instructions to avoid deadlock
     stream_sequential_dependence_ = device_schedule_dep_object;
   } else {

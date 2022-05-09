@@ -21,18 +21,16 @@ limitations under the License.
 
 namespace oneflow {
 
-struct StreamOnIndependentThread {
-  static bool Case(StreamRoleCase<StreamRole::kInvalid>) {  // NOLINT
-    LOG(FATAL);
-  }
-  static bool Case(StreamRoleCase<StreamRole::kCompute>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kHost2Device>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kDevice2Host>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kBarrier>) { return false; }
-  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return true; }
-  static bool Case(StreamRoleCase<StreamRole::kLazyJobLauncher>) { return true; }
+struct StreamOnIndependentThread : public StreamRoleVisitor<StreamOnIndependentThread> {
+  static bool VisitInvalid() { LOG(FATAL); }  // NOLINT
+  static bool VisitCompute() { return false; }
+  static bool VisitHost2Device() { return false; }
+  static bool VisitDevice2Host() { return false; }
+  static bool VisitSyncedLaunchedCommNet() { return false; }
+  static bool VisitAsyncedLaunchedCommNet() { return false; }
+  static bool VisitBarrier() { return false; }
+  static bool VisitCriticalSection() { return true; }
+  static bool VisitLazyJobLauncher() { return true; }
 };
 
 }  // namespace oneflow

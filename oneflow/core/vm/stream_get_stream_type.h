@@ -30,13 +30,11 @@ limitations under the License.
 
 namespace oneflow {
 
-struct GetStreamType {
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kInvalid>,
-                                           DeviceType device_type) {  // NOLINT
+struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
+  static Maybe<const vm::StreamType*> VisitInvalid(DeviceType device_type) {  // NOLINT
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kCompute>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitCompute(DeviceType device_type) {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuStreamType>();
     } else if (device_type == DeviceType::kCUDA) {
@@ -45,24 +43,21 @@ struct GetStreamType {
       UNIMPLEMENTED_THEN_RETURN();
     }
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kHost2Device>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitHost2Device(DeviceType device_type) {
     if (device_type == DeviceType::kCUDA) {
       return SingletonPtr<vm::CudaCopyH2DStreamType>();
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kDevice2Host>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitDevice2Host(DeviceType device_type) {
     if (device_type == DeviceType::kCUDA) {
       return SingletonPtr<vm::CudaCopyD2HStreamType>();
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitSyncedLaunchedCommNet(DeviceType device_type) {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuStreamType>();
     } else if (device_type == DeviceType::kCUDA) {
@@ -71,8 +66,7 @@ struct GetStreamType {
       UNIMPLEMENTED_THEN_RETURN();
     }
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitAsyncedLaunchedCommNet(DeviceType device_type) {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuStreamType>();
     } else if (device_type == DeviceType::kCUDA) {
@@ -81,16 +75,13 @@ struct GetStreamType {
       UNIMPLEMENTED_THEN_RETURN();
     }
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kBarrier>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitBarrier(DeviceType device_type) {
     return SingletonPtr<vm::ControlStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kCriticalSection>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitCriticalSection(DeviceType device_type) {
     return SingletonPtr<vm::CriticalSectionStreamType>();
   }
-  static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kLazyJobLauncher>,
-                                           DeviceType device_type) {
+  static Maybe<const vm::StreamType*> VisitLazyJobLauncher(DeviceType device_type) {
     return SingletonPtr<vm::LazyJobStreamType>();
   }
 };

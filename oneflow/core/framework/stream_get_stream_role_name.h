@@ -24,26 +24,16 @@ limitations under the License.
 
 namespace oneflow {
 
-struct GetStreamRoleName {
-  static const char* Case(StreamRoleCase<StreamRole::kInvalid>) {  // NOLINT
-    return "invalid";
-  }
-  static const char* Case(StreamRoleCase<StreamRole::kCompute>) { return "compute"; }
-  static const char* Case(StreamRoleCase<StreamRole::kHost2Device>) { return "h2d"; }
-  static const char* Case(StreamRoleCase<StreamRole::kDevice2Host>) { return "d2h"; }
-  static const char* Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) {
-    return "synced_launched_comm_net";
-  }
-  static const char* Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) {
-    return "asynced_launched_comm_net";
-  }
-  static const char* Case(StreamRoleCase<StreamRole::kBarrier>) { return "barrier"; }
-  static const char* Case(StreamRoleCase<StreamRole::kCriticalSection>) {
-    return "critical_section";
-  }
-  static const char* Case(StreamRoleCase<StreamRole::kLazyJobLauncher>) {
-    return "lazy_job_launcher";
-  }
+struct GetStreamRoleName : public StreamRoleVisitor<GetStreamRoleName> {
+  static const char* VisitInvalid() { return "invalid"; }  // NOLINT
+  static const char* VisitCompute() { return "compute"; }
+  static const char* VisitHost2Device() { return "h2d"; }
+  static const char* VisitDevice2Host() { return "d2h"; }
+  static const char* VisitSyncedLaunchedCommNet() { return "synced_launched_comm_net"; }
+  static const char* VisitAsyncedLaunchedCommNet() { return "asynced_launched_comm_net"; }
+  static const char* VisitBarrier() { return "barrier"; }
+  static const char* VisitCriticalSection() { return "critical_section"; }
+  static const char* VisitLazyJobLauncher() { return "lazy_job_launcher"; }
 };
 
 }  // namespace oneflow

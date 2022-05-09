@@ -400,11 +400,11 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (StreamRoleSwitch<IsCommNetStream>(last_used_stream->stream_role())) {
+  } else if (IsCommNetStream::Visit(last_used_stream->stream_role())) {
     // Disable inter-device instruction sequential for tensor used by communicative stream.
     // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (StreamRoleSwitch<IsCommNetStream>(producer_stream->stream_role())) {
+  } else if (IsCommNetStream::Visit(producer_stream->stream_role())) {
     // Disable inter-device instruction sequential for tensor produced by communicative stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {
@@ -416,8 +416,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   DeviceType device_type = producer_stream->device()->enum_type();
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       producer_stream->mut_vm_stream(),
-      JUST(StreamRoleSwitch<GetReleaseInstructionType>(stream_role, device_type)),
-      phy_instr_operand);
+      JUST(GetReleaseInstructionType::Visit(stream_role, device_type)), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -451,7 +450,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
     std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
     const std::string& modifier, Symbol<Stream> last_used_stream) {
   DeviceType device_type = last_used_stream->device()->enum_type();
-  if (!StreamRoleSwitch<NeedSoftSync>(last_used_stream->stream_role(), device_type)) {
+  if (!NeedSoftSync::Visit(last_used_stream->stream_role(), device_type)) {
     return Maybe<void>::Ok();
   }
   OF_PROFILER_RANGE_GUARD("SoftStream");
@@ -460,8 +459,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   StreamRole stream_role = last_used_stream->stream_role();
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       last_used_stream->mut_vm_stream(),
-      JUST(StreamRoleSwitch<GetRecordEventInstructionType>(stream_role, device_type)),
-      phy_instr_operand);
+      JUST(GetRecordEventInstructionType::Visit(stream_role, device_type)), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }

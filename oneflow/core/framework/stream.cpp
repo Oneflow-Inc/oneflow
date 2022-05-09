@@ -35,7 +35,7 @@ Stream::Stream(Symbol<Device> device, StreamRole stream_role)
 Maybe<void> Stream::Init() {
   auto* vm = JUST(GlobalMaybe<VirtualMachine>());
   schedule_local_dep_object_ = vm->FindOrCreateScheduleLocalDepObject(device_, stream_role_);
-  if (StreamRoleSwitch<IsCommNetStream>(stream_role_)) {
+  if (IsCommNetStream::Visit(stream_role_)) {
     transport_local_dep_object_ = vm->FindOrCreateTransportLocalDepObject();
   }
   vm_stream_ = JUST(vm->CreateStream(device_, stream_role_));

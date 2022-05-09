@@ -29,7 +29,7 @@ namespace vm {
 
 std::string InstructionMsg::DebugName() const {
   std::string instr_name = instruction_type().DebugName(*this);
-  return instr_name + ":" + StreamRoleSwitch<GetStreamRoleName>(stream().stream_role());
+  return instr_name + ":" + GetStreamRoleName::Visit(stream().stream_role());
 }
 
 void InstructionMsg::__Init__(Stream* stream, const InstructionType* instruction_type,
