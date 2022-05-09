@@ -115,26 +115,6 @@ if(BUILD_CUDA)
   find_package(CUDNN REQUIRED)
 endif()
 
-if (BUILD_ROCM)
-  # Find rocm packages
-  find_package(hip)
-  find_package(hipblas)
-  find_package(hipcub)
-  find_package(rocrand)
-  find_package(hiprand)
-  find_package(miopen)
-  find_package(rccl)
-  add_definitions(-DWITH_ROCM)
-  list(APPEND oneflow_third_party_libs hip::device)
-  list(APPEND oneflow_third_party_libs roc::hipblas)
-  list(APPEND oneflow_third_party_libs hip::hipcub)
-  list(APPEND oneflow_third_party_libs roc::rocrand)
-  list(APPEND oneflow_third_party_libs hip::hiprand)
-  list(APPEND oneflow_third_party_libs MIOpen)
-  link_directories(/opt/rocm/rccl/lib)
-  list(APPEND oneflow_third_party_libs rccl)
-endif()
-
 if(NOT WIN32)
   set(BLA_STATIC ON)
   set(BLA_VENDOR "Intel10_64lp_seq")
@@ -262,6 +242,38 @@ if(BUILD_CUDA)
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUDNN_INCLUDE_DIRS} ${CUB_INCLUDE_DIR}
        ${NCCL_INCLUDE_DIR})
 endif()
+
+
+if (BUILD_ROCM)
+  # Find rocm packages
+  find_package(hip)
+  find_package(hipblas)
+  find_package(hipcub)
+  find_package(hiprand)
+  find_package(rocrand)
+  find_package(miopen)
+  find_package(rccl)
+  add_definitions(-DWITH_ROCM)
+  add_definitions(-D__HIP_PLATFORM_HCC__)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__HIP_PLATFORM_HCC__")
+  list(APPEND oneflow_third_party_libs hip::device)
+  list(APPEND oneflow_third_party_libs roc::hipblas)
+  list(APPEND oneflow_third_party_libs hip::hipcub)
+  list(APPEND oneflow_third_party_libs roc::rocrand)
+  list(APPEND oneflow_third_party_libs hip::hiprand)
+  list(APPEND oneflow_third_party_libs MIOpen)
+  link_directories(/opt/rocm/rccl/lib)
+  list(APPEND oneflow_third_party_libs rccl)
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HIP_INCLUDE_DIRS} 
+                                               ${HIPBLAS_INCLUDE_DIRS}
+                                               ${HIPCUB_INCLUDE_DIRS}
+                                               "/opt/rocm/hiprand/include"
+                                               "/opt/rocm/rocrand/include"
+                                               ${MIOPEN_INCLUDE_DIRS}
+                                               ${RCCL_INCLUDE_DIRS})
+  message(STATUS "ONEFLOW_THIRD_PARTY_INCLUDE_DIRS: ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS}")
+endif()
+
 
 if(BUILD_RDMA)
   if(UNIX)
