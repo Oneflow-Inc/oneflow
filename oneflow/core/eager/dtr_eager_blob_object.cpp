@@ -65,7 +65,7 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
     CHECK_NOTNULL_OR_RETURN(dptr);
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
-    InitNonPODTypeBlobIfNeed(tensor_storage_->non_pod_allocator(), blob_.get());
+    InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
   }
   // rewrite it
   return Maybe<void>::Ok();

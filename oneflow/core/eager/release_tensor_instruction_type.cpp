@@ -81,7 +81,7 @@ class GpuEvictDTRTensorInstructionType final : public EvictDTRTensorInstructionT
   ~GpuEvictDTRTensorInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(vm::RegisterInstructionType<GpuEvictDTRTensorInstructionType>("gpu.EvictDTRTensor"));
+COMMAND(vm::RegisterInstructionType<GpuEvictDTRTensorInstructionType>("cuda.EvictDTRTensor"));
 #endif
 
 template<typename StreamT>

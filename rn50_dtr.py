@@ -127,7 +127,7 @@ def display():
 model = models.resnet50()
 
 weights = flow.load("/tmp/abcdef")
-model.load_state_dict(weights)
+model.load_state_dict(weights, strict=False)
 
 criterion = nn.CrossEntropyLoss()
 
@@ -176,16 +176,19 @@ else:
 total_time = 0
 # train_bar = tqdm(train_data_loader, dynamic_ncols=True)
 
+if args.dtr:
+    for x in model.parameters():
+        x.grad = flow.zeros_like(x).to(cuda0)
+
+    flow.comm.barrier()
+    # temp()
+
 for iter, (train_data, train_label) in enumerate(train_data_loader):
 # for iter in range(10000):
     # train_data = data
     # train_label = label
-    if args.dtr:
-        for x in model.parameters():
-            x.grad = flow.zeros_like(x).to(cuda0)
-
-        flow.comm.barrier()
-        # temp()
+    if iter >= ALL_ITERS:
+        break
 
     train_data = train_data.to(cuda0)
     train_label = train_label.to(cuda0)
