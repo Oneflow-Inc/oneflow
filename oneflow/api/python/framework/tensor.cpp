@@ -274,29 +274,30 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  const auto& t = PyTensor_Unpack(self);
-  PyObject* dtype = NULL;
+  const auto& tensor = PyTensor_Unpack(self);
+  PyObject* tensortype = NULL;
   int non_blocking = 0;
   static const char* keywords[3] = {"dtype", "non_blocking", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords), &dtype,
-                                   &non_blocking)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords),
+                                   &tensortype, &non_blocking)) {
     return NULL;
   }
-  if (dtype != NULL) {
-    if (functional::PyDTypeCheck(dtype)) {
-      const auto& tt = functional::To(t, functional::PyUnpackDType(dtype), false);
-      return functional::CastToPyObject(tt);
-    } else if (PyTensortype_Check(dtype)) {
-      Optional<std::string> device = TensortypeToDevice(dtype) == DeviceType::kCPU ? "cpu" : "cuda";
-      const auto& tt = functional::To(t, device, TensortypeToDType(dtype), false);
-      return functional::CastToPyObject(tt);
-    } else {
-      return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
-    }
+  if (tensortype == NULL) {
+    PyObject* result =
+        GetTensortype(tensor->dtype()->data_type(), CHECK_JUST(tensor->device())->enum_type());
+    return result;
   }
-
-  PyObject* result = GetTensortype(t->dtype(), t->device());
-  return result;
+  if (functional::PyDTypeCheck(tensortype)) {
+    const auto& t = functional::To(tensor, functional::PyUnpackDType(tensortype), false);
+    return functional::CastToPyObject(t);
+  } else if (PyTensortype_Check(tensortype)) {
+    Optional<std::string> device =
+        TensortypeToDevice(tensortype) == DeviceType::kCPU ? "cpu" : "cuda";
+    const auto& t = functional::To(tensor, device, TensortypeToDType(tensortype), false);
+    return functional::CastToPyObject(t);
+  } else {
+    return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
+  }
   END_HANDLE_ERRORS
 }
 

@@ -14,16 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <Python.h>
+#include <dictobject.h>
 #include <methodobject.h>
 #include <object.h>
 #include <objimpl.h>
 #include <pybind11/pybind11.h>
 #include <strings.h>
+#include <algorithm>
+#include <cstring>
 #include <functional>
+#include <unordered_map>
+#include <vector>
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/device_type.cfg.h"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/api/python/functional/common.h"
@@ -42,84 +48,38 @@ namespace one {
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 #define PY_XINCREF(p) (({ Py_XINCREF(p); }), (p))
 
-PyHeapTypeObject* PyTensortypeMetaclass_Type = NULL;
-PyTypeObject* PyByteTensortypeObject_Type = NULL;
-PyTypeObject* PyCharTensortypeObject_Type = NULL;
-PyTypeObject* PyShortTensortypeObject_Type = NULL;
-PyTypeObject* PyIntTensortypeObject_Type = NULL;
-PyTypeObject* PyLongTensortypeObject_Type = NULL;
-PyTypeObject* PyHalfTensortypeObject_Type = NULL;
-PyTypeObject* PyFloatTensortypeObject_Type = NULL;
-PyTypeObject* PyDoubleTensortypeObject_Type = NULL;
+static PyTypeObject PyTensortypeMetaClass{
+    PyVarObject_HEAD_INIT(NULL, 0) "oneflow.tensortype",  // tp_name
+    sizeof(PyTypeObject),                                 // tp_basicsize
+};
 
-PyHeapTypeObject* PyCudaTensortypeMetaclass_Type = NULL;
-PyTypeObject* PyCudaByteTensortypeObject_Type = NULL;
-PyTypeObject* PyCudaCharTensortypeObject_Type = NULL;
-PyTypeObject* PyCudaShortTensortypeObject_Type = NULL;
-PyTypeObject* PyCudaIntTensortypeObject_Type = NULL;
-PyTypeObject* PyCudaLongTensortypeObject_Type = NULL;
-PyTypeObject* PyCudaHalfTensortypeObject_Type = NULL;
-PyTypeObject* PyCudaFloatTensortypeObject_Type = NULL;
-PyTypeObject* PyCudaDoubleTensortypeObject_Type = NULL;
+static PyTypeObject PyTensortypeTemplate{
+    PyVarObject_HEAD_INIT(&PyTensortypeMetaClass, 0) NULL,  // tp_name
+    sizeof(PyTensortype),                                   // tp_basicsize
+};
 
-PyObject* GetTensortype(const Symbol<DType>& dtype, const Maybe<Symbol<Device>>& device) {
-  auto devicetype = CHECK_JUST(device)->enum_type();
-  if (devicetype == DeviceType::kCPU) {
-    if (dtype == DType::UInt8()) { return (PyObject*)PyByteTensortypeObject_Type; }
-    if (dtype == DType::Int8()) { return (PyObject*)PyCharTensortypeObject_Type; }
-    if (dtype == DType::Int16()) { return (PyObject*)PyShortTensortypeObject_Type; }
-    if (dtype == DType::Int32()) { return (PyObject*)PyIntTensortypeObject_Type; }
-    if (dtype == DType::Int64()) { return (PyObject*)PyLongTensortypeObject_Type; }
-    if (dtype == DType::Float16()) { return (PyObject*)PyHalfTensortypeObject_Type; }
-    if (dtype == DType::Float()) { return (PyObject*)PyFloatTensortypeObject_Type; }
-    if (dtype == DType::Double()) { return (PyObject*)PyDoubleTensortypeObject_Type; }
-    return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
-  } else if (devicetype == DeviceType::kCUDA) {
-    if (dtype == DType::UInt8()) { return (PyObject*)PyCudaByteTensortypeObject_Type; }
-    if (dtype == DType::Int8()) { return (PyObject*)PyCudaCharTensortypeObject_Type; }
-    if (dtype == DType::Int16()) { return (PyObject*)PyCudaShortTensortypeObject_Type; }
-    if (dtype == DType::Int32()) { return (PyObject*)PyCudaIntTensortypeObject_Type; }
-    if (dtype == DType::Int64()) { return (PyObject*)PyCudaLongTensortypeObject_Type; }
-    if (dtype == DType::Float16()) { return (PyObject*)PyCudaHalfTensortypeObject_Type; }
-    if (dtype == DType::Float()) { return (PyObject*)PyCudaFloatTensortypeObject_Type; }
-    if (dtype == DType::Double()) { return (PyObject*)PyCudaDoubleTensortypeObject_Type; }
-    return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
-  }
-  return PyErr_Format(PyExc_RuntimeError, "Invalid device");
-}
+std::vector<PyTensortype*> tensortype_list;
 
-DeviceType TensortypeToDevice(PyObject* tensortype) {
-  if (((PyTypeObject*)tensortype)->tp_base == (PyTypeObject*)PyTensortypeMetaclass_Type)
-    return DeviceType::kCPU;
-  else
-    return DeviceType::kCUDA;
-}
+std::unordered_map<DataType, std::string> datatype_to_string_dict{
+    {kChar, "CharTensor"},
+    {kFloat, "FloatTensor"},
+    {kDouble, "DoubleTensor"},
+    {kInt8, "Int8Tensor"},
+    {kInt32, "IntTensor"},
+    {kInt64, "LongTensor"},
+    {kUInt8, "ByteTensor"},
+    {kFloat16, "HalfTensor"},
+    {kBFloat16, "BFloat16Tensor"},
+    {kBool, "BoolTensor"},
+    {kComplex32, "ComplexHalfTensor"},
+    {kComplex64, "ComplexFloatTensor"},
+    {kComplex128, "ComplexDoubleTensor"},
+};
 
-Symbol<DType> TensortypeToDType(PyObject* type) {
-  bool is_tensortype =
-      ((PyHeapTypeObject*)type)->ht_type.tp_base == (PyTypeObject*)PyTensortypeMetaclass_Type
-      || ((PyHeapTypeObject*)type)->ht_type.tp_base
-             == (PyTypeObject*)PyCudaTensortypeMetaclass_Type;
-  CHECK_OR_THROW(is_tensortype) << "invalid tensortype";
-  if (type == (PyObject*)PyByteTensortypeObject_Type) return DType::UInt8();
-  if (type == (PyObject*)PyCharTensortypeObject_Type) return DType::Int8();
-  if (type == (PyObject*)PyShortTensortypeObject_Type) return DType::Int16();
-  if (type == (PyObject*)PyIntTensortypeObject_Type) return DType::Int32();
-  if (type == (PyObject*)PyLongTensortypeObject_Type) return DType::Int64();
-  if (type == (PyObject*)PyHalfTensortypeObject_Type) return DType::Float16();
-  if (type == (PyObject*)PyFloatTensortypeObject_Type) return DType::Float();
-  if (type == (PyObject*)PyDoubleTensortypeObject_Type) return DType::Double();
-
-  if (type == (PyObject*)PyCudaByteTensortypeObject_Type) return DType::UInt8();
-  if (type == (PyObject*)PyCudaCharTensortypeObject_Type) return DType::Int8();
-  if (type == (PyObject*)PyCudaShortTensortypeObject_Type) return DType::Int16();
-  if (type == (PyObject*)PyCudaIntTensortypeObject_Type) return DType::Int32();
-  if (type == (PyObject*)PyCudaLongTensortypeObject_Type) return DType::Int64();
-  if (type == (PyObject*)PyCudaHalfTensortypeObject_Type) return DType::Float16();
-  if (type == (PyObject*)PyCudaFloatTensortypeObject_Type) return DType::Float();
-  if (type == (PyObject*)PyCudaDoubleTensortypeObject_Type) return DType::Double();
-  return DType::UInt8();
-}
+std::unordered_map<DeviceType, std::string> devicetype_to_string_dict{
+    {kCPU, ""},
+    {kCUDA, "cuda"},
+};
 
 static PyObject* TensortypeType_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -131,66 +91,115 @@ static PyObject* TensortypeType_call(PyObject* self, PyObject* args, PyObject* k
   if (!PyTensor_Check(tensor)) { return NULL; }
 
   Symbol<oneflow::DType> dtype = TensortypeToDType(self);
-  Optional<std::string> device_str = "cuda";
-  if (TensortypeToDevice(self) == DeviceType::kCPU) device_str = "cpu";
-
+  Optional<std::string> device_str = ((PyTensortype*)self)->is_cuda ? "cuda" : "cpu";
   const auto& t = PyTensor_Unpack(tensor);
   const auto& cast_t = functional::To(t, device_str, dtype, false);
   return functional::CastToPyObject(cast_t);
   END_HANDLE_ERRORS
 }
 
-// tensortype
-static PyHeapTypeObject* MakeTensortypeMetaclass() {
-  PyObject* name = PyUnicode_FromString("tensortype");
-
-  auto* heap_type = (PyHeapTypeObject*)PyType_Type.tp_alloc(&PyType_Type, 0);
-  heap_type->ht_name = name;
-  heap_type->ht_qualname = PY_XINCREF(name);
-
-  auto* type = &heap_type->ht_type;
-
-  type->tp_name = "tensortype";
-  type->tp_base = PY_XINCREF(&PyType_Type);
-  type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
-  type->tp_call = TensortypeType_call;
-  type->tp_dealloc = PyType_Type.tp_dealloc;
-
-  if (PyType_Ready(type) < 0) { return NULL; }
-  PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow"));
-  return heap_type;
+std::string datatype_to_string(DataType datatype) {
+  CHECK_OR_THROW(datatype_to_string_dict.find(datatype) != datatype_to_string_dict.end())
+      << "unsupported datatype";
+  return datatype_to_string_dict.at(datatype);
 }
 
-static PyTypeObject* MakeTensortypeType(const char* tensortype_name, const DeviceType device,
-                                        pybind11::module_& m) {
-  PyObject* name = PyUnicode_FromString(tensortype_name);
+std::string device_to_string(DeviceType dtype) {
+  CHECK_OR_THROW(devicetype_to_string_dict.find(dtype) != devicetype_to_string_dict.end())
+      << "unsupported devicetype";
+  return devicetype_to_string_dict.at(dtype);
+}
 
-  auto* metaclass = &PyTensortypeMetaclass_Type->ht_type;
-  auto* heap_type = (PyHeapTypeObject*)metaclass->tp_alloc(metaclass, 0);
-  if (!heap_type) { return NULL; }
-  heap_type->ht_name = name;
-  heap_type->ht_qualname = PY_XINCREF(name);
-  auto* type = &heap_type->ht_type;
-  type->tp_base = (PyTypeObject*)PyTensortypeMetaclass_Type;
-  type->tp_name = tensortype_name;
-  type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
-  ((PyObject*)type)->ob_type = &PyTensortypeMetaclass_Type->ht_type;
-  if (PyType_Ready(type) < 0) { return NULL; }
+void tensortype_from_string(const std::string& tensortype_str) {
+  std::string prefix("oneflow.");
+  CHECK_OR_THROW(std::mismatch(prefix.begin(), prefix.end(), tensortype_str.begin()).first
+                 == prefix.end())
+      << "invalid type: " << tensortype_str;
+}
 
-  PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow"));
-  if (device == DeviceType::kCUDA) {
-    PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow.cuda"));
-    auto cuda = m.def_submodule("cuda");
-    type->tp_base = (PyTypeObject*)PyCudaTensortypeMetaclass_Type;
-    ((PyObject*)type)->ob_type = &PyCudaTensortypeMetaclass_Type->ht_type;
-    if (type && PyModule_AddObject(cuda.ptr(), tensortype_name, (PyObject*)type) < 0) {
-      return NULL;
+static std::string get_name(DataType datatype, DeviceType device) {
+  auto device_string = device_to_string(device);
+  if (device_string.empty()) return datatype_to_string(datatype);
+  return device_string + "." + datatype_to_string(datatype);
+  // return datatype_to_string(datatype);
+}
+
+void init_metaclass(PyTypeObject& metaclass) {
+  metaclass.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+  metaclass.tp_base = &PyType_Type;
+  metaclass.tp_call = TensortypeType_call;
+  if (PyType_Ready(&metaclass) < 0) { return; }
+}
+
+void init_tensortype(PyTypeObject& type, PyTypeObject& type_template, const std::string& name) {
+  memcpy(&type, &type_template, sizeof(PyTypeObject));
+  char* tp_name = new char[64]{'\0'};
+  // name.c_str() has bug here, so convert with iterating
+  for (int i = 0; i < name.size(); i++) tp_name[i] = name[i];
+  type.tp_name = tp_name;
+  // type.tp_new = TensortypeType_call;
+  type.tp_call = TensortypeType_call;
+  type.tp_flags = Py_TPFLAGS_DEFAULT;
+  // type.tp_new = PyType_Type.tp_new;
+  if (PyType_Ready(&type) < 0) { std::cout << "error in init tensortype" << std::endl; }
+}
+
+void generalize_tensortype_list() {
+  init_metaclass(PyTensortypeMetaClass);
+  for (const auto& datatype_string : datatype_to_string_dict) {
+    for (const auto& devicetype_string : devicetype_to_string_dict) {
+      PyTensortype* tensortype = new PyTensortype();
+
+      // set name
+      std::string name = get_name(datatype_string.first, devicetype_string.first);
+
+      size_t n = sizeof(tensortype->name);
+      strncpy(tensortype->name, name.c_str(), n);
+      tensortype->name[n - 1] = '\0';
+
+      name = "oneflow." + name;
+      init_tensortype(tensortype->py_type, PyTensortypeTemplate, name);
+
+      // set type
+      tensortype->datatype = datatype_string.first;
+      tensortype->device = devicetype_string.first;
+      tensortype->is_cuda = tensortype->device == DeviceType::kCUDA;
+      tensortype_list.push_back(tensortype);
     }
-  } else {
-    if (type && PyModule_AddObject(m.ptr(), tensortype_name, (PyObject*)type) < 0) { return NULL; }
   }
-  return type;
 }
+
+static void binding(pybind11::module_& m) {
+  generalize_tensortype_list();
+  for (PyTensortype* tensortype : tensortype_list) {
+    Py_INCREF(tensortype);
+    auto module = m;
+    if (tensortype->is_cuda) module = m.def_submodule("cuda");
+
+    std::string type_name = std::string(tensortype->name);
+    type_name = type_name.substr(type_name.rfind('.') + 1);
+    // auto module_name = name.substr(0, idx);
+    if (tensortype
+        && PyModule_AddObject(module.ptr(), type_name.c_str(), (PyObject*)tensortype) < 0) {
+      CHECK_OR_THROW(false);
+    }
+  }
+}
+
+bool PyTensortype_Check(PyObject* obj) {
+  auto it = std::find_if(tensortype_list.begin(), tensortype_list.end(),
+                         [obj](PyTensortype* type) { return obj == (PyObject*)type; });
+  return it != tensortype_list.end();
+}
+
+PyObject* GetTensortype(DataType datatype, DeviceType device) {
+  auto it = std::find_if(tensortype_list.begin(), tensortype_list.end(),
+                         [datatype, device](PyTensortype* x) {
+                           return (x->datatype == datatype) && (x->device == device);
+                         });
+  if (it == tensortype_list.end()) return PyErr_Format(PyExc_RuntimeError, "Invalid dtype");
+  return (PyObject*)(*it);
+};
 
 }  // namespace one
 }  // namespace oneflow
@@ -200,27 +209,4 @@ static PyTypeObject* MakeTensortypeType(const char* tensortype_name, const Devic
 
 using namespace oneflow::one;
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  PyTensortypeMetaclass_Type = MakeTensortypeMetaclass();
-  PyByteTensortypeObject_Type = MakeTensortypeType("ByteTensor", oneflow::DeviceType::kCPU, m);
-  PyCharTensortypeObject_Type = MakeTensortypeType("CharTensor", oneflow::DeviceType::kCPU, m);
-  PyShortTensortypeObject_Type = MakeTensortypeType("ShortTensor", oneflow::DeviceType::kCPU, m);
-  PyIntTensortypeObject_Type = MakeTensortypeType("IntTensor", oneflow::DeviceType::kCPU, m);
-  PyLongTensortypeObject_Type = MakeTensortypeType("LongTensor", oneflow::DeviceType::kCPU, m);
-  PyHalfTensortypeObject_Type = MakeTensortypeType("HalfTensor", oneflow::DeviceType::kCPU, m);
-  PyFloatTensortypeObject_Type = MakeTensortypeType("FloatTensor", oneflow::DeviceType::kCPU, m);
-  PyDoubleTensortypeObject_Type = MakeTensortypeType("DoubleTensor", oneflow::DeviceType::kCPU, m);
-
-  PyCudaTensortypeMetaclass_Type = MakeTensortypeMetaclass();
-  PyCudaByteTensortypeObject_Type = MakeTensortypeType("ByteTensor", oneflow::DeviceType::kCUDA, m);
-  PyCudaCharTensortypeObject_Type = MakeTensortypeType("CharTensor", oneflow::DeviceType::kCUDA, m);
-  PyCudaShortTensortypeObject_Type =
-      MakeTensortypeType("ShortTensor", oneflow::DeviceType::kCUDA, m);
-  PyCudaIntTensortypeObject_Type = MakeTensortypeType("IntTensor", oneflow::DeviceType::kCUDA, m);
-  PyCudaLongTensortypeObject_Type = MakeTensortypeType("LongTensor", oneflow::DeviceType::kCUDA, m);
-  PyCudaHalfTensortypeObject_Type = MakeTensortypeType("HalfTensor", oneflow::DeviceType::kCUDA, m);
-  PyCudaFloatTensortypeObject_Type =
-      MakeTensortypeType("FloatTensor", oneflow::DeviceType::kCUDA, m);
-  PyCudaDoubleTensortypeObject_Type =
-      MakeTensortypeType("DoubleTensor", oneflow::DeviceType::kCUDA, m);
-}
+ONEFLOW_API_PYBIND11_MODULE("", m) { binding(m); }
