@@ -85,6 +85,32 @@ std::unordered_map<DeviceType, std::string> device_to_string_dict{
     {kCUDA, "cuda"},
 };
 
+Maybe<const Symbol<DType>&> TensortypeToDType(PyTensortype* self) {
+  return DType::Get(self->dtype);
+}
+
+DeviceType TensortypeToDevice(PyTensortype* self) {
+  return self->device;
+}
+
+static PyObject* TensortypeType_call(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* tensor = NULL;
+  static const char* keywords[2] = {"tensor", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", const_cast<char**>(keywords), &tensor)) {
+    return NULL;
+  }
+  if (!PyTensor_Check(tensor)) { return NULL; }
+
+  Symbol<oneflow::DType> dtype = TensortypeToDType(self);
+  Optional<std::string> device_str = ((PyTensortype*)self)->is_cuda ? "cuda": "cpu";
+
+  const auto& t = PyTensor_Unpack(tensor);
+  const auto& cast_t = functional::To(t, device_str, dtype, false);
+  return functional::CastToPyObject(cast_t);
+  END_HANDLE_ERRORS
+}
+
 std::string dtype_to_string(DataType dtype) {
   CHECK_OR_THROW(dtype_to_string_dict.find(dtype) != dtype_to_string_dict.end());
   return dtype_to_string_dict.at(dtype);
@@ -96,17 +122,18 @@ std::string device_to_string(DeviceType dtype) {
 }
 
 static std::string get_name(DataType dtype, DeviceType device) {
-  return  device_to_string(device) + "." + dtype_to_string(dtype);
+  auto device_string = device_to_string(device);
+  if(device_string.empty())
+    return dtype_to_string(dtype);
+  return  device_string + "." + dtype_to_string(dtype);
 }
 
 void init_metaclass(PyTypeObject& metaclass) {
   metaclass.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
   metaclass.tp_base = &PyType_Type;
   if (PyType_Ready(&metaclass) < 0) {
-    std::cout << "metaclass init failed" << std::endl;
     return;
   }
-  std::cout << "metaclass init successfully" << std::endl;
 }
 
 void init_tensortype(PyTypeObject& type, PyTypeObject& type_template, const std::string& name) {
@@ -116,8 +143,8 @@ void init_tensortype(PyTypeObject& type, PyTypeObject& type_template, const std:
   for(int i = 0; i < name.size(); i++)
     tp_name[i] = name[i];
   type.tp_name = tp_name;
+  type.tp_call = TensortypeType_call;
   type.tp_flags = Py_TPFLAGS_DEFAULT;
-  std::cout << "init name: " << type.tp_name << std::endl;
   type.tp_new = PyType_Type.tp_new;
   if (PyType_Ready(&type) < 0) { std::cout << "error in init tensortype" << std::endl; }
 }
@@ -126,16 +153,12 @@ std::vector<PyTensortype*> tensortype_list;
 
 void generalize_tensortype_list() {
   init_metaclass(PyTensortypeMetaClass);
-  // for (DataType dtype : DataType_list) {
-  for (auto& datatype_string : dtype_to_string_dict) {
-    // for (DeviceType device : DeviceType_list) {
-    for (auto& devicetype_string : device_to_string_dict) {
-      std::cout << "dealing with " << datatype_string.second << " and " << devicetype_string.second << std::endl;
+  for (const auto& datatype_string : dtype_to_string_dict) {
+    for (const auto& devicetype_string : device_to_string_dict) {
       PyTensortype* tensortype = new PyTensortype();
 
       // set name
       std::string name = get_name(datatype_string.first, devicetype_string.first);
-      std::cout << "setting name: " << name << std::endl;
 
       size_t n = sizeof(tensortype->name);
       strncpy(tensortype->name, name.c_str(), n);
@@ -147,7 +170,7 @@ void generalize_tensortype_list() {
       // set type
       tensortype->dtype = datatype_string.first;
       tensortype->device = devicetype_string.first;
-      tensortype->is_cuda = true;
+      tensortype->is_cuda = tensortype->device == DeviceType::kCUDA;
       tensortype_list.push_back(tensortype);
     }
   }
@@ -160,12 +183,9 @@ static void binding(pybind11::module_& m) {
 
     Py_INCREF(tensortype);
     if (tensortype && PyModule_AddObject(m.ptr(), tensortype->name, (PyObject*)tensortype) < 0) {
-      std::cout << "failed" << std::endl;
       CHECK_OR_THROW(false);
     }
-    std::cout << tensortype->name << std::endl;
   }
-  std::cout << "all finished" << std::endl;
 }
 
 }  // namespace one
