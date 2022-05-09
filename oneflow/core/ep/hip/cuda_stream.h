@@ -24,7 +24,7 @@ limitations under the License.
 #include <hip/hip_runtime.h>
 
 // #if CUDA_VERSION >= 11000
-#define WITH_HIP_GRAPHS
+// #define WITH_HIP_GRAPHS
 // #endif  // CUDA_VERSION >= 11000
 
 #include "oneflow/core/device/cuda_util.h"

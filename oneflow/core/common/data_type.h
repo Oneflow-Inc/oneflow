@@ -114,7 +114,7 @@ using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataTyp
 
 #if defined(__CUDACC__)
 #define OF_DEVICE_FUNC __device__ __host__ __forceinline__
-#elif defined(__HIPCC__)
+#elif defined(__HIP_PLATFORM_HCC__)
 #define OF_DEVICE_FUNC __device__ __host__ __forceinline__
 #else
 #define OF_DEVICE_FUNC inline

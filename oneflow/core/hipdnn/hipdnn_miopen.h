@@ -24,9 +24,8 @@
 #ifdef WITH_HIP
 
 #include <hip/hip_runtime_api.h>
-#include <hipdnn.h>
 #include <miopen/miopen.h>
-
+#include "oneflow/core/hipdnn/hipdnn.h"
 
 hipdnnStatus_t miopenTohipConvolutionFwdAlgo(miopenConvFwdAlgorithm_t in,
                                              hipdnnConvolutionFwdAlgo_t *out);

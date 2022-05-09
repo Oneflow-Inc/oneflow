@@ -1,7 +1,7 @@
 
 #ifdef WITH_HIP
 
-#include "logger.h"
+#include "oneflow/core/hipdnn/logger.h"
 #include <sstream>
 
 namespace open {

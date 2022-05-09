@@ -176,7 +176,7 @@ cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 #include <rccl.h>
 #include <hip/hip_fp16.h>
 #include "oneflow/core/device/cuda_pseudo_half.h"
-#include "oneflow/core/ep/hip/hip_stream.h"
+// #include "oneflow/core/ep/hip/hip_stream.h"
 
 // #if CUDA_VERSION >= 10020
 
@@ -263,8 +263,8 @@ inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
   return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
 }
 
-#define RUN_CUDA_KERNEL(func, stream, elem_cnt, ...) \
-  stream->As<ep::CudaStream>()->LaunchKernel(func, elem_cnt, 1, __VA_ARGS__)
+// #define RUN_CUDA_KERNEL(func, stream, elem_cnt, ...) \
+//   stream->As<ep::CudaStream>()->LaunchKernel(func, elem_cnt, 1, __VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
 

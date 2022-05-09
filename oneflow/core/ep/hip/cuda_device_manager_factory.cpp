@@ -47,9 +47,9 @@ bool GetCudnnVersionString(std::string* version) {
   int version_major = 0;
   int version_minor = 0;
   int version_patch = 0;
-  if (!GetCudnnVersion(version_major, version_minor, version_patch)) { return false; }
-  *version = std::to_string(version_major) + "." + std::to_string(version_minor) + "."
-             + std::to_string(version_patch);
+  // if (!GetCudnnVersion(version_major, version_minor, version_patch)) { return false; }
+  // *version = std::to_string(version_major) + "." + std::to_string(version_minor) + "."
+  //            + std::to_string(version_patch);
   return true;
 }
 

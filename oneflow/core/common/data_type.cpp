@@ -138,6 +138,7 @@ void CheckDataType() {
   static_assert(sizeof(int32_t) == sizeof(int), "sizeof(int32_t) != sizeof(int)");
   static_assert(sizeof(int64_t) == sizeof(long long), "sizeof(int64_t) != sizeof(long long)");
 
+
 #if defined(WITH_CUDA)
 
 #define CHECK_DEVICE_FP16(get_val)                              \
@@ -152,6 +153,9 @@ void CheckDataType() {
   CHECK_DEVICE_FP16(GetMaxVal);
   CHECK_DEVICE_FP16(GetMinVal);
 #undef CHECK_DEVICE_FP16
+
+
+#endif
 
 #if defined(WITH_HIP)
 

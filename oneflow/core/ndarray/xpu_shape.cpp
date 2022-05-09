@@ -17,16 +17,16 @@ limitations under the License.
 
 namespace oneflow {
 
-XpuShape::XpuShape(const int64_t dim[], int num_axes) {
-  num_axes_ = num_axes;
-  int i = 0;
-  for (; i < num_axes_; ++i) { dim_[i] = dim[i]; }
-  UpdateDimElemNumAndElemNum();
-  for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) {
-    dim_[i] = 1;
-    dim_elem_num_[i] = 1;
-  }
-}
+// XpuShape::XpuShape(const int64_t dim[], int num_axes) {
+//   num_axes_ = num_axes;
+//   int i = 0;
+//   for (; i < num_axes_; ++i) { dim_[i] = dim[i]; }
+//   UpdateDimElemNumAndElemNum();
+//   for (; i < sizeof(dim_) / sizeof(dim_[0]); ++i) {
+//     dim_[i] = 1;
+//     dim_elem_num_[i] = 1;
+//   }
+// }
 
 XpuShape::XpuShape(const Shape& shape) {
   num_axes_ = shape.NumAxes();

@@ -61,10 +61,10 @@ void CudaGraphExecutable::Update(hipGraph_t graph) {
   if (dev != dev_) { Reset(); }
   dev_ = dev;
   if (graph_exec_ != nullptr) {
-    hipGraphExecUpdateResult update_result{};
-    hipGraphNode_t error_node = nullptr;
-    OF_CUDA_CHECK(hipGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
-    if (update_result == hipGraphExecUpdateSuccess) { return; }
+    // hipGraphExecUpdateResult update_result{};
+    // hipGraphNode_t error_node = nullptr;
+    // OF_CUDA_CHECK(hipGraphExecUpdate(graph_exec_, graph, &error_node, &update_result));
+    // if (update_result == hipGraphExecUpdateSuccess) { return; }
   }
   Reset();
   OF_CUDA_CHECK(hipGraphInstantiate(&graph_exec_, graph, NULL, NULL, 0));
@@ -112,18 +112,18 @@ CudaStream::CudaStream(CudaDevice* device)
   //   OF_CUDA_CHECK(hipDeviceSynchronize());
   //   OF_CUDA_CHECK(hipGetLastError());
   // }
-  OF_CUDNN_CHECK(miopenCreate(&cudnn_handle_));
+  // OF_CUDNN_CHECK(miopenCreate(&cudnn_handle_));
   // if (IsCuda9OnTuringDevice(device_properties())) {
   //   OF_CUDA_CHECK(hipDeviceSynchronize());
   //   hipGetLastError();
   // }
-  OF_CUDNN_CHECK(miopenSetStream(cudnn_handle_, cuda_stream_));
+  // OF_CUDNN_CHECK(miopenSetStream(cudnn_handle_, cuda_stream_));
 }
 
 CudaStream::~CudaStream() {
   CudaCurrentDeviceGuard guard(device_index_);
   OF_CUDA_CHECK(hipStreamSynchronize(cuda_stream_));
-  OF_CUDNN_CHECK(miopenDestroy(cudnn_handle_));
+  // OF_CUDNN_CHECK(miopenDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(hipblasDestroy(cublas_handle_));
 // #if CUDA_VERSION >= 10010
 //   OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
@@ -188,9 +188,9 @@ void CudaStream::BeginGraphCapture() {
 
 void CudaStream::EndGraphCapture(CudaGraphExecutable* executable) {
   hipGraph_t graph = nullptr;
-  OF_CUDA_CHECK(hipStreamEndCapture(cuda_stream_, &graph));
-  executable->Update(graph);
-  OF_CUDA_CHECK(hipGraphDestroy(graph));
+  // OF_CUDA_CHECK(hipStreamEndCapture(cuda_stream_, &graph));
+  // executable->Update(graph);
+  // OF_CUDA_CHECK(hipGraphDestroy(graph));
   is_graph_capturing_ = false;
 }
 
