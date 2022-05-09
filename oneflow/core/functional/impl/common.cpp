@@ -101,7 +101,11 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
    * Description: in some case, view operate is not allowed, so need to check it's validation,
    * the check refers to torch(aten/src/ATen/native/TensorShape.cpp)
    *************************************************/
-  if (stride.NumAxes() == 0) { return NullOpt; }
+  if (stride.NumAxes() == 0) {
+    // for scalar input tensor
+    DimVector newstride(target_shape.NumAxes(), 1);
+    return Stride(newstride);
+  }
   int64_t elem_count = shape.elem_cnt();
   int64_t ndim = shape.NumAxes();
   int64_t tgt_ndim = target_shape.NumAxes();
