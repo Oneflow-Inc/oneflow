@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -386,7 +387,8 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
-  size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
+  size_t gpu_device_num =
+      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
   std::map<int64_t, std::map<int64_t, std::vector<std::vector<std::string>>>>
       machine_id2job_id_device_id2node_list;
   for (size_t i : process_ranks) {
