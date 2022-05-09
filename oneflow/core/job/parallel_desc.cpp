@@ -169,8 +169,7 @@ Maybe<Symbol<Device>> ParallelDesc::GetTensorDevice4CurrentProcessCtx(
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  const auto& device =
-      JUST(Device::ThreadLocalGetOrNew(Device::Type4DeviceTag(device_tag()), device_id));
+  const auto& device = JUST(Device::ThreadLocalGetOrNew(device_tag(), device_id));
   int64_t parallel_id_val = -1;
   if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
     *parallel_id = parallel_id_val;
@@ -322,23 +321,26 @@ Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
       machine_id2sorted_dev_phy_ids_->find(GlobalProcessCtx::Rank());
   for (int64_t machine_id : sorted_machine_ids_) {
     CHECK_LT_OR_RETURN(machine_id, GlobalProcessCtx::WorldSize())
-        << "Placment is invalid because rank must be less than world size!";
+        << Error::RuntimeError()
+        << "Placement is invalid because rank must be less than world size!";
   }
   if (sorted_dev_phy_ids_iter != machine_id2sorted_dev_phy_ids_->end()) {
     for (int64_t dev_phy_id : *sorted_dev_phy_ids_iter->second) {
       if (device_type_ == DeviceType::kCUDA) {
         const int64_t gpu_device_num = GetGpuDeviceNum();
         CHECK_NE_OR_RETURN(gpu_device_num, 0)
-            << "Placment with \"cuda\" type is invalid because there is no CUDA device!";
+            << Error::RuntimeError()
+            << "Placement with \"cuda\" type is invalid because there is no CUDA device!";
         int64_t device_num = std::min(GlobalProcessCtx::NumOfProcessPerNode(), gpu_device_num);
         CHECK_LT_OR_RETURN(dev_phy_id, device_num)
-            << "Placment is invalid because device id must be less than "
+            << Error::RuntimeError() << "Placement is invalid because device id must be less than "
             << (gpu_device_num < GlobalProcessCtx::NumOfProcessPerNode()
                     ? "num of CUDA devices on node"
                     : "num of process per node");
       } else if (device_type_ == DeviceType::kCPU) {
         CHECK_LT_OR_RETURN(dev_phy_id, GlobalProcessCtx::NumOfProcessPerNode())
-            << "Placment is invalid because device id must be less than num of process per node";
+            << Error::RuntimeError()
+            << "Placement is invalid because device id must be less than num of process per node";
       } else {
         OF_UNIMPLEMENTED();
       }
@@ -457,7 +459,7 @@ Maybe<std::string> RanksToString(int64_t axis, const int64_t* ranks, const Shape
 }
 
 Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
-  std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
+  const std::string& device_type = placement->device_tag();
   std::vector<int64_t> sorted_node_ids;
   sorted_node_ids.reserve(placement->sorted_machine_ids().size());
   HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
@@ -479,14 +481,14 @@ Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
   CHECK_EQ_OR_RETURN(ranks.size(), placement->hierarchy()->elem_cnt())
       << "rank size is " << ranks.size() << ", but shape is " << placement->hierarchy()->ToString();
   const auto& ranks_str = JUST(RanksToString(0, ranks.data(), *placement->hierarchy()));
-  return "oneflow.placement(type=" + device_type + ", ranks=" + *ranks_str + ")";
+  return "oneflow.placement(type=\"" + device_type + "\", ranks=" + *ranks_str + ")";
 }
 
 Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  const auto& type = Device::Type4DeviceTag(parallel_desc->device_tag());
+  const auto& type = parallel_desc->device_tag();
   return JUST(Device::ThreadLocalGetOrNew(type, device_id));
 }
 

@@ -20,6 +20,62 @@ namespace oneflow {
 
 namespace {
 
+Maybe<Shape> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape) {
+  Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
+  Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
+  Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), broadcast_shape.NumAxes());
+  FOR_RANGE(int64_t, i, 0, broadcast_shape.NumAxes()) {
+    CHECK_OR_RETURN(a_extend_shape.At(i) == 1 || b_extend_shape.At(i) == 1
+                    || a_extend_shape.At(i) == b_extend_shape.At(i))
+        << Error::RuntimeError() << "The size of tensor a (" << a_extend_shape.At(i)
+        << ") must match the size of tensor b (" << b_extend_shape.At(i)
+        << ") at non-singleton dimension " << i;
+    broadcast_shape.Set(i, std::max(a_extend_shape.At(i), b_extend_shape.At(i)));
+  }
+  return broadcast_shape;
+}
+
+Maybe<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>> CalValidSplitDims(
+    const Shape& a_shape, const Shape& b_shape, const Shape& c_shape) {
+  std::shared_ptr<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>> vaild_split_dims =
+      std::make_shared<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>>();
+  int32_t max_num_axes =
+      std::max(a_shape.NumAxes(), std::max(b_shape.NumAxes(), c_shape.NumAxes()));
+  Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
+  Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
+  Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), broadcast_shape.NumAxes());
+  Shape c_extend_shape = CreateLeftExtendedShape(ShapeView(c_shape), broadcast_shape.NumAxes());
+  int64_t a_dim_offset = max_num_axes - a_shape.NumAxes();
+  int64_t b_dim_offset = max_num_axes - b_shape.NumAxes();
+  int64_t c_dim_offset = max_num_axes - c_shape.NumAxes();
+  FOR_RANGE(int64_t, i, 0, max_num_axes) {
+    if (a_extend_shape.At(i) != 1 && a_extend_shape.At(i) == b_extend_shape.At(i)
+        && a_extend_shape.At(i) == c_extend_shape.At(i)) {
+      vaild_split_dims->emplace_back(
+          std::make_tuple(i - a_dim_offset, i - b_dim_offset, i - c_dim_offset, i));
+    }
+  }
+  return vaild_split_dims;
+}
+
+Maybe<std::vector<std::tuple<int64_t, int64_t, int64_t>>> CalValidSplitDims(const Shape& a_shape,
+                                                                            const Shape& b_shape) {
+  std::shared_ptr<std::vector<std::tuple<int64_t, int64_t, int64_t>>> vaild_split_dims =
+      std::make_shared<std::vector<std::tuple<int64_t, int64_t, int64_t>>>();
+  int32_t max_num_axes = std::max(a_shape.NumAxes(), b_shape.NumAxes());
+  Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
+  Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
+  Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), broadcast_shape.NumAxes());
+  int64_t a_dim_offset = max_num_axes - a_shape.NumAxes();
+  int64_t b_dim_offset = max_num_axes - b_shape.NumAxes();
+  FOR_RANGE(int64_t, i, 0, max_num_axes) {
+    if (a_extend_shape.At(i) != 1 && a_extend_shape.At(i) == b_extend_shape.At(i)) {
+      vaild_split_dims->emplace_back(std::make_tuple(i - a_dim_offset, i - b_dim_offset, i));
+    }
+  }
+  return vaild_split_dims;
+}
+
 Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   const Shape& x_shape = ctx->InputShape("x", 0);
@@ -27,16 +83,8 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   if (x_shape == y_shape && y_shape == cond_shape) {
     *ctx->OutputShape("out", 0) = cond_shape;
   } else {
-    Shape max_shape =
-        Shape::Ones(std::max(x_shape.NumAxes(), std::max(y_shape.NumAxes(), cond_shape.NumAxes())));
-    const Shape& x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), max_shape.NumAxes());
-    const Shape& y_extend_shape = CreateLeftExtendedShape(ShapeView(y_shape), max_shape.NumAxes());
-    const Shape& cond_extend_shape =
-        CreateLeftExtendedShape(ShapeView(cond_shape), max_shape.NumAxes());
-    FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
-      max_shape.Set(i, std::max(x_extend_shape.At(i),
-                                std::max(y_extend_shape.At(i), cond_extend_shape.At(i))));
-    }
+    Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
+    max_shape = *JUST(GetBroadcastShape(max_shape, y_shape));
     *ctx->OutputShape("out", 0) = max_shape;
   }
   return Maybe<void>::Ok();
@@ -48,13 +96,7 @@ Maybe<void> InferWhereXScalarTensorDesc(user_op::InferContext* ctx) {
   if (cond_shape == y_shape) {
     *ctx->OutputShape("out", 0) = cond_shape;
   } else {
-    Shape max_shape = Shape::Ones(std::max(y_shape.NumAxes(), cond_shape.NumAxes()));
-    const Shape& y_extend_shape = CreateLeftExtendedShape(ShapeView(y_shape), max_shape.NumAxes());
-    const Shape& cond_extend_shape =
-        CreateLeftExtendedShape(ShapeView(cond_shape), max_shape.NumAxes());
-    FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
-      max_shape.Set(i, std::max(y_extend_shape.At(i), cond_extend_shape.At(i)));
-    }
+    Shape max_shape = *JUST(GetBroadcastShape(cond_shape, y_shape));
     *ctx->OutputShape("out", 0) = max_shape;
   }
   return Maybe<void>::Ok();
@@ -66,13 +108,7 @@ Maybe<void> InferWhereYScalarTensorDesc(user_op::InferContext* ctx) {
   if (cond_shape == x_shape) {
     *ctx->OutputShape("out", 0) = cond_shape;
   } else {
-    Shape max_shape = Shape::Ones(std::max(x_shape.NumAxes(), cond_shape.NumAxes()));
-    const Shape& x_extend_shape = CreateLeftExtendedShape(ShapeView(x_shape), max_shape.NumAxes());
-    const Shape& cond_extend_shape =
-        CreateLeftExtendedShape(ShapeView(cond_shape), max_shape.NumAxes());
-    FOR_RANGE(int64_t, i, 0, max_shape.NumAxes()) {
-      max_shape.Set(i, std::max(x_extend_shape.At(i), cond_extend_shape.At(i)));
-    }
+    Shape max_shape = *JUST(GetBroadcastShape(cond_shape, x_shape));
     *ctx->OutputShape("out", 0) = max_shape;
   }
   return Maybe<void>::Ok();
@@ -84,14 +120,16 @@ Maybe<void> InferWhereXYScalarTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& condition_tensor =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0);
-  FOR_RANGE(int64_t, i, 0, condition_tensor.shape().NumAxes()) {
+  const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
+  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+  const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
+  const auto& vaild_split_dims = JUST(CalValidSplitDims(cond_shape, x_shape, y_shape));
+  for (const auto& vaild_split_dim : *vaild_split_dims) {
     ctx->NewBuilder()
-        .Split(user_op::OpArg("condition", 0), i)
-        .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("y", 0), i)
-        .Split(user_op::OpArg("out", 0), i)
+        .Split(user_op::OpArg("condition", 0), std::get<0>(vaild_split_dim))
+        .Split(user_op::OpArg("x", 0), std::get<1>(vaild_split_dim))
+        .Split(user_op::OpArg("y", 0), std::get<2>(vaild_split_dim))
+        .Split(user_op::OpArg("out", 0), std::get<3>(vaild_split_dim))
         .Build();
   }
   ctx->NewBuilder()
@@ -106,57 +144,13 @@ Maybe<void> GetWhereSbpSignatures(user_op::SbpContext* ctx) {
 Maybe<void> GetWhereXScalarSbpSignatures(user_op::SbpContext* ctx) {
   const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
   const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
-  if (cond_shape.NumAxes() < y_shape.NumAxes()) {
-    FOR_RANGE(int64_t, i, 0, y_shape.NumAxes() - cond_shape.NumAxes()) {
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("condition", 0))
-          .Split(user_op::OpArg("y", 0), i)
-          .Split(user_op::OpArg("out", 0), i)
-          .Build();
-    }
-    FOR_RANGE(int64_t, i, 0, cond_shape.NumAxes()) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("condition", 0), cond_shape.NumAxes() - 1 - i)
-          .Split(user_op::OpArg("y", 0), y_shape.NumAxes() - 1 - i)
-          .Split(ctx->outputs(), y_shape.NumAxes() - 1 - i)
-          .Build();
-    }
-  } else if (cond_shape.NumAxes() > y_shape.NumAxes()) {
-    FOR_RANGE(int64_t, i, 0, cond_shape.NumAxes() - y_shape.NumAxes()) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("condition", 0), i)
-          .Broadcast(user_op::OpArg("y", 0))
-          .Split(user_op::OpArg("out", 0), i)
-          .Build();
-    }
-    FOR_RANGE(int64_t, i, 0, y_shape.NumAxes()) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("condition", 0), cond_shape.NumAxes() - 1 - i)
-          .Split(user_op::OpArg("y", 0), y_shape.NumAxes() - 1 - i)
-          .Split(ctx->outputs(), cond_shape.NumAxes() - 1 - i)
-          .Build();
-    }
-  } else {
-    FOR_RANGE(int64_t, i, 0, cond_shape.NumAxes()) {
-      if (cond_shape.At(i) == 1 && y_shape.At(i) == 1) { continue; }
-      if (cond_shape.At(i) == y_shape.At(i)) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-      } else if (cond_shape.At(i) == 1) {
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("condition", 0))
-            .Split(user_op::OpArg("y", 0), i)
-            .Split(ctx->outputs(), i)
-            .Build();
-      } else if (y_shape.At(i) == 1) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("condition", 0), i)
-            .Broadcast(user_op::OpArg("y", 0))
-            .Split(ctx->outputs(), i)
-            .Build();
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
+  const auto& vaild_split_dims = JUST(CalValidSplitDims(cond_shape, y_shape));
+  for (const auto& vaild_split_dim : *vaild_split_dims) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("condition", 0), std::get<0>(vaild_split_dim))
+        .Split(user_op::OpArg("y", 0), std::get<1>(vaild_split_dim))
+        .Split(user_op::OpArg("out", 0), std::get<2>(vaild_split_dim))
+        .Build();
   }
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("condition", 0))
@@ -169,57 +163,13 @@ Maybe<void> GetWhereXScalarSbpSignatures(user_op::SbpContext* ctx) {
 Maybe<void> GetWhereYScalarSbpSignatures(user_op::SbpContext* ctx) {
   const Shape& cond_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("condition", 0).shape();
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
-  if (cond_shape.NumAxes() < x_shape.NumAxes()) {
-    FOR_RANGE(int64_t, i, 0, x_shape.NumAxes() - cond_shape.NumAxes()) {
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("condition", 0))
-          .Split(user_op::OpArg("x", 0), i)
-          .Split(user_op::OpArg("out", 0), i)
-          .Build();
-    }
-    FOR_RANGE(int64_t, i, 0, cond_shape.NumAxes()) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("condition", 0), cond_shape.NumAxes() - 1 - i)
-          .Split(user_op::OpArg("x", 0), x_shape.NumAxes() - 1 - i)
-          .Split(ctx->outputs(), x_shape.NumAxes() - 1 - i)
-          .Build();
-    }
-  } else if (cond_shape.NumAxes() > x_shape.NumAxes()) {
-    FOR_RANGE(int64_t, i, 0, cond_shape.NumAxes() - x_shape.NumAxes()) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("condition", 0), i)
-          .Broadcast(user_op::OpArg("x", 0))
-          .Split(user_op::OpArg("out", 0), i)
-          .Build();
-    }
-    FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("condition", 0), cond_shape.NumAxes() - 1 - i)
-          .Split(user_op::OpArg("x", 0), x_shape.NumAxes() - 1 - i)
-          .Split(ctx->outputs(), cond_shape.NumAxes() - 1 - i)
-          .Build();
-    }
-  } else {
-    FOR_RANGE(int64_t, i, 0, cond_shape.NumAxes()) {
-      if (cond_shape.At(i) == 1 && x_shape.At(i) == 1) { continue; }
-      if (cond_shape.At(i) == x_shape.At(i)) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-      } else if (cond_shape.At(i) == 1) {
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("condition", 0))
-            .Split(user_op::OpArg("x", 0), i)
-            .Split(ctx->outputs(), i)
-            .Build();
-      } else if (x_shape.At(i) == 1) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("condition", 0), i)
-            .Broadcast(user_op::OpArg("x", 0))
-            .Split(ctx->outputs(), i)
-            .Build();
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
+  const auto& vaild_split_dims = JUST(CalValidSplitDims(cond_shape, x_shape));
+  for (const auto& vaild_split_dim : *vaild_split_dims) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("condition", 0), std::get<0>(vaild_split_dim))
+        .Split(user_op::OpArg("x", 0), std::get<1>(vaild_split_dim))
+        .Split(user_op::OpArg("out", 0), std::get<2>(vaild_split_dim))
+        .Build();
   }
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("condition", 0))

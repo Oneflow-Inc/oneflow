@@ -110,51 +110,6 @@ inline Maybe<void> StopLazyGlobalSession() {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> CreateMultiClientSessionContext() {
-  CHECK_ISNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
-  Global<MultiClientSessionContext>::New();
-  return Maybe<void>::Ok();
-}
-
-inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto_str) {
-  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
-  CHECK_NOTNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
-  CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
-
-  ConfigProto config_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
-      << "failed to parse config_proto: " << config_proto_str;
-  JUST(Global<MultiClientSessionContext>::Get()->TryInit(config_proto));
-  return Maybe<void>::Ok();
-}
-
-inline Maybe<void> MultiClientSessionContextUpdateResource(const std::string& resource_proto_str) {
-  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
-  Resource reso_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(resource_proto_str, &reso_proto))
-      << "failed to parse config_proto: " << resource_proto_str;
-  JUST(Global<MultiClientSessionContext>::Get()->UpdateResource(reso_proto));
-  return Maybe<void>::Ok();
-}
-
-inline Maybe<void> MultiClientSessionContextAddCGraph(
-    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
-  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
-  JUST(Global<MultiClientSessionContext>::Get()->AddCGraph(c_graph_ptr));
-  return Maybe<void>::Ok();
-}
-
-inline Maybe<void> TryDestroyMultiClientSessionContext() {
-  // Global<T>::Delete is not allowed to be called here
-  // because glog is not constructed yet and has bad bahavior
-  if (Global<MultiClientSessionContext>::Get() != nullptr) {
-    JUST(Global<MultiClientSessionContext>::Get()->TryClose());
-    delete Global<MultiClientSessionContext>::Get();
-    Global<MultiClientSessionContext>::SetAllocated(nullptr);
-  }
-  return Maybe<void>::Ok();
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_SESSION_SESSION_H_

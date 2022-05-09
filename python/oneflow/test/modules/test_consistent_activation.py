@@ -38,6 +38,8 @@ def build_module(act_type):
         return torch.nn.Sigmoid()
     elif act_type == "hardsigmoid":
         return torch.nn.Hardsigmoid()
+    elif act_type == "hardshrink":
+        return torch.nn.Hardshrink(lambd=random())
     elif act_type == "logsigmoid":
         return torch.nn.LogSigmoid()
     elif act_type == "hardswish":
@@ -54,6 +56,8 @@ def build_module(act_type):
         return torch.nn.SiLU()
     elif act_type == "selu":
         return torch.nn.SELU()
+    elif act_type == "threshold":
+        return torch.nn.Threshold(threshold=random(), value=random())
     elif act_type == "softplus":
         return torch.nn.Softplus()
     elif act_type == "softshrink":
@@ -156,6 +160,11 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         _test_activation_module(test_case, "hardsigmoid")
 
 
+class TestHardshrinkModule(flow.unittest.TestCase):
+    def test_hardshrink_module(test_case):
+        _test_activation_module(test_case, "hardshrink")
+
+
 class TestLogSigmoidModule(flow.unittest.TestCase):
     def test_logsigmoid_module(test_case):
         _test_activation_module(test_case, "logsigmoid")
@@ -189,6 +198,11 @@ class TestSiluModule(flow.unittest.TestCase):
 class TestSeluModule(flow.unittest.TestCase):
     def test_selu_module(test_case):
         _test_activation_module(test_case, "selu")
+
+
+class TestThresholdModule(flow.unittest.TestCase):
+    def test_threshold_module(test_case):
+        _test_activation_module(test_case, "threshold")
 
 
 class TestSoftplusModule(flow.unittest.TestCase):

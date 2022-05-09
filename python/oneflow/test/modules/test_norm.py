@@ -304,6 +304,15 @@ class TestNormModule(flow.unittest.TestCase):
         m = torch.linalg.norm(input, ord=ord, dim=dim, keepdim=keepdim)
         return m
 
+    @autotest(n=5)
+    def test_vector_norm_only_zero_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor(ndim=2).to(device)
+        dim = oneof((-2, -1), (0, 1), (-1, 0))
+        keepdim = random().to(bool)
+        m = torch.linalg.vector_norm(input, ord=0, dim=dim, keepdim=keepdim)
+        return m
+
 
 if __name__ == "__main__":
     unittest.main()

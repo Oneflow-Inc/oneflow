@@ -101,7 +101,7 @@ Maybe<LocalDepObject*> EagerMirroredTensorImpl::compute_local_dep_object() const
 }
 
 Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
-    const intrusive::shared_ptr<LocalDepObject>& dep_object) {
+    const intrusive::shared_ptr<LocalDepObject>& dep_object, const bool pin_memory) {
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
@@ -110,9 +110,11 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
     auto tensor_storage = tensor_storage_->storage();
     eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, dtype(),
                                                                tensor_storage, dep_object);
+    eager_blob_object_->set_pin_memory(pin_memory);
   } else {
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
+    eager_blob_object->set_pin_memory(pin_memory);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -121,30 +123,27 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;
-  CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
-                  == tensor_meta()->shape_ptr().get());
-  CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
+  CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get() == tensor_meta()->shape_ptr().get())
+      << kOfBugIssueUploadPrompt;
+  CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype())
+      << kOfBugIssueUploadPrompt;
   JUST(UpdateTensorStorage());
   return Maybe<void>::Ok();
 }
 
-const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
+std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
   if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
-  if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
-
-  const auto& shape_ptr = eager_blob_object_->blob_desc().shape_ptr();
-  const auto& Callback = [&shape_ptr](uint64_t of_blob_ptr) {
-    const auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-    of_blob->blob().shape_view().ToShape(const_cast<Shape*>(shape_ptr.get()));
-  };
-  auto btb = std::make_shared<BlockingThenBusy>(1);
-  CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->SyncAccessBlobByCallback(this, btb, Callback, "const");
-  }));
-  TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
-      .GetOrThrow();
-  eager_blob_object_->set_is_shape_synced(true);
-  return shape_ptr;
+  if (!eager_blob_object_->is_shape_synced()) {
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(
+          this, btb, [](uint64_t) {}, "const");
+    }));
+    TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
+        .GetOrThrow();
+    eager_blob_object_->set_is_shape_synced(true);
+  }
+  return eager_blob_object_->shape_ptr();
 }
 
 Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
@@ -214,11 +213,12 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     auto cur_rank_phy_tensor_impl =
         std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
-    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object));
+    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object, /*pin_memory=*/false));
     cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
-    const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device));
+    const auto& empty =
+        JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device, /*pin_memory=*/false));
     cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);

@@ -24,10 +24,9 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
-
-const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
 
 namespace {
 
@@ -36,9 +35,8 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 }
 
 void CheckDeviceType(const std::string& type) {
-  if (Device::type_supported.find(type) == Device::type_supported.end()) {
-    std::string error_msg =
-        "Expected one of cpu, cuda device type at start of device string " + type;
+  if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
+    std::string error_msg = "Device type `" + type + "` not found.";
     throw std::runtime_error(error_msg);
   }
 }
@@ -53,8 +51,12 @@ Device::Device(const std::string& type, int64_t device_id)
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
-  enum_type_ = JUST(DeviceType4DeviceTag(JUST(of_type())));
-  mem_case_ = MemoryCaseUtil::MakeMemCase(enum_type_, device_id_);
+  enum_type_ = JUST(DeviceType4DeviceTag(type()));
+  {
+    DeviceType dev_type = enum_type_;
+    if (dev_type == kMockDevice) { dev_type = DeviceType::kCPU; }
+    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -93,16 +95,6 @@ Maybe<void> Device::Init() {
   }
 }
 
-Maybe<const std::string&> Device::of_type() const {
-  static const HashMap<std::string, std::string> type2device_tag{
-      {"cpu", "cpu"},
-      {"gpu", "gpu"},
-      {"cuda", "gpu"},
-      {"auto", "auto"},  // Only used for auto generator currently.
-  };
-  return MapAt(type2device_tag, type());
-}
-
 std::string Device::ToRepr() const {
   std::stringstream ss;
   ss << "device(type='";
@@ -121,7 +113,7 @@ std::string Device::ToString() const {
 }
 
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
-  std::string type = Type4DeviceTag(parallel_desc.device_tag());
+  const std::string& type = parallel_desc.device_tag();
   std::vector<std::string> machine_device_ids;
   machine_device_ids.reserve(parallel_desc.parallel_conf().device_name().size());
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
@@ -137,17 +129,13 @@ Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& paral
   return Device::New(type, std::stoi(device_id));
 }
 
-std::string Device::Type4DeviceTag(const std::string& device_tag) {
-  return device_tag == "gpu" ? "cuda" : device_tag;
-}
-
 namespace {
 
 Maybe<Symbol<ParallelDesc>> RawGetPlacement(const Device& device) {
   std::string machine_device_id =
       "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
   ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(JUST(device.of_type()));
+  parallel_conf.set_device_tag(device.type());
   parallel_conf.add_device_name(machine_device_id);
   return SymbolOf(ParallelDesc(parallel_conf));
 }

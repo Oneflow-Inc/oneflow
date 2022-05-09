@@ -19,6 +19,7 @@ import inspect
 import copy
 import os
 import warnings
+import gc
 
 import numpy as np
 import oneflow as flow
@@ -143,7 +144,7 @@ def get_args(callable, *args, **kwargs):
 
     for arg in args:
         # TODO: refine codes
-        if isinstance(arg, tuple):
+        if isinstance(arg, (tuple, list)):
             pytorch_tuple_args = []
             oneflow_tuple_args = []
             for t in arg:
@@ -336,7 +337,7 @@ def get_functional_graph_res(
                 print(
                     "Run graph of function: ", repr(oneflow),
                 )
-                test_g.debug(3)
+                test_g.debug(2)
             test_g_res = test_g()
             if verbose:
                 print(
@@ -366,7 +367,7 @@ def get_tensor_graph_res(
         test_g = TestGraphOfTensorMethod()
         if verbose:
             print("Run graph of method: ", repr(oneflow))
-            test_g.debug(3)
+            test_g.debug(2)
         test_g_res = test_g()
         if verbose:
             print(
@@ -437,7 +438,7 @@ def oneflow_eager_run_with_graph_check(
             test_g = get_module_graph_test(graph_train_oneflow, oneflow, *args)
             if verbose:
                 print("Run graph of module: ", repr(oneflow))
-                test_g.debug(3)
+                test_g.debug(2)
             # When testing module methods, kwargs are not considered.
             test_g_res = test_g(*graph_args)
             if verbose:
@@ -450,7 +451,10 @@ def oneflow_eager_run_with_graph_check(
         # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
         # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
         elif (
-            ("oneflow.nn.modules" not in oneflow.__module__)
+            (
+                oneflow.__module__ is not None
+                and ("oneflow.nn.modules" not in oneflow.__module__)
+            )
             or inspect.isfunction(oneflow)
             or (
                 inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__
@@ -781,6 +785,17 @@ def clear_note_fake_program():
     flow.set_printoptions(profile="full")
 
 
+gc_interval = int(os.getenv("ONEFLOW_TEST_GC_INTERVAL", 10))
+gc_counter = 0
+
+
+def manual_gc_collect():
+    global gc_counter
+    gc_counter += 1
+    if gc_counter % gc_interval == 0:
+        gc.collect()
+
+
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
         self.name = name
@@ -843,6 +858,14 @@ class DualObject:
         else:
             return self.pytorch == other
 
+    def __del__(self):
+        # force running gc to avoid the periodic gc related to metaclass
+        # 'gc' will be None if Python is shutting down
+        try:
+            manual_gc_collect()
+        except Exception:
+            pass
+
 
 dual_modules_to_test = []
 dual_objects_to_test = []
@@ -857,7 +880,7 @@ def equality_checker(torch_type, flow_type):
     return deco
 
 
-def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
+def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05, check_dtype=False):
     checker = torch_type2checker.get(
         (type(dual_object.pytorch), type(dual_object.oneflow)), None
     )
@@ -874,12 +897,14 @@ def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
         + " and "
         + str(type(dual_object.oneflow))
     )
-    return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol)
+    return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol, check_dtype)
 
 
 @equality_checker(torch_original.Tensor, flow.Tensor)
 @equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
-def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
+def check_tensor_equality(
+    torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05, check_dtype=False
+):
     if torch_tensor.grad is not None:
         if flow_tensor.grad is None:
             print_note_fake_program()
@@ -899,29 +924,63 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
+    torch_numpy = torch_tensor.detach().cpu().numpy()
+    oneflow_numpy = flow_tensor.numpy()
     equality_res = np.allclose(
-        torch_tensor.detach().cpu().numpy(),
-        flow_tensor.numpy(),
-        rtol=rtol,
-        atol=atol,
-        equal_nan=True,
+        torch_numpy, oneflow_numpy, rtol=rtol, atol=atol, equal_nan=True,
     )
+    # NOTE: if check_dtype=True, then check the equality of data type
+    if check_dtype:
+        equality_res = equality_res and (torch_numpy.dtype == oneflow_numpy.dtype)
+
     if equality_res == False:
         print_note_fake_program()
         print("---------Tensor Shape--------")
         print(torch_tensor.shape)
         print(flow_tensor.shape)
+        print("---------Tensor dtype--------")
+        print(torch_tensor.dtype)
+        print(flow_tensor.dtype)
     return equality_res
 
 
 @equality_checker(int, int)
 @equality_checker(bool, bool)
-def check_basetype_equality(a, b, ignored1, ignored2):
+def check_basetype_equality(a, b, ignored1, ignored2, check_dtype=False):
+    if check_dtype:
+        return (a == b) and (type(a) == type(b))
     return a == b
 
 
+@equality_checker(tuple, tuple)
+@equality_checker(list, list)
+def check_basetype_equality(a, b, rtol=0.0001, atol=1e-05, check_dtype=False):
+    if len(a) != len(b):
+        equality_res = False
+    else:
+        for i in range(len(a)):
+            torch_np = a[i].detach().cpu().numpy()
+            flow_np = b[i].detach().cpu().numpy()
+            equality_res = np.allclose(
+                torch_np, flow_np, rtol=rtol, atol=atol, equal_nan=True,
+            )
+            if check_dtype:
+                equality_res = equality_res and (torch_np.dtype == flow_np.dtype)
+            if equality_res == False:
+                print_note_fake_program()
+                print("---------Tensor Shape--------")
+                print(a[i].shape)
+                print(b[i].shape)
+                print("---------Tensor dtype--------")
+                print(a[i].dtype)
+                print(b[i].dtype)
+                break
+
+    return equality_res
+
+
 @equality_checker(type(None), type(None))
-def check_nonetype_equality(a, b, ignored1, ignored2):
+def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return True
 
 
@@ -932,6 +991,7 @@ def autotest(
     atol=1e-05,
     check_graph=True,
     check_allclose=True,
+    check_dtype=False,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1019,7 +1079,12 @@ def autotest(
                 # check eager
                 for x in dual_objects_to_test:
                     if check_allclose:
-                        test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
+                        test_case.assertTrue(
+                            check_equality(
+                                x, rtol=rtol, atol=atol, check_dtype=check_dtype
+                            ),
+                            x,
+                        )
 
                 if verbose:
                     print(f"{f.__name__} test eager passed.")

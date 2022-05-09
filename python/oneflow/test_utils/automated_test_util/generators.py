@@ -459,7 +459,7 @@ class all_sbp(generator):
         dim=1,
         max_dim=0,
         except_split=False,
-        excpet_broadcast=False,
+        except_broadcast=False,
         except_partial_sum=False,
         valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
     ):
@@ -477,7 +477,7 @@ class all_sbp(generator):
             self.dim = dim
         self.max_dim = max_dim
         self.except_split = except_split
-        self.excpet_broadcast = excpet_broadcast
+        self.except_broadcast = except_broadcast
         self.except_partial_sum = except_partial_sum
         if valid_split_axis is not None:
             if isinstance(valid_split_axis, int):
@@ -506,7 +506,7 @@ class all_sbp(generator):
             for i in range(self.max_dim):
                 if i in self.valid_split_axis:
                     all_sbps.append(flow.sbp.split(i))
-        if not self.excpet_broadcast:
+        if not self.except_broadcast:
             all_sbps.append(flow.sbp.broadcast)
         if not self.except_partial_sum:
             all_sbps.append(flow.sbp.partial_sum)
@@ -523,7 +523,7 @@ class random_sbp(all_sbp):
         dim=1,
         max_dim=0,
         except_split=False,
-        excpet_broadcast=False,
+        except_broadcast=False,
         except_partial_sum=False,
         valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
     ):
@@ -532,7 +532,7 @@ class random_sbp(all_sbp):
             dim,
             max_dim,
             except_split,
-            excpet_broadcast,
+            except_broadcast,
             except_partial_sum,
             valid_split_axis,
         )

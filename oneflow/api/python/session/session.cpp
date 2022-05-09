@@ -17,6 +17,8 @@ limitations under the License.
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/session.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/api/python/session/session.h"
 
 namespace py = pybind11;
@@ -32,18 +34,22 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("StartLazyGlobalSession", &StartLazyGlobalSession);
   m.def("StopLazyGlobalSession", &StopLazyGlobalSession);
 
-  // multi-client lazy global session context
-  m.def("CreateMultiClientSessionContext", &CreateMultiClientSessionContext);
-  m.def("InitMultiClientSessionContext", &InitMultiClientSessionContext);
-  m.def("MultiClientSessionContextUpdateResource", &MultiClientSessionContextUpdateResource);
-  m.def("MultiClientSessionContextAddCGraph", &MultiClientSessionContextAddCGraph);
-  m.def("TryDestroyMultiClientSessionContext", &TryDestroyMultiClientSessionContext);
-
   using namespace oneflow;
+  py::class_<MultiClientSessionContext, std::shared_ptr<MultiClientSessionContext>>(
+      m, "SessionContext")
+      .def(py::init<const std::shared_ptr<EnvGlobalObjectsScope>&>())
+      .def("try_init",
+           [](MultiClientSessionContext& session, const std::string& config_proto_str) {
+             return session.TryInit(config_proto_str).GetOrThrow();
+           })
+      .def("update_resource",
+           [](MultiClientSessionContext& session, const std::string& reso_proto_str) {
+             return session.UpdateResource(reso_proto_str).GetOrThrow();
+           });
+
   m.def("NewSessionId", &NewSessionId);
   py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
       .def(py::init<const std::string&>());
-  ;
 }
 
 }  // namespace oneflow

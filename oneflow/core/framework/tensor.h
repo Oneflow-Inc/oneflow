@@ -47,7 +47,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   int64_t nelement() const { return shape()->elem_cnt(); }
   int64_t ndim() const { return shape()->NumAxes(); }
 
-  virtual const std::shared_ptr<const Shape>& shape() const = 0;
+  virtual std::shared_ptr<const Shape> shape() const = 0;
   virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<TransportToken> transport_token() const = 0;
   virtual Maybe<Symbol<NdSbp>> nd_sbp() const = 0;
@@ -62,6 +62,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_contiguous() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
+  virtual std::shared_ptr<Tensor> pin_memory() const = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -78,7 +79,9 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
     OF_UNIMPLEMENTED();
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
-  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) { OF_UNIMPLEMENTED(); }
+  virtual Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) {
+    OF_UNIMPLEMENTED();
+  }
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -112,8 +115,17 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
+  // The same tensor instance should share the python object to ensure that
+  // their id are consistent in Python. That is if x and y are hold the same tensor,
+  // then `id(x)` should equal to `id(y)`
+  void* pyobject() const { return pyobject_; }
+  void set_pyobject(void* object) { pyobject_ = object; }
+
  protected:
-  Tensor() = default;
+  Tensor() : pyobject_(nullptr) {}
+
+ private:
+  void* pyobject_;
 };
 
 class StaticZerosTensor final : public Tensor {
@@ -123,7 +135,7 @@ class StaticZerosTensor final : public Tensor {
     return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
   }
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
+  std::shared_ptr<const Shape> shape() const override { return shape_; }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -146,6 +158,9 @@ class StaticZerosTensor final : public Tensor {
     return *(TensorMeta*)nullptr;
   }
   Maybe<Tensor> data() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  std::shared_ptr<Tensor> pin_memory() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
@@ -168,7 +183,7 @@ class StaticZerosTensor final : public Tensor {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
@@ -280,7 +295,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   ProxyTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
   virtual ~ProxyTensor() = default;
 
-  virtual const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
+  virtual std::shared_ptr<const Shape> shape() const override { return tensor_->shape(); }
   virtual Symbol<DType> dtype() const override { return tensor_->dtype(); }
   virtual Maybe<Symbol<NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
@@ -298,6 +313,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return tensor_->consistent_tensor_meta();
   }
   virtual Maybe<Tensor> data() override { return tensor_->detach(); }
+  virtual std::shared_ptr<Tensor> pin_memory() const override { return tensor_->pin_memory(); }
 
   // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
   // and it will be wrong when use Tensor.data() in operators.
@@ -336,7 +352,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
     return tensor_->cur_rank_phy_tensor();
   }
-  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
+  virtual Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) override {
     return tensor_->set_consumer_nd_sbp_constraint(val);
   }
 
@@ -405,6 +421,7 @@ class Parameter final : public ProxyTensor<Parameter> {
   }
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
+  std::shared_ptr<Tensor> pin_memory() const override;
 
  private:
   Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
@@ -421,7 +438,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   ~MirroredTensor() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
+  std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override {
     OF_RUNTIME_ERROR() << "Only global tensors have 'global_id', global id is used to "
@@ -450,6 +467,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override { return this->detach(); }
+  std::shared_ptr<Tensor> pin_memory() const override;
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -537,7 +555,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   ~ConsistentTensor() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
+  std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
@@ -560,6 +578,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_cuda() const override;
   std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
+  std::shared_ptr<Tensor> pin_memory() const override;
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -573,7 +592,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
 
   // Setters
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) override {
     impl_->set_consumer_nd_sbp_constraint(val);
     return Maybe<void>::Ok();
   }

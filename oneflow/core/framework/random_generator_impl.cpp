@@ -16,13 +16,15 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
 #include <cuda.h>
@@ -35,7 +37,7 @@ namespace one {
 namespace {
 
 Maybe<void> CPUSynchronize() {
-  if (Global<EnvGlobalObjectsScope>::Get() != nullptr) { return vm::CurrentRankSync(); }
+  if (Global<VirtualMachine>::Get() != nullptr) { return vm::CurrentRankSync(); }
   return Maybe<void>::Ok();
 }
 
@@ -58,7 +60,8 @@ Maybe<Tensor> CPUGeneratorImpl::GetState() const {
   JUST(CPUSynchronize());
   CPUGeneratorState state;
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state = JUST(functional::Empty(Shape{sizeof(state)}, DType::UInt8(), device));
+  const auto& tensor_state =
+      JUST(functional::Empty(Shape{sizeof(state)}, DType::UInt8(), device, /*pin_memory=*/false));
 
   std::stringstream ss;
   ss << engine_;
@@ -179,7 +182,8 @@ Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   int64_t state_size = max_block_num_ * max_thread_num_ * sizeof(curandState);
   int64_t total_size = state_size + sizeof(int64_t);
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device));
+  const auto& tensor_state =
+      JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device, /*pin_memory=*/false));
 
   const auto& callback = [&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
@@ -224,7 +228,10 @@ void AutoGeneratorImpl::set_current_seed(uint64_t seed) {
   CHECK_JUST(CPUSynchronize());
   std::lock_guard<std::mutex> lock(mutex_);
   seed_ = seed;
-  for (const auto& it : generators_) { it.second->set_current_seed(seed); }
+  for (const auto& it : generators_) {
+    if (unlikely(pthread_fork::IsForkedSubProcess() && it.first.device_type == kCUDA)) { continue; }
+    it.second->set_current_seed(seed);
+  }
 }
 
 struct AutoGeneratorState {
@@ -288,7 +295,8 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
     }
   }
   const auto& device = JUST(Device::New("cpu"));
-  const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device));
+  const auto& tensor_state =
+      JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device, /*pin_memory=*/false));
   const auto& callback = [&buffer, &total_size](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), buffer.data(), total_size);
@@ -332,7 +340,8 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   std::vector<std::shared_ptr<Tensor>> tensor_states(state.num);
   for (int i = 0; i < state.num; ++i) {
     int64_t state_size = state_sizes.at(i);
-    tensor_states[i] = JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device));
+    tensor_states[i] =
+        JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device, /*pin_memory=*/false));
     const auto& callback = [&data, &state_size](uint64_t of_blob_ptr) {
       auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
       memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), data, state_size);
@@ -359,7 +368,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
     JUST(ParsingDeviceTag(splits.at(i), &device_name, &device_index));
     detail::DeviceKey device_key;
     const auto& device = JUST(Device::New(device_name, device_index));
-    device_key.device_type = JUST(DeviceType4DeviceTag(JUST(device->of_type())));
+    device_key.device_type = JUST(DeviceType4DeviceTag(device->type()));
     device_key.device_index = device_index;
     auto it = generators_.find(device_key);
     if (it == generators_.end()) {
