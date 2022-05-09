@@ -93,7 +93,6 @@ union Pack {
 
 // grid, 32x4
 // not consider packsize 
-constexpr int32_t kColsPerThread = 4; 
 constexpr int32_t kWarpSize = 32; 
 
 template<size_t num_dims, typename IndexType, typename T, int pack_size>
@@ -106,45 +105,48 @@ __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
   LoadStoreType* dst = reinterpret_cast<LoadStoreType*>(params.dst);
   IndexType src_index[num_dims];
   IndexType dst_index[num_dims];
-  for (IndexType linear_warp_index = global_warp_id*kWarpSize*kColsPerThread; linear_warp_index < params.elem_cnt;
-       linear_warp_index += num_total_warp*kWarpSize*kColsPerThread) {
-    params.dst_index_helper.OffsetToNdIndex(linear_warp_index + lane_id, dst_index); 
-    for(int col = 0; col < kColsPerThread; col++){
-      bool if_pad = false;
-      // out of bound. 
-      if (dst_index[num_dims-1] >= params.out_size[num_dims-1]){
-        break; 
-      }
-
-      #pragma unroll
-      for (int i = 0; i < num_dims; i++) {
-        if (dst_index[i] >= params.padding_before[i]
-            && dst_index[i] < params.out_size[i] - params.padding_after[i]) {
-          src_index[i] = dst_index[i] - params.padding_before[i];
-        } else {
-          if_pad = true;
-          break;
-        }
-      }
-      IndexType dst_linear_idx = linear_warp_index + col*kWarpSize + lane_id; 
-      // printf("Dst linear index is: %ld \n", dst_linear_idx); 
-      if (!if_pad) {
-        const IndexType src_offset = params.src_index_helper.NdIndexToOffset(src_index);
-        dst[dst_linear_idx] = src[src_offset];
+  // round up
+  IndexType col_per_thread = (params.elem_cnt + num_total_warp*kWarpSize-1) / (num_total_warp*kWarpSize); 
+  for (IndexType col = 0; col < col_per_thread; col++) {
+    IndexType linear_index = global_warp_id*kWarpSize*col_per_thread + kWarpSize*col; 
+    if(linear_index >= params.elem_cnt){
+      break; 
+    }
+    // printf("linear index is: %ld \n", linear_index); 
+    params.dst_index_helper.OffsetToNdIndex(linear_index + lane_id, dst_index); 
+    bool if_pad = false;
+    // out of bound. 
+    if (dst_index[num_dims-1] >= params.out_size[num_dims-1]){
+      break; 
+    }
+    #pragma unroll
+    for (int i = 0; i < num_dims; i++) {
+      if (dst_index[i] >= params.padding_before[i]
+          && dst_index[i] < params.out_size[i] - params.padding_after[i]) {
+        src_index[i] = dst_index[i] - params.padding_before[i];
       } else {
-        Pack<T, pack_size> packed_pad_val(pad_value);
-        dst[dst_linear_idx] = packed_pad_val.storage;
+        if_pad = true;
+        break;
       }
-      // 进位
-      dst_index[num_dims-1] += kWarpSize; 
-      #pragma unroll
-      for(int i = num_dims-1; i >= 1; i--){
-        if(dst_index[i] >= params.out_size[i]){
-          dst_index[i] -= params.out_size[i]; 
-          dst_index[i-1] += 1; 
-        } else {
-          break; 
-        }
+    }
+    IndexType dst_linear_idx = linear_index + lane_id; 
+    // printf("Dst linear index is: %ld \n", dst_linear_idx); 
+    if (!if_pad) {
+      const IndexType src_offset = params.src_index_helper.NdIndexToOffset(src_index);
+      dst[dst_linear_idx] = src[src_offset];
+    } else {
+      Pack<T, pack_size> packed_pad_val(pad_value);
+      dst[dst_linear_idx] = packed_pad_val.storage;
+    }
+    // 进位
+    dst_index[num_dims-1] += kWarpSize; 
+    #pragma unroll
+    for(int i = num_dims-1; i >= 1; i--){
+      if(dst_index[i] >= params.out_size[i]){
+        dst_index[i] -= params.out_size[i]; 
+        dst_index[i-1] += 1; 
+      } else {
+        break; 
       }
     }
   }
@@ -231,12 +233,6 @@ void LaunchKernel(Stream* stream, ConstantPadParams<num_dims, IndexType> params,
   ConstantPadKernel<num_dims, IndexType, T, pack_size>
       <<<num_blocks, warpBlockDim, 0,
          cuda_stream>>>(params, pad_val);
-
-  // for debug 
-  // dim3 warpBlockDim(32, 1); 
-  // ConstantPadKernel<num_dims, IndexType, T, pack_size>
-  //     <<<1, warpBlockDim, 0,
-  //        cuda_stream>>>(params, pad_val);
 }
 
 template<size_t num_dims, typename IndexType, typename T, size_t pack_size>
