@@ -37,7 +37,8 @@ class AutoGradCaptureState {
     size_t offset = saved_tensors_.size();
     saved_tensors_.emplace_back(tensor);
 
-    if (auto dtr_mirrored_tensor = dynamic_cast<one::DTRMirroredTensor*>(tensor.get())) {
+    if (auto dtr_mirrored_tensor =
+            dynamic_cast<one::DTRMirroredTensor*>(CHECK_JUST(tensor->AsMirroredTensor()).get())) {
       CHECK_JUST(dtr_mirrored_tensor->set_blob_object_bp_required());
     }
     return offset;
