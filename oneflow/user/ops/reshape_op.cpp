@@ -69,7 +69,7 @@ namespace oneflow {
   Shape logical_shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
-  
+
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   Stride* out_stride = out_tensor_desc->mut_stride();

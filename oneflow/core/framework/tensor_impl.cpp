@@ -109,12 +109,13 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 
   if (tensor_storage_) {
     auto tensor_storage = tensor_storage_->storage();
-    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
-                                                               tensor_storage, dep_object);
+    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride,
+                                                               dtype(), tensor_storage, dep_object);
     eager_blob_object_->set_pin_memory(pin_memory);
   } else {
-    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, mut_shape, mut_stride, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
+    const auto& eager_blob_object =
+        std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
+                                              std::make_shared<vm::TensorStorage>(), dep_object);
     eager_blob_object->set_pin_memory(pin_memory);
     JUST(set_eager_blob_object(eager_blob_object));
   }

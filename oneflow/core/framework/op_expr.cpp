@@ -454,9 +454,11 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);
   tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
-  CHECK_OR_RETURN(static_cast<bool>(tensor_desc_infer_fn_)) << Error::RuntimeError() << "registry->logical_tensor_desc_infer_fn failed.";
+  CHECK_OR_RETURN(static_cast<bool>(tensor_desc_infer_fn_))
+      << Error::RuntimeError() << "registry->logical_tensor_desc_infer_fn failed.";
   dtype_infer_fn_ = registry->data_type_infer_fn;
-  CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_)) << Error::RuntimeError() << "registry->data_type_infer_fn failed.";
+  CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_))
+      << Error::RuntimeError() << "registry->data_type_infer_fn failed.";
   if (registry->device_and_stream_infer_fn) {
     device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn;
   }
