@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def test_reflection_pad2d_impl(test_case, padding, placement, sbp):
+def _test_reflection_pad2d_impl(test_case, padding, placement, sbp):
     m = torch.nn.ReflectionPad2d(padding=padding)
     dims = [random(2, 4) * 8 for _ in range(4)]
     x = random_tensor(4, *dims)
@@ -44,7 +44,7 @@ class TestReflectionPad2dConsistent(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
                 for pad in padding:
-                    test_reflection_pad2d_impl(test_case, pad, placement, sbp)
+                    _test_reflection_pad2d_impl(test_case, pad, placement, sbp)
 
 
 if __name__ == "__main__":

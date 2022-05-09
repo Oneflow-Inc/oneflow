@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=3, check_graph=False)
-def test_roll_impl(test_case, placement, sbp):
+def _test_roll_impl(test_case, placement, sbp):
     shifts = (
         random(-100, 100).to(int).value(),
         random(-100, 100).to(int).value(),
@@ -42,7 +42,7 @@ class TestRollConsistent(flow.unittest.TestCase):
     def test_roll(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                test_roll_impl(test_case, placement, sbp)
+                _test_roll_impl(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
