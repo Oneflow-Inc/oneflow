@@ -14,11 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/user/kernels/embedding_kernel_util.h"
 
 namespace oneflow {
@@ -104,7 +101,10 @@ class CpuEmbeddingGradKernel final : public user_op::OpKernel {
     const IndexType* indices_buf = indices->dptr<IndexType>();
     T* dx_buf = dx->mut_dptr<T>();
 
-    Memset<DeviceType::kCPU>(ctx->stream(), dx_buf, 0, dx->shape().Count(0) * sizeof(T));
+    std::unique_ptr<ep::primitive::Memset> memset_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
+    CHECK(memset_primitive);
+    memset_primitive->Launch(ctx->stream(), dx_buf, 0, dx->shape().Count(0) * sizeof(T));
     EmbeddingGradFunctor<DeviceType::kCPU, T, IndexType>()(ctx->stream(), dy_buf, indices_buf,
                                                            dx_buf, padding_idx, scale_grad_by_freq,
                                                            num_indices, emb_size, emb_dim, nullptr);
