@@ -30,6 +30,7 @@ def empty_op(
         flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
     ] = None,
     requires_grad: bool = False,
+    pin_memory: bool = False,
 ):
     """
     Returns a tensor filled with uninitialized data.
@@ -45,6 +46,7 @@ def empty_op(
           construct local tensor.
         sbp (flow.sbp or List[flow.sbp], optional): The desired sbp of returned global tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+        pin_memory (bool, optional) – If set, returned tensor would be allocated in the pinned memory. Works only for CPU tensors. Default: False.
 
     For example:
 
@@ -98,7 +100,7 @@ def empty_op(
     if placement is not None:
         tensor = flow._C.global_empty(shape, dtype=dtype, placement=placement, sbp=sbp)
     else:
-        tensor = flow._C.empty(shape, dtype=dtype, device=device)
+        tensor = flow._C.empty(shape, dtype=dtype, device=device, pin_memory=pin_memory)
     tensor.requires_grad_(requires_grad)
     return tensor
 
