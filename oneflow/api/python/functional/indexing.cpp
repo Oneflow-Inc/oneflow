@@ -165,7 +165,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
                                   "(`None`) and integer or boolean arrays are valid indices";
   }
   // In advanced indexing condition, index can be array object, need to handle it specially.
-  if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false); }
+  if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false, false); }
 
   const auto& sizes = InferArraySizes(object);
   const auto& tensor =

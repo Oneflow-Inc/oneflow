@@ -141,7 +141,7 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_
                           MAKE_DATA_TYPE_CTRV_SEQ(POD_AND_HALF_DATA_TYPE_SEQ));
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                                      const Optional<Symbol<Device>>& device, bool requires_grad) {
+                                      const Optional<Symbol<Device>>& device, const bool& requires_grad, const bool& pin_memory) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
     // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
@@ -164,7 +164,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
     device_ = JUST(Device::New("cpu"));
   }
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_, /*pin_memory=*/false));
+      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_, /*pin_memory=*/pin_memory));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
   Py_DECREF(array);
@@ -175,7 +175,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   } else if (!dtype && data_type == DataType::kDouble && !PyArray_Check(data)) {
     dtype_ = DType::Float();
   }
-  if (dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
+  if (dtype_) { tensor = JUST(functional::Cast(tensor, dtype_, pin_memory)); }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
 }
@@ -197,7 +197,7 @@ auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
                                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           bool requires_grad) {
+                                           const bool& requires_grad) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
     // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
@@ -255,14 +255,15 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   return consistent_tensor;
 }
 
-Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other, const bool& pin_memory) {
   if (other->is_local()) {
     const Symbol<Device>& device = JUST(other->device());
-    return functional::Copy(other, device->type(), device->device_id());
+    return functional::Copy(other, device, pin_memory);
   } else {
     const Symbol<NdSbp>& nd_sbp = JUST(other->nd_sbp());
     const std::vector<Symbol<SbpParallel>>& sbp_tuple = *JUST(GetSbpList(nd_sbp));
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
+    // TODO:(zhaoluyang) consistent case support pin_memory
     return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
                                     /* check_meta */ false);
   }
@@ -271,21 +272,21 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Optional<Symbol<Device>>& device,
-                                        const bool& requires_grad) {
+                                        const bool& requires_grad, const bool& pin_memory) {
   std::shared_ptr<Tensor> tensor;
   Symbol<Device> device_;
   if (device) { device_ = JUST(device); }
   if (other->is_local()) {
     if (!device) { device_ = JUST(other->device()); }
-    tensor = JUST(functional::Copy(other, device_->type(), device_->device_id()));
+    tensor = JUST(functional::Copy(other, device, pin_memory));
   } else {
     tensor = JUST(functional::ConsistentToLocal(other));
     if (!device) { device_ = JUST(Device::New("cpu")); }
-    tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id()));
+    tensor = JUST(functional::Copy(tensor, device, pin_memory));
   }
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
-    if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
+    if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_, pin_memory)); }
   }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;

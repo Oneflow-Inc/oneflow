@@ -720,7 +720,10 @@
   bind_python: True
 
 - name: "cast"
-  signature: "Tensor (Tensor x, DataType dtype) => Cast"
+  signature: [
+    "Tensor (Tensor x, DataType dtype) => Cast",
+    "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
+  ]
   bind_python: True
 
 - name: "constant"
@@ -1271,7 +1274,10 @@
   bind_python: True
 
 - name: "copy"
-  signature: "Tensor (Tensor x, String device_type, Int64 device_id) => Copy"
+  signature: [
+    "Tensor (Tensor x, String device_type, Int64 device_id) => Copy",
+    "Tensor (Tensor x, Device device=None, Bool pin_memory=False) => Copy"
+  ]
   bind_python: True
 
 - name: "to"

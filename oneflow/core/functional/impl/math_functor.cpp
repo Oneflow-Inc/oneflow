@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -1117,6 +1118,24 @@ class CastFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class PinMemoryCastFunctor {
+ public:
+  PinMemoryCastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Symbol<DType>& dtype, const bool& pin_memory) const {
+    if(JUST(x->device())->type()=="cuda" || pin_memory==false){
+      return functional::Cast(x, dtype);
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x},
+                                            OpExprInterpContext(attrs, JUST(x->device()), pin_memory));
   }
 
  private:
@@ -2996,7 +3015,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
-  m.add_functor<CastFunctor>("Cast");
+  m.add_functor<CastFunctor, PinMemoryCastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
   m.add_functor<ClipFunctor>("Clip");
