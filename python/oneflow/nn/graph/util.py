@@ -75,7 +75,7 @@ def _mem_desc_repr(reg_desc):
     desc_str += "block=" + str(block_info.mem_block_id)
     desc_str += ", life=[" + str(block_info.alloc_before_actor) + "]to[" + str(block_info.free_after_actor) + "]in[" + str(block_info.mem_block_total_actor_count) + "]"
     desc_str += ", offset=" + str(block_info.mem_block_offset)
-    desc_str += ", size=" + str(_get_blob_size(blob_info)) + "B"
+    desc_str += ", size=" + str(_get_blob_size(blob_info)*1.0/1000000.0) + "MB"
     desc_str += ")"
     return desc_str
 
