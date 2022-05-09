@@ -869,7 +869,7 @@
   bind_python: True
 
 - name: "embedding_renorm_"
-  signature: " Tensor (Tensor in, Tensor indices, Double max_norm, Double norm_type) => EmbeddingRenorm"
+  signature: " Tensor (Tensor in, Tensor indices, Double max_norm, Double norm_type) => EmbeddingReNorm"
   bind_python: True
 
 - name: "embedding"

@@ -2776,7 +2776,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
-  m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingRenorm");
+  m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
