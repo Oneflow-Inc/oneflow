@@ -64,7 +64,7 @@ class FlipCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int32_t elem_cnt = y_tensor->shape().elem_cnt();
-
+    if (elem_cnt == 0) { return; }
     const int32_t total_dims = y_tensor->shape().NumAxes();
 
     std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
@@ -98,32 +98,10 @@ class FlipCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class FlipGrad1DCpuKernel final : public user_op::OpKernel {
- public:
-  FlipGrad1DCpuKernel() = default;
-  ~FlipGrad1DCpuKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kCPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                             dx_tensor->shape().elem_cnt() * sizeof(T));
-    const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    memcpy((void*)dx_tensor->mut_dptr<T>(), (void*)dy_tensor->dptr<T>(),
-           dy_tensor->shape().elem_cnt() * sizeof(T));
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
 #define REGISTER_FLIP_CPU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("flip").SetCreateFn<FlipCpuKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCPU)                                \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));              \
-  REGISTER_USER_KERNEL("flip_grad")                                                 \
-      .SetCreateFn<FlipGrad1DCpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_FLIP_CPU_KERNEL(bool)
 REGISTER_FLIP_CPU_KERNEL(float)
