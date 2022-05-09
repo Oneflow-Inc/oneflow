@@ -105,13 +105,14 @@ static std::string device_to_string(DeviceType dtype) {
 
 PyObject* tensortype_from_string(const std::string& tensortype_str) {
   std::string oneflow_prefix = "oneflow.";
-  auto mismatch_pair = std::mismatch(oneflow_prefix.begin(), oneflow_prefix.end(), tensortype_str.begin());
+  auto mismatch_pair =
+      std::mismatch(oneflow_prefix.begin(), oneflow_prefix.end(), tensortype_str.begin());
   CHECK_OR_THROW(mismatch_pair.first == oneflow_prefix.end()) << "invalid type: " << tensortype_str;
 
   std::string dtype_str = tensortype_str.substr(oneflow_prefix.size());
-  auto it = std::find_if(tensortype_list.begin(), tensortype_list.end(), [dtype_str](PyTensortype* type){
-    return std::string(type->name) == dtype_str;
-  });
+  auto it = std::find_if(
+      tensortype_list.begin(), tensortype_list.end(),
+      [dtype_str](PyTensortype* type) { return std::string(type->name) == dtype_str; });
   CHECK_OR_THROW(it != tensortype_list.end()) << "invalid type: " << tensortype_str;
   return (PyObject*)(*it);
 }
@@ -129,7 +130,8 @@ static void init_metaclass(PyTypeObject& metaclass) {
   if (PyType_Ready(&metaclass) < 0) { return; }
 }
 
-static void init_tensortype(PyTypeObject& type, PyTypeObject& type_template, const std::string& name) {
+static void init_tensortype(PyTypeObject& type, PyTypeObject& type_template,
+                            const std::string& name) {
   memcpy(&type, &type_template, sizeof(PyTypeObject));
   char* tp_name = new char[64]{'\0'};
 
@@ -138,7 +140,10 @@ static void init_tensortype(PyTypeObject& type, PyTypeObject& type_template, con
   type.tp_name = tp_name;
   type.tp_call = TensortypeType_call;
   type.tp_flags = Py_TPFLAGS_DEFAULT;
-  if (PyType_Ready(&type) < 0) { CHECK_OR_THROW(false) << "tensortype initialization failed"; return; }
+  if (PyType_Ready(&type) < 0) {
+    CHECK_OR_THROW(false) << "tensortype initialization failed";
+    return;
+  }
 }
 
 static void generalize_tensortype_list() {

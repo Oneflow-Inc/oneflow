@@ -45,36 +45,61 @@ def _test_is_floating_point(test_case, shape, device, dtype):
 
 
 def _test_type_dtype(test_case, shape, device, src_dtype, tgt_dtype):
-    # test tensor.type(dtype) rather than tensor.type_dtype
+    # test tensor.type(x: dtype) rather than tensor.type_dtype
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=src_dtype, device=device)
-    target = flow.tensor(np_input, dtype=tgt_dtype, device=device)
-    input = input.type(target.type())
-    test_case.assertEqual(input.dtype, target.dtype)
+    input = input.type(tgt_dtype)
+    test_case.assertEqual(input.dtype, tgt_dtype)
+    test_case.assertEqual(input.device, flow.device(device))
 
 
-def _test_type_tensortype(test_case, shape, device, src_dtype, tgt_tensortype):
-    # test tensor.type(tensortype) rather than tensor.type_tensortype
+def _test_type_str(
+    test_case, tensortype_dict, shape, device, dtype, tgt_tensortype_str
+):
+    # test tensor.type(x: str) rather than tensor.type_tensortype
     np_input = np.random.rand(*shape)
-    input = flow.tensor(np_input, dtype=src_dtype, device=device)
+    input = flow.tensor(np_input, dtype=dtype, device=device)
+    input = input.type(tgt_tensortype_str)
+    tgt_dtype, tgt_device = tensortype_dict[tgt_tensortype_str]
+    test_case.assertEqual(input.dtype, tgt_dtype)
+    test_case.assertEqual(input.device, tgt_device)
+
+
+def _test_type_tensortype(
+    test_case, tensortype_dict, shape, device, dtype, tgt_tensortype
+):
+    # test tensor.type(x: tensortype) rather than tensor.type_tensortype
+    np_input = np.random.rand(*shape)
+    input = flow.tensor(np_input, dtype=dtype, device=device)
     input = input.type(tgt_tensortype)
-    test_case.assertEqual(input.type(), tgt_tensortype)
+    tgt_dtype, tgt_device = tensortype_dict[tgt_tensortype]
+    test_case.assertEqual(input.dtype, tgt_dtype)
+    test_case.assertEqual(input.device, tgt_device)
 
 
 def _test_type_noargs(test_case, shape, device, dtype):
     # test tensor.type() rather than tensor.type_noargs
-    dtype_to_tensortype_dict = {
-        flow.uint8: flow._oneflow_internal.ByteTensor,
-        flow.int8: flow._oneflow_internal.CharTensor,
-        flow.int32: flow._oneflow_internal.IntTensor,
-        flow.int64: flow._oneflow_internal.LongTensor,
-        flow.float16: flow._oneflow_internal.HalfTensor,
-        flow.float32: flow._oneflow_internal.FloatTensor,
-        flow.float64: flow._oneflow_internal.DoubleTensor,
-    }
+    def generate_tensortype_string(device, dtype):
+        dtype_to_str_dict = {
+            flow.uint8: "ByteTensor",
+            flow.int8: "CharTensor",
+            flow.int32: "IntTensor",
+            flow.int64: "LongTensor",
+            flow.float16: "HalfTensor",
+            flow.bfloat16: "BFloat16Tensor",
+            flow.float32: "FloatTensor",
+            flow.float64: "DoubleTensor",
+        }
+        dtype = dtype_to_str_dict[dtype]
+        if device == "cpu":
+            return dtype
+        return ".".join([device, dtype])
+
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=dtype, device=device)
-    test_case.assertEqual(input.type(), dtype_to_tensortype_dict[dtype])
+    test_case.assertEqual(
+        input.type(), "oneflow." + generate_tensortype_string(device, dtype)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -252,7 +277,7 @@ class TestTensorOps(flow.unittest.TestCase):
             _test_is_floating_point(test_case, *arg)
 
     def test_type_dtype(test_case):
-        # test tensor.type(dtype) rather than tensor.type_dtype
+        # test tensor.type(x.dtype) rather than tensor.type_dtype
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -265,21 +290,12 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.float32,
             flow.float64,
         ]
-        # arg_dict["src_dtype"] = [ flow.float32, flow.float64]
-        arg_dict["tgt_dtype"] = [
-            flow.uint8,
-            flow.int8,
-            flow.int64,
-            flow.int32,
-            flow.float16,
-            flow.float32,
-            flow.float64,
-        ]
+        arg_dict["tgt_dtype"] = arg_dict["src_dtype"]
         for arg in GenArgList(arg_dict):
             _test_type_dtype(test_case, *arg)
 
-    def test_type_tensortype(test_case):
-        # test tensor.type(tensortype) rather than tensor.type_tensortype
+    def test_type_tensortype_str(test_case):
+        # test tensor.type(x: str) rather than tensor.type_tensortype
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -292,18 +308,65 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.float32,
             flow.float64,
         ]
-        arg_dict["tgt_tensortype"] = [
-            flow._oneflow_internal.ByteTensor,
-            flow._oneflow_internal.CharTensor,
-            # flow._oneflow_internal.ShortTensor,
-            flow._oneflow_internal.IntTensor,
-            flow._oneflow_internal.LongTensor,
-            flow._oneflow_internal.HalfTensor,
-            flow._oneflow_internal.FloatTensor,
-            flow._oneflow_internal.DoubleTensor,
-        ]
+        tensortype_dict = {
+            "oneflow.CharTensor": [flow.int8, flow.device("cpu")],
+            "oneflow.ByteTensor": [flow.uint8, flow.device("cpu")],
+            "oneflow.IntTensor": [flow.int32, flow.device("cpu")],
+            "oneflow.LongTensor": [flow.int64, flow.device("cpu")],
+            "oneflow.HalfTensor": [flow.float16, flow.device("cpu")],
+            "oneflow.FloatTensor": [flow.float32, flow.device("cpu")],
+            "oneflow.DoubleTensor": [flow.float64, flow.device("cpu")],
+            "oneflow.cuda.CharTensor": [flow.int8, flow.device("cuda")],
+            "oneflow.cuda.ByteTensor": [flow.uint8, flow.device("cuda")],
+            "oneflow.cuda.IntTensor": [flow.int32, flow.device("cuda")],
+            "oneflow.cuda.LongTensor": [flow.int64, flow.device("cuda")],
+            "oneflow.cuda.HalfTensor": [flow.float16, flow.device("cuda")],
+            "oneflow.cuda.FloatTensor": [flow.float32, flow.device("cuda")],
+            "oneflow.cuda.DoubleTensor": [flow.float64, flow.device("cuda")],
+        }
+        arg_dict["tgt_tensortype_str"] = list(tensortype_dict.keys())
         for arg in GenArgList(arg_dict):
-            _test_type_tensortype(test_case, *arg)
+            _test_type_str(test_case, tensortype_dict, *arg)
+
+    def test_type_tensortype(test_case):
+        # test tensor.type(x: tensortype) rather than tensor.type_tensortype
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["src_dtype"] = [
+            flow.uint8,
+            flow.int8,
+            flow.int64,
+            flow.int32,
+            flow.float16,
+            flow.float32,
+            flow.float64,
+        ]
+        tensortype_dict = {
+            flow._oneflow_internal.CharTensor: [flow.int8, flow.device("cpu")],
+            flow._oneflow_internal.ByteTensor: [flow.uint8, flow.device("cpu")],
+            flow._oneflow_internal.IntTensor: [flow.int32, flow.device("cpu")],
+            flow._oneflow_internal.LongTensor: [flow.int64, flow.device("cpu")],
+            flow._oneflow_internal.HalfTensor: [flow.float16, flow.device("cpu")],
+            flow._oneflow_internal.FloatTensor: [flow.float32, flow.device("cpu")],
+            flow._oneflow_internal.DoubleTensor: [flow.float64, flow.device("cpu")],
+            flow._oneflow_internal.cuda.CharTensor: [flow.int8, flow.device("cuda")],
+            flow._oneflow_internal.cuda.ByteTensor: [flow.uint8, flow.device("cuda")],
+            flow._oneflow_internal.cuda.IntTensor: [flow.int32, flow.device("cuda")],
+            flow._oneflow_internal.cuda.LongTensor: [flow.int64, flow.device("cuda")],
+            flow._oneflow_internal.cuda.HalfTensor: [flow.float16, flow.device("cuda")],
+            flow._oneflow_internal.cuda.FloatTensor: [
+                flow.float32,
+                flow.device("cuda"),
+            ],
+            flow._oneflow_internal.cuda.DoubleTensor: [
+                flow.float64,
+                flow.device("cuda"),
+            ],
+        }
+        arg_dict["tgt_tensortype"] = list(tensortype_dict.keys())
+        for arg in GenArgList(arg_dict):
+            _test_type_tensortype(test_case, tensortype_dict, *arg)
 
     def test_type_noargs(test_case):
         # test tensor.type() rather than tensor.type_noargs

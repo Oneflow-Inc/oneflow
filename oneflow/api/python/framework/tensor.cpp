@@ -287,7 +287,7 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     std::string tensortype_string = "oneflow." + std::string(((PyTensortype*)result)->name);
     return PyUnicode_FromString(tensortype_string.c_str());
   }
-  if (PyUnicode_Check(tensortype)) { 
+  if (PyUnicode_Check(tensortype)) {
     std::string tensortype_string = PyUnicode_AsUTF8(tensortype);
     tensortype = tensortype_from_string(tensortype_string);
   };
@@ -300,7 +300,7 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     const auto& t = functional::To(tensor, functional::PyUnpackDType(tensortype), false);
     return functional::CastToPyObject(t);
   }
-  return PyErr_Format(PyExc_RuntimeError, "Invalid datatype");
+  return PyErr_Format(PyExc_RuntimeError, "dtype must be a type, str, or dtype object");
   END_HANDLE_ERRORS
 }
 
