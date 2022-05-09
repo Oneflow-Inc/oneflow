@@ -32,9 +32,9 @@ jobs:
           sudo apt-get install -y libopenblas-dev nasm python3-pip ninja-build
       - name: Download OneFlow custom clang-tidy
         run: |
-          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/llvmorg-13.0.0-maybe/clang-tidy-b836e4d-x86_64.AppImage
+          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/llvmorg-13.0.0-maybe/clang-tidy-13.AppImage
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
-          chmod +x clang-tidy-b836e4d-x86_64.AppImage run-clang-tidy.py
+          chmod +x clang-tidy-13.AppImage run-clang-tidy.py
       - name: Build third party libs and generate files
         run: |
           mkdir build
@@ -55,7 +55,7 @@ jobs:
             -DBUILD_TESTING=ON \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy-b836e4d-x86_64.AppImage -p build -quiet -allow-enabling-alpha-checkers -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" "^(?!$(pwd)/build)"
+          ./run-clang-tidy.py -clang-tidy-binary ./clang-tidy-13.AppImage -p build -quiet -allow-enabling-alpha-checkers -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" "^(?!$(pwd)/build)"
 
   hosted:
     name: CPU-only
@@ -97,6 +97,10 @@ jobs:
             cmake_generator: "Unix Makefiles"
             cmake_build_type: "Release"
     steps:
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 5
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -241,7 +245,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@support-auto-benchmark
+      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
         name: Build with gcc7
         if: ${{ matrix.build-type == 'gcc7'}}
         with:
@@ -250,7 +254,7 @@ jobs:
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/gcc7/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
-      - uses: Oneflow-Inc/get-oneflow@support-auto-benchmark
+      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
         name: Build with clang10
         if: ${{ matrix.build-type == 'clang10'}}
         with:

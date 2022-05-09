@@ -24,12 +24,13 @@ limitations under the License.
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/check_level.h"
+#include "oneflow/core/framework/sync_symbol_consistent_tensor_meta.h"
 
 namespace oneflow {
 
 namespace {
 
-class FlatMetaInfoConsistency;
+struct FlatMetaInfoConsistency;
 
 class CheckMetaInfoConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:
@@ -151,7 +152,9 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement) {
-  if (!placement->containing_current_rank()) { return Maybe<void>::Ok(); }
+  if (!placement->containing_current_rank() || placement->parallel_num() == 1) {
+    return Maybe<void>::Ok();
+  }
 
   const auto& rank_group = JUST(RankGroup::New(placement));
 
@@ -223,8 +226,8 @@ NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheck
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
                                      const Optional<Symbol<NdSbp>>& grad_nd_sbp,
-                                     const size_t debug_level) {
-  if (IsEnvEnabled(debug_level) && !IsMetaInfoConsistencyCheckDisable()) {
+                                     const size_t debug_level, bool force_check) {
+  if ((IsEnvEnabled(debug_level) || force_check) && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp));
   }
   return Maybe<void>::Ok();
@@ -232,8 +235,8 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
-                                     const size_t debug_level) {
-  if (IsEnvEnabled(debug_level) && !IsMetaInfoConsistencyCheckDisable()) {
+                                     const size_t debug_level, bool force_check) {
+  if ((IsEnvEnabled(debug_level) || force_check) && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<NdSbp>>()));
   }
   return Maybe<void>::Ok();
@@ -242,22 +245,22 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                      const std::vector<Symbol<SbpParallel>>& grad_sbp_tuple,
-                                     const size_t debug_level) {
+                                     const size_t debug_level, bool force_check) {
   Optional<Symbol<NdSbp>> nd_sbp;
   Optional<Symbol<NdSbp>> grad_nd_sbp;
   if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
   if (!grad_sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_tuple)); }
-  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level));
+  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level, force_check));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                     const size_t debug_level) {
+                                     const size_t debug_level, bool force_check) {
   Optional<Symbol<NdSbp>> nd_sbp;
   Optional<Symbol<NdSbp>> grad_nd_sbp;
   if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
-  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level));
+  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level, force_check));
   return Maybe<void>::Ok();
 }
 

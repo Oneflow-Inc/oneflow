@@ -96,15 +96,24 @@ def clip_grad_norm_(
             [p.is_global for p in parameters]
         ), "All parameters must be consistent tensor."
         sbp_broadcast = [flow.sbp.broadcast for _ in parameters[0].sbp]
+        param0_placement = parameters[0].placement
         if norm_type == float("inf"):
             norms = [
-                p.grad.detach().to_global(sbp=sbp_broadcast).abs().max()
+                p.grad.detach()
+                .to_global(sbp=sbp_broadcast)
+                .abs()
+                .max()
+                .to_global(placement=param0_placement)
                 for p in parameters
             ]
             total_norm = norms[0] if len(norms) == 1 else flow.max(flow.stack(norms))
         elif norm_type == float("-inf"):
             norms = [
-                p.grad.detach().to_global(sbp=sbp_broadcast).abs().min()
+                p.grad.detach()
+                .to_global(sbp=sbp_broadcast)
+                .abs()
+                .min()
+                .to_global(placement=param0_placement)
                 for p in parameters
             ]
             total_norm = norms[0] if len(norms) == 1 else flow.min(flow.stack(norms))
@@ -114,15 +123,14 @@ def clip_grad_norm_(
                     [
                         flow.linalg.vector_norm(
                             p.grad.detach().to_global(sbp=sbp_broadcast), norm_type
-                        )
+                        ).to_global(placement=param0_placement)
                         for p in parameters
                     ]
                 ),
                 norm_type,
             )
-        if error_if_nonfinite and (
-            np.isnan(total_norm.to_local().numpy()).all()
-            or np.isinf(total_norm.to_local().numpy()).all()
+        if error_if_nonfinite and flow.logical_or(
+            total_norm.isnan(), total_norm.isinf()
         ):
             raise RuntimeError(
                 f"The total norm of order {norm_type} for gradients from "
@@ -133,7 +141,7 @@ def clip_grad_norm_(
         clip_coef = max_norm / (total_norm + 1e-6)
         clip_coef_clamped = clip_coef.clamp(max=1.0)
         for p in parameters:
-            p.grad.detach().mul_(clip_coef_clamped)
+            p.grad.detach().mul_(clip_coef_clamped.to_global(placement=p.placement))
     else:
         device = parameters[0].grad.device
         if norm_type == float("inf"):
@@ -152,8 +160,8 @@ def clip_grad_norm_(
                 ),
                 norm_type,
             )
-        if error_if_nonfinite and (
-            np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all()
+        if error_if_nonfinite and flow.logical_or(
+            total_norm.isnan(), total_norm.isinf()
         ):
             raise RuntimeError(
                 f"The total norm of order {norm_type} for gradients from "

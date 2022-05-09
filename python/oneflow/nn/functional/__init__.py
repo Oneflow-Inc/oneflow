@@ -20,6 +20,9 @@ from oneflow.nn.modules.sparse_softmax_cross_entropy import sparse_softmax_cross
 from oneflow._C import conv1d
 from oneflow._C import conv2d
 from oneflow._C import conv3d
+from oneflow._C import deconv1d as conv_transpose1d
+from oneflow._C import deconv2d as conv_transpose2d
+from oneflow._C import deconv3d as conv_transpose3d
 from oneflow._C import avg_pool1d
 from oneflow._C import avg_pool2d
 from oneflow._C import avg_pool3d
@@ -29,9 +32,11 @@ from .functional_maxpool import max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
+from oneflow._C import cosine_similarity
 from oneflow._C import relu
 from oneflow._C import hardtanh
 from oneflow._C import hardsigmoid
+from oneflow._C import hardshrink
 from oneflow._C import hardswish
 from oneflow._C import leaky_relu
 from oneflow._C import elu
@@ -51,7 +56,7 @@ from oneflow._C import tanh
 from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
-from oneflow._C import layer_norm
+from oneflow.nn.modules.normalization import layer_norm
 from oneflow._C import dropout
 from oneflow._C import smooth_l1_loss
 from oneflow._C import pad
