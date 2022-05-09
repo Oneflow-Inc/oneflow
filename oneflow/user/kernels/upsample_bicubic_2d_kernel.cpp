@@ -33,9 +33,9 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
     const T* in_ptr = x_tensor->dptr<T>();
     T* out_ptr = y_tensor->mut_dptr<T>();
     const bool align_corners = ctx->Attr<bool>("align_corners");
-
     const int nbatch = x_tensor->shape().At(0);
     const int channels = x_tensor->shape().At(1);
+    
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t in_width = x_tensor->shape().At(3);
     const int64_t out_height = y_tensor->shape().At(2);
@@ -109,10 +109,10 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
     T* in_ptr = dx_tensor->mut_dptr<T>();
     const T* out_ptr = dy_tensor->dptr<T>();
     const bool align_corners = ctx->Attr<bool>("align_corners");
-
     const int nbatch = dx_tensor->shape().At(0);
     int channels = dx_tensor->shape().At(1);
     channels = channels * nbatch;
+
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t in_width = dx_tensor->shape().At(3);
     const int64_t out_height = dy_tensor->shape().At(2);

@@ -175,7 +175,6 @@ class Interpolate(Module):
                 data_format="channels_first",
             )
         if len(x.shape) == 4 and self.mode == "bilinear":
-            assert self.align_corners is not None
             return flow._C.upsample_bilinear_2d(
                 x,
                 height_scale=scale_factors[0],
@@ -205,7 +204,7 @@ class Interpolate(Module):
                 output_size=output_size,
                 data_format="channels_first",
             )
-        
+
         raise NotImplementedError(
             "Input Error: Only 3D, 4D and 5D input Tensors supported"
             " (got {}D) for the modes: nearest | linear | bilinear | bicubic | trilinear | area"

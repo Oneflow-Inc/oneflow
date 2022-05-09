@@ -304,9 +304,9 @@ class UpsampleNearest3DGPUKernel final : public user_op::OpKernel {
     const int64_t in_depth = x_tensor->shape().At(2);
     const int64_t in_height = x_tensor->shape().At(3);
     const int64_t in_width = x_tensor->shape().At(4);
-    const int64_t out_depth = x_tensor->shape().At(2);
-    const int64_t out_height = x_tensor->shape().At(3);
-    const int64_t out_width = x_tensor->shape().At(4);
+    const int64_t out_depth = y_tensor->shape().At(2);
+    const int64_t out_height = y_tensor->shape().At(3);
+    const int64_t out_width = y_tensor->shape().At(4);
     const float depth_scale = out_depth * 1.0 / in_depth;
     const float height_scale = out_height * 1.0 / in_height;
     const float width_scale = out_width * 1.0 / in_width;
@@ -342,9 +342,9 @@ class UpsampleNearestGrad3DGPUKernel final : public user_op::OpKernel {
     const int64_t in_depth = dx_tensor->shape().At(2);
     const int64_t in_height = dx_tensor->shape().At(3);
     const int64_t in_width = dx_tensor->shape().At(4);
-    const int64_t out_depth = dx_tensor->shape().At(2);
-    const int64_t out_height = dx_tensor->shape().At(3);
-    const int64_t out_width = dx_tensor->shape().At(4);
+    const int64_t out_depth = dy_tensor->shape().At(2);
+    const int64_t out_height = dy_tensor->shape().At(3);
+    const int64_t out_width = dy_tensor->shape().At(4);
     const float depth_scale = out_depth * 1.0 / in_depth;
     const float height_scale = out_height * 1.0 / in_height;
     const float width_scale = out_width * 1.0 / in_width;
