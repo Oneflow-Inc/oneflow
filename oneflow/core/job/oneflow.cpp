@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/job/oneflow.h"
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
