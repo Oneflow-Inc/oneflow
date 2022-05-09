@@ -13,27 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
+#ifndef ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_
+#define ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_
 
-#include <cub/cub.cuh>
+#include "oneflow/core/ep/include/event.h"
+
+#ifdef WITH_HIP
+
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
-int GetCudaSmVersion() {
-  int sm_version, device_ordinal;
-  OF_CUDA_CHECK(cudaGetDevice(&device_ordinal));
-  OF_CUDA_CHECK(cub::SmVersion(sm_version, device_ordinal));
-  return sm_version;
-}
+namespace ep {
 
-int GetCudaPtxVersion() {
-  int ptx_version;
-  OF_CUDA_CHECK(cub::PtxVersion(ptx_version));
-  return ptx_version;
-}
+class CudaEvent : public Event {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudaEvent);
+  explicit CudaEvent(unsigned int flags);
+  ~CudaEvent() override;
+
+  Maybe<bool> QueryDone() override;
+  Maybe<void> Sync() override;
+
+  hipEvent_t cuda_event();
+
+ private:
+  hipEvent_t cuda_event_;
+};
+
+}  // namespace ep
 
 }  // namespace oneflow
 
+#endif  // WITH_HIP
 
-#endif
+#endif  // ONEFLOW_CORE_EP_CUDA_CUDA_EVENT_H_

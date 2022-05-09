@@ -153,6 +153,21 @@ void CheckDataType() {
   CHECK_DEVICE_FP16(GetMinVal);
 #undef CHECK_DEVICE_FP16
 
+#if defined(WITH_HIP)
+
+#define CHECK_DEVICE_FP16(get_val)                              \
+  do {                                                          \
+    float16 host_fp16 = get_val<float16>();                     \
+    half device_fp16 = get_val<half>();                         \
+    CHECK_EQ(*(uint16_t*)&host_fp16, *(uint16_t*)&device_fp16); \
+  } while (0)
+
+  CHECK_DEVICE_FP16(GetZeroVal);
+  CHECK_DEVICE_FP16(GetOneVal);
+  CHECK_DEVICE_FP16(GetMaxVal);
+  CHECK_DEVICE_FP16(GetMinVal);
+#undef CHECK_DEVICE_FP16
+
 #endif
 
 #define CHECK_MAX_VAL(T, limit_value) CHECK_EQ(GetMaxVal<T>(), std::numeric_limits<T>::max());
