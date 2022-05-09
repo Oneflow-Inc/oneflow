@@ -22,12 +22,10 @@ import time
 import oneflow as flow
 import oneflow.unittest
 
-from oneflow.test_utils.automated_test_util import *
-
 
 class TestBinaryFunctorError(flow.unittest.TestCase):
     def test_add_device_runtime_error(test_case):
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4))
             y = flow.ones((4, 4)).cuda()
             z = flow.add(x, y)
@@ -37,7 +35,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
         )
 
     def test_add_inplace_runtime_error(test_case):
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             y = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             x.add_(y)
@@ -47,7 +45,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
         )
 
     def test_add_broad_cast_runtime_error(test_case):
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((2, 3))
             y = flow.ones((2, 4))
             x.add_(y)
@@ -56,7 +54,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
         )
 
     def test_mul_device_runtime_error(test_case):
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4))
             y = flow.ones((4, 4)).cuda()
             z = flow.mul(x, y)
@@ -66,7 +64,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
         )
 
     def test_mul_inplace_runtime_error(test_case):
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4))
             y = flow.ones((4, 4)).cuda()
             x.mul_(y)
@@ -75,7 +73,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             y = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             x.mul_(y)
@@ -84,7 +82,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((2, 3))
             y = flow.ones((2, 4))
             x.mul_(y)
@@ -93,7 +91,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
         )
 
     def test_div_inplace_runtime_error(test_case):
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4))
             y = flow.ones((4, 4)).cuda()
             x.div_(y)
@@ -102,7 +100,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             y = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             x.div_(y)
@@ -111,7 +109,7 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
-        with test_case.assertRaises(Exception) as context:
+        with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((2, 3))
             y = flow.ones((2, 4))
             x.div_(y)
