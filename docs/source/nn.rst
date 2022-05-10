@@ -31,6 +31,7 @@ Operators for neural networks
         CombinedMarginLoss,
         CropMirrorNormalize,
         CrossEntropyLoss,
+        DistributedPariticalFCSample,
         Dropout,
         ELU,
         CELU,
