@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_PRIMITIVE_COMMON_PAD_H_
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
-#include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/core/ep/include/primitive/nd_index_offset_calculator.h"
 
 namespace oneflow {
 
@@ -27,8 +27,8 @@ namespace primitive {
 
 template<size_t num_dims, typename IndexType>
 struct ConstantPadParams {
-  NdIndexOffsetHelper<IndexType, num_dims> src_index_helper;
-  NdIndexOffsetHelper<IndexType, num_dims> dst_index_helper;
+  NdIndexOffsetHelperCalculator<IndexType, num_dims> src_index_helper;
+  NdIndexOffsetHelperCalculator<IndexType, num_dims> dst_index_helper;
   IndexType padding_before[num_dims];
   IndexType padding_after[num_dims];
   IndexType out_size[num_dims];
