@@ -32,11 +32,10 @@ def _test_argmax_with_random_data(test_case, ndim, placement, sbp):
 class TestArgmax(flow.unittest.TestCase):
     @globaltest
     def test_argmax(test_case):
-        for i in range(100):
-            ndim = random(1, 3).to(int).value()
-            for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=ndim):
-                    _test_argmax_with_random_data(test_case, ndim, placement, sbp)
+        ndim = random(1, 3).to(int).value()
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=ndim):
+                _test_argmax_with_random_data(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
