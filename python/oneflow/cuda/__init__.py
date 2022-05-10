@@ -68,7 +68,3 @@ def manual_seed(seed: int) -> None:
     seed = int(seed)
     idx = current_device()
     flow._oneflow_internal.manual_seed(seed, "cuda", idx)
-
-
-def synchronize(device=None):
-    flow._oneflow_internal.eager.Sync()
