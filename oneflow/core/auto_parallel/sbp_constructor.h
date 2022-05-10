@@ -68,7 +68,7 @@ class SbpConstructor final {
   Maybe<void> StealSbpSignatureFromOpNode(const OpGraph& op_graph, const Job& job);
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
   Maybe<void> InitCopyCost(const OpGraph& op_graph);
-  Maybe<void> ApplyMainstemAlgo();
+  Maybe<void> ApplyMainstemAlgo(bool take_curr_sbp);
   // Load logical blob ids onto sbp edges
   void LoadLbi2SbpEdge(const OpGraph& op_graph);
 

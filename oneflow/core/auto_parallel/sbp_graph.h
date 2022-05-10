@@ -123,7 +123,8 @@ class SbpGraph {
   void DetectAdjustOverlap(double CostRatio);
 
   // Compute the minimum and maximum layer of each node in the graph
-  int32_t ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+  int32_t ComputeLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+                       bool consider_transfer_as_layer);
 
   // Find the mianstem of the sbp graph, then reduce the wait time for tributaries
   void FindMainstem(int32_t max_MinLayer,
@@ -912,9 +913,12 @@ void SbpGraph<SbpSignature>::DetectAdjustOverlap(double CostRatio) {
 // Compute the minimum and maximum layer of each node in the graph
 template<class SbpSignature>
 int32_t SbpGraph<SbpSignature>::ComputeLayer(
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
+    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+    bool consider_transfer_as_layer) {
   // Compute minimum layer
-  for (SbpNode<SbpSignature>* this_node : NodeList) { this_node->GetMinLayer(op_name2sbp_node); }
+  for (SbpNode<SbpSignature>* this_node : NodeList) {
+    this_node->GetMinLayer(op_name2sbp_node, consider_transfer_as_layer);
+  }
   // Find the largest minimum layer
   int32_t max_MinLayer = -1;
   for (SbpNode<SbpSignature>* this_node : NodeList) {

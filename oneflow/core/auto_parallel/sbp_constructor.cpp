@@ -39,7 +39,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(GenerateNodeAndEdge(op_graph, job));
   JUST(FillSbpSignatureForOpNode(op_graph, job, take_curr_sbp));
   JUST(InitComputationCost(op_graph));
-  if (enable_mainstem_algo_) { JUST(ApplyMainstemAlgo()); }
+  if (enable_mainstem_algo_ && !take_curr_sbp) { JUST(ApplyMainstemAlgo(take_curr_sbp)); }
   if (use_sbp_collector_) {
     // Load logical blobs on all sbp edges.
     LoadLbi2SbpEdge(op_graph);
@@ -50,6 +50,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   }
 
   JUST(InitCopyCost(op_graph));
+  if (take_curr_sbp) { JUST(ApplyMainstemAlgo(take_curr_sbp)); }
   // TODO:  Set all the sbp signature id to be 0 for initialization.
   //        Could revert it back to
   // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
@@ -300,9 +301,9 @@ Maybe<void> SbpConstructor::InitCopyCost(const OpGraph& op_graph) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SbpConstructor::ApplyMainstemAlgo() {
+Maybe<void> SbpConstructor::ApplyMainstemAlgo(bool take_curr_sbp) {
   // Compute layer number for each node
-  int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_);
+  int32_t max_MinLayer = sbp_graph_.ComputeLayer(op_name2sbp_node_, take_curr_sbp);
   // Accumulate cost on the mainstem after initializing computation cost
   sbp_graph_.FindMainstem(max_MinLayer, op_name2sbp_node_);
   return Maybe<void>::Ok();
@@ -457,24 +458,24 @@ Maybe<void> SbpConstructor::StraightenNodes(
   // Decide which node should run first
   struct comp {
     bool operator()(const SbpNode<NdSbpSignature>* a, const SbpNode<NdSbpSignature>* b) const {
-      if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
+      // if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
+      if (a->MinLayer == b->MinLayer) {
         if (a->TributaryLayer == b->TributaryLayer) {
-          if (a->MinLayer == b->MinLayer) {
-            // the order does not matter right now
-            // return a->Cost[0] < b->Cost[0];
-            // we need a strict order
-            return a->NodeListId < b->NodeListId;
-          } else {
-            // the node that shows up first has higher priority
-            return a->MinLayer < b->MinLayer;
-          }
+          // the order does not matter right now
+          // return a->Cost[0] < b->Cost[0];
+          // we need a strict order
+          return a->NodeListId < b->NodeListId;
         } else {
           // the urgent node has the higher priority
           return a->TributaryLayer < b->TributaryLayer;
         }
       } else {
-        return a->MinDistance2Transfer < b->MinDistance2Transfer;
+        // the node that shows up first has higher priority
+        return a->MinLayer < b->MinLayer;
       }
+      // } else {
+      //   return a->MinDistance2Transfer < b->MinDistance2Transfer;
+      // }
     }
   };
   // The computation ready for execution

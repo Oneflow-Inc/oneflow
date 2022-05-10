@@ -186,7 +186,8 @@ class SbpNode {
   void DetectSpreadOverlap(double overlap_ratio);
 
   // Get or compute the minimum layer of this node
-  int32_t GetMinLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+  int32_t GetMinLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+                      bool consider_transfer_as_layer);
   // Spread the minimum layer to compute the maximum layer of producers
   void SpreadMaxLayer(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
   // Drop down the maximum layer with the minimum layer form consumer
@@ -688,17 +689,21 @@ void SbpNode<SbpSignature>::DetectSpreadOverlap(double overlap_ratio) {
 // Get or compute the minimum layer of this node
 template<class SbpSignature>
 int32_t SbpNode<SbpSignature>::GetMinLayer(
-    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node) {
+    oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node,
+    bool consider_transfer_as_layer) {
   if (MinLayer >= 0) { return MinLayer; }
   if (!op_node) { return MinLayer; }
   for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
-    int32_t producer_min_layer = this_edge->StartNode->GetMinLayer(op_name2sbp_node);
+    int32_t producer_min_layer =
+        this_edge->StartNode->GetMinLayer(op_name2sbp_node, consider_transfer_as_layer);
+    if (consider_transfer_as_layer && this_edge->Cost[0][0] > 0.0) { producer_min_layer++; }
     if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
   }
   for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
-      int32_t producer_min_layer = it->second->GetMinLayer(op_name2sbp_node);
+      int32_t producer_min_layer =
+          it->second->GetMinLayer(op_name2sbp_node, consider_transfer_as_layer);
       if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
     }
   }
