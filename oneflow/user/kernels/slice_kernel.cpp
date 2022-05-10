@@ -205,6 +205,7 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
     Memset<device_type>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
+    if (dy_tensor->shape().elem_cnt() == 0) { return; }
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
