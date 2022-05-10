@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
@@ -426,45 +425,25 @@ class BroadcastLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& like,
                            const std::vector<int32_t>& broadcast_axes) const {
-    const int64_t x_ndim = x->ndim();
-    const int64_t like_ndim = like->ndim();
-    CHECK_EQ_OR_RETURN(x_ndim, like_ndim)
-        << Error::RuntimeError() << "Dim of x must be equal to like_tensor, but got " << x_ndim
-        << " vs " << like_ndim;
     MutableAttrMap attrs;
-    const int32_t broadcast_axes_size = broadcast_axes.size();
-    std::vector<int32_t> broadcast_axes_new;
-    if (broadcast_axes_size == 0) {
-      for (int i = 0; i < x_ndim; ++i) {
-        if (x->shape()->At(i) != like->shape()->At(i)) {
-          CHECK_EQ_OR_RETURN(x->shape()->At(i), 1)
-              << Error::RuntimeError() << "Output with shape " << x->shape()->ToString()
+    if (broadcast_axes.empty()) {
+      int64_t like_ndim = like->shape()->NumAxes();
+      int64_t x_ndim = x->shape()->NumAxes();
+      int64_t num_prepend = like_ndim - x_ndim;
+      std::vector<int64_t> prepend_shape(num_prepend, 1);
+      std::vector<int64_t> broadcast_axes;
+      for (int i = 0; i < x_ndim; ++i) { prepend_shape.emplace_back(x->shape()->At(i)); }
+      for (int i = 0; i < num_prepend; ++i) { broadcast_axes.emplace_back(i); }
+      for (int i = num_prepend; i < prepend_shape.size(); ++i) {
+        if (prepend_shape[i] != like->shape()->At(i)) {
+          if (prepend_shape[i] == 1) { broadcast_axes.emplace_back(i); }
+          CHECK_GE_OR_RETURN(prepend_shape[i], 1)
+              << Error::RuntimeError() << "output with shape " << x->shape()->ToString()
               << " doesn't match the broadcast shape " << like->shape()->ToString();
-          broadcast_axes_new.emplace_back(i);
-        }
-      }
-      CHECK_NE_OR_RETURN(broadcast_axes_new.size(), 0)
-          << Error::RuntimeError() << "Shape of x to broadcast must be 1";
-
-    } else {
-      std::vector<int32_t> broadcast_axes_new(broadcast_axes);
-      for (int i = 0; i < broadcast_axes_size; ++i) {
-        CHECK_OR_RETURN(broadcast_axes[i] >= -x_ndim && broadcast_axes[i] < x_ndim)
-            << Error::IndexError() << "broadcast_axes out of range (expected to be in range of ["
-            << -x_ndim << ", " << x_ndim - 1 << "], but got " << broadcast_axes[i] << ")";
-
-        CHECK_EQ_OR_RETURN(x->shape()->At(broadcast_axes[i]), 1)
-            << Error::RuntimeError() << "Shape of x to broadcast must be 1, but got "
-            << x->shape()->At(broadcast_axes[i]);
-
-        if (broadcast_axes[i] < 0) {
-          broadcast_axes_new[i] = broadcast_axes[i] + x_ndim;
-        } else {
-          broadcast_axes_new[i] = broadcast_axes[i];
         }
       }
     }
-    JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes_new));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
   }
 
@@ -591,8 +570,11 @@ class StackGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
                                 const int64_t& axis) const {
-    CHECK_GE_OR_RETURN(like.size(), 2) << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
-    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount) << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount << ", but got " << like.size();
+    CHECK_GE_OR_RETURN(like.size(), 2)
+        << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount)
+        << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount
+        << ", but got " << like.size();
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
@@ -2357,8 +2339,12 @@ class SplitLikeFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& like,
                                 const int64_t& axis) const {
-    CHECK_GE_OR_RETURN(like.size(), 2) << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
-    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount) << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount << ", but got " << like.size();;
+    CHECK_GE_OR_RETURN(like.size(), 2)
+        << Error::RuntimeError() << "like.size() must not less than 2, but got " << like.size();
+    CHECK_LE_OR_RETURN(like.size(), kMaxInputCount)
+        << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount
+        << ", but got " << like.size();
+    ;
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
