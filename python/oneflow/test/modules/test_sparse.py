@@ -19,6 +19,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
 
+
 def _test_embedding_padding_idx(test_case, device):
     indices = flow.tensor(
         [[1, 0, 4, 8], [8, 3, 0, 9]],
@@ -78,8 +79,8 @@ class TestEmbedding(flow.unittest.TestCase):
     @autotest(n=5, check_graph=True)
     def test_embedding_impl(test_case):
         device = random_device()
-        emb_size = random(low=2)
-        emb_dim = random(low=2)
+        emb_size = random(low=2) * 16
+        emb_dim = random(low=2) * 16
         emb_shape = [emb_size, emb_dim]
 
         idx_ndim = random(high=4).to(int).value()
@@ -94,11 +95,11 @@ class TestEmbedding(flow.unittest.TestCase):
         y = embedding(indices)
         return y
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_embedding_functional(test_case):
         device = random_device()
-        emb_size = random(low=2)
-        emb_dim = random(low=2)
+        emb_size = random(low=2) * 16
+        emb_dim = random(low=2) * 16
         emb_shape = [emb_size, emb_dim]
 
         idx_ndim = random(high=4).to(int).value()
@@ -115,8 +116,8 @@ class TestEmbedding(flow.unittest.TestCase):
     @autotest(n=5, check_graph=False)
     def test_embedding_renorm(test_case):
         device = random_device()
-        emb_size = random(low=2)
-        emb_dim = random(low=2)
+        emb_size = random(low=2) * 16
+        emb_dim = random(low=2) * 16
         emb_shape = [emb_size, emb_dim]
 
         idx_ndim = 2
@@ -133,11 +134,11 @@ class TestEmbedding(flow.unittest.TestCase):
         y = embedding(indices)
         return y
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_embedding_scale_grad_by_freq(test_case):
         device = random_device()
-        emb_size = random(low=2)
-        emb_dim = random(low=2)
+        emb_size = random(low=2) * 16
+        emb_dim = random(low=2) * 16
         emb_shape = [emb_size, emb_dim]
 
         idx_ndim = random(high=4).to(int).value()
