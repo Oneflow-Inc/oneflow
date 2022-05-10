@@ -34,6 +34,5 @@ TEST(Shape, function_test_1) {
   ASSERT_EQ(shape.elem_cnt(), 2543386624);
 }
 
-
-} // test
-} // oneflow
+}  // namespace test
+}  // namespace oneflow
