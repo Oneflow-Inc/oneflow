@@ -26,10 +26,6 @@ def sum_op(input, dim=None, keepdim=False):
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
         return input
-    print('^'*100)
-    print(input)
-    print(axis_checked)
-    print(keepdim)
     return flow._C.reduce_sum(input, axis=axis_checked, keepdims=keepdim)
 
 
