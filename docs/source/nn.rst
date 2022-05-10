@@ -27,6 +27,7 @@ Operators for neural networks
         ConvTranspose1d,
         ConvTranspose2d,
         ConvTranspose3d,
+        CosineSimilarity,
         CombinedMarginLoss,
         CropMirrorNormalize,
         CrossEntropyLoss,

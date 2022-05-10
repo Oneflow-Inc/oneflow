@@ -37,7 +37,7 @@ def current_device() -> int:
 
 def manual_seed_all(seed) -> None:
     r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.cuda.manual_seed_all.html?highlight=manual_seed_all
+    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed_all.html.
     
     Sets the seed for generating random numbers on all GPUs.
     It's safe to call this function if CUDA is not available; in that
@@ -52,7 +52,7 @@ def manual_seed_all(seed) -> None:
 
 def manual_seed(seed: int) -> None:
     r"""The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.cuda.manual_seed.html?highlight=manual_seed
+    https://pytorch.org/docs/1.10/generated/torch.cuda.manual_seed.html.
     
     Sets the seed for generating random numbers for the current GPU.
     It's safe to call this function if CUDA is not available; in that

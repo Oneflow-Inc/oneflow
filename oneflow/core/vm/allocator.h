@@ -27,6 +27,7 @@ class Allocator {
 
   virtual void Allocate(char** mem_ptr, std::size_t size) = 0;
   virtual void Deallocate(char* mem_ptr, std::size_t size) = 0;
+  virtual void DeviceReset() {}
 
  protected:
   Allocator() = default;
