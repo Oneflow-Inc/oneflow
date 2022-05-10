@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,14 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_KERNEL_UTIL_ARITHEMETIC_INTERFACE_H_
-#define ONEFLOW_CORE_KERNEL_UTIL_ARITHEMETIC_INTERFACE_H_
+"""
+US_IN_MS = 1000.0
+US_IN_SECOND = US_IN_MS * 1000.0
 
-#include "oneflow/core/job/resource.pb.h"
-#include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/common/data_type.h"
 
-namespace oneflow {
-
-template<DeviceType>
-struct ArithemeticIf;
-
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_KERNEL_UTIL_ARITHEMETIC_INTERFACE_H_
+def format_time(time_us):
+    if time_us >= US_IN_SECOND:
+        return "{:.3f}s".format(time_us / US_IN_SECOND)
+    if time_us >= US_IN_MS:
+        return "{:.3f}ms".format(time_us / US_IN_MS)
+    return "{:.3f}us".format(time_us)

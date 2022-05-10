@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
@@ -86,6 +87,7 @@ struct LocalCallOpKernelUtil final {
                          operand->consistent_tensor_infer_result().get());
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
     temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+    temp_eager_blob_object->set_pin_memory(false);
     temp_eager_blob_object->set_is_dynamic(true);
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
   }
@@ -126,7 +128,21 @@ struct LocalCallOpKernelUtil final {
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
-    operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    {
+      std::shared_ptr<profiler::EventRecorder> er_guard;
+      if (Global<profiler::ProfileMgr>::Get() != nullptr) {
+        er_guard = profiler::EventRecorder::CreateKernelEventRecorder(
+            opkernel->op_type_name(), [&]() -> std::vector<Shape> {
+              std::vector<Shape> shapes;
+              for (const auto& pair : compute_ctx->inputs()) {
+                shapes.push_back(
+                    compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
+              }
+              return shapes;
+            });
+      }
+      operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    }
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
