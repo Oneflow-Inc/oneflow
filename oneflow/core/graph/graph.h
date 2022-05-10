@@ -35,8 +35,10 @@ class Graph {
   void ForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   Maybe<void> MaybeForEachNode(std::function<Maybe<void>(NodeType*)> NodeHandler) const;
   void TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
+  void TopoForEachNodeFast(std::function<void(NodeType*)> NodeHandler) const;
   Maybe<void> TopoForEachNodeWithErrorCaptured(
       std::function<Maybe<void>(NodeType*)> NodeHandler) const;
+  Maybe<void> TopoForEachNodeFastMaybe(std::function<Maybe<void>(NodeType*)> NodeHandler) const;
   void ReverseTopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const;
 
@@ -60,6 +62,12 @@ class Graph {
       const std::function<void(NodeType*)>& Handler) const;
 
   Maybe<void> TopoForEachNodeWithErrorCaptured(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<Maybe<void>(NodeType*)>& Handler) const;
+
+  Maybe<void> TopoForEachNodeFastMaybe(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
@@ -218,10 +226,27 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> N
 }
 
 template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::TopoForEachNodeFast(
+    std::function<void(NodeType*)> NodeHandler) const {
+  TopoForEachNodeFastMaybe(source_nodes(), &NodeType::ForEachNodeOnInEdge,
+                           &NodeType::ForEachNodeOnOutEdge, [&](NodeType* node) {
+                             NodeHandler(node);
+                             return Maybe<void>::Ok();
+                           });
+}
+
+template<typename NodeType, typename EdgeType>
 Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeWithErrorCaptured(
     std::function<Maybe<void>(NodeType*)> NodeHandler) const {
   return TopoForEachNodeWithErrorCaptured(source_nodes(), &NodeType::ForEachNodeOnInEdge,
                                           &NodeType::ForEachNodeOnOutEdge, NodeHandler);
+}
+
+template<typename NodeType, typename EdgeType>
+Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeFastMaybe(
+    std::function<Maybe<void>(NodeType*)> NodeHandler) const {
+  return TopoForEachNodeFastMaybe(source_nodes(), &NodeType::ForEachNodeOnInEdge,
+                                  &NodeType::ForEachNodeOnOutEdge, NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -532,6 +557,31 @@ Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeWithErrorCaptured(
         queue.push(out);
         has_queued[out] = true;
       }
+    });
+  }
+  return Maybe<void>::Ok();
+}
+
+template<typename NodeType, typename EdgeType>
+Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeFastMaybe(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+    const std::function<Maybe<void>(NodeType*)>& Handler) const {
+  HashMap<NodeType*, int32_t> counter_in;
+  std::queue<NodeType*> queue;
+  ForEachNode([&](NodeType* node) {
+    int32_t count = 0;
+    ForEachInNode(node, [&](NodeType*) { count++; });
+    counter_in[node] = count;
+    if (count == 0) { queue.push(node); }
+  });
+  while (!queue.empty()) {
+    NodeType* cur_node = queue.front();
+    queue.pop();
+    JUST(Handler(cur_node));
+    ForEachOutNode(cur_node, [&](NodeType* out) {
+      if (--counter_in[out] == 0) { queue.push(out); }
     });
   }
   return Maybe<void>::Ok();
