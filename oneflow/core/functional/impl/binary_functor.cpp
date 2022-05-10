@@ -118,7 +118,7 @@ class SubFunctor : public InplaceableBinaryFunctor {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor> other, const Scalar& alpha,
+                           const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
                            bool inplace) const {
     if (IsIntegralDataType(input->dtype()->data_type())
         && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
