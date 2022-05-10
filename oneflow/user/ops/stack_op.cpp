@@ -107,8 +107,16 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& first_in_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, first_in_desc.shape().NumAxes()) {
-    if (i >= axis) { continue; }
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    /*
+    Stack can be view as expand_dims + concat.
+    For stack([(2, 4, 6), (2, 4, 6), axis=1]), it equals to [2, 4, 6]->[2, 1, 4, 6]. concat([2, 1,
+    4, 6], [2, 1, 4, 6], concat_dim=1) Concat split all the axis except the concat_dim.
+    */
+    if (i >= axis) {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i + 1).Build();
+    } else {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
   }
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
