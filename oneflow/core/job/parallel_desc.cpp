@@ -291,6 +291,7 @@ void ParallelDesc::set_device_type(DeviceType device_type) {
   device_type_ = device_type;
   const std::string tag = *CHECK_JUST(DeviceTag4DeviceType(device_type));
   parallel_conf_.set_device_tag(tag);
+  cfg_parallel_conf_->set_device_tag(tag);
 }
 
 Maybe<void> ParallelDesc::SanityCheck() {

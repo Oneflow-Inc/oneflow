@@ -30,28 +30,28 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 
 }  // namespace
 
-Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                             const Shape& logical_shape) {
+Maybe<void> CheckCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                         const Shape& logical_shape) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
   CHECK_OR_RETURN(equal);
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
-  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kCUDA);
+  CHECK_NE_OR_RETURN(out->placement()->device_type(), DeviceType::kCPU);  // NOLINT
   CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckCudaCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                             const Shape& logical_shape) {
+Maybe<void> CheckCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                         const Shape& logical_shape) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
   CHECK_OR_RETURN(equal);
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
+  CHECK_NE_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);  // NOLINT
   CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kCPU);
   CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
 
-Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                            Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> CopyBoxingFunction(const std::shared_ptr<one::Tensor>& tensor,
+                                      Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
@@ -69,7 +69,7 @@ Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor, Symbol<P
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("cuda-copy-h2d", &CheckCudaCopyH2D, &CudaCopy));
-COMMAND(RegisterBoxingFunction("cuda-copy-d2h", &CheckCudaCopyD2H, &CudaCopy));
+COMMAND(RegisterBoxingFunction("copy-h2d", &CheckCopyH2D, &CopyBoxingFunction));
+COMMAND(RegisterBoxingFunction("copy-d2h", &CheckCopyD2H, &CopyBoxingFunction));
 
 }  // namespace oneflow

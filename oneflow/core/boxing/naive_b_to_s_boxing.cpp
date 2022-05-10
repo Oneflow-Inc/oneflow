@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/boxing/slice_boxing_util.h"
 
 namespace oneflow {
 
@@ -56,18 +57,32 @@ Maybe<one::Tensor> NaiveBToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
-  std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
+  // Copy to cpu if device of input tensor is not cpu or cuda, otherwise return self
+  std::shared_ptr<one::Tensor> processed_in_tensor = JUST(PreprocessInputTensor4SliceBoxing(
+      tensor, /* log_prefix */ "\t\tInternal boxing of naive-b-to-s, "));
+
+  Symbol<ParallelDesc> new_out_placement = JUST(ReplaceDeviceType(
+      out->placement(), JUST(processed_in_tensor->parallel_desc())->device_type()));
+
+  std::shared_ptr<one::Tensor> local_tensor = JUST(processed_in_tensor->cur_rank_phy_tensor());
   {
-    const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
-    const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
+    const auto& in_parallel_id =
+        JUST(GetParallelId4CurrentProcessCtx(JUST(processed_in_tensor->parallel_desc())));
+    const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(new_out_placement));
     if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
-      local_tensor = JUST(one::functional::EagerBToS(
-          local_tensor, tensor_placement, out->placement(), *sbp_list, *tensor->shape()));
+      local_tensor =
+          JUST(one::functional::EagerBToS(local_tensor, JUST(processed_in_tensor->parallel_desc()),
+                                          new_out_placement, *sbp_list, *tensor->shape()));
     }
   }
 
-  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
-                                                 *tensor->shape(), tensor->dtype()));
+  std::shared_ptr<one::Tensor> out_tensor = JUST(one::functional::LocalToConsistent(
+      local_tensor, new_out_placement, *sbp_list, *tensor->shape(), tensor->dtype()));
+
+  // Copy to corresponding device if device of output tensor is not same with that of out
+  // placed_nd_sbp, otherwise return self
+  return JUST(PostprocessOutputTensor4SliceBoxing(
+      out_tensor, out, /* log_prefix */ "\t\tInternal boxing of naive-b-to-s, "));
 }
 
 COMMAND(RegisterBoxingFunction("naive-b-to-s", CheckNaiveBToS, &NaiveBToS));
