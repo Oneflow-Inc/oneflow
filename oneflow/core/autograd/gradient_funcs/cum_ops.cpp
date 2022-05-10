@@ -58,10 +58,10 @@ class CumsumGrad : public CumGrad<CumCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       std::vector<int32_t> flip_dim(1, ctx->dim);
-      in_grads->at(0) = JUST(functional::Flip(
-          JUST(functional::Cumsum(JUST(functional::Flip(out_grads.at(0), flip_dim)), ctx->dim,
-                                  out_grads.at(0)->dtype())),
-          flip_dim));
+      (*in_grads)[0] = JUST(
+          functional::Flip(JUST(functional::Cumsum(JUST(functional::Flip(out_grads[0], flip_dim)),
+                                                   ctx->dim, out_grads[0]->dtype())),
+                           flip_dim));
     }
     return Maybe<void>::Ok();
   }
