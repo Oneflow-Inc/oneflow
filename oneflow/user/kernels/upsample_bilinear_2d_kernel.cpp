@@ -100,6 +100,7 @@ class UpsampleBilinear2DCPUKernel final : public user_op::OpKernel {
     const int64_t in_width = x_tensor->shape().At(3);
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
+
     if (!output_size.empty()) {
       height_scale = out_height * 1.0 / in_height;
       width_scale = out_width * 1.0 / in_width;

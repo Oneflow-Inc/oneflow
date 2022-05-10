@@ -108,7 +108,6 @@ class UpsampleBilinear2DGPUKernel final : public user_op::OpKernel {
       height_scale = out_height * 1.0 / in_height;
       width_scale = out_width * 1.0 / in_width;
     }
-
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
