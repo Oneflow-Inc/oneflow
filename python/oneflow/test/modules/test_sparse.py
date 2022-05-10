@@ -75,7 +75,7 @@ class TestEmbedding(flow.unittest.TestCase):
         for device in ["cpu", "cuda"]:
             _test_embedding_padding_idx(test_case, device)
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_embedding_impl(test_case):
         device = random_device()
         emb_size = random(low=2)

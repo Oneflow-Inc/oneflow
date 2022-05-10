@@ -112,23 +112,41 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+// REGISTER_USER_OP_GRAD("embedding")
+//     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+//                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
+//       if (op.NeedGenGradTensor4OpInput("weight", 0)) {
+//         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+//         user_op::UserOpConfWrapper grad_op =
+//             builder.Op("embedding_grad")
+//                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+//                 .Input("weight", op.input("weight", 0))
+//                 .Input("indices", op.input("indices", 0))
+//                 .Output("dx")
+//                 .Attr("padding_idx", op.attr<int64_t>("padding_idx"))
+//                 .Attr("scale_grad_by_freq", op.attr<bool>("scale_grad_by_freq"))
+//                 .Build();
+//         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "weight", 0);
+//         AddOp(grad_op);
+//       }
+//       return Maybe<void>::Ok();
+//     });
+
 REGISTER_USER_OP_GRAD("embedding")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("weight", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("embedding_grad")
-                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-                .Input("weight", op.input("weight", 0))
-                .Input("indices", op.input("indices", 0))
-                .Output("dx")
-                .Attr("padding_idx", op.attr<int64_t>("padding_idx"))
-                .Attr("scale_grad_by_freq", op.attr<bool>("scale_grad_by_freq"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "weight", 0);
-        AddOp(grad_op);
-      }
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const auto embedding_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(embedding_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("embedding_grad")
+            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .InputBind("weight", ctx->FwOp().input("weight", 0))
+            .InputBind("indices", ctx->FwOp().input("indices", 0))
+            .Output("dx")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("weight", 0),
+                                [&ctx, &embedding_grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(embedding_grad_op_name).output("dx", 0);
+                                });
       return Maybe<void>::Ok();
     });
 
