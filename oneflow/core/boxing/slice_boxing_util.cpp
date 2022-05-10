@@ -22,13 +22,13 @@ namespace oneflow {
 
 Maybe<one::Tensor> PreprocessInputTensor4SliceBoxing(const std::shared_ptr<one::Tensor>& tensor,
                                                      const std::string& log_prefix) {
-  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   if (tensor_placement->device_type() == DeviceType::kCPU
       || tensor_placement->device_type() == DeviceType::kCUDA) {
     return tensor;
   }
 
+  const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   Symbol<ParallelDesc> new_placement = JUST(ReplaceDeviceType(tensor_placement, DeviceType::kCPU));
 
   const auto& boxing_interpreter =
