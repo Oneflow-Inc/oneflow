@@ -276,7 +276,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
 // according to input tensors
 Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs) {
   struct NodeFrame {
-    NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
+    explicit NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
     FunctionNode* node_;
     size_t next_function_idx_;
 
