@@ -310,7 +310,11 @@ std::string GetErrorString(const std::shared_ptr<cfg::ErrorProto>& error) {
   if (IsInDebugMode()) {
     return GetStackedErrorString(error);
   } else {
-    return error->msg();
+    if (error->msg().empty() && error->stack_frame().size() > 0) {
+      return error->stack_frame(0).error_msg();
+    } else {
+      return error->msg();
+    }
   }
 }
 
