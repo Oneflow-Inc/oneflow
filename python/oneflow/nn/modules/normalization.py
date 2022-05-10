@@ -26,7 +26,7 @@ _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 class GroupNorm(Module):
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.GroupNorm.html
+    https://pytorch.org/docs/1.10/generated/torch.nn.GroupNorm.html.
 
     Applies Group Normalization over a mini-batch of inputs as described in
     the paper `Group Normalization <https://arxiv.org/abs/1803.08494>`__
@@ -145,7 +145,7 @@ def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
     for i in range(0, len(normalized_shape)):
         if input.shape[i + begin_params_axis] != normalized_shape[i]:
             raise RuntimeError(
-                f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {x.shape}"
+                f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {input.shape}"
             )
 
     if not input.is_cuda:

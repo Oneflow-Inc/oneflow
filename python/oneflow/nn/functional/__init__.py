@@ -32,6 +32,7 @@ from .functional_maxpool import max_pool3d
 from oneflow._C import adaptive_avg_pool1d
 from oneflow._C import adaptive_avg_pool2d
 from oneflow._C import adaptive_avg_pool3d
+from oneflow._C import cosine_similarity
 from oneflow._C import relu
 from oneflow._C import hardtanh
 from oneflow._C import hardsigmoid

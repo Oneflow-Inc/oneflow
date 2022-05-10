@@ -868,6 +868,17 @@ def clear_note_fake_program():
     flow.set_printoptions(profile="full")
 
 
+gc_interval = int(os.getenv("ONEFLOW_TEST_GC_INTERVAL", 10))
+gc_counter = 0
+
+
+def manual_gc_collect():
+    global gc_counter
+    gc_counter += 1
+    if gc_counter % gc_interval == 0:
+        gc.collect()
+
+
 class DualObject:
     def __init__(self, name, pytorch, oneflow):
         self.name = name
@@ -932,7 +943,11 @@ class DualObject:
 
     def __del__(self):
         # force running gc to avoid the periodic gc related to metaclass
-        gc.collect()
+        # 'gc' will be None if Python is shutting down
+        try:
+            manual_gc_collect()
+        except Exception:
+            pass
 
 
 dual_modules_to_test = []
@@ -1074,8 +1089,6 @@ def autotest(
             loop_limit = successful_runs_needed * 20
             current_run = 0
             while successful_runs_needed > 0:
-                # force running gc to avoid the periodic gc related to metaclass
-                gc.collect()
                 clear_note_fake_program()
                 if current_run > loop_limit:
                     raise ValueError(
