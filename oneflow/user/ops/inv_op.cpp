@@ -40,8 +40,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenerateBackwardOpConf4Median(const user_op::UserOpWrapper& op,
-                                          const user_op::AddOpFn& AddOp) {
+Maybe<void> GenerateBackwardOpConf4Inv(const user_op::UserOpWrapper& op,
+                                       const user_op::AddOpFn& AddOp) {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
     const auto& x = op.arg_tensor_desc("x", 0);
     const int64_t ndim = x.shape().NumAxes();
@@ -81,5 +81,7 @@ Maybe<void> GenerateBackwardOpConf4Median(const user_op::UserOpWrapper& op,
   }
   return Maybe<void>::Ok();
 }
+
+REGISTER_USER_OP_GRAD("inv").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Inv);
 
 }  // namespace oneflow
