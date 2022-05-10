@@ -280,6 +280,11 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
                                    &tensortype, &non_blocking)) {
     return NULL;
   }
+  //TODO: support for non_blocking=True
+  if(non_blocking == 1){
+    UNIMPLEMENTED() << "non_blocking=True is not supported yet";
+    return NULL;
+  }
   if (tensortype == NULL) {
     PyObject* result =
         PyTensortype_FromDTypeDeviceType(tensor->dtype()->data_type(), CHECK_JUST(tensor->device())->enum_type());
