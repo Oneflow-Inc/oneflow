@@ -169,7 +169,7 @@ intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListEr
     Instruction* instruction, const ScheduleCtx& schedule_ctx) {
   ++total_completed_instruction_cnt_;
   auto ret = mut_lively_instruction_list()->Erase(instruction);
-  static constexpr int kFlushInterval = 64;
+  static constexpr int kFlushInterval = 1;
   if (unlikely(total_completed_instruction_cnt_ % kFlushInterval) == 0) {
     FlushGarbageInstructions(schedule_ctx);
   }
