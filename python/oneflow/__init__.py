@@ -298,8 +298,8 @@ import oneflow.nn.image
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
-from oneflow.framework.env_util import api_enable_dtr as enable_dtr
-from oneflow.framework.env_util import api_is_dtr_enabled as is_dtr_enabled
+from oneflow.framework.env_util import enable_dtr
+from oneflow.framework.env_util import is_dtr_enabled
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator
