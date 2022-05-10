@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,21 +12,29 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow._oneflow_internal
+*/
 
+#ifndef ONEFLOW_CORE_PROFILER_UTIL_H_
+#define ONEFLOW_CORE_PROFILER_UTIL_H_
 
-def RangePush(range_name):
-    oneflow._oneflow_internal.profiler.RangePush(range_name)
+#include <cstdint>
+#include <time.h>
 
+namespace oneflow {
 
-def RangePop():
-    oneflow._oneflow_internal.profiler.RangePop()
+namespace profiler {
 
+using time_t = int64_t;
 
-def ProfilerStart():
-    oneflow._oneflow_internal.profiler.ProfilerStart()
+inline time_t GetTimeNow(bool allow_monotonic = false) {
+  struct timespec t {};
+  auto mode = CLOCK_REALTIME;
+  if (allow_monotonic) { mode = CLOCK_MONOTONIC; }
+  clock_gettime(mode, &t);
+  return static_cast<time_t>(t.tv_sec) * 1000000000 + static_cast<time_t>(t.tv_nsec);
+}
 
+}  // namespace profiler
+}  // namespace oneflow
 
-def ProfilerStop():
-    oneflow._oneflow_internal.profiler.ProfilerStop()
+#endif  // ONEFLOW_CORE_PROFILER_UTIL_H_

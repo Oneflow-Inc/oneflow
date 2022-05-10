@@ -73,7 +73,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"tanh_grad", "TanhGrad"},
     {"gelu", "Gelu"},
     {"gelu_grad", "GeluGrad"},
-    {"sigmoid", "Sigmoid"},
+    {"sigmoid_v2", "Sigmoid"},
     {"relu", "Relu"},
     {"normalization", "Normalization"},
     {"bias_add", "BiasAdd"},
