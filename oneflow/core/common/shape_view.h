@@ -83,7 +83,7 @@ class MutShapeView final : public ShapeViewBase<int64_t> {
 template<typename DimT>
 bool ShapeViewBase<DimT>::operator==(const ShapeViewBase<DimT>& rhs) const {
   if (this->NumAxes() != rhs.NumAxes()) { return false; }
-  FOR_RANGE(int, i, 0, this->NumAxes()) {
+  FOR_RANGE(int64_t, i, 0, this->NumAxes()) {
     if (At(i) != rhs.At(i)) { return false; }
   }
   return true;

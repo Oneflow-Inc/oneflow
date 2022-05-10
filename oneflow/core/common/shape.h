@@ -61,7 +61,7 @@ class Shape final {
   const DimVector& dim_vec() const { return dim_vec_; }
   DimVector& dim_vec() { return dim_vec_; }
   int64_t elem_cnt() const {
-    return std::accumulate(dim_vec_.begin(), dim_vec_.end(), 1, std::multiplies<int>());
+    return std::accumulate(dim_vec_.begin(), dim_vec_.end(), 1, std::multiplies<int64_t>());
   }
   int64_t At(int64_t index) const;
   void Set(int64_t index, int64_t val);
@@ -94,7 +94,7 @@ class Shape final {
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
 Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec);
-Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_extend_to);
+Shape CreateLeftExtendedShape(const ShapeView& shape, int64_t ndims_extend_to);
 Shape ZeroDimCompatiableShape(const Shape& shape);
 Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec);
 template<typename StreamT>
@@ -110,9 +110,9 @@ namespace std {
 
 template<>
 struct hash<oneflow::Shape> {
-  size_t operator()(const oneflow::Shape& shape) const {
-    size_t ret = shape.NumAxes();
-    FOR_RANGE(int, i, 0, shape.NumAxes()) { oneflow::AddHash(&ret, shape.At(i)); }
+  int64_t operator()(const oneflow::Shape& shape) const {
+    int64_t ret = shape.NumAxes();
+    FOR_RANGE(int64_t, i, 0, shape.NumAxes()) { oneflow::AddHash(&ret, shape.At(i)); }
     return ret;
   }
 };
