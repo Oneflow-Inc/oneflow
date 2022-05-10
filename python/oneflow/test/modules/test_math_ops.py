@@ -82,12 +82,38 @@ def _test_cos_backward(test_case, shape, device):
     np_grad = -np.sin(x.numpy())
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
 
+def _test_cos_higher_order_backward(test_case, shape, device):
+    x = flow.tensor(
+        np.random.randn(*shape),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.cos(x)
+    x_grad = flow.autograd.grad(
+        outputs=y,
+        inputs=x,
+        grad_outputs=flow.ones_like(y),
+        create_graph = True
+        )[0]
+    np_grad = -np.sin(x.numpy())
+    test_case.assertTrue(np.allclose(x_grad, np_grad, 1e-05, 1e-05))
+
+    x_grad_grad = flow.autograd.grad(
+        outputs=x_grad,
+        inputs=x,
+        grad_outputs=flow.ones_like(y),
+        create_graph = True
+        )[0]
+    np_grad_grad = -np.cos(x.numpy())
+    test_case.assertTrue(np.allclose(x_grad_grad, np_grad_grad, 1e-05, 1e-05))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestCos(flow.unittest.TestCase):
     def test_cos(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_cos, _test_cos_backward]
+        arg_dict["test_fun"] = [_test_cos, _test_cos_backward, _test_cos_higher_order_backward]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

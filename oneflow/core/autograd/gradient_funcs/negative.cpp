@@ -16,48 +16,34 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/user/ops/math_unary_elementwise_seq.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-struct UnaryMathCaptureState : public AutoGradCaptureState {
+struct NegativeCaptureState : public AutoGradCaptureState {
   bool x_requires_grad;
 };
 
-typedef Maybe<one::Tensor> (*UnaryBwFunc)(const std::shared_ptr<one::Tensor>&,
-                                          const std::shared_ptr<one::Tensor>&);
-
-template<UnaryBwFunc BwFunc>
-class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
+class Negative : public OpExprGradFunction<NegativeCaptureState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(UnaryMathCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(NegativeCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const UnaryMathCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const NegativeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
-    const auto& x = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(BwFunc(x, out_grads.at(0)));
+    in_grads->at(0) = JUST(functional::Negative(out_grads.at(0)));
     return Maybe<void>::Ok();
   }
-
- protected:
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
-#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS(op_type_name, op_cls)     \
-  class op_cls##Cls final : public UnaryMathOp<functional::op_cls##Grad> {}; \
-  REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
+REGISTER_OP_EXPR_GRAD_FUNCTION("negative", Negative);
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_GRAD_SEQ);
-
-#undef INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS
 }  // namespace one
 }  // namespace oneflow
