@@ -141,9 +141,15 @@ class UpsampleTrilinear3DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape().At(3);
     const int64_t out_width = y_tensor->shape().At(4);
 
-    const double depth_scale = out_depth * 1.0 / in_depth;
-    const double height_scale = out_height * 1.0 / in_height;
-    const double width_scale = out_width * 1.0 / in_width;
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double depth_scale = ctx->Attr<float>("depth_scale");
+    double height_scale = ctx->Attr<float>("height_scale");
+    double width_scale = ctx->Attr<float>("width_scale");
+    if (!output_size.empty()) {
+      depth_scale = out_depth * 1.0 / in_depth;
+      height_scale = out_height * 1.0 / in_height;
+      width_scale = out_width * 1.0 / in_width;
+    }
 
     const T scale_depth = GetAreaPixelScale(in_depth, out_depth, align_corners, depth_scale);
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
@@ -187,9 +193,15 @@ class UpsampleTrilinearGrad3DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_tensor->shape().At(3);
     const int64_t out_width = dy_tensor->shape().At(4);
 
-    const double depth_scale = out_depth * 1.0 / in_depth;
-    const double height_scale = out_height * 1.0 / in_height;
-    const double width_scale = out_width * 1.0 / in_width;
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double depth_scale = ctx->Attr<float>("depth_scale");
+    double height_scale = ctx->Attr<float>("height_scale");
+    double width_scale = ctx->Attr<float>("width_scale");
+    if (!output_size.empty()) {
+      depth_scale = out_depth * 1.0 / in_depth;
+      height_scale = out_height * 1.0 / in_height;
+      width_scale = out_width * 1.0 / in_width;
+    }
 
     const T scale_depth = GetAreaPixelScale(in_depth, out_depth, align_corners, depth_scale);
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);

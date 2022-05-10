@@ -30,6 +30,10 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<float>("height_scale");
+    double width_scale = ctx->Attr<float>("width_scale");
+
     const T* in_ptr = x_tensor->dptr<T>();
     T* out_ptr = y_tensor->mut_dptr<T>();
     const bool align_corners = ctx->Attr<bool>("align_corners");
@@ -40,8 +44,10 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
     const int64_t in_width = x_tensor->shape().At(3);
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
-    const double height_scale = out_height * 1.0 / in_height;
-    const double width_scale = out_width * 1.0 / in_width;
+    if (!output_size.empty()) {
+      height_scale = out_height * 1.0 / in_height;
+      width_scale = out_width * 1.0 / in_width;
+    }
 
     if (in_height == out_height && in_width == out_width) {
       memcpy(out_ptr, in_ptr, sizeof(T) * nbatch * channels * in_height * in_width);
@@ -117,9 +123,14 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
     const int64_t in_width = dx_tensor->shape().At(3);
     const int64_t out_height = dy_tensor->shape().At(2);
     const int64_t out_width = dy_tensor->shape().At(3);
-    const double height_scale = out_height * 1.0 / in_height;
-    const double width_scale = out_width * 1.0 / in_width;
 
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<float>("height_scale");
+    double width_scale = ctx->Attr<float>("width_scale");
+    if (!output_size.empty()) {
+      height_scale = out_height * 1.0 / in_height;
+      width_scale = out_width * 1.0 / in_width;
+    }
     if (in_height == out_height && in_width == out_width) {
       memcpy(in_ptr, out_ptr, sizeof(T) * channels * in_height * in_width);
     } else {

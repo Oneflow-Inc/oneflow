@@ -1509,7 +1509,9 @@ class UpsampleLinear1DGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
-                           const bool& align_corners, const std::string& data_format) const {
+                           const bool& align_corners,
+                           const Optional<std::vector<int64_t>>& output_size,
+                           const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
@@ -1550,6 +1552,7 @@ class UpsampleNearest1DGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
+                           const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
@@ -1592,7 +1595,9 @@ class UpsampleNearest2DGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
-                           const float& width_scale, const std::string& data_format) const {
+                           const float& width_scale,
+                           const Optional<std::vector<int64_t>>& output_size,
+                           const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
@@ -1637,6 +1642,7 @@ class UpsampleBilinear2DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
+                           const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
@@ -1683,6 +1689,7 @@ class UpsampleBicubic2DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
                            const float& width_scale, const bool& align_corners,
+                           const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
@@ -1729,6 +1736,7 @@ class UpsampleNearest3DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
+                           const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("depth_scale", depth_scale));
@@ -1777,7 +1785,9 @@ class UpsampleTrilinear3DGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& depth_scale,
                            const float& height_scale, const float& width_scale,
-                           const bool& align_corners, const std::string& data_format) const {
+                           const bool& align_corners,
+                           const Optional<std::vector<int64_t>>& output_size,
+                           const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("depth_scale", depth_scale));
     JUST(attrs.SetAttr<float>("height_scale", height_scale));

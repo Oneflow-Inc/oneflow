@@ -82,6 +82,7 @@ struct UpsampleNearest2DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float height_scale;
   float width_scale;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -111,7 +112,8 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     in_grads->at(0) = JUST(functional::UpsampleNearest2DGrad(out_grads.at(0), x, ctx->height_scale,
-                                                             ctx->width_scale, ctx->data_format));
+                                                             ctx->width_scale, ctx->output_size,
+                                                             ctx->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -127,6 +129,7 @@ struct UpsampleBilinear2DCaptureState : public AutoGradCaptureState {
   float height_scale;
   float width_scale;
   bool align_corners;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -158,7 +161,7 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
     in_grads->resize(1);
     in_grads->at(0) = JUST(functional::UpsampleBilinear2DGrad(out_grads.at(0), x, ctx->height_scale,
                                                               ctx->width_scale, ctx->align_corners,
-                                                              ctx->data_format));
+                                                              ctx->output_size, ctx->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -173,6 +176,7 @@ struct UpsampleLinear1DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float scale_factor;
   bool align_corners;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -189,6 +193,9 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->scale_factor = JUST(composed_attrs.GetAttr<float>("scale_factor"));
     ctx->align_corners = JUST(composed_attrs.GetAttr<bool>("align_corners"));
+    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
@@ -202,7 +209,8 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     in_grads->at(0) = JUST(functional::UpsampleLinear1DGrad(out_grads.at(0), x, ctx->scale_factor,
-                                                            ctx->align_corners, ctx->data_format));
+                                                            ctx->align_corners, ctx->output_size,
+                                                            ctx->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -216,6 +224,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_linear_1d", UpsampleLinear1D);
 struct UpsampleNearest1DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float scale_factor;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -243,8 +252,8 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(
-        functional::UpsampleNearest1DGrad(out_grads.at(0), x, ctx->scale_factor, ctx->data_format));
+    in_grads->at(0) = JUST(functional::UpsampleNearest1DGrad(out_grads.at(0), x, ctx->scale_factor,
+                                                             ctx->output_size, ctx->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -260,6 +269,7 @@ struct UpsampleBicubic2DCaptureState : public AutoGradCaptureState {
   float height_scale;
   float width_scale;
   bool align_corners;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -291,7 +301,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
     in_grads->resize(1);
     in_grads->at(0) = JUST(functional::UpsampleBicubic2DGrad(out_grads.at(0), x, ctx->height_scale,
                                                              ctx->width_scale, ctx->align_corners,
-                                                             ctx->data_format));
+                                                             ctx->output_size, ctx->data_format));
     return Maybe<void>::Ok();
   }
 
@@ -306,6 +316,7 @@ struct UpsampleNearest3DCaptureState : public AutoGradCaptureState {
   float depth_scale;
   float height_scale;
   float width_scale;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -337,7 +348,7 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
     in_grads->resize(1);
     in_grads->at(0) = JUST(functional::UpsampleNearest3DGrad(out_grads.at(0), x, ctx->depth_scale,
                                                              ctx->height_scale, ctx->width_scale,
-                                                             ctx->data_format));
+                                                             ctx->output_size, ctx->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -354,6 +365,7 @@ struct UpsampleTrilinear3DCaptureState : public AutoGradCaptureState {
   float height_scale;
   float width_scale;
   bool align_corners;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -386,7 +398,7 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
     in_grads->resize(1);
     in_grads->at(0) = JUST(functional::UpsampleTrilinear3DGrad(
         out_grads.at(0), x, ctx->depth_scale, ctx->height_scale, ctx->width_scale,
-        ctx->align_corners, ctx->data_format));
+        ctx->align_corners, ctx->output_size, ctx->data_format));
 
     return Maybe<void>::Ok();
   }
