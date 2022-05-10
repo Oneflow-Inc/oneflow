@@ -51,9 +51,6 @@ void Memset(ep::Stream* stream, void* dst, const char value, size_t sz) {
   primitive->Launch(stream, dst, value, sz);
 }
 
-void WithHostBlobAndStreamSynchronizeEnv(ep::Stream* stream, Blob* blob,
-                                         std::function<void(Blob*)> Callback);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_NEW_KERNEL_UTIL_H_
