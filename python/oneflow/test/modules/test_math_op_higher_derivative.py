@@ -30,16 +30,15 @@ def _test_math_op_grad_grad_impl(test_case, op_name):
             x_grad.pytorch.detach().cpu().numpy(), x_grad.oneflow.detach().numpy()
         )
     )
-    x_grad_grad = torch.autograd.grad(
-        x_grad, x, torch.ones_like(x), create_graph=True
-    )[0]
+    x_grad_grad = torch.autograd.grad(x_grad, x, torch.ones_like(x), create_graph=True)[
+        0
+    ]
     test_case.assertTrue(
         np.allclose(
             x_grad_grad.pytorch.detach().cpu().numpy(),
             x_grad_grad.oneflow.detach().numpy(),
         )
     )
-
 
 
 class TestMathOpHigherDerivative(flow.unittest.TestCase):
