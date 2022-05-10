@@ -113,7 +113,10 @@ class TestEmbedding(flow.unittest.TestCase):
         y = torch.nn.functional.embedding(indices, weight)
         return y
 
-    @autotest(n=5, check_graph=False)
+    # NOTE(Yao Zihang): Set check_graph=False temporarily
+    # Graph mode do not support inplace op with flow.no_grad()
+    # See this issue: https://github.com/Oneflow-Inc/OneTeam/issues/1382
+    @autotest(n=5, check_graph="ValidatedFlase")
     def test_embedding_renorm(test_case):
         device = random_device()
         emb_size = random(low=2) * 16
