@@ -362,7 +362,7 @@ class random_pytorch_tensor(generator):
             return res
         elif dtype == int:
             np_arr = rng.integers(low=low, high=high, size=shape)
-            res = torch.tensor(np_arr, dtype=torch.int64, pin_memory=pin_memory)
+            res = torch.tensor(np_arr, dtype=torch.int64)
             if pin_memory:
                 res = res.pin_memory() 
                 return res
