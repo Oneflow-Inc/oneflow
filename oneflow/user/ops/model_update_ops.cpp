@@ -129,8 +129,6 @@ Maybe<void> InferIndexedSlicesSGDUpdateDataType(user_op::InferContext* ctx) {
 Maybe<void> InferMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
   const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
-  std::cout << model_diff.shape().DebugStr() << std::endl;
-  std::cout << model.shape().DebugStr() << std::endl;
   CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
   const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
   JUST(CheckShapeLike(&momentum, &model));

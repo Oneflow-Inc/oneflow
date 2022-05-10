@@ -302,6 +302,7 @@ def get_functional_graph_res(
         global_backward
         and flow.is_tensor(oneflow_res)
         and oneflow_res.ndim > 1
+        and oneflow_res.size()
         and oneflow_res.nelement() > 0
     ):
         # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
@@ -313,8 +314,12 @@ def get_functional_graph_res(
             graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
         )
 
-    print_note_fake_program()
-
+    print('##'*50)
+    print(oneflow_res)
+    print(oneflow_res.shape)
+    print(oneflow_res.ndim)
+    print(oneflow_res.nelement())
+    print(graph_functional_oneflow)
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -485,7 +490,6 @@ def get_oneflow_eager_res(
 def oneflow_eager_run_with_graph_check(
     oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args
 ):
-    print_note_fake_program()
     if testing_graph:
         graph_args, graph_kwargs = get_args_copy(oneflow_args, oneflow_kwargs)
 
@@ -698,8 +702,8 @@ def GetDualObject(name, pytorch, oneflow):
         "__str__",
         "__repr__",
     ]
-    # verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
-    verbose = True
+    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+
     pytorch_methods = dir(pytorch)
     if hasattr(pytorch, "__call__") and "__call__" not in pytorch_methods:
         pytorch_methods.append("__call__")
