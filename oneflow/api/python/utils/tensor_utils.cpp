@@ -141,7 +141,8 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_
                           MAKE_DATA_TYPE_CTRV_SEQ(POD_AND_HALF_DATA_TYPE_SEQ));
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                                      const Optional<Symbol<Device>>& device, const bool& requires_grad, const bool& pin_memory) {
+                                      const Optional<Symbol<Device>>& device,
+                                      const bool& requires_grad, const bool& pin_memory) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
     // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
@@ -163,8 +164,8 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   } else {
     device_ = JUST(Device::New("cpu"));
   }
-  std::shared_ptr<Tensor> tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_, /*pin_memory=*/pin_memory));
+  std::shared_ptr<Tensor> tensor = JUST(
+      functional::Empty(shape, JUST(DType::Get(data_type)), device_, /*pin_memory=*/pin_memory));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
   Py_DECREF(array);
@@ -255,7 +256,8 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   return consistent_tensor;
 }
 
-Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other, const bool& pin_memory) {
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
+                                        const bool& pin_memory) {
   if (other->is_local()) {
     const Symbol<Device>& device = JUST(other->device());
     return functional::Copy(other, device, pin_memory);
@@ -286,7 +288,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
   }
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
-    if (tensor->dtype() != dtype_) { tensor = JUST(functional::PinMemoryCast(tensor, dtype_, pin_memory)); }
+    if (tensor->dtype() != dtype_) {
+      tensor = JUST(functional::PinMemoryCast(tensor, dtype_, pin_memory));
+    }
   }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
