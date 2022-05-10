@@ -33,6 +33,15 @@ struct BlasIf<DeviceType::kCUDA> {
   static void OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const double alpha, const float16* a,
                      const float16* b, const double beta, float16* c);
+  static void OFgetrfBatched(ep::Stream* stream, int n, float** dA_array, int ldda, int* ipiv_array,
+                             int* info_array, int batchsize);
+  static void OFgetrfBatched(ep::Stream* stream, int n, double** dA_array, int ldda,
+                             int* ipiv_array, int* info_array, int batchsize);
+  static void OFgetriBatched(ep::Stream* stream, int n, float** dA_array, int ldda, int* ipiv_array,
+                             float** dC_array, int lddc, int* info_array, int batchsize);
+  static void OFgetriBatched(ep::Stream* stream, int n, double** dA_array, int ldda,
+                             int* ipiv_array, double** dC_array, int lddc, int* info_array,
+                             int batchsize);
 };
 
 }  // namespace oneflow

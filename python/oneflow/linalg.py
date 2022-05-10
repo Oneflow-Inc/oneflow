@@ -26,3 +26,7 @@ def vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
 
 def matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
     return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+
+
+def inv(self):
+    return flow._C.inv(self)

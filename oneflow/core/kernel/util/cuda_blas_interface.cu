@@ -131,5 +131,29 @@ void BlasIf<DeviceType::kCUDA>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE 
              reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b), beta,
              reinterpret_cast<half*>(c));
 }
+void BlasIf<DeviceType::kCUDA>::OFgetrfBatched(ep::Stream* stream, int n, float** dA_array,
+                                               int ldda, int* ipiv_array, int* info_array,
+                                               int batchsize) {
+  OF_CUBLAS_CHECK(cublasSgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+                                      ldda, ipiv_array, info_array, batchsize));
+}
+void BlasIf<DeviceType::kCUDA>::OFgetrfBatched(ep::Stream* stream, int n, double** dA_array,
+                                               int ldda, int* ipiv_array, int* info_array,
+                                               int batchsize) {
+  OF_CUBLAS_CHECK(cublasDgetrfBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+                                      ldda, ipiv_array, info_array, batchsize));
+}
+void BlasIf<DeviceType::kCUDA>::OFgetriBatched(ep::Stream* stream, int n, float** dA_array,
+                                               int ldda, int* ipiv_array, float** dC_array,
+                                               int lddc, int* info_array, int batchsize) {
+  OF_CUBLAS_CHECK(cublasSgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+                                      ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
+}
+void BlasIf<DeviceType::kCUDA>::OFgetriBatched(ep::Stream* stream, int n, double** dA_array,
+                                               int ldda, int* ipiv_array, double** dC_array,
+                                               int lddc, int* info_array, int batchsize) {
+  OF_CUBLAS_CHECK(cublasDgetriBatched(stream->As<ep::CudaStream>()->cublas_handle(), n, dA_array,
+                                      ldda, ipiv_array, dC_array, lddc, info_array, batchsize));
+}
 
 }  // namespace oneflow
