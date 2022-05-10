@@ -37,7 +37,7 @@ def _test_batch_gather(test_case, shape, device):
 
     batch_gather_index = flow.tensor(init_index).to(device)
     batch_gather_out = flow.batch_gather(x_tensor, batch_gather_index)
-    
+
     x_tensor_gather = flow.Tensor(x).to(device)
     x_tensor_gather.requires_grad = True
     reshaped_shape = [batchsize]  # reshaped_shape = [3]
