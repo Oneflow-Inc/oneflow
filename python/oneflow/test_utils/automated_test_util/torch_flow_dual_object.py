@@ -314,12 +314,13 @@ def get_functional_graph_res(
             graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
         )
 
-    print('##'*50)
+    print("##" * 50)
     print(oneflow_res)
     print(oneflow_res.shape)
     print(oneflow_res.ndim)
     print(oneflow_res.nelement())
     print(graph_functional_oneflow)
+
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
