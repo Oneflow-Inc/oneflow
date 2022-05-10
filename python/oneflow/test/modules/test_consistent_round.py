@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def test_round_impl(test_case, ndim, placement, sbp):
+def _test_round_impl(test_case, ndim, placement, sbp):
     x_dims = [random(2, 4) * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *x_dims)
     y = x.to_global(placement=placement, sbp=sbp)
@@ -37,7 +37,7 @@ class TestRoundConsistent(flow.unittest.TestCase):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                test_round_impl(test_case, ndim, placement, sbp)
+                _test_round_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
