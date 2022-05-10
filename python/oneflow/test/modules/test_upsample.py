@@ -420,7 +420,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
     
-    @autotest(n=5, atol=1e-5)
+    @autotest(n=5, atol=1e-5, auto_backward=False)
     def test_upsample2d_nearest_output_size(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to(device)

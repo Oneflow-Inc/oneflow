@@ -1546,10 +1546,14 @@ class UpsampleNearest1DGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& scale_factor,
+                           const Optional<std::vector<int64_t>>& output_size,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    if (output_size.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", *JUST(output_size)));
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
@@ -1588,11 +1592,16 @@ class UpsampleNearest2DGradFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x, const float& height_scale,
-                           const float& width_scale, const std::string& data_format) const {
+                           const float& width_scale,
+                           const Optional<std::vector<int64_t>>& output_size,
+                           const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("height_scale", height_scale));
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    if (output_size.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", *JUST(output_size)));
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 

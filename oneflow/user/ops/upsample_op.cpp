@@ -471,6 +471,7 @@ REGISTER_USER_OP_GRAD("upsample_nearest_1d")
                 .Input("x", op.input("x", 0))
                 .Output("dx")
                 .Attr("scale_factor", op.attr<float>("scale_factor"))
+                .Attr("output_size", op.attr<std::vector<int64_t>>("output_size"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
@@ -491,6 +492,7 @@ REGISTER_USER_OP_GRAD("upsample_nearest_2d")
                 .Output("dx")
                 .Attr("height_scale", op.attr<float>("height_scale"))
                 .Attr("width_scale", op.attr<float>("width_scale"))
+                .Attr("output_size", op.attr<std::vector<int64_t>>("output_size"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);

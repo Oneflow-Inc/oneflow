@@ -131,7 +131,9 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = y_tensor->shape().elem_cnt();
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
-    const float height_scale = out_height * 1.0 / in_height;
+    std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    float height_scale = ctx->Attr<float>("scale_factor");
+    if (output_size.size()) { height_scale = out_height * 1.0 / in_height; }
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
@@ -166,7 +168,9 @@ class UpsampleNearestGrad1DGPUKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(2);
-    const float height_scale = out_height * 1.0 / in_height;
+    std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    float height_scale = ctx->Attr<float>("scale_factor");
+    if (output_size.size()) { height_scale = out_height * 1.0 / in_height; }
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
@@ -215,8 +219,11 @@ class UpsampleNearest2DGPUKernel final : public user_op::OpKernel {
     const int64_t in_width = x_tensor->shape().At(3);
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
-    const float height_scale = out_height * 1.0 / in_height;
-    const float width_scale = out_width * 1.0 / in_width;
+    float height_scale = ctx->Attr<float>("height_scale");
+    std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    if (output_size.size()) { height_scale = out_height * 1.0 / in_height; }
+    float width_scale = ctx->Attr<float>("width_scale");
+    if (output_size.size()) { width_scale = out_width * 1.0 / in_width; }
 
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
@@ -256,8 +263,11 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_tensor->shape().At(2);
     const int64_t out_width = dy_tensor->shape().At(3);
 
-    const float height_scale = out_height * 1.0 / in_height;
-    const float width_scale = out_width * 1.0 / in_width;
+    float height_scale = ctx->Attr<float>("height_scale");
+    std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    if (output_size.size()) { height_scale = out_height * 1.0 / in_height; }
+    float width_scale = ctx->Attr<float>("width_scale");
+    if (output_size.size()) { width_scale = out_width * 1.0 / in_width; }
     
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(

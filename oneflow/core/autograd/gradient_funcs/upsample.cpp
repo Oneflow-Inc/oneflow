@@ -82,6 +82,7 @@ struct UpsampleNearest2DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float height_scale;
   float width_scale;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -98,6 +99,9 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
     ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
+    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
@@ -111,7 +115,8 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     in_grads->at(0) = JUST(functional::UpsampleNearest2DGrad(out_grads.at(0), x, ctx->height_scale,
-                                                             ctx->width_scale, ctx->data_format));
+                                                             ctx->width_scale, ctx->output_size,
+                                                             ctx->data_format));
 
     return Maybe<void>::Ok();
   }
@@ -216,6 +221,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_linear_1d", UpsampleLinear1D);
 struct UpsampleNearest1DCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   float scale_factor;
+  std::vector<int64_t> output_size;
   std::string data_format;
 };
 
@@ -231,6 +237,9 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->scale_factor = JUST(composed_attrs.GetAttr<float>("scale_factor"));
+    if (base_attrs_.find("output_size") != base_attrs_.end()) {
+      ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
+    }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
@@ -243,8 +252,8 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(
-        functional::UpsampleNearest1DGrad(out_grads.at(0), x, ctx->scale_factor, ctx->data_format));
+    in_grads->at(0) = JUST(functional::UpsampleNearest1DGrad(out_grads.at(0), x, ctx->scale_factor,
+                                                             ctx->output_size, ctx->data_format));
 
     return Maybe<void>::Ok();
   }
