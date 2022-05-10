@@ -1395,14 +1395,14 @@ class PinMemoryCopyFunctor {
   PinMemoryCopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Device& device,
                            const bool& pin_memory) const {
-    if (!pin_memory || device.type() == "cuda"){
+    if (device.type() == "cuda" || pin_memory == false){
       return functional::Copy(x, device.type(), device.device_id());
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device.type()));
     JUST(attrs.SetAttr<int64_t>("device_id", device.device_id()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x},
-                                            OpExprInterpContext(attrs, device, pin_memory));
+                                            OpExprInterpContext(attrs, device, /*pin_memory=*/true));
   }
 
  private:

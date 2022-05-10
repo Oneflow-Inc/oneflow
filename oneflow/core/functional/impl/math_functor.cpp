@@ -1129,13 +1129,13 @@ class PinMemoryCastFunctor {
   PinMemoryCastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Symbol<DType>& dtype, const bool& pin_memory) const {
-    if(JUST(x->device())->type()=="cuda" || pin_memory==false){
+    if(JUST(x->device())->type()=="cuda" || pin_memory == false){
       return functional::Cast(x, dtype);
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x},
-                                            OpExprInterpContext(attrs, JUST(x->device()), pin_memory));
+                                            OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/true));
   }
 
  private:
