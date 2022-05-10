@@ -1053,10 +1053,11 @@ def autotest(
                                 call_tensor_id.append(id(x.pytorch))
                                 if check_grad_use_random_data:
                                     np_arr = rng.uniform(
-                                        low=0, high=1, size=list(x.pytorch.shape)
+                                        low=0, high=1, size=list(x.oneflow.shape)
                                     )
+                                    # TODO(): Inferred shape of some op(for example, linalg.norm) is different between oneflow and torch
                                     pytorch_tensor = torch_original.tensor(
-                                        np_arr,
+                                        np_arr.reshape(list(x.pytorch.shape)),
                                         dtype=x.pytorch.dtype,
                                         device=x.pytorch.device,
                                     )
