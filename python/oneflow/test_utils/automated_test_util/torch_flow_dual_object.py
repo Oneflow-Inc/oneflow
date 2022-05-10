@@ -785,7 +785,7 @@ def clear_note_fake_program():
     flow.set_printoptions(profile="full")
 
 
-tensor_size_limit = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT", 10))
+tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 10))
 
 
 class DualObject:
@@ -805,10 +805,10 @@ class DualObject:
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
-            tensor_size = pytorch.nelement() * pytorch.element_size() / 1024 / 1024
+            tensor_size_mb = pytorch.nelement() * pytorch.element_size() / 1024 / 1024
             assert (
-                tensor_size < tensor_size_limit
-            ), f"Tensor memory in autotest cannot be larger than {tensor_size_limit}MB, but got {tensor_size}MB"
+                tensor_size_mb < tensor_size_limit_mb
+            ), f"Tensor memory in autotest cannot be larger than {tensor_size_limit_mb}MB, but got {tensor_size_mb}MB"
             if testing:
                 dual_objects_to_test.append(self)
         self.pytorch = pytorch
