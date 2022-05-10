@@ -107,9 +107,15 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (dtr::is_enabled()) {
-      const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
-      outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
-      output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+      if (!outputs->at(i) || EnvBool<ONEFLOW_DTR_IMMUTABLE>()) {
+        const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
+        outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
+        output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+      } else {
+        bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+        CHECK_OR_RETURN(has_eager_blob_object);
+        output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+      }
     } else {
       if (!outputs->at(i)) {
         const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
