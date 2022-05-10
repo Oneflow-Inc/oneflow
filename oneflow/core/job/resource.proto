@@ -57,8 +57,4 @@ message Resource {
   optional bool disable_group_boxing_by_dst_parallel = 31 [default = false];
 
   optional CudnnConfig cudnn_conf = 32;
-  
-  // io_conf
-  optional bool enable_model_io_v2 = 41 [default = false];
-  optional bool enable_legacy_model_io = 42 [default = false];
 }

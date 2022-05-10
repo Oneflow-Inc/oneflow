@@ -406,14 +406,6 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   }
 };
 
-class ReshapeLikeFunctor : public BinaryFunctor {
- public:
-  ReshapeLikeFunctor() {
-    op_ =
-        CHECK_JUST(one::OpBuilder("reshape_like").Input("in").Input("like").Output("out").Build());
-  }
-};
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -442,7 +434,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
-  m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
 };
 
