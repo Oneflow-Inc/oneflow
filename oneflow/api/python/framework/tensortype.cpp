@@ -77,14 +77,15 @@ static PyObject* PyTensortypeMetaCls_call(PyObject* self, PyObject* args, PyObje
   HANDLE_ERRORS
   auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
-  PyTensorObject* tensor = (PyTensorObject*) PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
+  PyTensorObject* tensor = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
   tensor->data = PyTensor_Unpack(temp);
   tensor->data->set_pyobject(self);
 
-  PyTensortype* tensortype = (PyTensortype*) self;
+  PyTensortype* tensortype = (PyTensortype*)self;
   Maybe<std::string> device = DeviceTag4DeviceType(PyTensortype_AsDevice((PyObject*)tensortype));
   Optional<std::string> device_str = CHECK_JUST(device);
-  const auto& t = functional::To(tensor->data, device_str, PyTensortype_AsDType((PyObject*)tensortype), false);
+  const auto& t =
+      functional::To(tensor->data, device_str, PyTensortype_AsDType((PyObject*)tensortype), false);
   tensor->data = CHECK_JUST(t);
 
   // reset temp data to prevent clearing the pyobject
@@ -101,7 +102,7 @@ static std::string datatype_to_string(DataType datatype) {
   return datatype_to_string_dict.at(datatype);
 }
 
-static std::string device_to_string(DeviceType dtype) {
+static std::string devicetype_to_string(DeviceType dtype) {
   CHECK_OR_THROW(devicetype_to_string_dict.find(dtype) != devicetype_to_string_dict.end())
       << "unsupported devicetype";
   return devicetype_to_string_dict.at(dtype);
@@ -122,7 +123,7 @@ PyObject* PyTensortype_FromString(const std::string& tensortype_str) {
 }
 
 static std::string get_name(DataType datatype, DeviceType device) {
-  auto device_string = device_to_string(device);
+  auto device_string = devicetype_to_string(device);
   if (device_string.empty()) return datatype_to_string(datatype);
   return device_string + "." + datatype_to_string(datatype);
 }
@@ -183,7 +184,6 @@ static void binding(pybind11::module_& m) {
 
     std::string type_name = std::string(tensortype->name);
     type_name = type_name.substr(type_name.rfind('.') + 1);
-    // auto module_name = name.substr(0, idx);
     if (tensortype
         && PyModule_AddObject(module.ptr(), type_name.c_str(), (PyObject*)tensortype) < 0) {
       CHECK_OR_THROW(false);
@@ -202,7 +202,7 @@ PyObject* PyTensortype_FromDTypeDeviceType(DataType datatype, DeviceType device)
                          [datatype, device](PyTensortype* x) {
                            return (x->datatype == datatype) && (x->device == device);
                          });
-  if (it == tensortype_list.end()) return PyErr_Format(PyExc_RuntimeError, "Invalid dtype");
+  if (it == tensortype_list.end()) return PyErr_Format(PyExc_RuntimeError, "unsupported dtype");
   return (PyObject*)(*it);
 };
 

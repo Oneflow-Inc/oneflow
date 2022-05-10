@@ -343,26 +343,20 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.float64,
         ]
         tensortype_dict = {
-            flow._oneflow_internal.CharTensor: [flow.int8, flow.device("cpu")],
-            flow._oneflow_internal.ByteTensor: [flow.uint8, flow.device("cpu")],
-            flow._oneflow_internal.IntTensor: [flow.int32, flow.device("cpu")],
-            flow._oneflow_internal.LongTensor: [flow.int64, flow.device("cpu")],
-            flow._oneflow_internal.HalfTensor: [flow.float16, flow.device("cpu")],
-            flow._oneflow_internal.FloatTensor: [flow.float32, flow.device("cpu")],
-            flow._oneflow_internal.DoubleTensor: [flow.float64, flow.device("cpu")],
-            flow._oneflow_internal.cuda.CharTensor: [flow.int8, flow.device("cuda")],
-            flow._oneflow_internal.cuda.ByteTensor: [flow.uint8, flow.device("cuda")],
-            flow._oneflow_internal.cuda.IntTensor: [flow.int32, flow.device("cuda")],
-            flow._oneflow_internal.cuda.LongTensor: [flow.int64, flow.device("cuda")],
-            flow._oneflow_internal.cuda.HalfTensor: [flow.float16, flow.device("cuda")],
-            flow._oneflow_internal.cuda.FloatTensor: [
-                flow.float32,
-                flow.device("cuda"),
-            ],
-            flow._oneflow_internal.cuda.DoubleTensor: [
-                flow.float64,
-                flow.device("cuda"),
-            ],
+            flow.CharTensor: [flow.int8, flow.device("cpu")],
+            flow.ByteTensor: [flow.uint8, flow.device("cpu")],
+            flow.IntTensor: [flow.int32, flow.device("cpu")],
+            flow.LongTensor: [flow.int64, flow.device("cpu")],
+            flow.HalfTensor: [flow.float16, flow.device("cpu")],
+            flow.FloatTensor: [flow.float32, flow.device("cpu")],
+            flow.DoubleTensor: [flow.float64, flow.device("cpu")],
+            flow.cuda.CharTensor: [flow.int8, flow.device("cuda")],
+            flow.cuda.ByteTensor: [flow.uint8, flow.device("cuda")],
+            flow.cuda.IntTensor: [flow.int32, flow.device("cuda")],
+            flow.cuda.LongTensor: [flow.int64, flow.device("cuda")],
+            flow.cuda.HalfTensor: [flow.float16, flow.device("cuda")],
+            flow.cuda.FloatTensor: [flow.float32, flow.device("cuda"),],
+            flow.cuda.DoubleTensor: [flow.float64, flow.device("cuda"),],
         }
         arg_dict["tgt_tensortype"] = list(tensortype_dict.keys())
         for arg in GenArgList(arg_dict):
