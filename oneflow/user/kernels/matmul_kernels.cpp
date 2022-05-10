@@ -156,7 +156,8 @@ class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 REGISTER_USER_KERNEL("matmul")
     .SetCreateFn<MatmulKernel>()
-    .SetIsMatchedHob(MemcpyPrimitiveExists() && MatmulPrimitiveExists())
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU) 
+                    && MemcpyPrimitiveExists() && MatmulPrimitiveExists())
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.has_input("_add_to_output", 0)) {

@@ -16,46 +16,42 @@ limitations under the License.
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
-
+#include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 
 namespace user_op {
 
 namespace {
 
-template<typename Context>
-std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->device_type(), data_type);
-}
 
-class OnesLikeKernel final : public user_op::OpKernel {
+class OnesLikeNpuKernel final : public user_op::OpKernel {
  public:
-  OnesLikeKernel() = default;
-  ~OnesLikeKernel() = default;
+  OnesLikeNpuKernel() = default;
+  ~OnesLikeNpuKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    std::unique_ptr<ep::primitive::Fill> fill =
-        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
-                                                                out->data_type());
-    CHECK(fill);
-    fill->Launch(ctx->stream(), out->mut_dptr(), 1, out->shape().elem_cnt());
+    NpuCommand npu_command;
+    npu_command.OpName("OnesLike")
+               .Input(in,"channel_nd")
+               .Output(out,"channel_nd")
+               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+               .Check();
+    npu_command.Run();
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    PrintResult(out);
+    std::cout<<"Execute Over"<<std::endl; 
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-auto FillPrimitiveExists() {
-  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-    return NewFillPrimitive(&ctx).operator bool();
-  });
-}
 
 REGISTER_USER_KERNEL("ones_like")
-    .SetCreateFn<OnesLikeKernel>()
-    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)&&FillPrimitiveExists());
+    .SetCreateFn<OnesLikeNpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 
 }  // namespace
 

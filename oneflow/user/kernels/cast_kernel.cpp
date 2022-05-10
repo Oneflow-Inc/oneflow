@@ -62,7 +62,8 @@ auto CastPrimitiveExists() {
 
 REGISTER_USER_KERNEL("cast")
     .SetCreateFn<CastKernel>()
-    .SetIsMatchedHob(CastPrimitiveExists() == true)
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
+                    &&CastPrimitiveExists() == true)
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       if (ctx.InputDType("in", 0) == ctx.Attr<DataType>("dtype")) {

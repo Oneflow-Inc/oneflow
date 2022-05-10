@@ -139,6 +139,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
     CHECK_OR_RETURN((IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())))
         << "The gradient function for op " << proto().op_type_name()
         << " is not found. Please check whether it has been implemented and registered correctly.";
+    std::cout<<"OpGradClosure proto().op_type_name()"<<proto().op_type_name()<<std::endl;
     op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
     JUST(op_grad_func_->Init(*this));
   }

@@ -42,7 +42,6 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
         Memset<device_type>(

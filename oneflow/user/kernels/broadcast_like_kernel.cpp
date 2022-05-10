@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-
+#include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 
 namespace {
@@ -33,12 +33,14 @@ class BroadcastLikeKernel final : public user_op::OpKernel, public user_op::Cuda
     const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    std::cout<<"output_shape1"<<out_tensor->shape().ToString()<<std::endl;
     const auto& axis = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
     const Shape& reduced_shape =
         CreateReducedShapeOrOnesShape(like_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayUtil<device_type, T>::BroadcastTo(
         ctx->stream(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, in_tensor->dptr<T>()));
+    std::cout<<"output_shape2"<<out_tensor->shape().ToString()<<std::endl;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

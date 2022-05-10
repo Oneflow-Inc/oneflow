@@ -45,7 +45,7 @@ class ReluNpuKernel final : public user_op::OpKernel {
                  .Check();
       npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(y->mut_dptr<void>(),y->shape().elem_cnt() * GetSizeOfDataType(y->data_type()));
+    PrintResult(y);
     std::cout<<"Execute Over"<<std::endl;       
     } else {
       // For 0-d Tensor

@@ -15,58 +15,54 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/add.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
-
+#include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 
 namespace user_op {
 
 namespace {
 
-template<typename Context>
-std::unique_ptr<ep::primitive::Add> NewAddPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), data_type);
-}
-
-class AddNKernel : public OpKernel, public CudaGraphSupport {
+class AddNNpuKernel : public OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AddNKernel);
-  AddNKernel() = default;
-  ~AddNKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AddNNpuKernel);
+  AddNNpuKernel() = default;
+  ~AddNNpuKernel() override = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    auto primitive = NewAddPrimitive(ctx);
-    CHECK(primitive);
-    Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const DataType data_type = out->data_type();
     const size_t count = out->shape().elem_cnt();
     size_t in_num = ctx->inputs().size();
+    CHECK_EQ(in_num, 2)<<"Current only support AddV2, so input num should be 2. ";
     std::vector<const void*> srcs(in_num);
+    NpuCommand npu_command;
     for (size_t i = 0; i < in_num; ++i) {
-      const Tensor* in_i = ctx->Tensor4ArgNameAndIndex("in", i);
+      user_op::Tensor* in_i = ctx->Tensor4ArgNameAndIndex("in", i);
       CHECK_EQ(in_i->shape().elem_cnt(), count);
       CHECK_EQ(in_i->data_type(), data_type);
-      srcs[i] = in_i->template dptr();
+      npu_command.Input(in_i, "channel_last");
+      std::cout<<"in_i "<<i<<std::endl;
+      PrintResult(in_i); 
     }
-    primitive->Launch(ctx->stream(), srcs.data(), in_num, out->mut_dptr(), count);
+    npu_command.OpName("AddV2")
+               //.Attr("N", (int64_t)in_num)
+               .Output(out, "channel_last")
+               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+               .Check();
+    npu_command.Run();
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    PrintResult(out);
+    std::cout<<"Execute Over"<<std::endl; 
   }
 };
 
-auto AddPrimitiveExists() {
-  return hob::make_custom("AddPrimitiveExists", [](const KernelRegContext& ctx) {
-    return NewAddPrimitive(&ctx).operator bool();
-  });
-}
-
 REGISTER_USER_KERNEL("add_n")
-    .SetCreateFn<AddNKernel>()
-    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
-                      &&AddPrimitiveExists() == true)
+    .SetCreateFn<AddNNpuKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInplaceProposalFn([](const InferContext&,
                              const AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));

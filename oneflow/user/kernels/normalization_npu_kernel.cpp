@@ -48,29 +48,60 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
     CHECK_GE(axis, 0);
     CHECK_LT(axis, x->shape().NumAxes());
 
-    const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
-    const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+    user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+    user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
     auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
+
 
     // user_op::Tensor* moving_mean = nullptr;
     // user_op::Tensor* moving_variance = nullptr;
     // if (ctx->has_input("moving_mean", 0)) {
     //   CHECK(ctx->has_input("moving_variance", 0));
     //   moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
-    //   moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
-      
+    //   moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0); 
     // }
-
-    //NpuCommand npu_command;
-    PRINT(x->shape().ptr(),x->shape().NumAxes());
-    // npu_command.OpName("BNTrainingUpdate")
-    //            .Input(x, "channel_nc1hwc0")
-               
-    //            .Output(y, "channel_nc1hwc0")
-    //            .Attr("epsilon", epsilon)
-    //            .Attr("factor", momentum)
-
+    std::cout<<"gamma";
+    PrintResult(gamma);
+    std::cout<<"beta";
+    PrintResult(beta);
+    std::cout<<std::endl;
+    NpuCommand npu_command;
+    std::cout<<x->shape().ToString()<<std::endl;
+    std::vector<int64_t> batch_desc = {x->shape().ptr()[1]};
+    void* batch_mean_ptr = nullptr;
+    uint32_t batch_mean_size = sizeof(float) * mulVector(batch_desc);
+    void* batch_var_ptr = nullptr;
+    uint32_t batch_var_size = sizeof(float) * mulVector(batch_desc);
+    std::cout<<"batch_desc_shape "<<batch_desc[0]<<std::endl;
+    AclTensorWrapper mean_warp(batch_mean_ptr,
+                              ACL_FLOAT, 
+                              batch_desc.size(), 
+                              batch_desc.data(),
+                              ACL_FORMAT_ND,
+                              batch_mean_size);
+    AclTensorWrapper var_warp(batch_var_ptr,
+                              ACL_FLOAT, 
+                              batch_desc.size(), 
+                              batch_desc.data(),
+                              ACL_FORMAT_ND,
+                              batch_var_size);
+    npu_command.OpName("BatchNorm")
+               .Input(x, "channel_first")
+               .Input(gamma, "channel_nd")  
+               .Input(beta, "channel_nd")   
+               .Output(y, "channel_first")
+               .Output(mean_warp)
+               .Output(var_warp)
+               .Attr("epsilon", epsilon)
+               .Attr("data_format", string("channels_first"))
+               .Attr("is_training", true)
+               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+               .Check();
+    npu_command.Run();
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    PrintResult(y);
+    std::cout<<"Execute Over"<<std::endl; 
 
 //     const void* sp_alpha = CudnnSPOnePtr<T>();
 //     const void* sp_beta;

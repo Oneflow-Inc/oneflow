@@ -28,10 +28,6 @@ using namespace std;
 namespace oneflow {
 namespace {
 
-#define VECTOR_PRINT(x) std::cout<<#x<<" ";\
-                        for(auto& i:x) { std::cout<<i<<" ";}\
-                        std::cout<<std::endl;
-
 template<typename T, size_t NDims>
 class ConvNpuKernel final : public user_op::OpKernel {
  public:
@@ -79,7 +75,7 @@ class ConvNpuKernel final : public user_op::OpKernel {
               .Check();
     npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(out->mut_dptr<void>(),out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
+    PrintResult(out);
     std::cout<<"Execute Over"<<std::endl; 
   };
 };
@@ -99,6 +95,63 @@ REGISTER_CONV_KERNEL(conv1d, float16, 1);
 REGISTER_CONV_KERNEL(conv2d, float16, 2);
 REGISTER_CONV_KERNEL(conv3d, float16, 3);
 
+
+template<typename T>
+class ConvDataGradNpuKernel final : public user_op::OpKernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradNpuKernel);
+  ConvDataGradNpuKernel() = default;
+  ~ConvDataGradNpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* x_like = ctx->Tensor4ArgNameAndIndex("x_like", 0);
+    user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    //user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    Memset<DeviceType::kNPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
+                             dx->shape().elem_cnt() * sizeof(T));
+
+    std::cout<<"ConvNpuDataGradCpuKernel"<<std::endl;
+    // if (ctx->has_input("_add_to_output", 0)) {
+    //   const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+    //   CHECK_EQ(add_to_output->data_type(), dx->data_type());
+    //   CHECK_EQ(add_to_output->shape(), dx->shape());
+    //   std::unique_ptr<ep::primitive::Add> primitive =
+    //       ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
+    //                                                              add_to_output->data_type());
+    //   CHECK(primitive);
+    //   primitive->Launch(ctx->stream(), dx->dptr<T>(), add_to_output->dptr<T>(), dx->mut_dptr<T>(),
+    //                     add_to_output->shape().elem_cnt());
+    // }
+  }
+};
+
+#define REGISTER_CONV_DATA_GRAD_KERNEL(op_name, dtype)                                     \
+  REGISTER_USER_KERNEL(#op_name)                                                           \
+      .SetCreateFn<ConvDataGradNpuKernel<dtype>>()                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                      \
+                       && (user_op::HobAttr<int32_t>("groups") == 1)                       \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
+      // .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
+      //   size_t tmp_buffer_size = 0;                                                        \
+      //   const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                \
+      //   const auto& weight_shape = ctx->InputTensorDesc("filter", 0).shape();              \
+      //                                                                                      \
+      //   int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));             \
+      //   tmp_buffer_size +=                                                                 \
+      //       CalcElemNumOfColBuf(out_diff_shape, weight_shape, idx_offset) * sizeof(dtype); \
+      //   return tmp_buffer_size;                                                            \
+      // })
+
+REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, float);
+REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, float16);
 } // namespace
 } // namespace oneflow
 
