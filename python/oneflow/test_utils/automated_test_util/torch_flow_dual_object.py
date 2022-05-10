@@ -1125,7 +1125,9 @@ def random_tensor(
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
     pytorch_tensor = (
-        random_pytorch_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype, pin_memory)
+        random_pytorch_tensor(
+            ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype, pin_memory
+        )
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
@@ -1140,7 +1142,7 @@ def random_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
-            pin_memory=pin_memory
+            pin_memory=pin_memory,
         )
 
     return GetDualObject("unused", pytorch_tensor, flow_tensor)

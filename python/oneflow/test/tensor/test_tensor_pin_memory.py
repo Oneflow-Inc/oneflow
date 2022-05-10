@@ -55,7 +55,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(id(x1.oneflow) != id(x2.oneflow))
         test_case.assertTrue(id(x3.oneflow) == id(x2.oneflow))
         return x3
-    
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, auto_backward=False, check_graph=False)
@@ -65,7 +65,9 @@ class TestTensor(flow.unittest.TestCase):
         c = random(1, 4).to(int)
         h = random(1, 4).to(int)
         w = random(1, 4).to(int)
-        x = random_tensor(ndim=4, dim0=n, dim1=c, dim2=h, dim3=w, pin_memory=True).to(device)
+        x = random_tensor(ndim=4, dim0=n, dim1=c, dim2=h, dim3=w, pin_memory=True).to(
+            device
+        )
         return x
 
 

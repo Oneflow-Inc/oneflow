@@ -288,7 +288,7 @@ class random_pytorch_tensor(generator):
         low=0,
         high=1,
         dtype=float,
-        pin_memory=False
+        pin_memory=False,
     ):
         if ndim is None:
             ndim = random(1, 6)
@@ -358,13 +358,13 @@ class random_pytorch_tensor(generator):
             np_arr = rng.uniform(low=low, high=high, size=shape)
             res = torch.tensor(np_arr)
             if pin_memory:
-                res = res.pin_memory() 
+                res = res.pin_memory()
             return res
         elif dtype == int:
             np_arr = rng.integers(low=low, high=high, size=shape)
             res = torch.tensor(np_arr, dtype=torch.int64)
             if pin_memory:
-                res = res.pin_memory() 
+                res = res.pin_memory()
                 return res
         else:
             raise NotImplementedError(f"Not implemented dtype {dtype} in random")
