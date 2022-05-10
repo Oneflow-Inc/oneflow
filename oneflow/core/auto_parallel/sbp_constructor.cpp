@@ -444,8 +444,12 @@ void SbpConstructor::ExposeCtrlEdges() {
 // Algorithms for straightening
 Maybe<void> SbpConstructor::StraightenNodes(
     const std::function<Maybe<void>(OpNode*, OpNode*)>& add_control_edge) {
-  // Set the counter to be the number of producer
-  for (auto* sbp_node : sbp_graph_.NodeList) { sbp_node->counter = sbp_node->EdgesIn.size(); }
+  for (auto* sbp_node : sbp_graph_.NodeList) {
+    // Set the counter to be the number of producer
+    sbp_node->counter = sbp_node->EdgesIn.size();
+    // Set the minimum computation distance from the beginning of this op to the next transfer
+    sbp_node->GetMinDistance2Transfer();
+  }
   // The time passed before finishing the current transfer
   double acc_comp_time = 0.0;
   // The transfer happening at this moment
@@ -453,19 +457,23 @@ Maybe<void> SbpConstructor::StraightenNodes(
   // Decide which node should run first
   struct comp {
     bool operator()(const SbpNode<NdSbpSignature>* a, const SbpNode<NdSbpSignature>* b) const {
-      if (a->TributaryLayer == b->TributaryLayer) {
-        if (a->MinLayer == b->MinLayer) {
-          // the order does not matter right now
-          // return a->Cost[0] < b->Cost[0];
-          // we need a strict order
-          return a->NodeListId < b->NodeListId;
+      if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
+        if (a->TributaryLayer == b->TributaryLayer) {
+          if (a->MinLayer == b->MinLayer) {
+            // the order does not matter right now
+            // return a->Cost[0] < b->Cost[0];
+            // we need a strict order
+            return a->NodeListId < b->NodeListId;
+          } else {
+            // the node that shows up first has higher priority
+            return a->MinLayer < b->MinLayer;
+          }
         } else {
-          // the node that shows up first has higher priority
-          return a->MinLayer < b->MinLayer;
+          // the urgent node has the higher priority
+          return a->TributaryLayer < b->TributaryLayer;
         }
       } else {
-        // the urgent node has the higher priority
-        return a->TributaryLayer < b->TributaryLayer;
+        return a->MinDistance2Transfer < b->MinDistance2Transfer;
       }
     }
   };
@@ -544,8 +552,13 @@ Maybe<void> SbpConstructor::StraightenNodes(
         pop_waiting_transfer();
       }
     } else {
-      // if we have nodes waiting in the list, execute the first one
-      execute(*waiting_computation.begin());
+      if (waiting_transfer.empty()) {
+        // if we have no transfer waiting in the list, execute the first one
+        execute(*waiting_computation.begin());
+      } else {
+        // if we have transfer waiting in the list, execute the last one
+        execute(*waiting_computation.rbegin());
+      }
     }
   }
   return Maybe<void>::Ok();

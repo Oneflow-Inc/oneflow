@@ -97,6 +97,8 @@ class SbpNode {
   int32_t counter = 0;
   // Accumulate mainstem cost from consumer to the end
   double AccMainstemCost = -1.0;
+  // The minimum computation distance from the beginning of this op to the next transfer
+  double MinDistance2Transfer = -1.0;
 
 #ifdef DEBUG_ALGORITHM_
 
@@ -225,6 +227,8 @@ class SbpNode {
 
   // Algorithms for straightening
   void ExposeCtrlEdges(oneflow::HashMap<std::string, SbpNode<SbpSignature>*>& op_name2sbp_node);
+  // The minimum computation distance from the beginning of this op to the next transfer
+  double GetMinDistance2Transfer();
 
 };  // class SbpNode
 
@@ -955,6 +959,24 @@ void SbpNode<SbpSignature>::ExposeCtrlEdges(
       if (it != op_name2sbp_node.end()) { PointFrom(it->second); }
     }
   }
+}
+
+// The minimum computation distance from the beginning of this op to the next transfer
+template<class SbpSignature>
+double SbpNode<SbpSignature>::GetMinDistance2Transfer() {
+  if (MinDistance2Transfer > -0.5) { return MinDistance2Transfer; }
+  MinDistance2Transfer = GetValidMaxCopyCost();
+  for (auto* edge_out : EdgesOut) {
+    if (edge_out->Cost.empty() || edge_out->Cost[0][0] == 0.0) {
+      MinDistance2Transfer =
+          std::min(MinDistance2Transfer, edge_out->EndNode->GetMinDistance2Transfer());
+    } else {
+      MinDistance2Transfer = 0.0;
+      break;
+    }
+  }
+  MinDistance2Transfer += Cost[0];
+  return MinDistance2Transfer;
 }
 
 }  // namespace auto_parallel
