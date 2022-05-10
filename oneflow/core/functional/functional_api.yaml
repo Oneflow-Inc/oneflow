@@ -1316,24 +1316,24 @@
   bind_python: False
 
 - name: "upsample_nearest_1d"
-  signature: 'Tensor (Tensor x, Float scale_factor,
+  signature: 'Tensor (Tensor x, Float scale_factor, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleNearest1D'
   bind_python: True
 
 - name: "upsample_nearest_1d_grad"
   signature: 'Tensor (Tensor dy, Tensor x, Float scale_factor,
-    String data_format="channels_first") => UpsampleNearest1DGrad'
+    Int64List[2] output_size=None, String data_format="channels_first") => UpsampleNearest1DGrad'
   bind_python: False
 
 - name: "upsample_nearest_2d"
-  signature: 'Tensor (Tensor x, Float height_scale, Float width_scale,
+  signature: 'Tensor (Tensor x, Float height_scale, Float width_scale, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleNearest2D'
   bind_python: True
 
 - name: "upsample_nearest_2d_grad"
   signature:
     'Tensor (Tensor dy, Tensor x, Float height_scale, Float width_scale,
-    String data_format="channels_first") => UpsampleNearest2DGrad'
+    Int64List[2] output_size=None, String data_format="channels_first") => UpsampleNearest2DGrad'
   bind_python: False
 
 - name: "upsample_bilinear_2d"
