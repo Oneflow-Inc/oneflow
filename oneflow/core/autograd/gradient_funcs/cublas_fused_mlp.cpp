@@ -135,10 +135,10 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     const auto& last_layer_wgrad_bgrad =
         JUST(functional::CublasMatmulBiasAddGrad(last_bias_dy, last_layer_x));
     if (last_layer_weight_requires_grad) {
-      *JUST(VectorAt(in_grads, weight_num)) = last_layer_wgrad_bgrad->at(0);
+      *JUST(VectorAt(in_grads, weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 0));
     }
     if (last_layer_bias_requires_grad) {
-      *JUST(VectorAt(in_grads, 2 * weight_num)) = last_layer_wgrad_bgrad->at(1);
+      *JUST(VectorAt(in_grads, 2 * weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 1));
     }
   }
 
