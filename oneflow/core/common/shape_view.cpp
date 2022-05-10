@@ -58,7 +58,7 @@ template<typename DimT>
 std::string ShapeViewBase<DimT>::ToString() const {
   std::stringstream ss;
   ss << "(";
-  FOR_RANGE(int64_t, i, 0, this->NumAxes()) {
+  FOR_RANGE(int, i, 0, this->NumAxes()) {
     int64_t dim = this->At(i);
     ss << dim;
     if (i != this->NumAxes() - 1 || this->NumAxes() == 1) { ss << ","; }

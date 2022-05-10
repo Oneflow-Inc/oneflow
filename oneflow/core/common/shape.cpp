@@ -29,11 +29,11 @@ Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
   return Shape(std::move(dim_vec));
 }
 
-Shape CreateLeftExtendedShape(const ShapeView& shape, int64_t ndims_left_extend_to) {
+Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) {
   CHECK_GE(ndims_left_extend_to, shape.NumAxes());
   DimVector dim_vec(ndims_left_extend_to);
-  const int64_t left_ones_num = ndims_left_extend_to - shape.NumAxes();
-  int64_t i = 0;
+  const size_t left_ones_num = ndims_left_extend_to - shape.NumAxes();
+  int i = 0;
   for (; i < left_ones_num; ++i) { dim_vec.at(i) = 1LL; }
   for (; i < ndims_left_extend_to; ++i) { dim_vec.at(i) = shape.At(i - left_ones_num); }
   return Shape(std::move(dim_vec));
@@ -90,8 +90,8 @@ Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
 
 Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
   CHECK_GE(NumAxes(), shape_view.NumAxes());
-  int64_t left_ones_size = NumAxes() - shape_view.NumAxes();
-  FOR_RANGE(int64_t, i, 0, left_ones_size) { dim_vec_.at(i) = 1LL; }
+  size_t left_ones_size = NumAxes() - shape_view.NumAxes();
+  FOR_RANGE(int, i, 0, left_ones_size) { dim_vec_.at(i) = 1LL; }
   std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(),
             dim_vec_.data() + left_ones_size);
   return *this;
@@ -101,7 +101,7 @@ bool Shape::operator==(const Shape& rhs) const { return dim_vec_ == rhs.dim_vec_
 
 std::string Shape::ToString() const {
   std::stringstream ss;
-  int64_t idx = 0;
+  int32_t idx = 0;
   ss << "(";
   for (int64_t dim : dim_vec_) {
     ss << dim;
@@ -190,7 +190,7 @@ AxisVector Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {
 
 bool Shape::Containing(const Shape& small_shape) const {
   if (this->NumAxes() < small_shape.NumAxes()) { return false; }
-  FOR_RANGE(int64_t, i, 0, small_shape.NumAxes()) {
+  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
     if (this->At(i) != small_shape.At(i)) { return false; }
   }
   return true;
