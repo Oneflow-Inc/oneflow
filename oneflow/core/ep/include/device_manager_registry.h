@@ -32,13 +32,17 @@ class DeviceManagerRegistry {
   ~DeviceManagerRegistry();
 
   DeviceManager* GetDeviceManager(DeviceType device_type);
+  DeviceManager* GetDeviceManagerOrNull(DeviceType device_type);
   std::shared_ptr<Device> GetDevice(DeviceType device_type, size_t device_index);
+  size_t GetDeviceCount(DeviceType device_type);
+  size_t GetDeviceCount(const std::string& device_type_name);
 
   static void RegisterDeviceManagerFactory(std::unique_ptr<DeviceManagerFactory>&& factory);
   static void DumpVersionInfo();
   static std::string GetDeviceTypeNameByDeviceType(DeviceType device_type);
   static DeviceType GetDeviceTypeByDeviceTypeName(const std::string& device_type_name);
   static std::set<DeviceType> GetRegisteredDeviceTypes();
+  static bool IsDeviceTypeRegistered(DeviceType device_type);
 
  private:
   class Impl;
