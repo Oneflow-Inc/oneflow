@@ -1395,12 +1395,10 @@ class PinMemoryCopyFunctor {
   PinMemoryCopyFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Symbol<Device>>& device,
-                           const bool& pin_memory) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<Symbol<Device>>& device, const bool& pin_memory) const {
     Symbol<Device> device_ = JUST(x->device());
-    if(device){
-      device_ = JUST(device);
-    }
+    if (device) { device_ = JUST(device); }
     if (device_->type() == "cuda" || pin_memory == false) {
       return functional::Copy(x, device_->type(), device_->device_id());
     }
