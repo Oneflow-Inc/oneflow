@@ -147,9 +147,9 @@ struct PlacementSymbolExportUtil {
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
       if (type != "cpu") {
         const int64_t device_count = GetDeviceCount(type);
-        CHECK_NE_OR_RETURN(device_count, 0) << Error::RuntimeError()
-                                            << "Can\'t construct placement with \"" << type
-                                            << "\" type because there is no device!";
+        CHECK_NE_OR_RETURN(device_count, 0)
+            << Error::RuntimeError() << "Can\'t construct placement with \"" << type
+            << "\" type because there is no device!";
         device_num = std::min(device_num, device_count);
       }
       std::vector<std::string> machine_device_ids;
