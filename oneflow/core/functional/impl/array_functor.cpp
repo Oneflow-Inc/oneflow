@@ -1395,16 +1395,20 @@ class PinMemoryCopyFunctor {
   PinMemoryCopyFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Device& device,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Symbol<Device>>& device,
                            const bool& pin_memory) const {
-    if (device.type() == "cuda" || pin_memory == false) {
-      return functional::Copy(x, device.type(), device.device_id());
+    Symbol<Device> device_ = JUST(x->device());
+    if(device){
+      device_ = JUST(device);
+    }
+    if (device_->type() == "cuda" || pin_memory == false) {
+      return functional::Copy(x, device_->type(), device_->device_id());
     }
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("device_type", device.type()));
-    JUST(attrs.SetAttr<int64_t>("device_id", device.device_id()));
+    JUST(attrs.SetAttr<std::string>("device_type", device_->type()));
+    JUST(attrs.SetAttr<int64_t>("device_id", device_->device_id()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x},
-                                          OpExprInterpContext(attrs, device, /*pin_memory=*/true));
+                                          OpExprInterpContext(attrs, device_, /*pin_memory=*/true));
   }
 
  private:
@@ -2993,7 +2997,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
-  m.add_functor<impl::CopyFunctor, impl::PinMemoryCopyFunctor>("Copy");
+  m.add_functor<impl::CopyFunctor>("Copy");
+  m.add_functor<impl::PinMemoryCopyFunctor>("PinMemoryCopy");
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::FlipGradFunctor>("FlipGrad");
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");

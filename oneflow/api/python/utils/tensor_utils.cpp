@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/consistency_check.h"
@@ -260,7 +261,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const bool& pin_memory) {
   if (other->is_local()) {
     const Symbol<Device>& device = JUST(other->device());
-    return functional::Copy(other, device, pin_memory);
+    return functional::PinMemoryCopy(other, device, pin_memory);
   } else {
     const Symbol<NdSbp>& nd_sbp = JUST(other->nd_sbp());
     const std::vector<Symbol<SbpParallel>>& sbp_tuple = *JUST(GetSbpList(nd_sbp));
@@ -280,11 +281,11 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
   if (device) { device_ = JUST(device); }
   if (other->is_local()) {
     if (!device) { device_ = JUST(other->device()); }
-    tensor = JUST(functional::Copy(other, device, pin_memory));
+    tensor = JUST(functional::PinMemoryCopy(other, device_, pin_memory));
   } else {
     tensor = JUST(functional::ConsistentToLocal(other));
     if (!device) { device_ = JUST(Device::New("cpu")); }
-    tensor = JUST(functional::Copy(tensor, device, pin_memory));
+    tensor = JUST(functional::PinMemoryCopy(tensor, device_, pin_memory));
   }
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);

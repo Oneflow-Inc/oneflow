@@ -1276,7 +1276,7 @@
 - name: "copy"
   signature: [
     "Tensor (Tensor x, String device_type, Int64 device_id) => Copy",
-    "Tensor (Tensor x, Device device=None, Bool pin_memory=False) => Copy"
+    "Tensor (Tensor x, Device device=None, Bool pin_memory=False) => PinMemoryCopy"
   ]
   bind_python: True
 
