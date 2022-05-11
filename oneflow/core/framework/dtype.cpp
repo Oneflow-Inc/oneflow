@@ -73,9 +73,6 @@ Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
       {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
       {DataType::kBFloat16, DTypeMeta("oneflow.bfloat16", true, true, false)},
       {DataType::kBool, DTypeMeta("oneflow.bool", false, false, false)},
-      {DataType::kComplex32, DTypeMeta("oneflow.complex32", true, true, true)},
-      {DataType::kComplex64, DTypeMeta("oneflow.complex64", true, true, true)},
-      {DataType::kComplex128, DTypeMeta("oneflow.complex128", true, true, true)},
   };
   return MapAt(data_type2dtype_meta, data_type);
 };

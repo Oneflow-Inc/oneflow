@@ -57,9 +57,10 @@ std::unordered_map<DataType, std::string> datatype_to_string_dict{
     {kFloat16, "HalfTensor"},
     {kBFloat16, "BFloat16Tensor"},
     {kBool, "BoolTensor"},
-    {kComplex32, "ComplexHalfTensor"},
-    {kComplex64, "ComplexFloatTensor"},
-    {kComplex128, "ComplexDoubleTensor"},
+    // dtype complex is not supported yet
+    // {kComplex32, "ComplexHalfTensor"},
+    // {kComplex64, "ComplexFloatTensor"},
+    // {kComplex128, "ComplexDoubleTensor"},
 };
 
 std::unordered_map<DeviceType, std::string> devicetype_to_string_dict{
@@ -174,7 +175,6 @@ static void generalize_tensortype_list() {
       tensortype_list.push_back(tensortype);
 
       name = "oneflow." + name;
-      std::cout << "datatype: " << tensortype->datatype << std::endl;
       std::string doc = get_doc(tensortype);
       init_tensortype(tensortype->py_type, PyTensortypeTemplate, name, doc);
     }
