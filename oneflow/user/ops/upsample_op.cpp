@@ -53,14 +53,8 @@ namespace oneflow {
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
                   && x_desc.shape().NumAxes() == 3)
       << "upsample_nearest_1d only supports NCH";
-  std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-  if (output_size.size()) {
-    *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0])});
-  } else {
-    *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
-  }
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest1DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -83,16 +77,9 @@ namespace oneflow {
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
                   && x_desc.shape().NumAxes() == 4)
       << "upsample_nearest_2d only supports NCHW";
-  std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-  if (output_size.size()) {
-    *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0]),
-               static_cast<int32_t>(output_size[1])});
-  } else {
-    *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
-                                  static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
-  }
+  *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -471,7 +458,6 @@ REGISTER_USER_OP_GRAD("upsample_nearest_1d")
                 .Input("x", op.input("x", 0))
                 .Output("dx")
                 .Attr("scale_factor", op.attr<float>("scale_factor"))
-                .Attr("output_size", op.attr<std::vector<int64_t>>("output_size"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
@@ -492,7 +478,6 @@ REGISTER_USER_OP_GRAD("upsample_nearest_2d")
                 .Output("dx")
                 .Attr("height_scale", op.attr<float>("height_scale"))
                 .Attr("width_scale", op.attr<float>("width_scale"))
-                .Attr("output_size", op.attr<std::vector<int64_t>>("output_size"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
