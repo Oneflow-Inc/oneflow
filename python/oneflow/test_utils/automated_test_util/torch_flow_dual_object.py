@@ -1070,7 +1070,7 @@ def autotest(
                                             dtype=x.oneflow.dtype,
                                             device=x.oneflow.device,
                                         )
-                                    # TODO(): Inferred shape of some op(for example, linalg.norm) is different between oneflow and torch
+                                    # TODO(): Inferred shape of some op is different between oneflow and torch
                                     pytorch_tensor = torch_original.tensor(
                                         np_arr.reshape(list(x.pytorch.shape)),
                                         dtype=x.pytorch.dtype,
