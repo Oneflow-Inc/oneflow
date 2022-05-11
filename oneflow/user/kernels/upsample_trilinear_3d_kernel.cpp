@@ -146,9 +146,9 @@ class UpsampleTrilinear3DCPUKernel final : public user_op::OpKernel {
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
-      depth_scale = out_depth * 1.0 / in_depth;
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
 
     const T scale_depth = GetAreaPixelScale(in_depth, out_depth, align_corners, depth_scale);
@@ -198,9 +198,9 @@ class UpsampleTrilinearGrad3DCPUKernel final : public user_op::OpKernel {
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
-      depth_scale = out_depth * 1.0 / in_depth;
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
 
     const T scale_depth = GetAreaPixelScale(in_depth, out_depth, align_corners, depth_scale);

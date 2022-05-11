@@ -33,7 +33,7 @@ namespace oneflow {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   if (output_size.size()) {
     *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0])});
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
                                   static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
@@ -62,7 +62,7 @@ namespace oneflow {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   if (output_size.size()) {
     *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0])});
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
                                   static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
@@ -92,8 +92,8 @@ namespace oneflow {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   if (output_size.size()) {
     *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0]),
-               static_cast<int32_t>(output_size[1])});
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0]),
+               static_cast<int64_t>(output_size[1])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
                                   static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
@@ -124,8 +124,8 @@ namespace oneflow {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   if (output_size.size()) {
     *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0]),
-               static_cast<int32_t>(output_size[1])});
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0]),
+               static_cast<int64_t>(output_size[1])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
                                   static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
@@ -156,8 +156,8 @@ namespace oneflow {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   if (output_size.size()) {
     *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0]),
-               static_cast<int32_t>(output_size[1])});
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0]),
+               static_cast<int64_t>(output_size[1])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
                                   static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
@@ -214,8 +214,8 @@ namespace oneflow {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   if (output_size.size()) {
     *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0]),
-               static_cast<int32_t>(output_size[1]), static_cast<int32_t>(output_size[2])});
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0]),
+               static_cast<int64_t>(output_size[1]), static_cast<int64_t>(output_size[2])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
                                   static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
@@ -248,8 +248,8 @@ namespace oneflow {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   if (output_size.size()) {
     *y_desc->mut_shape() =
-        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int32_t>(output_size[0]),
-               static_cast<int32_t>(output_size[1]), static_cast<int32_t>(output_size[2])});
+        Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0]),
+               static_cast<int64_t>(output_size[1]), static_cast<int64_t>(output_size[2])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
                                   static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),

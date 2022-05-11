@@ -149,8 +149,8 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
     const int64_t elem_cnt = out_height * out_width;
 
@@ -195,8 +195,8 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
     const int64_t elem_cnt = out_height * out_width;
 

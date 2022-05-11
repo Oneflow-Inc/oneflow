@@ -45,7 +45,7 @@ class UpsampleBicubic2dCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
     if (!output_size.empty()) {
-      height_scale = out_height * 1.0 / in_height;
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = out_width * 1.0 / in_width;
     }
 
@@ -128,8 +128,8 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
     if (in_height == out_height && in_width == out_width) {
       memcpy(in_ptr, out_ptr, sizeof(T) * channels * in_height * in_width);

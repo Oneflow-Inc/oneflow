@@ -1655,6 +1655,9 @@ class UpsampleBilinear2DGradFunctor {
     JUST(attrs.SetAttr<double>("height_scale", height_scale));
     JUST(attrs.SetAttr<double>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    if (output_size.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", *JUST(output_size)));
+    }
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
@@ -1702,6 +1705,9 @@ class UpsampleBicubic2DGradFunctor {
     JUST(attrs.SetAttr<double>("height_scale", height_scale));
     JUST(attrs.SetAttr<double>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    if (output_size.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", *JUST(output_size)));
+    }
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
@@ -1749,6 +1755,9 @@ class UpsampleNearest3DGradFunctor {
     JUST(attrs.SetAttr<double>("depth_scale", depth_scale));
     JUST(attrs.SetAttr<double>("height_scale", height_scale));
     JUST(attrs.SetAttr<double>("width_scale", width_scale));
+    if (output_size.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", *JUST(output_size)));
+    }
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
@@ -1800,6 +1809,9 @@ class UpsampleTrilinear3DGradFunctor {
     JUST(attrs.SetAttr<double>("height_scale", height_scale));
     JUST(attrs.SetAttr<double>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    if (output_size.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", *JUST(output_size)));
+    }
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }

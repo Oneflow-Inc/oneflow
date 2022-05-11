@@ -83,7 +83,9 @@ class UpsampleLinear1DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape().At(2);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("scale_factor");
-    if (!output_size.empty()) { height_scale = out_height * 1.0 / in_height; }
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+    }
 
     if (in_height == out_height) {
       memcpy(y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
@@ -123,7 +125,9 @@ class UpsampleLinearGrad1DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_tensor->shape().At(2);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("scale_factor");
-    if (!output_size.empty()) { height_scale = out_height * 1.0 / in_height; }
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+    }
 
     if (in_height == out_height) {
       memcpy(dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
