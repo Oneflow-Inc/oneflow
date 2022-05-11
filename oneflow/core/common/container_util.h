@@ -76,6 +76,15 @@ Maybe<typename VecT::value_type*> VectorAt(VecT* vec, typename VecT::size_type i
   return &(*vec)[index];
 }
 
+template<typename VecT>
+Maybe<typename VecT::value_type*> VectorAt(std::shared_ptr<VecT> vec,
+                                           typename VecT::size_type index) {
+  static_assert(!std::is_same<typename VecT::value_type, bool>::value,
+                "VectorAt(std::shared_ptr<vector<bool>>, size_t) is not supported.");
+  CHECK_LT_OR_RETURN(index, vec->size());
+  return &(*vec)[index];
+}
+
 template<typename T>
 std::string Join(const T& con, const std::string& delimiter) {
   std::ostringstream os;
