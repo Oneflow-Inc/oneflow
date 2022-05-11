@@ -14,20 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <Python.h>
-#include <object.h>
 #include <pybind11/pybind11.h>
-#include <cstring>
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/device_type.cfg.h"
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
-#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -82,10 +76,10 @@ static PyObject* PyTensortypeMetaCls_call(PyObject* self, PyObject* args, PyObje
   tensor->data->set_pyobject(self);
 
   PyTensortype* tensortype = (PyTensortype*)self;
-  Maybe<std::string> device = DeviceTag4DeviceType(PyTensortype_AsDevice((PyObject*)tensortype));
-  Optional<std::string> device_str = CHECK_JUST(device);
+  const Optional<std::string>& device =
+      ASSERT(DeviceTag4DeviceType(PyTensortype_UnpackDevice((PyObject*)tensortype)));
   const auto& t =
-      functional::To(tensor->data, device_str, PyTensortype_AsDType((PyObject*)tensortype), false);
+      functional::To(tensor->data, device, PyTensortype_UnpackDType((PyObject*)tensortype), false);
   tensor->data = CHECK_JUST(t);
 
   // reset temp data to prevent clearing the pyobject
@@ -180,7 +174,7 @@ static void binding(pybind11::module_& m) {
   for (PyTensortype* tensortype : tensortype_list) {
     Py_INCREF(tensortype);
     auto module = m.def_submodule("_C");
-    if (tensortype->is_cuda) module = m.def_submodule("cuda");
+    if (tensortype->is_cuda) module = module.def_submodule("cuda");
 
     std::string type_name = std::string(tensortype->name);
     type_name = type_name.substr(type_name.rfind('.') + 1);

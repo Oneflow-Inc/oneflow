@@ -293,7 +293,7 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
   }
   if (tensortype == NULL) {
     PyObject* result = PyTensortype_FromDTypeDeviceType(tensor->dtype()->data_type(),
-                                                        CHECK_JUST(tensor->device())->enum_type());
+                                                        ASSERT(tensor->device())->enum_type());
     std::string tensortype_string = "oneflow." + std::string(((PyTensortype*)result)->name);
     return PyUnicode_FromString(tensortype_string.c_str());
   }
@@ -302,9 +302,9 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     tensortype = PyTensortype_FromString(tensortype_string);
   };
   if (PyTensortype_Check(tensortype)) {
-    Maybe<std::string> device = DeviceTag4DeviceType(PyTensortype_AsDevice(tensortype));
-    Optional<std::string> device_str = CHECK_JUST(device);
-    const auto& t = functional::To(tensor, device_str, PyTensortype_AsDType(tensortype), false);
+    const Optional<std::string>& device =
+        ASSERT(DeviceTag4DeviceType(PyTensortype_UnpackDevice(tensortype)));
+    const auto& t = functional::To(tensor, device, PyTensortype_UnpackDType(tensortype), false);
     return functional::CastToPyObject(t);
   } else if (functional::PyDTypeCheck(tensortype)) {
     const auto& t = functional::To(tensor, functional::PyUnpackDType(tensortype), false);

@@ -35,12 +35,13 @@ typedef struct {
 
 bool PyTensortype_Check(PyObject*);
 
-inline DeviceType PyTensortype_AsDevice(PyObject* self) { return ((PyTensortype*)self)->device; }
-inline Symbol<DType> PyTensortype_AsDType(PyObject* self) {
+inline DeviceType PyTensortype_UnpackDevice(PyObject* self) {
+  return ((PyTensortype*)self)->device;
+}
+inline Symbol<DType> PyTensortype_UnpackDType(PyObject* self) {
   return CHECK_JUST(DType::Get(((PyTensortype*)self)->datatype));
 }
 
-bool PyTensortype_Check(PyObject*);
 PyObject* PyTensortype_FromDTypeDeviceType(DataType, DeviceType);
 PyObject* PyTensortype_FromString(const std::string&);
 
