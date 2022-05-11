@@ -57,7 +57,6 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
-      LOG(ERROR) << "add boxing iden op " << identity_op_conf.DebugString();
       job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
       NdSbpSignature identity_nd_sbp_signature;
       (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["in"] = dst_nd_sbp;

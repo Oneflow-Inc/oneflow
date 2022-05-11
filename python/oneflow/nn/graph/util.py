@@ -137,6 +137,18 @@ def _get_var_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc, lbn2regst):
     output_sig_str += ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn]) + ", " + _mem_desc_repr(lbn2regst[output_lbn])
     return input_sig_str, output_sig_str
 
+def _get_iden_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc, lbn2regst):
+    iden_op_conf = op_conf.identity_conf
+    input_lbn = getattr(iden_op_conf, "in")
+    input_sig_str = input_lbn + ":" + _nd_sbp2repr(bn2nd_sbp["in"])  + ", " + _blob_desc_repr(lbn2blob_desc[input_lbn]) + ", " + _mem_desc_repr(lbn2regst[input_lbn])
+
+    output_lbn = op_conf.name + "/" + iden_op_conf.out
+    output_sig_str = iden_op_conf.out
+    nd_sbp = bn2nd_sbp[iden_op_conf.out]
+    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn]) + ", " + _mem_desc_repr(lbn2regst[output_lbn])
+
+    return input_sig_str, output_sig_str
+
 
 def operators_repr(ops, graph):
     r"""Generate operators' string representation of this module
@@ -177,6 +189,8 @@ def operators_repr(ops, graph):
             input_sig_str, output_sig_str = _get_user_op_io_repr(op.user_conf, bn2nd_sbp, lbn2blob_desc, lbn2regst)
         elif op.HasField("variable_conf"):
             input_sig_str, output_sig_str = _get_var_op_io_repr(op, bn2nd_sbp, lbn2blob_desc,lbn2regst)
+        elif op.HasField("identity_conf"):
+            input_sig_str, output_sig_str = _get_iden_op_io_repr(op, bn2nd_sbp, lbn2blob_desc,lbn2regst)
 
         return signature_template.substitute(input=input_sig_str, output=output_sig_str)
 

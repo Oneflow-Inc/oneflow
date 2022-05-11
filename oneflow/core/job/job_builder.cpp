@@ -209,7 +209,6 @@ void JobBuilder::AddOpToModuleConf(const OperatorConf& op_conf) {
         return;
       }
     }
-    LOG(INFO) << "op " << op_conf.name() << " has no module name, so use job name.";
     const auto& module_name = job_->job_conf().job_name();
     auto* module_name2module_conf = job_->mutable_module_name2module_conf();
     if (!(*module_name2module_conf)[module_name].has_name()) {
