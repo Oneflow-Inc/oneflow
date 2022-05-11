@@ -27,7 +27,7 @@ template<typename T>
 __global__ void UpsampleNearest1DForward(const int64_t elem_cnt, const T* in_dptr,
                                          NdIndexOffsetHelper<int64_t, 3> in_helper,
                                          NdIndexOffsetHelper<int64_t, 3> out_helper,
-                                         const int64_t in_height, const float scale_factor,
+                                         const int64_t in_height, const double scale_factor,
                                          T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
@@ -41,7 +41,7 @@ template<typename T>
 __global__ void UpsampleNearest1DBackward(const int64_t elem_cnt, const T* dy_dptr,
                                           NdIndexOffsetHelper<int64_t, 3> dy_helper,
                                           NdIndexOffsetHelper<int64_t, 3> dx_helper,
-                                          const int64_t in_height, const float scale_factor,
+                                          const int64_t in_height, const double scale_factor,
                                           T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
@@ -56,7 +56,7 @@ __global__ void UpsampleNearest2DForward(const int64_t elem_cnt, const T* in_dpt
                                          NdIndexOffsetHelper<int64_t, 4> in_helper,
                                          NdIndexOffsetHelper<int64_t, 4> out_helper,
                                          const int64_t in_height, const int64_t in_width,
-                                         const float scale_h, const float scale_w, T* out_dptr) {
+                                         const double scale_h, const double scale_w, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
@@ -71,7 +71,7 @@ __global__ void UpsampleNearest2DBackward(const int64_t elem_cnt, const T* dy_dp
                                           NdIndexOffsetHelper<int64_t, 4> dy_helper,
                                           NdIndexOffsetHelper<int64_t, 4> dx_helper,
                                           const int64_t dx_height, const int64_t dx_width,
-                                          const float scale_h, const float scale_w, T* dx_dptr) {
+                                          const double scale_h, const double scale_w, T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
@@ -134,7 +134,6 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
     if (!output_size.empty()) { height_scale = out_height * 1.0 / in_height; }
-
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
