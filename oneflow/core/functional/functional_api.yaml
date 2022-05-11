@@ -1251,7 +1251,7 @@
   bind_python: True
 
 - name: "slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => Slice"
+  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=True) => Slice"
   bind_python: True
 
 - name: "slice_grad"

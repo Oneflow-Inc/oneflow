@@ -54,6 +54,7 @@ static constexpr auto* CheckSymmetricB2S =
 
 Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                                 Symbol<PlacedNdSbp> out) {
+  printf("\n >>>>>>>>>>>>> SymmetricB2S ");
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
@@ -81,7 +82,7 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
       start.emplace_back(range.begin());
       stop.emplace_back(range.end());
     }
-    local_tensor = JUST(one::functional::Slice(local_tensor, start, stop, step));
+    local_tensor = JUST(one::functional::Slice(local_tensor, start, stop, step, /*enable_view_slice=*/false));
   }
 
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),

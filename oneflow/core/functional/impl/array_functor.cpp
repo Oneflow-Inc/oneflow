@@ -1188,8 +1188,8 @@ class SliceBaseFunctor {
   virtual ~SliceBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
-                           const std::vector<int64_t>& step) const {
-    if (view::IsViewApplicable(x)) { return view::Slice(x, start, stop, step); }
+                           const std::vector<int64_t>& step, const bool enable_view_slice) const {
+    if (view::IsViewApplicable(x) && enable_view_slice) { return view::Slice(x, start, stop, step); }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
@@ -1906,7 +1906,7 @@ class SliceView1dContiguousFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start,
                            int64_t end) const {
     if (view::IsViewApplicable(x)) { return JUST(view::Slice(x, {start}, {end}, {1})); }
-    return JUST(functional::Slice(x, {start}, {end}, {1}));
+    return JUST(functional::Slice(x, {start}, {end}, {1}, /*enable_view_slice=*/true));
   }
 };
 
@@ -1914,13 +1914,13 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    if (x->is_local() && !(LazyMode::is_enabled()) && x->requires_grad() == false
-        && index.size() == 1 && index[0].IsInteger()) {
-      // NOTE: speed up in special case, e.g. dataloader(refer to torch)
-      // function call chain of pytorch : tensor getitem -> select -> as_strided
-      // function call chain of oneflow : tensor getitem -> as_strided
-      return ApplySelectIndexing(x, index);
-    }
+    // if (x->is_local() && !(LazyMode::is_enabled()) && x->requires_grad() == false
+    //     && index.size() == 1 && index[0].IsInteger()) {
+    //   // NOTE: speed up in special case, e.g. dataloader(refer to torch)
+    //   // function call chain of pytorch : tensor getitem -> select -> as_strided
+    //   // function call chain of oneflow : tensor getitem -> as_strided
+    //   return ApplySelectIndexing(x, index);
+    // }
 
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
@@ -1958,7 +1958,7 @@ class TensorGetItemFunctor {
     if (is_identity) {
       result = expand_input;
     } else {
-      result = JUST(Slice(expand_input, start, end, step));
+      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
@@ -2561,10 +2561,10 @@ class IndexSelectFunctor {
     index_broad_cast[new_dim] = 1;
     Shape expand_shape(index_broad_cast);
     auto index_gather =
-        JUST(functional::Expand(JUST(functional::Slice(index, {0}, {1}, {1})), expand_shape));
+        JUST(functional::Expand(JUST(functional::Slice(index, {0}, {1}, {1}, /*enable_view_slice=*/true)), expand_shape));
     for (int i = 1; i < index->dim(0); i++) {
       index_gather = JUST(functional::Concat(
-          {index_gather, JUST(functional::Expand(JUST(functional::Slice(index, {i}, {i + 1}, {1})),
+          {index_gather, JUST(functional::Expand(JUST(functional::Slice(index, {i}, {i + 1}, {1}, /*enable_view_slice=*/true)),
                                                  expand_shape))},
           new_dim));
     }
