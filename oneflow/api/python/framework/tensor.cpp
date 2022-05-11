@@ -302,8 +302,12 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     tensortype = PyTensortype_FromString(tensortype_string);
   };
   if (PyTensortype_Check(tensortype)) {
-    const Optional<std::string>& device =
-        ASSERT(DeviceTag4DeviceType(PyTensortype_UnpackDevice(tensortype)));
+    DeviceType device_type = PyTensortype_UnpackDevice(tensortype);
+    if(device_type == ASSERT(tensor->device())->enum_type()){
+      const auto& t = functional::To(tensor, functional::PyUnpackDType(tensortype), false);
+      return functional::CastToPyObject(t);
+    }
+    const Optional<std::string>& device = ASSERT(DeviceTag4DeviceType(device_type));
     const auto& t = functional::To(tensor, device, PyTensortype_UnpackDType(tensortype), false);
     return functional::CastToPyObject(t);
   } else if (functional::PyDTypeCheck(tensortype)) {
