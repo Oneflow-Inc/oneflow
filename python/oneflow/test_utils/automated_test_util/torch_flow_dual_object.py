@@ -1032,7 +1032,7 @@ def autotest(
                     global testing
                     testing = True
                     if check_graph:
-                        testing_graph = True
+                        testing_graph = False
                     res = f(test_case, *args, **kwargs)
                     testing = False
                     testing_graph = False
@@ -1055,13 +1055,8 @@ def autotest(
                                     np_arr = rng.uniform(
                                         low=0, high=1, size=list(x.oneflow.shape)
                                     )
-                                    # TODO(): Inferred shape of some op(for example, linalg.norm) is different between oneflow and torch
-                                    pytorch_tensor = torch_original.tensor(
-                                        np_arr.reshape(list(x.pytorch.shape)),
-                                        dtype=x.pytorch.dtype,
-                                        device=x.pytorch.device,
-                                    )
                                     if is_global():
+                                        np_arr = broadcast(np_arr)
                                         flow_tensor = flow.tensor(
                                             np_arr,
                                             dtype=x.oneflow.dtype,
@@ -1075,11 +1070,18 @@ def autotest(
                                             dtype=x.oneflow.dtype,
                                             device=x.oneflow.device,
                                         )
+                                    # TODO(): Inferred shape of some op(for example, linalg.norm) is different between oneflow and torch
+                                    pytorch_tensor = torch_original.tensor(
+                                        np_arr.reshape(list(x.pytorch.shape)),
+                                        dtype=x.pytorch.dtype,
+                                        device=x.pytorch.device,
+                                    )
                                     diff_output = GetDualObject(
                                         "unused", pytorch_tensor, flow_tensor
                                     )
                                     x.backward(diff_output)
                                 else:
+                                    print("sum then backward!")
                                     x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
