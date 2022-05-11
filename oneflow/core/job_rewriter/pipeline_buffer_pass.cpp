@@ -83,6 +83,7 @@ int64_t GetStageIdHint(const OpNode* node) {
 
 void TryInsertOrUseBufferOpToDstNode(
     const OpEdge* op_edge, const int64_t buffer_size,
+    const std::string& buffer_op_type_name,
     HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
     HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
     HashMap<std::string, OperatorConf>* mut_op_name2conf) {
@@ -94,7 +95,8 @@ void TryInsertOrUseBufferOpToDstNode(
   const int64_t stage_id = GetStageIdHint(dst_node);
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::string lbn = GenLogicalBlobName(lbi);
-    std::string buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name()
+    std::string buffer_op_name = kBufferOpNamePrefix + "-"
+      + buffer_op_type_name + "-" + lbi.op_name() + "-" + lbi.blob_name()
                                  + "-stage_id_" + std::to_string(stage_id);
 
     auto it = buffer_op_name2op_conf->find(buffer_op_name);
@@ -102,7 +104,7 @@ void TryInsertOrUseBufferOpToDstNode(
       it = buffer_op_name2op_conf
                ->emplace(buffer_op_name,
                          user_op::UserOpConfWrapperBuilder(buffer_op_name)
-                             .Op("identity_buffer")
+                             .Op(buffer_op_type_name)
                              .Input("in", lbn)
                              .Output("out")
                              .Attr<int64_t>("buffer_size", buffer_size)
@@ -239,6 +241,26 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
     max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
   });
 
+  HashSet<const OpNode*> equivalent_var_ops;
+  op_graph.TopoForEachNode([&](const OpNode* this_node) {
+    const OperatorConf& op_conf = this_node->op().op_conf();
+    if (op_conf.has_variable_conf()) {
+      equivalent_var_ops.insert(this_node);
+      return;
+    }
+    if (this_node->in_edges().size() == 1 
+      && this_node->out_edges().size() == 1
+      && op_conf.has_user_conf()) {
+      const std::string& op_type_name = op_conf.user_conf().op_type_name();
+      if (op_type_name == "cast" || op_type_name == "identity" || op_type_name == "copy") {
+        if (equivalent_var_ops.find(this_node->SoleInEdge()->src_node()) != equivalent_var_ops.end()) {
+          equivalent_var_ops.insert(this_node);
+          LOG(INFO) << " cclog: find equivalent_var_ops: " << op_conf.name();
+        }
+      }
+    }
+  });
+
   if (max_stage_id == 0) { return Maybe<void>::Ok(); }
   const int64_t total_stage_num = max_stage_id + 1;
   VLOG(3) << "total stage num = " << total_stage_num;
@@ -268,8 +290,14 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                        << "). Make sure to change the tensor's placment before it enter the module "
                           "of a next pipeline stage.\n";
         }
+        std::string buffer_op_name = "identity_buffer";
+        if (equivalent_var_ops.find(src_node) != equivalent_var_ops.end()) {
+          // NOTE(chengcheng): inplaced buffer has regst num = 1 for memory cost.
+          buffer_op_name = "_constant_inplace_buffer";
+        }
         const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
-        TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,
+        TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, buffer_op_name,
+                                        &buffer_op_name2op_conf,
                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
@@ -294,7 +322,9 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       if (src_node->parallel_desc().device_type() == DeviceType::kCPU
           && dst_node->parallel_desc().device_type() == DeviceType::kCUDA) {
         if (src_stage_id == 0 && (dst_stage_id == max_stage_id || dst_stage_id == 0)) {
-          TryInsertOrUseBufferOpToDstNode(edge, total_stage_num * 2, &buffer_op_name2op_conf,
+          TryInsertOrUseBufferOpToDstNode(edge, total_stage_num * 2, 
+                                          "identity_buffer",
+                                          &buffer_op_name2op_conf,
                                           &buffer_op_name2parallel_conf, &mut_op_name2conf);
           return;
         }
