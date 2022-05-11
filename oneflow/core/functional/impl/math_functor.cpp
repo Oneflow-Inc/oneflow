@@ -1529,8 +1529,7 @@ class NormFunctor {
           res = JUST(MatrixNorm(x, ord_sca, dim, keepdim, dtype));
         }
       } else {
-        std::vector<int32_t> dim(1, 2);
-        res = JUST(VectorNorm(JUST(Flatten(x, 0, -1)), Scalar(2.0), input_dim, keepdim, dtype));
+        res = JUST(VectorNorm(x, Scalar(2.0), input_dim, keepdim, dtype));
       }
     }
     return res;
