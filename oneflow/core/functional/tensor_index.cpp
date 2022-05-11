@@ -102,9 +102,9 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
           int size = shape->At(dim);
           int expanded_size = expanded_shape->At(expanded_dim);
           CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << "Cannot broadcast advanced index to size " << std::max(size, expanded_size)
-              << " at dimension " << j << " since the size of another index is not 1.";
-          sizes[j] = std::max(size, expanded_size);
+              << "The size of tensor a (" << size << ") must match the size of tensor b ("
+              << expanded_size << ") at non-singleton dimension " << i;
+          sizes[j] = size == 1 ? expanded_size : size;
         }
       }
       expanded_shape.reset(new Shape(sizes));
@@ -351,6 +351,24 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
       << required_ndim;
   if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
   return result;
+}
+
+Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
+                                               TensorTuple& tensor_indices) {
+  if (!x->is_consistent()) {
+    const auto x_device = JUST(x->device());
+    for (int64_t i = 0; i < tensor_indices.size(); ++i) {
+      const auto tensor_index = tensor_indices[i];
+      if (tensor_index == nullptr) { continue; }
+      if (tensor_index->is_consistent()) { return Maybe<void>::Ok(); }
+      const auto tensor_index_device = JUST(tensor_index->device());
+      if ((tensor_index_device->type() != x_device->type())
+          || (tensor_index_device->device_id() != x_device->device_id())) {
+        tensor_indices[i] = JUST(Copy(tensor_index, x_device->type(), x_device->device_id()));
+      }
+    }
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace functional

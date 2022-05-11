@@ -58,7 +58,7 @@ class TensorImpl {
   virtual ~TensorImpl() = default;
 
   // Getters
-  virtual const std::shared_ptr<const Shape>& shape() const = 0;
+  virtual std::shared_ptr<const Shape> shape() const = 0;
   virtual DataType dtype() const = 0;
   virtual bool is_lazy() const = 0;
 
@@ -141,7 +141,7 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual ~ConsistentTensorImpl() = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape_ptr(); }
+  std::shared_ptr<const Shape> shape() const override { return tensor_meta_->shape_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
   Symbol<NdSbp> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
@@ -198,7 +198,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   ~LazyMirroredTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return tensor_meta()->shape_ptr(); }
+  std::shared_ptr<const Shape> shape() const override { return tensor_meta()->shape_ptr(); }
   bool is_lazy() const override { return true; }
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,
@@ -228,7 +228,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   ~EagerMirroredTensorImpl() override;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override;
+  std::shared_ptr<const Shape> shape() const override;
   Maybe<MirroredTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
   bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
@@ -251,6 +251,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
   Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
+  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object,
+                                  const bool pin_memory);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;

@@ -100,9 +100,9 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 
-  const Blob& blob = JUST(tensor->eager_blob_object())->blob();
-  const Shape& blob_shape = blob.static_shape();
-  const auto* tensor_buffer_ptr = blob.dptr<TensorBuffer>();
+  const auto& eager_blob_object = JUST(tensor->eager_blob_object());
+  const Shape& blob_shape = eager_blob_object->shape();
+  const auto* tensor_buffer_ptr = eager_blob_object->dptr<TensorBuffer>();
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
     shapes.emplace_back(tensor_buffer->shape());
@@ -164,7 +164,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
     device_ = JUST(Device::New("cpu"));
   }
   std::shared_ptr<Tensor> tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_));
+      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device_, /*pin_memory=*/false));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
   Py_DECREF(array);
@@ -229,7 +229,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
     device = JUST(Device::New("cuda"));
   }
   std::shared_ptr<Tensor> local_tensor =
-      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device));
+      JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), local_tensor, array));
 
   Py_DECREF(array);
