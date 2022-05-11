@@ -36,7 +36,7 @@ namespace oneflow {
         Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
+                                  static_cast<int64_t>(scale_factor * x_desc.shape().At(2))});
   }
   return Maybe<void>::Ok();
 }
@@ -65,7 +65,7 @@ namespace oneflow {
         Shape({x_desc.shape().At(0), x_desc.shape().At(1), static_cast<int64_t>(output_size[0])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(scale_factor * x_desc.shape().At(2))});
+                                  static_cast<int64_t>(scale_factor * x_desc.shape().At(2))});
   }
   return Maybe<void>::Ok();
 }
@@ -96,8 +96,8 @@ namespace oneflow {
                static_cast<int64_t>(output_size[1])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
-                                  static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
+                                  static_cast<int64_t>(height_scale * x_desc.shape().At(2)),
+                                  static_cast<int64_t>(width_scale * x_desc.shape().At(3))});
   }
   return Maybe<void>::Ok();
 }
@@ -128,8 +128,8 @@ namespace oneflow {
                static_cast<int64_t>(output_size[1])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
-                                  static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
+                                  static_cast<int64_t>(height_scale * x_desc.shape().At(2)),
+                                  static_cast<int64_t>(width_scale * x_desc.shape().At(3))});
   }
   return Maybe<void>::Ok();
 }
@@ -160,8 +160,8 @@ namespace oneflow {
                static_cast<int64_t>(output_size[1])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
-                                  static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
+                                  static_cast<int64_t>(height_scale * x_desc.shape().At(2)),
+                                  static_cast<int64_t>(width_scale * x_desc.shape().At(3))});
   }
   return Maybe<void>::Ok();
 }
@@ -186,8 +186,8 @@ namespace oneflow {
     LOG(FATAL) << "upsample only supports NCHW";
   }
   *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
-                                static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
+                                static_cast<int64_t>(height_scale * x_desc.shape().At(2)),
+                                static_cast<int64_t>(width_scale * x_desc.shape().At(3))});
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -218,9 +218,9 @@ namespace oneflow {
                static_cast<int64_t>(output_size[1]), static_cast<int64_t>(output_size[2])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
-                                  static_cast<int32_t>(height_scale * x_desc.shape().At(3)),
-                                  static_cast<int32_t>(width_scale * x_desc.shape().At(4))});
+                                  static_cast<int64_t>(depth_scale * x_desc.shape().At(2)),
+                                  static_cast<int64_t>(height_scale * x_desc.shape().At(3)),
+                                  static_cast<int64_t>(width_scale * x_desc.shape().At(4))});
   }
   return Maybe<void>::Ok();
 }
@@ -252,9 +252,9 @@ namespace oneflow {
                static_cast<int64_t>(output_size[1]), static_cast<int64_t>(output_size[2])});
   } else {
     *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
-                                  static_cast<int32_t>(depth_scale * x_desc.shape().At(2)),
-                                  static_cast<int32_t>(height_scale * x_desc.shape().At(3)),
-                                  static_cast<int32_t>(width_scale * x_desc.shape().At(4))});
+                                  static_cast<int64_t>(depth_scale * x_desc.shape().At(2)),
+                                  static_cast<int64_t>(height_scale * x_desc.shape().At(3)),
+                                  static_cast<int64_t>(width_scale * x_desc.shape().At(4))});
   }
   return Maybe<void>::Ok();
 }
