@@ -133,7 +133,9 @@ class UpsampleNearest1DCPUKernel final : public user_op::OpKernel {
     const int64_t channels = x_tensor->shape().At(1);
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
-    if (!output_size.empty()) { height_scale = out_height * 1.0 / in_height; }
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+    }
 
     if (in_height == out_height) {
       memcpy(y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
@@ -171,7 +173,9 @@ class UpsampleNearestGrad1DCPUKernel final : public user_op::OpKernel {
     const int64_t channels = dx_tensor->shape().At(1);
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(2);
-    if (!output_size.empty()) { height_scale = out_height * 1.0 / in_height; }
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+    }
     if (in_height == out_height) {
       memcpy(dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
              sizeof(T) * nbatch * channels * in_height);
@@ -222,8 +226,8 @@ class UpsampleNearest2DCPUKernel final : public user_op::OpKernel {
     const int64_t out_width = y_tensor->shape().At(3);
     const int64_t elem_cnt = y_tensor->shape().elem_cnt();
     if (!output_size.empty()) {
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
 
     if (in_height == out_height && in_width == out_width) {
@@ -266,8 +270,8 @@ class UpsampleNearest2DGradCPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_tensor->shape().At(3);
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
     if (!output_size.empty()) {
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
 
     if (in_height == out_height && in_width == out_width) {
@@ -321,9 +325,9 @@ class UpsampleNearest3DCPUKernel final : public user_op::OpKernel {
     const int64_t out_width = y_blob->shape().At(4);
     const int64_t elem_cnt = y_blob->shape().elem_cnt();
     if (!output_size.empty()) {
-      depth_scale = out_depth * 1.0 / in_depth;
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
     NdIndexOffsetHelper<int64_t, 5> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
                                               x_blob->shape().At(2), x_blob->shape().At(3),
@@ -364,9 +368,9 @@ class UpsampleNearestGrad3DCPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_blob->shape().At(4);
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
     if (!output_size.empty()) {
-      depth_scale = out_depth * 1.0 / in_depth;
-      height_scale = out_height * 1.0 / in_height;
-      width_scale = out_width * 1.0 / in_width;
+      depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
     NdIndexOffsetHelper<int64_t, 5> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
                                               dy_blob->shape().At(2), dy_blob->shape().At(3),
