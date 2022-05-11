@@ -20,12 +20,14 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1)
 def _test_embedding(test_case, ndim, placement, sbp):
     emb_size = random() * 8
     emb_dim = random() * 8
     emb_shape = [emb_size, emb_dim]
     idx_shape = [random(high=4) * 8 for i in range(ndim)]
+    
+    emb_sbp = [flow.sbp.broadcast for _ in range(len(sbp))]
     
     weight = random_tensor(2, *emb_shape)
     indices = random_tensor(
@@ -33,7 +35,7 @@ def _test_embedding(test_case, ndim, placement, sbp):
     ).to_global(placement=placement, sbp=sbp)
     
     embedding = torch.nn.Embedding(emb_size, emb_dim, _weight=weight)
-    embedding.oneflow.to_global(placement=placement, sbp=sbp)
+    embedding.oneflow.to_global(placement=placement, sbp=emb_sbp)
     
     output = embedding(indices)
     return output
