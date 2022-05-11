@@ -94,8 +94,9 @@ class PolynomialLR(LRScheduler):
         return (base_lr - self.end_learning_rate) * factor + self.end_learning_rate
 
     def _generate_conf_for_graph(self, lr_conf):
-        polynomial_conf = lr_conf.mutable_polynomial_conf()
-        polynomial_conf.set_decay_batches(self.max_decay_steps)
-        polynomial_conf.set_end_learning_rate(self.end_learning_rate)
-        polynomial_conf.set_power(self.power)
-        polynomial_conf.set_cycle(self.cycle)
+        lr_conf.polynomial_conf.SetInParent()
+        polynomial_conf = lr_conf.polynomial_conf
+        polynomial_conf.decay_batches = self.max_decay_steps
+        polynomial_conf.end_learning_rate = self.end_learning_rate
+        polynomial_conf.power = self.power
+        polynomial_conf.cycle = self.cycle
