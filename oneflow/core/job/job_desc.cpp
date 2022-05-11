@@ -54,9 +54,6 @@ Maybe<JobDesc> JobDesc::New(int64_t symbol_id, const JobConfigProto& job_conf) {
 }
 
 Maybe<void> JobDesc::Init() {
-#ifndef WITH_CUDA
-  CHECK_EQ_OR_RETURN((Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()), 0);
-#endif
   CheckFunctionConfig(job_conf_);
   return Maybe<void>::Ok();
 }
