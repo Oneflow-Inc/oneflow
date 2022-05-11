@@ -70,8 +70,14 @@ class RegstDesc final {
   int64_t mem_block_offset() const;
   void set_mem_block_offset(int64_t val) { mem_block_offset_ = val; }
   void set_hint_inplace_consumed_regst_desc_id(int64_t val) {
-    CHECK_EQ(force_inplace_consumed_regst_desc_id_, -1);
-    hint_inplace_consumed_regst_desc_id_ = val;
+    if (force_inplace_consumed_regst_desc_id_ == -1) {
+      hint_inplace_consumed_regst_desc_id_ = val;
+    } else {
+      CHECK_EQ(force_inplace_consumed_regst_desc_id_, val)
+          << " RuntimeError! hint_inplace_consumed_regst_desc_id: " << val
+          << " is different with force_inplace_consumed_regst_desc_id: "
+          << force_inplace_consumed_regst_desc_id_;
+    }
   }
   bool has_force_inplace_consumed_regst_desc_id() {
     return force_inplace_consumed_regst_desc_id_ != -1;

@@ -30,8 +30,7 @@ struct PlanUtil {
   static std::function<const TaskProto*(int64_t)> MakeGetterTaskProto4TaskId(const Plan& plan);
   static void SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan);
   static void GenMemBlockAndChunk4Plan(Plan* plan);
-  static void GenMemBlockAndChunkWithVariableOpNames4Plan(
-      Plan* plan, const HashSet<std::string>& variable_op_names);
+  static void SetRegstVariableOpNamesInPlan(Plan*, const HashSet<std::string>& variable_op_names);
   static void CleanUselessMemBlockAndCheckValid(Plan* plan);
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);

@@ -60,13 +60,11 @@ void PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(Plan* plan) {
         regst_desc->set_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
         regst_desc->set_mem_block_offset(0);
       }
+      if (RtRegstDesc(*regst_desc).TotalSeparatedHeaderByteSize4AllRegst() > 0) {
+        regst_desc->set_separated_header_mem_block_id(Global<IDMgr>::Get()->NewMemBlockId());
+      }
     }
   }
-}
-
-void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
-  HashSet<std::string> variable_op_names;
-  PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(plan, variable_op_names);
 }
 
 namespace {
@@ -186,10 +184,8 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
 
 }  // namespace
 
-void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
-    Plan* plan, const HashSet<std::string>& variable_op_names) {
-  HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
-
+void PlanUtil::SetRegstVariableOpNamesInPlan(Plan* plan,
+                                             const HashSet<std::string>& variable_op_names) {
   auto IsVariableRegst = [&](const TaskProto* task, std::string* name) -> bool {
     if (variable_op_names.empty()) { return false; }
     if (task->exec_sequence().exec_node_size() != 1) { return false; }
@@ -208,6 +204,27 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     return true;
   };
 
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    std::string var_name;
+    bool is_variable_regst = IsVariableRegst(task, &var_name);
+    if (is_variable_regst) {
+      for (auto& pair : *task->mutable_produced_regst_desc()) {
+        RegstDescProto* regst_desc = &pair.second;
+        CHECK(!var_name.empty());
+        CHECK_EQ(regst_desc->register_num(), 1);
+        // NOTE(xuxiaoyu): this check cannot pass when open ZeRO
+        // CHECK_EQ(regst_desc->min_register_num(), 1);
+        // CHECK_EQ(regst_desc->max_register_num(), 1) << var_name;
+        regst_desc->set_variable_op_name(var_name);
+      }
+    }
+  }
+}
+
+void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
+  HashMap<int64_t, std::unique_ptr<MemBlockProto>> mem_block_id2mem_block;
+
   auto GenMemBlock4RegstIfNeed = [&](RegstDescProto* regst_desc, const TaskProto* task) {
     const int64_t job_id = task->job_id();
     const int64_t machine_id = task->machine_id();
@@ -216,18 +233,6 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     int64_t mem_block_offset = regst_desc->mem_block_offset();
     CHECK_NE(mem_block_id, -1);
     CHECK_NE(mem_block_offset, -1);
-    CHECK_EQ(regst_desc->separated_header_mem_block_id(), -1);
-
-    std::string var_name;
-    bool is_variable_regst = IsVariableRegst(task, &var_name);
-    if (is_variable_regst) {
-      CHECK(!var_name.empty());
-      CHECK_EQ(regst_desc->register_num(), 1);
-      CHECK_EQ(regst_desc->min_register_num(), 1);
-      // NOTE(xuxiaoyu): this check cannot pass when open ZeRO
-      // CHECK_EQ(regst_desc->max_register_num(), 1) << var_name;
-      regst_desc->set_variable_op_name(var_name);
-    }
 
     RtRegstDesc rt_regst_desc(*regst_desc);
     int64_t regst_main_size = rt_regst_desc.TotalMainByteSize4AllRegst();
@@ -242,8 +247,8 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       mem_block.set_enable_reuse_mem(regst_desc->enable_reuse_mem());
       mem_block.set_mem_size(regst_main_size + mem_block_offset);
       mem_block.set_thrd_id_hint(thrd_id);
-      if (is_variable_regst) {
-        mem_block.set_variable_op_name(var_name);
+      if (regst_desc->has_variable_op_name()) {
+        mem_block.set_variable_op_name(regst_desc->variable_op_name());
         mem_block.set_is_separated_header(false);
       }
       CHECK(mem_block_id2mem_block
@@ -251,33 +256,58 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
                 .second);
     } else {
       MemBlockProto* mem_block = mem_block_id2mem_block.at(mem_block_id).get();
-      CHECK(!mem_block->has_variable_op_name());  // variable regst mem block is unique.
+      // NOTE(chengcheng): variable regst mem block maybe inplace with consumer op.
+      // CHECK(!mem_block->has_variable_op_name());
       CHECK_EQ(mem_block->job_id(0), job_id);
       CHECK_EQ(mem_block->machine_id(), machine_id);
       CHECK(mem_block->mem_case() == regst_desc->mem_case());
       CHECK_EQ(mem_block->enable_reuse_mem(), regst_desc->enable_reuse_mem());
-      mem_block->set_mem_size(std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+      if (regst_desc->has_variable_op_name()) {
+        mem_block->set_variable_op_name(regst_desc->variable_op_name());
+        mem_block->set_is_separated_header(false);
+        CHECK_EQ(mem_block_offset, 0);
+        CHECK_EQ(mem_block->mem_size(), regst_main_size);
+      } else {
+        mem_block->set_mem_size(
+            std::max(mem_block->mem_size(), regst_main_size + mem_block_offset));
+      }
     }
 
-    if (regst_separated_size > 0) {
-      int64_t separated_mem_block_id = Global<IDMgr>::Get()->NewMemBlockId();
-      regst_desc->set_separated_header_mem_block_id(separated_mem_block_id);
-      MemBlockProto mem_block;
-      mem_block.set_mem_block_id(separated_mem_block_id);
-      mem_block.add_job_id(job_id);
-      mem_block.set_machine_id(machine_id);
-      *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
-      mem_block.set_enable_reuse_mem(false);
-      mem_block.set_mem_size(regst_separated_size);
-      mem_block.set_thrd_id_hint(thrd_id);
-      if (is_variable_regst) {
-        mem_block.set_variable_op_name(var_name);
-        mem_block.set_is_separated_header(true);
+    if (regst_desc->has_separated_header_mem_block_id()) {
+      int64_t separated_mem_block_id = regst_desc->separated_header_mem_block_id();
+      CHECK_GE(separated_mem_block_id, 0);
+      CHECK_GT(regst_separated_size, 0);
+      if (mem_block_id2mem_block.find(separated_mem_block_id) == mem_block_id2mem_block.end()) {
+        MemBlockProto mem_block;
+        mem_block.set_mem_block_id(separated_mem_block_id);
+        mem_block.add_job_id(job_id);
+        mem_block.set_machine_id(machine_id);
+        *(mem_block.mutable_mem_case()) =
+            MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+        mem_block.set_enable_reuse_mem(false);
+        mem_block.set_mem_size(regst_separated_size);
+        mem_block.set_thrd_id_hint(thrd_id);
+        if (regst_desc->has_variable_op_name()) {
+          mem_block.set_variable_op_name(regst_desc->variable_op_name());
+          mem_block.set_is_separated_header(true);
+        }
+        CHECK(mem_block_id2mem_block
+                  .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
+                  .second);
+      } else {
+        MemBlockProto* mem_block = mem_block_id2mem_block.at(separated_mem_block_id).get();
+        CHECK_EQ(mem_block->job_id(0), job_id);
+        CHECK_EQ(mem_block->machine_id(), machine_id);
+        CHECK(mem_block->mem_case().has_host_mem());
+        CHECK(!mem_block->enable_reuse_mem());
+        CHECK_EQ(mem_block->mem_size(), regst_separated_size);
+        if (regst_desc->has_variable_op_name()) {
+          mem_block->set_variable_op_name(regst_desc->variable_op_name());
+          mem_block->set_is_separated_header(true);
+        }
       }
-      CHECK(mem_block_id2mem_block
-                .emplace(mem_block.mem_block_id(), std::make_unique<MemBlockProto>(mem_block))
-                .second);
+    } else {
+      CHECK_EQ(regst_separated_size, 0) << regst_desc->DebugString();
     }
   };
 
@@ -655,8 +685,22 @@ void PlanUtil::SetForceInplaceMemBlock(Plan* plan) {
         CHECK_EQ(in_regst_desc->mem_block_offset(), 0);
         CHECK_EQ(regst_desc->mem_block_offset(), 0);
         CHECK_EQ(in_regst_desc->register_num(), regst_desc->register_num());
+        CHECK(in_regst_desc->mem_case() == regst_desc->mem_case());
+        RtRegstDesc in_regst_rt(*in_regst_desc);
+        RtRegstDesc regst_rt(*regst_desc);
+        CHECK_EQ(in_regst_rt.TotalByteSize4AllRegst(), regst_rt.TotalByteSize4AllRegst());
+        CHECK_EQ(in_regst_rt.TotalMainByteSize4AllRegst(), regst_rt.TotalMainByteSize4AllRegst());
+        CHECK_EQ(in_regst_rt.TotalSeparatedHeaderByteSize4AllRegst(),
+                 regst_rt.TotalSeparatedHeaderByteSize4AllRegst());
         regst_desc->set_mem_block_id(in_regst_desc->mem_block_id());
         regst_desc->set_inplace_consumed_regst_desc_id(force_id);
+        if (in_regst_desc->has_separated_header_mem_block_id()) {
+          CHECK(regst_desc->has_separated_header_mem_block_id());
+          regst_desc->set_separated_header_mem_block_id(
+              in_regst_desc->separated_header_mem_block_id());
+        }
+        LOG(INFO) << " cclog: set force inplace from " << regst_desc->DebugString() << " to "
+                  << in_regst_desc->DebugString();
       }
     }
   }
@@ -854,7 +898,6 @@ void PlanUtil::GenRegisterHint(Plan* plan) {
   }
 }
 
-
 namespace {
 
 struct MemBlockMemoryInfo {
@@ -959,7 +1002,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   auto CompMemBlockIncrease = [&](int64_t a, int64_t b) {
     return mem_block_id2info[a].mem_block_mem_size < mem_block_id2info[b].mem_block_mem_size;
   };
-  
+
   auto CompMemBlockDecrease = [&](int64_t a, int64_t b) {
     return mem_block_id2info[a].mem_block_mem_size > mem_block_id2info[b].mem_block_mem_size;
   };
@@ -970,9 +1013,9 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     std::sort(rank_memory_info.chunk_info.mem_block_ids.begin(),
               rank_memory_info.chunk_info.mem_block_ids.end(), CompMemBlockIncrease);
     std::sort(rank_memory_info.independent_mem_block_ids.begin(),
-        rank_memory_info.independent_mem_block_ids.end(), CompMemBlockDecrease);
+              rank_memory_info.independent_mem_block_ids.end(), CompMemBlockDecrease);
     std::sort(rank_memory_info.eager_variable_mem_block_ids.begin(),
-        rank_memory_info.eager_variable_mem_block_ids.end(), CompMemBlockDecrease);
+              rank_memory_info.eager_variable_mem_block_ids.end(), CompMemBlockDecrease);
 
     LOG(INFO) << " \n Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
               << ", Device: " << rank_memory_info.device_id << " needs to allocate [ "
@@ -989,74 +1032,70 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   if (IsInDebugMode()) {
     for (const auto& rank_memory_info : rank_device_memory_infos) {
       LOG(INFO) << "In rank: " << rank_memory_info.rank_id
-        << "============================================\n\n";
+                << "============================================\n\n";
       int64_t chunk_id = rank_memory_info.chunk_info.chunk_id;
       LOG(INFO) << " For detail: Chunk id: " << chunk_id << " has "
-              << rank_memory_info.chunk_info.mem_block_ids.size() 
-              << " MemBlocks with memory size = " 
-              << B2MiB(rank_memory_info.chunk_info.chunk_mem_size)
-              << "\n";
+                << rank_memory_info.chunk_info.mem_block_ids.size()
+                << " MemBlocks with memory size = "
+                << B2MiB(rank_memory_info.chunk_info.chunk_mem_size) << "\n";
       for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
         CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
         const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
         LOG(INFO) << " Summary: In Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id
-                << " has num = " << mem_block_info.ordered_op_names.size()
-                << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size);
+                  << " has num = " << mem_block_info.ordered_op_names.size()
+                  << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size);
       }
       for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
         CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
         const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
         LOG(INFO) << " In Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id
-                << " has num = " << mem_block_info.ordered_op_names.size()
-                << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size);
+                  << " has num = " << mem_block_info.ordered_op_names.size()
+                  << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size);
         for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
-          LOG(INFO) << " MemBlock: " << mem_block_id << " order: " << i <<
-            " mem_size: " << mem_block_info.ordered_regst_mem_size.at(i)
-            << " mem_offset: " << mem_block_info.ordered_regst_mem_offset_in_block.at(i)
-                  << " op_name: " << mem_block_info.ordered_op_names.at(i);
+          LOG(INFO) << " MemBlock: " << mem_block_id << " order: " << i
+                    << " mem_size: " << mem_block_info.ordered_regst_mem_size.at(i)
+                    << " mem_offset: " << mem_block_info.ordered_regst_mem_offset_in_block.at(i)
+                    << " op_name: " << mem_block_info.ordered_op_names.at(i);
         }
       }
 
-
       LOG(INFO) << " Summary: device " << rank_memory_info.device_id
-        << " has Independent MemBlock num = " << rank_memory_info.independent_mem_block_ids.size()
-        << " total memory cost is : [ " << 
-        B2MiB(rank_memory_info.not_reused_mem_size - rank_memory_info.eager_variable_total_mem_size) 
-        << " MiB ].";
+                << " has Independent MemBlock num = "
+                << rank_memory_info.independent_mem_block_ids.size() << " total memory cost is : [ "
+                << B2MiB(rank_memory_info.not_reused_mem_size
+                         - rank_memory_info.eager_variable_total_mem_size)
+                << " MiB ].";
       for (int64_t mem_block_id : rank_memory_info.independent_mem_block_ids) {
         CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
         const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
-        if (mem_block_info.ordered_op_names.size() > 0 &&
-            mem_block_info.mem_block_mem_size > 0) {
-        LOG(INFO) << " Independent MemBlock: " << mem_block_id
-          << " has num = " << mem_block_info.ordered_op_names.size()
-          << " ops with mem_size = " << B2MiB(mem_block_info.mem_block_mem_size)
-          << " with op_name = " << mem_block_info.ordered_op_names.at(0);
+        if (mem_block_info.ordered_op_names.size() > 0 && mem_block_info.mem_block_mem_size > 0) {
+          LOG(INFO) << " Independent MemBlock: " << mem_block_id
+                    << " has num = " << mem_block_info.ordered_op_names.size()
+                    << " ops with mem_size = " << B2MiB(mem_block_info.mem_block_mem_size)
+                    << " with op_name = " << mem_block_info.ordered_op_names.at(0);
         }
       }
 
-
       LOG(INFO) << " Summary: device " << rank_memory_info.device_id
-        << " has EagerVarTensor  num = " << rank_memory_info.eager_variable_mem_block_ids.size()
-        << " total memory cost is : [ " << 
-        B2MiB(rank_memory_info.eager_variable_total_mem_size) 
-        << " MiB ].";
+                << " has EagerVarTensor  num = "
+                << rank_memory_info.eager_variable_mem_block_ids.size()
+                << " total memory cost is : [ "
+                << B2MiB(rank_memory_info.eager_variable_total_mem_size) << " MiB ].";
       for (int64_t mem_block_id : rank_memory_info.eager_variable_mem_block_ids) {
         CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
         const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
         if (mem_block_info.ordered_op_names.size() == 0) {
           LOG(INFO) << " Empty EagerVarTensor MemBlock: " << mem_block_id
-          << " has num = " << mem_block_info.ordered_op_names.size()
-          << " ops with mem_size = " << B2MiB(mem_block_info.mem_block_mem_size);
+                    << " has num = " << mem_block_info.ordered_op_names.size()
+                    << " ops with mem_size = " << B2MiB(mem_block_info.mem_block_mem_size);
         } else {
-        LOG(INFO) << " EagerVarTensor MemBlock: " << mem_block_id
-          << " has num = " << mem_block_info.ordered_op_names.size()
-          << " ops with mem_size = " << B2MiB(mem_block_info.mem_block_mem_size)
-          << " with op_name = " << mem_block_info.ordered_op_names.at(0);
+          LOG(INFO) << " EagerVarTensor MemBlock: " << mem_block_id
+                    << " has num = " << mem_block_info.ordered_op_names.size()
+                    << " ops with mem_size = " << B2MiB(mem_block_info.mem_block_mem_size)
+                    << " with op_name = " << mem_block_info.ordered_op_names.at(0);
         }
       }
     }
-
   }
 }
 

@@ -281,7 +281,10 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
-    PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
+    PlanUtil::SetRegstVariableOpNamesInPlan(&plan_, variable_op_names_);
+    PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(&plan_);
+    PlanUtil::SetForceInplaceMemBlock(&plan_);
+    PlanUtil::GenMemBlockAndChunk4Plan(&plan_);
 
     VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
             << " seconds.";
@@ -292,7 +295,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     PlanUtil::GenRegisterHint(&plan_);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
-    // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
     PlanUtil::DumpCtrlRegstInfoToPlan(&plan_);
     PlanUtil::PlanMemoryLog(&plan_, name_);
   }
