@@ -439,24 +439,21 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
-    @autotest(n=5, atol=1e-3)
+    @autotest(n=5, atol=1e-5)
     def test_upsample2d_bilinear_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
         m = torch.nn.Upsample(size=(38, 30), mode="bilinear")
         y = m(x)
         return y
 
-    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
-    @autotest(n=5, atol=1e-3)
+    @autotest(n=5, atol=1e-5)
     def test_upsample2d_bicubic_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
         m = torch.nn.Upsample(size=(38, 30), mode="bicubic")
         y = m(x)
         return y
 
-    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
-    @autotest(n=5, atol=1e-3)
+    @autotest(n=5, atol=1e-5)
     def test_upsample3d_trilinear_output_size(test_case):
         x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=12, dim3=937, dim4=32).to("cuda")
         m = torch.nn.Upsample(size=(38, 30, 30), mode="trilinear")
