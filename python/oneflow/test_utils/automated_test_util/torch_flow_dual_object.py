@@ -808,10 +808,7 @@ class DualObject:
             oneflow_state_dict = {
                 k: v.detach() for (k, v) in oneflow_state_dict.items()
             }
-            already_global = False
-            for (k, v) in oneflow_state_dict.items():
-                if v.is_global:
-                    already_global = True
+            already_global = any([v.is_global for v in oneflow_state_dict.values()])
             oneflow.load_state_dict(state_dict, strict=False)
             if is_global():
                 if already_global:
