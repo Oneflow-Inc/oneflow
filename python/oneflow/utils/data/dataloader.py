@@ -599,9 +599,10 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
 
     def _next_data(self):
         index = self._next_index()  # may raise StopIteration
+        data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
         if self._pin_memory:
             data = _utils.pin_memory.pin_memory(data)
-        return self._dataset_fetcher.fetch(index)
+        return data
 
 
 class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
