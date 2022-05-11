@@ -439,8 +439,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    # The CUDA fast atomic addition method used by PyTorch and OneFlow is different, which leads to the difference in accuracy.
-    # So the atol is 1e-3.
+    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
     @autotest(n=5, atol=1e-3)
     def test_upsample2d_bilinear_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
@@ -448,6 +447,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
     @autotest(n=5, atol=1e-3)
     def test_upsample2d_bicubic_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
@@ -455,6 +455,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
     @autotest(n=5, atol=1e-3)
     def test_upsample3d_trilinear_output_size(test_case):
         x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=12, dim3=937, dim4=32).to("cuda")
