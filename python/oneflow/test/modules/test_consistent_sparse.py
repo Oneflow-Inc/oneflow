@@ -28,7 +28,6 @@ def _test_embedding(test_case, ndim, placement, sbp):
     emb_sbp = [flow.sbp.broadcast for _ in range(len(sbp))]
 
     idx_shape = [random(high=4) * 8 for i in range(ndim)]
-
     weight = random_tensor(2, *emb_shape)
     indices = random_tensor(len(idx_shape), *idx_shape, low=0, high=emb_size, dtype=int).to_global(
         placement=placement, sbp=emb_sbp
@@ -36,6 +35,9 @@ def _test_embedding(test_case, ndim, placement, sbp):
     embedding = torch.nn.Embedding(emb_size, emb_dim, _weight=weight).to_global(
         placement=placement, sbp=sbp
     )
+    print("self.weight placement:")
+    print(embedding.weight.placement)
+    #print([embedding.oneflow.named_parameters()[0]])
     output = embedding(indices)
     return output
 
