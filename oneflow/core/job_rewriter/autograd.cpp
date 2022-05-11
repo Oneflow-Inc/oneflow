@@ -21,9 +21,11 @@ limitations under the License.
 #include "oneflow/core/register/op_blob_arg.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/job_rewriter/clip_by_global_norm_job_pass_state.h"
 
 namespace oneflow {
@@ -260,12 +262,13 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
     const auto& parallel_conf = JUST(job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi));
     int64_t scope_symbol_id = 0;
     {
-      const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
-          std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
-      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-          std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
-                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
+      const auto& opt_scope_symbol_id = JUST(MakeInitialScope(job_builder->job().job_conf(),
+                                                              SymbolOf(ParallelDesc(parallel_conf)),
+                                                              /* is_mirrored */ false))
+                                            ->symbol_id();
+      CHECK_OR_RETURN(opt_scope_symbol_id.has_value())
+          << Error::RuntimeError() << "symbol_id not initialized";
+      scope_symbol_id = JUST(opt_scope_symbol_id);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -316,12 +319,13 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     parallel_conf.add_device_name("0:0");
     int64_t scope_symbol_id = 0;
     {
-      const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
-          std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
-      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-          std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
-                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+      const auto& opt_scope_symbol_id =
+          CHECK_JUST(MakeInitialScope(job_builder->job().job_conf(),
+                                      SymbolOf(ParallelDesc(parallel_conf)),
+                                      /* is_mirrored */ false))
+              ->symbol_id();
+      if (!opt_scope_symbol_id.has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
+      scope_symbol_id = CHECK_JUST(opt_scope_symbol_id);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -416,12 +420,12 @@ void ForEachAggregatedParamGroup(
 }
 
 int64_t MakeScopeSymbolId(const JobConfigProto& job_conf, const ParallelConf& parallel_conf) {
-  const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
-      std::make_shared<cfg::JobConfigProto>(job_conf);
-  const std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf =
-      std::make_shared<cfg::ParallelConf>(parallel_conf);
-  return (*Global<std::shared_ptr<ForeignCallback>>::Get())
-      ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+  const auto& opt_scope_symbol_id =
+      CHECK_JUST(MakeInitialScope(job_conf, SymbolOf(ParallelDesc(parallel_conf)),
+                                  /* is_mirrored */ false))
+          ->symbol_id();
+  if (!opt_scope_symbol_id.has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
+  return CHECK_JUST(opt_scope_symbol_id);
 }
 
 std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbns,
