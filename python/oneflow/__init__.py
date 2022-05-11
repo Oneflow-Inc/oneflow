@@ -215,7 +215,6 @@ import atexit
 
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
-import oneflow.framework.register_python_callback
 
 
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
@@ -232,13 +231,12 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback, register_python_callback
+from oneflow.framework import python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
     python_callback.global_python_callback
 )
 del python_callback
-del register_python_callback
 
 
 class ExitHook:

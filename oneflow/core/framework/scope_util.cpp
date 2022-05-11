@@ -27,7 +27,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Scope> MakeInitialScope() {
+Maybe<Scope> MakeDefaultScope() {
   JobConfigProto config_proto;
   config_proto.mutable_predict_conf();
   config_proto.set_job_name("");
@@ -35,7 +35,7 @@ Maybe<Scope> MakeInitialScope() {
 }
 
 std::list<std::shared_ptr<Scope>>* ThreadLocalScopeStack() {
-  thread_local static std::list<std::shared_ptr<Scope>> scope_stack{CHECK_JUST(MakeInitialScope())};
+  thread_local static std::list<std::shared_ptr<Scope>> scope_stack{CHECK_JUST(MakeDefaultScope())};
   return &scope_stack;
 }
 
@@ -58,6 +58,19 @@ Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device)
                                             {machine_ids + ":" + device_ids}, nullptr, false));
     return Maybe<void>::Ok();
   }));
+  return scope;
+}
+
+Maybe<Scope> MakeInitialScope(const JobConfigProto& job_conf, Symbol<ParallelDesc> placement,
+                              bool is_mirrored) {
+  std::shared_ptr<Scope> scope;
+  JUST(PhysicalRun(
+      [&scope, &job_conf, placement, is_mirrored](InstructionsBuilder* builder) -> Maybe<void> {
+        int64_t session_id = JUST(GetDefaultSessionId());
+        scope = JUST(builder->BuildInitialScopeWithPlacement(
+            session_id, std::make_shared<cfg::JobConfigProto>(job_conf), placement, is_mirrored));
+        return Maybe<void>::Ok();
+      }));
   return scope;
 }
 
