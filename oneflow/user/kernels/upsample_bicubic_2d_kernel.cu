@@ -137,8 +137,6 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* in_ptr = x_tensor->dptr<T>();
     T* out_ptr = y_tensor->mut_dptr<T>();
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
     const int nbatch = x_tensor->shape().At(0);
@@ -147,6 +145,13 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
     const int64_t in_width = x_tensor->shape().At(3);
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
+    if (!output_size.empty()) {
+      height_scale = out_height * 1.0 / in_height;
+      width_scale = out_width * 1.0 / in_width;
+    }
     const int64_t elem_cnt = out_height * out_width;
 
     if (in_height == out_height && in_width == out_width) {
@@ -178,8 +183,6 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                               dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
     const int nbatch = dx_tensor->shape().At(0);
@@ -188,6 +191,13 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
     const int64_t in_width = dx_tensor->shape().At(3);
     const int64_t out_height = dy_tensor->shape().At(2);
     const int64_t out_width = dy_tensor->shape().At(3);
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
+    if (!output_size.empty()) {
+      height_scale = out_height * 1.0 / in_height;
+      width_scale = out_width * 1.0 / in_width;
+    }
     const int64_t elem_cnt = out_height * out_width;
 
     if (in_height == out_height && in_width == out_width) {

@@ -387,7 +387,6 @@ class TestUpsample2d(flow.unittest.TestCase):
     # The forward and backward result in cpu and cuda of bilinear interpolate operation in PyTorch is different
     # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
     # So here we only test cuda device forward result.
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=10, auto_backward=False, atol=1e-8)
     def test_upsample2d_bilinear(test_case):
         x = random_tensor(ndim=4).to("cuda")
@@ -400,7 +399,6 @@ class TestUpsample2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(atol=1e-5)
     def test_upsample2d_bicubic(test_case):
         x = random_tensor(ndim=4, dim0=16, dim1=8).to("cuda")
@@ -414,19 +412,57 @@ class TestUpsample2d(flow.unittest.TestCase):
 
     @autotest(n=5, atol=1e-5)
     def test_upsample1d_nearest_output_size(test_case):
-        device = random_device()
-        x = random_tensor(ndim=3, dim0=1, dim1=2, dim2=12).to(device)
+        x = random_tensor(ndim=3, dim0=1, dim1=2, dim2=12).to("cuda")
         m = torch.nn.Upsample(size=(13), mode="nearest")
         y = m(x)
         return y
-    
-    @autotest(n=5, atol=1e-5, auto_backward=False)
+
+    @autotest(n=5, atol=1e-5)
     def test_upsample2d_nearest_output_size(test_case):
-        device = random_device()
-        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to(device)
+        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
         m = torch.nn.Upsample(size=(38, 30), mode="nearest")
         y = m(x)
         return y
+
+    @autotest(n=5, atol=1e-5)
+    def test_upsample3d_nearest_output_size(test_case):
+        x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=12, dim3=32, dim4=32).to("cuda")
+        m = torch.nn.Upsample(size=(38, 30, 30), mode="nearest")
+        y = m(x)
+        return y
+
+    @autotest(n=5, atol=1e-5)
+    def test_upsample1d_linear_output_size(test_case):
+        device = random_device()
+        x = random_tensor(ndim=3, dim0=1, dim1=2, dim2=12).to(device)
+        m = torch.nn.Upsample(size=(13), mode="linear")
+        y = m(x)
+        return y
+
+    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
+    @autotest(n=5, atol=1e-3)
+    def test_upsample2d_bilinear_output_size(test_case):
+        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
+        m = torch.nn.Upsample(size=(38, 30), mode="bilinear")
+        y = m(x)
+        return y
+
+    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
+    @autotest(n=5, atol=1e-3)
+    def test_upsample2d_bicubic_output_size(test_case):
+        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
+        m = torch.nn.Upsample(size=(38, 30), mode="bicubic")
+        y = m(x)
+        return y
+
+    # PyTorch 1.10 version use fastAtomicAdd in kernel, so we set absolute tolerance to 1e-3 to avoid backward value check failed in AutoTest.
+    @autotest(n=5, atol=1e-3)
+    def test_upsample3d_trilinear_output_size(test_case):
+        x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=12, dim3=937, dim4=32).to("cuda")
+        m = torch.nn.Upsample(size=(38, 30, 30), mode="trilinear")
+        y = m(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

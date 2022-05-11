@@ -120,8 +120,8 @@ class UpsampleNearestGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
+    const float height_scale = ctx->Attr<double>("height_scale");
+    const float width_scale = ctx->Attr<double>("width_scale");
     const int64_t elem_cnt = y_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 4> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
                                               x_blob->shape().At(2), x_blob->shape().At(3));
@@ -150,8 +150,8 @@ class UpsampleNearestGradGPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
                               dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
+    const float height_scale = ctx->Attr<double>("height_scale");
+    const float width_scale = ctx->Attr<double>("width_scale");
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
                                               dy_blob->shape().At(2), dy_blob->shape().At(3));
@@ -193,8 +193,8 @@ class UpsampleBilinearGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
+    const float height_scale = ctx->Attr<double>("height_scale");
+    const float width_scale = ctx->Attr<double>("width_scale");
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = y_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 4> in_helper(x_blob->shape().At(0), x_blob->shape().At(1),
@@ -229,8 +229,8 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
                               dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
+    const float height_scale = ctx->Attr<double>("height_scale");
+    const float width_scale = ctx->Attr<double>("width_scale");
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = dy_blob->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_blob->shape().At(0), dy_blob->shape().At(1),
