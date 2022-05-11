@@ -30,8 +30,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 #define ASSERT(x) (x).GetOrThrow()
-#define ASSERT_PTR(x) (x).GetPtrOrThrow()
-#define PY_XINCREF(p) (({ Py_XINCREF(p); }), (p))
 
 static PyTypeObject PyTensortypeMetaClass{
     PyVarObject_HEAD_INIT(NULL, 0) "oneflow.tensortype",  // tp_name
@@ -48,15 +46,9 @@ std::vector<PyTensortype*> tensortype_list;
 std::unordered_map<DataType, std::string> datatype_to_string_dict{
     // functional::To failed when dtype->datatype() == kChar
     // {kChar, "CharTensor"},
-    {kFloat, "FloatTensor"},
-    {kDouble, "DoubleTensor"},
-    {kInt8, "CharTensor"},
-    {kInt32, "IntTensor"},
-    {kInt64, "LongTensor"},
-    {kUInt8, "ByteTensor"},
-    {kFloat16, "HalfTensor"},
-    {kBFloat16, "BFloat16Tensor"},
-    {kBool, "BoolTensor"},
+    {kFloat, "FloatTensor"},  {kDouble, "DoubleTensor"},     {kInt8, "CharTensor"},
+    {kInt32, "IntTensor"},    {kInt64, "LongTensor"},        {kUInt8, "ByteTensor"},
+    {kFloat16, "HalfTensor"}, {kBFloat16, "BFloat16Tensor"}, {kBool, "BoolTensor"},
     // dtype complex is not supported yet
     // {kComplex32, "ComplexHalfTensor"},
     // {kComplex64, "ComplexFloatTensor"},
@@ -128,7 +120,8 @@ static std::string get_doc(PyTensortype* tensortype) {
   dtype_str = dtype_str.substr(dtype_str.rfind(".") + 1);
   std::string device = tensortype->is_cuda ? "cuda" : "cpu";
   std::ostringstream ss;
-  ss << "Creates a Tensor with the dtype of "<< dtype_str << " and the device on "<< device <<" , it has the same parameters as :func:`oneflow.Tensor`";
+  ss << "Creates a Tensor with the dtype of " << dtype_str << " and the device on " << device
+     << " , it has the same parameters as :func:`oneflow.Tensor`";
   return ss.str();
 }
 
@@ -216,7 +209,6 @@ PyObject* PyTensortype_FromDTypeDeviceType(DataType datatype, DeviceType device)
 }  // namespace oneflow
 
 #undef ASSERT
-#undef ASSERT_PTR
 
 using namespace oneflow::one;
 

@@ -303,7 +303,7 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
   };
   if (PyTensortype_Check(tensortype)) {
     DeviceType device_type = PyTensortype_UnpackDevice(tensortype);
-    if(device_type == ASSERT(tensor->device())->enum_type()){
+    if (device_type == ASSERT(tensor->device())->enum_type()) {
       const auto& t = functional::To(tensor, functional::PyUnpackDType(tensortype), false);
       return functional::CastToPyObject(t);
     }

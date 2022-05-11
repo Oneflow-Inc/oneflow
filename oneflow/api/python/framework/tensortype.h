@@ -17,10 +17,8 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FRAMEWORK_TENSORTYPE_H_
 
 #include <Python.h>
-#include <object.h>
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 namespace one {
