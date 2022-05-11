@@ -1187,9 +1187,11 @@ class SliceBaseFunctor {
   SliceBaseFunctor() = default;
   virtual ~SliceBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
-                           const std::vector<int64_t>& stop,
-                           const std::vector<int64_t>& step, const bool enable_view_slice) const {
-    if (view::IsViewApplicable(x) && enable_view_slice) { return view::Slice(x, start, stop, step); }
+                           const std::vector<int64_t>& stop, const std::vector<int64_t>& step,
+                           const bool enable_view_slice) const {
+    if (view::IsViewApplicable(x) && enable_view_slice) {
+      return view::Slice(x, start, stop, step);
+    }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
@@ -2560,12 +2562,14 @@ class IndexSelectFunctor {
     for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
     index_broad_cast[new_dim] = 1;
     Shape expand_shape(index_broad_cast);
-    auto index_gather =
-        JUST(functional::Expand(JUST(functional::Slice(index, {0}, {1}, {1}, /*enable_view_slice=*/true)), expand_shape));
+    auto index_gather = JUST(functional::Expand(
+        JUST(functional::Slice(index, {0}, {1}, {1}, /*enable_view_slice=*/true)), expand_shape));
     for (int i = 1; i < index->dim(0); i++) {
       index_gather = JUST(functional::Concat(
-          {index_gather, JUST(functional::Expand(JUST(functional::Slice(index, {i}, {i + 1}, {1}, /*enable_view_slice=*/true)),
-                                                 expand_shape))},
+          {index_gather,
+           JUST(functional::Expand(
+               JUST(functional::Slice(index, {i}, {i + 1}, {1}, /*enable_view_slice=*/true)),
+               expand_shape))},
           new_dim));
     }
 
