@@ -365,7 +365,7 @@ class random_pytorch_tensor(generator):
             res = torch.tensor(np_arr, dtype=torch.int64)
             if pin_memory:
                 res = res.pin_memory()
-                return res
+            return res
         else:
             raise NotImplementedError(f"Not implemented dtype {dtype} in random")
 
