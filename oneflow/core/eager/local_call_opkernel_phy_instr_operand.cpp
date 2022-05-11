@@ -90,7 +90,7 @@ DTRInstrOperand::DTRInstrOperand(
         consistent_tensor_infer_result_(consistent_tensor_infer_result),
         op_interp_ctx_(op_interp_ctx_),
         dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode) {
-        if (dtr::is_enabled_and_debug()) {
+        if (dtr::debug_level() >= 2) {
           for (const auto &x : *input) {
             for (const auto &y : *output) {
               if (x.get() == y.get()) {

@@ -197,8 +197,10 @@ bool DtrNaiveCudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   if (dtr::is_enabled()) {
     if (total_memory_bytes_ < dtr::memory_threshold()) {
       available_bytes = dtr::memory_threshold() - total_memory_bytes_;
-      LOG(INFO) << "available_bytes: " << available_bytes / 1024. / 1024.
-                << ", total_memory_bytes: " << total_memory_bytes_ / 1024. / 1024.;
+      if (dtr::debug_level() >= 2) {
+        LOG(INFO) << "available_bytes: " << available_bytes / 1024. / 1024.
+                  << ", total_memory_bytes: " << total_memory_bytes_ / 1024. / 1024.;
+      }
     } else {
       return false;
     }
@@ -219,23 +221,17 @@ bool DtrNaiveCudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
     allocate_bytes = RoundUp(allocate_bytes, 2097152);
   }
   const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     LOG(INFO) << "final allocate " << final_allocate_bytes / 1024. / 1024. << ", allocate "
               << allocate_bytes / 1024. / 1024. << ", wanted " << aligned_size / 1024. / 1024.;
   }
 
-  if (final_allocate_bytes > available_bytes) {
-    return false;
-  }
+  if (final_allocate_bytes > available_bytes) { return false; }
 
-  if (final_allocate_bytes < aligned_size) {
-    return false;
-  }
+  if (final_allocate_bytes < aligned_size) { return false; }
 
   char* mem_ptr = nullptr;
-  if (cudaMalloc(&mem_ptr, final_allocate_bytes) != cudaSuccess) {
-    return false;
-  }
+  if (cudaMalloc(&mem_ptr, final_allocate_bytes) != cudaSuccess) { return false; }
 
   // extend sucess
   total_memory_bytes_ += final_allocate_bytes;
@@ -282,8 +278,10 @@ bool DtrNaiveCudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   Global<dtr::TensorPool>::Get()->set_total_memory(total_memory_bytes_);
 
   if (total_free_bytes > 0) {
-    LOG(INFO) << "DtrNaiveCudaAllocator try deallocate free block for garbage collection. "
-              << " deallocate free bytes : " << total_free_bytes / 1024. / 1024.;
+    if (dtr::debug_level() >= 2) {
+      LOG(INFO) << "DtrNaiveCudaAllocator try deallocate free block for garbage collection. "
+                << " deallocate free bytes : " << total_free_bytes / 1024. / 1024.;
+    }
     cudaSetDevice(device_id_);
     for (char* ptr : free_block_ptrs) {
       auto it = mem_ptr2block_.find(ptr);
@@ -344,8 +342,10 @@ void DtrNaiveCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     // int it = 0;   // evict iteration times
     while (piece == nullptr
            && CHECK_JUST(Global<dtr::TensorPool>::Get()->find_best_tensor_and_evict())) {
-      LOG(INFO) << "total_memory_bytes after find best tensor and evict: "
-                << total_memory_bytes_ / 1024. / 1024.;
+      if (dtr::debug_level() >= 2) {
+        LOG(INFO) << "total_memory_bytes after find best tensor and evict: "
+                  << total_memory_bytes_ / 1024. / 1024.;
+      }
       piece = FindPiece(aligned_size);
       if (piece == nullptr) {
         if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
@@ -361,7 +361,7 @@ void DtrNaiveCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   }
 
   if (piece == nullptr) {
-    CHECK_JUST(Global<dtr::TensorPool>::Get()->display2());
+    CHECK_JUST(Global<dtr::TensorPool>::Get()->verbose_display());
     Display();
   }
 

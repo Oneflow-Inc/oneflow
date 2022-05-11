@@ -61,7 +61,7 @@ bool DTRMirroredTensor::is_in_memory() const {
 }
 
 Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     std::stringstream ss;
     ss << "set inputs of " << this << " (ebo " << JUST(eager_blob_object()).get() << ") to ";
     for (const auto& x : inputs) {
@@ -85,7 +85,7 @@ Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
   }
   holder_ =
       std::make_shared<Holder>(input_holders, JUST(tensor_storage()), JUST(eager_blob_object()));
-  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "set_tenosr_inputs done"; }
+  if (dtr::debug_level() >= 3) { LOG(INFO) << "set_tenosr_inputs done"; }
   return Maybe<void>::Ok();
 }
 

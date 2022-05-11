@@ -28,7 +28,7 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
   }
   if (tensor_storage_->blob_dptr() != nullptr) {
     CHECK_EQ_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
-    if (dtr::is_enabled_and_debug()) {
+    if (dtr::debug_level() >= 2) {
       LOG(INFO) << "ebo " << this
                 << " body already allocated, blob_body_bytes_: " << tensor_storage_->blob_bytes()
                 << ", required_body_bytes: " << required_body_bytes;
@@ -92,7 +92,7 @@ DTREagerBlobObject::~DTREagerBlobObject() { clear_invalid_object(); }
 
 void DTREagerBlobObject::pin() {
   pinned_++;
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     LOG(INFO) << "pinned " << this << ", " << (pinned_ - 1) << " to " << pinned_ << std::endl;
   }
 }
@@ -100,14 +100,18 @@ void DTREagerBlobObject::pin() {
 void DTREagerBlobObject::unpin() {
   CHECK_GT(pinned_, 0) << this;
   pinned_--;
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     LOG(INFO) << "unpinned " << this << ", " << (pinned_ + 1) << " to " << pinned_ << std::endl;
   }
 }
 
 Maybe<void> DTREagerBlobObject::evict() {
+  if (dtr::is_enabled_and_debug()) {
+    static size_t c = 0;
+    LOG(INFO) << "evict (No." << c++ << ")" << std::endl;
+    LOG(INFO) << "this:" << this << std::endl;
+  }
   CHECK_OR_RETURN(is_evictable());
-  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "evict " << this; }
   if (shape().elem_cnt() == 0) {
     if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "but elem_cnt is 0, shape is " << shape() << ", skip";
@@ -117,7 +121,10 @@ Maybe<void> DTREagerBlobObject::evict() {
   evict_flag_ = true;
   // NOTE: DeallocateBlobDataPtr() resets tensor_storage_, which is not we want
   tensor_storage_->Release();
-  LOG(INFO) << "****" << "EVICT-" << this << "-" << BlobBodyBytes() << std::endl;
+  if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
+    LOG(INFO) << "****"
+              << "EVICT-" << this << "-" << BlobBodyBytes() << std::endl;
+  }
   if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_OR_RETURN(!is_in_memory());
   Global<dtr::TensorPool>::Get()->inc_num_eviction();
@@ -135,7 +142,7 @@ void DTREagerBlobObject::set_compute_op(LocalCallOpKernelPhyInstrOperand* operan
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
       operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
       operand->dev_vm_dep_object_consume_mode());
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     LOG(INFO) << "set compute_op_ of " << this << " to " << compute_op_.get();
   }
   could_evict_ = (input_size() > 0) && could_evict_;
@@ -143,7 +150,7 @@ void DTREagerBlobObject::set_compute_op(LocalCallOpKernelPhyInstrOperand* operan
 
 void DTREagerBlobObject::update_access_time() {
   last_access_time_ = Global<dtr::TensorPool>::Get()->duration();
-  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "update_access_time to " << last_access_time_; }
+  if (dtr::debug_level() >= 2) { LOG(INFO) << "update_access_time to " << last_access_time_; }
 }
 
 void DTREagerBlobObject::AppendUserOp(vm::LocalCallOpKernelPhyInstrOperand* operand) {
@@ -312,7 +319,7 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
   const double time_since_last_access =
       heuristic == "size" ? 1 : Global<dtr::TensorPool>::Get()->duration() - last_access_time_;
 
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     std::cout << std::dec << "ap compute " << JUST(approx_neighbor_cost()) << ", blob_body_bytes_ "
               << tensor_storage_->blob_bytes() << ", time_since_last_access "
               << time_since_last_access << std::endl;
@@ -374,7 +381,7 @@ void DTREagerBlobObject::set_compute_time(double val) {
     if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= 5; }
     if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= 5; }
   }
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     LOG(INFO) << "Compute time of " << this << ": " << compute_time_ << ", compute op "
               << compute_op_type_name() << std::endl;
   }
@@ -485,7 +492,9 @@ void DTREagerBlobObject::reset_pesudo_node() { node->reset_pesudo_node(); }
 void DisjNode::reset_pesudo_node() {
   auto pesudo_node_ = std::make_shared<DisjNode>(compute_time_);
   if (parent_ != nullptr) {
-    LOG(INFO) << "Parent of node is not nullptr while reseting the pesudo node!!!";
+    if (dtr::debug_level() >= 3) {
+      LOG(INFO) << "Parent of node is not nullptr while reseting the pesudo node!!!";
+    }
     auto&& p = parent_->pesudo_node();
     pesudo_node_->set_parent(p);
   }

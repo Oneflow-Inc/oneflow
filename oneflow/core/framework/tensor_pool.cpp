@@ -26,7 +26,12 @@ class LocalCallOpKernelPhyInstrOperand;
 
 namespace dtr {
 
-TensorPool::TensorPool() : duration_(0), total_memory_bytes_(0), num_eviction_(0), num_recomputation_(0), num_destruction_(0) {
+TensorPool::TensorPool()
+    : duration_(0),
+      total_memory_bytes_(0),
+      num_eviction_(0),
+      num_recomputation_(0),
+      num_destruction_(0) {
   start_time_ = std::chrono::steady_clock::now();
 }
 
@@ -56,7 +61,7 @@ Maybe<vm::DTREagerBlobObject*> TensorPool::find_best_tensor() {
   double min_cost = -1;
   vm::DTREagerBlobObject* best(nullptr);
   int evict_object_id = -1;
-  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "Finding best tensor to evict..."; }
+  if (dtr::debug_level() >= 2) { LOG(INFO) << "Finding best tensor to evict..."; }
   int id = 0;
   double tensor_pool_mem = 0.;
   for (const auto& object : candidates_) {
@@ -88,13 +93,12 @@ Maybe<vm::DTREagerBlobObject*> TensorPool::find_best_tensor() {
         if (shared_object->is_in_memory() && compute_op != "copy") { tensor_pool_mem += mem; }
       }
     } else {
-      JUST(display());
       LOG(INFO) << "Unable to lock candidates in tensor pool: " << id
                 << ", is_expired: " << object.expired();
     }
     id++;
   }
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     LOG(INFO) << "pool mem is " << tensor_pool_mem << "MB";
     if (best != nullptr) {
       LOG(INFO) << "Evict " << evict_object_id << "th object , cost is " << min_cost
@@ -123,8 +127,7 @@ Maybe<bool> TensorPool::find_best_tensor_and_evict() {
   return true;
 }
 
-Maybe<void> TensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object,
-                                  size_t thres) {
+Maybe<void> TensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object, size_t thres) {
   CHECK_NOTNULL_OR_RETURN(blob_object);
   CHECK_EQ_OR_RETURN(thres, 0);
   // if ((blob_object->is_evictable()) && (blob_object->memory() > thres)) {
@@ -148,9 +151,6 @@ Maybe<void> TensorPool::clear() {
   auto object = candidates_.begin();
   while (object != candidates_.end()) {
     if (object->lock().get() == nullptr) {
-      if (dtr::is_enabled_and_debug()) {
-        // LOG(INFO) << "Erase nullptr candidates from tensor_pool.";
-      }
       candidates_.erase(object);
       num_destruction_++;
       return Maybe<void>::Ok();
@@ -172,10 +172,10 @@ double TensorPool::duration() {
 
 void TensorPool::time_flies(double t) {
   duration_ += t;
-  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "time flies " << t << " to " << duration_; }
+  if (dtr::debug_level() >= 2) { LOG(INFO) << "time flies " << t << " to " << duration_; }
 }
 
-Maybe<void> TensorPool::display2() {
+Maybe<void> TensorPool::verbose_display() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
   int id = 0;
@@ -231,7 +231,8 @@ void TensorPool::pesudo_merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<
   auto&& pesudo_parent_y = find_father(pesudo_y);
   if (pesudo_parent_x.get() == pesudo_parent_y.get()) { return; }
 
-  pesudo_parent_y->set_compute_time(pesudo_parent_y->compute_time() + pesudo_parent_x->compute_time());
+  pesudo_parent_y->set_compute_time(pesudo_parent_y->compute_time()
+                                    + pesudo_parent_x->compute_time());
   pesudo_parent_x->set_parent(pesudo_parent_y);
   pesudo_parent_y->add_cnt();
   pesudo_parent_x->set_cnt(pesudo_parent_y->cnt());
@@ -259,22 +260,25 @@ int TensorPool::update_after_pesudo_compute(vm::DTREagerBlobObject* obj) {
   // split start_tensor from the chain
   auto&& pesudo_node = obj->node->pesudo_node();
   auto&& fa = find_father(pesudo_node);
-  if (fa == pesudo_node) {
-    LOG(INFO) << "pesudo compute father";
+
+  if (dtr::debug_level() >= 3) {
+    if (fa == pesudo_node) { LOG(INFO) << "pesudo compute father"; }
   }
   if (fa->cnt() > 1) {
     fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
-    LOG(INFO) << "fa original cnt: " << fa->cnt();
+    if (dtr::debug_level() >= 3) { LOG(INFO) << "fa original cnt: " << fa->cnt(); }
     fa->reduce_cnt();
-    LOG(INFO) << "fa current cnt: " << fa->cnt();
+    if (dtr::debug_level() >= 3) { LOG(INFO) << "fa current cnt: " << fa->cnt(); }
   }
   obj->reset_pesudo_node();
   auto&& pesudo_node_new = obj->node->pesudo_node();
   auto&& fa_new = find_father(pesudo_node_new);
-  if (fa_new != pesudo_node_new) {
-    LOG(INFO) << "PESUDO NODE NEW != ITSELF, ERROR!";
+  if (fa_new != pesudo_node_new) { LOG(FATAL) << "PESUDO NODE NEW != ITSELF, ERROR!"; }
+  if (dtr::debug_level() >= 3) {
+    LOG(INFO) << "new fa current cnt: " << fa_new->cnt()
+              << "new pesudo node cnt: " << pesudo_node_new->cnt() << ", fa == pesudo_node? "
+              << (fa_new == pesudo_node_new);
   }
-  LOG(INFO) << "new fa current cnt: " << fa_new->cnt() << "new pesudo node cnt: " << pesudo_node_new->cnt() << ", fa == pesudo_node? " << (fa_new == pesudo_node_new);
   return fa->cnt();
 }
 
@@ -300,7 +304,8 @@ Maybe<void> TensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, const char* start_id, const char* end_id) {
+Maybe<void> TensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, const char* start_id,
+                                                  const char* end_id) {
   // include new end_tensor in the chain
   auto* operand = obj->compute_op();
   const auto& inputs = operand->inputs();
@@ -309,7 +314,9 @@ Maybe<void> TensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, c
     if (auto tmp = inputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory() && obj->dptr() > start_id && obj->dptr() < end_id) { pesudo_merge(dtr_blob_object->node, obj->node); }
+      if (!dtr_blob_object->is_in_memory() && obj->dptr() > start_id && obj->dptr() < end_id) {
+        pesudo_merge(dtr_blob_object->node, obj->node);
+      }
     }
   }
 
@@ -317,7 +324,9 @@ Maybe<void> TensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, c
     if (auto tmp = outputs[i].lock()) {
       auto dtr_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(tmp.get());
       CHECK_NOTNULL_OR_RETURN(dtr_blob_object);
-      if (!dtr_blob_object->is_in_memory() && obj->dptr() > start_id && obj->dptr() < end_id) { pesudo_merge(obj->node, dtr_blob_object->node); }
+      if (!dtr_blob_object->is_in_memory() && obj->dptr() > start_id && obj->dptr() < end_id) {
+        pesudo_merge(obj->node, dtr_blob_object->node);
+      }
     }
   }
   return Maybe<void>::Ok();
@@ -331,9 +340,7 @@ void TensorPool::set_current_op_type_name(std::string op_type_name) {
   current_op_type_name_ = std::move(op_type_name);
 }
 
-const std::string& TensorPool::current_op_type_name() {
-  return current_op_type_name_;
-}
+const std::string& TensorPool::current_op_type_name() { return current_op_type_name_; }
 
 }  // namespace dtr
 }  // namespace oneflow

@@ -51,7 +51,8 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
         []() -> size_t { return Global<vm::DtrCudaAllocator>::Get()->allocated_memory(); });
   m.def("display_all_pieces",
         []() -> void { return Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces(); });
-  m.def("display", []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->display(); });
+  m.def("pool_display", []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->display(); });
+  m.def("pool_verbose_display", []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->verbose_display(); });
   m.def("set_non_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
     auto dtr_tensor =
         std::dynamic_pointer_cast<one::DTRMirroredTensor>(JUST(t->AsMirroredTensor()));

@@ -92,9 +92,9 @@ import oneflow as flow
 import oneflow.nn as nn
 import flowvision
 import flowvision.transforms as transforms
-import flowvision.models as models
+# import flowvision.models as models
 
-# import resnet50_model
+import resnet50_model as models
 # import resnet50
 
 # run forward, backward and update parameters
@@ -119,11 +119,6 @@ setup_seed(seed)
 
 writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
-
-def display():
-    flow._oneflow_internal.dtr.display()
-
-
 model = models.resnet50()
 
 weights = flow.load("/tmp/abcdef")
@@ -138,7 +133,7 @@ model.to(cuda0)
 criterion.to(cuda0)
 
 learning_rate = 0.1
-optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=1e-4)
+optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
@@ -146,8 +141,8 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 if args.no_dataloader:
     global data
     global label
-    data = flow.ones(args.bs, 3, 224, 224).to('cuda')
-    label = flow.ones(args.bs, dtype=flow.int64).to('cuda')
+    data = flow.ones(args.bs, 3, 224, 224)
+    label = flow.ones(args.bs, dtype=flow.int64)
 
     class FixedDataset(flow.utils.data.Dataset):
         def __len__(self):
@@ -176,19 +171,18 @@ else:
 total_time = 0
 # train_bar = tqdm(train_data_loader, dynamic_ncols=True)
 
-if args.dtr:
-    for x in model.parameters():
-        x.grad = flow.zeros_like(x).to(cuda0)
-
-    flow.comm.barrier()
-    # temp()
-
 for iter, (train_data, train_label) in enumerate(train_data_loader):
 # for iter in range(10000):
     # train_data = data
     # train_label = label
     if iter >= ALL_ITERS:
         break
+
+    if args.dtr:
+        for x in model.parameters():
+            x.grad = flow.zeros_like(x).to(cuda0)
+
+    flow.comm.barrier()
 
     train_data = train_data.to(cuda0)
     train_label = train_label.to(cuda0)
@@ -206,6 +200,8 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     # writer.add_scalar("Loss/train/loss", loss.item(), iter)
     # writer.flush()
     del loss
+    del train_data
+    del train_label
 
     optimizer.step()
     optimizer.zero_grad(True)
@@ -218,6 +214,7 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
         print(f'iter: {iter}, time: {this_time}')
         total_time += this_time
     print(f'iter {iter} end')
+    flow.comm.barrier()
 
 end_time = time.time()
 print(

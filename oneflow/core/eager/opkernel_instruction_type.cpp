@@ -59,6 +59,9 @@ struct LocalCallOpKernelUtil final {
 
   static inline Maybe<void> ComputeOperand(LocalCallOpKernelPhyInstrOperand* operand,
                                            DeviceCtx* device_ctx) {
+    if (dtr::is_enabled_and_debug()) {
+      LOG(INFO) << operand->shared_opkernel()->op_type_name() << " ComputeOperand" << std::endl;
+    }
     OF_PROFILER_RANGE_PUSH("ResetPrior");
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
     OF_PROFILER_RANGE_POP();
@@ -83,7 +86,7 @@ struct LocalCallOpKernelUtil final {
       OF_PROFILER_RANGE_GUARD("DeallocateTempStorageBlobMemory");
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     }
-    if (dtr::is_enabled_and_debug()) {
+    if (dtr::debug_level() >= 2) {
       LOG(INFO) << operand->shared_opkernel()->op_type_name() << " ComputeOperand done";
     }
     if (dtr::is_enabled()) { JUST(CheckOutputInMemory(operand)); }
@@ -176,8 +179,10 @@ struct LocalCallOpKernelUtil final {
     if (dtr::is_enabled()) {
       for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
         const std::string& op_type_name = operand->opkernel().op_type_name();
-        LOG(INFO) << "mutable! op: " << op_type_name << ", input " << i;
-        LOG(INFO) << " set it as non evictable";
+        if (dtr::debug_level() >= 3) {
+          LOG(INFO) << "mutable! op: " << op_type_name << ", input " << i;
+          LOG(INFO) << " set it as non evictable";
+        }
         GetDTRInputs(operand)[i]->set_evict_attr(false);
       }
     }
@@ -187,8 +192,7 @@ struct LocalCallOpKernelUtil final {
         if (mut_input->mem_case().has_device_cuda_mem()) {
           size_t bytes = mut_input->ByteSizeOfBlobBody();
           std::vector<float> tmp(bytes / 4);
-          cudaMemcpy(tmp.data(), mut_input->dptr(), bytes,
-                     cudaMemcpyKind::cudaMemcpyDeviceToHost);
+          cudaMemcpy(tmp.data(), mut_input->dptr(), bytes, cudaMemcpyKind::cudaMemcpyDeviceToHost);
           float x = 0;
           for (float f : tmp) { x += f; }
           mut_input->hash_ = x;
@@ -219,8 +223,8 @@ struct LocalCallOpKernelUtil final {
                           << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
                           << ", old hash: " << output->hash_ << ", new hash: " << x
                           << ", old data[0]: " << output->backup_data_[0]
-                          << ", new data[0]: " << tmp[0]
-                          << ", shape: " << output->shape() << std::endl;
+                          << ", new data[0]: " << tmp[0] << ", shape: " << output->shape()
+                          << std::endl;
 
                 // compare hash of inputs
                 compare_input_hash = true;
@@ -231,7 +235,8 @@ struct LocalCallOpKernelUtil final {
                           << ", old hash: " << output->hash_ << ", new hash: " << x << std::endl;
               }
             } else {
-              LOG(INFO) << "first! set " << base_class_output.get() << " hash to " << x << std::endl;
+              LOG(INFO) << "first! set " << base_class_output.get() << " hash to " << x
+                        << std::endl;
             }
             base_class_output->hash_ = x;
             base_class_output->backup_data_.resize(bytes / 4);
@@ -249,8 +254,7 @@ struct LocalCallOpKernelUtil final {
               size_t bytes = input->ByteSizeOfBlobBody();
               CHECK_EQ(bytes % 4, 0);
               std::vector<float> tmp(bytes / 4);
-              cudaMemcpy(tmp.data(), input->dptr(), bytes,
-                         cudaMemcpyKind::cudaMemcpyDeviceToHost);
+              cudaMemcpy(tmp.data(), input->dptr(), bytes, cudaMemcpyKind::cudaMemcpyDeviceToHost);
               float x = 0;
               for (float f : tmp) { x += f; }
               if (input->hash_ != -1) {
@@ -258,8 +262,8 @@ struct LocalCallOpKernelUtil final {
                   LOG(INFO) << "input hash wrong!!!!"
                             << ", old hash: " << input->hash_ << ", new hash: " << x
                             << ", old data[0]: " << input->backup_data_[0]
-                            << ", new data[0]: " << tmp[0]
-                            << ", shape: " << input->shape() << std::endl;
+                            << ", new data[0]: " << tmp[0] << ", shape: " << input->shape()
+                            << std::endl;
                 } else {
                   LOG(INFO) << "input hash correct :)"
                             << ", shape: " << input->shape() << std::endl;
@@ -325,9 +329,6 @@ bool IsInplace(const DTREagerBlobObjectList& inputs, const DTREagerBlobObjectLis
 
 Maybe<void> _IncReferenceNumOfRecomputedTensor(
     const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, int& pinned_num) {
-  if (dtr::is_enabled_and_debug()) {
-    LOG(INFO) << operand << " with type " << operand->shared_opkernel()->op_type_name() << " start";
-  }
   for (auto& input : GetDTRInputs(operand)) {
     input->pin();
     const auto& dtr_op = input->compute_op();
@@ -340,23 +341,17 @@ Maybe<void> _IncReferenceNumOfRecomputedTensor(
       if (dtr_pool->operand_visited_.count(input->compute_op()) == 0) {
         dtr_pool->operand_visited_.insert(input->compute_op());
 
-        if (dtr::is_enabled_and_debug()) {
-          LOG(INFO) << input << " with compute op " << dtr_op << ", type "
-                    << dtr_op->shared_opkernel()->op_type_name()
-                    << " is not in memory, searching parents..";
-        }
-
         JUST(_IncReferenceNumOfRecomputedTensor(local_call_op, pinned_num));
       }
     } else {
       pinned_num++;
-      if (dtr::is_enabled_and_debug()) {
+      if (dtr::debug_level() >= 2) {
         LOG(INFO) << "pin: compute op of " << input << " is " << dtr_op << " with type "
                   << dtr_op->shared_opkernel()->op_type_name();
       }
     }
   }
-  if (dtr::is_enabled_and_debug()) {
+  if (dtr::debug_level() >= 2) {
     LOG(INFO) << operand << " with type " << operand->shared_opkernel()->op_type_name() << " end";
   }
   return Maybe<void>::Ok();
@@ -386,7 +381,7 @@ static Maybe<double> GetEstimatedComputeTime(vm::LocalCallOpKernelPhyInstrOperan
 Maybe<void> _RecursivelyCompute(
     const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, DeviceCtx* device_ctx) {
   // PinGuard guard(operand->inputs());
-  if (dtr::debug_level() >= 2) {
+  if (dtr::debug_level() >= 4) {
     if (auto* thread_safe_allocator =
             dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
       if (auto* dtr_allocator =
@@ -404,10 +399,6 @@ Maybe<void> _RecursivelyCompute(
 
   for (auto& output : outputs) {
     output->pin();
-    if (dtr::is_enabled_and_debug()) {
-      LOG(INFO) << "going to (re)compute " << output->compute_op() << "("
-                << output->compute_op_type_name() << ") for " << output;
-    }
   }
 
   for (auto& input : inputs) {
@@ -418,10 +409,10 @@ Maybe<void> _RecursivelyCompute(
       CHECK_NOTNULL_OR_RETURN(local_call_op);
 
       if (dtr::is_enabled_and_debug()) {
-        LOG(INFO) << "going to recompute " << input->compute_op() << "("
-                  << input->compute_op_type_name() << ") for " << input << ", whose dptr is "
-                  << input->dptr() << ", is in memory: " << input->is_in_memory()
-                  << std::endl;
+        LOG(INFO) << "going to recompute (No." << Global<dtr::TensorPool>::Get()->recompute_times()
+                  << ") " << input->compute_op() << "(" << input->compute_op_type_name() << ") for "
+                  << input << ", whose dptr is " << input->dptr()
+                  << ", is in memory: " << input->is_in_memory() << std::endl;
       }
       // TODO for each ptr rather than shared_ptr
       JUST(_RecursivelyCompute(local_call_op, device_ctx));
@@ -444,9 +435,9 @@ Maybe<void> _RecursivelyCompute(
   }
 
   // unpin output
-  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "unpin output"; }
+  if (dtr::debug_level() >= 3) { LOG(INFO) << "unpin output"; }
   for (auto& output : outputs) { output->unpin(); }
-  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "unpin output end"; }
+  if (dtr::debug_level() >= 3) { LOG(INFO) << "unpin output end"; }
 
   // use current timestamp as access time and **then** update timestamp
   for (auto& input : inputs) { input->update_access_time(); }
@@ -457,7 +448,7 @@ Maybe<void> _RecursivelyCompute(
     input->unpin();
     if (input->num_pinned() == 0
         && Global<dtr::TensorPool>::Get()->need_eager_eviction_ebos_.count(input.get()) > 0) {
-      if (dtr::is_enabled_and_debug()) {
+      if (dtr::debug_level() >= 2) {
         LOG(INFO) << "going to evict " << input << " in recomputation, whose dptr is "
                   << input->dptr() << ", compute op: " << input->compute_op_type_name()
                   << ", size: " << input->ByteSizeOfBlobBody()
@@ -475,15 +466,16 @@ Maybe<void> _RecursivelyCompute(
 
 Maybe<void> RecursivelyCompute(const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand,
                                DeviceCtx* device_ctx) {
-  int pinned_num = JUST(IncReferenceNumOfRecomputedTensor(operand));
   if (dtr::is_enabled_and_debug()) {
+    LOG(INFO) << operand->shared_opkernel()->op_type_name() << " run from user" << std::endl;
+  }
+
+  int pinned_num = JUST(IncReferenceNumOfRecomputedTensor(operand));
+  if (dtr::debug_level() >= 3) {
     LOG(INFO) << "pinning input tensors ended, pinned num: " << pinned_num;
   }
   JUST(_RecursivelyCompute(operand, device_ctx));
   CHECK_OR_RETURN(Global<dtr::TensorPool>::Get()->need_eager_eviction_ebos_.empty());
-  if (dtr::debug_level() >= 1) {
-    LOG(INFO) << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
-  }
   return Maybe<void>::Ok();
 }
 
@@ -491,15 +483,14 @@ Maybe<void> DTRComputeInstruction(const vm::InstructionMsg& instr_msg) {
   auto operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg);
   DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
 
-  if (dtr::is_enabled()) {
-    LOG(INFO) << "****" << "START-DTRComputeInstruction" << "-" << instr_msg.instr_type_name() << std::endl;
-    // LOG(INFO) << "****" << "START-DTRComputeInstruction" << "-" << instr_msg.instr_type_name().substr(0, 3) << std::endl;
-    LOG(INFO) << "****" << "OP-" << operand->opkernel().op_type_name() << std::endl;
-  }
-
-  if (dtr::is_enabled_and_debug()) {
-    LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
-    LOG(INFO) << "start pinning input tensors..";
+  if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
+    LOG(INFO) << "****"
+              << "START-DTRComputeInstruction"
+              << "-" << instr_msg.instr_type_name() << std::endl;
+    // LOG(INFO) << "****" << "START-DTRComputeInstruction" << "-" <<
+    // instr_msg.instr_type_name().substr(0, 3) << std::endl;
+    LOG(INFO) << "****"
+              << "OP-" << operand->opkernel().op_type_name() << std::endl;
   }
 
   const auto& inputs = GetDTRInputs(operand);
@@ -516,10 +507,13 @@ Maybe<void> DTRComputeInstruction(const vm::InstructionMsg& instr_msg) {
       JUST(Global<dtr::TensorPool>::Get()->insert(output));
     }
   }
-  if (dtr::debug_level() >= 3) { JUST(Global<dtr::TensorPool>::Get()->display2()); }
-  if (dtr::is_enabled()) {
-    LOG(INFO) << "****" << "END-DTRComputeInstruction" << "-" << instr_msg.instr_type_name() << std::endl;
-    // LOG(INFO) << "****" << "END-DTRComputeInstruction" << "-" << instr_msg.instr_type_name().substr(0, 3) << std::endl;
+  if (dtr::debug_level() >= 3) { JUST(Global<dtr::TensorPool>::Get()->verbose_display()); }
+  if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
+    LOG(INFO) << "****"
+              << "END-DTRComputeInstruction"
+              << "-" << instr_msg.instr_type_name() << std::endl;
+    // LOG(INFO) << "****" << "END-DTRComputeInstruction" << "-" <<
+    // instr_msg.instr_type_name().substr(0, 3) << std::endl;
   }
   return Maybe<void>::Ok();
 }
