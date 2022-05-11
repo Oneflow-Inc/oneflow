@@ -31,10 +31,10 @@ def _test_embedding(test_case, ndim, placement, sbp):
     indices = random_tensor(
         len(idx_shape), *idx_shape, low=0, high=emb_size, dtype=int
     ).to_global(placement=placement, sbp=sbp)
-    
+
     embedding = torch.nn.Embedding(emb_size, emb_dim, _weight=weight)
     embedding.oneflow.to_global(placement=placement, sbp=sbp)
-    
+
     output = embedding(indices)
     return output
 

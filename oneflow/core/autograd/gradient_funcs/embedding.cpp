@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -42,18 +43,18 @@ class Embedding : public OpExprGradFunction<EmbeddingCaptureState> {
 
 Maybe<void> Embedding::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "Forward op must be not null";
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Embedding::Capture(EmbeddingCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->requires_grad = inputs.at(0)->requires_grad();
+  ctx->requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  ctx->SaveTensorForBackward(inputs.at(0));
-  ctx->SaveTensorForBackward(inputs.at(1));
+  ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 0)));
+  ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 1)));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->padding_idx = JUST(composed_attrs.GetAttr<int64_t>("padding_idx"));
@@ -63,16 +64,16 @@ Maybe<void> Embedding::Capture(EmbeddingCaptureState* ctx, const TensorTuple& in
 
 Maybe<void> Embedding::Apply(const EmbeddingCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  const auto& weight = ctx->SavedTensors().at(0);
-  const auto& indices = ctx->SavedTensors().at(1);
+  const auto& weight = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
+  const auto& indices = JUST(oneflow::VectorAt(ctx->SavedTensors(), 1));
   int64_t padding_idx = ctx->padding_idx;
   bool scale_grad_by_freq = ctx->scale_grad_by_freq;
 
-  in_grads->at(0) = JUST(
-      functional::EmbeddingGrad(out_grads.at(0), weight, indices, padding_idx, scale_grad_by_freq));
+  *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::EmbeddingGrad(
+      JUST(oneflow::VectorAt(out_grads, 0)), weight, indices, padding_idx, scale_grad_by_freq));
   return Maybe<void>::Ok();
 }
 

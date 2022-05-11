@@ -80,7 +80,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-  CHECK_OR_RETURN(indices_modifier != nullptr);
+  CHECK_OR_RETURN(indices_modifier != nullptr);  // NOLINT(maybe-need-error-msg)
   indices_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
@@ -118,7 +118,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingGradOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-  CHECK_OR_RETURN(indices_modifier != nullptr);
+  CHECK_OR_RETURN(indices_modifier != nullptr);  // NOLINT(maybe-need-error-msg)
   indices_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }

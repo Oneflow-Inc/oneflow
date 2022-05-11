@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
@@ -219,14 +220,14 @@ class EmbeddingReNormFunctor {
     CHECK_EQ_OR_RETURN(in->ndim(), 2)
         << Error::RuntimeError() << "The dimension of input should be 2.";
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-    outputs->at(0) = in;
+    (*outputs)[0] = in;
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("max_norm", max_norm));
     JUST(attrs.SetAttr<double>("norm_type", norm_type));
 
     JUST(OpInterpUtil::Dispatch(*op_, {in, indices}, outputs.get(), attrs));
-    return outputs->at(0);
+    return (*outputs)[0];
   }
 
  private:
