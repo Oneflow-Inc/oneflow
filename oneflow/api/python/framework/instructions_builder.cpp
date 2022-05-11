@@ -46,13 +46,17 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
            py::arg("session_id").none(false), py::arg("job_conf").none(false),
            py::arg("device_tag").none(false), py::arg("machine_device_ids").none(false),
            py::arg("hierarchy").none(true), py::arg("is_mirrored").none(false))
+      .def("BuildInitialScopeWithPlacement", &InstructionsBuilder::BuildInitialScopeWithPlacement,
+           py::arg("session_id").none(false), py::arg("job_conf").none(false),
+           py::arg("placement").none(false), py::arg("is_mirrored").none(false))
       .def("BuildScopeWithNewParallelDesc", &InstructionsBuilder::BuildScopeWithNewParallelDesc,
            py::arg("scope").none(false), py::arg("device_tag").none(false),
            py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true))
       .def("BuildScopeWithNewParallelConf", &InstructionsBuilder::BuildScopeWithNewParallelConf)
       .def("BuildScopeWithNewIsMirrored", &InstructionsBuilder::BuildScopeWithNewIsMirrored)
       .def("BuildScopeWithNewScopeName", &InstructionsBuilder::BuildScopeWithNewScopeName)
-      .def("BuildScopeByProtoSetter", &InstructionsBuilder::BuildScopeByProtoSetter);
+      .def("BuildScopeByProtoSetter", &InstructionsBuilder::BuildScopeByProtoSetter)
+      .def("BuildScopeByProtoStrSetter", &InstructionsBuilder::BuildScopeByProtoStrSetter);
 
   m.def("PhysicalRun", &DeprecatedPhysicalRun, py::call_guard<py::gil_scoped_release>());
 }
