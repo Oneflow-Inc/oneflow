@@ -86,8 +86,8 @@ class UpsampleBilinear2DCPUKernel final : public user_op::OpKernel {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     const int64_t elem_cnt = y_tensor->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 4> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
                                               x_tensor->shape().At(2), x_tensor->shape().At(3));
@@ -134,8 +134,8 @@ class UpsampleBilinear2DGradCPUKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
                                               dy_tensor->shape().At(2), dy_tensor->shape().At(3));

@@ -146,9 +146,9 @@ class UpsampleTrilinear3DGPUKernel final : public user_op::OpKernel {
     const int64_t out_width = y_tensor->shape().At(4);
 
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double depth_scale = ctx->Attr<float>("depth_scale");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double depth_scale = ctx->Attr<double>("depth_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
       depth_scale = out_depth * 1.0 / in_depth;
       height_scale = out_height * 1.0 / in_height;
@@ -199,9 +199,9 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_tensor->shape().At(4);
 
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double depth_scale = ctx->Attr<float>("depth_scale");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double depth_scale = ctx->Attr<double>("depth_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
       depth_scale = out_depth * 1.0 / in_depth;
       height_scale = out_height * 1.0 / in_height;

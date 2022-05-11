@@ -146,8 +146,8 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape().At(2);
     const int64_t out_width = y_tensor->shape().At(3);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
       height_scale = out_height * 1.0 / in_height;
       width_scale = out_width * 1.0 / in_width;
@@ -192,8 +192,8 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_tensor->shape().At(2);
     const int64_t out_width = dy_tensor->shape().At(3);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     if (!output_size.empty()) {
       height_scale = out_height * 1.0 / in_height;
       width_scale = out_width * 1.0 / in_width;

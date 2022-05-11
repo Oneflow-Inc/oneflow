@@ -128,7 +128,7 @@ class UpsampleNearest1DCPUKernel final : public user_op::OpKernel {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t elem_cnt = y_tensor->shape().elem_cnt();
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("scale_factor");
+    double height_scale = ctx->Attr<double>("scale_factor");
     const int64_t nbatch = x_tensor->shape().At(0);
     const int64_t channels = x_tensor->shape().At(1);
     const int64_t in_height = x_tensor->shape().At(2);
@@ -165,7 +165,7 @@ class UpsampleNearestGrad1DCPUKernel final : public user_op::OpKernel {
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("scale_factor");
+    double height_scale = ctx->Attr<double>("scale_factor");
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
     const int64_t nbatch = dx_tensor->shape().At(0);
     const int64_t channels = dx_tensor->shape().At(1);
@@ -212,8 +212,8 @@ class UpsampleNearest2DCPUKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     const int64_t nbatch = x_tensor->shape().At(0);
     const int64_t channels = x_tensor->shape().At(1);
     const int64_t in_height = x_tensor->shape().At(2);
@@ -256,8 +256,8 @@ class UpsampleNearest2DGradCPUKernel final : public user_op::OpKernel {
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     const int64_t nbatch = dx_tensor->shape().At(0);
     const int64_t channels = dx_tensor->shape().At(1);
     const int64_t in_height = dx_tensor->shape().At(2);
@@ -310,9 +310,9 @@ class UpsampleNearest3DCPUKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_blob = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_blob = ctx->Tensor4ArgNameAndIndex("y", 0);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double depth_scale = ctx->Attr<float>("depth_scale");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double depth_scale = ctx->Attr<double>("depth_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     const int64_t in_depth = x_blob->shape().At(2);
     const int64_t in_height = x_blob->shape().At(3);
     const int64_t in_width = x_blob->shape().At(4);
@@ -353,9 +353,9 @@ class UpsampleNearestGrad3DCPUKernel final : public user_op::OpKernel {
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double depth_scale = ctx->Attr<float>("depth_scale");
-    double height_scale = ctx->Attr<float>("height_scale");
-    double width_scale = ctx->Attr<float>("width_scale");
+    double depth_scale = ctx->Attr<double>("depth_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
     const int64_t in_depth = dx_blob->shape().At(2);
     const int64_t in_height = dx_blob->shape().At(3);
     const int64_t in_width = dx_blob->shape().At(4);

@@ -27,7 +27,7 @@ template<typename T>
 __global__ void UpsampleLinear1DForward(const int64_t elem_cnt, const T* in_dptr,
                                         NdIndexOffsetHelper<int64_t, 3> in_helper,
                                         NdIndexOffsetHelper<int64_t, 3> out_helper,
-                                        const int in_height, const float scale_factor,
+                                        const int in_height, const double scale_factor,
                                         bool align_corners, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
@@ -46,7 +46,7 @@ template<typename T>
 __global__ void UpsampleLinear1DBackward(const int64_t elem_cnt, const T* dy_dptr,
                                          NdIndexOffsetHelper<int64_t, 3> dy_helper,
                                          NdIndexOffsetHelper<int64_t, 3> dx_helper,
-                                         const int in_height, const float scale_factor,
+                                         const int in_height, const double scale_factor,
                                          bool align_corners, T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
@@ -85,7 +85,7 @@ class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("scale_factor");
+    double height_scale = ctx->Attr<double>("scale_factor");
     if (!output_size.empty()) { height_scale = out_height * 1.0 / in_height; }
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
@@ -124,7 +124,7 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(2);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-    double height_scale = ctx->Attr<float>("scale_factor");
+    double height_scale = ctx->Attr<double>("scale_factor");
     if (!output_size.empty()) { height_scale = out_height * 1.0 / in_height; }
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
