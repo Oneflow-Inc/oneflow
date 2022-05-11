@@ -243,8 +243,8 @@ void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const void
                   const int64_t* src_dims, const int64_t* padding_before,
                   const int64_t* padding_after, T pad_val) {
   ConstantPadParams<num_dims, IndexType> params;
-  params.dst_index_helper = NdIndexOffsetHelperCalculator<IndexType, num_dims>(dst_dims);
-  params.src_index_helper = NdIndexOffsetHelperCalculator<IndexType, num_dims>(src_dims);
+  params.dst_index_helper = FastOffsetToIndexCalculator<IndexType, num_dims>(dst_dims);
+  params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
   params.dst = dst;
   params.src = src;
   size_t elem_cnt = 1;

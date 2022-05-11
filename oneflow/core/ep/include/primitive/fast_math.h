@@ -77,27 +77,18 @@ struct FastIntegerMath<int32_t> {
 #else
     int leading_zeroes = __builtin_clz(operand);
 #endif
-    is_power_2 = ((operand & (operand - 1)) == 0);
-    if (is_power_2) {
-      log2_operand_ = 31 - leading_zeroes;
-    } else {
-      log2_operand_ = -1;  // Set as flag.
-      operand_ = operand == 0 ? 1 : operand;
-      assert(operand_ >= 1 && operand_ <= GetMaxVal<uint32_t>());
-      for (l_ = 0; l_ < 32; l_++)
-        if ((1U << l_) >= operand_) break;
+    operand_ = operand == 0 ? 1 : operand;
+    assert(operand_ >= 1 && operand_ <= GetMaxVal<uint32_t>());
+    for (l_ = 0; l_ < 32; l_++)
+      if ((1U << l_) >= operand_) break;
 
-      uint64_t one = 1;
-      uint64_t m = ((one << 32) * ((one << l_) - operand_)) / operand_ + 1;
-      M_ = static_cast<uint32_t>(m);
-      assert(M_ > 0 && M_ == m);
-    }
+    uint64_t one = 1;
+    uint64_t m = ((one << 32) * ((one << l_) - operand_)) / operand_ + 1;
+    M_ = static_cast<uint32_t>(m);
+    assert(M_ > 0 && M_ == m);
   }
 
   OF_DEVICE_FUNC int32_t divides(const int32_t n) const {
-    if (is_power_2) {
-      return n >> log2_operand_;
-    } else {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
       uint32_t t = __umulhi(M_, n);
       return (t + n) >> l_;
@@ -106,16 +97,11 @@ struct FastIntegerMath<int32_t> {
       uint64_t t = ((uint64_t)M_ * n) >> 32;
       return static_cast<int>((t + n) >> l_);
 #endif
-    }
   }
 
   OF_DEVICE_FUNC int32_t mod(int32_t n) const { return n - divides(n) * operand_; }
   OF_DEVICE_FUNC int32_t mul(int32_t n) const {
-    if (log2_operand_ >= 0) {
-      return n << log2_operand_;
-    } else {
-      return n * operand_;
-    }
+    return n * operand_;
   }
   OF_DEVICE_FUNC int32_t add(int32_t n) const { return n + operand_; }
   OF_DEVICE_FUNC int32_t sub(int32_t n) const { return n - operand_; }
@@ -125,10 +111,8 @@ struct FastIntegerMath<int32_t> {
   }
 
   uint32_t operand_;
-  int32_t log2_operand_;
   uint32_t M_;  // m' in the paper.
   uint32_t l_;  // l_ = ceil(log2(d_))
-  bool is_power_2;
 };
 
 }  // namespace oneflow
