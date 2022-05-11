@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/job_desc.h"
@@ -128,15 +129,18 @@ struct LocalCallOpKernelUtil final {
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
     {
-      auto er_guard = profiler::EventRecorder::CreateKernelEventRecorder(
-          opkernel->op_type_name(), [&]() -> std::vector<Shape> {
+      auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
+          opkernel->op_type_name(),
+          compute_ctx->device_type() == DeviceType::kCUDA ? profiler::KernelEventDevice::kCUDA
+                                                          : profiler::KernelEventDevice::kCPU,
+          [&]() -> std::vector<Shape> {
             std::vector<Shape> shapes;
             for (const auto& pair : compute_ctx->inputs()) {
               shapes.push_back(
                   compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
             }
             return shapes;
-          });
+          }));
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
     }
     OF_PROFILER_RANGE_POP();

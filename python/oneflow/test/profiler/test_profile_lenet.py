@@ -56,14 +56,19 @@ class TestProfileLenet(flow.unittest.TestCase):
         # warm up
         for _ in range(10):
             res = lenet(x)
-        with oneflow.profiler.profile() as prof:
+        with oneflow.profiler.profile(
+            activities=[oneflow.profiler.ProfilerActivity.CPU],
+            record_shapes=True
+        ) as prof:
             with oneflow.profiler.record_function("lenet_forward_total_time") as f:
                 for _ in range(2):
                     eager_res = lenet(x)
             with oneflow.profiler.record_function("lenet_backward_total_time") as f:
                 eager_res.sum().backward()
 
+        print(prof.key_averages())
         events = prof.key_averages()
+
 
         conv_event = get_event(events, "conv2d", "[(2,3,32,32), (6,3,5,5)]")
         test_case.assertIsNotNone(conv_event)
