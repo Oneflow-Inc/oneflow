@@ -8998,7 +8998,7 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
     SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
@@ -9017,7 +9017,7 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
     SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
@@ -9035,8 +9035,8 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
@@ -9055,8 +9055,8 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );

@@ -49,7 +49,7 @@ namespace oneflow {
 /*static*/ Maybe<void> UpsampleNearest1DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
-  const float scale_factor = ctx->Attr<float>("scale_factor");
+  const double scale_factor = ctx->Attr<double>("scale_factor");
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
                   && x_desc.shape().NumAxes() == 3)
       << "upsample_nearest_1d only supports NCH";
@@ -78,8 +78,8 @@ namespace oneflow {
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
-  const float height_scale = ctx->Attr<float>("height_scale");
-  const float width_scale = ctx->Attr<float>("width_scale");
+  const double height_scale = ctx->Attr<double>("height_scale");
+  const double width_scale = ctx->Attr<double>("width_scale");
   CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
                   && x_desc.shape().NumAxes() == 4)
       << "upsample_nearest_2d only supports NCHW";
@@ -470,7 +470,7 @@ REGISTER_USER_OP_GRAD("upsample_nearest_1d")
                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                 .Input("x", op.input("x", 0))
                 .Output("dx")
-                .Attr("scale_factor", op.attr<float>("scale_factor"))
+                .Attr("scale_factor", op.attr<double>("scale_factor"))
                 .Attr("output_size", op.attr<std::vector<int64_t>>("output_size"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Build();
@@ -490,8 +490,8 @@ REGISTER_USER_OP_GRAD("upsample_nearest_2d")
                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
                 .Input("x", op.input("x", 0))
                 .Output("dx")
-                .Attr("height_scale", op.attr<float>("height_scale"))
-                .Attr("width_scale", op.attr<float>("width_scale"))
+                .Attr("height_scale", op.attr<double>("height_scale"))
+                .Attr("width_scale", op.attr<double>("width_scale"))
                 .Attr("output_size", op.attr<std::vector<int64_t>>("output_size"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Build();

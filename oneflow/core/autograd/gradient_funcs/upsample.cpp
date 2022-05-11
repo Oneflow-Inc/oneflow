@@ -79,9 +79,9 @@ Maybe<void> Upsample::Apply(const UpsampleCaptureState* ctx, const TensorTuple& 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample", Upsample);
 
 struct UpsampleNearest2DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  float height_scale;
-  float width_scale;
+  bool requires_grad = false;
+  double height_scale = 0.0;
+  double width_scale = 0.0;
   std::vector<int64_t> output_size;
   std::string data_format;
 };
@@ -97,8 +97,8 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->height_scale = JUST(composed_attrs.GetAttr<float>("height_scale"));
-    ctx->width_scale = JUST(composed_attrs.GetAttr<float>("width_scale"));
+    ctx->height_scale = JUST(composed_attrs.GetAttr<double>("height_scale"));
+    ctx->width_scale = JUST(composed_attrs.GetAttr<double>("width_scale"));
     if (base_attrs_.find("output_size") != base_attrs_.end()) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
@@ -219,8 +219,8 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_linear_1d", UpsampleLinear1D);
 
 struct UpsampleNearest1DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  float scale_factor;
+  bool requires_grad = false;
+  double scale_factor = 0.0;
   std::vector<int64_t> output_size;
   std::string data_format;
 };
@@ -236,7 +236,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     ctx->requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->scale_factor = JUST(composed_attrs.GetAttr<float>("scale_factor"));
+    ctx->scale_factor = JUST(composed_attrs.GetAttr<double>("scale_factor"));
     if (base_attrs_.find("output_size") != base_attrs_.end()) {
       ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
     }
