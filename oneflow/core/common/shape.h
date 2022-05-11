@@ -61,7 +61,7 @@ class Shape final {
   const DimVector& dim_vec() const { return dim_vec_; }
   DimVector& dim_vec() { return dim_vec_; }
   int64_t elem_cnt() const {
-    return std::accumulate(dim_vec_.begin(), dim_vec_.end(), 1, std::multiplies<int>());
+    return std::accumulate(dim_vec_.begin(), dim_vec_.end(), int64_t(1), std::multiplies<>());
   }
   int64_t At(int64_t index) const;
   void Set(int64_t index, int64_t val);
