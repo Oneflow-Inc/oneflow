@@ -30,11 +30,11 @@ static void UpsampleLinear1DForward(const int64_t elem_cnt, const T* in_dptr,
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, h;
     out_helper.OffsetToNdIndex(index, n, c, h);
-    const T h1r = GetLinearInputIndex(h, scale_factor, align_corners);
+    const double h1r = GetLinearInputIndex(h, scale_factor, align_corners);
     const int64_t h1 = h1r;
     const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
-    const T h1lambda = h1r - h1;
-    const T h0lambda = static_cast<T>(1.) - h1lambda;
+    const double h1lambda = h1r - h1;
+    const double h0lambda = static_cast<double>(1.) - h1lambda;
     out_dptr[index] = h0lambda * in_dptr[in_helper.NdIndexToOffset(n, c, h1)]
                       + h1lambda * in_dptr[in_helper.NdIndexToOffset(n, c, h1 + h1p)];
   }
@@ -48,11 +48,11 @@ static void UpsampleLinear1DBackward(const int64_t elem_cnt, const T* dy_dptr,
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, h;
     dy_helper.OffsetToNdIndex(index, n, c, h);
-    const T h1r = GetLinearInputIndex(h, scale_factor, align_corners);
+    const double h1r = GetLinearInputIndex(h, scale_factor, align_corners);
     const int64_t h1 = h1r;
     const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
-    const T h1lambda = h1r - h1;
-    const T h0lambda = static_cast<T>(1.) - h1lambda;
+    const double h1lambda = h1r - h1;
+    const double h0lambda = static_cast<double>(1.) - h1lambda;
 
     *(dx_dptr + dx_helper.NdIndexToOffset(n, c, h1)) += h0lambda * dy_dptr[index];
     *(dx_dptr + dx_helper.NdIndexToOffset(n, c, h1 + h1p)) += h1lambda * dy_dptr[index];
