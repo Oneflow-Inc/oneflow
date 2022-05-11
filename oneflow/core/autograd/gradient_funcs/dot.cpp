@@ -32,8 +32,8 @@ class DotGrad : public OpExprGradFunction<DotCaptureState> {
 
   Maybe<void> Capture(DotCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "dot grad must have two inputs";
+    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "dot grad can only have one output";
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     if (ctx->x_requires_grad) { ctx->x_offset = ctx->SaveTensorForBackward(inputs.at(1)); }
     ctx->y_requires_grad = inputs.at(1)->requires_grad();
