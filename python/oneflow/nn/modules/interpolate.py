@@ -121,14 +121,13 @@ class Interpolate(Module):
                 scale_factors.append(output_size[i] / x.shape[2 + i])
         if len(x.shape) == 3 and self.mode == "nearest":
             return flow._C.upsample_nearest_1d(
-                x, scale_factor=scale_factors[0], output_size=output_size, data_format="channels_first"
+                x, scale_factor=scale_factors[0], data_format="channels_first"
             )
         if len(x.shape) == 4 and self.mode == "nearest":
             return flow._C.upsample_nearest_2d(
                 x,
                 height_scale=scale_factors[0],
                 width_scale=scale_factors[1],
-                output_size=output_size,
                 data_format="channels_first",
             )
         if len(x.shape) == 5 and self.mode == "nearest":
