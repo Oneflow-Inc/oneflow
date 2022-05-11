@@ -1081,7 +1081,6 @@ def autotest(
                                     )
                                     x.backward(diff_output)
                                 else:
-                                    print("sum then backward!")
                                     x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
