@@ -60,7 +60,8 @@ Maybe<void> Expand::Capture(ExpandCaptureState* ctx, const TensorTuple& inputs,
 Maybe<void> Expand::Apply(const ExpandCaptureState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+      << "it requires exactly one tensor as output grad of expand";
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<std::vector<int32_t>>("logical_out_shape", ctx->logical_out_shape));
   JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", ctx->logical_expand_shape));
