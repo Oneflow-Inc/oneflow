@@ -134,6 +134,7 @@ class UpsampleNearest1DGPUKernel final : public user_op::OpKernel {
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
     if (!output_size.empty()) { height_scale = out_height * 1.0 / in_height; }
+
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
@@ -269,7 +270,6 @@ class UpsampleNearest2DGradGPUKernel final : public user_op::OpKernel {
       height_scale = out_height * 1.0 / in_height;
       width_scale = out_width * 1.0 / in_width;
     }
-
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),

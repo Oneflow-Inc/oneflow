@@ -1198,7 +1198,7 @@ jobs:
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTING=ON \
+            -DBUILD_TESTING=OFF \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj of_op_schema
@@ -1217,7 +1217,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang-12 \
             -DCMAKE_CXX_COMPILER=clang++-12 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTING=ON \
+            -DBUILD_TESTING=OFF \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
           git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-13.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="$(cat ./ci/check/clang_tidy_warnings_as_errors_on_diff)"

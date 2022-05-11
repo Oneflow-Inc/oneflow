@@ -63,6 +63,15 @@ class RangeGuard final {
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
 #endif
 
+void EnableProfiler();
+
+// DisableProfilerAndReturnResult will return a json of profile results.
+std::string DisableProfilerAndReturnResult();
+
+Maybe<std::string> StartRecord(const std::string& name);
+
+Maybe<void> EndRecord(const std::string& event_recorder_key);
+
 }  // namespace profiler
 
 }  // namespace oneflow
