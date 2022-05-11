@@ -1516,6 +1516,9 @@ class UpsampleLinear1DGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("scale_factor", scale_factor));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    if (output_size.has_value()) {
+      JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", *JUST(output_size)));
+    }
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
