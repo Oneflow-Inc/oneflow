@@ -122,6 +122,16 @@ static std::string get_name(DataType datatype, DeviceType device) {
   return device_string + "." + datatype_to_string(datatype);
 }
 
+static std::string get_doc(PyTensortype* tensortype) {
+  std::cout << "datatype in get_doc: " << tensortype->datatype << std::endl;
+  std::string dtype_str = ASSERT(DType::Get(tensortype->datatype))->name();
+  dtype_str = dtype_str.substr(dtype_str.rfind("."));
+  std::string device = tensortype->is_cuda ? "cuda" : "cpu";
+  std::ostringstream ss;
+  ss << "Creates a Tensor with the dtype of "<< dtype_str << " and the device on "<< device <<" , it has the same parameters as :func:`oneflow.Tensor`";
+  return ss.str();
+}
+
 static void init_metaclass(PyTypeObject& metaclass) {
   metaclass.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
   metaclass.tp_base = &PyType_Type;
@@ -130,13 +140,14 @@ static void init_metaclass(PyTypeObject& metaclass) {
 }
 
 static void init_tensortype(PyTypeObject& type, PyTypeObject& type_template,
-                            const std::string& name) {
+                            const std::string& name, const std::string& doc) {
   memcpy(&type, &type_template, sizeof(PyTypeObject));
   char* tp_name = new char[64]{'\0'};
 
   // name.c_str() has bug here, so convert with iterating
   for (int i = 0; i < name.size(); i++) tp_name[i] = name[i];
   type.tp_name = tp_name;
+  type.tp_doc = doc.c_str();
   type.tp_flags = Py_TPFLAGS_DEFAULT;
   if (PyType_Ready(&type) < 0) {
     CHECK_OR_THROW(false) << "tensortype initialization failed";
@@ -157,14 +168,16 @@ static void generalize_tensortype_list() {
       strncpy(tensortype->name, name.c_str(), n);
       tensortype->name[n - 1] = '\0';
 
-      name = "oneflow." + name;
-      init_tensortype(tensortype->py_type, PyTensortypeTemplate, name);
-
       // set type
       tensortype->datatype = datatype_string_pair.first;
       tensortype->device = devicetype_string_pair.first;
       tensortype->is_cuda = tensortype->device == DeviceType::kCUDA;
       tensortype_list.push_back(tensortype);
+
+      name = "oneflow." + name;
+      std::cout << "datatype: " << tensortype->datatype << std::endl;
+      std::string doc = get_doc(tensortype);
+      init_tensortype(tensortype->py_type, PyTensortypeTemplate, name, doc);
     }
   }
 }
