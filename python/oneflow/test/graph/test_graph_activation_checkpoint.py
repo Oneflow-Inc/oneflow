@@ -94,7 +94,7 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
                 for value in op.user_conf.input.values():
                     if (
                         re.search(
-                            "OneFlow-System-Checkpointing-Fake-Fw-Op", str(value), re.I
+                            "System-Checkpointing", str(value), re.I
                         )
                         is not None
                     ):
@@ -104,7 +104,7 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
             # Check having insert identity op and first fake op of a segment has indentity grad as it's ctrl in op
             if (
                 re.search(
-                    "OneFlow-System-Checkpointing-Fake-Fw-Op_model.model.0-matmul*",
+                    "System-Checkpointing_model.model.0-matmul*",
                     op.name,
                     re.I,
                 )

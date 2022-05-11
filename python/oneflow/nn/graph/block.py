@@ -263,7 +263,7 @@ class ModuleBlock(Block):
 
     def __pre_forward_map(self, *args, **kwargs):
         # Insert identity op when doing activation checkpointing or pipeline execution.
-        # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
+        # Identity op outside activation checkpointing scope will be the start point of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
         if self.config.activation_checkpointing or (
@@ -510,13 +510,13 @@ class ModuleBlock(Block):
         _append_child(self._buffers)
         _append_child(self._modules)
 
-        for op_str in self._ops_repr():
-            child_lines.append(add_indent(op_str, 2))
-
         if len(self._outs_repr) > 0:
             for out_str in self._outs_repr:
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
+
+        for op_str in self._ops_repr():
+            child_lines.append(add_indent(op_str, 2))
 
         if len(child_lines) > 0:
             lines = child_lines

@@ -46,8 +46,8 @@ class CheckpointingPass final : public JobPass {
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 };
 
-const std::string kCheckpointingFakeOpNamePrefix = "OneFlow-System-Checkpointing-Fake-Fw-Op_";
-const std::string kCheckpointingBadOpName = "OneFlow-System-CheckpointPassBadEndOpName";
+const std::string kCheckpointingFakeOpNamePrefix = "System-Checkpoint_";
+const std::string kCheckpointingBadOpName = "System-Checkpoint_BadEndOp";
 
 const Scope& Scope4OpNode(const OpNode* op_node) {
   int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();

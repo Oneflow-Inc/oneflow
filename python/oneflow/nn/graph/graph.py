@@ -527,13 +527,13 @@ class Graph(object):
                 mod_str = add_indent(mod_str, 2)
                 child_lines.append(mod_str)
 
-        for op_str in self._ops_repr():
-            child_lines.append(add_indent(op_str, 2))
-
         if len(self._outs_repr) > 0:
             for out_str in self._outs_repr:
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
+
+        for op_str in self._ops_repr():
+            child_lines.append(add_indent(op_str, 2))
 
         main_str = self._shallow_repr() + ": ("
         if len(child_lines) > 0:

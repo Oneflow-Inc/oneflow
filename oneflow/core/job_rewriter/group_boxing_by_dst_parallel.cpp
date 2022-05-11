@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -51,9 +52,12 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
       const NdSbp& dst_nd_sbp = parallel7group.first.second;
       OperatorConf identity_op_conf{};
       identity_op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
+      const OperatorConf& input_op_conf = JUST(job_builder->OpConf4OpName(lbi.op_name()));
+      identity_op_conf.set_scope_symbol_id(input_op_conf.scope_symbol_id());
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
+      LOG(ERROR) << "add boxing iden op " << identity_op_conf.DebugString();
       job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
       NdSbpSignature identity_nd_sbp_signature;
       (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["in"] = dst_nd_sbp;
