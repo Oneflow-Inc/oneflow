@@ -1032,7 +1032,7 @@ def autotest(
                     global testing
                     testing = True
                     if check_graph:
-                        testing_graph = False
+                        testing_graph = True
                     res = f(test_case, *args, **kwargs)
                     testing = False
                     testing_graph = False
