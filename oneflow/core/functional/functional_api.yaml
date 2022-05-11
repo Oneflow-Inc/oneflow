@@ -2206,3 +2206,19 @@
 - name: "_fused_lstm_cell_grad"
   signature: "TensorTuple (Tensor grad_hy, Tensor grad_cy, Tensor cx, Tensor cy, Tensor workspace, Bool need_cx_grad, Bool has_bias) => FusedLstmCellGrad"
   bind_python: False
+
+- name: "rnn_tanh"
+  signature:
+    [
+      "TensorTuple (Tensor input, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => RnnTanhInput",
+      # "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
+    ]
+  bind_python: True
+
+- name: "rnn_relu"
+  signature:
+    [
+      "TensorTuple (Tensor input, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => RnnReluInput",
+      # "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
+    ]
+  bind_python: True

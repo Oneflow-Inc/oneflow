@@ -15,6 +15,8 @@ limitations under the License.
 """
 
 import math
+import warnings
+import numbers
 from typing import List, Tuple, Optional
 
 import oneflow as flow
@@ -1127,6 +1129,441 @@ class LSTM(nn.Module):
 
 # NOTE(Liang Depeng): The implementation of rnn modules are modified from
 #                     https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/rnn.py
+def apply_permutation(tensor: Tensor, permutation: Tensor, dim: int = 1) -> Tensor:
+    return tensor.index_select(dim, permutation)
+
+
+class RNNBase(nn.Module):
+    def __init__(
+        self,
+        mode: str,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int = 1,
+        bias: bool = True,
+        batch_first: bool = False,
+        dropout: float = 0.0,
+        bidirectional: bool = False,
+        proj_size: int = 0,
+        device=None,
+        dtype=None,
+    ) -> None:
+        factory_kwargs = {"device": device, "dtype": dtype}
+        super().__init__()
+        self.mode = mode
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.bias = bias
+        self.batch_first = batch_first
+        self.dropout = float(dropout)
+        self.bidirectional = bidirectional
+        self.proj_size = proj_size
+        num_directions = 2 if bidirectional else 1
+
+        if (
+            not isinstance(dropout, numbers.Number)
+            or not 0 <= dropout <= 1
+            or isinstance(dropout, bool)
+        ):
+            raise ValueError(
+                "dropout should be a number in range [0, 1] "
+                "representing the probability of an element being "
+                "zeroed"
+            )
+        if dropout > 0 and num_layers == 1:
+            warnings.warn(
+                "dropout option adds dropout after all but last "
+                "recurrent layer, so non-zero dropout expects "
+                "num_layers greater than 1, but got dropout={} and "
+                "num_layers={}".format(dropout, num_layers)
+            )
+        if proj_size < 0:
+            raise ValueError(
+                "proj_size should be a positive integer or zero to disable projections"
+            )
+        if proj_size >= hidden_size:
+            raise ValueError("proj_size has to be smaller than hidden_size")
+
+        if mode == "LSTM":
+            gate_size = 4 * hidden_size
+        elif mode == "GRU":
+            gate_size = 3 * hidden_size
+        elif mode == "RNN_TANH":
+            gate_size = hidden_size
+        elif mode == "RNN_RELU":
+            gate_size = hidden_size
+        else:
+            raise ValueError("Unrecognized RNN mode: " + mode)
+
+        self._flat_weights_names = []
+        self._all_weights = []
+        for layer in range(num_layers):
+            for direction in range(num_directions):
+                real_hidden_size = proj_size if proj_size > 0 else hidden_size
+                layer_input_size = (
+                    input_size if layer == 0 else real_hidden_size * num_directions
+                )
+
+                w_ih = nn.Parameter(
+                    flow.empty((gate_size, layer_input_size), **factory_kwargs)
+                )
+                w_hh = nn.Parameter(
+                    flow.empty((gate_size, real_hidden_size), **factory_kwargs)
+                )
+                b_ih = nn.Parameter(flow.empty(gate_size, **factory_kwargs))
+                b_hh = nn.Parameter(flow.empty(gate_size, **factory_kwargs))
+                layer_params: Tuple[Tensor, ...] = ()
+                if self.proj_size == 0:
+                    if bias:
+                        layer_params = (w_ih, w_hh, b_ih, b_hh)
+                    else:
+                        layer_params = (w_ih, w_hh)
+                else:
+                    w_hr = nn.Parameter(
+                        flow.empty((proj_size, hidden_size), **factory_kwargs)
+                    )
+                    if bias:
+                        layer_params = (w_ih, w_hh, b_ih, b_hh, w_hr)
+                    else:
+                        layer_params = (w_ih, w_hh, w_hr)
+
+                suffix = "_reverse" if direction == 1 else ""
+                param_names = ["weight_ih_l{}{}", "weight_hh_l{}{}"]
+                if bias:
+                    param_names += ["bias_ih_l{}{}", "bias_hh_l{}{}"]
+                if self.proj_size > 0:
+                    param_names += ["weight_hr_l{}{}"]
+                param_names = [x.format(layer, suffix) for x in param_names]
+
+                for name, param in zip(param_names, layer_params):
+                    setattr(self, name, param)
+                self._flat_weights_names.extend(param_names)
+                self._all_weights.append(param_names)
+
+        self._flat_weights = [
+            (lambda wn: getattr(self, wn) if hasattr(self, wn) else None)(wn)
+            for wn in self._flat_weights_names
+        ]
+        self.reset_parameters()
+
+    def __setattr__(self, attr, value):
+        if hasattr(self, "_flat_weights_names") and attr in self._flat_weights_names:
+            # keep self._flat_weights up to date if you do self.weight = ...
+            idx = self._flat_weights_names.index(attr)
+            self._flat_weights[idx] = value
+        super().__setattr__(attr, value)
+
+    def reset_parameters(self) -> None:
+        stdv = 1.0 / math.sqrt(self.hidden_size) if self.hidden_size > 0 else 0
+        for weight in self.parameters():
+            nn.init.uniform_(weight, -stdv, stdv)
+
+    def check_input(self, input: Tensor, batch_sizes: Optional[Tensor]) -> None:
+        expected_input_dim = 2 if batch_sizes is not None else 3
+        if input.dim() != expected_input_dim:
+            raise RuntimeError(
+                "input must have {} dimensions, got {}".format(
+                    expected_input_dim, input.dim()
+                )
+            )
+        if self.input_size != input.size(-1):
+            raise RuntimeError(
+                "input.size(-1) must be equal to input_size. Expected {}, got {}".format(
+                    self.input_size, input.size(-1)
+                )
+            )
+
+    def get_expected_hidden_size(
+        self, input: Tensor, batch_sizes: Optional[Tensor]
+    ) -> Tuple[int, int, int]:
+        if batch_sizes is not None:
+            mini_batch = int(batch_sizes[0])
+        else:
+            mini_batch = input.size(0) if self.batch_first else input.size(1)
+        num_directions = 2 if self.bidirectional else 1
+        if self.proj_size > 0:
+            expected_hidden_size = (
+                self.num_layers * num_directions,
+                mini_batch,
+                self.proj_size,
+            )
+        else:
+            expected_hidden_size = (
+                self.num_layers * num_directions,
+                mini_batch,
+                self.hidden_size,
+            )
+        return expected_hidden_size
+
+    def check_hidden_size(
+        self,
+        hx: Tensor,
+        expected_hidden_size: Tuple[int, int, int],
+        msg: str = "Expected hidden size {}, got {}",
+    ) -> None:
+        if hx.size() != expected_hidden_size:
+            raise RuntimeError(msg.format(expected_hidden_size, list(hx.size())))
+
+    def check_forward_args(
+        self, input: Tensor, hidden: Tensor, batch_sizes: Optional[Tensor]
+    ):
+        self.check_input(input, batch_sizes)
+        expected_hidden_size = self.get_expected_hidden_size(input, batch_sizes)
+
+        self.check_hidden_size(hidden, expected_hidden_size)
+
+    def permute_hidden(self, hx: Tensor, permutation: Optional[Tensor]):
+        if permutation is None:
+            return hx
+        return apply_permutation(hx, permutation)
+
+    def extra_repr(self) -> str:
+        s = "{input_size}, {hidden_size}"
+        if self.proj_size != 0:
+            s += ", proj_size={proj_size}"
+        if self.num_layers != 1:
+            s += ", num_layers={num_layers}"
+        if self.bias is not True:
+            s += ", bias={bias}"
+        if self.batch_first is not False:
+            s += ", batch_first={batch_first}"
+        if self.dropout != 0:
+            s += ", dropout={dropout}"
+        if self.bidirectional is not False:
+            s += ", bidirectional={bidirectional}"
+        return s.format(**self.__dict__)
+
+    @property
+    def all_weights(self) -> List[List[nn.Parameter]]:
+        return [
+            [getattr(self, weight) for weight in weights]
+            for weights in self._all_weights
+        ]
+
+
+class RNNV2(RNNBase):
+    r"""Applies a multi-layer Elman RNN with :math:`\tanh` or :math:`\text{ReLU}` non-linearity to an
+    input sequence.
+
+
+    For each element in the input sequence, each layer computes the following
+    function:
+
+    .. math::
+        h_t = \tanh(W_{ih} x_t + b_{ih} + W_{hh} h_{(t-1)} + b_{hh})
+
+    where :math:`h_t` is the hidden state at time `t`, :math:`x_t` is
+    the input at time `t`, and :math:`h_{(t-1)}` is the hidden state of the
+    previous layer at time `t-1` or the initial hidden state at time `0`.
+    If :attr:`nonlinearity` is ``'relu'``, then :math:`\text{ReLU}` is used instead of :math:`\tanh`.
+
+    Args:
+        input_size: The number of expected features in the input `x`
+        hidden_size: The number of features in the hidden state `h`
+        num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
+            would mean stacking two RNNs together to form a `stacked RNN`,
+            with the second RNN taking in outputs of the first RNN and
+            computing the final results. Default: 1
+        nonlinearity: The non-linearity to use. Can be either ``'tanh'`` or ``'relu'``. Default: ``'tanh'``
+        bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+            Default: ``True``
+        batch_first: If ``True``, then the input and output tensors are provided
+            as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+            Note that this does not apply to hidden or cell states. See the
+            Inputs/Outputs sections below for details.  Default: ``False``
+        dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
+            RNN layer except the last layer, with dropout probability equal to
+            :attr:`dropout`. Default: 0
+        bidirectional: If ``True``, becomes a bidirectional RNN. Default: ``False``
+
+    Inputs: input, h_0
+        * **input**: tensor of shape :math:`(L, H_{in})` for unbatched input,
+          :math:`(L, N, H_{in})` when ``batch_first=False`` or
+          :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of
+          the input sequence.  The input can also be a packed variable length sequence.
+          See :func:`torch.nn.utils.rnn.pack_padded_sequence` or
+          :func:`torch.nn.utils.rnn.pack_sequence` for details.
+        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, H_{out})` for unbatched input or
+          :math:`(D * \text{num\_layers}, N, H_{out})` containing the initial hidden
+          state for the input sequence batch. Defaults to zeros if not provided.
+
+        where:
+
+        .. math::
+            \begin{aligned}
+                N ={} & \text{batch size} \\
+                L ={} & \text{sequence length} \\
+                D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
+                H_{in} ={} & \text{input\_size} \\
+                H_{out} ={} & \text{hidden\_size}
+            \end{aligned}
+
+    Outputs: output, h_n
+        * **output**: tensor of shape :math:`(L, D * H_{out})` for unbatched input,
+          :math:`(L, N, D * H_{out})` when ``batch_first=False`` or
+          :math:`(N, L, D * H_{out})` when ``batch_first=True`` containing the output features
+          `(h_t)` from the last layer of the RNN, for each `t`. If a
+          :class:`torch.nn.utils.rnn.PackedSequence` has been given as the input, the output
+          will also be a packed sequence.
+        * **h_n**: tensor of shape :math:`(D * \text{num\_layers}, H_{out})` for unbatched input or
+          :math:`(D * \text{num\_layers}, N, H_{out})` containing the final hidden state
+          for each element in the batch.
+
+    Attributes:
+        weight_ih_l[k]: the learnable input-hidden weights of the k-th layer,
+            of shape `(hidden_size, input_size)` for `k = 0`. Otherwise, the shape is
+            `(hidden_size, num_directions * hidden_size)`
+        weight_hh_l[k]: the learnable hidden-hidden weights of the k-th layer,
+            of shape `(hidden_size, hidden_size)`
+        bias_ih_l[k]: the learnable input-hidden bias of the k-th layer,
+            of shape `(hidden_size)`
+        bias_hh_l[k]: the learnable hidden-hidden bias of the k-th layer,
+            of shape `(hidden_size)`
+
+    .. note::
+        All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
+        where :math:`k = \frac{1}{\text{hidden\_size}}`
+
+    .. note::
+        For bidirectional RNNs, forward and backward are directions 0 and 1 respectively.
+        Example of splitting the output layers when ``batch_first=False``:
+        ``output.view(seq_len, batch, num_directions, hidden_size)``.
+
+    .. note::
+        ``batch_first`` argument is ignored for unbatched inputs.
+
+    .. include:: ../cudnn_rnn_determinism.rst
+
+    .. include:: ../cudnn_persistent_rnn.rst
+
+    Examples::
+
+        >>> rnn = nn.RNN(10, 20, 2)
+        >>> input = torch.randn(5, 3, 10)
+        >>> h0 = torch.randn(2, 3, 20)
+        >>> output, hn = rnn(input, h0)
+    """
+
+    def __init__(self, *args, **kwargs):
+        if "proj_size" in kwargs:
+            raise ValueError(
+                "proj_size argument is only supported for LSTM, not RNN or GRU"
+            )
+        self.nonlinearity = kwargs.pop("nonlinearity", "tanh")
+        if self.nonlinearity == "tanh":
+            mode = "RNN_TANH"
+        elif self.nonlinearity == "relu":
+            mode = "RNN_RELU"
+        else:
+            raise ValueError("Unknown nonlinearity '{}'".format(self.nonlinearity))
+        super().__init__(mode, *args, **kwargs)
+
+    def forward(self, input, hx=None):  # noqa: F811
+        orig_input = input
+        # TODO(Liang Depeng): Support PackedSequence
+        # if isinstance(orig_input, PackedSequence):
+        #     input, batch_sizes, sorted_indices, unsorted_indices = input
+        #     max_batch_size = int(batch_sizes[0])
+        # else:
+        batch_sizes = None
+        is_batched = input.dim() == 3
+        batch_dim = 0 if self.batch_first else 1
+        if not is_batched:
+            input = input.unsqueeze(batch_dim)
+            if hx is not None:
+                if hx.dim() != 2:
+                    raise RuntimeError(
+                        f"For unbatched 2-D input, hx should also be 2-D but got {hx.dim()}-D tensor"
+                    )
+                hx = hx.unsqueeze(1)
+        else:
+            if hx is not None and hx.dim() != 3:
+                raise RuntimeError(
+                    f"For batched 3-D input, hx should also be 3-D but got {hx.dim()}-D tensor"
+                )
+        max_batch_size = input.size(0) if self.batch_first else input.size(1)
+        sorted_indices = None
+        unsorted_indices = None
+
+        if hx is None:
+            num_directions = 2 if self.bidirectional else 1
+            if input.is_global:
+                hx = flow.zeros(
+                    self.num_layers * num_directions,
+                    max_batch_size,
+                    self.hidden_size,
+                    dtype=input.dtype,
+                    sbp=input.sbp,
+                    placement=input.placement,
+                )
+            else:
+                hx = flow.zeros(
+                    self.num_layers * num_directions,
+                    max_batch_size,
+                    self.hidden_size,
+                    dtype=input.dtype,
+                    device=input.device,
+                )
+        else:
+            # Each batch of the hidden state should match the input sequence that
+            # the user believes he/she is passing in.
+            hx = self.permute_hidden(hx, sorted_indices)
+
+        assert hx is not None
+        self.check_forward_args(input, hx, batch_sizes)
+        assert self.mode == "RNN_TANH" or self.mode == "RNN_RELU"
+        # if batch_sizes is None:
+        if self.mode == "RNN_TANH":
+            result = flow._C.rnn_tanh(
+                input,
+                hx,
+                self._flat_weights,
+                self.bias,
+                self.num_layers,
+                self.dropout,
+                self.training,
+                self.bidirectional,
+                self.batch_first,
+            )
+        else:
+            result = flow._C.rnn_relu(
+                input,
+                hx,
+                self._flat_weights,
+                self.bias,
+                self.num_layers,
+                self.dropout,
+                self.training,
+                self.bidirectional,
+                self.batch_first,
+            )
+        # TODO(Liang Depeng): Support PackedSequence
+        # else:
+        #     if self.mode == 'RNN_TANH':
+        #         result = _VF.rnn_tanh(input, batch_sizes, hx, self._flat_weights, self.bias,
+        #                               self.num_layers, self.dropout, self.training,
+        #                               self.bidirectional)
+        #     else:
+        #         result = _VF.rnn_relu(input, batch_sizes, hx, self._flat_weights, self.bias,
+        #                               self.num_layers, self.dropout, self.training,
+        #                               self.bidirectional)
+
+        output = result[0]
+        hidden = result[1]
+
+        # TODO(Liang Depeng): Support PackedSequence
+        # if isinstance(orig_input, PackedSequence):
+        #     output_packed = PackedSequence(output, batch_sizes, sorted_indices, unsorted_indices)
+        #     return output_packed, self.permute_hidden(hidden, unsorted_indices)
+
+        if not is_batched:
+            output = output.squeeze(batch_dim)
+            hidden = hidden.squeeze(1)
+
+        return output, self.permute_hidden(hidden, unsorted_indices)
+
+
 class RNNCellBase(nn.Module):
     def __init__(
         self,
