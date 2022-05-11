@@ -21,9 +21,9 @@ namespace oneflow {
 namespace one {
 
 struct UpsampleCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  double height_scale;
-  double width_scale;
+  bool requires_grad = false;
+  double height_scale = 0;
+  double width_scale = 0;
   float align_corners;
   std::string data_format;
   std::string interpolation;
@@ -79,9 +79,9 @@ Maybe<void> Upsample::Apply(const UpsampleCaptureState* ctx, const TensorTuple& 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample", Upsample);
 
 struct UpsampleNearest2DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  double height_scale;
-  double width_scale;
+  bool requires_grad = false;
+  double height_scale = 0;
+  double width_scale = 0;
   std::vector<int64_t> output_size;
   std::string data_format;
 };
@@ -128,9 +128,9 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_2d", UpsampleNearest2D);
 
 struct UpsampleBilinear2DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  double height_scale;
-  double width_scale;
+  bool requires_grad = false;
+  double height_scale = 0;
+  double width_scale = 0;
   bool align_corners;
   std::vector<int64_t> output_size;
   std::string data_format;
@@ -179,8 +179,8 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_bilinear_2d", UpsampleBilinear2D);
 
 struct UpsampleLinear1DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  double scale_factor;
+  bool requires_grad = false;
+  double scale_factor = 0;
   bool align_corners;
   std::vector<int64_t> output_size;
   std::string data_format;
@@ -228,8 +228,8 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_linear_1d", UpsampleLinear1D);
 
 struct UpsampleNearest1DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  double scale_factor;
+  bool requires_grad = false;
+  double scale_factor = 0;
   std::vector<int64_t> output_size;
   std::string data_format;
 };
@@ -274,9 +274,9 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_1d", UpsampleNearest1D);
 
 struct UpsampleBicubic2DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  double height_scale;
-  double width_scale;
+  bool requires_grad = false;
+  double height_scale = 0;
+  double width_scale = 0;
   bool align_corners;
   std::vector<int64_t> output_size;
   std::string data_format;
@@ -324,10 +324,10 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_bicubic_2d", UpsampleBicubic2D);
 
 struct UpsampleNearest3DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  float depth_scale;
-  double height_scale;
-  double width_scale;
+  bool requires_grad = false;
+  double depth_scale = 0;
+  double height_scale = 0;
+  double width_scale = 0;
   std::vector<int64_t> output_size;
   std::string data_format;
 };
@@ -375,10 +375,10 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_3d", UpsampleNearest3D);
 
 struct UpsampleTrilinear3DCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  float depth_scale;
-  double height_scale;
-  double width_scale;
+  bool requires_grad = false;
+  double depth_scale = 0;
+  double height_scale = 0;
+  double width_scale = 0;
   bool align_corners;
   std::vector<int64_t> output_size;
   std::string data_format;
