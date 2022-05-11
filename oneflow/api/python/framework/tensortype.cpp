@@ -123,9 +123,8 @@ static std::string get_name(DataType datatype, DeviceType device) {
 }
 
 static std::string get_doc(PyTensortype* tensortype) {
-  std::cout << "datatype in get_doc: " << tensortype->datatype << std::endl;
   std::string dtype_str = ASSERT(DType::Get(tensortype->datatype))->name();
-  dtype_str = dtype_str.substr(dtype_str.rfind("."));
+  dtype_str = dtype_str.substr(dtype_str.rfind(".") + 1);
   std::string device = tensortype->is_cuda ? "cuda" : "cpu";
   std::ostringstream ss;
   ss << "Creates a Tensor with the dtype of "<< dtype_str << " and the device on "<< device <<" , it has the same parameters as :func:`oneflow.Tensor`";
