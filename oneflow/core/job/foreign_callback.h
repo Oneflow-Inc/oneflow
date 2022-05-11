@@ -41,14 +41,6 @@ class ForeignCallback {
   virtual void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
 
   virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
-
-  // return scope_symbol_id
-  virtual int64_t MakeScopeSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf,
-                                  const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
-                                  bool is_mirrored) const {
-    UNIMPLEMENTED();
-    return 0;
-  }
 };
 
 }  // namespace oneflow
