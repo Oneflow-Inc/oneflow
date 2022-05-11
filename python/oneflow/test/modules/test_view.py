@@ -85,7 +85,7 @@ class TestView(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
     @autotest(n=5, check_graph=False)
     def test_view_with_0_dim_data(test_case):
         device = random_device()
