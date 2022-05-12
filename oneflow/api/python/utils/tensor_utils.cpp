@@ -142,7 +142,7 @@ DEFINE_STATIC_SWITCH_FUNC(Maybe<void>, CopyMirroredTensorFromUntypedArray, MAKE_
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device,
-                                      const bool& requires_grad, const bool& pin_memory) {
+                                      const bool requires_grad, const bool pin_memory) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
     // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
@@ -198,7 +198,7 @@ auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
                                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           const bool& requires_grad) {
+                                           const bool requires_grad) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
     // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
@@ -257,7 +257,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
 }
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
-                                        const bool& pin_memory) {
+                                        const bool pin_memory) {
   if (other->is_local()) {
     const Symbol<Device>& device = JUST(other->device());
     return functional::PinMemoryCopy(other, device, pin_memory);
@@ -274,7 +274,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Optional<Symbol<Device>>& device,
-                                        const bool& requires_grad, const bool& pin_memory) {
+                                        const bool requires_grad, const bool pin_memory) {
   std::shared_ptr<Tensor> tensor;
   Symbol<Device> device_;
   if (device) { device_ = JUST(device); }
@@ -300,7 +300,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Symbol<ParallelDesc>& placement,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                        const bool& requires_grad) {
+                                        const bool requires_grad) {
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
   bool check_meta = other->is_consistent() ? false : true;
   std::shared_ptr<Tensor> tensor =
