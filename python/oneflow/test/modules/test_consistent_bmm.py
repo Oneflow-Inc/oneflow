@@ -13,39 +13,34 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from oneflow.test_utils.test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
-def _test_greater_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 3) * 8 for i in range(ndim)]
-    x1 = random_tensor(ndim, *dims)
-    x2 = x1.to_global(placement=placement, sbp=sbp)
-    y1 = random_tensor(ndim, *dims)
-    y2 = y1.to_global(placement=placement, sbp=sbp)
+@autotest(n=1, check_graph=False)
+def _test_bmm_with_random_data(test_case, placement, sbp):
+    batch = random(1, 3).to(int) * 8
+    m = random(1, 3).to(int) * 8
+    n = random(1, 3).to(int) * 8
+    k = random(1, 3).to(int) * 8
+    x = random_tensor(ndim=3, dim0=batch, dim1=m, dim2=k).to_global(
+        placement=placement, sbp=sbp
+    )
+    y = random_tensor(ndim=3, dim0=batch, dim1=k, dim2=n).to_global(
+        placement=placement, sbp=sbp
+    )
+    return torch.bmm(x, y)
 
-    z = torch.gt(x2, y2)
-    return z
 
-
-class TestGreaterConsistent(flow.unittest.TestCase):
+class TestModule(flow.unittest.TestCase):
     @globaltest
-    def test_greater(test_case):
-        # random ndim in range [1,4]
-        ndim = random(1, 5).to(int).value()
+    def test_bmm_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
-                _test_greater_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_bmm_with_random_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

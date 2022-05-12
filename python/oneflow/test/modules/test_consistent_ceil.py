@@ -15,37 +15,26 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from oneflow.test_utils.test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
-def _test_greater_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 3) * 8 for i in range(ndim)]
-    x1 = random_tensor(ndim, *dims)
-    x2 = x1.to_global(placement=placement, sbp=sbp)
-    y1 = random_tensor(ndim, *dims)
-    y2 = y1.to_global(placement=placement, sbp=sbp)
-
-    z = torch.gt(x2, y2)
-    return z
+@autotest(n=1, check_graph=False)
+def _test_ceil_with_random_data(test_case, ndim, placement, sbp):
+    dims = [random(1, 3).to(int) * 8 for _ in range(ndim)]
+    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+    return torch.ceil(x)
 
 
-class TestGreaterConsistent(flow.unittest.TestCase):
+class TestModule(flow.unittest.TestCase):
     @globaltest
-    def test_greater(test_case):
-        # random ndim in range [1,4]
-        ndim = random(1, 5).to(int).value()
+    def test_bmm_with_random_data(test_case):
         for placement in all_placement():
+            ndim = random(1, 4).to(int).value()
             for sbp in all_sbp(placement, max_dim=min(2, ndim)):
-                _test_greater_impl(test_case, ndim, placement, sbp)
+                _test_ceil_with_random_data(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":

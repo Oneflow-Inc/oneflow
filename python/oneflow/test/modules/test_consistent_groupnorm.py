@@ -15,37 +15,36 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
 import numpy as np
-from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
-def _test_greater_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 3) * 8 for i in range(ndim)]
-    x1 = random_tensor(ndim, *dims)
-    x2 = x1.to_global(placement=placement, sbp=sbp)
-    y1 = random_tensor(ndim, *dims)
-    y2 = y1.to_global(placement=placement, sbp=sbp)
+@autotest(n=1, rtol=1e-03, atol=1e-03, check_graph=False)
+def _test_group_norm(test_case, placement, sbp):
+    dims = [random(1, 3).to(int) * 8 for _ in range(4)]
+    channels = dims[1]
+    m = torch.nn.GroupNorm(
+        num_groups=oneof(1, 2, 4, 8),
+        num_channels=channels,
+        eps=random(0, 1).to(float),
+        affine=random_bool(),
+    )
+    m.train(random_bool())
+    m.to_global(placement=placement, sbp=random_sbp(placement, max_dim=0))
+    x = random_tensor(4, *dims).to_global(placement=placement, sbp=sbp)
+    y = m(x)
+    return y
 
-    z = torch.gt(x2, y2)
-    return z
 
-
-class TestGreaterConsistent(flow.unittest.TestCase):
+class TestGroupNorm(flow.unittest.TestCase):
     @globaltest
-    def test_greater(test_case):
-        # random ndim in range [1,4]
-        ndim = random(1, 5).to(int).value()
+    def test_groupnorm(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
-                _test_greater_impl(test_case, ndim, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_group_norm(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
