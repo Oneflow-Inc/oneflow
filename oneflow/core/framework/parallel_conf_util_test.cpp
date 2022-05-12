@@ -42,14 +42,14 @@ TEST(ParallelConfUtil, MakeParallelConfError) {
 }
 
 TEST(ParallelConfUtil, GetDeviceTagAndMachineDeviceIdsAndHierarchy) {
-  std::shared_ptr<ParallelConf> parallel_conf = std::make_shared<ParallelConf>();
-  parallel_conf->set_device_tag("cpu");
-  parallel_conf->add_device_name("0:0-1");
-  parallel_conf->add_device_name("0:2-3");
-  parallel_conf->add_device_name("1:0-1");
-  parallel_conf->add_device_name("1:2-3");
-  parallel_conf->mutable_hierarchy()->add_dim(2);
-  parallel_conf->mutable_hierarchy()->add_dim(4);
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag("cpu");
+  parallel_conf.add_device_name("0:0-1");
+  parallel_conf.add_device_name("0:2-3");
+  parallel_conf.add_device_name("1:0-1");
+  parallel_conf.add_device_name("1:2-3");
+  parallel_conf.mutable_hierarchy()->add_dim(2);
+  parallel_conf.mutable_hierarchy()->add_dim(4);
   std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>>
       tag_and_dev_ids_and_hierarchy =
           *CHECK_JUST(GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf));
