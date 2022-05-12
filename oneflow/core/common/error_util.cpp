@@ -115,7 +115,8 @@ std::string FormatErrorSummaryAndMsgOfErrorProto(const std::shared_ptr<ErrorProt
 
 // the msg in error type instance.
 Maybe<std::string> FormatMsgOfErrorType(const std::shared_ptr<ErrorProto>& error) {
-  CHECK_NE_OR_RETURN(error->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET);
+  CHECK_NE_OR_RETURN(error->error_type_case(), ErrorProto::ERROR_TYPE_NOT_SET)
+      << Error::RuntimeError() << "Parse error failed, unknown error type";
   std::stringstream ss;
   const google::protobuf::Descriptor* error_des = error->GetDescriptor();
   const google::protobuf::OneofDescriptor* oneof_field_des =

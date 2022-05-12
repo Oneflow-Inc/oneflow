@@ -35,7 +35,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def("input", &OpBuilder::MaybeInput)
       .def("output", &OpBuilder::MaybeOutput)
       .def("attr",
-           [](std::shared_ptr<one::OpBuilder> x, const std::string& attr_name,
+           [](const std::shared_ptr<one::OpBuilder>& x, const std::string& attr_name,
               const std::string& attr_val_str) -> Maybe<OpBuilder&> {
              AttrValue attr_val;
              if (!TxtString2PbMessage(attr_val_str, &attr_val)) {
