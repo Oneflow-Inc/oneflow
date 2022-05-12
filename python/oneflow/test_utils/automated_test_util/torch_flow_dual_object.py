@@ -23,6 +23,7 @@ import gc
 
 import numpy as np
 import oneflow as flow
+import oneflow.test_utils.automated_test_util.profiler as auto_profiler
 
 flow.backends.cudnn.deterministic = True
 
@@ -210,6 +211,19 @@ def get_args(callable, *args, **kwargs):
     note_pytorch_kwargs.append(new_pytorch_kwargs)
 
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
+
+
+def to_string(*args, **kwargs) -> str:
+    def _to_string(x):
+        if isinstance(x, DualObject):
+            return x.name
+        return str(x)
+    strs = []
+    if len(args) > 0:
+        strs.append(', '.join([_to_string(arg) for arg in args]))
+    if len(kwargs) > 0:
+        strs.append(', '.join([f'{k}={_to_string(v)}' for k, v in kwargs.items()]))
+    return ', '.join(strs)
 
 
 counter = 0
@@ -601,6 +615,9 @@ def get_pytorch_oneflow_tensor_res(
     return pytorch_res, oneflow_res
 
 
+profiled_method_name = []
+
+
 def GetDualObject(name, pytorch, oneflow):
     global counter
     counter += 1
@@ -631,7 +648,13 @@ def GetDualObject(name, pytorch, oneflow):
             def get_dual_method(method_name):
                 if method_name == "__call__":
 
+                    if name in profiled_method_name:
+                        def method(self, *args, **kwargs):
+                            return auto_profiler.profile_dual_object(self)(*args, **kwargs)
+                        return method
+
                     def dual_method(self, *args, **kwargs):
+                        param_str = to_string(*args, **kwargs)
                         (
                             pytorch_args,
                             pytorch_kwargs,
@@ -651,7 +674,7 @@ def GetDualObject(name, pytorch, oneflow):
                             testing_graph,
                             *args,
                         )
-                        return GetDualObject("unused", pytorch_res, oneflow_res)
+                        return GetDualObject(f'{name}({param_str})', pytorch_res, oneflow_res)
 
                 else:
 
@@ -1187,5 +1210,5 @@ def choice_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
-torch = GetDualObject("", torch_original, flow)
+torch = GetDualObject("torch", torch_original, flow)
 __all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]
