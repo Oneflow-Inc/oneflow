@@ -82,7 +82,7 @@ static const char* get_doc(PyTensorType* tensortype) {
   // all tensortype docs
   static std::vector<std::string> tensortype_doc;
 
-  std::string dtype = PyTensorType_UnpackDType((PyObject*)tensortype)->name();
+  std::string dtype = tensortype->dtype->name();
   std::string device = ASSERT(DeviceTag4DeviceType(tensortype->devicetype));
   std::string doc = "Creates a Tensor with the dtype of " + dtype + " and the device on " + device
                     + ", it has the same parameters as :func:`oneflow.Tensor`";
@@ -110,16 +110,16 @@ static void generalize_tensor_types() {
   init_tensortype_metaclass(&PyTensorTypeMetaClass);
 
   for (const auto& devicetype : all_device_types) {
-    for (const auto& datatype : all_data_types) {
+    for (const auto& dtype : all_data_types) {
       PyTensorType* tensortype = new PyTensorType();
       // set name
-      std::string name = devicetype.second + "." + datatype.second;
+      std::string name = devicetype.second + "." + dtype.second;
       size_t n = sizeof(tensortype->name);
       strncpy(tensortype->name, name.c_str(), n);
       tensortype->name[n - 1] = '\0';
 
       // set type
-      tensortype->datatype = datatype.first;
+      tensortype->dtype = dtype.first;
       tensortype->devicetype = devicetype.first;
       tensortype->is_cuda = tensortype->devicetype == DeviceType::kCUDA;
       tensor_types.push_back(tensortype);
@@ -132,14 +132,14 @@ static void generalize_tensor_types() {
 
 bool PyTensorType_Check(PyObject* obj) { return PyObject_TypeCheck(obj, &PyTensorTypeMetaClass); }
 
-PyObject* PyTensorType_FromDTypeAndDeviceType(Symbol<DType> datatype, DeviceType device) {
+PyObject* PyTensorType_FromDTypeAndDeviceType(Symbol<DType> dtype, DeviceType device) {
   auto it =
-      std::find_if(tensor_types.begin(), tensor_types.end(), [datatype, device](PyTensorType* x) {
-        return (x->datatype == datatype) && (x->devicetype == device);
+      std::find_if(tensor_types.begin(), tensor_types.end(), [dtype, device](PyTensorType* x) {
+        return (x->dtype == dtype) && (x->devicetype == device);
       });
   if (it == tensor_types.end())
     return PyErr_Format(PyExc_ValueError, "unsupported data type (%s) or device (%s)",
-                        datatype->name(), ASSERT(DeviceTag4DeviceType(device)));
+                        dtype->name(), ASSERT(DeviceTag4DeviceType(device)));
   return (PyObject*)(*it);
 };
 

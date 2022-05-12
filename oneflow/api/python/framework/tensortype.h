@@ -27,7 +27,7 @@ typedef struct {
   PyTypeObject py_type;
   char name[64];
   bool is_cuda;
-  Symbol<DType> datatype;
+  Symbol<DType> dtype;
   DeviceType devicetype;
 } PyTensorType;
 
@@ -37,7 +37,7 @@ inline DeviceType PyTensorType_UnpackDevice(PyObject* self) {
   return ((PyTensorType*)self)->devicetype;
 }
 inline Symbol<DType> PyTensorType_UnpackDType(PyObject* self) {
-  return ((PyTensorType*)self)->datatype;
+  return ((PyTensorType*)self)->dtype;
 }
 
 PyObject* PyTensorType_FromDTypeAndDeviceType(Symbol<DType>, DeviceType);
