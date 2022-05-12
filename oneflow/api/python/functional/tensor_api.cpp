@@ -120,9 +120,11 @@ class TensorWithOtherCtorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
-    return MakeTensorFromOtherTensor(
-        other,
-        /*pin_memory=*/JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory());
+    bool pin_memory = false;
+    if(other->is_local()){
+      pin_memory = JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory();
+    }
+    return MakeTensorFromOtherTensor(other, pin_memory);
   }
 };
 
