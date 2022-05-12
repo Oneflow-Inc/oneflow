@@ -772,14 +772,15 @@ class Ftrl(Optimizer):
             adam.zero_grad()
 
     Args:
-        params (Union[Iterator[Parameter], List[Dict]]): _description_
-        lr (float, optional): _description_. Defaults to 0.001.
-        weight_decay (float, optional): _description_. Defaults to 0.0.
-        lr_power (float, optional): _description_. Defaults to -0.5.
-        initial_accumulator_value (float, optional): _description_. Defaults to 0.1.
-        lambda1 (float, optional): _description_. Defaults to 0.0.
-        lambda2 (float, optional): _description_. Defaults to 0.0.
-        beta (float, optional): _description_. Defaults to 0.0.
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate. Defaults to 1e-3.
+        weight_decay (float, optional): weight decay (L2 penalty). Defaults to 0.0.
+        lr_power (float, optional): learning rate decrease factor. Defaults to -0.5.
+        initial_accumulator_value (float, optional): The initial value of accumlator. Defaults to 0.1.
+        lambda1 (float, optional): L1 regularization strength. Defaults to 0.0.
+        lambda2 (float, optional): L2 regularization strength. Defaults to 0.0.
+        beta (float, optional): The value of beta. Defaults to 0.0.
     """
 
     def __init__(
@@ -863,7 +864,7 @@ class Ftrl(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (
                 param_group["initial_lr"]
@@ -878,21 +879,21 @@ class Ftrl(Optimizer):
             lambda2 = param_group["lambda2"]
             beta = param_group["beta"]
 
-            optimizer_conf.set_base_learning_rate(lr)
-            optimizer_conf.mutable_ftrl_conf().set_initial_accumulator_value(
+            optimizer_conf.base_learning_rate = lr
+            optimizer_conf.ftrl_conf.initial_accumulator_value = (
                 initial_accumulator_value
             )
-            optimizer_conf.mutable_ftrl_conf().set_lr_power(lr_power)
-            optimizer_conf.mutable_ftrl_conf().set_lambda1(lambda1)
-            optimizer_conf.mutable_ftrl_conf().set_lambda2(lambda2)
-            optimizer_conf.mutable_ftrl_conf().set_beta(beta)
+            optimizer_conf.ftrl_conf.lr_power = lr_power
+            optimizer_conf.ftrl_conf.lambda1 = lambda1
+            optimizer_conf.ftrl_conf.lambda2 = lambda2
+            optimizer_conf.ftrl_conf.beta = beta
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs
