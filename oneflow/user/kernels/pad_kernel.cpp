@@ -28,14 +28,6 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
-  const auto& in_arg_pair = ctx->inputs().front();
-  const int64_t ndims =
-      ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second)->shape().NumAxes();
-  return ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), ndims);
-}
-
-template<typename Context>
 std::unique_ptr<ep::primitive::ConstantPad> NewConstantPadPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("y", 0)->data_type();
   return ep::primitive::NewPrimitive<ep::primitive::ConstantPadFactory>(ctx->device_type(),
@@ -43,25 +35,21 @@ std::unique_ptr<ep::primitive::ConstantPad> NewConstantPadPrimitive(Context* ctx
 }
 
 template<typename Context>
-std::unique_ptr<ep::primitive::Memset> NewMemsetPrimitive(Context* ctx) {
-  return ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
+std::unique_ptr<ep::primitive::ConstantPad> NewConstantPadGradPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::ConstantPadFactory>(ctx->device_type(),
+                                                                        data_type);
 }
 
-auto PadPrimitiveExists() {
-  return hob::make_custom("PadPrimitiveExists", [](const KernelRegContext& ctx) {
+auto ConstantPadPrimitiveExists() {
+  return hob::make_custom("ConstantPadPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewConstantPadPrimitive(&ctx).operator bool();
   });
 }
 
-auto CopyNdPrimitiveExists() {
-  return hob::make_custom("CopyNdPrimitiveExists", [](const KernelRegContext& ctx) {
-    return NewCopyNdPrimitive(&ctx).operator bool();
-  });
-}
-
-auto MemsetPrimitiveExists() {
-  return hob::make_custom("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
-    return NewMemsetPrimitive(&ctx).operator bool();
+auto ConstantPadGradPrimitiveExists() {
+  return hob::make_custom("ConstantPadGradPrimitiveExists", [](const KernelRegContext& ctx) {
+    return NewConstantPadGradPrimitive(&ctx).operator bool();
   });
 }
 
@@ -101,7 +89,8 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob(PadPrimitiveExists());
+REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob(ConstantPadPrimitiveExists());
+
 class PadGradKernel final : public OpKernel, public CudaGraphSupport {
  public:
   PadGradKernel() = default;
@@ -111,13 +100,6 @@ class PadGradKernel final : public OpKernel, public CudaGraphSupport {
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-    void* dst = dx->mut_dptr();
-
-    std::unique_ptr<ep::primitive::Memset> memset_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
-    CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream(), dst, 0, out_bytes_size);
 
     if ((dy->shape().NumAxes() > 0 && dy->shape().elem_cnt() == 0)
         || (dx->shape().NumAxes() > 0 && dx->shape().elem_cnt() == 0)) {
@@ -125,45 +107,28 @@ class PadGradKernel final : public OpKernel, public CudaGraphSupport {
       return;
     }
 
-    const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-    const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
+    std::vector<int64_t> padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
+    std::vector<int64_t> padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
     const int64_t ndims = dy->shape().NumAxes();
 
-    DimVector dst_pos_vec(ndims, 0);
-    DimVector src_pos_vec(padding_before.cbegin(), padding_before.cend());
-    DimVector pad_before_vec(padding_before.cbegin(), padding_before.cend());
-    DimVector pad_after_vec(padding_after.cbegin(), padding_after.cend());
-
     for (int i = 0; i < ndims; ++i) {
-      if (src_pos_vec[i] < 0) {
-        dst_pos_vec[i] -= src_pos_vec[i];
-        src_pos_vec[i] = 0;
-      }
+      padding_before[i] = -padding_before[i];
+      padding_after[i] = -padding_after[i];
     }
 
-    DimVector extent_vec(ndims, 0);
-    for (int i = 0; i < extent_vec.size(); ++i) {
-      if (dy->shape().At(i) < dx->shape().At(i)) {
-        extent_vec[i] = dy->shape().At(i);
-      } else {
-        extent_vec[i] = dx->shape().At(i);
-        if (pad_before_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_before_vec[i]; }
-        if (pad_after_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_after_vec[i]; }
-      }
-    }
-    std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), ndims);
-    CHECK(copy_nd_primitive);
-    copy_nd_primitive->Launch(ctx->stream(), dy->data_type(), ndims, dst, dx->shape().ptr(),
-                              dst_pos_vec.data(), dy->dptr(), dy->shape().ptr(), src_pos_vec.data(),
-                              extent_vec.data());
+    std::unique_ptr<ep::primitive::ConstantPad> pad_grad_primitive =
+        NewConstantPadGradPrimitive(ctx);
+    CHECK(pad_grad_primitive);
+    pad_grad_primitive->Launch(ctx->stream(), ndims, dx->mut_dptr(), dx->shape().ptr(), dy->dptr(),
+                               dy->shape().ptr(), padding_before.data(), padding_after.data(),
+                               Scalar(0));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 REGISTER_USER_KERNEL("pad_grad")
     .SetCreateFn<PadGradKernel>()
-    .SetIsMatchedHob(MemsetPrimitiveExists() && CopyNdPrimitiveExists());
+    .SetIsMatchedHob(ConstantPadGradPrimitiveExists());
 
 }  // namespace user_op
 
