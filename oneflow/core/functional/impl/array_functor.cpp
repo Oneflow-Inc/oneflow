@@ -1374,26 +1374,22 @@ class UpsampleGradFunctor {
 
 class CopyFunctor {
  public:
-  CopyFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::string& device_type,
-                           const int64_t& device_id,
-                           const bool pin_memory) const {
+  CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
+                           const int64_t& device_id, const bool pin_memory) const {
     Symbol<Device> device_ = JUST(x->device());
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
 
-    #ifdef WITH_CUDA
-        if (device_type == "cuda") { InitCudaContextOnce(device_id); }
-    #endif
+#ifdef WITH_CUDA
+    if (device_type == "cuda") { InitCudaContextOnce(device_id); }
+#endif
     if (device_->type() == "cuda") {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    } else{
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x},
-                                          OpExprInterpContext(attrs, device_, /*pin_memory=*/pin_memory));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {x}, OpExprInterpContext(attrs, device_, /*pin_memory=*/pin_memory));
     }
   }
 
@@ -2590,7 +2586,9 @@ Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string&
     tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
   }
   if (dtype != x->dtype()) { tensor = JUST(Cast(tensor, dtype, /*pin_memory=*/false)); }
-  if (copy && tensor == x) { tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false)); }
+  if (copy && tensor == x) {
+    tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
+  }
   return tensor;
 }
 

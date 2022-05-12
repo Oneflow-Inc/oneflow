@@ -106,7 +106,8 @@ Maybe<Tensor> ConsistentTensor::clone() const {
   const auto& local_tensor = JUST(cur_rank_phy_tensor());
   const auto& device_type = JUST(local_tensor->device())->type();
   int64_t device_id = JUST(local_tensor->device())->device_id();
-  const auto& cloned_local_tensor = JUST(functional::Copy(local_tensor, device_type, device_id, /*pin_memory=*/false));
+  const auto& cloned_local_tensor =
+      JUST(functional::Copy(local_tensor, device_type, device_id, /*pin_memory=*/false));
   DisableCheckConsistentTensorMetaScope disable_meta_check{};
   return functional::LocalToConsistent(cloned_local_tensor, JUST(parallel_desc()),
                                        *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype());

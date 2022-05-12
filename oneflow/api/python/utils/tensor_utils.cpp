@@ -280,17 +280,17 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
   if (device) { device_ = JUST(device); }
   if (other->is_local()) {
     if (!device) { device_ = JUST(other->device()); }
-    tensor = JUST(functional::Copy(other, device_->type(), device_->device_id(), pin_memory && !dtype.has_value()));
+    tensor = JUST(functional::Copy(other, device_->type(), device_->device_id(),
+                                   pin_memory && !dtype.has_value()));
   } else {
     tensor = JUST(functional::ConsistentToLocal(other));
     if (!device) { device_ = JUST(Device::New("cpu")); }
-    tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id(), pin_memory && !dtype.has_value()));
+    tensor = JUST(functional::Copy(tensor, device_->type(), device_->device_id(),
+                                   pin_memory && !dtype.has_value()));
   }
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
-    if (tensor->dtype() != dtype_) {
-      tensor = JUST(functional::Cast(tensor, dtype_, pin_memory));
-    }
+    if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_, pin_memory)); }
   }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
@@ -307,7 +307,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
       JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple, check_meta));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
-    if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_, /*pin_memory=*/false)); }
+    if (tensor->dtype() != dtype_) {
+      tensor = JUST(functional::Cast(tensor, dtype_, /*pin_memory=*/false));
+    }
   }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
