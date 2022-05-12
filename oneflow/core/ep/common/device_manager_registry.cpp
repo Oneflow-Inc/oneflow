@@ -83,7 +83,7 @@ class DeviceManagerRegistry::Impl {
     if (!factory) {
       return "";
     } else {
-      const std::string name = factory->device_type_name();
+      std::string name = factory->device_type_name();
       device_type2device_type_name.at(device_type) = name;
       return name;
     }
