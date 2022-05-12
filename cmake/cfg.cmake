@@ -25,10 +25,7 @@ include_directories(${CFG_INCLUDE_DIR})
 function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
   set(of_cfg_proto_python_dir "${PROJECT_BINARY_DIR}/of_cfg_proto_python")
 
-  list(
-    APPEND
-    CFG_SOURCE_FILE_CONVERT_PROTO
-    oneflow/core/common/cfg_reflection_test.proto)
+  list(APPEND CFG_SOURCE_FILE_CONVERT_PROTO oneflow/core/common/cfg_reflection_test.proto)
 
   set(CFG_ARGS "")
   foreach(FIL ${CFG_SOURCE_FILE_CONVERT_PROTO})
