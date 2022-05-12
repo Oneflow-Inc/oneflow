@@ -151,7 +151,7 @@ PyObject* PyTensorType_FromDTypeAndDeviceType(DataType datatype, DeviceType devi
 using namespace oneflow::one;
 
 ONEFLOW_API_PYBIND11_MODULE("_C", m) {
-  static std::string oneflow_prefix = "oneflow";
+  static std::string oneflow_prefix = "oneflow.";
   generalize_tensor_types();
 
   for (PyTensorType* tensortype : tensor_types) {
@@ -160,7 +160,7 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {
     size_t idx = name.rfind('.');
     std::string type_name = name.substr(idx + 1);
 
-    name = name.substr(0, idx);
+    name = name.substr(0, idx - 1);
     std::string module_name = name.substr(oneflow_prefix.size());
     auto module = m;
     if (!module_name.empty()) { module = m.def_submodule(module_name.data()); }
