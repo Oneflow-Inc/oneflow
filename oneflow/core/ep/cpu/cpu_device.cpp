@@ -66,10 +66,16 @@ void CpuDevice::Free(const AllocationOptions& options, void* ptr) {
 }
 
 Maybe<void> CpuDevice::AllocPinned(const AllocationOptions& options, void** ptr, size_t size) {
-  UNIMPLEMENTED_THEN_RETURN();
+  AllocationOptions new_options = options;
+  new_options.ClearPinnedDevice();
+  return Alloc(new_options, ptr, size);
 }
 
-void CpuDevice::FreePinned(const AllocationOptions& options, void* ptr) { UNIMPLEMENTED(); }
+void CpuDevice::FreePinned(const AllocationOptions& options, void* ptr) {
+  AllocationOptions new_options = options;
+  new_options.ClearPinnedDevice();
+  return Free(new_options, ptr);
+}
 
 }  // namespace ep
 

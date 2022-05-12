@@ -67,6 +67,7 @@ class NNGraph final : public NNGraphIf {
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   Maybe<void> RegisterNewVariableOpInJobPass();
+  Maybe<void> DeleteOutdatedVariableInVariableTensorMgr();
   Maybe<void> GetVariableRealBlobAfterSyncPlan();
 
   void NewRuntimeBuffers();
@@ -88,7 +89,7 @@ class NNGraph final : public NNGraphIf {
   // they will be load into job after plan is generated.
   HashMap<std::string, std::shared_ptr<one::Tensor>>
       additional_variable_op_tobe_loaded_name2tensor_;
-  HashMap<std::string, Blob*> variable_op_name2eager_blob_;
+  HashMap<std::string, vm::EagerBlobObject*> variable_op_name2eager_blob_object_;
   HashSet<std::string> variable_op_names_;
   Job job_;
   Plan plan_;

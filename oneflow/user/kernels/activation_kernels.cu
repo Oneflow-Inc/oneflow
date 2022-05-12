@@ -123,6 +123,29 @@ struct HardswishGradFunctor<half> {
 };
 
 template<>
+struct HardShrinkFunctor<half> {
+  OF_DEVICE_FUNC explicit HardShrinkFunctor(float lambd)
+      : lambd(lambd), float_functor(HardShrinkFunctor<float>(lambd)) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  const float lambd;
+  HardShrinkFunctor<float> float_functor;
+};
+
+template<>
+struct HardShrinkGradFunctor<half> {
+  OF_DEVICE_FUNC explicit HardShrinkGradFunctor(float lambd)
+      : lambd(lambd), float_functor(HardShrinkGradFunctor<float>(lambd)) {}
+  OF_DEVICE_FUNC half operator()(half y, half dy) const {
+    return __float2half(float_functor(__half2float(y), __half2float(dy)));
+  }
+
+  const float lambd;
+  HardShrinkGradFunctor<float> float_functor;
+};
+
+template<>
 struct MishFunctor<half> {
   OF_DEVICE_FUNC explicit MishFunctor() : float_functor(MishFunctor<float>()) {}
   OF_DEVICE_FUNC half operator()(half x) const {
@@ -261,6 +284,7 @@ struct SoftShrinkGradFunctor<half> {
   REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);   \
   REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype); \
+  REGISTER_HARDSHRINK_KERNEL(DeviceType::kCUDA, dtype);  \
   REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);    \
   REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);        \

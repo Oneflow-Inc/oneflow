@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
@@ -51,24 +52,20 @@ struct LocalCallOpKernelUtil final {
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorageBlobMemory");
+      OF_PROFILER_RANGE_GUARD("TryAllocateTempStorageBlobMemory");
       InferTempStorageBlobDesc(operand);
-      JUST(ResetTempStorageBlob(operand));
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
-      OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
-      OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
+      OF_PROFILER_RANGE_GUARD("TryInitOpKernelStateAndCache");
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
-      OF_PROFILER_RANGE_POP();
     }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
+      OF_PROFILER_RANGE_GUARD("DeallocateTempStorageBlobMemory");
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
-      OF_PROFILER_RANGE_POP();
     }
     return Maybe<void>::Ok();
   }
@@ -82,20 +79,17 @@ struct LocalCallOpKernelUtil final {
  private:
   static inline void InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
     const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
-    auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
-    CHECK(temp_blob_desc->data_type() == DataType::kChar);
+    auto* temp_eager_blob_object = operand->mut_opkernel()->mut_temp_blob_object();
+    CHECK(temp_eager_blob_object->data_type() == DataType::kChar);
     one::LocalUserOpInferContext* op_infer_ctx =
         operand->opkernel().op_infer_ctx_for_scheduler_thread();
     op_infer_ctx->Update(operand->inputs().get(), operand->outputs().get(),
                          operand->consistent_tensor_infer_result().get());
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
-    temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
-    temp_blob_desc->set_is_dynamic(true);
+    temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+    temp_eager_blob_object->set_pin_memory(false);
+    temp_eager_blob_object->set_is_dynamic(true);
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
-  }
-
-  static inline Maybe<void> ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
   }
 
   static inline void TryInitOpKernelStateAndCache(LocalCallOpKernelPhyInstrOperand* operand,
@@ -116,7 +110,6 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
     for (const auto& blob_object : *operand->outputs()) {
-      JUST(blob_object->TryInitBlob());
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
     return Maybe<void>::Ok();
@@ -135,7 +128,21 @@ struct LocalCallOpKernelUtil final {
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
-    operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    {
+      std::shared_ptr<profiler::EventRecorder> er_guard;
+      if (Global<profiler::ProfileMgr>::Get() != nullptr) {
+        er_guard = profiler::EventRecorder::CreateKernelEventRecorder(
+            opkernel->op_type_name(), [&]() -> std::vector<Shape> {
+              std::vector<Shape> shapes;
+              for (const auto& pair : compute_ctx->inputs()) {
+                shapes.push_back(
+                    compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
+              }
+              return shapes;
+            });
+      }
+      operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    }
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);

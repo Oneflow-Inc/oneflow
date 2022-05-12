@@ -49,7 +49,6 @@ limitations under the License.
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/vm/tensor_view_operand.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
@@ -269,6 +268,30 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
   return GetScopeSymbol(scope_proto);
 }
 
+Maybe<Scope> InstructionsBuilder::BuildInitialScopeWithPlacement(
+    int64_t session_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+    Symbol<ParallelDesc> placement, bool is_mirrored) {
+  std::shared_ptr<cfg::ScopeProto> scope_proto = std::make_shared<cfg::ScopeProto>();
+  scope_proto->set_session_id(session_id);
+  std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
+  scope_proto->set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
+
+  std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
+      JUST(GetParallelDescSymbol(placement->cfg_parallel_conf()));
+  scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
+
+  Symbol<ParallelDesc> new_placement = JUST(ReplaceDeviceType(placement, DeviceType::kCPU));
+  std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
+      JUST(GetParallelDescSymbol(new_placement->cfg_parallel_conf()));
+  scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
+  if (is_mirrored) {
+    scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+  } else {
+    scope_proto->mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+  }
+  return GetScopeSymbol(scope_proto);
+}
+
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     const std::shared_ptr<Scope>& scope, const std::string& device_tag,
     const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy) {
@@ -333,6 +356,19 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
   std::shared_ptr<cfg::ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
   Setter(scope_proto);
   return GetScopeSymbol(scope_proto);
+}
+
+Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
+    const std::shared_ptr<Scope>& scope,
+    const std::function<std::string(const std::string&)>& StrSetter) {
+  std::shared_ptr<cfg::ScopeProto> cfg_scope_proto = JUST(scope->MakeChildScopeProto());
+  ScopeProto scope_proto;
+  cfg_scope_proto->ToProto(&scope_proto);
+  std::string serialized_scope_proto = PbMessage2TxtString(scope_proto);
+  std::string new_serialized_scope_proto = StrSetter(serialized_scope_proto);
+  CHECK_OR_RETURN(TxtString2PbMessage(new_serialized_scope_proto, &scope_proto))
+      << "scope_proto parse failed";
+  return GetScopeSymbol(std::make_shared<cfg::ScopeProto>(scope_proto));
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
@@ -438,7 +474,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
   if (!StreamRoleSwitch<NeedSoftSync>(stream->stream_role(), device_type)) {
     return Maybe<void>::Ok();
   }
-  OF_PROFILER_RANGE_PUSH("SoftStream");
+  OF_PROFILER_RANGE_GUARD("SoftStream");
   const auto& parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
       std::move(compute_local_dep_objects), modifier);
@@ -446,7 +482,6 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
       Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".RecordEvent",
       parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
-  OF_PROFILER_RANGE_POP();
   return Maybe<void>::Ok();
 }
 
@@ -466,37 +501,6 @@ const std::shared_ptr<const ParallelDesc>& GetParallelDesc(
 }
 
 }  // namespace
-
-template<typename T>
-Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_tensor) {
-  /**
-   * TensorView instruction assign the data pointer of input tensor to output view tensor,
-   * so they can share memory.
-   */
-  const auto& parallel_desc = GetParallelDesc(input_tensor);
-  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object =
-      JUST(input_tensor->eager_blob_object());
-  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
-      JUST(view_tensor->eager_blob_object());
-  // init view blob (with empty data pointer)
-  JUST(view_eager_blob_object->InitBlobWithOffset(JUST(view_tensor->storage_offset())));
-  view_eager_blob_object->set_is_shape_synced(true);
-  view_eager_blob_object->set_last_used_stream(JUST(eager_blob_object->last_used_stream()));
-  // prepare instruction operand
-  const auto& phy_instr_operand =
-      std::make_shared<vm::TensorViewOperand>(eager_blob_object, view_eager_blob_object);
-  // prepare instruction
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), parallel_desc->device_tag() + ".TensorView",
-      parallel_desc, phy_instr_operand);
-  // assign the data pointer to output view blob
-  instruction_list_->EmplaceBack(std::move(instruction));
-  return Maybe<void>::Ok();
-}
-
-template Maybe<void> InstructionsBuilder::TensorView(
-    const std::shared_ptr<one::MirroredTensor> input_tensor,
-    const std::shared_ptr<one::MirroredTensor> view_tensor);
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(

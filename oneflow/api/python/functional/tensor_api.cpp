@@ -50,7 +50,7 @@ class TensorWithDataFunctor {
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
-    if (PyTensorCheck(data)) {
+    if (PyTensor_Check(data)) {
       // Throw warnings like pytorch.
       auto ret = PyErr_WarnEx(
           PyExc_UserWarning,
@@ -60,7 +60,7 @@ class TensorWithDataFunctor {
           1);
       if (ret != 0) { return Error::RuntimeError(); }
 
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, device, requires_grad);
     } else {
       // Make tensor from python sequence or numpy array.
@@ -79,7 +79,7 @@ class ConsistentTensorWithDataFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
 
-    if (PyTensorCheck(data)) {
+    if (PyTensor_Check(data)) {
       // Throw warnings like pytorch.
       auto ret = PyErr_WarnEx(
           PyExc_UserWarning,
@@ -89,7 +89,7 @@ class ConsistentTensorWithDataFunctor {
           1);
       if (ret != 0) { return Error::RuntimeError(); }
 
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple, requires_grad);
     }
     // Make consistent tensor from python sequence or numpy array.
@@ -138,8 +138,8 @@ class TensorWithDataCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
     const auto& dtype = DType::Float();
-    if (PyTensorCheck(data)) {
-      const auto& other = JUST(PyUnpackTensor(data));
+    if (PyTensor_Check(data)) {
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false);
     }
@@ -164,8 +164,8 @@ class ConsistentTensorWithDataCtorFunctor {
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
 
     const auto& dtype = DType::Float();
-    if (PyTensorCheck(data)) {
-      const auto& other = JUST(PyUnpackTensor(data));
+    if (PyTensor_Check(data)) {
+      const auto& other = PyTensor_Unpack(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
                                        /*requires_grad=*/false);
     }
@@ -185,7 +185,7 @@ class TensorWithShapeCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, DType::Float(), device_);
+    return functional::Empty(shape, DType::Float(), device_, /*pin_memory=*/false);
   }
 };
 
@@ -207,6 +207,7 @@ class AssignLocalTensorFunctor {
   }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
                          const std::shared_ptr<one::Tensor>& value) const {
+    // JUST(CheckInplaceValid(ref)); // align check to torch
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
@@ -277,11 +278,9 @@ class LocalTensorSharedNumpyDataFunctor {
                                                                  /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject(), /*pin_memory=*/false));
     const auto& stream = GetDefaultStreamByDevice(device);
     JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
-    JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
-    JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
     return out;
   }
@@ -299,7 +298,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentTensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
   m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
-  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensorFunctor");
+  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensor");
   m.add_functor<impl::LocalTensorSharedNumpyDataFunctor>("LocalTensorSharedNumpyData");
 }
 
