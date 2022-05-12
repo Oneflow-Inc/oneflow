@@ -53,6 +53,9 @@ nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kKernel;
   j["input_shapes"] = FormatShapes();
+#if defined(WITH_CUDA)
+  if (cuda_stream_) { j["cuda_time"] = cuda_event_pair_->ElapsedTime(); }
+#endif
   return j;
 }
 
@@ -78,28 +81,37 @@ std::string KernelEvent::FormatShapes(size_t max_num_to_format) {
 void KernelEvent::RecordShape(const Shape& shape) { input_shapes_.emplace_back(shape); }
 
 void KernelEvent::Start() {
-  if (device_ == KernelEventDevice::kCPU) {
+#if defined(WITH_CUDA)
+  if (!cuda_stream_) {
     IEvent::Start();
   } else {
+    cuda_event_pair_->Start(cuda_stream_);
   }
+#else
+  IEvent::Start();
+#endif
 }
 
 void KernelEvent::Finish() {
-  if (device_ == KernelEventDevice::kCPU) {
+#if defined(WITH_CUDA)
+  if (!cuda_stream_) {
     IEvent::Finish();
   } else {
+    cuda_event_pair_->Finish(cuda_stream_);
   }
+#else
+  IEvent::Finish();
+#endif  // WITH_CUDA
 }
 
 std::shared_ptr<IEvent> KernelEvent::Create(
-    const std::string& name, KernelEventDevice device,
-    const std::function<std::vector<Shape>(void)>& shape_getter) {
-  return std::make_shared<KernelEvent>(name, device, shape_getter);
+    const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter) {
+  return std::make_shared<KernelEvent>(name, shape_getter);
 }
 
 nlohmann::json CustomEvent::ToJson() {
   auto j = IEvent::ToJson();
-  j["type"] = EventType::kKernel;
+  j["type"] = EventType::kCustom;
   return j;
 }
 
@@ -148,24 +160,37 @@ std::string ProfileMgr::GetNextEventRecorderKey(const std::string& name) {
 std::shared_ptr<EventRecorder> EventRecorder::CreateCustomEventRecorder(const std::string& name) {
   return std::make_shared<EventRecorder>(CustomEvent::Create(name));
 }
-
+#if defined(WITH_CUDA)
 Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
-    const std::string& name, KernelEventDevice device, const ShapeGetterFuncType& shape_getter) {
+    const std::string& name, cudaStream_t cuda_stream, const ShapeGetterFuncType& shape_getter) {
   auto pmgr = Global<ProfileMgr>::Get();
   if (pmgr) {
-    if (pmgr->use_cpu_ && device == KernelEventDevice::kCPU) {
-      return std::make_shared<EventRecorder>(KernelEvent::Create(
-          name, KernelEventDevice::kCPU, pmgr->record_shapes_ ? shape_getter : nullptr));
-    }
-    if (pmgr->use_cuda_ && device == KernelEventDevice::kCUDA) {
-      return std::make_shared<EventRecorder>(KernelEvent::Create(
-          name, KernelEventDevice::kCUDA, pmgr->record_shapes_ ? shape_getter : nullptr));
+    if ((pmgr->use_cpu_ && (!cuda_stream)) || (pmgr->use_cuda_ && cuda_stream)) {
+      auto event = KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr);
+      auto kernel_event = std::dynamic_pointer_cast<KernelEvent>(event);
+      kernel_event->SetCudaStream(cuda_stream);
+      return std::make_shared<EventRecorder>(event);
     }
   }
 
   std::shared_ptr<EventRecorder> null_recorder;
   return null_recorder;
 }
+#else   // WITH_CUDA
+Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
+    const std::string& name, const ShapeGetterFuncType& shape_getter) {
+  auto pmgr = Global<ProfileMgr>::Get();
+  if (pmgr) {
+    if (pmgr->use_cpu_) {
+      return std::make_shared<EventRecorder>(
+          KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr));
+    }
+  }
+
+  std::shared_ptr<EventRecorder> null_recorder;
+  return null_recorder;
+}
+#endif  // WITH_CUDA
 
 }  // namespace profiler
 }  // namespace oneflow

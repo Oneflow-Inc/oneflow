@@ -21,11 +21,11 @@ from prettytable import PrettyTable
 from oneflow.profiler.util import format_time
 
 
-def format_event_type(event_type):
+def format_event_type(event_type, on_gpu: bool):
     if event_type == 0:
         return "custom"
     if event_type == 1:
-        return "kernel"
+        return "kernel" + ("@gpu" if on_gpu else "@cpu")
     raise ValueError(f"Undefined event type {event_type}.")
 
 
@@ -34,22 +34,30 @@ class Event:
         self,
         name: str,
         cpu_time: int,
-        cpu_time_total: int,
+        # cpu_time_total: int,
+        gpu_time: int,
         count: int,
         input_shapes: str,
         event_type: int,
     ) -> None:
         self.name = name
         self.cpu_time = cpu_time
-        self.cpu_time_total = cpu_time_total
+        self.cpu_time_total = cpu_time
+        self.gpu_time = gpu_time
+        self.gpu_time_total = gpu_time
         self.count = count
         self.input_shapes = input_shapes
         self.event_type = event_type
 
     def update(self, event):
-        self.cpu_time_total += event.cpu_time
-        self.count += 1
-        self.cpu_time = self.cpu_time_total / self.count
+        if event.cpu_time > 0:
+            self.cpu_time_total += event.cpu_time
+            self.count += 1
+            self.cpu_time = self.cpu_time_total / self.count
+        if event.gpu_time > 0:
+            self.gpu_time_total += event.gpu_time
+            self.count += 1
+            self.gpu_time = self.gpu_time_total / self.count
 
     def __eq__(self, other):
         if not isinstance(other, type(self)):
@@ -58,6 +66,8 @@ class Event:
             self.name == other.name
             and self.cpu_time == other.cpu_time
             and self.cpu_time_total == other.cpu_time_total
+            and self.gpu_time == other.gpu_time
+            and self.gpu_time_total == other.gpu_time_total
             and self.count == other.count
             and self.input_shapes == other.input_shapes
             and self.event_type == other.event_type
@@ -65,9 +75,16 @@ class Event:
 
     @classmethod
     def from_dict(cls, d: dict):
-        return cls(
-            d["name"], d["cpu_time"], d["cpu_time"], 1, d["input_shapes"], d["type"]
-        )
+        if "cuda_time" in d:
+            return cls(
+                d["name"],
+                d["cpu_time"],
+                d["cuda_time"],
+                1,
+                d["input_shapes"],
+                d["type"],
+            )
+        return cls(d["name"], d["cpu_time"], 0, 1, d["input_shapes"], d["type"])
 
 
 class Events(list):
@@ -106,6 +123,8 @@ class Events(list):
             "Name",
             "Cpu time total",
             "Cpu time",
+            "Gpu time total",
+            "Gpu time",
             "Number of calls",
             "Event type",
             "Shapes of inputs",
@@ -115,9 +134,11 @@ class Events(list):
                 [
                     item.name,
                     format_time(item.cpu_time_total),
-                    format_time(item.cpu_time_total),
+                    format_time(item.cpu_time),
+                    format_time(item.gpu_time_total),
+                    format_time(item.gpu_time),
                     item.count,
-                    format_event_type(item.event_type),
+                    format_event_type(item.event_type, item.gpu_time > 0),
                     item.input_shapes,
                 ]
             )

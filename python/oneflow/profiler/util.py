@@ -18,6 +18,8 @@ US_IN_SECOND = US_IN_MS * 1000.0
 
 
 def format_time(time_us):
+    if time_us == 0.0:
+        return "-"
     if time_us >= US_IN_SECOND:
         return "{:.3f}s".format(time_us / US_IN_SECOND)
     if time_us >= US_IN_MS:

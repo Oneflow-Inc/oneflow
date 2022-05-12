@@ -50,15 +50,14 @@ def get_event(events, name: str, input_shapes: str = "-"):
 
 
 class TestProfileLenet(flow.unittest.TestCase):
-    def test_lenet(test_case):
+    def test_lenet_cpu(test_case):
         x = flow.randn(2, 3, 32, 32)
         lenet = LeNet()
         # warm up
         for _ in range(10):
             res = lenet(x)
         with oneflow.profiler.profile(
-            activities=[oneflow.profiler.ProfilerActivity.CPU],
-            record_shapes=True
+            activities=[oneflow.profiler.ProfilerActivity.CPU], record_shapes=True
         ) as prof:
             with oneflow.profiler.record_function("lenet_forward_total_time") as f:
                 for _ in range(2):
@@ -66,20 +65,54 @@ class TestProfileLenet(flow.unittest.TestCase):
             with oneflow.profiler.record_function("lenet_backward_total_time") as f:
                 eager_res.sum().backward()
 
-        print(prof.key_averages())
         events = prof.key_averages()
-
 
         conv_event = get_event(events, "conv2d", "[(2,3,32,32), (6,3,5,5)]")
         test_case.assertIsNotNone(conv_event)
-        test_case.assertGreater(conv_event.cpu_time, 0)
-        test_case.assertGreater(conv_event.cpu_time_total, 0)
+        test_case.assertGreater(conv_event.cpu_time, 0.0)
+        test_case.assertGreater(conv_event.cpu_time_total, 0.0)
         test_case.assertEqual(conv_event.count, 2)
 
         relu_grad_event = get_event(events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]")
         test_case.assertIsNotNone(relu_grad_event)
-        test_case.assertGreater(relu_grad_event.cpu_time, 0)
-        test_case.assertGreater(relu_grad_event.cpu_time_total, 0)
+        test_case.assertGreater(relu_grad_event.cpu_time, 0.0)
+        test_case.assertGreater(relu_grad_event.cpu_time_total, 0.0)
+        test_case.assertEqual(relu_grad_event.count, 1)
+
+        test_case.assertIsNotNone(get_event(events, "lenet_forward_total_time"))
+        test_case.assertIsNotNone(get_event(events, "lenet_backward_total_time"))
+
+    def test_lenet_cuda(test_case):
+        x = flow.randn(2, 3, 32, 32).to("cuda")
+        lenet = LeNet().to("cuda")
+        # warm up
+        for _ in range(10):
+            res = lenet(x)
+        with oneflow.profiler.profile(
+            activities=[
+                oneflow.profiler.ProfilerActivity.CPU,
+                oneflow.profiler.ProfilerActivity.CUDA,
+            ],
+            record_shapes=True,
+        ) as prof:
+            with oneflow.profiler.record_function("lenet_forward_total_time") as f:
+                for _ in range(2):
+                    eager_res = lenet(x)
+            with oneflow.profiler.record_function("lenet_backward_total_time") as f:
+                eager_res.sum().backward()
+
+        events = prof.key_averages()
+
+        conv_event = get_event(events, "conv2d", "[(2,3,32,32), (6,3,5,5)]")
+        test_case.assertIsNotNone(conv_event)
+        test_case.assertGreater(conv_event.gpu_time, 0.0)
+        test_case.assertGreater(conv_event.gpu_time_total, 0.0)
+        test_case.assertEqual(conv_event.count, 2)
+
+        relu_grad_event = get_event(events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]")
+        test_case.assertIsNotNone(relu_grad_event)
+        test_case.assertGreater(relu_grad_event.gpu_time, 0.0)
+        test_case.assertGreater(relu_grad_event.gpu_time_total, 0.0)
         test_case.assertEqual(relu_grad_event.count, 1)
 
         test_case.assertIsNotNone(get_event(events, "lenet_forward_total_time"))

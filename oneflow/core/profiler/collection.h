@@ -28,13 +28,13 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
 namespace profiler {
 
 enum class EventType { kCustom, kKernel };
-enum class KernelEventDevice { kCPU, kCUDA };
 
 class CustomEvent;
 class KernelEvent;
@@ -64,16 +64,45 @@ class IEvent {
 class CustomEvent final : public IEvent {
  public:
   explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
+
   std::string Key() override;
+
   nlohmann::json ToJson() override;
+
   static std::shared_ptr<IEvent> Create(const std::string& name);
 };
 
+#if defined(WITH_CUDA)
+
+struct CUDAEventPair {
+  OF_DISALLOW_COPY_AND_MOVE(CUDAEventPair);
+
+  cudaEvent_t cuda_event_start = nullptr;
+  cudaEvent_t cuda_event_finish = nullptr;
+  CUDAEventPair() {
+    cudaEventCreate(&cuda_event_start);
+    cudaEventCreate(&cuda_event_finish);
+  }
+  void Start(cudaStream_t cuda_stream) { cudaEventRecord(cuda_event_start, cuda_stream); }
+  void Finish(cudaStream_t cuda_stream) { cudaEventRecord(cuda_event_finish, cuda_stream); }
+  double ElapsedTime() {
+    float elapsed_time = 0;
+    cudaEventElapsedTime(&elapsed_time, cuda_event_start, cuda_event_finish);
+    return elapsed_time * 1000.0;
+  }
+  ~CUDAEventPair() {
+    if (cuda_event_start) { cudaEventDestroy(cuda_event_start); }
+    if (cuda_event_finish) { cudaEventDestroy(cuda_event_finish); }
+  }
+};
+
+#endif  // WITH_CUDA
+
 class KernelEvent final : public IEvent {
  public:
-  explicit KernelEvent(const std::string& kernel_name, KernelEventDevice device,
+  explicit KernelEvent(const std::string& kernel_name,
                        const std::function<std::vector<Shape>(void)>& shape_getter)
-      : IEvent(kernel_name), device_(device) {
+      : IEvent(kernel_name) {
     if (shape_getter) { input_shapes_ = shape_getter(); }
   }
 
@@ -81,17 +110,27 @@ class KernelEvent final : public IEvent {
 
   nlohmann::json ToJson() override;
 
-  void RecordShape(const Shape& shape);
-
   static std::shared_ptr<IEvent> Create(
-      const std::string& name, KernelEventDevice device,
-      const std::function<std::vector<Shape>(void)>& shape_getter);
+      const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter);
+
+  void RecordShape(const Shape& shape);
 
   void Start() override;
   void Finish() override;
 
+#if defined(WITH_CUDA)
+  void SetCudaStream(cudaStream_t cuda_stream) {
+    cuda_stream_ = cuda_stream;
+    cuda_event_pair_ = std::make_shared<CUDAEventPair>();
+  }
+#endif  // WITH_CUDA
+
  private:
-  KernelEventDevice device_;
+#if defined(WITH_CUDA)
+  cudaStream_t cuda_stream_;
+  std::shared_ptr<CUDAEventPair> cuda_event_pair_;
+#endif  // WITH_CUDA
+
   std::vector<Shape> input_shapes_;
   std::string FormatShapes(size_t max_num_to_format = 4);
 };
@@ -147,9 +186,14 @@ class EventRecorder {
     }
   }
   static std::shared_ptr<EventRecorder> CreateCustomEventRecorder(const std::string& name);
+#if defined(WITH_CUDA)
   static Maybe<EventRecorder> CreateKernelEventRecorder(const std::string& name,
-                                                        KernelEventDevice device,
+                                                        cudaStream_t cuda_stream,
                                                         const ShapeGetterFuncType& shape_getter);
+#else   // WITH_CUDA
+  static Maybe<EventRecorder> CreateKernelEventRecorder(const std::string& name,
+                                                        const ShapeGetterFuncType& shape_getter);
+#endif  // WITH_CUDA
 
  private:
   std::shared_ptr<IEvent> event_;

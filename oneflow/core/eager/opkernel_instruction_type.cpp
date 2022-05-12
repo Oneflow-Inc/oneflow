@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -131,8 +132,11 @@ struct LocalCallOpKernelUtil final {
     {
       auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
           opkernel->op_type_name(),
-          compute_ctx->device_type() == DeviceType::kCUDA ? profiler::KernelEventDevice::kCUDA
-                                                          : profiler::KernelEventDevice::kCPU,
+#if defined(WITH_CUDA)
+          compute_ctx->device_type() == DeviceType::kCUDA
+              ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
+              : nullptr,
+#endif
           [&]() -> std::vector<Shape> {
             std::vector<Shape> shapes;
             for (const auto& pair : compute_ctx->inputs()) {
