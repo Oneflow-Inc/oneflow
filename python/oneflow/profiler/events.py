@@ -34,7 +34,6 @@ class Event:
         self,
         name: str,
         cpu_time: int,
-        # cpu_time_total: int,
         gpu_time: int,
         count: int,
         input_shapes: str,

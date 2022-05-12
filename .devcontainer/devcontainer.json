@@ -1,5 +1,8 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.209.6/containers/cpp
+// workaround for EACCES: permission denied, mkdir '/tmp/vsch.....
+// https://github.com/microsoft/vscode-remote-release/issues/2347
+// sudo chmod 777 /tmp/vsch/container-features
 {
 	"name": "oneflow-devel",
 	"image": "oneflowinc/manylinux2014_x86_64_cuda11.2",
