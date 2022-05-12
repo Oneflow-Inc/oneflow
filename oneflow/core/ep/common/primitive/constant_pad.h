@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_PAD_H_
-#define ONEFLOW_CORE_PRIMITIVE_COMMON_PAD_H_
+#ifndef ONEFLOW_CORE_PRIMITIVE_COMMON_CONSTANT_PAD_H_
+#define ONEFLOW_CORE_PRIMITIVE_COMMON_CONSTANT_PAD_H_
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
 #include "oneflow/core/ep/include/primitive/fast_math.h"
@@ -25,6 +25,8 @@ namespace oneflow {
 namespace ep {
 
 namespace primitive {
+
+namespace {
 
 template<typename T, int N>
 class FastOffsetToIndexCalculator {
@@ -38,7 +40,9 @@ class FastOffsetToIndexCalculator {
     InitFastIntegerMath(dims_arr, n);
   }
 
-  OF_DEVICE_FUNC explicit FastOffsetToIndexCalculator(const T* dims) { InitFastIntegerMath(dims, N); }
+  OF_DEVICE_FUNC explicit FastOffsetToIndexCalculator(const T* dims) {
+    InitFastIntegerMath(dims, N);
+  }
 
   template<typename U>
   OF_DEVICE_FUNC explicit FastOffsetToIndexCalculator(const U* dims) {
@@ -82,9 +86,7 @@ class FastOffsetToIndexCalculator {
 #pragma unroll
 #endif
     for (int i = 0; i < N; ++i) {
-      if (i == n - 1){
-        break; 
-      }
+      if (i == n - 1) { break; }
       if (i < n - 1) {
         const T idx = math_helper_[i].divides(remaining);
         index[i] = idx;
@@ -144,10 +146,36 @@ struct ConstantPadParams {
   void* dst{};
 };
 
+void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims, const int64_t* src_dims,
+                     const int64_t* padding_before, const int64_t* padding_after,
+                     size_t* simplified_num_dims, int64_t* simplified_dst_dims,
+                     int64_t* simplified_src_dims, int64_t* simplified_padding_before,
+                     int64_t* simplified_padding_after) {
+  CHECK_NE(num_dims, 0);
+  size_t valid_num_dims = 0;
+  FOR_RANGE(size_t, i, 0, num_dims) {
+    if ((i != 0) && (padding_before[i] == 0 && padding_after[i] == 0)) {
+      simplified_dst_dims[valid_num_dims - 1] *= dst_dims[i];
+      simplified_src_dims[valid_num_dims - 1] *= src_dims[i];
+      simplified_padding_before[valid_num_dims - 1] *= src_dims[i];
+      simplified_padding_after[valid_num_dims - 1] *= src_dims[i];
+    } else {
+      simplified_dst_dims[valid_num_dims] = dst_dims[i];
+      simplified_src_dims[valid_num_dims] = src_dims[i];
+      simplified_padding_before[valid_num_dims] = padding_before[i];
+      simplified_padding_after[valid_num_dims] = padding_after[i];
+      valid_num_dims += 1;
+    }
+  }
+  *simplified_num_dims = valid_num_dims;
+}
+
+}  // namespace
+
 }  // namespace primitive
 
 }  // namespace ep
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PRIMITIVE_COMMON_PAD_H_
+#endif  // ONEFLOW_CORE_PRIMITIVE_COMMON_CONSTANT_PAD_H_
