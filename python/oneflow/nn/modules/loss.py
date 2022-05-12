@@ -889,9 +889,9 @@ class CombinedMarginLoss(Module):
     Applies the function:
 
     .. math::
-    
-        {\rm CombinedMarginLoss}(x_i, label) = 
-        \left\{\begin{matrix} \cos(m_1\cdot\arccos x_i+m_2) - m_3 & {\rm if} \ i == label \\ 
+
+        {\rm CombinedMarginLoss}(x_i, label) =
+        \left\{\begin{matrix} \cos(m_1\cdot\arccos x_i+m_2) - m_3 & {\rm if} \ i == label \\
         x_i & {\rm otherwise} \end{matrix}\right.
 
 
