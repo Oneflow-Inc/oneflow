@@ -279,42 +279,39 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   const auto& tensor = PyTensor_Unpack(self);
-  PyObject* tensortype = NULL;
+  PyObject* tensor_type = NULL;
   int non_blocking = 0;
   static const char* keywords[3] = {"dtype", "non_blocking", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords),
-                                   &tensortype, &non_blocking)) {
+                                   &tensor_type, &non_blocking)) {
     return NULL;
   }
-  // TODO: support for non_blocking=True
+  // TODO: support non_blocking=True
   if (non_blocking == 1) {
-    UNIMPLEMENTED() << "non_blocking=True is not supported yet";
-    return NULL;
+    return PyErr_Format(PyExc_TypeError, "non_blocking=True is not supported yet");
   }
-  if (tensortype == NULL) {
-    PyObject* result = PyTensortype_FromDTypeDeviceType(tensor->dtype()->data_type(),
-                                                        ASSERT(tensor->device())->enum_type());
-    std::string tensortype_string = "oneflow." + std::string(((PyTensortype*)result)->name);
-    return PyUnicode_FromString(tensortype_string.c_str());
+  if (tensor_type == NULL) {
+    tensor_type = PyTensorType_FromDTypeAndDeviceType(tensor->dtype()->data_type(),
+                                                      ASSERT(tensor->device())->enum_type());
+    return PyUnicode_FromString(((PyTensorType*)tensor_type)->name);
   }
-  if (PyUnicode_Check(tensortype)) {
-    std::string tensortype_string = PyUnicode_AsUTF8(tensortype);
-    tensortype = PyTensortype_FromString(tensortype_string);
-  };
-  if (PyTensortype_Check(tensortype)) {
-    DeviceType device_type = PyTensortype_UnpackDevice(tensortype);
+  if (PyUnicode_Check(tensor_type)) {
+    tensor_type = PyTensorType_FromString(PyUnicode_AsUTF8(tensor_type));
+  }
+  if (PyTensorType_Check(tensor_type)) {
+    const auto& dtype = PyTensorType_UnpackDType(tensor_type);
+    DeviceType device_type = PyTensorType_UnpackDevice(tensor_type);
     if (device_type == ASSERT(tensor->device())->enum_type()) {
-      const auto& t = functional::To(tensor, functional::PyUnpackDType(tensortype), false);
-      return functional::CastToPyObject(t);
+      return PyTensor_New(ASSERT_PTR(functional::To(tensor, dtype, /*copy=*/false)));
     }
-    const Optional<std::string>& device = ASSERT(DeviceTag4DeviceType(device_type));
-    const auto& t = functional::To(tensor, device, PyTensortype_UnpackDType(tensortype), false);
-    return functional::CastToPyObject(t);
-  } else if (functional::PyDTypeCheck(tensortype)) {
-    const auto& t = functional::To(tensor, functional::PyUnpackDType(tensortype), false);
-    return functional::CastToPyObject(t);
+    Optional<std::string> device = ASSERT(DeviceTag4DeviceType(device_type));
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, dtype, /*copy=*/false)));
+
+  } else if (functional::PyDTypeCheck(tensor_type)) {
+    return PyTensor_New(
+        ASSERT_PTR(functional::To(tensor, functional::PyUnpackDType(tensor_type), /*copy=*/false)));
   }
-  return PyErr_Format(PyExc_RuntimeError, "dtype must be a type, str, or dtype object");
+  return PyErr_Format(PyExc_TypeError, "dtype must be a type, str, or dtype object");
   END_HANDLE_ERRORS
 }
 

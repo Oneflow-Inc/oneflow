@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/api/python/functional/common.h"
-#include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
@@ -29,177 +28,117 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
-#define ASSERT(x) (x).GetOrThrow()
 
-static PyTypeObject PyTensortypeMetaClass{
+#define ASSERT(x) (x).GetOrThrow()
+#define ASSERT_PTR(x) (x).GetPtrOrThrow()
+
+static PyTypeObject PyTensorTypeMetaClass{
     PyVarObject_HEAD_INIT(NULL, 0) "oneflow.tensortype",  // tp_name
     sizeof(PyTypeObject),                                 // tp_basicsize
 };
 
-static PyTypeObject PyTensortypeTemplate{
-    PyVarObject_HEAD_INIT(&PyTensortypeMetaClass, 0) NULL,  // tp_name
-    sizeof(PyTensortype),                                   // tp_basicsize
+static PyTypeObject PyTensorTypeTemplate{
+    PyVarObject_HEAD_INIT(&PyTensorTypeMetaClass, 0) NULL,  // tp_name
+    sizeof(PyTensorType),                                   // tp_basicsize
 };
 
-std::vector<PyTensortype*> tensortype_list;
+static std::vector<PyTensorType*> tensor_types;
 
-std::unordered_map<DataType, std::string> datatype_to_string_dict{
+static std::vector<std::pair<DataType, std::string>> all_data_types = {
     {kFloat, "FloatTensor"},  {kDouble, "DoubleTensor"},     {kInt8, "CharTensor"},
     {kInt32, "IntTensor"},    {kInt64, "LongTensor"},        {kUInt8, "ByteTensor"},
     {kFloat16, "HalfTensor"}, {kBFloat16, "BFloat16Tensor"}, {kBool, "BoolTensor"},
-    // Complex dtype is not supported yet
-    // {kComplex32, "ComplexHalfTensor"},
-    // {kComplex64, "ComplexFloatTensor"},
-    // {kComplex128, "ComplexDoubleTensor"},
 };
 
-std::unordered_map<DeviceType, std::string> devicetype_to_string_dict{
-    {kCPU, ""},
-    {kCUDA, "cuda"},
+static std::vector<std::pair<DeviceType, std::string>> all_device_types = {
+    {kCPU, "oneflow"},
+    {kCUDA, "oneflow.cuda"},
 };
 
-static PyObject* PyTensortypeMetaCls_call(PyObject* self, PyObject* args, PyObject* kwargs) {
+static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
+  auto* tensor = functional::_legacy_tensor_ctor(NULL, args, kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
-  PyTensorObject* tensor = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
-  tensor->data = PyTensor_Unpack(temp);
-  tensor->data->set_pyobject(self);
 
-  PyTensortype* tensortype = (PyTensortype*)self;
-  const Optional<std::string>& device =
-      ASSERT(DeviceTag4DeviceType(PyTensortype_UnpackDevice((PyObject*)tensortype)));
-  const auto& t =
-      functional::To(tensor->data, device, PyTensortype_UnpackDType((PyObject*)tensortype), false);
-  tensor->data = CHECK_JUST(t);
-
-  // reset temp data to prevent clearing the pyobject
-  // when the temp is deallocated
-  ((PyTensorObject*)temp)->data.reset();
-  Py_XDECREF(temp);
-  return (PyObject*)tensor;
+  Optional<std::string> device = ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self)));
+  const auto& data_type = PyTensorType_UnpackDType(self);
+  return PyTensor_New(
+      ASSERT_PTR(functional::To(PyTensor_Unpack(tensor), device, data_type, /*copy=*/false)));
   END_HANDLE_ERRORS
 };
 
-static std::string datatype_to_string(DataType datatype) {
-  CHECK_OR_THROW(datatype_to_string_dict.find(datatype) != datatype_to_string_dict.end())
-      << "unsupported datatype";
-  return datatype_to_string_dict.at(datatype);
-}
-
-static std::string devicetype_to_string(DeviceType dtype) {
-  CHECK_OR_THROW(devicetype_to_string_dict.find(dtype) != devicetype_to_string_dict.end())
-      << "unsupported devicetype";
-  return devicetype_to_string_dict.at(dtype);
-}
-
-PyObject* PyTensortype_FromString(const std::string& tensortype_str) {
-  std::string oneflow_prefix = "oneflow.";
-  auto mismatch_pair =
-      std::mismatch(oneflow_prefix.begin(), oneflow_prefix.end(), tensortype_str.begin());
-  CHECK_OR_THROW(mismatch_pair.first == oneflow_prefix.end()) << "invalid type: " << tensortype_str;
-
-  std::string dtype_str = tensortype_str.substr(oneflow_prefix.size());
+PyObject* PyTensorType_FromString(const std::string& tensortype) {
   auto it = std::find_if(
-      tensortype_list.begin(), tensortype_list.end(),
-      [dtype_str](PyTensortype* type) { return std::string(type->name) == dtype_str; });
-  CHECK_OR_THROW(it != tensortype_list.end()) << "invalid type: " << tensortype_str;
+      tensor_types.begin(), tensor_types.end(),
+      [tensortype](PyTensorType* type) { return std::string(type->name) == tensortype; });
+  if (it == tensor_types.end()) {
+    return PyErr_Format(PyExc_ValueError, "invalid type: %s", tensortype.data());
+  }
   return (PyObject*)(*it);
 }
 
-static std::string get_name(DataType datatype, DeviceType device) {
-  auto device_string = devicetype_to_string(device);
-  if (device_string.empty()) return datatype_to_string(datatype);
-  return device_string + "." + datatype_to_string(datatype);
+static const char* get_doc(PyTensorType* tensortype) {
+  // all tensortype docs
+  static std::vector<std::string> tensortype_doc;
+
+  std::string dtype /* = PyTensorType_UnpackDType(tensortype)->name()*/;
+  std::string device = ASSERT(DeviceTag4DeviceType(tensortype->device));
+  std::string doc = "Creates a Tensor with the dtype of " + dtype + " and the device on " + device
+                    + ", it has the same parameters as :func:`oneflow.Tensor`";
+  tensortype_doc.emplace_back(doc);
+  return tensortype_doc.back().data();
 }
 
-static std::string get_doc(PyTensortype* tensortype) {
-  std::string dtype_str = ASSERT(DType::Get(tensortype->datatype))->name();
-  dtype_str = dtype_str.substr(dtype_str.rfind(".") + 1);
-  std::string device = tensortype->is_cuda ? "cuda" : "cpu";
-  std::ostringstream ss;
-  ss << "Creates a Tensor with the dtype of " << dtype_str << " and the device on " << device
-     << " , it has the same parameters as :func:`oneflow.Tensor`";
-  return ss.str();
+static void init_tensortype_metaclass(PyTypeObject* metaclass) {
+  metaclass->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+  metaclass->tp_base = &PyType_Type;
+  metaclass->tp_call = PyTensorTypeMetaCls_call;
+  if (PyType_Ready(metaclass) < 0) { return; }
 }
 
-static void init_metaclass(PyTypeObject& metaclass) {
-  metaclass.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
-  metaclass.tp_base = &PyType_Type;
-  metaclass.tp_call = PyTensortypeMetaCls_call;
-  if (PyType_Ready(&metaclass) < 0) { return; }
+static void init_tensortype(PyTypeObject* type, PyTypeObject& type_template, const char* name,
+                            const char* doc) {
+  memcpy(type, &type_template, sizeof(PyTypeObject));
+  type->tp_name = name;
+  type->tp_doc = doc;
+  type->tp_flags = Py_TPFLAGS_DEFAULT;
+  if (PyType_Ready(type) < 0) { THROW(RuntimeError) << "tensortype initialization failed"; }
 }
 
-static void init_tensortype(PyTypeObject& type, PyTypeObject& type_template,
-                            const std::string& name, const std::string& doc) {
-  memcpy(&type, &type_template, sizeof(PyTypeObject));
-  char* tp_name = new char[64]{'\0'};
+static void generalize_tensor_types() {
+  init_tensortype_metaclass(&PyTensorTypeMetaClass);
 
-  // name.c_str() has bug here, so convert with iterating
-  for (int i = 0; i < name.size(); i++) tp_name[i] = name[i];
-  type.tp_name = tp_name;
-  type.tp_doc = doc.c_str();
-  type.tp_flags = Py_TPFLAGS_DEFAULT;
-  if (PyType_Ready(&type) < 0) {
-    CHECK_OR_THROW(false) << "tensortype initialization failed";
-    return;
-  }
-}
-
-static void generalize_tensortype_list() {
-  init_metaclass(PyTensortypeMetaClass);
-  for (const auto& datatype_string_pair : datatype_to_string_dict) {
-    for (const auto& devicetype_string_pair : devicetype_to_string_dict) {
-      PyTensortype* tensortype = new PyTensortype();
-
+  for (const auto& devicetype : all_device_types) {
+    for (const auto& datatype : all_data_types) {
+      PyTensorType* tensortype = new PyTensorType();
       // set name
-      std::string name = get_name(datatype_string_pair.first, devicetype_string_pair.first);
-
+      std::string name = devicetype.second + "." + datatype.second;
       size_t n = sizeof(tensortype->name);
       strncpy(tensortype->name, name.c_str(), n);
       tensortype->name[n - 1] = '\0';
 
       // set type
-      tensortype->datatype = datatype_string_pair.first;
-      tensortype->device = devicetype_string_pair.first;
+      tensortype->datatype = datatype.first;
+      tensortype->device = devicetype.first;
       tensortype->is_cuda = tensortype->device == DeviceType::kCUDA;
-      tensortype_list.push_back(tensortype);
+      tensor_types.push_back(tensortype);
 
-      name = "oneflow." + name;
-      std::string doc = get_doc(tensortype);
-      init_tensortype(tensortype->py_type, PyTensortypeTemplate, name, doc);
+      const char* doc = get_doc(tensortype);
+      init_tensortype(&tensortype->py_type, PyTensorTypeTemplate, tensortype->name, doc);
     }
   }
 }
 
-static void binding(pybind11::module_& m) {
-  generalize_tensortype_list();
-  for (PyTensortype* tensortype : tensortype_list) {
-    Py_INCREF(tensortype);
-    auto module = m.def_submodule("_C");
-    if (tensortype->is_cuda) module = module.def_submodule("cuda");
+bool PyTensorType_Check(PyObject* obj) { return PyObject_TypeCheck(obj, &PyTensorTypeMetaClass); }
 
-    std::string type_name = std::string(tensortype->name);
-    type_name = type_name.substr(type_name.rfind('.') + 1);
-    if (tensortype
-        && PyModule_AddObject(module.ptr(), type_name.c_str(), (PyObject*)tensortype) < 0) {
-      CHECK_OR_THROW(false);
-    }
-  }
-}
-
-bool PyTensortype_Check(PyObject* obj) {
-  auto it = std::find_if(tensortype_list.begin(), tensortype_list.end(),
-                         [obj](PyTensortype* type) { return obj == (PyObject*)type; });
-  return it != tensortype_list.end();
-}
-
-PyObject* PyTensortype_FromDTypeDeviceType(DataType datatype, DeviceType device) {
-  auto it = std::find_if(tensortype_list.begin(), tensortype_list.end(),
-                         [datatype, device](PyTensortype* x) {
-                           return (x->datatype == datatype) && (x->device == device);
-                         });
-  if (it == tensortype_list.end()) return PyErr_Format(PyExc_RuntimeError, "unsupported dtype");
+PyObject* PyTensorType_FromDTypeAndDeviceType(DataType datatype, DeviceType device) {
+  auto it =
+      std::find_if(tensor_types.begin(), tensor_types.end(), [datatype, device](PyTensorType* x) {
+        return (x->datatype == datatype) && (x->device == device);
+      });
+  if (it == tensor_types.end())
+    return PyErr_Format(PyExc_ValueError, "unsupported data type (%s) or device (%s)",
+                        ASSERT(DType::Get(datatype))->name(), ASSERT(DeviceTag4DeviceType(device)));
   return (PyObject*)(*it);
 };
 
@@ -210,4 +149,23 @@ PyObject* PyTensortype_FromDTypeDeviceType(DataType datatype, DeviceType device)
 
 using namespace oneflow::one;
 
-ONEFLOW_API_PYBIND11_MODULE("", m) { binding(m); }
+ONEFLOW_API_PYBIND11_MODULE("_C", m) {
+  static std::string oneflow_prefix = "oneflow.";
+  generalize_tensor_types();
+
+  for (PyTensorType* tensortype : tensor_types) {
+    Py_INCREF(tensortype);
+    std::string name = std::string(tensortype->name);
+    size_t idx = name.rfind('.');
+    std::string type_name = name.substr(idx + 1);
+
+    name = name.substr(0, idx - 1);
+    std::string module_name = name.substr(oneflow_prefix.size());
+    auto module = m;
+    if (!module_name.empty()) { module = m.def_submodule(module_name.data()); }
+    if (tensortype
+        && PyModule_AddObject(module.ptr(), type_name.c_str(), (PyObject*)tensortype) < 0) {
+      return;
+    }
+  }
+}

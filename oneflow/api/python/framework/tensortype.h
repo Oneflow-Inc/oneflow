@@ -29,21 +29,21 @@ typedef struct {
   bool is_cuda;
   DataType datatype;
   DeviceType device;
-} PyTensortype;
+} PyTensorType;
 
-bool PyTensortype_Check(PyObject*);
+bool PyTensorType_Check(PyObject*);
 
-inline DeviceType PyTensortype_UnpackDevice(PyObject* self) {
-  return ((PyTensortype*)self)->device;
+inline DeviceType PyTensorType_UnpackDevice(PyObject* self) {
+  return ((PyTensorType*)self)->device;
 }
-inline Symbol<DType> PyTensortype_UnpackDType(PyObject* self) {
-  return CHECK_JUST(DType::Get(((PyTensortype*)self)->datatype));
+inline Symbol<DType> PyTensorType_UnpackDType(PyObject* self) {
+  return CHECK_JUST(DType::Get(((PyTensorType*)self)->datatype));
 }
 
-PyObject* PyTensortype_FromDTypeDeviceType(DataType, DeviceType);
-PyObject* PyTensortype_FromString(const std::string&);
+PyObject* PyTensorType_FromDTypeAndDeviceType(DataType, DeviceType);
+PyObject* PyTensorType_FromString(const std::string&);
 
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_TENSOR_H_
+#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_TENSORTYPE_H_
