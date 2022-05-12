@@ -162,8 +162,7 @@ Maybe<const ParallelDesc> GetParallelDescOfTensor(const std::shared_ptr<Tensor>&
   }
 }
 
-Maybe<Scope> NewScopeWithParallelConfAndCurScope(
-    const std::shared_ptr<ParallelConf>& parallel_conf) {
+Maybe<Scope> NewScopeWithParallelConfAndCurScope(const ParallelConf& parallel_conf) {
   std::shared_ptr<Scope> new_scope;
   const auto& old_scope = JUST(GetCurrentScope());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -177,9 +176,8 @@ Maybe<Scope> NewScopeWithParallelConfAndCurScope(
 }
 
 Maybe<Scope> NewScopeWithParallelDescByTensor(const std::shared_ptr<Tensor>& tensor) {
-  std::shared_ptr<ParallelConf> parallel_conf =
-      std::make_shared<ParallelConf>(JUST(GetParallelDescOfTensor(tensor))->parallel_conf());
-  return NewScopeWithParallelConfAndCurScope(parallel_conf);
+  return NewScopeWithParallelConfAndCurScope(
+      JUST(GetParallelDescOfTensor(tensor))->parallel_conf());
 }
 
 int32_t GetGradAccStep(const JobConfigProto& job_conf) {
@@ -666,9 +664,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ImageDecoderRandomCropResizeOpExpr&
     device_tag = "cuda";
   }
 
-  std::shared_ptr<ParallelConf> parallel_conf =
-      std::make_shared<ParallelConf>(JUST(GetParallelDescOfTensor(input_tensor))->parallel_conf());
-  parallel_conf->set_device_tag(device_tag);  // NOTE(chengcheng): only support gpu decode.
+  ParallelConf parallel_conf = JUST(GetParallelDescOfTensor(input_tensor))->parallel_conf();
+  parallel_conf.set_device_tag(device_tag);  // NOTE(chengcheng): only support gpu decode.
   const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
 
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
@@ -735,12 +732,11 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     }
     is_local = true;
   }
-  std::shared_ptr<ParallelConf> parallel_conf =
-      std::make_shared<ParallelConf>(parallel_desc->parallel_conf());
+  const auto& parallel_conf = parallel_desc->parallel_conf();
   const auto& scope = JUST(NewScopeWithParallelConfAndCurScope(parallel_conf));
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
-  op_conf->set_device_tag(parallel_conf->device_tag());
+  op_conf->set_device_tag(parallel_conf.device_tag());
 
   auto infer_ctx = JUST(GetCurInferCtx());
   // NOTE(chengcheng): MUST reset unique op name before InferCtx::AddOp

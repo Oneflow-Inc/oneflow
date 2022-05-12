@@ -93,7 +93,7 @@ Maybe<ParallelDesc> ParallelDesc::New(const std::string& device_tag,
   const auto parallel_conf = JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
   std::shared_ptr<ParallelDesc> parallel_desc;
   JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-    parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+    parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
     return Maybe<void>::Ok();
   }));
   return parallel_desc;

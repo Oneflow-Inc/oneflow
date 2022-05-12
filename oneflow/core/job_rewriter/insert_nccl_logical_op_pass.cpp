@@ -337,8 +337,8 @@ Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
   auto old_scope = scope_storage->GetPtr(old_scope_symbol_id);
   std::shared_ptr<Scope> new_scope;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    new_scope = JUST(builder->BuildScopeWithNewParallelConf(
-        old_scope, std::make_shared<ParallelConf>(parallel_desc.parallel_conf())));
+    new_scope =
+        JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_desc.parallel_conf()));
     return Maybe<void>::Ok();
   }));
   // NOTE(chengcheng): need sync vm for get scope right now

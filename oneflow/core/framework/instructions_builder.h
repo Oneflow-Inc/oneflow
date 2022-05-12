@@ -79,13 +79,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<int64_t> CreateSymbolId(const OperatorConf& op_conf);
 
-  Maybe<JobDesc> GetJobConfSymbol(const std::shared_ptr<JobConfigProto>& job_conf);
+  Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
 
-  Maybe<ParallelDesc> GetParallelDescSymbol(const std::shared_ptr<ParallelConf>& parallel_conf);
+  Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf);
 
-  Maybe<Scope> GetScopeSymbol(const std::shared_ptr<ScopeProto>& scope_proto);
+  Maybe<Scope> GetScopeSymbol(const ScopeProto& scope_proto);
 
-  Maybe<OperatorConfSymbol> GetOpConfSymbol(const std::shared_ptr<OperatorConf>& op_conf);
+  Maybe<OperatorConfSymbol> GetOpConfSymbol(const OperatorConf& op_conf);
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
@@ -103,14 +103,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ComputeGlobalFrontSeqBarrier();
 
-  Maybe<Scope> BuildInitialScope(int64_t session_id,
-                                 const std::shared_ptr<JobConfigProto>& job_conf,
+  Maybe<Scope> BuildInitialScope(int64_t session_id, const JobConfigProto& job_conf,
                                  const std::string& device_tag,
                                  const std::vector<std::string>& machine_device_ids,
                                  const std::shared_ptr<Shape>& hierarchy, bool is_mirrored);
 
-  Maybe<Scope> BuildInitialScopeWithPlacement(int64_t session_id,
-                                              const std::shared_ptr<JobConfigProto>& job_conf,
+  Maybe<Scope> BuildInitialScopeWithPlacement(int64_t session_id, const JobConfigProto& job_conf,
                                               Symbol<ParallelDesc> placement, bool is_mirrored);
 
   Maybe<Scope> BuildScopeWithNewParallelDesc(const std::shared_ptr<Scope>& scope,
@@ -119,12 +117,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                              const std::shared_ptr<Shape>& hierarchy);
 
   Maybe<Scope> BuildScopeWithNewParallelConf(const std::shared_ptr<Scope>& scope,
-                                             const std::shared_ptr<ParallelConf>& parallel_conf);
+                                             const ParallelConf& parallel_conf);
 
   Maybe<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope, bool is_mirrored);
 
   Maybe<Scope> BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
-                                          std::string scope_name);
+                                          const std::string& scope_name);
 
   Maybe<Scope> BuildScopeByProtoSetter(
       const std::shared_ptr<Scope>& scope,

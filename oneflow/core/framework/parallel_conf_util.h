@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>>>
-GetDeviceTagAndMachineDeviceIdsAndHierarchy(const std::shared_ptr<ParallelConf>& parallel_conf);
+GetDeviceTagAndMachineDeviceIdsAndHierarchy(const ParallelConf& parallel_conf);
 
 Maybe<ParallelConf> MakeParallelConf(const std::string& device_tag,
                                      const std::vector<std::string>& machine_device_ids,
