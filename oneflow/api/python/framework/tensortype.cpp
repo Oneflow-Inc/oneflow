@@ -72,7 +72,6 @@ PyObject* PyTensorType_FromString(const std::string& tensortype) {
       tensor_types.begin(), tensor_types.end(),
       [tensortype](PyTensorType* type) { return std::string(type->name) == tensortype; });
   if (it == tensor_types.end()) {
-    // return PyErr_Format(PyExc_ValueError, "invalid type: %s", tensortype.data());
     PyErr_Format(PyExc_ValueError, "invalid type: %s", tensortype.data());
     throw py::error_already_set();
   }
