@@ -30,12 +30,12 @@ namespace {
 constexpr int kNumWaves = 32;
 constexpr int kBlockDim = 256;
 
-template<size_t num_dims, typename IndexType, typename T, int pack_size>
-__global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, T pad_val) {
+template<size_t num_dims, typename IndexType, typename StorageType>
+__global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
+                                  StorageType packed_pad_val) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  using LoadType = PackType<T, pack_size>;
-  const LoadType* src = reinterpret_cast<const LoadType*>(params.src);
-  LoadType* dst = reinterpret_cast<LoadType*>(params.dst);
+  const StorageType* src = reinterpret_cast<const StorageType*>(params.src);
+  StorageType* dst = reinterpret_cast<StorageType*>(params.dst);
   IndexType src_index[num_dims];
   IndexType dst_index[num_dims];
   CUDA_1D_KERNEL_LOOP_T(IndexType, linear_index, params.elem_cnt) {
@@ -51,13 +51,12 @@ __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
         break;
       }
     }
+    StorageType dst_val = packed_pad_val;
     if (!if_pad) {
       const IndexType src_offset = params.src_index_helper.NdIndexToOffset(src_index);
-      dst[linear_index] = src[src_offset];
-    } else {
-      Pack<T, pack_size> packed_pad_val(pad_val);
-      dst[linear_index] = packed_pad_val.storage;
+      dst_val = src[src_offset];
     }
+    dst[linear_index] = dst_val;
   }
 }
 
@@ -96,48 +95,47 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
   return cudaSuccess;
 }
 
-template<size_t num_dims, typename IndexType, typename T, size_t pack_size>
-void LaunchKernel(Stream* stream, ConstantPadParams<num_dims, IndexType> params, T pad_val) {
+template<size_t num_dims, typename IndexType, typename StorageType>
+void LaunchKernel(Stream* stream, ConstantPadParams<num_dims, IndexType> params,
+                  StorageType packed_pad_val, int num_blocks) {
   cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
-  int num_blocks = 0;
-  GetNumBlocks(params.elem_cnt / pack_size, &num_blocks);
 
-  ConstantPadKernel<num_dims, IndexType, T, pack_size>
-      <<<num_blocks, kBlockDim, 0, cuda_stream>>>(params, pad_val);
+  ConstantPadKernel<num_dims, IndexType, StorageType>
+      <<<num_blocks, kBlockDim, 0, cuda_stream>>>(params, packed_pad_val);
 }
 
-template<size_t num_dims, typename IndexType, typename T, size_t pack_size>
+template<size_t num_dims, typename IndexType, typename StorageType>
 void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const void* src,
                   const int64_t* src_dims, const int64_t* padding_before,
-                  const int64_t* padding_after, T pad_val) {
+                  const int64_t* padding_after, StorageType packed_pad_val, int num_blocks,
+                  size_t elem_cnt) {
   ConstantPadParams<num_dims, IndexType> params;
   params.dst_index_helper = FastOffsetToIndexCalculator<IndexType, num_dims>(dst_dims);
   params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
   params.dst = dst;
   params.src = src;
-  size_t elem_cnt = 1;
   for (int i = 0; i < num_dims; i++) {
     params.padding_before[i] = padding_before[i];
     params.padding_after[i] = padding_after[i];
     params.out_size[i] = dst_dims[i];
-    elem_cnt *= params.out_size[i];
   }
   params.elem_cnt = elem_cnt;
-  LaunchKernel<num_dims, IndexType, T, pack_size>(stream, params, pad_val);
+  LaunchKernel<num_dims, IndexType, StorageType>(stream, params, packed_pad_val, num_blocks);
 }
 
-template<size_t num_dims, typename T, size_t pack_size>
+template<size_t num_dims, typename StorageType>
 void DispatchIndexType(Stream* stream, void* dst, const int64_t* dst_dims, const void* src,
                        const int64_t* src_dims, const int64_t* padding_before,
-                       const int64_t* padding_after, T pad_val) {
-  size_t elem_cnt = 1;
-  for (size_t i = 0; i < num_dims; ++i) { elem_cnt *= dst_dims[i]; }
+                       const int64_t* padding_after, StorageType packed_pad_val, int num_blocks,
+                       size_t elem_cnt) {
   if (elem_cnt < GetMaxVal<int32_t>()) {
-    LaunchKernel<num_dims, int32_t, T, pack_size>(stream, dst, dst_dims, src, src_dims,
-                                                  padding_before, padding_after, pad_val);
+    LaunchKernel<num_dims, int32_t, StorageType>(stream, dst, dst_dims, src, src_dims,
+                                                 padding_before, padding_after, packed_pad_val,
+                                                 num_blocks, elem_cnt);
   } else {
-    LaunchKernel<num_dims, int64_t, T, pack_size>(stream, dst, dst_dims, src, src_dims,
-                                                  padding_before, padding_after, pad_val);
+    LaunchKernel<num_dims, int64_t, StorageType>(stream, dst, dst_dims, src, src_dims,
+                                                 padding_before, padding_after, packed_pad_val,
+                                                 num_blocks, elem_cnt);
   }
 }
 
@@ -154,23 +152,39 @@ void DispatchPackSize(Stream* stream, void* dst, int64_t* dst_dims, const void* 
   padding_before[num_dims - 1] /= launch_pack_size;
   padding_after[num_dims - 1] /= launch_pack_size;
 
-  void (*func)(Stream* /*stream*/, void* /*dst*/, const int64_t* /*dst_dims*/, const void* /*src*/,
-               const int64_t* /*src_dims*/, const int64_t* /*padding_before*/,
-               const int64_t* /*padding_after*/, T) = nullptr;
+  size_t elem_cnt = 1;
+  for (int i = 0; i < num_dims; i++) { elem_cnt *= dst_dims[i]; }
+
+  int num_blocks = 0;
+  GetNumBlocks(elem_cnt / launch_pack_size, &num_blocks);
   if (launch_pack_size == 1) {
-    func = DispatchIndexType<num_dims, T, 1>;
+    Pack<T, 1> packed_pad_val(pad_val);
+    DispatchIndexType<num_dims, PackType<T, 1>>(stream, dst, dst_dims, src, src_dims,
+                                                padding_before, padding_after,
+                                                packed_pad_val.storage, num_blocks, elem_cnt);
   } else if (launch_pack_size == 2) {
-    func = DispatchIndexType<num_dims, T, 2>;
+    Pack<T, 2> packed_pad_val(pad_val);
+    DispatchIndexType<num_dims, PackType<T, 2>>(stream, dst, dst_dims, src, src_dims,
+                                                padding_before, padding_after,
+                                                packed_pad_val.storage, num_blocks, elem_cnt);
   } else if (launch_pack_size == 4) {
-    func = DispatchIndexType<num_dims, T, 4>;
+    Pack<T, 4> packed_pad_val(pad_val);
+    DispatchIndexType<num_dims, PackType<T, 4>>(stream, dst, dst_dims, src, src_dims,
+                                                padding_before, padding_after,
+                                                packed_pad_val.storage, num_blocks, elem_cnt);
   } else if (launch_pack_size == 8) {
-    func = DispatchIndexType<num_dims, T, 8>;
+    Pack<T, 8> packed_pad_val(pad_val);
+    DispatchIndexType<num_dims, PackType<T, 8>>(stream, dst, dst_dims, src, src_dims,
+                                                padding_before, padding_after,
+                                                packed_pad_val.storage, num_blocks, elem_cnt);
   } else if (launch_pack_size == 16) {
-    func = DispatchIndexType<num_dims, T, 16>;
+    Pack<T, 16> packed_pad_val(pad_val);
+    DispatchIndexType<num_dims, PackType<T, 16>>(stream, dst, dst_dims, src, src_dims,
+                                                 padding_before, padding_after,
+                                                 packed_pad_val.storage, num_blocks, elem_cnt);
   } else {
     UNIMPLEMENTED();
   }
-  func(stream, dst, dst_dims, src, src_dims, padding_before, padding_after, pad_val);
 }
 
 template<typename T>
