@@ -291,7 +291,7 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     return PyErr_Format(PyExc_TypeError, "non_blocking=True is not supported yet");
   }
   if (tensor_type == NULL) {
-    tensor_type = PyTensorType_FromDTypeAndDeviceType(tensor->dtype()->data_type(),
+    tensor_type = PyTensorType_FromDTypeAndDeviceType(tensor->dtype(),
                                                       ASSERT(tensor->device())->enum_type());
     return PyUnicode_FromString(((PyTensorType*)tensor_type)->name);
   }

@@ -44,10 +44,10 @@ static PyTypeObject PyTensorTypeTemplate{
 
 static std::vector<PyTensorType*> tensor_types;
 
-static std::vector<std::pair<DataType, std::string>> all_data_types = {
-    {kFloat, "FloatTensor"},  {kDouble, "DoubleTensor"},     {kInt8, "CharTensor"},
-    {kInt32, "IntTensor"},    {kInt64, "LongTensor"},        {kUInt8, "ByteTensor"},
-    {kFloat16, "HalfTensor"}, {kBFloat16, "BFloat16Tensor"}, {kBool, "BoolTensor"},
+static std::vector<std::pair<const Symbol<DType>&, std::string>> all_data_types = {
+    {DType::Float(), "FloatTensor"},  {DType::Double(), "DoubleTensor"},     {DType::Int8(), "CharTensor"},
+    {DType::Int32(), "IntTensor"},    {DType::Int64(), "LongTensor"},        {DType::UInt8(), "ByteTensor"},
+    {DType::Float16(), "HalfTensor"}, {DType::BFloat16(), "BFloat16Tensor"}, {DType::Bool(), "BoolTensor"},
 };
 
 static std::vector<std::pair<DeviceType, std::string>> all_device_types = {
@@ -72,7 +72,9 @@ PyObject* PyTensorType_FromString(const std::string& tensortype) {
       tensor_types.begin(), tensor_types.end(),
       [tensortype](PyTensorType* type) { return std::string(type->name) == tensortype; });
   if (it == tensor_types.end()) {
-    return PyErr_Format(PyExc_ValueError, "invalid type: %s", tensortype.data());
+    // return PyErr_Format(PyExc_ValueError, "invalid type: %s", tensortype.data());
+    PyErr_Format(PyExc_ValueError, "invalid type: %s", tensortype.data());
+    throw py::error_already_set();
   }
   return (PyObject*)(*it);
 }
@@ -81,8 +83,8 @@ static const char* get_doc(PyTensorType* tensortype) {
   // all tensortype docs
   static std::vector<std::string> tensortype_doc;
 
-  std::string dtype /* = PyTensorType_UnpackDType(tensortype)->name()*/;
-  std::string device = ASSERT(DeviceTag4DeviceType(tensortype->device));
+  std::string dtype = PyTensorType_UnpackDType((PyObject*)tensortype)->name();
+  std::string device = ASSERT(DeviceTag4DeviceType(tensortype->devicetype));
   std::string doc = "Creates a Tensor with the dtype of " + dtype + " and the device on " + device
                     + ", it has the same parameters as :func:`oneflow.Tensor`";
   tensortype_doc.emplace_back(doc);
@@ -119,8 +121,8 @@ static void generalize_tensor_types() {
 
       // set type
       tensortype->datatype = datatype.first;
-      tensortype->device = devicetype.first;
-      tensortype->is_cuda = tensortype->device == DeviceType::kCUDA;
+      tensortype->devicetype = devicetype.first;
+      tensortype->is_cuda = tensortype->devicetype == DeviceType::kCUDA;
       tensor_types.push_back(tensortype);
 
       const char* doc = get_doc(tensortype);
@@ -131,14 +133,14 @@ static void generalize_tensor_types() {
 
 bool PyTensorType_Check(PyObject* obj) { return PyObject_TypeCheck(obj, &PyTensorTypeMetaClass); }
 
-PyObject* PyTensorType_FromDTypeAndDeviceType(DataType datatype, DeviceType device) {
+PyObject* PyTensorType_FromDTypeAndDeviceType(Symbol<DType> datatype, DeviceType device) {
   auto it =
       std::find_if(tensor_types.begin(), tensor_types.end(), [datatype, device](PyTensorType* x) {
-        return (x->datatype == datatype) && (x->device == device);
+        return (x->datatype == datatype) && (x->devicetype == device);
       });
   if (it == tensor_types.end())
     return PyErr_Format(PyExc_ValueError, "unsupported data type (%s) or device (%s)",
-                        ASSERT(DType::Get(datatype))->name(), ASSERT(DeviceTag4DeviceType(device)));
+                        datatype->name(), ASSERT(DeviceTag4DeviceType(device)));
   return (PyObject*)(*it);
 };
 
@@ -159,8 +161,8 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {
     size_t idx = name.rfind('.');
     std::string type_name = name.substr(idx + 1);
 
-    name = name.substr(0, idx - 1);
-    std::string module_name = name.substr(oneflow_prefix.size());
+    name = name.substr(0, idx);
+    std::string module_name = name.size() > oneflow_prefix.size() ? name.substr(oneflow_prefix.size()) : "";
     auto module = m;
     if (!module_name.empty()) { module = m.def_submodule(module_name.data()); }
     if (tensortype

@@ -27,20 +27,20 @@ typedef struct {
   PyTypeObject py_type;
   char name[64];
   bool is_cuda;
-  DataType datatype;
-  DeviceType device;
+  Symbol<DType> datatype;
+  DeviceType devicetype;
 } PyTensorType;
 
 bool PyTensorType_Check(PyObject*);
 
 inline DeviceType PyTensorType_UnpackDevice(PyObject* self) {
-  return ((PyTensorType*)self)->device;
+  return ((PyTensorType*)self)->devicetype;
 }
 inline Symbol<DType> PyTensorType_UnpackDType(PyObject* self) {
-  return CHECK_JUST(DType::Get(((PyTensorType*)self)->datatype));
+  return ((PyTensorType*)self)->datatype;
 }
 
-PyObject* PyTensorType_FromDTypeAndDeviceType(DataType, DeviceType);
+PyObject* PyTensorType_FromDTypeAndDeviceType(Symbol<DType>, DeviceType);
 PyObject* PyTensorType_FromString(const std::string&);
 
 }  // namespace one
