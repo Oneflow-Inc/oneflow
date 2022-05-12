@@ -152,7 +152,7 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_tensor->shape().At(3);
     if (!output_size.empty()) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
-      width_scale = static_cast<double>(out_width)  / static_cast<double>(in_width);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
