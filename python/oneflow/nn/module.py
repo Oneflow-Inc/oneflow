@@ -53,6 +53,10 @@ T = TypeVar("T", bound="Module")
 
 class Module(object):
     r"""Base class for all neural network modules.
+    
+    This class is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.Module.html.
 
     Your models should also subclass this class.
 
@@ -459,9 +463,8 @@ class Module(object):
             >>> l1 = nn.Linear(2, 2)
             >>> l2 = nn.Linear(2, 2)
             >>> net = nn.Sequential(l1, l2)
-            >>> for idx, m in enumerate(net.children()): # doctest: +SKIP
-            ...     print(idx, '->', m) # doctest: +SKIP
-
+            >>> for idx, m in enumerate(net.children()):
+            ...     print(idx, '->', m)
             0 -> Linear(in_features=2, out_features=2, bias=True)
             1 -> Linear(in_features=2, out_features=2, bias=True)
 
@@ -510,9 +513,8 @@ class Module(object):
             >>> import oneflow.nn as nn
             >>> l = nn.Linear(2, 2)
             >>> net = nn.Sequential(l, l)
-            >>> for idx, m in enumerate(net.modules()): # doctest: +SKIP
-            ...     print(idx, '->', m) # doctest: +SKIP
-
+            >>> for idx, m in enumerate(net.modules()):
+            ...     print(idx, '->', m)
             0 -> Sequential(
               (0): Linear(in_features=2, out_features=2, bias=True)
               (1): Linear(in_features=2, out_features=2, bias=True)
@@ -546,9 +548,8 @@ class Module(object):
             >>> import oneflow.nn as nn
             >>> l = nn.Linear(2, 2)
             >>> net = nn.Sequential(l, l)
-            >>> for idx, m in enumerate(net.named_modules()): # doctest: +SKIP
-            ...     print(idx, '->', m) # doctest: +SKIP
-
+            >>> for idx, m in enumerate(net.named_modules()):
+            ...     print(idx, '->', m)
             0 -> ('', Sequential(
               (0): Linear(in_features=2, out_features=2, bias=True)
               (1): Linear(in_features=2, out_features=2, bias=True)
@@ -823,8 +824,12 @@ class Module(object):
 
         Example::
 
-            >>> module.state_dict().keys() # doctest: +SKIP
-            ['bias', 'weight']
+            >>> import oneflow.nn as nn
+            >>> l1 = nn.Linear(2, 2)
+            >>> l2 = nn.Linear(2, 2)
+            >>> net = nn.Sequential(l1, l2)
+            >>> net.state_dict().keys()
+            odict_keys(['0.weight', '0.bias', '1.weight', '1.bias'])
 
         """
         if destination is None:
@@ -953,23 +958,27 @@ class Module(object):
             Module: self
 
         Example::
-
+    
             >>> import oneflow as flow
             >>> import oneflow.nn as nn
-            >>> @flow.no_grad() # doctest: +SKIP
-            >>> def init_weights(m): # doctest: +SKIP
-            ...     print(m) # doctest: +SKIP
-            ...     if type(m) == nn.Linear: # doctest: +SKIP
-            ...         m.weight.fill_(1.0) # doctest: +SKIP
-            ...         print(m.weight) # doctest: +SKIP
-            >>> net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2)) # doctest: +SKIP
-            >>> net.apply(init_weights) # doctest: +SKIP
+            >>> @flow.no_grad()
+            ... def init_weights(m):
+            ...     print(m)
+            ...     if type(m) == nn.Linear:
+            ...         m.weight.fill_(1.0)
+            ...         print(m.weight)
+            >>> net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))
+            >>> net.apply(init_weights)
             Linear(in_features=2, out_features=2, bias=True)
             tensor([[1., 1.],
                     [1., 1.]], dtype=oneflow.float32, requires_grad=True)
             Linear(in_features=2, out_features=2, bias=True)
             tensor([[1., 1.],
                     [1., 1.]], dtype=oneflow.float32, requires_grad=True)
+            Sequential(
+              (0): Linear(in_features=2, out_features=2, bias=True)
+              (1): Linear(in_features=2, out_features=2, bias=True)
+            )
             Sequential(
               (0): Linear(in_features=2, out_features=2, bias=True)
               (1): Linear(in_features=2, out_features=2, bias=True)
@@ -1006,21 +1015,18 @@ class Module(object):
             >>> import oneflow as flow
             >>> import oneflow.nn as nn
             >>> linear = nn.Linear(2, 2)
-            >>> linear.weight # doctest: +SKIP
-            tensor([[ 0.1913, -0.3420],
-                    [-0.5113, -0.2325]], dtype=oneflow.float32, requires_grad=True)
-            >>> gpu1 = flow.device("cuda:1") # doctest: +SKIP
-            >>> linear.to(gpu1) # doctest: +SKIP
+            >>> linear.weight.device
+            device(type='cpu', index=0)
+            >>> gpu1 = flow.device("cuda:1")
+            >>> linear.to(gpu1)
             Linear(in_features=2, out_features=2, bias=True)
-            >>> linear.weight # doctest: +SKIP
-            tensor([[ 0.1914, -0.3420],
-                    [-0.5112, -0.2324]], device='cuda:1', dtype=oneflow.float32, requires_grad=True)
-            >>> cpu = flow.device("cpu") # doctest: +SKIP
-            >>> linear.to(cpu) # doctest: +SKIP
+            >>> linear.weight.device
+            device(type='cuda', index=1)
+            >>> cpu = flow.device("cpu")
+            >>> linear.to(cpu)
             Linear(in_features=2, out_features=2, bias=True)
-            >>> linear.weight # doctest: +SKIP
-            tensor([[ 0.1914, -0.3420],
-                    [-0.5112, -0.2324]], dtype=oneflow.float32, requires_grad=True)
+            >>> linear.weight.device
+            device(type='cpu', index=0)
 
         """
 
