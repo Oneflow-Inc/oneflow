@@ -772,14 +772,15 @@ class Ftrl(Optimizer):
             ftrl.zero_grad()
 
     Args:
-        params (Union[Iterator[Parameter], List[Dict]]): _description_
-        lr (float, optional): _description_. Defaults to 0.001.
-        weight_decay (float, optional): _description_. Defaults to 0.0.
-        lr_power (float, optional): _description_. Defaults to -0.5.
-        initial_accumulator_value (float, optional): _description_. Defaults to 0.1.
-        lambda1 (float, optional): _description_. Defaults to 0.0.
-        lambda2 (float, optional): _description_. Defaults to 0.0.
-        beta (float, optional): _description_. Defaults to 0.0.
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate. Defaults to 1e-3.
+        weight_decay (float, optional): weight decay (L2 penalty). Defaults to 0.0.
+        lr_power (float, optional): learning rate decrease factor. Defaults to -0.5.
+        initial_accumulator_value (float, optional): The initial value of accumlator. Defaults to 0.1.
+        lambda1 (float, optional): L1 regularization strength. Defaults to 0.0.
+        lambda2 (float, optional): L2 regularization strength. Defaults to 0.0.
+        beta (float, optional): The value of beta. Defaults to 0.0.
     """
 
     def __init__(
