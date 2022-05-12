@@ -832,6 +832,10 @@ class DualObject:
             pytorch_attr = identity
         elif key in ["placement", "sbp"]:
             pytorch_attr = "unused"
+        elif key in ['broadcast_like']:
+            def broadcast_like(x, y, *args, **kwargs):
+                return self.pytorch.broadcast_to(x, y.size())
+            pytorch_attr = broadcast_like
         else:
             pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
