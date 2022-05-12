@@ -1272,7 +1272,7 @@ class CtcLossFunctor {
     if (reduction == "sum") { return functional::ReduceSum(out, {}, false); }
     if (reduction == "mean") {
       return sequence_function(functional::Clamp)
-          .then(std::bind(functional::Cast, std::placeholders::_1, log_probs->dtype()))
+          .then(std::bind(functional::Cast, std::placeholders::_1, log_probs->dtype(), /*pin_memory=*/false))
           .then([&](const std::shared_ptr<one::Tensor>& x) {
             return OpInterpUtil::Dispatch<Tensor>(*op_xdivy_, {out, x});
           })

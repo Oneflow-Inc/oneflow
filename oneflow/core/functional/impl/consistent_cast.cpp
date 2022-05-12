@@ -421,14 +421,14 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   if (JUST(input->device())->type() != parallel_desc->device_tag()) {
     VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
             << parallel_desc->device_tag();
-    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(), /*pin_memory=*/false));
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
   if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
     VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
             << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(), /*pin_memory=*/false));
   }
   const auto& device = JUST(input->device());
   CHECK_EQ_OR_RETURN(device->type(), parallel_desc->device_tag())
@@ -473,14 +473,14 @@ class LocalToConsistentFunctor {
     if (JUST(input->device())->type() != parallel_desc->device_tag()) {
       VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
               << parallel_desc->device_tag();
-      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(), /*pin_memory=*/false));
     }
     // copy to default device of the current rank if input's device type is right but not on default
     // device
     if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
       VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
               << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank(), /*pin_memory=*/false));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     MutableAttrMap attrs;

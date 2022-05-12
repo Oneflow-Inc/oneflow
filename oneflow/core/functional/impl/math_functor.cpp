@@ -762,7 +762,7 @@ class ReduceProdWholeFunctor {
                            const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
     std::shared_ptr<one::Tensor> tensor = x;
-    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
+    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype), /*pin_memory=*/false)); }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (DType::priority_order[tensor->dtype()->data_type()]
@@ -858,7 +858,7 @@ class ReduceProdFunctor {
                            const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
     std::shared_ptr<one::Tensor> tensor = x;
-    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
+    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype), /*pin_memory=*/false)); }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (DType::priority_order[tensor->dtype()->data_type()]
@@ -1110,33 +1110,17 @@ class ConsistentArange2Functor {
 class CastFunctor {
  public:
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Symbol<DType>& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype, const bool pin_memory) const {
     if (x->dtype() == dtype) { return x; }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class PinMemoryCastFunctor {
- public:
-  PinMemoryCastFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
-                           const bool& pin_memory) const {
-    if (JUST(x->device())->type() == "cuda" || pin_memory == false) {
-      return functional::Cast(x, dtype);
+    if (JUST(x->device())->type() == "cuda") {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/pin_memory));
     }
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/true));
   }
 
  private:
@@ -1312,7 +1296,7 @@ class VectorNormFunctor {
             JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),
                            Scalar(1.0) / ord, false));
       }
-      res = JUST(Cast(res, dtype_val));
+      res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
       return res;
     } else {
       UNIMPLEMENTED_THEN_RETURN()
@@ -1415,7 +1399,7 @@ class ScalarMatrixNormFunctor {
     } else if (ord_tmp == -INFINITY || ord_tmp == -1) {
       res = JUST(ReduceMin(res, dim_tmp1_vec, keepdim));
     }
-    res = JUST(Cast(res, dtype_val));
+    res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
     return res;
   }
 };
@@ -1462,7 +1446,7 @@ class MatrixNormFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): could not convert string to float:"
                                   << ord;
     }
-    res = JUST(Cast(res, dtype_val));
+    res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
     return res;
   }
 };
@@ -2015,7 +1999,7 @@ class StandardDeviationFunctor {
       //  If input tensor's dtype is float32, than cast it to double dtype,
       //  because float dtype has accuracy problem in float dtype, see:
       //  https://github.com/Oneflow-Inc/oneflow/issues/6526
-      const auto& double_input = JUST(functional::Cast(input, DType::Double()));
+      const auto& double_input = JUST(functional::Cast(input, DType::Double(), /*pin_memory=*/false));
       const auto& sum = JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(JUST(functional::Square(double_input)), axis, keepdims)),
           Scalar((double)reduce_count)));
@@ -2027,9 +2011,9 @@ class StandardDeviationFunctor {
         return functional::Cast(
             JUST(functional::Sqrt(JUST(functional::ScalarMul(
                 sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)))),
-            input->dtype());
+            input->dtype(), /*pin_memory=*/false);
       }
-      return functional::Cast(JUST(functional::Sqrt(sub)), input->dtype());
+      return functional::Cast(JUST(functional::Sqrt(sub)), input->dtype(), /*pin_memory=*/false);
     }
   }
 };
@@ -3016,7 +3000,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
-  m.add_functor<PinMemoryCastFunctor>("PinMemoryCast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
   m.add_functor<ClipFunctor>("Clip");
