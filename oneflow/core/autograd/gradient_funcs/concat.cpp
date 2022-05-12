@@ -64,7 +64,7 @@ Maybe<void> Concat::Apply(const ConcatCaptureState* ctx, const TensorTuple& out_
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(ctx->input_num);
   TensorTuple like(ctx->input_num);
-  for (int i = 0; i < ctx->input_num; ++i) { like[i] = JUST(ctx->SavedTensors().at(i)->detach()); }
+  for (int i = 0; i < ctx->input_num; ++i) { like[i] = ctx->SavedTensors().at(i); }
   if (ctx->input_num == 1) {
     in_grads->at(0) = out_grads.at(0);
   } else {

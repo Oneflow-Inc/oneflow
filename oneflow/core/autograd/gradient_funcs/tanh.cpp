@@ -38,6 +38,7 @@ class TanhGrad : public OpExprGradFunction<TanhCaptureState> {
 
   Maybe<void> Apply(const TanhCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    in_grads->resize(1);
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     const auto& y = ctx->SavedTensors().at(0);
     const auto& a = functional::Mul(y, y);
