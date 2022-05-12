@@ -872,7 +872,8 @@ void PlanUtil::GenRegisterHint(Plan* plan) {
   HashSet<int64_t> multi_regst_regst_desc_ids;
   for (const TaskProto& task : plan->task()) {
     for (const auto& pair : task.produced_regst_desc()) {
-      if (pair.second.register_num() != 1 || task.task_type() == TaskType::kRepeat) {
+      if (pair.second.register_num() != 1 || task.task_type() == TaskType::kRepeat
+          || task.task_type() == TaskType::kConstantInplaceBuffer) {
         multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
       }
     }

@@ -49,7 +49,7 @@ void ConstantInplaceBufferActor::VirtualActorInit(const TaskProto& proto) {
       inplace_produced_rs_.TryPushBackRegst(regst);
     });
   }
-  LOG(WARNIG) << "cclog: ConstantInplaceBufferActor init " << proto.DebugString();
+  // LOG(WARNING) << "cclog: ConstantInplaceBufferActor init " << proto.DebugString();
   OF_SET_MSG_HANDLER(&ConstantInplaceBufferActor::HandlerNormal);
 }
 
@@ -57,10 +57,11 @@ void ConstantInplaceBufferActor::Act() {
   // NOTE(chengcheng):
   //   Constant Inplace Buffer Actor using inplace input with all buffer_size_ num output regst,
   //   so Act() will Do Nothing.
-  Regst* out_regst = GetNaiveCurWriteable("out");
-  Regst* in_regst = GetNaiveCurReadable("in");
-  LOG(WARNING) << "cclog: ConstantInplaceBufferActor: "
-               << out_regst->regst_desc()->regst_desc_type().DebugString();
+  Regst* out_regst = GetNaiveOrInplaceCurWriteable("out");
+  Regst* in_regst = GetNaiveOrInplaceCurReadable("in");
+  CHECK(out_regst && in_regst);
+  // LOG(WARNING) << "cclog: ConstantInplaceBufferActor: "
+  //             << out_regst->regst_desc()->regst_desc_type().DebugString();
   CHECK(out_regst->main_mem_ptr() == in_regst->main_mem_ptr());
   CHECK(out_regst->separated_header_mem_ptr() == in_regst->separated_header_mem_ptr());
   CHECK_EQ(out_regst->regst_desc()->MainByteSize4OneRegst(),
