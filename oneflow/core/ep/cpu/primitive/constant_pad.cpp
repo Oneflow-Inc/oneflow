@@ -55,38 +55,9 @@ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, T pad_valu
   }
 }
 
-template<typename T>
-T GetValue(Scalar value) {
-  return value.Value<T>();
-}
-
 template<>
 float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
-}
-
-template<size_t max_pack_size>
-size_t GetLaunchPackSize(size_t elem_size, size_t num_dims, void* dst, const int64_t* dst_dims,
-                         const void* src, const int64_t* src_dims, const int64_t* padding_before,
-                         const int64_t* padding_after) {
-  static_assert(max_pack_size > 0 && (max_pack_size & (max_pack_size - 1)) == 0, "");
-  CHECK_GT(elem_size, 0);
-  CHECK_EQ((elem_size & (elem_size - 1)), 0);
-  CHECK_EQ(max_pack_size % elem_size, 0);
-  const int64_t last_dst_dim_size = dst_dims[num_dims - 1];
-  const int64_t last_src_dim_size = src_dims[num_dims - 1];
-  const int64_t last_padding_before_size = padding_before[num_dims - 1];
-  const int64_t last_padding_after_size = padding_after[num_dims - 1];
-  auto src_ptr = reinterpret_cast<std::uintptr_t>(src);
-  auto dst_ptr = reinterpret_cast<std::uintptr_t>(dst);
-  for (size_t size = max_pack_size; size > 1; size /= 2) {
-    if (last_dst_dim_size % size == 0 && last_src_dim_size % size == 0
-        && last_padding_before_size % size == 0 && last_padding_after_size % size == 0
-        && src_ptr % size == 0 && dst_ptr % size == 0) {
-      return size;
-    }
-  }
-  return 1;
 }
 
 template<size_t num_dims, typename IndexType, typename T, size_t pack_size>
