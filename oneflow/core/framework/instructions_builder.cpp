@@ -344,7 +344,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_p
 Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
     const std::shared_ptr<Scope>& scope,
     const std::function<void(const std::shared_ptr<ScopeProto>&)>& Setter) {
-  std::shared_ptr<ScopeProto> scope_proto = std::make_shared<ScopeProto>();
+  std::shared_ptr<ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
   Setter(scope_proto);
   return GetScopeSymbol(*scope_proto);
 }
