@@ -156,10 +156,10 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
     const auto& dy_mul_gamma = JUST(functional::Mul(reshaped_gamma, y_grad_fp32));
     const auto& dy_mul_inv_var = JUST(functional::Mul(dy_mul_gamma, reshaped_inv_variance));
     if (is_fp16) {
-      in_grads->at(0) =
+      (*in_grads)[0] =
           JUST(functional::Cast(dy_mul_inv_var, DType::Float16(), /*pin_memory=*/false));
     } else {
-      in_grads->at(0) = dy_mul_inv_var;
+      (*in_grads)[0] = dy_mul_inv_var;
     }
     return Maybe<void>::Ok();
   }

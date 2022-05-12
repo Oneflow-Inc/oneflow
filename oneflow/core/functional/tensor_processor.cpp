@@ -92,8 +92,8 @@ Maybe<void> TensorProcessor::Apply() {
       if (base_dtype->data_type()
           && DType::priority_order[base_dtype->data_type()]
                  > DType::priority_order[tensor_tuple_.at(i)->dtype()->data_type()]) {
-        tensor_tuple_.at(i) =
-            JUST(one::functional::Cast(tensor_tuple_.at(i), base_dtype, /*pin_memory=*/false));
+        tensor_tuple_[i] =
+            JUST(one::functional::Cast(tensor_tuple_[i], base_dtype, /*pin_memory=*/false));
       }
     }
   }
