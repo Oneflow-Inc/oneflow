@@ -62,7 +62,7 @@ class LazyConsistentBlob : public ConsistentBlob {
 
   bool is_dynamic() const override;
 
-  std::shared_ptr<ParallelConf> parallel_conf() const override;
+  const ParallelConf& parallel_conf() const override;
 
   bool IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) const;
 };
@@ -104,7 +104,7 @@ class LazyMirroredBlob : public MirroredBlob {
 
   bool is_dynamic() const override;
 
-  std::shared_ptr<ParallelConf> parallel_conf() const override;
+  const ParallelConf& parallel_conf() const override;
 
  private:
   std::vector<std::shared_ptr<LazyConsistentBlob>> sub_consistent_blob_list_;
@@ -121,7 +121,7 @@ class EagerBlobTrait {
   DataType dtype() const;
   int64_t split_axis() const;
   bool is_dynamic() const;
-  std::shared_ptr<ParallelConf> parallel_conf() const;
+  const ParallelConf& parallel_conf() const;
   int64_t parallel_size();
   std::shared_ptr<BlobObject> blob_object() const;
   void _Init(const std::string logical_blob_name, const std::shared_ptr<BlobObject>& blob_object,

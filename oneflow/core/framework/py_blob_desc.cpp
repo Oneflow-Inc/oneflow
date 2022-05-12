@@ -31,7 +31,7 @@ std::string BlobDesc::op_name() const { return lbi_->op_name(); }
 std::string BlobDesc::blob_name() const { return lbi_->blob_name(); }
 std::shared_ptr<Shape> BlobDesc::shape() const { UNIMPLEMENTED(); }
 DataType BlobDesc::dtype() const { UNIMPLEMENTED(); }
-std::shared_ptr<ParallelConf> BlobDesc::parallel_conf() const { UNIMPLEMENTED(); }
+const ParallelConf& BlobDesc::parallel_conf() const { UNIMPLEMENTED(); }
 
 bool BlobDesc::is_dynamic() const { UNIMPLEMENTED(); }
 std::shared_ptr<Distribute> BlobDesc::distribute() const { return distribute_; }

@@ -39,7 +39,7 @@ class Tensor {
   virtual std::string blob_name() const = 0;
   virtual std::shared_ptr<Shape> shape() const = 0;
   virtual DataType dtype() const = 0;
-  virtual std::shared_ptr<ParallelConf> parallel_conf() const = 0;
+  virtual const ParallelConf& parallel_conf() const = 0;
 };
 
 class BlobDesc : public Tensor {
@@ -56,7 +56,7 @@ class BlobDesc : public Tensor {
   virtual std::string blob_name() const override;
   virtual std::shared_ptr<Shape> shape() const override;
   virtual DataType dtype() const override;
-  virtual std::shared_ptr<ParallelConf> parallel_conf() const override;
+  virtual const ParallelConf& parallel_conf() const override;
 
   virtual bool is_dynamic() const;
   virtual std::shared_ptr<Distribute> distribute() const;

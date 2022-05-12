@@ -35,8 +35,8 @@ std::string ConsistentBlob::job_name() const { return job_name_; }
 
 int64_t ConsistentBlob::parallel_size() {
   if (parallel_size_ == 0) {
-    std::shared_ptr<ParallelConf> parallel_conf = this->parallel_conf();
-    ParallelDesc parallel_desc(*parallel_conf);
+    const ParallelConf& parallel_conf = this->parallel_conf();
+    ParallelDesc parallel_desc(parallel_conf);
     parallel_size_ = parallel_desc.parallel_num();
   }
   return parallel_size_;
@@ -75,10 +75,9 @@ bool LazyConsistentBlob::is_dynamic() const {
   return CHECK_JUST(ctx->IsDynamic(logical_blob_name()));
 }
 
-std::shared_ptr<ParallelConf> LazyConsistentBlob::parallel_conf() const {
+const ParallelConf& LazyConsistentBlob::parallel_conf() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
-  return std::make_shared<ParallelConf>(
-      CHECK_JUST(ctx->GetParallelDescFromProducerView(logical_blob_name()))->parallel_conf());
+  return CHECK_JUST(ctx->GetParallelDescFromProducerView(logical_blob_name()))->parallel_conf();
 }
 
 bool LazyConsistentBlob::IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) const {
@@ -101,8 +100,8 @@ std::string MirroredBlob::job_name() const { return job_name_; }
 
 int64_t MirroredBlob::parallel_size() {
   if (parallel_size_ == 0) {
-    std::shared_ptr<ParallelConf> parallel_conf = this->parallel_conf();
-    ParallelDesc parallel_desc(*parallel_conf);
+    const ParallelConf& parallel_conf = this->parallel_conf();
+    ParallelDesc parallel_desc(parallel_conf);
     parallel_size_ = parallel_desc.parallel_num();
   }
   return parallel_size_;
@@ -155,11 +154,10 @@ bool LazyMirroredBlob::is_dynamic() const {
   return CHECK_JUST(ctx->MirroredBlobIsDynamic(logical_blob_name()));
 }
 
-std::shared_ptr<ParallelConf> LazyMirroredBlob::parallel_conf() const {
+const ParallelConf& LazyMirroredBlob::parallel_conf() const {
   auto* ctx = CHECK_JUST(GetJobBuildAndInferCtx(job_name()));
-  return std::make_shared<ParallelConf>(
-      CHECK_JUST(ctx->MirroredBlobGetParallelDescFromProducerView(logical_blob_name()))
-          ->parallel_conf());
+  return CHECK_JUST(ctx->MirroredBlobGetParallelDescFromProducerView(logical_blob_name()))
+      ->parallel_conf();
 }
 
 EagerBlobTrait::EagerBlobTrait() : parallel_size_(0) {}
@@ -198,14 +196,14 @@ int64_t EagerBlobTrait::split_axis() const {
 
 bool EagerBlobTrait::is_dynamic() const { return blob_object()->op_arg_blob_attr()->is_dynamic(); }
 
-std::shared_ptr<ParallelConf> EagerBlobTrait::parallel_conf() const {
-  return std::make_shared<ParallelConf>(blob_object()->parallel_desc_symbol()->parallel_conf());
+const ParallelConf& EagerBlobTrait::parallel_conf() const {
+  return blob_object()->parallel_desc_symbol()->parallel_conf();
 }
 
 int64_t EagerBlobTrait::parallel_size() {
   if (parallel_size_ == 0) {
-    std::shared_ptr<ParallelConf> parallel_conf = this->parallel_conf();
-    ParallelDesc parallel_desc(*parallel_conf);
+    const ParallelConf& parallel_conf = this->parallel_conf();
+    ParallelDesc parallel_desc(parallel_conf);
     parallel_size_ = parallel_desc.parallel_num();
   }
   return parallel_size_;
