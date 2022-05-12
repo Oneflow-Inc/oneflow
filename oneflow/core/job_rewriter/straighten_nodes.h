@@ -17,11 +17,22 @@ limitations under the License.
 #define STRAIGHTEN_NODES_H_
 
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
 class OpGraph;
 class Job;
+
+class TopoStruct {
+ public:
+  TaskNode* node;
+  int32_t MinLayer = -1;
+  // We can have some other nodes in it for example
+  // SbpNode<NdSbpSignature>* node;
+  // SbpEdge<NdSbpSignature>* node;
+  // Or we can omit all the pointers and leave all the useful parameters.
+};
 
 Maybe<void> StraightenNodes(const OpGraph& op_graph, Job* job);
 

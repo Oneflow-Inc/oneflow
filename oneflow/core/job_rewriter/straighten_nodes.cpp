@@ -24,6 +24,7 @@ namespace oneflow {
 
 Maybe<void> StraightenNodes(const OpGraph& op_graph, Job* job) {
   // Not allowed two-step boxing and disable checking for debugging
+  return Maybe<void>::Ok();
   if (ParseBooleanFromEnv("ONEFLOW_RANDOM_STRAIGHTEN_NODES", false)) { return Maybe<void>::Ok(); }
   // test debug
   if (GlobalProcessCtx::Rank() == 0) { std::cout << "Start straightening operators" << std::endl; }

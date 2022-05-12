@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -23,12 +24,14 @@ limitations under the License.
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/job_rewriter/straighten_nodes.h"
 
 namespace oneflow {
 
@@ -449,8 +452,12 @@ TaskGraph::TaskGraph() {
       ConnectCtrlEdges(src_task_nodes, dst_task_nodes);
     }
   });
+  if (ParseBooleanFromEnv("ONEFLOW_RANDOM_STRAIGHTEN_NODES", false)) {
+    SetOrderInGraphForEachNode();
+  } else {
+    StraightenNodes();
+  }
 
-  SetOrderInGraphForEachNode();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 
@@ -554,12 +561,195 @@ void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
 
 void TaskGraph::SetOrderInGraphForEachNode() {
   int64_t order_in_graph = 0;
+  HashMap<int32_t, int32_t> task_type_map;
   auto SetOrderInGraph = [&](TaskNode* task_node) {
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "Execution order: " << order_in_graph << ": " << task_node->VisualStr()
+                << ": task type: " << task_node->GetTaskType() << ", "
+                << (task_node->parallel_ctx() == 0) << std::endl;
+      if (task_type_map.find(task_node->GetTaskType()) == task_type_map.end()) {
+        task_type_map[task_node->GetTaskType()] = 0;
+      }
+      task_type_map[task_node->GetTaskType()]++;
+    }
     task_node->set_order_in_graph(order_in_graph);
     ordered_task_nodes_.emplace_back(task_node);
     ++order_in_graph;
   };
-  TopoForEachNode(SetOrderInGraph);
+  TopoForEachNodeFast(SetOrderInGraph);
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "Print all task type: " << std::endl;
+    for (auto& pair : task_type_map) {
+      std::cout << "task type: " << pair.first << ", " << pair.second << std::endl;
+    }
+  }
+}
+
+void TaskGraph::StraightenNodes() {
+  // The function for settle the order in the graph
+  int64_t order_in_graph = 0;
+  HashMap<int32_t, int32_t> task_type_map;
+  auto SetOrderInGraph = [&](TaskNode* task_node) {
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "Execution order: " << order_in_graph << ": " << task_node->VisualStr()
+                << ": task type: " << task_node->GetTaskType() << ", "
+                << (task_node->parallel_ctx() == 0) << std::endl;
+      task_node->ForEachNodeOnInDataEdge(
+          [](TaskNode* in) { std::cout << "Pre task node: " << in->VisualStr() << std::endl; });
+      if (task_type_map.find(task_node->GetTaskType()) == task_type_map.end()) {
+        task_type_map[task_node->GetTaskType()] = 0;
+      }
+      task_type_map[task_node->GetTaskType()]++;
+    }
+    task_node->set_order_in_graph(order_in_graph);
+    ordered_task_nodes_.emplace_back(task_node);
+    ++order_in_graph;
+  };
+
+  // Generate topological data structure for each task node
+  HashMap<TaskNode*, TopoStruct> task_node2topo_struct;
+  TopoForEachNodeFast([&](TaskNode* node) {
+    auto& topo_struct = task_node2topo_struct[node];
+    topo_struct.node = node;
+    if (node->in_edges().empty()) {
+      topo_struct.MinLayer = 0;
+    } else {
+      int32_t max_min_layer = 0;
+      node->ForEachNodeOnInEdge([&](TaskNode* in) {
+        max_min_layer = std::max(max_min_layer, task_node2topo_struct[in].MinLayer);
+      });
+      topo_struct.MinLayer = max_min_layer + 1;
+    }
+  });
+
+  // Order in the waiting sets
+  // Decide which node should run first
+  struct comp {
+    bool operator()(const TopoStruct* a, const TopoStruct* b) const {
+      // if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
+      if (a->MinLayer == b->MinLayer) {
+        auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
+        if (comp_str == 0) {
+          // the order does not matter right now, but we need a strict order
+          return a < b;
+        } else {
+          return comp_str < 0;
+        }
+      } else {
+        // the node that shows up first has higher priority
+        return a->MinLayer < b->MinLayer;
+      }
+      // } else {
+      //   return a->MinDistance2Transfer < b->MinDistance2Transfer;
+      // }
+    }
+  };
+
+  // Classify sets for the task nodes
+  std::set<TopoStruct*, comp> waiting_transfer;
+  std::set<TopoStruct*, comp> waiting_computation;
+  std::set<TopoStruct*, comp> run_asap;  // run as soon as possible
+  std::set<TopoStruct*, comp> run_alap;  // run as late as possible
+
+  // Classifier for the set according to the task type
+  auto set_classifier = [&](TaskNode* node) {
+    // Check task.pb.h for detail
+    int32_t task_type = node->GetTaskType();
+    if (task_type == 1) { return &waiting_computation; }
+    if (task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64)) {
+      return &waiting_transfer;
+    }
+    if (task_type == 47) { return &run_alap; }
+    return &run_asap;
+  };
+
+  // wait in the list
+  auto wait = [&](TaskNode* node) { set_classifier(node)->insert(&task_node2topo_struct[node]); };
+
+  // initialization
+  HashMap<TaskNode*, int32_t> counter_in;
+  ForEachNode([&](TaskNode* node) {
+    int32_t count = node->in_edges().size();
+    counter_in[node] = count;
+    if (count == 0) { wait(node); }
+  });
+
+  // Finish execution
+  auto finish_execution = [&](TaskNode* node) {
+    node->ForEachNodeOnOutEdge([&](TaskNode* out) {
+      if (--counter_in[out] == 0) { wait(out); }
+    });
+  };
+
+  // The same order in the set
+  auto should_run_simultaneously = [](TopoStruct* a, TopoStruct* b) -> bool {
+    return a->MinLayer == b->MinLayer && a->node->VisualStr() == b->node->VisualStr();
+  };
+
+  // Execute the first n nodes in the waiting list
+  auto execute = [&](std::set<TopoStruct*, comp>& waiting_list, int32_t n) {
+    // n>=1
+    if (n <= 0) { return; }
+    std::vector<TaskNode*> execution_list;
+    std::set<TopoStruct*, comp>::iterator it_curr = waiting_list.begin();
+    TopoStruct* last_topo_struct = nullptr;
+    // At least add n nodes in the execution list
+    int32_t count = 1;
+    while (it_curr != waiting_list.end()) {
+      if (count >= n) {
+        if (count == n) {
+          last_topo_struct = *it_curr;
+        } else {
+          if (!should_run_simultaneously(last_topo_struct, *it_curr)) { break; }
+        }
+      }
+      execution_list.push_back((*it_curr)->node);
+      count++;
+      ++it_curr;
+    }
+    waiting_list.erase(waiting_list.begin(), it_curr);
+    for (auto* node : execution_list) {
+      SetOrderInGraph(node);
+      finish_execution(node);
+    }
+  };
+
+  // straightening
+  while (true) {
+    if (run_asap.empty()) {
+      if (waiting_transfer.empty()) {
+        if (waiting_computation.empty()) {
+          if (run_alap.empty()) {
+            if (GlobalProcessCtx::Rank() == 0) { std::cout << "Execution done" << std::endl; }
+            break;
+          } else {
+            execute(run_alap, run_alap.size());
+          }
+        } else {
+          execute(waiting_computation, 1);
+        }
+      } else {
+        // Holding the transfer
+        auto* node = (*waiting_transfer.begin())->node;
+        waiting_transfer.erase(waiting_transfer.begin());
+        SetOrderInGraph(node);
+        // Overlap transfer with computation
+        execute(waiting_computation, waiting_computation.size() / (waiting_transfer.size() + 1));
+        // Release the transfer
+        finish_execution(node);
+      }
+    } else {
+      execute(run_asap, run_asap.size());
+    }
+  }
+
+  // test debug
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "Print all task type: " << std::endl;
+    for (auto& pair : task_type_map) {
+      std::cout << "task type: " << pair.first << ", " << pair.second << std::endl;
+    }
+  }
 }
 
 void TaskGraph::MergeChain() {

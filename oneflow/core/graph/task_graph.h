@@ -84,6 +84,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void MergeChain();
   void BuildCtrlRegstDescInSameChain();
 
+  void StraightenNodes();
+
   // inplace
   void GetInplaceOpBlobArgList(
       InplaceObasInfo* obas_info, const HashSet<TaskNode*>& dev_nodes,
