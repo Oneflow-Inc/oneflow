@@ -928,7 +928,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         y = x.swapaxes(random(0, 2).to(int), random(0, 2).to(int))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_mm_with_random_data(test_case):
         device = random_device()
         k = random(1, 6)

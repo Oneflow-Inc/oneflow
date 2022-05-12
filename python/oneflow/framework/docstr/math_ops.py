@@ -1256,8 +1256,8 @@ add_docstr(
         This function does not broadcast. For broadcasting matrix products, see :func:`oneflow.matmul()`.
 
     Args:
-        a (oneflow.Tensor): A 2-D Tensor
-        b (oneflow.Tensor): A 2-D Tensor
+        input (oneflow.Tensor): The first 2-D Tensor in matrix multiplication
+        other (oneflow.Tensor): The second 2-D Tensor in matrix multiplication
 
     Returns:
         oneflow.Tensor: The result Tensor
