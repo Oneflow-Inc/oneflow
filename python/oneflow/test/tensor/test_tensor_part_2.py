@@ -935,7 +935,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         x = random_tensor(ndim=2, dim1=k).to(device)
         y = random_tensor(ndim=2, dim0=k).to(device)
         return x.mm(y)
-      
+
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5)
     def test_tensor_swapdimst(test_case):
