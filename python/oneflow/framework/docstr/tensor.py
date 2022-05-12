@@ -1697,16 +1697,34 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.sum,
     """
-    input.sum(dim, index) -> Tensor
+    input.sum(dim=None, keepdim=False) -> Tensor
 
     See :func:`oneflow.sum`
     """,
 )
 
 add_docstr(
+    oneflow.Tensor.all,
+    """
+    input.all(dim=None, keepdim=False) -> Tensor
+
+    See :func:`oneflow.all`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.any,
+    """
+    input.any(dim=None, keepdim=False) -> Tensor
+
+    See :func:`oneflow.any`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.mean,
     """
-    input.mean(dim, index) -> Tensor
+    input.mean(dim=None, keepdim=False) -> Tensor
 
     See :func:`oneflow.mean`
     """,
@@ -1715,7 +1733,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.prod,
     """
-    input.prod(dim, index) -> Tensor
+    input.prod(dim=None, keepdim=False) -> Tensor
 
     See :func:`oneflow.prod`
     """,
@@ -2034,5 +2052,14 @@ add_docstr(
     oneflow.Tensor.amin,
     """
     See :func:`oneflow.amin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.pin_memory,
+    r"""
+    Tensor.pin_memory() -> Tensor
+
+    Copies the tensor to pinned memory, if it’s not already pinned.
     """,
 )
