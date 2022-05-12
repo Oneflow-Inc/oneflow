@@ -72,7 +72,8 @@ PyObject* PyTensorType_FromString(const std::string& tensortype) {
       tensor_types.begin(), tensor_types.end(),
       [tensortype](PyTensorType* type) { return std::string(type->name) == tensortype; });
   if (it == tensor_types.end()) {
-    return PyErr_Format(PyExc_ValueError, "invalid type: %s", tensortype.data());
+    PyErr_Format(PyExc_ValueError, "invalid type: %s", tensortype.data());
+    throw py::error_already_set();
   }
   return (PyObject*)(*it);
 }
@@ -150,7 +151,7 @@ PyObject* PyTensorType_FromDTypeAndDeviceType(DataType datatype, DeviceType devi
 using namespace oneflow::one;
 
 ONEFLOW_API_PYBIND11_MODULE("_C", m) {
-  static std::string oneflow_prefix = "oneflow.";
+  static std::string oneflow_prefix = "oneflow";
   generalize_tensor_types();
 
   for (PyTensorType* tensortype : tensor_types) {
@@ -159,7 +160,7 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {
     size_t idx = name.rfind('.');
     std::string type_name = name.substr(idx + 1);
 
-    name = name.substr(0, idx - 1);
+    name = name.substr(0, idx);
     std::string module_name = name.substr(oneflow_prefix.size());
     auto module = m;
     if (!module_name.empty()) { module = m.def_submodule(module_name.data()); }
