@@ -41,7 +41,7 @@ args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
 REQUIRED_PACKAGES = [
     f"numpy>={np.__version__}",
-    "protobuf>=3.9.2",
+    "protobuf>=3.9.2, <0.4",
     "tqdm",
     "requests",
     "pillow",
