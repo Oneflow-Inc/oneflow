@@ -28,6 +28,35 @@ namespace primitive {
 
 namespace {
 
+constexpr int32_t kMaxNumDims = 8;
+
+constexpr int32_t Min(int32_t a, int32_t b) { return a < b ? a : b; }
+constexpr int32_t kMaxPackBytes = 128 / 8;
+
+template<typename T>
+constexpr int32_t GetMaxPackSize() {
+  return Min(kMaxPackBytes / sizeof(T), 8);
+}
+
+template<typename T, int pack_size>
+struct GetPackType {
+  using type = typename std::aligned_storage<pack_size * sizeof(T), pack_size * sizeof(T)>::type;
+};
+
+template<typename T, int pack_size>
+using PackType = typename GetPackType<T, pack_size>::type;
+
+template<typename T, size_t pack_size>
+union Pack {
+  static_assert(sizeof(PackType<T, pack_size>) == sizeof(T) * pack_size, "");
+  explicit OF_DEVICE_FUNC Pack(T value) {
+#pragma unroll
+    for (int i = 0; i < pack_size; i++) { elem[i] = value; }
+  }
+  T elem[pack_size];
+  PackType<T, pack_size> storage;
+};
+
 template<typename T, int N>
 class FastOffsetToIndexCalculator {
  public:

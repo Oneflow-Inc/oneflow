@@ -27,37 +27,8 @@ namespace primitive {
 
 namespace {
 
-constexpr int32_t kMaxNumDims = 8;
-
 constexpr int kNumWaves = 32;
 constexpr int kBlockDim = 256;
-
-constexpr int32_t Min(int32_t a, int32_t b) { return a < b ? a : b; }
-constexpr int32_t kMaxPackBytes = 128 / 8;
-
-template<typename T>
-constexpr int32_t GetMaxPackSize() {
-  return Min(kMaxPackBytes / sizeof(T), 8);
-}
-
-template<typename T, int pack_size>
-struct GetPackType {
-  using type = typename std::aligned_storage<pack_size * sizeof(T), pack_size * sizeof(T)>::type;
-};
-
-template<typename T, int pack_size>
-using PackType = typename GetPackType<T, pack_size>::type;
-
-template<typename T, size_t pack_size>
-union Pack {
-  static_assert(sizeof(PackType<T, pack_size>) == sizeof(T) * pack_size, "");
-  explicit __host__ __device__ Pack(T value) {
-#pragma unroll
-    for (int i = 0; i < pack_size; i++) { elem[i] = value; }
-  }
-  T elem[pack_size];
-  PackType<T, pack_size> storage;
-};
 
 template<size_t num_dims, typename IndexType, typename T, int pack_size>
 __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, T pad_val) {

@@ -25,35 +25,6 @@ namespace primitive {
 
 namespace {
 
-constexpr int32_t kMaxNumDims = 8;
-
-constexpr int32_t Min(int32_t a, int32_t b) { return a < b ? a : b; }
-constexpr int32_t kMaxPackBytes = 128 / 8;
-
-template<typename T>
-constexpr int32_t GetMaxPackSize() {
-  return Min(kMaxPackBytes / sizeof(T), 8);
-}
-
-template<typename T, int pack_size>
-struct GetPackType {
-  using type = typename std::aligned_storage<pack_size * sizeof(T), pack_size * sizeof(T)>::type;
-};
-
-template<typename T, int pack_size>
-using PackType = typename GetPackType<T, pack_size>::type;
-
-template<typename T, size_t pack_size>
-union Pack {
-  static_assert(sizeof(PackType<T, pack_size>) == sizeof(T) * pack_size, "");
-  explicit Pack(T value) {
-#pragma unroll
-    for (int i = 0; i < pack_size; i++) { elem[i] = value; }
-  }
-  T elem[pack_size];
-  PackType<T, pack_size> storage;
-};
-
 template<size_t num_dims, typename IndexType, typename T, int pack_size>
 void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, T pad_value) {
   using LoadType = PackType<T, pack_size>;
@@ -252,12 +223,6 @@ std::unique_ptr<ConstantPad> NewConstantPad() {
   return std::unique_ptr<ConstantPad>(new ConstantPadImpl<T>());
 }
 
-#define CPU_CONSTANT_PAD_PRIMITIVE_TYPE_SEQ \
-  CPU_PRIMITIVE_INT32_TYPE_SEQ              \
-  CPU_PRIMITIVE_INT64_TYPE_SEQ              \
-  CPU_PRIMITIVE_FLOAT_TYPE_SEQ              \
-  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ
-
 class ConstantPadFactoryImpl : public ConstantPadFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConstantPadFactoryImpl);
@@ -269,7 +234,7 @@ class ConstantPadFactoryImpl : public ConstantPadFactory {
 
     static const std::map<DataType, std::function<std::unique_ptr<ConstantPad>()>>
         new_constant_pad_handle{
-            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_CONSTANT_PAD_ENTRY, CPU_CONSTANT_PAD_PRIMITIVE_TYPE_SEQ)};
+            OF_PP_FOR_EACH_TUPLE(MAKE_NEW_CONSTANT_PAD_ENTRY, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
 
 #undef MAKE_NEW_CONSTANT_PAD_ENTRY
 
