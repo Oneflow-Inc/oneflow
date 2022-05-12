@@ -27,20 +27,20 @@ void FunctionSchema::ReportKwargsError(PyObject* kwargs, size_t nargs) const {
 
   while (PyDict_Next(kwargs, &pos, &key, &value)) {
     if (!PyStringCheck(key)) { THROW(TypeError) << def_->name << "(): keywords must be strings"; }
-    size_t pos = -1;
+    int64_t index = -1;
     const std::string string_key = PyStringAsString(key);
     for (int i = 0; i < def_->argument_def.size(); ++i) {
       const auto& arg = def_->argument_def.at(i);
       if (arg.name == string_key) {
-        pos = i;
+        index = i;
         break;
       }
     }
-    if (pos < 0) {
+    if (index < 0) {
       THROW(TypeError) << def_->name << "(): got an unexpected keyword argument '" << string_key
                        << "'";
     }
-    if (pos < nargs) {
+    if (index < nargs) {
       THROW(TypeError) << def_->name << "(): got multiple values for argument '" << string_key
                        << "'";
     }
