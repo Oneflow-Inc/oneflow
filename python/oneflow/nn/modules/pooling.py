@@ -55,7 +55,6 @@ class MaxPool1d(Module):
         padding: Implicit negative infinity padding to be added on both sides, must be >= 0 and <= kernel_size / 2.
         dilation: The stride between elements within a sliding window, must be > 0.
         return_indices: If ``True``, will return the argmax along with the max values.
-                        Useful for :class:`torch.nn.MaxUnpool1d` later
         ceil_mode: If ``True``, will use `ceil` instead of `floor` to compute the output shape. This
                    ensures that every element in the input tensor is covered by a sliding window.
 
