@@ -33,6 +33,7 @@ def _test_stack_with_random_data(test_case, placement, sbp):
     out = torch.stack((x, y), dim=random(low=-5, high=5).to(int))
     return out
 
+
 @unittest.skip("backward of stack with random diff has bug.")
 class TestStackModule(flow.unittest.TestCase):
     @globaltest
