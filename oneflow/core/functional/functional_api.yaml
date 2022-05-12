@@ -474,6 +474,10 @@
   signature: "Tensor (Tensor x, Tensor dy) => LogGrad"
   bind_python: False
 
+- name: "log_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => LogGradGrad"
+  bind_python: False
+
 - name: "log2"
   signature: "Tensor (Tensor x) => Log2"
   bind_python: True

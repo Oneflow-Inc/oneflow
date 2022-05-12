@@ -47,7 +47,9 @@ class TestMathOpHigherDerivative(flow.unittest.TestCase):
 
     def test_cos_grad_grad(test_case):
         _test_math_op_grad_grad_impl(test_case, "cos")
-
+    
+    def test_log_grad_grad(test_case):
+        _test_math_op_grad_grad_impl(test_case, "log")
 
 if __name__ == "__main__":
     unittest.main()

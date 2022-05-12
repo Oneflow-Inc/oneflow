@@ -57,11 +57,25 @@ class CosGradGradFunctor {
   }
 };
 
+class LogGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {                 
+    auto res = sequence_function(functional::Square)
+                   .then(functional::Negative)
+                   .then(functional::Reciprocal)
+                   .then(std::bind(functional::Mul, dydx, std::placeholders::_1))
+                   .call(x);
+    return res;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SinGradGradFunctor>("SinGradGrad");
   m.add_functor<impl::CosGradGradFunctor>("CosGradGrad");
+  m.add_functor<impl::LogGradGradFunctor>("LogGradGrad");
 }
 
 }  // namespace functional
