@@ -28,12 +28,6 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("y", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->device_type(), data_type);
-}
-
-template<typename Context>
 std::unique_ptr<ep::primitive::CopyNd> NewCopyNdPrimitive(Context* ctx) {
   const auto& in_arg_pair = ctx->inputs().front();
   const int64_t ndims =
@@ -56,12 +50,6 @@ std::unique_ptr<ep::primitive::Memset> NewMemsetPrimitive(Context* ctx) {
 auto PadPrimitiveExists() {
   return hob::make_custom("PadPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewConstantPadPrimitive(&ctx).operator bool();
-  });
-}
-
-auto FillPrimitiveExists() {
-  return hob::make_custom("FillPrimitiveExists", [](const KernelRegContext& ctx) {
-    return NewFillPrimitive(&ctx).operator bool();
   });
 }
 
@@ -99,45 +87,11 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
     } else {
       value = Scalar(ctx->Attr<double>("floating_constant_value"));
     }
-    // std::unique_ptr<ep::primitive::Fill> fill_primitive = NewFillPrimitive(ctx);
-    // CHECK(fill_primitive);
-    // fill_primitive->Launch(ctx->stream(), y->mut_dptr(), value, y->shape().elem_cnt());
 
     const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
     const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
     const int64_t ndims = x->shape().NumAxes();
     CHECK_EQ(padding_before.size(), ndims);
-
-    // DimVector src_pos_vec(ndims, 0);
-    // DimVector dst_pos_vec(padding_before.cbegin(), padding_before.cend());
-    // DimVector pad_before_vec(padding_before.cbegin(), padding_before.cend());
-    // DimVector pad_after_vec(padding_after.cbegin(), padding_after.cend());
-
-    // for (int i = 0; i < ndims; ++i) {
-    //   if (dst_pos_vec[i] < 0) {
-    //     // When padding[i] < 0 , dst_pos_vec[i] will < 0 too , src_pos_vec[i] should adjust
-    //     coords
-    //     // relative and dst_pos_vec[i] will == 0
-    //     src_pos_vec[i] -= dst_pos_vec[i];
-    //     dst_pos_vec[i] = 0;
-    //   }
-    // }
-
-    // DimVector extent_vec(ndims, 0);
-    // for (int i = 0; i < extent_vec.size(); ++i) {
-    //   if (y->shape().At(i) < x->shape().At(i)) {
-    //     extent_vec[i] = y->shape().At(i);
-    //   } else {
-    //     extent_vec[i] = x->shape().At(i);
-    //     if (pad_before_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_before_vec[i]; }
-    //     if (pad_after_vec[i] < 0) { extent_vec[i] = extent_vec[i] + pad_after_vec[i]; }
-    //   }
-    // }
-    // std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive = NewCopyNdPrimitive(ctx);
-    // CHECK(copy_nd_primitive);
-    // copy_nd_primitive->Launch(ctx->stream(), x->data_type(), x->shape().NumAxes(), y->mut_dptr(),
-    //                           y->shape().ptr(), dst_pos_vec.data(), x->dptr(), x->shape().ptr(),
-    //                           src_pos_vec.data(), extent_vec.data());
 
     std::unique_ptr<ep::primitive::ConstantPad> pad_primitive = NewConstantPadPrimitive(ctx);
     CHECK(pad_primitive);
@@ -147,8 +101,6 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-// REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob(FillPrimitiveExists()
-//                                                                      && CopyNdPrimitiveExists());
 REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob(PadPrimitiveExists());
 class PadGradKernel final : public OpKernel, public CudaGraphSupport {
  public:
