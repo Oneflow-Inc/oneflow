@@ -280,11 +280,11 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
   if (device) { device_ = JUST(device); }
   if (other->is_local()) {
     if (!device) { device_ = JUST(other->device()); }
-    tensor = JUST(functional::PinMemoryCopy(other, device_, pin_memory));
+    tensor = JUST(functional::PinMemoryCopy(other, device_, pin_memory && !dtype.has_value()));
   } else {
     tensor = JUST(functional::ConsistentToLocal(other));
     if (!device) { device_ = JUST(Device::New("cpu")); }
-    tensor = JUST(functional::PinMemoryCopy(tensor, device_, pin_memory));
+    tensor = JUST(functional::PinMemoryCopy(tensor, device_, pin_memory && !dtype.has_value()));
   }
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
