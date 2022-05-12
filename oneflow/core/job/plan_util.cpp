@@ -983,7 +983,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
         CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
         const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
         for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
-          VLOG(3) << " In MemBlock id: " << mem_block_id << " order: " << i
+          VLOG(3) << " In Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id << " order: " << i
                   << " op_name: " << mem_block_info.ordered_op_names.at(i);
         }
       }
