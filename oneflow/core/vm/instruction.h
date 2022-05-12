@@ -184,10 +184,7 @@ class Instruction final : public intrusive::Base {
   void set_stream(Stream* val) { stream_ = val; }
   void clear_stream() { stream_ = nullptr; }
   Stream* mut_stream() { return stream_; }
-  InstructionMsg* mut_instr_msg() {
-    if (unlikely(!instr_msg_)) { instr_msg_ = intrusive::make_shared<InstructionMsg>(); }
-    return CHECK_NOTNULL(instr_msg_.Mutable());
-  }
+  InstructionMsg* mut_instr_msg() { return CHECK_NOTNULL(instr_msg_.Mutable()); }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
   void clear_instr_msg() { instr_msg_.Reset(); }
   std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }

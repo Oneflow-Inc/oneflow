@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -149,17 +150,16 @@ void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instructio
   mut_lively_instruction_list()->PushBack(instruction);
 }
 
-void VirtualMachineEngine::InsertCallbackProbe(
+void VirtualMachineEngine::InsertProbe(
     const std::function<bool(VirtualMachineEngine*)>& ProbeFunction) {
-  callback_probe_list_.EmplaceBack(intrusive::make_shared<CallbackProbe>(ProbeFunction));
+  probe_list_.EmplaceBack(intrusive::make_shared<VmProbe>(ProbeFunction));
 }
 
-void VirtualMachineEngine::HandleLocalSchedulerProbe() {
-  if (unlikely(local_scheduler_probe_list_.size())) {
-    OF_PROFILER_RANGE_PUSH("HandleLocalSchedulerProbe");
-    INTRUSIVE_FOR_EACH_PTR(probe, &local_scheduler_probe_list_) {
-      probe->probe_function()(this);
-      local_scheduler_probe_list_.Erase(probe);
+void VirtualMachineEngine::HandleLocalProbe() {
+  if (unlikely(local_probe_list_.size())) {
+    OF_PROFILER_RANGE_PUSH("HandleLocalProbe");
+    INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
+      if (probe->probe_function()(this)) { local_probe_list_.Erase(probe); }
     }
     OF_PROFILER_RANGE_POP();
   }
@@ -167,13 +167,8 @@ void VirtualMachineEngine::HandleLocalSchedulerProbe() {
 
 intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
     Instruction* instruction, const ScheduleCtx& schedule_ctx) {
-  ++total_completed_instruction_cnt_;
-  auto ret = mut_lively_instruction_list()->Erase(instruction);
-  static constexpr int kFlushInterval = 1;
-  if (unlikely(total_completed_instruction_cnt_ % kFlushInterval) == 0) {
-    FlushGarbageInstructions(schedule_ctx);
-  }
-  return ret;
+  ++total_erased_instruction_cnt_;
+  return mut_lively_instruction_list()->Erase(instruction);
 }
 
 // Collect ready instructions onto ready_instruction_list_
@@ -189,20 +184,10 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
       // in stream->DeleteInstruction(...)
       intrusive::shared_ptr<InstructionMsg> instr_msg(instruction_ptr->mut_instr_msg());
       stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr, schedule_ctx));
-      local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
   OF_PROFILER_RANGE_POP();
-}
-
-void VirtualMachineEngine::FlushGarbageInstructions(const ScheduleCtx& schedule_ctx) {
-  if (local_garbage_msg_list_.size()) {
-    OF_PROFILER_RANGE_PUSH("FlushGarbageInstructions");
-    garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
-    schedule_ctx.OnGarbageMsgPending();
-    OF_PROFILER_RANGE_POP();
-  }
 }
 
 int64_t VirtualMachineEngine::this_machine_id() const {
@@ -487,10 +472,11 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
-  intrusive::shared_ptr<InstructionMsg> instr_msg(sequnential_instruction->mut_instr_msg());
-  LivelyInstructionListErase(sequnential_instruction, schedule_ctx);
-  local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
-  FlushGarbageInstructions(schedule_ctx);
+  const auto* operand = sequnential_instruction->instr_msg().phy_instr_operand().get();
+  const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+  CHECK_NOTNULL(barrier_operand)->callback();
+  auto* stream = sequnential_instruction->mut_stream();
+  stream->DeleteInstruction(LivelyInstructionListErase(sequnential_instruction, schedule_ctx));
 }
 
 void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
@@ -519,78 +505,23 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
     DispatchAndPrescheduleInstructions(schedule_ctx);
   }
   // handle scheduler probes
-  if (unlikely(local_scheduler_probe_list_.size())) {
-    HandleLocalSchedulerProbe();
-  } else if (unlikely(scheduler_probe_list_.thread_unsafe_size())) {
-    scheduler_probe_list_.MoveTo(&local_scheduler_probe_list_);
-    HandleLocalSchedulerProbe();
+  if (unlikely(local_probe_list_.size())) {
+    HandleLocalProbe();
+  } else if (unlikely(probe_list_.thread_unsafe_size())) {
+    probe_list_.MoveTo(&local_probe_list_);
+    HandleLocalProbe();
   }
-}
-
-void VirtualMachineEngine::Callback() {
-  InstructionMsgList garbage_msg_list;
-  mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
-  INTRUSIVE_FOR_EACH(garbage, &garbage_msg_list) {
-    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      garbage_msg_list.Erase(garbage.Mutable());
-      // There may be a tiny gap between appending `garbage` to garbage_list and dereferencing
-      // `garbage` in scheduler thread or work thread.
-      //  e.g.
-      //
-      //   void Foo() {
-      //     auto garbage = GetGarbage();
-      //     AppendToGarbageList(garbage);
-      //
-      //     // **Callback thread maybe handle garbage in the same time**. From it's point view,
-      //     ref_cnt > 1.
-      //
-      //     garbage.reset(); // explicitly dereference garbage for better understood.
-      //   }
-      //
-      while (garbage->ref_cnt() > 1) {
-        // Do nothing. Wait until all other threads ref_cnts released.
-      }
-      CHECK_NOTNULL(garbage->phy_instr_operand());
-      while (garbage->phy_instr_operand().use_count() > 1) {
-        // Do nothing. Wait until all other threads ref_cnts released.
-      }
-      // Destruct garbage.
-      return Maybe<void>::Ok();
-    }));
-    ++total_erased_instruction_cnt_;
-  }
-
-  if (unlikely(local_callback_probe_list_.size())) {
-    HandleLocalCallbackProbe();
-  } else if (unlikely(callback_probe_list_.thread_unsafe_size())) {
-    callback_probe_list_.MoveTo(&local_callback_probe_list_);
-    HandleLocalCallbackProbe();
-  }
-}
-
-void VirtualMachineEngine::HandleLocalCallbackProbe() {
-  OF_PROFILER_RANGE_PUSH("HandleLocalCallbackProbe");
-  INTRUSIVE_FOR_EACH_PTR(probe, &local_callback_probe_list_) {
-    if (probe->probe_function()(this)) { local_callback_probe_list_.Erase(probe); }
-  }
-  OF_PROFILER_RANGE_POP();
 }
 
 bool VirtualMachineEngine::SchedulerThreadUnsafeEmpty() const {
   return pending_msg_list().thread_unsafe_size() == 0 && local_pending_msg_list().empty()
          && lively_instruction_list_.empty() && active_stream_list().empty()
-         && scheduler_probe_list_.thread_unsafe_size() == 0 && local_scheduler_probe_list_.empty();
+         && probe_list_.thread_unsafe_size() == 0 && local_probe_list_.empty();
 }
 
 bool VirtualMachineEngine::SchedulerEmpty() const {
   // hook and size will be check in pending_msg_list().empty().
-  return pending_msg_list().empty() && scheduler_probe_list_.empty()
-         && SchedulerThreadUnsafeEmpty();
-}
-
-bool VirtualMachineEngine::CallbackEmpty() const {
-  return (total_erased_instruction_cnt() == total_inserted_instruction_cnt())
-         && callback_probe_list_.empty() && local_callback_probe_list_.empty();
+  return pending_msg_list().empty() && probe_list_.empty() && SchedulerThreadUnsafeEmpty();
 }
 
 }  // namespace vm
