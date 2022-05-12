@@ -674,7 +674,7 @@ class MseLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     const auto out = sequence_function(functional::Sub)
                          .then(functional::Square)
-                         .call(input, target, /*inplace=*/false);
+                         .call(input, target, /*alpha=*/1.0, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -687,7 +687,7 @@ class L1LossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     const auto out = sequence_function(functional::Sub)
                          .then(functional::Abs)
-                         .call(input, target, /*inplace=*/false);
+                         .call(input, target, /*alpha=*/1.0, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -742,7 +742,7 @@ class MarginRankingLossFunctor : public LossFunctorBase {
               return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1, /*inplace=*/true);
             })
             .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
-            .call(input_1, input_2, /*inplace=*/false);
+            .call(input_1, input_2, /*alpha=*/1.0, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -1355,21 +1355,27 @@ class TripletMarginLossFunctor {
       return true;
     }());
     auto da_p = JUST(VectorNorm(
-        JUST(ScalarAdd(eps, JUST(Sub(anchor, positive, /*inplace=*/false)), /*alpha=*/1)), p, dim,
+        JUST(ScalarAdd(eps, JUST(Sub(anchor, positive, /*alpha=*/1.0, /*inplace=*/false)),
+                       /*alpha=*/1)),
+        p, dim,
         /*keepdim=*/false, anchor->dtype()));
     auto da_n = JUST(VectorNorm(
-        JUST(ScalarAdd(eps, JUST(Sub(anchor, negative, /*inplace=*/false)), /*alpha=*/1)), p, dim,
+        JUST(ScalarAdd(eps, JUST(Sub(anchor, negative, /*alpha=*/1.0, /*inplace=*/false)),
+                       /*alpha=*/1)),
+        p, dim,
         /*keepdim=*/false, anchor->dtype()));
     if (swap) {
       auto distance_swap = JUST(VectorNorm(
-          JUST(ScalarAdd(eps, JUST(Sub(positive, negative, /*inplace=*/false)), /*alpha=*/1)), p,
-          dim,
+          JUST(ScalarAdd(eps, JUST(Sub(positive, negative, /*alpha=*/1.0, /*inplace=*/false)),
+                         /*alpha=*/1)),
+          p, dim,
           /*keepdim=*/false, positive->dtype()));
       da_n = JUST(Minimum(distance_swap, da_n));
     }
-    auto triplet_loss = JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n, /*inplace=*/false)), margin,
-                                                  /*alpha=*/1, /*inplace=*/false)),
-                                   /*min=*/0.0, NullOpt));
+    auto triplet_loss =
+        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n, /*alpha=*/1.0, /*inplace=*/false)), margin,
+                                  /*alpha=*/1, /*inplace=*/false)),
+                   /*min=*/0.0, NullOpt));
     int32_t ndim = triplet_loss->ndim() - 1;
     std::vector<int32_t> axis(1, ndim);
 
