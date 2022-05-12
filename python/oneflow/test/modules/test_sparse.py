@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from collections import OrderedDict
 import unittest
 from oneflow.test_utils.automated_test_util import *
+from oneflow.test_utils.test_util import GenArgList
 import oneflow as flow
 import oneflow.unittest
 
@@ -73,8 +75,10 @@ def _test_embedding_padding_idx(test_case, device):
 @flow.unittest.skip_unless_1n1d()
 class TestEmbedding(flow.unittest.TestCase):
     def test_padding_idx(test_case):
-        for device in ["cpu", "cuda"]:
-            _test_embedding_padding_idx(test_case, device)
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_embedding_padding_idx(test_case, *arg)
 
     @autotest(n=5, check_graph=True)
     def test_embedding_impl(test_case):
