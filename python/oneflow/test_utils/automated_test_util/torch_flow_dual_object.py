@@ -785,7 +785,7 @@ def clear_note_fake_program():
     flow.set_printoptions(profile="full")
 
 
-tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 10))
+tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 20))
 
 
 class DualObject:
