@@ -35,7 +35,6 @@ def _test_rnn(test_case, device):
     if nonlinearity == "relu":
         grad_tol = 10
 
-    print(nonlinearity, grad_tol)
     bias = random.randint(-10, 10) <= 0
     batch_first = random.randint(-10, 10) <= 0
     dropout = 0
@@ -92,6 +91,14 @@ def _test_rnn(test_case, device):
         )
     )
 
+    test_case.assertTrue(
+        np.allclose(
+            hid_torch.cpu().detach().numpy(),
+            hid_flow.cpu().detach().numpy(),
+            atol=1e-5,
+        )
+    )
+
     all_weights = rnn_torch.all_weights
     torch_params = []
     for ls in all_weights:
@@ -122,7 +129,7 @@ def _test_lstm(test_case, device):
     batch_first = random.randint(-10, 10) <= 0
     dropout = 0
     bidirectional = random.randint(-10, 10) <= 0
-    proj_size = random.randint(10, hidden_size - 1)
+    proj_size = random.randint(0, hidden_size - 1)
 
     lstm_torch = torch.nn.LSTM(
         input_size=input_size,
@@ -130,55 +137,84 @@ def _test_lstm(test_case, device):
         num_layers=num_layers,
         bias=bias,
         batch_first=batch_first,
-        dropout=0,
+        dropout=dropout,
         bidirectional=bidirectional,
         proj_size=proj_size,
-    ).to(device)
+    )
 
-    weights_torch = []
-    for w in lstm_torch.parameters():
-        weights_torch.append(
-            w.permute(1, 0).cpu().data.numpy()
-            if len(w.size()) > 1
-            else w.cpu().data.numpy()
-        )
-
-    lstm_flow = flow.nn.LSTM(
+    lstm_flow = flow.nn.LSTMV2(
         input_size=input_size,
         hidden_size=hidden_size,
         num_layers=num_layers,
         bias=bias,
         batch_first=batch_first,
-        dropout=0,
+        dropout=dropout,
         bidirectional=bidirectional,
         proj_size=proj_size,
-    ).to(device)
+    )
 
-    for i, w in enumerate(lstm_flow.parameters()):
-        w_torch = weights_torch[i]
-        w.copy_(flow.tensor(w_torch))
+    torch_state_dict = lstm_torch.state_dict()
+    new_dict = {}
+    for k, v in torch_state_dict.items():
+        new_dict[k] = v.detach().numpy()
+    lstm_flow.load_state_dict(new_dict)
 
-    x = np.random.rand(32, 10, input_size)
-    x_torch = torch.tensor(x, dtype=torch.float32, requires_grad=True).to(device)
-    x_flow = flow.tensor(x, dtype=flow.float32, requires_grad=True).to(device)
+    lstm_flow = lstm_flow.to(device)
+    lstm_torch = lstm_torch.to(device)
+
+    x = np.random.rand(32, 16, input_size)
+    x_torch = torch.tensor(x, dtype=torch.float32, requires_grad=True, device=device)
+    x_flow = flow.tensor(x, dtype=flow.float32, requires_grad=True, device=device)
 
     out_torch, hid_torch = lstm_torch(x_torch)
     out_flow, hid_flow = lstm_flow(x_flow)
-    test_case.assertTrue(
-        np.allclose(
-            out_torch.cpu().data.numpy(),
-            out_flow.cpu().data.numpy(),
-            rtol=1e-05,
-            atol=1e-05,
-        )
-    )
 
     z_torch = out_torch.sum()
     z_torch.backward()
     z_flow = out_flow.sum()
     z_flow.backward()
+
     test_case.assertTrue(
-        np.allclose(x_torch.cpu().data.numpy(), x_flow.cpu().data.numpy())
+        np.allclose(
+            out_torch.cpu().detach().numpy(),
+            out_flow.cpu().detach().numpy(),
+            atol=1e-5,
+        )
+    )
+
+    test_case.assertTrue(
+        np.allclose(
+            hid_torch[0].cpu().detach().numpy(),
+            hid_flow[0].cpu().detach().numpy(),
+            atol=1e-5,
+        )
+    )
+
+    test_case.assertTrue(
+        np.allclose(
+            hid_torch[1].cpu().detach().numpy(),
+            hid_flow[1].cpu().detach().numpy(),
+            atol=1e-5,
+        )
+    )
+
+    all_weights = lstm_torch.all_weights
+    torch_params = []
+    for ls in all_weights:
+        for l in ls:
+            torch_params.append(l)
+    all_weights = lstm_flow.all_weights
+    flow_params = []
+    for ls in all_weights:
+        for l in ls:
+            flow_params.append(l)
+
+    for i in range(len(flow_params)):
+        torch_np = torch_params[i].grad.cpu().numpy()
+        flow_np = flow_params[i].grad.cpu().numpy()
+        test_case.assertTrue(np.allclose(torch_np, flow_np, atol=1e-4))
+    test_case.assertTrue(
+        np.allclose(x_torch.grad.cpu().numpy(), x_flow.grad.cpu().numpy(), atol=1e-4)
     )
 
 
@@ -251,11 +287,11 @@ def _test_gru(test_case, device):
 class TestRNNModule(flow.unittest.TestCase):
     def test_rnn(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_rnn]
+        arg_dict["test_fun"] = [_test_rnn, _test_lstm]
         arg_dict["device"] = ["cuda", "cpu"]
-        for arg in GenArgList(arg_dict):
-            print(arg)
-            arg[0](test_case, *arg[1:])
+        for i in range(10):
+            for arg in GenArgList(arg_dict):
+                arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":

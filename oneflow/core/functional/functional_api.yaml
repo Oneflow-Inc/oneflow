@@ -2211,7 +2211,6 @@
   signature:
     [
       "TensorTuple (Tensor input, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => RnnTanhInput",
-      # "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
     ]
   bind_python: True
 
@@ -2219,6 +2218,12 @@
   signature:
     [
       "TensorTuple (Tensor input, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => RnnReluInput",
-      # "Tensor (Int32 n, *, Placement placement, SbpList sbp, Generator generator=None, DataType dtype=kInt64, Bool requires_grad=False) => ConsistentRandPerm",
+    ]
+  bind_python: True
+
+- name: "lstm"
+  signature:
+    [
+      "TensorTuple (Tensor input, TensorTuple hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => LstmInput",
     ]
   bind_python: True

@@ -151,4 +151,4 @@ from . import functional
 
 from . import parallel
 
-from oneflow.nn.modules.rnn import RNN, LSTM, GRU, RNNCell, LSTMCell, RNNV2
+from oneflow.nn.modules.rnn import RNN, LSTM, GRU, RNNCell, LSTMCell, RNNV2, LSTMV2

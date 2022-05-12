@@ -3354,10 +3354,11 @@ class FusedLstmCellGradFunctor {
 };
 
 template<typename cell_type>
-Maybe<TensorTuple> rnn_impl(const std::shared_ptr<one::Tensor>& input,
-                            const std::shared_ptr<one::Tensor>& hx, const one::TensorTuple& params,
-                            const bool& has_biases, const int32_t& num_layers, const float& dropout,
-                            const bool& train, const bool& bidirectional, const bool& batch_first) {
+Maybe<TensorTuple> _rnn_impl(const std::shared_ptr<one::Tensor>& input,
+                             const std::shared_ptr<one::Tensor>& hx, const one::TensorTuple& params,
+                             const bool& has_biases, const int32_t& num_layers,
+                             const float& dropout, const bool& train, const bool& bidirectional,
+                             const bool& batch_first) {
   TensorTuple hiddens;
   hiddens.emplace_back(hx);
   check_attributes(input, params, hiddens);
@@ -3386,10 +3387,10 @@ Maybe<TensorTuple> rnn_impl(const std::shared_ptr<one::Tensor>& input,
       }
       final_hiddens.emplace_back(fw_hidden);
       if (dropout != 0 && train && l < num_layers - 1) {
-        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*rnn_inputs, 0));
-        std::shared_ptr<one::Tensor> layer_input =
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*fw_outputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
             JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
-        rnn_inputs = JUST(functional::Unbind(layer_input, 0));
+        fw_outputs = JUST(functional::Unbind(dropout_res, 0));
       }
 
       // reverse direction
@@ -3403,9 +3404,9 @@ Maybe<TensorTuple> rnn_impl(const std::shared_ptr<one::Tensor>& input,
       final_hiddens.emplace_back(bw_hidden);
       if (dropout != 0 && train && l < num_layers - 1) {
         std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*bw_outputs, 0));
-        std::shared_ptr<one::Tensor> layer_input =
+        std::shared_ptr<one::Tensor> dropout_res =
             JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
-        bw_outputs = JUST(functional::Unbind(layer_input, 0));
+        bw_outputs = JUST(functional::Unbind(dropout_res, 0));
       }
 
       // concat fw_outputs and bw_outputs
@@ -3454,8 +3455,8 @@ class RnnTanhInputFunctor {
                                 const one::TensorTuple& params, const bool& has_biases,
                                 const int32_t& num_layers, const float& dropout, const bool& train,
                                 const bool& bidirectional, const bool& batch_first) const {
-    return rnn_impl<SimpleCell<tanh_f, CellParams>>(input, hx, params, has_biases, num_layers,
-                                                    dropout, train, bidirectional, batch_first);
+    return _rnn_impl<SimpleCell<tanh_f, CellParams>>(input, hx, params, has_biases, num_layers,
+                                                     dropout, train, bidirectional, batch_first);
   }
 };
 
@@ -3468,8 +3469,133 @@ class RnnReluInputFunctor {
                                 const one::TensorTuple& params, const bool& has_biases,
                                 const int32_t& num_layers, const float& dropout, const bool& train,
                                 const bool& bidirectional, const bool& batch_first) const {
-    return rnn_impl<SimpleCell<relu_f, CellParams>>(input, hx, params, has_biases, num_layers,
-                                                    dropout, train, bidirectional, batch_first);
+    return _rnn_impl<SimpleCell<relu_f, CellParams>>(input, hx, params, has_biases, num_layers,
+                                                     dropout, train, bidirectional, batch_first);
+  }
+};
+
+Maybe<TensorTuple> _lstm_impl(const std::shared_ptr<one::Tensor>& input, const one::TensorTuple& hx,
+                              const one::TensorTuple& params, const bool& has_biases,
+                              const int32_t& num_layers, const float& dropout, const bool& train,
+                              const bool& bidirectional, const bool& batch_first) {
+  CHECK_OR_RETURN(hx.size() == 2) << "lstm expects two hidden states";
+  // if cells are of different size, that means projections are used
+  bool has_projections = (hx[0]->shape()->At(2) != hx[1]->shape()->At(2));
+  check_attributes(input, params, hx);
+  std::shared_ptr<one::Tensor> rnn_input = input;
+  if (batch_first) {
+    std::vector<int32_t> dims = {1, 0, 2};
+    rnn_input = JUST(functional::Permute(input, dims));
+  }
+  auto rnn_params = JUST(gather_params(params, has_biases, has_projections));
+
+  std::shared_ptr<TensorTuple> layer_hxs = JUST(functional::Unbind(hx[0], 0));
+  std::shared_ptr<TensorTuple> layer_cxs = JUST(functional::Unbind(hx[1], 0));
+  std::shared_ptr<TensorTuple> rnn_inputs = JUST(functional::Unbind(rnn_input, 0));
+
+  auto generator = JUST(one::DefaultAutoGenerator());
+
+  TensorTuple final_hy;
+  TensorTuple final_cy;
+
+  if (bidirectional) {
+    for (int32_t l = 0; l < num_layers; ++l) {
+      // forward direction
+      std::shared_ptr<TensorTuple> fw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
+      std::shared_ptr<TensorTuple> lstm_cell_out = std::make_shared<TensorTuple>(2);
+      (*lstm_cell_out)[0] = layer_hxs->at(l * 2);
+      (*lstm_cell_out)[1] = layer_cxs->at(l * 2);
+      auto& fw_cell_param = rnn_params->at(l * 2);
+
+      for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
+        lstm_cell_out =
+            JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, fw_cell_param));
+        (*fw_outputs)[i] = lstm_cell_out->at(0);
+      }
+      final_hy.emplace_back(lstm_cell_out->at(0));
+      final_cy.emplace_back(lstm_cell_out->at(1));
+
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*fw_outputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        fw_outputs = JUST(functional::Unbind(dropout_res, 0));
+      }
+
+      // reverse direction
+      std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
+      (*lstm_cell_out)[0] = layer_hxs->at(l * 2 + 1);
+      (*lstm_cell_out)[1] = layer_cxs->at(l * 2 + 1);
+      auto& bw_cell_param = rnn_params->at(l * 2 + 1);
+      for (int32_t i = rnn_inputs->size() - 1; i >= 0; i--) {
+        lstm_cell_out =
+            JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, bw_cell_param));
+        (*bw_outputs)[i] = lstm_cell_out->at(0);
+      }
+      final_hy.emplace_back(lstm_cell_out->at(0));
+      final_cy.emplace_back(lstm_cell_out->at(1));
+
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*bw_outputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        bw_outputs = JUST(functional::Unbind(dropout_res, 0));
+      }
+
+      // concat fw_outputs and bw_outputs
+      for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
+        rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
+                                                    bw_outputs->at(0)->shape()->NumAxes() - 1));
+      }
+    }
+
+  } else {
+    std::shared_ptr<TensorTuple> lstm_cell_out = std::make_shared<TensorTuple>(2);
+
+    for (int32_t l = 0; l < num_layers; ++l) {
+      auto& cell_param = rnn_params->at(l);
+      (*lstm_cell_out)[0] = layer_hxs->at(l);
+      (*lstm_cell_out)[1] = layer_cxs->at(l);
+      for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
+        lstm_cell_out = JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, cell_param));
+        rnn_inputs->at(i) = lstm_cell_out->at(0);
+      }
+      final_hy.emplace_back(lstm_cell_out->at(0));
+      final_cy.emplace_back(lstm_cell_out->at(1));
+
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*rnn_inputs, 0));
+        std::shared_ptr<one::Tensor> layer_input =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        rnn_inputs = JUST(functional::Unbind(layer_input, 0));
+      }
+    }
+  }
+
+  TensorTuple output;
+  std::shared_ptr<one::Tensor> output_0 = JUST(functional::Stack(*rnn_inputs, 0));
+  if (batch_first) {
+    std::vector<int32_t> dims = {1, 0, 2};
+    output.emplace_back(JUST(functional::Permute(output_0, dims)));
+  } else {
+    output.emplace_back(output_0);
+  }
+  output.emplace_back(JUST(functional::Stack(final_hy, 0)));
+  output.emplace_back(JUST(functional::Stack(final_cy, 0)));
+  return output;
+}
+
+class LstmInputFunctor {
+ public:
+  LstmInputFunctor() {}
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
+                                const one::TensorTuple& hx, const one::TensorTuple& params,
+                                const bool& has_biases, const int32_t& num_layers,
+                                const float& dropout, const bool& train, const bool& bidirectional,
+                                const bool& batch_first) const {
+    return _lstm_impl(input, hx, params, has_biases, num_layers, dropout, train, bidirectional,
+                      batch_first);
   }
 };
 
@@ -3565,6 +3691,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedLstmCellGradFunctor>("FusedLstmCellGrad");
   m.add_functor<impl::RnnTanhInputFunctor>("RnnTanhInput");
   m.add_functor<impl::RnnReluInputFunctor>("RnnReluInput");
+  m.add_functor<impl::LstmInputFunctor>("LstmInput");
 }
 
 }  // namespace functional
