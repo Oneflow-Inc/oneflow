@@ -57,6 +57,17 @@ class CosGradGradFunctor {
   }
 };
 
+class ExpGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto res = sequence_function(functional::Exp)
+                   .then(std::bind(functional::Mul, dydx, std::placeholders::_1))
+                   .call(x);
+    return res;
+  }
+};
+
 class LogGradGradFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
@@ -75,6 +86,7 @@ class LogGradGradFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SinGradGradFunctor>("SinGradGrad");
   m.add_functor<impl::CosGradGradFunctor>("CosGradGrad");
+  m.add_functor<impl::ExpGradGradFunctor>("ExpGradGrad");
   m.add_functor<impl::LogGradGradFunctor>("LogGradGrad");
 }
 

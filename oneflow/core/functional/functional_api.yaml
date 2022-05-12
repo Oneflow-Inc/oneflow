@@ -912,6 +912,10 @@
   signature: "Tensor (Tensor x, Tensor dy) => ExpGrad"
   bind_python: False
 
+- name: "exp_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => ExpGradGrad"
+  bind_python: False
+
 - name: "gather"
   signature: "Tensor (Tensor x, Tensor indices, Int64 axis) => Gather"
   bind_python: True
