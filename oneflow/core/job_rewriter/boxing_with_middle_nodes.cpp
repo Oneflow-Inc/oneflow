@@ -63,6 +63,8 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
           // Create the middle operators
           OperatorConf identity_op_conf{};
           identity_op_conf.set_name("System-Boxing-Middle-Identity-" + NewUniqueId());
+          const OperatorConf& input_op_conf = JUST(job_builder->OpConf4OpName(middle_node_lbi.op_name()));
+          identity_op_conf.set_scope_symbol_id(input_op_conf.scope_symbol_id());
           IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
           identity_conf->set_in(GenLogicalBlobName(middle_node_lbi));
           identity_conf->set_out("out");
