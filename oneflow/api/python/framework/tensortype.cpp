@@ -44,12 +44,10 @@ static PyTypeObject PyTensortypeTemplate{
 std::vector<PyTensortype*> tensortype_list;
 
 std::unordered_map<DataType, std::string> datatype_to_string_dict{
-    // functional::To failed when dtype->datatype() == kChar
-    // {kChar, "CharTensor"},
     {kFloat, "FloatTensor"},  {kDouble, "DoubleTensor"},     {kInt8, "CharTensor"},
     {kInt32, "IntTensor"},    {kInt64, "LongTensor"},        {kUInt8, "ByteTensor"},
     {kFloat16, "HalfTensor"}, {kBFloat16, "BFloat16Tensor"}, {kBool, "BoolTensor"},
-    // dtype complex is not supported yet
+    // Complex dtype is not supported yet
     // {kComplex32, "ComplexHalfTensor"},
     // {kComplex64, "ComplexFloatTensor"},
     // {kComplex128, "ComplexDoubleTensor"},

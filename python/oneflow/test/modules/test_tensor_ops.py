@@ -86,7 +86,7 @@ def _test_type_noargs(test_case, shape, device, dtype):
             flow.int32: "IntTensor",
             flow.int64: "LongTensor",
             flow.float16: "HalfTensor",
-            flow.bfloat16: "BFloat16Tensor",
+            flow.bfloat16: "BFloat16Tensor", # Currently unsupport
             flow.float32: "FloatTensor",
             flow.float64: "DoubleTensor",
         }
