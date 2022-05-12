@@ -37,9 +37,9 @@
 - name: "sub"
   signature:
     [
-      "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Sub",
-      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarSub",
-      "Tensor (Scalar input, Tensor other) =>  ScalarSub",
+      "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=False) => Sub",
+      "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=False) => ScalarSub",
+      "Tensor (Scalar input, Tensor other, *, Scalar alpha=1) =>  ScalarSub",
     ]
   bind_python: true
 
@@ -429,6 +429,10 @@
   signature: "Tensor (Tensor x, Tensor dy) => SinGrad"
   bind_python: False
 
+- name: "sin_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => SinGradGrad"
+  bind_python: False
+
 - name: "sin_"
   signature: "Tensor (Tensor x) => Sin_"
   bind_python: True
@@ -439,6 +443,10 @@
 
 - name: "cos_grad"
   signature: "Tensor (Tensor x, Tensor dy) => CosGrad"
+  bind_python: False
+
+- name: "cos_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => CosGradGrad"
   bind_python: False
 
 - name: "cosh"
