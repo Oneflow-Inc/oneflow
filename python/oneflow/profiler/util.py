@@ -13,22 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from google.protobuf import text_format
-
-import oneflow._oneflow_internal
-import oneflow.framework.scope_util as scope_util
+US_IN_MS = 1000.0
+US_IN_SECOND = US_IN_MS * 1000.0
 
 
-def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
-    parallel_hierarchy = None
-    if parallel_conf.has_hierarchy():
-        parallel_hierarchy = oneflow._oneflow_internal.Size(
-            tuple(parallel_conf.hierarchy().dim())
-        )
-    return scope_util.MakeInitialScope(
-        job_conf,
-        parallel_conf.device_tag(),
-        list(parallel_conf.device_name()),
-        parallel_hierarchy,
-        is_mirrored,
-    ).symbol_id
+def format_time(time_us):
+    if time_us >= US_IN_SECOND:
+        return "{:.3f}s".format(time_us / US_IN_SECOND)
+    if time_us >= US_IN_MS:
+        return "{:.3f}ms".format(time_us / US_IN_MS)
+    return "{:.3f}us".format(time_us)

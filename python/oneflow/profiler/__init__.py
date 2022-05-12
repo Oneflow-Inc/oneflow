@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,32 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_JOB_MODEL_IO_V2_JOB_
-#define ONEFLOW_CORE_JOB_MODEL_IO_V2_JOB_
+"""
 
-#include "oneflow/core/job/compiler.h"
-#include "oneflow/core/job/inter_user_job_info.pb.h"
+import oneflow._oneflow_internal
+from oneflow.profiler.profiler import profile, record_function
 
-namespace oneflow {
+__all__ = [
+    "range_push",
+    "range_pop",
+    "profiler_start",
+    "profiler_stop",
+    "profile",
+    "record_function",
+]
 
-void MakeModelIoV2Jobs(const std::vector<std::shared_ptr<Job>>& jobs,
-                       const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
-                       const std::function<void(Job*)>& Handler);
 
-}  // namespace oneflow
+def range_push(range_name):
+    oneflow._oneflow_internal.profiler.RangePush(range_name)
 
-#endif  // ONEFLOW_CORE_JOB_MODEL_IO_V2_JOB_
+
+def range_pop():
+    oneflow._oneflow_internal.profiler.RangePop()
+
+
+def profiler_start():
+    oneflow._oneflow_internal.profiler.ProfilerStart()
+
+
+def profiler_stop():
+    oneflow._oneflow_internal.profiler.ProfilerStop()
