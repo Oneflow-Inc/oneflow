@@ -644,7 +644,8 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
   // put remainder process ids into src groups.
   for (int i = 0; i < remainder_process_ids.size(); ++i) {
     int64_t src_process_id = src_process_ids.at(i % src_process_ids.size());
-    JUST(MapAt(process_id2group, src_process_id)).emplace_back(JUST(oneflow::VectorAt(remainder_process_ids, i)));
+    JUST(MapAt(process_id2group, src_process_id))
+        .emplace_back(JUST(oneflow::VectorAt(remainder_process_ids, i)));
   }
   const auto& map = std::make_shared<std::unordered_map<int64_t, Symbol<ParallelDesc>>>();
   for (const auto& pair : process_id2group) {
