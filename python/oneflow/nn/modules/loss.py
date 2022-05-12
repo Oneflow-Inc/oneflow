@@ -891,8 +891,8 @@ class CombinedMarginLoss(Module):
     .. math::
         L = -\frac{1}{N} \sum_{i=1}^N
             \frac
-            {\exp(s\cos(m_1\theta_{y_i}+m_2) -m_3)}
-            {\exp(s\cos(m_1\theta_{y_i}+m_2) -m_3) + \sum^{n}_{j=1, j\neq y_i}\exp(s\cos\theta_j)}
+            {\exp(s(\cos(m_1\theta_{y_i}+m_2) -m_3))}
+            {\exp(s(\cos(m_1\theta_{y_i}+m_2) -m_3)) + \sum^{n}_{j=1, j\neq y_i}\exp(s\cos\theta_j)}
 
     where :math:`y_i` represents the class of sample :math:`i`.
 
