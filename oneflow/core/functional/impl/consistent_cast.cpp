@@ -432,9 +432,9 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   }
   const auto& device = JUST(input->device());
   CHECK_EQ_OR_RETURN(device->type(), parallel_desc->device_tag())
-      << Error::UnimplementedError() << "tensor' device type must be same with placement.";
+      << Error::RuntimeError() << "tensor' device type must be same with placement.";
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
-      << Error::UnimplementedError() << "tensor must be on default device of the current rank.";
+      << Error::RuntimeError() << "tensor must be on default device of the current rank.";
   Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();

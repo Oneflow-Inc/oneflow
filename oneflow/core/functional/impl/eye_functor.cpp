@@ -80,13 +80,13 @@ class ConsistentEyeSbpListFunctor {
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
-        << "len(sbp) == len(placement.hierarchy) required, but "
+        << Error::RuntimeError() << "len(sbp) == len(placement.hierarchy) required, but "
         << "len(sbp)==" << sbp_tuple.size() << ", "
         << "len(placement.hierarchy)==" << placement->hierarchy()->NumAxes();
 
     FOR_RANGE(int32_t, i, 0, sbp_tuple.size()) {
       CHECK_OR_RETURN(sbp_tuple.at(i)->has_broadcast_parallel())
-          << "sbp of eye should be broadcast only";
+          << Error::RuntimeError() << "sbp of eye should be broadcast only";
     }
 
     JUST(attrs.SetAttr<int64_t>("rows", JUST(rows.As<int64_t>())));

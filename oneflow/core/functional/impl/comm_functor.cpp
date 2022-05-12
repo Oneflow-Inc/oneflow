@@ -130,7 +130,10 @@ class BroadcastFunctor {
                            bool inplace) const {
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     std::string device_type_str = JUST(x->device())->type();
-    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
+    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu")
+        << Error::RuntimeError()
+        << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+        << "for consistent tensor, but got " << JUST(x->device())->ToString() << "!";
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
     return one::Broadcast(x, src_rank, parallel_desc, inplace);
@@ -185,10 +188,14 @@ class LocalAllReduceFunctor {
   LocalAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
     const auto& device = JUST(x->device());
-    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
+    CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
+        << Error::RuntimeError() << "tensor must be on default device of the current rank.";
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
     const std::string& device_type_str = device->type();
-    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu");
+    CHECK_OR_RETURN(device_type_str == "cuda" || device_type_str == "cpu")
+        << Error::RuntimeError()
+        << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
+        << "for consistent tensor, but got " << JUST(x->device())->ToString() << "!";
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
@@ -212,7 +219,8 @@ class ConsistentAllReduceFunctor {
   ConsistentAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(x->is_consistent())
+          << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
       CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
     }
     std::shared_ptr<OpExpr> op_expr =
@@ -227,10 +235,14 @@ class ConsistentReduceScatterFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::string& op_type) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(x->is_consistent())
+          << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
       if (op_type == "max") {
         CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(x->nd_sbp())));
-        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA);
+        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA)
+            << Error::RuntimeError() << "cannot pin tensor with device: "
+            << *JUST(PlacementToString(JUST(x->parallel_desc())))
+            << ", only dense GPU tensors can be pinned.";
       } else if (op_type == "sum") {
         CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
       } else {
@@ -248,7 +260,8 @@ class ConsistentAllGatherFunctor {
   ConsistentAllGatherFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(x->is_consistent())
+          << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
       CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
     }
     std::shared_ptr<OpExpr> op_expr =
@@ -265,7 +278,8 @@ class ConsistentS2SFunctor {
     Symbol<NdSbp> in_nd_sbp = JUST(x->nd_sbp());
     Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
     {
-      CHECK_OR_RETURN(x->is_consistent());
+      CHECK_OR_RETURN(x->is_consistent())
+          << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
       CHECK_OR_RETURN(IsSplitSbp(in_nd_sbp->sbp_parallel(0)));
       CHECK_EQ_OR_RETURN(out_nd_sbp->sbp_parallel_size(), 1);
@@ -349,7 +363,9 @@ class RecvFunctor {
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      CHECK_OR_RETURN(out_tensor_device == device);
+      CHECK_OR_RETURN(out_tensor_device == device)
+          << Error::RuntimeError() << "device type " << device->ToString()
+          << " does not match device type of out parameter (" << out_tensor_device->ToString();
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = out_tensor;
       JUST(OpInterpUtil::Dispatch(*op_expr_, {}, outputs.get(), op_expr_interp_context));
@@ -367,7 +383,10 @@ class LocalReduceFunctor {
   LocalReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t dst, bool inplace) const {
     const auto& device = JUST(x->device());
-    { CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank()); }
+    {
+      CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
+          << Error::RuntimeError() << "tensor must be on default device of the current rank.";
+    }
     static thread_local std::unordered_map<Symbol<RankGroup>, Symbol<ParallelDesc>>
         rank_group2parallel_desc;
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());

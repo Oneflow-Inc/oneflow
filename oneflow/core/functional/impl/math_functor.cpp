@@ -722,7 +722,7 @@ class ReduceMeanWholeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // ReduceMean only calculate floating values.
     CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
-        << "RuntimeError: Can only calculate the mean of floating types.";
+        << Error::RuntimeError() << "RuntimeError: Can only calculate the mean of floating types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
     const auto& sum = JUST(functional::ReduceSumWhole(x));
@@ -738,7 +738,7 @@ class ReduceMeanFunctor {
                            const bool& keepdims) const {
     // ReduceMean only calculate floating values.
     CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
-        << "RuntimeError: Can only calculate the mean of floating types.";
+        << Error::RuntimeError() << "RuntimeError: Can only calculate the mean of floating types.";
     const auto& sum = JUST(functional::ReduceSum(x, axis, keepdims));
     size_t reduce_count = 1;
     if (axis.empty()) {
@@ -889,7 +889,8 @@ class TransposeFunctor {
                            const std::vector<int32_t>& permute) const {
     MutableAttrMap attrs;
     auto ndim = input->ndim();
-    CHECK_EQ_OR_RETURN(ndim, permute.size()) << "number of dims don't match in permute";
+    CHECK_EQ_OR_RETURN(ndim, permute.size())
+        << Error::RuntimeError() << "number of dims don't match in permute";
 
     // handle negative permute value here, because of permute is const,
     // so copy it to local var and do modification.
@@ -953,10 +954,13 @@ class AsStridedFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
                            const int32_t& storage_offset) const {
-    CHECK_OR_RETURN(size.size() == stride.size()) << "mismatch in length of strides and shape";
+    CHECK_OR_RETURN(size.size() == stride.size())
+        << Error::RuntimeError() << "mismatch in length of strides and shape";
     for (size_t i = 0; i < size.size(); i++) {
-      CHECK_OR_RETURN(size[i] >= 0) << "Trying to create tensor with negative dimension" << size[i];
+      CHECK_OR_RETURN(size[i] >= 0)
+          << Error::RuntimeError() << "Trying to create tensor with negative dimension" << size[i];
       CHECK_OR_RETURN(stride[i] >= 0)
+          << Error::RuntimeError()
           << "as_strided: Negative strides are not supported at the moment, got strides:"
           << stride[i];
     }
@@ -1133,7 +1137,7 @@ class ClampBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max, bool inplace) const {
     CHECK_OR_RETURN(min.has_value() || max.has_value())
-        << "Requires one of argument `min` and `max` at least in clip.";
+        << Error::RuntimeError() << "Requires one of argument `min` and `max` at least in clip.";
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
@@ -1342,8 +1346,10 @@ class ScalarMatrixNormFunctor {
     auto num_dims = x->ndim();
     auto axis = input_dim.size();
     CHECK_OR_RETURN(num_dims >= 2)
+        << Error::RuntimeError()
         << "linalg.matrix_norm(): input tensor must be a matrix or batch of matrices";
     CHECK_OR_RETURN(axis == 2 && input_dim[0] != input_dim[1])
+        << Error::RuntimeError()
         << "linalg.matrix_norm(): input_dim must be a 2-tuple of ints with different elements";
 
     Symbol<DType> dtype_val;
@@ -1500,6 +1506,7 @@ class NormFunctor {
     } else {
       if (ord.has_value()) {
         CHECK_OR_RETURN(x->ndim() <= 2)
+            << Error::RuntimeError()
             << "linalg.norm(): input must be 1-D or 2-D when dim is None and ord is not None";
         if (x->ndim() == 1) {
           res = JUST(VectorNorm(x, ord_sca, input_dim, keepdim, dtype));
@@ -1623,6 +1630,7 @@ class ClampGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const Optional<Scalar>& min,
                            const Optional<Scalar>& max) const {
     CHECK_OR_RETURN(min.has_value() || max.has_value())
+        << Error::RuntimeError()
         << "Requires one of argument `min` and `max` at least in clip_grad.";
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
@@ -1674,15 +1682,16 @@ class SelectFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const int32_t& index) const {
     int32_t ndim = input->ndim();
-    CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
+    CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError()
+                              << "select() cannot be applied to a 0-dim tensor.";
     CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
         << "," << ndim - 1 << "], but got " << dim << ")";
     int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
     auto size = input->dim(pos_dim);
     CHECK_OR_RETURN((index >= -size) && (index < size))
-        << "Index out of range (expected to be in range of [" << -size << "," << size - 1
-        << "], but got " << index << ")";
+        << Error::RuntimeError() << "Index out of range (expected to be in range of [" << -size
+        << "," << size - 1 << "], but got " << index << ")";
     int32_t pos_index = index >= 0 ? index : index + size;
 
     std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
@@ -2080,7 +2089,8 @@ class MovedimVecFunctor {
       CHECK_OR_RETURN(item >= -ndim && item < ndim)
           << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
           << ", " << ndim - 1 << "], but got " << item << ")";
-      CHECK_EQ_OR_RETURN(is_used[item], false) << "repeated dim in " << desc;
+      CHECK_EQ_OR_RETURN(is_used[item], false)
+          << Error::RuntimeError() << "repeated dim in " << desc;
 
       is_used[item] = true;
       perm_out[i] = item;
@@ -2095,9 +2105,9 @@ class MovedimVecFunctor {
     int32_t dim = source.size();
 
     CHECK_EQ_OR_RETURN(source.size(), destination.size())
-        << "movedim: Invalid source or destination dims: source (" << source.size()
-        << " dims ) should contain the same number of dims as destination (" << destination.size()
-        << " dims)";
+        << Error::RuntimeError() << "movedim: Invalid source or destination dims: source ("
+        << source.size() << " dims ) should contain the same number of dims as destination ("
+        << destination.size() << " dims)";
 
     std::vector<int32_t> source_nopeat(dim);
     std::vector<int32_t> destination_nopeat(dim);
@@ -2181,7 +2191,8 @@ class TensorSplitIntFunctor {
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
         << "," << ndim - 1 << "], but got " << dim << ")";
     CHECK_OR_RETURN(indices_or_sections > 0)
-        << "number of sections must be larger than 0, got ," << indices_or_sections << ");";
+        << Error::RuntimeError() << "number of sections must be larger than 0, got ,"
+        << indices_or_sections << ");";
     int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
 
     const auto dim_size = input->dim(pos_dim);
@@ -2213,12 +2224,14 @@ class HsplitIntFunctor {
                                 const int32_t& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 1)
+        << Error::RuntimeError()
         << "flow.hsplit requires a tensor with at least 1 dimension, but got a tensor with " << ndim
         << " dimensions!";
-    CHECK_OR_RETURN(indices_or_sections > 0) << "indices_or_sections must greater than 0";
+    CHECK_OR_RETURN(indices_or_sections > 0)
+        << Error::RuntimeError() << "indices_or_sections must greater than 0";
     int32_t dim = (ndim == 1) ? 0 : 1;
     CHECK_OR_RETURN(input->dim(dim) % indices_or_sections == 0)
-        << "flow.hsplit attempted to split along dimension " << dim
+        << Error::RuntimeError() << "flow.hsplit attempted to split along dimension " << dim
         << ", but the size of the dimension " << input->shape()->At(dim)
         << " is not divisible by the split_size " << indices_or_sections << "!";
     return TensorSplitInt(input, indices_or_sections, dim);
@@ -2232,6 +2245,7 @@ class HsplitVecFunctor {
                                 const std::vector<int32_t>& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 1)
+        << Error::RuntimeError()
         << "flow.hsplit requires a tensor with at least 1 dimension, but got a tensor with " << ndim
         << " dimensions!";
     int32_t dim = (ndim == 1) ? 0 : 1;
@@ -2246,11 +2260,12 @@ class VsplitIntFunctor {
                                 const int32_t& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 2)
+        << Error::RuntimeError()
         << "flow.vsplit requires a tensor with at least 2 dimension, but got a tensor with " << ndim
         << " dimensions!";
     CHECK_OR_RETURN(indices_or_sections > 0) << "indices_or_sections must greater than 0";
     CHECK_OR_RETURN(input->dim(0) % indices_or_sections == 0)
-        << "flow.vsplit attempted to split along dimension " << 0
+        << Error::RuntimeError() << "flow.vsplit attempted to split along dimension " << 0
         << ", but the size of the dimension " << input->dim(0)
         << " is not divisible by the split_size " << indices_or_sections << "!";
     return TensorSplitInt(input, indices_or_sections, 0);
@@ -2264,6 +2279,7 @@ class VsplitVecFunctor {
                                 const std::vector<int32_t>& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 2)
+        << Error::RuntimeError()
         << "flow.vsplit requires a tensor with at least 1 dimension, but got a tensor with " << ndim
         << " dimensions!";
     return TensorSplitVec(input, indices_or_sections, 0);
@@ -2308,7 +2324,7 @@ class CumBaseFunctor {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
     CHECK_OR_RETURN(dim >= 0 && dim < ndim)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << Error::RuntimeError() << "Dimension out of range (expected to be in range of [" << -ndim
         << "," << ndim << " ) but got " << dim << ")";
 
     MutableAttrMap attrs;
@@ -2387,17 +2403,20 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
                                           const std::vector<int32_t>& sum_dims_, bool keepdim) {
   // assumes that tensors have been pre-unsqueezed (so that all dimensions match - after
   // broadcasting) but makes no other assumptions on the order of dimensions
-  CHECK_OR_RETURN(left_->ndim() == right_->ndim()) << "number of dimensions must match";
+  CHECK_OR_RETURN(left_->ndim() == right_->ndim())
+      << Error::RuntimeError() << "number of dimensions must match";
   if (sum_dims_.size() == 0) return functional::Mul(left_, right_);
   int64_t dim = left_->ndim();
 
   constexpr size_t dim_bitset_size = 64;
   CHECK_OR_RETURN(dim <= (int64_t)dim_bitset_size)
-      << "only tensors with up to " << dim_bitset_size << " dims are supported";
+      << Error::RuntimeError() << "only tensors with up to " << dim_bitset_size
+      << " dims are supported";
   std::bitset<dim_bitset_size> sum_dims;
   for (int i = 0; i < sum_dims_.size(); ++i) {
     size_t d = sum_dims_[i];
-    CHECK_OR_RETURN(!sum_dims[d]) << "dim " << d << " appears multiple times in the list of dims";
+    CHECK_OR_RETURN(!sum_dims[d]) << Error::RuntimeError() << "dim " << d
+                                  << " appears multiple times in the list of dims";
     sum_dims[d] = true;
   }
 
@@ -2414,7 +2433,7 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
     if (sum_dims[i]) {  // first dimensions that will be summed over after multiplication
       if (sl && sr) {   // dimensions nontrivially in both left and right must be of the same size
         CHECK_OR_RETURN(left->shape()->At(i) == right->shape()->At(i))
-            << "non-broadcast dimensions must match";
+            << Error::RuntimeError() << "non-broadcast dimensions must match";
         sum_size *= left->shape()->At(i);
       } else if (sl) {  // if it is only in one of left and right, we can sum right away
         left = JUST(functional::ReduceSum(left, {i}, true));
@@ -2424,7 +2443,7 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
     } else if (sl && sr) {  // now deal with dimensions  dimensions that will be in the output
       // dimensions nontrivially in both left and right must be of the same size
       CHECK_OR_RETURN(left->shape()->At(i) == right->shape()->At(i))
-          << "non-broadcast dimensions must match";
+          << Error::RuntimeError() << "non-broadcast dimensions must match";
       lro.push_back(i);
       lro_size *= left->shape()->At(i);
     } else if (sl) {  // keep track of dimensions appearing only once
@@ -2541,7 +2560,8 @@ class EinSumFunctor {
  public:
   EinSumFunctor() {}
   Maybe<Tensor> operator()(const std::string& equation, const one::TensorTuple& operands) const {
-    CHECK_OR_RETURN(operands.size() > 0) << "einsum(): must provide at least one input tensor.";
+    CHECK_OR_RETURN(operands.size() > 0)
+        << Error::RuntimeError() << "einsum(): must provide at least one input tensor.";
     // NOTE(Liang Depeng): In order to better understand what einsum is doing,
     //                     the following comments will give a detailed explaination of
     //                     how the operands of equation "ik,jkl,il->ij" (bilinear)
@@ -2581,12 +2601,12 @@ class EinSumFunctor {
           CHECK_OR_RETURN(
               // Only one ellipsis per operand can be given
               !found_ell)
-              << "einsum(): found \'.\' for operand " << curr_op
+              << Error::RuntimeError() << "einsum(): found \'.\' for operand " << curr_op
               << " for which an ellipsis was already found";
           CHECK_OR_RETURN(
               // Ensure it's a valid ellipsis
               i + 2 < lhs.length() && lhs[++i] == '.' && lhs[++i] == '.')
-              << "einsum(): found \'.\' for operand " << curr_op
+              << Error::RuntimeError() << "einsum(): found \'.\' for operand " << curr_op
               << " that is not part of any ellipsis";
           op_labels[curr_op].push_back(ELLIPSIS);
           found_ell = true;
@@ -2596,6 +2616,7 @@ class EinSumFunctor {
           // Move onto next operand
           ++curr_op;
           CHECK_OR_RETURN(curr_op < num_ops)
+              << Error::RuntimeError()
               << "einsum(): fewer operands were provided than specified in the equation";
           found_ell = false;
           break;
@@ -2603,13 +2624,14 @@ class EinSumFunctor {
         default:
           // Parse label
           CHECK_OR_RETURN(einsum_check_label(label))
-              << "einsum(): invalid subscript given at index  " << i
+              << Error::RuntimeError() << "einsum(): invalid subscript given at index  " << i
               << " in the equation string, subscripts must be in [a-zA-Z]";
           op_labels[curr_op].push_back(einsum_label_to_index(label));
       }
     }
 
     CHECK_OR_RETURN(curr_op == num_ops - 1)
+        << Error::RuntimeError()
         << "einsum(): more operands were provided than specified in the equation";
 
     // Labels must be within [a-zA-Z].
@@ -2649,13 +2671,14 @@ class EinSumFunctor {
       }
       if (has_ellipsis) {
         CHECK_OR_RETURN(nlabels <= ndims)
-            << "einsum() the number of subscripts in the equation (" << nlabels
-            << ") is more than the number of dimensions (" << ndims << ") for operand " << i;
+            << Error::RuntimeError() << "einsum() the number of subscripts in the equation ("
+            << nlabels << ") is more than the number of dimensions (" << ndims << ") for operand "
+            << i;
       } else {
         CHECK_OR_RETURN(nlabels == ndims)
-            << "einsum(): the number of subscripts in the equation (" << nlabels
-            << ") does not match the number of dimensions (" << ndims << ") for operand " << i
-            << " and no ellipsis was given";
+            << Error::RuntimeError() << "einsum(): the number of subscripts in the equation ("
+            << nlabels << ") does not match the number of dimensions (" << ndims << ") for operand "
+            << i << " and no ellipsis was given";
       }
     }
 
@@ -2701,11 +2724,13 @@ class EinSumFunctor {
             CHECK_OR_RETURN(
                 // There can only be one ellipsis in the output
                 !found_ell)
+                << Error::RuntimeError()
                 << "einsum(): found \'.\' for output but an ellipsis (...) was already found";
             CHECK_OR_RETURN(
                 // Ensure ellipsis is correct
                 i + 2 < rhs.length() && rhs[++i] == '.' && rhs[++i] == '.')
-            "einsum(): found \'.\' for output that is not part of any ellipsis (...)";
+                << Error::RuntimeError()
+                << "einsum(): found \'.\' for output that is not part of any ellipsis (...)";
             ell_index = perm_index;
             perm_index += ell_num_dim;
             found_ell = true;
@@ -2713,14 +2738,14 @@ class EinSumFunctor {
 
           default:
             CHECK_OR_RETURN(einsum_check_label(label))
-                << "einsum(): invalid subscript given at index " << lhs.size() + 2 + i
-                << " in the equation string, subscripts must be in [a-zA-Z]";
+                << Error::RuntimeError() << "einsum(): invalid subscript given at index "
+                << lhs.size() + 2 + i << " in the equation string, subscripts must be in [a-zA-Z]";
             const auto index = einsum_label_to_index(label);
             CHECK_OR_RETURN(
                 // Ensure label appeared at least once for some input operand
                 // and at most once for the output
                 label_count[index] > 0 && label_perm_index[index] == -1)
-                << "einsum(): output subscript " << label
+                << Error::RuntimeError() << "einsum(): output subscript " << label
                 << (label_perm_index[index] > -1
                         ? " appears more than once in the output"
                         : " does not appear in the equation for any input operand");
@@ -2780,7 +2805,7 @@ class EinSumFunctor {
           // Repeated label, take diagonal
           const auto dim = label_dim[label];
           CHECK_OR_RETURN(operand->dim(j) == operand->dim(dim))
-              << "einsum() subscript " << einsum_index_to_label(label)
+              << Error::RuntimeError() << "einsum() subscript " << einsum_index_to_label(label)
               << " is repeated for operand " << i << " but the sizes don't match, "
               << operand->dim(j) << " != " << operand->dim(dim);
 
@@ -2843,7 +2868,7 @@ class EinSumFunctor {
             msg << " " << operands[j]->shape()->DebugStr() << "->"
                 << permuted_operands[j]->shape()->DebugStr();
           }
-          CHECK_OR_RETURN(false) << msg.str();
+          CHECK_OR_RETURN(false) << Error::RuntimeError() << msg.str();
         }
         if (dim_size != 1) {
           broadcast_size = dim_size;
