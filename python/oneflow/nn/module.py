@@ -52,6 +52,38 @@ T = TypeVar("T", bound="Module")
 
 
 class Module(object):
+    r"""Base class for all neural network modules.
+
+    Your models should also subclass this class.
+
+    Modules can also contain other Modules, allowing to nest them in
+    a tree structure. You can assign the submodules as regular attributes::
+
+        import oneflow.nn as nn
+        import oneflow.nn.functional as F
+
+        class Model(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.conv1 = nn.Conv2d(1, 20, 5)
+                self.conv2 = nn.Conv2d(20, 20, 5)
+
+            def forward(self, x):
+                x = F.relu(self.conv1(x))
+                return F.relu(self.conv2(x))
+
+    Submodules assigned in this way will be registered, and will have their
+    parameters converted too when you call :meth:`to`, etc.
+
+    .. note::
+        As per the example above, an ``__init__()`` call to the parent class
+        must be made before assignment on the child.
+
+    :ivar training: Boolean represents whether this module is in training or
+                    evaluation mode.
+    :vartype training: bool
+    """
+
     def __init__(self):
         self.training = True
         self._parameters = OrderedDict()
@@ -140,7 +172,7 @@ class Module(object):
                 
         Example::
 
-            >>> self.register_buffer('running_mean', oneflow.zeros(num_features))
+            >>> self.register_buffer('running_mean', oneflow.zeros(num_features)) # doctest: +SKIP
         """
         if "_buffers" not in self.__dict__:
             raise AttributeError("cannot assign buffer before Module.__init__() call")
@@ -318,10 +350,9 @@ class Module(object):
 
         Example::
 
-            >>> for param in model.parameters():
-            >>>     print(type(param), param.size())
-            <class 'oneflow.Tensor'> (20L,)
-            <class 'oneflow.Tensor'> (20L, 1L, 5L, 5L)
+            >>> for param in model.parameters(): # doctest: +SKIP
+            ...     print(type(param), param.size()) # doctest: +SKIP
+            <class 'oneflow.Tensor'> oneflow.Size([10])
 
         """
         for (name, param) in self.named_parameters(recurse=recurse):
@@ -347,9 +378,9 @@ class Module(object):
 
         Example::
 
-            >>> for name, param in self.named_parameters():
-            >>>    if name in ['bias']:
-            >>>        print(param.size())
+            >>> for name, param in self.named_parameters(): # doctest: +SKIP
+            ...    if name in ['bias']: # doctest: +SKIP
+            ...        print(param.size()) # doctest: +SKIP
 
         """
         gen = self._named_members(
@@ -374,10 +405,9 @@ class Module(object):
 
         Example::
 
-            >>> for buf in model.buffers():
-            >>>     print(type(buf), buf.size())
-            <class 'oneflow.Tensor'> (20L,)
-            <class 'oneflow.Tensor'> (20L, 1L, 5L, 5L)
+            >>> for buf in model.buffers(): # doctest: +SKIP
+            ...     print(type(buf), buf.size()) # doctest: +SKIP
+            <class 'oneflow.Tensor'> oneflow.Size([10])
 
         """
         for (name, buf) in self.named_buffers(recurse=recurse):
@@ -403,9 +433,9 @@ class Module(object):
 
         Example::
 
-            >>> for name, buf in self.named_buffers():
-            >>>    if name in ['running_var']:
-            >>>        print(buf.size())
+            >>> for name, buf in self.named_buffers(): # doctest: +SKIP
+            ...    if name in ['running_var']: # doctest: +SKIP
+            ...        print(buf.size()) # doctest: +SKIP
 
         """
         gen = self._named_members(
@@ -422,6 +452,19 @@ class Module(object):
 
         Yields:
             Module: a child module
+            
+        Example::
+
+            >>> import oneflow.nn as nn
+            >>> l1 = nn.Linear(2, 2)
+            >>> l2 = nn.Linear(2, 2)
+            >>> net = nn.Sequential(l1, l2)
+            >>> for idx, m in enumerate(net.children()): # doctest: +SKIP
+            ...     print(idx, '->', m) # doctest: +SKIP
+
+            0 -> Linear(in_features=2, out_features=2, bias=True)
+            1 -> Linear(in_features=2, out_features=2, bias=True)
+
         """
         for (name, module) in self.named_children():
             yield module
@@ -438,9 +481,9 @@ class Module(object):
 
         Example::
 
-            >>> for name, module in model.named_children():
-            >>>     if name in ['conv4', 'conv5']:
-            >>>         print(module)
+            >>> for name, module in model.named_children(): # doctest: +SKIP
+            ...     if name in ['conv4', 'conv5']: # doctest: +SKIP
+            ...         print(module) # doctest: +SKIP
 
         """
         memo = set()
@@ -464,10 +507,11 @@ class Module(object):
 
         Example::
 
+            >>> import oneflow.nn as nn
             >>> l = nn.Linear(2, 2)
             >>> net = nn.Sequential(l, l)
-            >>> for idx, m in enumerate(net.modules()):
-                    print(idx, '->', m)
+            >>> for idx, m in enumerate(net.modules()): # doctest: +SKIP
+            ...     print(idx, '->', m) # doctest: +SKIP
 
             0 -> Sequential(
               (0): Linear(in_features=2, out_features=2, bias=True)
@@ -489,8 +533,6 @@ class Module(object):
         Args:
             memo: a memo to store the set of modules already added to the result
             prefix: a prefix that will be added to the name of the module
-            remove_duplicate: whether to remove the duplicated module instances in the result
-                or not
 
         Yields:
             (string, Module): Tuple of name and module
@@ -501,10 +543,11 @@ class Module(object):
 
         Example::
 
+            >>> import oneflow.nn as nn
             >>> l = nn.Linear(2, 2)
             >>> net = nn.Sequential(l, l)
-            >>> for idx, m in enumerate(net.named_modules()):
-                    print(idx, '->', m)
+            >>> for idx, m in enumerate(net.named_modules()): # doctest: +SKIP
+            ...     print(idx, '->', m) # doctest: +SKIP
 
             0 -> ('', Sequential(
               (0): Linear(in_features=2, out_features=2, bias=True)
@@ -762,19 +805,6 @@ class Module(object):
         included. Keys are corresponding parameter and buffer names.
         Parameters and buffers set to ``None`` are not included.
 
-        This can be called as
-
-        .. function:: state_dict(*, prefix='', keep_vars=False)
-           :noindex:
-
-        .. function:: state_dict(destination, prefix='', keep_vars=False)
-           :noindex:
-
-        .. warning::
-            The second signature is deprecated and should not be used. It's only
-            temporarily kept for backward compatibility and will be removed in
-            a future release. Use the first signature instead.
-
         Args:
             destination (dict, optional): Deprecated. This dict is returned
                 with the module state saved in it. It should also have an
@@ -793,7 +823,7 @@ class Module(object):
 
         Example::
 
-            >>> module.state_dict().keys()
+            >>> module.state_dict().keys() # doctest: +SKIP
             ['bias', 'weight']
 
         """
@@ -814,12 +844,7 @@ class Module(object):
         r"""
         register_forward_pre_hook(hook)
         
-        Registers a forward pre-hook common to all modules.
-
-        .. warning ::
-
-            This adds global state to the `nn.module` module
-            and it is only intended for debugging/profiling purposes.
+        Registers a forward pre-hook on the module.
 
         The hook will be called every time before :func:`forward` is invoked.
         It should have the following signature::
@@ -831,9 +856,6 @@ class Module(object):
         The hook can modify the input. User can either return a tuple or a
         single modified value in the hook. We will wrap the value into a tuple
         if a single value is returned(unless that value is already a tuple).
-
-        This hook has precedence over the specific module hooks registered with
-        ``register_forward_pre_hook``.
 
         """
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
@@ -922,7 +944,7 @@ class Module(object):
         apply(fn)
         
         Applies ``fn`` recursively to every submodule (as returned by ``.children()``)
-        as well as self. Typical use includes initializing the parameters of a model
+        as well as self. Typical use includes initializing the parameters of a model.
 
         Args:
             fn (:class:`Module` -> None): function to be applied to each submodule
@@ -932,26 +954,22 @@ class Module(object):
 
         Example::
 
-            >>> @oneflow.no_grad()
-            >>> def init_weights(m):
-            >>>     print(m)
-            >>>     if type(m) == nn.Linear:
-            >>>         m.weight.fill_(1.0)
-            >>>         print(m.weight)
-            >>> net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))
-            >>> net.apply(init_weights)
+            >>> import oneflow as flow
+            >>> import oneflow.nn as nn
+            >>> @flow.no_grad() # doctest: +SKIP
+            >>> def init_weights(m): # doctest: +SKIP
+            ...     print(m) # doctest: +SKIP
+            ...     if type(m) == nn.Linear: # doctest: +SKIP
+            ...         m.weight.fill_(1.0) # doctest: +SKIP
+            ...         print(m.weight) # doctest: +SKIP
+            >>> net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2)) # doctest: +SKIP
+            >>> net.apply(init_weights) # doctest: +SKIP
             Linear(in_features=2, out_features=2, bias=True)
-            Parameter containing:
-            tensor([[ 1.,  1.],
-                    [ 1.,  1.]])
+            tensor([[1., 1.],
+                    [1., 1.]], dtype=oneflow.float32, requires_grad=True)
             Linear(in_features=2, out_features=2, bias=True)
-            Parameter containing:
-            tensor([[ 1.,  1.],
-                    [ 1.,  1.]])
-            Sequential(
-              (0): Linear(in_features=2, out_features=2, bias=True)
-              (1): Linear(in_features=2, out_features=2, bias=True)
-            )
+            tensor([[1., 1.],
+                    [1., 1.]], dtype=oneflow.float32, requires_grad=True)
             Sequential(
               (0): Linear(in_features=2, out_features=2, bias=True)
               (1): Linear(in_features=2, out_features=2, bias=True)
@@ -966,30 +984,10 @@ class Module(object):
         r"""
         to(device=None)
         
-        Moves and/or casts the parameters and buffers.
+        Moves the parameters and buffers.
 
-        This can be called as
-
-        .. function:: to(device=None, dtype=None, non_blocking=False)
-           :noindex:
-
-        .. function:: to(dtype, non_blocking=False)
-           :noindex:
-
-        .. function:: to(tensor, non_blocking=False)
-           :noindex:
-
-        .. function:: to(memory_format=oneflow.channels_last)
-           :noindex:
-
-        Its signature is similar to :meth:`oneflow.Tensor.to`, but only accepts
-        floating point or complex :attr:`dtype`\ s. In addition, this method will
-        only cast the floating point or complex parameters and buffers to :attr:`dtype`
-        (if given). The integral parameters and buffers will be moved
-        :attr:`device`, if that is given, but with dtypes unchanged. When
-        :attr:`non_blocking` is set, it tries to convert/move asynchronously
-        with respect to the host if possible, e.g., moving CPU Tensors with
-        pinned memory to CUDA devices.
+        Its signature is similar to :meth:`oneflow.Tensor.to`.
+        The parameters and buffers will be moved :attr:`device`, if that is given.
 
         See below for examples.
 
@@ -999,56 +997,33 @@ class Module(object):
         Args:
             device (:class:`oneflow.device`): the desired device of the parameters
                 and buffers in this module
-            dtype (:class:`oneflow.dtype`): the desired floating point or complex dtype of
-                the parameters and buffers in this module
-            tensor (oneflow.Tensor): Tensor whose dtype and device are the desired
-                dtype and device for all parameters and buffers in this module
-            memory_format (:class:`oneflow.memory_format`): the desired memory
-                format for 4D parameters and buffers in this module (keyword
-                only argument)
 
         Returns:
             Module: self
 
         Examples::
 
+            >>> import oneflow as flow
+            >>> import oneflow.nn as nn
             >>> linear = nn.Linear(2, 2)
-            >>> linear.weight
-            Parameter containing:
+            >>> linear.weight # doctest: +SKIP
             tensor([[ 0.1913, -0.3420],
-                    [-0.5113, -0.2325]])
-            >>> linear.to(oneflow.double)
+                    [-0.5113, -0.2325]], dtype=oneflow.float32, requires_grad=True)
+            >>> gpu1 = flow.device("cuda:1") # doctest: +SKIP
+            >>> linear.to(gpu1) # doctest: +SKIP
             Linear(in_features=2, out_features=2, bias=True)
-            >>> linear.weight
-            Parameter containing:
-            tensor([[ 0.1913, -0.3420],
-                    [-0.5113, -0.2325]], dtype=oneflow.float64)
-            >>> gpu1 = oneflow.device("cuda:1")
-            >>> linear.to(gpu1, dtype=oneflow.half, non_blocking=True)
-            Linear(in_features=2, out_features=2, bias=True)
-            >>> linear.weight
-            Parameter containing:
+            >>> linear.weight # doctest: +SKIP
             tensor([[ 0.1914, -0.3420],
-                    [-0.5112, -0.2324]], dtype=oneflow.float16, device='cuda:1')
-            >>> cpu = oneflow.device("cpu")
-            >>> linear.to(cpu)
+                    [-0.5112, -0.2324]], device='cuda:1', dtype=oneflow.float32, requires_grad=True)
+            >>> cpu = flow.device("cpu") # doctest: +SKIP
+            >>> linear.to(cpu) # doctest: +SKIP
             Linear(in_features=2, out_features=2, bias=True)
-            >>> linear.weight
-            Parameter containing:
+            >>> linear.weight # doctest: +SKIP
             tensor([[ 0.1914, -0.3420],
-                    [-0.5112, -0.2324]], dtype=oneflow.float16)
-
-            >>> linear = nn.Linear(2, 2, bias=None).to(oneflow.cdouble)
-            >>> linear.weight
-            Parameter containing:
-            tensor([[ 0.3741+0.j,  0.2382+0.j],
-                    [ 0.5593+0.j, -0.4443+0.j]], dtype=oneflow.complex128)
-            >>> linear(oneflow.ones(3, 2, dtype=oneflow.cdouble))
-            tensor([[0.6122+0.j, 0.1150+0.j],
-                    [0.6122+0.j, 0.1150+0.j],
-                    [0.6122+0.j, 0.1150+0.j]], dtype=oneflow.complex128)
+                    [-0.5112, -0.2324]], dtype=oneflow.float32, requires_grad=True)
 
         """
+
         def convert(t):
             return t.to(device)
 
