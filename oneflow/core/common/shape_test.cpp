@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,9 +12,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow._oneflow_internal
-import oneflow.eager.interpreter_callback as interpreter_callback
-import oneflow.framework.python_callback as python_callback
+*/
+#include "oneflow/core/common/shape.h"
+#include "gtest/gtest.h"
+#include <functional>
+#include <algorithm>
 
-python_callback.interpreter_callback = interpreter_callback
+namespace oneflow {
+
+namespace test {
+
+TEST(Shape, constructor_0) {
+  Shape a;
+  ASSERT_EQ(a.is_initialized(), false);
+}
+
+TEST(Shape, function_test_1) {
+  Shape shape({4096, 16, 197, 197});
+  ASSERT_EQ(shape.is_initialized(), true);
+  ASSERT_EQ(shape.NumAxes(), 4);
+  ASSERT_EQ(shape.elem_cnt(), 2543386624);
+}
+
+}  // namespace test
+}  // namespace oneflow
