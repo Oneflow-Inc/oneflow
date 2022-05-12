@@ -356,7 +356,6 @@ class random_pytorch_tensor(generator):
         pytorch_tensor = None
         if dtype == float:
             np_arr = rng.uniform(low=low, high=high, size=shape)
-            # return torch.Tensor(np_arr)
             res = torch.Tensor(np_arr)
             if pin_memory:
                 res = res.pin_memory()
