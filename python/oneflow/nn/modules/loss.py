@@ -886,15 +886,14 @@ class CombinedMarginLoss(Module):
     The implementation of margin_softmax in InsightFace is composed of multiple operators.
     We fuse them for speed up.
 
-    The loss function for each sample in the mini-batch is:
+    Applies the function:
 
     .. math::
-        L = -\frac{1}{N} \sum_{i=1}^N
-            \frac
-            {\exp(s(\cos(m_1\theta_{y_i}+m_2) -m_3))}
-            {\exp(s(\cos(m_1\theta_{y_i}+m_2) -m_3)) + \sum^{n}_{j=1, j\neq y_i}\exp(s\cos\theta_j)}
+    
+        {\rm CombinedMarginLoss}(x_i, label) = 
+        \left\{\begin{matrix} \cos(m_1\cdot\arccos x_i+m_2) - m_3 & {\rm if} \ i == label \\ 
+        x_i & {\rm otherwise} \end{matrix}\right.
 
-    where :math:`y_i` represents the class of sample :math:`i`.
 
     Args:
         x (oneflow.Tensor): A Tensor
@@ -907,11 +906,11 @@ class CombinedMarginLoss(Module):
 
         Here are some special cases:
 
-        - when :math:`m_1=1, m_2\neq 0, m_3=0`, CombineMarginLoss is equivalent to `ArcFace <https://arxiv.org/abs/1801.07698>`__ .
+        - when :math:`m_1=1, m_2\neq 0, m_3=0`, CombineMarginLoss has the same parameter as `ArcFace <https://arxiv.org/abs/1801.07698>`__ .
 
-        - when :math:`m_1=1, m_2=0, m_3\neq 0`, CombineMarginLoss is equivalent to `CosFace (a.k.a AM-Softmax) <https://arxiv.org/abs/1801.09414>`__ .
+        - when :math:`m_1=1, m_2=0, m_3\neq 0`, CombineMarginLoss has the same parameter as `CosFace (a.k.a AM-Softmax) <https://arxiv.org/abs/1801.09414>`__ .
 
-        - when :math:`m_1\gt 1, m_2=m_3=0`, CombineMarginLoss is equivalent to `A-Softmax <https://arxiv.org/abs/1704.08063>`__.
+        - when :math:`m_1\gt 1, m_2=m_3=0`, CombineMarginLoss has the same parameter as `A-Softmax <https://arxiv.org/abs/1704.08063>`__.
 
     Returns:
         oneflow.Tensor: A Tensor
