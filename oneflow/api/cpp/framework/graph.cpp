@@ -68,13 +68,13 @@ namespace {
 class CompileScope {
  public:
   CompileScope(const of::JobConfigProto& job_config, const of::Device& device, XrtKind kind) {
-    const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(job_config, device));
+    of::JobConfigProto mut_job_config = job_config;
+    const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(mut_job_config, device));
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
-    of::cfg::JobConfigProto job_config_cfg(job_config);
-    ConfigXrt(job_config_cfg, kind);
-    CHECK_JUST(of::JobBuildAndInferCtx_Open(job_config.job_name()));
-    CHECK_JUST(of::CurJobBuildAndInferCtx_SetJobConf(job_config_cfg));
+    ConfigXrt(mut_job_config, kind);
+    CHECK_JUST(of::JobBuildAndInferCtx_Open(mut_job_config.job_name()));
+    CHECK_JUST(CHECK_JUST(of::GetCurInferCtx())->SetJobConf(mut_job_config));
   }
 
   ~CompileScope() {
@@ -85,16 +85,16 @@ class CompileScope {
  private:
   of::LazyMode::Guard lazy_mode_enabled_guard{true};
 
-  void ConfigXrt(of::cfg::JobConfigProto& job_config_cfg, XrtKind kind) {
+  void ConfigXrt(of::JobConfigProto& job_config, XrtKind kind) {
     if (kind == XrtKind::kTensorRT) {
 #ifdef WITH_TENSORRT
-      *(job_config_cfg.mutable_xrt_config()->mutable_use_tensorrt()) = true;
+      job_config.mutable_xrt_config()->set_use_tensorrt(true);
 #else
       LOG(WARNING) << "XRT TensorRT is unavailable while tensorrt is enabled";
 #endif
     } else if (kind == XrtKind::kOpenVino) {
 #ifdef WITH_OPENVINO
-      *(job_config_cfg.mutable_xrt_config()->mutable_use_openvino()) = true;
+      job_config.mutable_xrt_config()->set_use_openvino(true);
 #else
       LOG(WARNING) << "XRT OpenVINO is unavailable while openvino is enabled";
 #endif
