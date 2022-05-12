@@ -119,7 +119,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   py::class_<LazyConsistentBlob, TrampLazyConsistentBlob, ConsistentBlob,
              std::shared_ptr<LazyConsistentBlob>>(m, "LazyConsistentBlob")
-      .def(py::init([](const std::string& lbi_str, std::string job_name,
+      .def(py::init([](const std::string& lbi_str, const std::string& job_name,
                        const std::shared_ptr<Distribute>& distribute) {
         std::shared_ptr<LogicalBlobId> lbi = ParseLogicalBlobId(lbi_str);
         return std::make_shared<TrampLazyConsistentBlob>(lbi, job_name, distribute);
@@ -146,7 +146,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("get_lazy_shape_log_warning", &LazyConsistentBlob::get_lazy_shape_log_warning);
 
   py::class_<MirroredBlob, BlobDesc, std::shared_ptr<MirroredBlob>>(m, "MirroredBlob")
-      .def(py::init([](const std::string& lbi_str, std::string job_name,
+      .def(py::init([](const std::string& lbi_str, const std::string& job_name,
                        const std::shared_ptr<Distribute>& distribute) {
         std::shared_ptr<LogicalBlobId> lbi = ParseLogicalBlobId(lbi_str);
         return std::make_shared<MirroredBlob>(lbi, job_name, distribute);
@@ -172,7 +172,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   py::class_<LazyMirroredBlob, TrampLazyMirroredBlob, MirroredBlob,
              std::shared_ptr<LazyMirroredBlob>>(m, "LazyMirroredBlob")
-      .def(py::init([](const std::string& lbi_str, std::string job_name,
+      .def(py::init([](const std::string& lbi_str, const std::string& job_name,
                        const std::shared_ptr<Distribute>& distribute) {
         std::shared_ptr<LogicalBlobId> lbi = ParseLogicalBlobId(lbi_str);
         return std::make_shared<TrampLazyMirroredBlob>(lbi, job_name, distribute);
