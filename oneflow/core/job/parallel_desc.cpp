@@ -26,22 +26,14 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/vm_util.h"
-#ifdef WITH_CUDA
-#include <cuda_runtime_api.h>
-#endif  // WITH_CUDA
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
 namespace {
 
-int64_t GetGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
+int64_t GetDeviceCount(DeviceType device_type) {
+  return Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_type);
 }
 
 using MachineId2DeviceIdList =
@@ -88,7 +80,6 @@ Maybe<OFRecord> ParseMachineAndDeviceIdList(const ParallelConf& parallel_conf) {
 
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) : symbol_id_(NullOpt) {  // NOLINT
   CHECK_JUST(MaybeInit(user_conf));
-  CHECK_JUST(CheckWithResourceDesc(*(Global<ResourceDesc, ForSession>::Get())));
 }
 
 Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& parallel_conf) {
@@ -305,17 +296,6 @@ Maybe<void> ParallelDesc::SanityCheck() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ParallelDesc::CheckWithResourceDesc(const ResourceDesc& resource_desc) {
-  if (device_type_ == DeviceType::kCUDA) {
-    for (auto& pair : *machine_id2sorted_dev_phy_ids_) {
-      for (int64_t dev_phy_id : *pair.second) {
-        CHECK_LT_OR_RETURN(dev_phy_id, resource_desc.GpuDeviceNum());
-      }
-    }
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
   const auto& sorted_dev_phy_ids_iter =
       machine_id2sorted_dev_phy_ids_->find(GlobalProcessCtx::Rank());
@@ -326,23 +306,19 @@ Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
   }
   if (sorted_dev_phy_ids_iter != machine_id2sorted_dev_phy_ids_->end()) {
     for (int64_t dev_phy_id : *sorted_dev_phy_ids_iter->second) {
-      if (device_type_ == DeviceType::kCUDA) {
-        const int64_t gpu_device_num = GetGpuDeviceNum();
-        CHECK_NE_OR_RETURN(gpu_device_num, 0)
-            << Error::RuntimeError()
-            << "Placement with \"cuda\" type is invalid because there is no CUDA device!";
-        int64_t device_num = std::min(GlobalProcessCtx::NumOfProcessPerNode(), gpu_device_num);
-        CHECK_LT_OR_RETURN(dev_phy_id, device_num)
-            << Error::RuntimeError() << "Placement is invalid because device id must be less than "
-            << (gpu_device_num < GlobalProcessCtx::NumOfProcessPerNode()
-                    ? "num of CUDA devices on node"
-                    : "num of process per node");
-      } else if (device_type_ == DeviceType::kCPU) {
+      if (device_type_ == DeviceType::kCPU) {
         CHECK_LT_OR_RETURN(dev_phy_id, GlobalProcessCtx::NumOfProcessPerNode())
             << Error::RuntimeError()
             << "Placement is invalid because device id must be less than num of process per node";
       } else {
-        OF_UNIMPLEMENTED();
+        const int64_t device_count = GetDeviceCount(device_type_);
+        CHECK_NE_OR_RETURN(device_count, 0)
+            << Error::RuntimeError() << "Placement is invalid because there is no device!";
+        int64_t device_num = std::min(GlobalProcessCtx::NumOfProcessPerNode(), device_count);
+        CHECK_LT_OR_RETURN(dev_phy_id, device_num)
+            << Error::RuntimeError() << "Placement is invalid because device id must be less than "
+            << (device_count < GlobalProcessCtx::NumOfProcessPerNode() ? "num devices on node"
+                                                                       : "num of process per node");
       }
     }
   }
