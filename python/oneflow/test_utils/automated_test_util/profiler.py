@@ -19,8 +19,9 @@ def compose(*fs):
 
 
 class ProfResult:
-    def __init__(self, prof, kind, thread_num, op_name, args_description, additional_description=None):
+    def __init__(self, prof, num, kind, thread_num, op_name, args_description, additional_description=None):
         self.prof = prof
+        self.num = num
         self.kind = kind
         self.thread_num = thread_num
         self.op_name = op_name
@@ -31,6 +32,8 @@ class ProfResult:
         return getattr(self.prof, attr)
 
 
+RUN_NUM = 1000
+
 def run_torch(op, args, kwargs, num_threads, op_name, args_description, additional_description=None):
     torch.set_num_threads(num_threads)
     for _ in range(10):
@@ -38,11 +41,12 @@ def run_torch(op, args, kwargs, num_threads, op_name, args_description, addition
 
     print(f'torch (num_threads={torch.get_num_threads()}):')
     with torch.profiler.profile() as prof:
-        for _ in range(1000):
-            op(*args, **kwargs)
+        with torch.profiler.record_function("total"):
+            for _ in range(RUN_NUM):
+                op(*args, **kwargs)
 
     print(prof.key_averages().table(row_limit=10))
-    return ProfResult(prof, 'torch', torch.get_num_threads(), op_name, args_description, additional_description)
+    return ProfResult(prof, RUN_NUM, 'torch', torch.get_num_threads(), op_name, args_description, additional_description)
 
 
 def run_flow(op, args, kwargs, num_threads, op_name, args_description, additional_description=None):
@@ -53,11 +57,12 @@ def run_flow(op, args, kwargs, num_threads, op_name, args_description, additiona
     # NOTE: there is no flow.get_num_threads()
     print(f'flow (num_threads={num_threads}):')
     with flow.profiler.profile() as prof:
-        for _ in range(1000):
-            op(*args, **kwargs)
+        with flow.profiler.record_function("total"):
+            for _ in range(RUN_NUM):
+                op(*args, **kwargs)
 
     print(prof.key_averages())
-    return ProfResult(prof, 'flow', num_threads, op_name, args_description, additional_description)
+    return ProfResult(prof, RUN_NUM, 'flow', num_threads, op_name, args_description, additional_description)
 
 
 def profile_dual_object(op):
