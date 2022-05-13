@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/max_pool_kernel_util.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
+
 
 namespace oneflow {
 
@@ -95,15 +98,77 @@ void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helpe
 
 }  // namespace
 
+#ifdef WITH_ONEDNN
+
+template<typename T>
+dnnl::memory::data_type CppTypeToOneDnnDtype();
+
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<int32_t>(){ return dnnl::memory::data_type::s32;}
+
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<float>(){ return dnnl::memory::data_type::f32;}
+
+// template<typename T, typename IDX>
+// struct OneDnnPoolKernelUtil {
+
+// }
+
+template<typename T, typename IDX>
+struct OneDnnPoolKernelUtil {
+  static void OneDnnPool1dForwardCompute(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                               const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                               const MaxPoolParams3D& params_3d) {
+    printf("test------->");
+    auto data_type = CppTypeToOneDnnDtype<T>();
+    ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
+    size_t num_threads = cpu_stream->device()->GetNumThreads();
+    ep::CpuNumThreadsGuard guard(num_threads);
+  
+    // onednn
+    // dnnl::memory::dims strides_dims = {1};
+    // dnnl::memory::dims padding_dims_l = {0};
+
+  }
+};
+
+template< typename IDX>
+struct OneDnnPoolKernelUtil <double, IDX> {
+  static void OneDnnPool1dForwardCompute(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                               const IDX elem_num, const double* src, double* dest, int64_t* indice_ptr,
+                               const MaxPoolParams3D& params_3d) {
+    Maxpool1dForwardCompute<double, IDX>(
+        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
+        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
+        params_3d.pool_size_3d()[2], params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
+  }
+};
+
+// void OneDnnPool1dForwardCompute(ep::Stream* stream,const NdIndexOffsetHelper<int64_t, 2>& index_helper,
+//                                const int64_t elem_num, const void* src, void* dest, int64_t* indice_ptr,
+//                                const MaxPoolParams3D& params_3d)
+// {
+//   auto data_type = CppTypeToOneDnnDtype<T>();
+
+// }
+
+
+#endif  // WITH_ONEDNN
+
 template<typename T, typename IDX>
 struct PoolKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolParams3D& params_3d) {
+  #ifdef WITH_ONEDNN
+    OneDnnPoolKernelUtil<T, IDX>::OneDnnPool1dForwardCompute(stream,
+        index_helper, elem_num, src, dest, indice_ptr, params_3d);
+  #else
     Maxpool1dForwardCompute<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
         params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
         params_3d.pool_size_3d()[2], params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
+ #endif  // WITH_ONEDNN
   }
 
   static void Maxpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
