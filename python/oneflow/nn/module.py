@@ -577,7 +577,7 @@ class Module(object):
 
         This has any effect only on certain modules. See documentations of
         particular modules for details of their behaviors in training/evaluation
-        mode, if they are affected, e.g. :class:`Dropout`, :class:`BatchNorm`,
+        mode, if they are affected, e.g. :class:`Dropout`, :class:`BatchNorm1d`,
         etc.
 
         Args:
@@ -600,7 +600,7 @@ class Module(object):
 
         This has any effect only on certain modules. See documentations of
         particular modules for details of their behaviors in training/evaluation
-        mode, if they are affected, e.g. :class:`Dropout`, :class:`BatchNorm`,
+        mode, if they are affected, e.g. :class:`Dropout`, :class:`BatchNorm1d`,
         etc.
 
         This is equivalent with :meth:`self.train(False) <oneflow.nn.Module.train>`.
