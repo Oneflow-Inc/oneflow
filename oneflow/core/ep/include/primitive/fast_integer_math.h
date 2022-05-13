@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_PRIMITIVE_FAST_MATH_H_
-#define ONEFLOW_CORE_EP_PRIMITIVE_FAST_MATH_H_
+#ifndef ONEFLOW_CORE_EP_PRIMITIVE_FAST_INTEGER_MATH_H_
+#define ONEFLOW_CORE_EP_PRIMITIVE_FAST_INTEGER_MATH_H_
 #include "oneflow/core/common/data_type.h"
 #include <cassert>
 
@@ -113,4 +113,4 @@ struct FastIntegerMath<int32_t> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EP_PRIMITIVE_FAST_MATH_H_
+#endif  // ONEFLOW_CORE_EP_PRIMITIVE_FAST_INTEGER_MATH_H_
