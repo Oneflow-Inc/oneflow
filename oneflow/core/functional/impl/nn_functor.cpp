@@ -220,14 +220,14 @@ class EmbeddingReNormFunctor {
     CHECK_EQ_OR_RETURN(in->ndim(), 2)
         << Error::RuntimeError() << "The dimension of input should be 2.";
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-    (*outputs)[0] = in;
+    JUST(oneflow::VectorAt(*outputs, 0)) = in;
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("max_norm", max_norm));
     JUST(attrs.SetAttr<double>("norm_type", norm_type));
 
     JUST(OpInterpUtil::Dispatch(*op_, {in, indices}, outputs.get(), attrs));
-    return (*outputs)[0];
+    return JUST(oneflow::VectorAt(*outputs, 0));
   }
 
  private:

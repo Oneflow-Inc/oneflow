@@ -72,7 +72,7 @@ Maybe<void> Embedding::Apply(const EmbeddingCaptureState* ctx, const TensorTuple
   int64_t padding_idx = ctx->padding_idx;
   bool scale_grad_by_freq = ctx->scale_grad_by_freq;
 
-  *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::EmbeddingGrad(
+  JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::EmbeddingGrad(
       JUST(oneflow::VectorAt(out_grads, 0)), weight, indices, padding_idx, scale_grad_by_freq));
   return Maybe<void>::Ok();
 }
