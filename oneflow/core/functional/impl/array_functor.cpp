@@ -1312,9 +1312,9 @@ class LogicalSliceAssignFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
     auto outputs = std::make_shared<TensorTuple>(1);
     JUST(CheckInplaceValid(ref));
-    *JUST(VectorAt(outputs.get(), 0)) = ref;
+    JUST(VectorAt(*outputs, 0)) = ref;
     JUST(OpInterpUtil::Dispatch(*op_, {ref, value}, outputs.get(), attrs));
-    return *JUST(VectorAt(outputs.get(), 0));
+    return JUST(VectorAt(*outputs, 0));
   }
 
  private:
