@@ -46,7 +46,6 @@ __inline__ __device__ T WarpAllReduce(T val) {
   }
   return val;
 }
-#define OF_LAYER_NORM_USE_FAST_MATH
 
 template<template<typename> class ReductionOp, typename T, int block_size>
 __inline__ __device__ T BlockAllReduce(T val) {
