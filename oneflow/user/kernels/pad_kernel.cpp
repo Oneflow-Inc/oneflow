@@ -83,8 +83,9 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
 
     std::unique_ptr<ep::primitive::ConstantPad> pad_primitive = NewConstantPadPrimitive(ctx);
     CHECK(pad_primitive);
-    pad_primitive->Launch(ctx->stream(), ndims, y->mut_dptr(), y->shape().ptr(), x->dptr(),
-                          x->shape().ptr(), padding_before.data(), padding_after.data(), value);
+
+    pad_primitive->Launch(ctx->stream(), ndims, x->shape().ptr(), x->dptr(), padding_before.data(),
+                          padding_after.data(), value, y->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -119,9 +120,10 @@ class PadGradKernel final : public OpKernel, public CudaGraphSupport {
     std::unique_ptr<ep::primitive::ConstantPad> pad_grad_primitive =
         NewConstantPadGradPrimitive(ctx);
     CHECK(pad_grad_primitive);
-    pad_grad_primitive->Launch(ctx->stream(), ndims, dx->mut_dptr(), dx->shape().ptr(), dy->dptr(),
-                               dy->shape().ptr(), padding_before.data(), padding_after.data(),
-                               Scalar(0));
+
+    pad_grad_primitive->Launch(ctx->stream(), ndims, dy->shape().ptr(), dy->dptr(),
+                               padding_before.data(), padding_after.data(), Scalar(0),
+                               dx->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

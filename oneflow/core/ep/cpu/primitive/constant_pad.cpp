@@ -68,7 +68,7 @@ void LaunchKernel(void* dst, const int64_t* dst_dims, const void* src, const int
                   const int64_t* padding_before, const int64_t* padding_after,
                   StorageType packed_pad_val, size_t elem_cnt) {
   ConstantPadParams<num_dims, IndexType> params;
-  params.dst_index_helper = FastOffsetToIndexCalculator<IndexType, num_dims>(dst_dims);
+  params.dst_index_helper = OffsetToIndexCalculator<IndexType, num_dims>(dst_dims);
   params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
   params.dst = dst;
   params.src = src;
@@ -98,8 +98,8 @@ template<size_t num_dims, typename T>
 void DispatchPackSize(void* dst, int64_t* dst_dims, const void* src, int64_t* src_dims,
                       int64_t* padding_before, int64_t* padding_after, T pad_val) {
   constexpr int32_t max_packsize = GetMaxPackSize<T>();
-  size_t launch_pack_size = GetLaunchPackSize<max_packsize>(
-      sizeof(T), num_dims, dst, dst_dims, src, src_dims, padding_before, padding_after);
+  size_t launch_pack_size = GetLaunchPackSize<max_packsize>(num_dims, dst, dst_dims, src, src_dims,
+                                                            padding_before, padding_after);
 
   dst_dims[num_dims - 1] /= launch_pack_size;
   src_dims[num_dims - 1] /= launch_pack_size;
@@ -163,16 +163,16 @@ void LaunchWithSimplified(size_t num_dims, void* dst, int64_t* dst_dims, const v
 }
 
 template<typename T>
-void SimplifyThenLaunch(size_t num_dims, void* dst, const int64_t* dst_dims, const void* src,
-                        const int64_t* src_dims, const int64_t* padding_before,
-                        const int64_t* padding_after, T pad_val) {
+void SimplifyThenLaunch(size_t num_dims, const int64_t* src_dims, const void* src,
+                        const int64_t* padding_before, const int64_t* padding_after, T pad_val,
+                        void* dst) {
   CHECK_LE(num_dims, kMaxNumDims);
   int64_t simplified_dst_dims[kMaxNumDims];
   int64_t simplified_src_dims[kMaxNumDims];
   int64_t simplified_padding_before[kMaxNumDims];
   int64_t simplified_padding_after[kMaxNumDims];
   size_t simplified_num_dims = 1;
-  SimplifyPadDims(num_dims, dst_dims, src_dims, padding_before, padding_after, &simplified_num_dims,
+  SimplifyPadDims(num_dims, src_dims, padding_before, padding_after, &simplified_num_dims,
                   simplified_dst_dims, simplified_src_dims, simplified_padding_before,
                   simplified_padding_after);
   LaunchWithSimplified<T>(simplified_num_dims, dst, simplified_dst_dims, src, simplified_src_dims,
@@ -186,11 +186,11 @@ class ConstantPadImpl : public ConstantPad {
   ConstantPadImpl() = default;
   ~ConstantPadImpl() override = default;
 
-  void Launch(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims, const void* src,
-              const int64_t* src_dims, const int64_t* padding_before, const int64_t* padding_after,
-              Scalar pad_val) override {
-    SimplifyThenLaunch<T>(num_dims, dst, dst_dims, src, src_dims, padding_before, padding_after,
-                          GetValue<T>(pad_val));
+  void Launch(Stream* stream, size_t num_dims, const int64_t* src_dims, const void* src,
+              const int64_t* padding_before, const int64_t* padding_after, Scalar pad_val,
+              void* dst) override {
+    SimplifyThenLaunch<T>(num_dims, src_dims, src, padding_before, padding_after,
+                          GetValue<T>(pad_val), dst);
   }
 };
 

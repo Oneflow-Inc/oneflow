@@ -63,34 +63,32 @@ T GetValue(Scalar value) {
 }
 
 template<typename T, int N>
-class FastOffsetToIndexCalculator {
+class OffsetToIndexCalculator {
  public:
-  FastOffsetToIndexCalculator() {}
+  OffsetToIndexCalculator() {}
   template<class... Ts>
-  OF_DEVICE_FUNC explicit FastOffsetToIndexCalculator(T d0, Ts... dims) {
+  OF_DEVICE_FUNC explicit OffsetToIndexCalculator(T d0, Ts... dims) {
     constexpr int n = 1 + sizeof...(dims);
     static_assert(n <= N, "");
     T dims_arr[n] = {d0, static_cast<T>(dims)...};
     InitFastIntegerMath(dims_arr, n);
   }
 
-  OF_DEVICE_FUNC explicit FastOffsetToIndexCalculator(const T* dims) {
-    InitFastIntegerMath(dims, N);
-  }
+  OF_DEVICE_FUNC explicit OffsetToIndexCalculator(const T* dims) { InitFastIntegerMath(dims, N); }
 
   template<typename U>
-  OF_DEVICE_FUNC explicit FastOffsetToIndexCalculator(const U* dims) {
+  OF_DEVICE_FUNC explicit OffsetToIndexCalculator(const U* dims) {
     T dims_arr[N];
     for (int i = 0; i < N; ++i) { dims_arr[i] = dims[i]; }
     InitFastIntegerMath(dims_arr, N);
   }
 
-  OF_DEVICE_FUNC explicit FastOffsetToIndexCalculator(const T* dims, int n) {
+  OF_DEVICE_FUNC explicit OffsetToIndexCalculator(const T* dims, int n) {
     InitFastIntegerMath(dims, n);
   }
 
   template<typename U>
-  OF_DEVICE_FUNC explicit FastOffsetToIndexCalculator(const U* dims, int n) {
+  OF_DEVICE_FUNC explicit OffsetToIndexCalculator(const U* dims, int n) {
     T dims_arr[N];
     for (int i = 0; i < N; ++i) {
       if (i < n) { dims_arr[i] = dims[i]; }
@@ -98,7 +96,7 @@ class FastOffsetToIndexCalculator {
     InitFastIntegerMath(dims_arr, n);
   }
 
-  ~FastOffsetToIndexCalculator() = default;
+  ~OffsetToIndexCalculator() = default;
 
   OF_DEVICE_FUNC void OffsetToNdIndex(T offset, T* index) const {
     T remaining = offset;
@@ -171,7 +169,7 @@ class FastOffsetToIndexCalculator {
 template<size_t num_dims, typename IndexType>
 struct ConstantPadParams {
   NdIndexOffsetHelper<IndexType, num_dims> src_index_helper;
-  FastOffsetToIndexCalculator<IndexType, num_dims> dst_index_helper;
+  OffsetToIndexCalculator<IndexType, num_dims> dst_index_helper;
   IndexType padding_before[num_dims];
   IndexType padding_after[num_dims];
   IndexType out_size[num_dims];
@@ -181,13 +179,10 @@ struct ConstantPadParams {
 };
 
 template<size_t max_pack_size>
-size_t GetLaunchPackSize(size_t elem_size, size_t num_dims, void* dst, const int64_t* dst_dims,
-                         const void* src, const int64_t* src_dims, const int64_t* padding_before,
+size_t GetLaunchPackSize(size_t num_dims, void* dst, const int64_t* dst_dims, const void* src,
+                         const int64_t* src_dims, const int64_t* padding_before,
                          const int64_t* padding_after) {
   static_assert(max_pack_size > 0 && (max_pack_size & (max_pack_size - 1)) == 0, "");
-  CHECK_GT(elem_size, 0);
-  CHECK_EQ((elem_size & (elem_size - 1)), 0);
-  CHECK_EQ(max_pack_size % elem_size, 0);
   const int64_t last_dst_dim_size = dst_dims[num_dims - 1];
   const int64_t last_src_dim_size = src_dims[num_dims - 1];
   const int64_t last_padding_before_size = padding_before[num_dims - 1];
@@ -204,21 +199,21 @@ size_t GetLaunchPackSize(size_t elem_size, size_t num_dims, void* dst, const int
   return 1;
 }
 
-void SimplifyPadDims(size_t num_dims, const int64_t* dst_dims, const int64_t* src_dims,
-                     const int64_t* padding_before, const int64_t* padding_after,
-                     size_t* simplified_num_dims, int64_t* simplified_dst_dims,
-                     int64_t* simplified_src_dims, int64_t* simplified_padding_before,
-                     int64_t* simplified_padding_after) {
+void SimplifyPadDims(size_t num_dims, const int64_t* src_dims, const int64_t* padding_before,
+                     const int64_t* padding_after, size_t* simplified_num_dims,
+                     int64_t* simplified_dst_dims, int64_t* simplified_src_dims,
+                     int64_t* simplified_padding_before, int64_t* simplified_padding_after) {
   CHECK_NE(num_dims, 0);
   size_t valid_num_dims = 0;
   FOR_RANGE(size_t, i, 0, num_dims) {
+    const int64_t dst_dim = src_dims[i] + padding_before[i] + padding_after[i];
     if ((i != 0) && (padding_before[i] == 0 && padding_after[i] == 0)) {
-      simplified_dst_dims[valid_num_dims - 1] *= dst_dims[i];
+      simplified_dst_dims[valid_num_dims - 1] *= dst_dim;
       simplified_src_dims[valid_num_dims - 1] *= src_dims[i];
       simplified_padding_before[valid_num_dims - 1] *= src_dims[i];
       simplified_padding_after[valid_num_dims - 1] *= src_dims[i];
     } else {
-      simplified_dst_dims[valid_num_dims] = dst_dims[i];
+      simplified_dst_dims[valid_num_dims] = dst_dim;
       simplified_src_dims[valid_num_dims] = src_dims[i];
       simplified_padding_before[valid_num_dims] = padding_before[i];
       simplified_padding_after[valid_num_dims] = padding_after[i];

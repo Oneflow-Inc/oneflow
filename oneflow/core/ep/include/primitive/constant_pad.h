@@ -31,9 +31,9 @@ class ConstantPad : public Primitive {
   ConstantPad() = default;
   ~ConstantPad() override = default;
 
-  virtual void Launch(Stream* stream, size_t num_dims, void* dst, const int64_t* dst_dims,
-                      const void* src, const int64_t* src_dims, const int64_t* padding_before,
-                      const int64_t* padding_after, Scalar pad_val) = 0;
+  virtual void Launch(Stream* stream, size_t num_dims, const int64_t* src_dims, const void* src,
+                      const int64_t* padding_before, const int64_t* padding_after, Scalar pad_val,
+                      void* dst) = 0;
 };
 
 class ConstantPadFactory : public Factory<ConstantPad> {
