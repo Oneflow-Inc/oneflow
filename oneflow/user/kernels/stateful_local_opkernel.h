@@ -58,7 +58,7 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
     return mut_eager_blob_object_()->mut_shape().ToMutShapeView();
   }
 
-  Stride stride() const override { return mut_eager_blob_object_()->stride(); }
+  const Stride& stride() const override { return mut_eager_blob_object_()->stride(); }
 
   DataType data_type() const override { return mut_eager_blob_object_()->data_type(); }
 
