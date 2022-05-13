@@ -13,18 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_MODEL_IO_V2_JOB_
-#define ONEFLOW_CORE_JOB_MODEL_IO_V2_JOB_
-
-#include "oneflow/core/job/compiler.h"
-#include "oneflow/core/job/inter_user_job_info.pb.h"
+#include "oneflow/core/common/shape.h"
+#include "gtest/gtest.h"
+#include <functional>
+#include <algorithm>
 
 namespace oneflow {
 
-void MakeModelIoV2Jobs(const std::vector<std::shared_ptr<Job>>& jobs,
-                       const HashMap<std::string, ParallelBlobConf>& var_op_name2parallel_blob_conf,
-                       const std::function<void(Job*)>& Handler);
+namespace test {
 
+TEST(Shape, constructor_0) {
+  Shape a;
+  ASSERT_EQ(a.is_initialized(), false);
+}
+
+TEST(Shape, function_test_1) {
+  Shape shape({4096, 16, 197, 197});
+  ASSERT_EQ(shape.is_initialized(), true);
+  ASSERT_EQ(shape.NumAxes(), 4);
+  ASSERT_EQ(shape.elem_cnt(), 2543386624);
+}
+
+}  // namespace test
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_MODEL_IO_V2_JOB_

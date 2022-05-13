@@ -120,6 +120,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                  const std::vector<std::string>& machine_device_ids,
                                  const std::shared_ptr<Shape>& hierarchy, bool is_mirrored);
 
+  Maybe<Scope> BuildInitialScopeWithPlacement(int64_t session_id,
+                                              const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+                                              Symbol<ParallelDesc> placement, bool is_mirrored);
+
   Maybe<Scope> BuildScopeWithNewParallelDesc(const std::shared_ptr<Scope>& scope,
                                              const std::string& device_tag,
                                              const std::vector<std::string>& machine_device_ids,
@@ -136,6 +140,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<Scope> BuildScopeByProtoSetter(
       const std::shared_ptr<Scope>& scope,
       const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter);
+
+  Maybe<Scope> BuildScopeByProtoStrSetter(
+      const std::shared_ptr<Scope>& scope,
+      const std::function<std::string(const std::string&)>& StrSetter);
 
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {

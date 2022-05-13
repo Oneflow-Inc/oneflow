@@ -151,7 +151,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      *JUST(oneflow::VectorAt(in_grads, 0)) =
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
           JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), input_shape));
       return Maybe<void>::Ok();
     };
@@ -246,7 +246,7 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      *JUST(oneflow::VectorAt(in_grads, 0)) =
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
           JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *shape));
       return Maybe<void>::Ok();
     };
@@ -290,7 +290,7 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::Reshape(
+      JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::Reshape(
           JUST(oneflow::VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec())));
       return Maybe<void>::Ok();
     };

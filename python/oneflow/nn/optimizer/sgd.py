@@ -171,7 +171,7 @@ class SGD(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
             lr = (
                 param_group["initial_lr"]
                 if "initial_lr" in param_group
@@ -180,18 +180,18 @@ class SGD(Optimizer):
             beta = param_group["momentum"]
             l2 = param_group["weight_decay"]
 
-            optimizer_conf.set_base_learning_rate(lr)
+            optimizer_conf.base_learning_rate = lr
             if beta == 0:
-                optimizer_conf.mutable_naive_conf()
+                optimizer_conf.naive_conf.SetInParent()
             else:
-                optimizer_conf.mutable_momentum_conf().set_beta(beta)
+                optimizer_conf.momentum_conf.beta = beta
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

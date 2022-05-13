@@ -449,7 +449,7 @@ class BroadcastLikeFunctor {
       }
     }
     JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, JUST(like->detach())}, attrs);
   }
 
  private:
@@ -1312,9 +1312,9 @@ class LogicalSliceAssignFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
     auto outputs = std::make_shared<TensorTuple>(1);
     JUST(CheckInplaceValid(ref));
-    *JUST(VectorAt(outputs.get(), 0)) = ref;
+    JUST(VectorAt(*outputs, 0)) = ref;
     JUST(OpInterpUtil::Dispatch(*op_, {ref, value}, outputs.get(), attrs));
-    return *JUST(VectorAt(outputs.get(), 0));
+    return JUST(VectorAt(*outputs, 0));
   }
 
  private:
@@ -2877,6 +2877,21 @@ class TransposeAllDimFunctionFunctor {
   }
 };
 
+class ReshapeLikeFunctor {
+ public:
+  ReshapeLikeFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("reshape_like").Input("in").Input("like").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, JUST(like->detach())});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class PinMemoryFunctor {
  public:
   PinMemoryFunctor() {
@@ -3039,6 +3054,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TileFunctor>("Tile");
   m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
+  m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::PinMemoryFunctor>("PinMemory");
 };
 

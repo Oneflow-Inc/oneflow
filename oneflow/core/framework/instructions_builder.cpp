@@ -268,6 +268,30 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
   return GetScopeSymbol(scope_proto);
 }
 
+Maybe<Scope> InstructionsBuilder::BuildInitialScopeWithPlacement(
+    int64_t session_id, const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+    Symbol<ParallelDesc> placement, bool is_mirrored) {
+  std::shared_ptr<cfg::ScopeProto> scope_proto = std::make_shared<cfg::ScopeProto>();
+  scope_proto->set_session_id(session_id);
+  std::shared_ptr<JobDesc> job_conf_sym = JUST(GetJobConfSymbol(job_conf));
+  scope_proto->set_job_desc_symbol_id(JUST(job_conf_sym->symbol_id()));
+
+  std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
+      JUST(GetParallelDescSymbol(placement->cfg_parallel_conf()));
+  scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
+
+  Symbol<ParallelDesc> new_placement = JUST(ReplaceDeviceType(placement, DeviceType::kCPU));
+  std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
+      JUST(GetParallelDescSymbol(new_placement->cfg_parallel_conf()));
+  scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
+  if (is_mirrored) {
+    scope_proto->mutable_opt_mirrored_parallel_conf()->mutable_mirrored_parallel();
+  } else {
+    scope_proto->mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
+  }
+  return GetScopeSymbol(scope_proto);
+}
+
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     const std::shared_ptr<Scope>& scope, const std::string& device_tag,
     const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy) {
@@ -332,6 +356,19 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
   std::shared_ptr<cfg::ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
   Setter(scope_proto);
   return GetScopeSymbol(scope_proto);
+}
+
+Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
+    const std::shared_ptr<Scope>& scope,
+    const std::function<std::string(const std::string&)>& StrSetter) {
+  std::shared_ptr<cfg::ScopeProto> cfg_scope_proto = JUST(scope->MakeChildScopeProto());
+  ScopeProto scope_proto;
+  cfg_scope_proto->ToProto(&scope_proto);
+  std::string serialized_scope_proto = PbMessage2TxtString(scope_proto);
+  std::string new_serialized_scope_proto = StrSetter(serialized_scope_proto);
+  CHECK_OR_RETURN(TxtString2PbMessage(new_serialized_scope_proto, &scope_proto))
+      << "scope_proto parse failed";
+  return GetScopeSymbol(std::make_shared<cfg::ScopeProto>(scope_proto));
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(

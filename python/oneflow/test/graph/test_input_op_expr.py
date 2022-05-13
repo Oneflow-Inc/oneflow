@@ -18,6 +18,7 @@ import os
 import unittest
 
 import numpy as np
+from google.protobuf import text_format
 
 import oneflow
 import oneflow as flow
@@ -42,20 +43,17 @@ class TestFeedInputTensor(unittest.TestCase):
             oneflow._oneflow_internal.JobBuildAndInferCtx_Open(
                 "cc_test_input_op_expr_job"
             )
-            job_conf = (
-                oneflow._oneflow_internal.oneflow.core.job.job_conf.JobConfigProto()
-            )
-            job_conf.set_job_name("cc_test_input_op_expr_job")
-            job_conf.mutable_predict_conf()
+            job_conf = oneflow.core.job.job_conf_pb2.JobConfigProto()
+            job_conf.job_name = "cc_test_input_op_expr_job"
+            job_conf.predict_conf.SetInParent()
             c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
             op_name = "cc_Input_0"
-            input_conf = (
-                oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
-            )
-            input_conf.set_in_0("EagerTensorInput")
-            input_conf.set_out_0("out_0")
+            input_conf = oneflow.core.operator.op_conf_pb2.FeedInputOpConf()
+            input_conf.in_0 = "EagerTensorInput"
+            input_conf.out_0 = "out_0"
+            input_conf_str = text_format.MessageToString(input_conf)
             input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
-                op_name, input_conf, ["in_0"], ["out_0"]
+                op_name, input_conf_str, ["in_0"], ["out_0"]
             )
             attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
             out_tensor = _C.dispatch_feed_input(input_op, x)
