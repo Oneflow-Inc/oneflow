@@ -98,7 +98,7 @@ import resnet50_model as models
 # import resnet50
 
 # run forward, backward and update parameters
-WARMUP_ITERS = 6
+WARMUP_ITERS = 5
 ALL_ITERS = args.iters
 
 # NOTE: it has not effect for dtr allocator
@@ -121,8 +121,8 @@ writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
 model = models.resnet50()
 
-weights = flow.load("/tmp/abcdef")
-model.load_state_dict(weights, strict=False)
+# weights = flow.load("/tmp/abcdef")
+# model.load_state_dict(weights, strict=False)
 
 criterion = nn.CrossEntropyLoss()
 
@@ -184,14 +184,14 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
 
     flow.comm.barrier()
 
-    train_data = train_data.to(cuda0)
-    train_label = train_label.to(cuda0)
-
     if iter >= WARMUP_ITERS:
         start_time = time.time()
 
+    train_data = train_data.to(cuda0)
+    train_label = train_label.to(cuda0)
+
     logits = model(train_data)
-    loss = criterion(logits, train_label)
+    loss = logits.sum() # criterion(logits, train_label)
     del logits
     loss.backward()
     # train_bar.set_description(
@@ -212,7 +212,7 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
         end_time = time.time()
         this_time = end_time - start_time
         total_time += this_time
-        if iter % 10 == 0:
+        if iter % 1 == 0:
             print(f'iter {iter} end, time: {this_time}')
     flow.comm.barrier()
 
