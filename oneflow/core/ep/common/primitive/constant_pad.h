@@ -172,7 +172,7 @@ struct ConstantPadParams {
   OffsetToIndexCalculator<IndexType, num_dims> dst_index_helper;
   IndexType padding_before[num_dims];
   IndexType padding_after[num_dims];
-  IndexType out_size[num_dims];
+  IndexType valid_end_range[num_dims];
   IndexType elem_cnt{};
   const void* src{};
   void* dst{};
