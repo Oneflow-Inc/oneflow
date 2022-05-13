@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/graph/task_node.h"
@@ -628,26 +629,44 @@ void TaskGraph::StraightenNodes() {
   // Decide which node should run first
   struct comp {
     bool operator()(const TopoStruct* a, const TopoStruct* b) const {
-      if (a->TributaryLayer == b->TributaryLayer) {
-        if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
-          if (a->MinLayer == b->MinLayer) {
-            auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
-            if (comp_str == 0) {
-              // the order does not matter right now, but we need a strict order
-              return a < b;
-            } else {
-              return comp_str < 0;
-            }
-          } else {
-            // the node that shows up first has higher priority
-            return a->MinLayer < b->MinLayer;
-          }
-        } else {
-          return a->MinDistance2Transfer < b->MinDistance2Transfer;
+      static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 0),
+                                                     ParseIntegerFromEnv("Parameter1", 1),
+                                                     ParseIntegerFromEnv("Parameter2", 2)});
+      for (int32_t decide_parameter : decide_parameters) {
+        int32_t decide_parameter_a = a->GetDecidingParameter(decide_parameter);
+        int32_t decide_parameter_b = b->GetDecidingParameter(decide_parameter);
+        if (decide_parameter_a != decide_parameter_b) {
+          return decide_parameter_a < decide_parameter_b;
         }
-      } else {
-        return a->TributaryLayer < b->TributaryLayer;
       }
+      auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
+      if (comp_str == 0) {
+        // the order does not matter right now, but we need a strict order
+        return a < b;
+      } else {
+        return comp_str < 0;
+      };
+      // if (a->TributaryLayer == b->TributaryLayer) {
+      //   if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
+      //     if (a->MinLayer == b->MinLayer) {
+      //       // Put the task with the same names together
+      //       auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
+      //       if (comp_str == 0) {
+      //         // the order does not matter right now, but we need a strict order
+      //         return a < b;
+      //       } else {
+      //         return comp_str < 0;
+      //       }
+      //     } else {
+      //       // the node that shows up first has higher priority
+      //       return a->MinLayer < b->MinLayer;
+      //     }
+      //   } else {
+      //     return a->MinDistance2Transfer < b->MinDistance2Transfer;
+      //   }
+      // } else {
+      //   return a->TributaryLayer < b->TributaryLayer;
+      // }
     }
   };
 

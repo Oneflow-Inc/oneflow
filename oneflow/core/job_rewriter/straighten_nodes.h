@@ -46,6 +46,9 @@ class TopoStruct {
 
   // The minimum computation distance from the beginning of this op to the next transfer
   int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
+
+  // deciding parameter
+  int32_t GetDecidingParameter(int32_t i) const;
 };
 
 void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);

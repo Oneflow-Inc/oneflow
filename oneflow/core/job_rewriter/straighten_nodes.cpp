@@ -93,6 +93,21 @@ int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>& task
   return ++MinDistance2Transfer;
 }
 
+// deciding parameter
+int32_t TopoStruct::GetDecidingParameter(int32_t i) const {
+  int32_t sign = 1;
+  if (i >= 3) {
+    i -= 3;
+    sign = -1;
+  }
+  switch (i) {
+    case 0: return sign * TributaryLayer;
+    case 1: return sign * MinDistance2Transfer;
+    case 2: return sign * MinLayer;
+  }
+  return 0;
+}
+
 // Find the mianstem of the task graph, then reduce the wait time for tributaries
 void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
   // Find the maximum layer number
