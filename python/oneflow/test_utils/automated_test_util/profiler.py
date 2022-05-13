@@ -37,7 +37,7 @@ def run_torch(op, args, kwargs, num_threads, op_name, args_description, addition
 
     print(f'torch (num_threads={torch.get_num_threads()}):')
     with torch.profiler.profile() as prof:
-        with torch.profiler.record_function("total"):
+        with torch.profiler.record_function("end-to-end"):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
@@ -53,7 +53,7 @@ def run_flow(op, args, kwargs, num_threads, op_name, args_description, additiona
     # NOTE: there is no flow.get_num_threads()
     print(f'flow (num_threads={num_threads}):')
     with flow.profiler.profile() as prof:
-        with flow.profiler.record_function("total"):
+        with flow.profiler.record_function("end-to-end"):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 

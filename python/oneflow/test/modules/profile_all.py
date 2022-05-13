@@ -14,23 +14,24 @@ def get_sole_value(x):
 
 
 def get_kernel_cpu_time(prof):
+    # mark as "kernel" if count >= prof.num
     assert prof.num > 1
     try:
         # pytorch
-        kernel_cpu_time = sum(map(lambda x: x.self_cpu_time_total, filter(lambda x: x.count == prof.num, prof.key_averages()))) / prof.num
+        kernel_cpu_time = sum(map(lambda x: x.self_cpu_time_total, filter(lambda x: x.count >= prof.num, prof.key_averages()))) / prof.num
     except:
         # oneflow
-        kernel_cpu_time = sum(map(lambda x: x.cpu_time_total, filter(lambda x: x.count == prof.num, prof.key_averages()))) / prof.num
+        kernel_cpu_time = sum(map(lambda x: x.cpu_time_total, filter(lambda x: x.count >= prof.num, prof.key_averages()))) / prof.num
     return round(kernel_cpu_time, 1)
 
 
-def get_all_cpu_time(prof):
+def get_end_to_end_cpu_time(prof):
     try:
         # pytorch
-        total = get_sole_value(filter(lambda x: x.key == "total", prof.key_averages()))
+        total = get_sole_value(filter(lambda x: x.key == "end-to-end", prof.key_averages()))
     except:
         # oneflow
-        total = list(filter(lambda x: x.name == "total", prof.key_averages()))[0]
+        total = list(filter(lambda x: x.name == "end-to-end", prof.key_averages()))[0]
     return round(total.cpu_time / prof.num, 1)
 
 
@@ -74,11 +75,11 @@ def add_row(profs):
             additional_description,
             "oneflow",
             get_kernel_cpu_time(profs[2]),
-            get_all_cpu_time(profs[2]),
+            get_end_to_end_cpu_time(profs[2]),
             get_kernel_cpu_time(profs[1]),
-            get_all_cpu_time(profs[1]),
+            get_end_to_end_cpu_time(profs[1]),
             get_kernel_cpu_time(profs[0]),
-            get_all_cpu_time(profs[0]),
+            get_end_to_end_cpu_time(profs[0]),
         ]
     )
     writer.writerow(
@@ -88,11 +89,11 @@ def add_row(profs):
             additional_description,
             "pytorch",
             get_kernel_cpu_time(profs[5]),
-            get_all_cpu_time(profs[5]),
+            get_end_to_end_cpu_time(profs[5]),
             get_kernel_cpu_time(profs[4]),
-            get_all_cpu_time(profs[4]),
+            get_end_to_end_cpu_time(profs[4]),
             get_kernel_cpu_time(profs[3]),
-            get_all_cpu_time(profs[3]),
+            get_end_to_end_cpu_time(profs[3]),
         ]
     )
     f.flush()
