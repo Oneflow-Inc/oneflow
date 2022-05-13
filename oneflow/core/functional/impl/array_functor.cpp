@@ -769,8 +769,8 @@ class DimGatherFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const bool sparse_grad) const {
-    CHECK_EQ_OR_RETURN(index->dtype()->data_type(), kInt64)
-        << Error::RuntimeError() << "gather(): Expected dtype int64 for index";
+    CHECK_OR_RETURN(index->dtype()->data_type() == kInt64 || index->dtype()->data_type() == kInt32)
+        << Error::RuntimeError() << "gather(): Expected dtype int32 or int64 for index";
     CHECK_EQ_OR_RETURN(sparse_grad, false)
         << Error::RuntimeError() << "Only support bool = False for now!";
     CHECK_LT_OR_RETURN(dim, index->ndim())

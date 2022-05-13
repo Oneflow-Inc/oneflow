@@ -123,7 +123,8 @@ class TestArrayError(flow.unittest.TestCase):
             x2 = flow.ones((2, 2), dtype=flow.float32)
             y = flow.gather(x1, 1, x2)
         test_case.assertTrue(
-            "gather(): Expected dtype int64 for index" in str(context.exception)
+            "gather(): Expected dtype int32 or int64 for index"
+            in str(context.exception)
         )
 
     def test_gather_dim_value_runtime_error(test_case):
