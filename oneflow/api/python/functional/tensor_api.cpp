@@ -144,8 +144,10 @@ class TensorWithDataCtorFunctor {
     const auto& dtype = DType::Float();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
-      const bool pin_memory = other->is_local() ?
-          JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory() : false;
+      const bool pin_memory =
+          other->is_local()
+              ? JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory()
+              : false;
       return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
