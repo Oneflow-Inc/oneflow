@@ -390,7 +390,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
                    "variable.\n";
       }
       // Register
-      *JUST(MapAt(&variable_op_name2tensor_, var_name)) = tensor;
+      JUST(MapAt(variable_op_name2tensor_, var_name)) = tensor;
       // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
       // valid.
       session_ctx_->StoreFreeEagerTensorWithNameByGraphName(name_, tensor, var_name);
