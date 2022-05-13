@@ -62,8 +62,8 @@ bool IsForwardPass(const OpNode* node) {
   return Scope4OpNode(node).scope_proto().calculation_pass_name() == kForwardPass;
 }
 
-bool IsBackwardPass(const OpNode* node) {
-  return Scope4OpNode(node).scope_proto().calculation_pass_name() == kBackwardPass;
+bool IsBackwardOptimizerPass(const OpNode* node) {
+  return Scope4OpNode(node).scope_proto().calculation_pass_name() != kForwardPass;
 }
 
 bool OpNodeHasScope(const OpNode* node) { return node->op().op_conf().has_scope_symbol_id(); }
@@ -330,7 +330,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
 
   op_graph.ForEachNode([&](const OpNode* this_node) {
     if (!OpNodeHasScope(this_node)) { return; /* ignore op without scope */ }
-    if (!IsBackwardPass(this_node)) { return; /* ignore fw dst op */ }
+    if (!IsBackwardOptimizerPass(this_node)) { return; /* ignore fw dst op */ }
     for (const OpEdge* in_edge : this_node->in_edges()) {
       const OpNode* src_node = in_edge->src_node();
       if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
@@ -361,13 +361,30 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
         }
       }
     }
-    for (const std::string& ctrl_in_op_name : this_node->op().op_conf().ctrl_in_op_name()) {
+
+    std::vector<std::string> effective_ctrl_op_names;
+    const OperatorConf& this_op_conf = this_node->op().op_conf();
+    for (const std::string& ctrl_in_op_name : this_op_conf.ctrl_in_op_name()) {
       const OpNode* src_node = op_graph.OpNode4OpName(ctrl_in_op_name);
       if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
       if (IsForwardPass(src_node)) {
         LOG(WARNING) << "CtrlEdge: src_op[FwPass]: " << src_node->op().op_conf().DebugString()
-                     << " dst_op[BwPass]: " << this_node->op().op_conf().DebugString()
-                     << " connected.";
+                     << " dst_op[Bw/OptPass]: " << this_node->op().op_conf().DebugString()
+                     << " connected. This will impact pipeline performance, which will be ignored.";
+      } else {
+        effective_ctrl_op_names.push_back(ctrl_in_op_name);
+      }
+    }
+    if (effective_ctrl_op_names.size() < this_op_conf.ctrl_in_op_name_size()) {
+      const std::string& this_op_name = this_node->op().op_name();
+      auto mut_op_it = mut_op_name2conf.find(this_op_name);
+      if (mut_op_it == mut_op_name2conf.end()) {
+        mut_op_it = mut_op_name2conf.emplace(this_op_name, this_node->op().op_conf()).first;
+      }
+      OperatorConf* mut_op = &(mut_op_it->second);
+      mut_op->clear_ctrl_in_op_name();
+      for (const std::string& ctrl_in_op_name : effective_ctrl_op_names) {
+        mut_op->add_ctrl_in_op_name(ctrl_in_op_name);
       }
     }
   });
@@ -398,8 +415,8 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                                          &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
-    if (OpNodeHasScope(src_node) && OpNodeHasScope(dst_node) && IsBackwardPass(src_node)
-        && IsBackwardPass(dst_node)) {
+    if (OpNodeHasScope(src_node) && OpNodeHasScope(dst_node) && IsBackwardOptimizerPass(src_node)
+        && IsBackwardOptimizerPass(dst_node)) {
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
       // NOTE(chengcheng): Backward ONLY need buffer size 1.

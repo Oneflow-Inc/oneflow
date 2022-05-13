@@ -48,11 +48,13 @@ void CheckSubGraph(const HashSet<const InplaceLbiNode*>& nodes) {
     }
     if (dynamic_cast<const UpdateInplaceLbiNode*>(node) != nullptr) {
       CHECK_EQ(++updt_node_cnt, 1);
+      /*
       CHECK(dynamic_cast<const SourceOpInplaceLbiNode*>(node->SoleInEdge()->src_node()) != nullptr)
           << "UpdateInplaceLbiNode-lbi: " << PbMessage2TxtString(node->lbi())
           << ", src_node.in_edges_size: " << node->SoleInEdge()->src_node()->in_edges().size()
           << ", SoleInNode: " << typeid(node->SoleInEdge()->src_node()).name() << ", "
           << PbMessage2TxtString(node->SoleInEdge()->src_node()->lbi());
+          */
     }
   }
 }
