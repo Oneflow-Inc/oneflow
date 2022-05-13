@@ -1377,7 +1377,6 @@ class CopyFunctor {
   CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
                            const int64_t& device_id, const bool pin_memory) const {
-    Symbol<Device> device_ = JUST(x->device());
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
@@ -1385,11 +1384,11 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    if (device_->type() == "cuda" || !x->is_local()) {
+    if(!x->is_local() || device_type == "cuda") {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    } else {
+    }else{
       return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {x}, OpExprInterpContext(attrs, device_, /*pin_memory=*/pin_memory));
+          *op_, {x}, OpExprInterpContext(attrs, JUST(Device::New(device_type, device_id)), /*pin_memory=*/pin_memory));
     }
   }
 
@@ -2632,7 +2631,6 @@ class ToFunctor {
                            const Optional<std::string>& device_,
                            const Optional<Symbol<DType>>& dtype_, bool copy) const {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
-
     if (input->is_consistent()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
       CHECK_OR_RETURN(device_type == "cpu" || device_type == "cuda")
