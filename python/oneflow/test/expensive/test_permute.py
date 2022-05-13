@@ -168,7 +168,7 @@ class TestPermute(flow.unittest.TestCase):
         shuffle(permute_list)
         x = random_tensor(
             ndim=ndim,
-             dim0=random(1, 7).to(int),
+            dim0=random(1, 7).to(int),
             dim1=random(1, 15).to(int),
             dim2=random(1, 9).to(int),
             dim3=random(1, 19).to(int),
