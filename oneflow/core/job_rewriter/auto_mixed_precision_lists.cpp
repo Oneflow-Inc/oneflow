@@ -27,7 +27,8 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "prelu",
                                "tf_prelu",
                                "cublas_fused_mlp",
-                               "fused_dot_feature_interaction"};
+                               "fused_dot_feature_interaction",
+                               "embedding_lookup_placeholder"};
   return white_list;
 }
 
