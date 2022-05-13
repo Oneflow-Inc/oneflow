@@ -50,7 +50,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
              const std::shared_ptr<Shape>& hierarchy, bool is_mirrored) -> Maybe<Scope> {
             JobConfigProto job_conf;
             CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf))
-                << "job conf parse failed";
+                << Error::RuntimeError() << "job conf parse failed";
             return builder->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids,
                                               hierarchy, is_mirrored);
           },
@@ -64,7 +64,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
              bool is_mirrored) -> Maybe<Scope> {
             JobConfigProto job_conf;
             CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf))
-                << "job conf parse failed";
+                << Error::RuntimeError() << "job conf parse failed";
             return builder->BuildInitialScopeWithPlacement(session_id, job_conf, placement,
                                                            is_mirrored);
           },
@@ -79,7 +79,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
               const std::string& parallel_conf_str) -> Maybe<Scope> {
              ParallelConf parallel_conf;
              CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
-                 << "parallel conf parse failed";
+                 << Error::RuntimeError() << "parallel conf parse failed";
              return builder->BuildScopeWithNewParallelConf(scope, parallel_conf);
            })
       .def("BuildScopeWithNewIsMirrored", &InstructionsBuilder::BuildScopeWithNewIsMirrored)
