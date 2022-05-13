@@ -70,7 +70,7 @@ class IdCache final {
 
  private:
   mutable std::mutex mutex_;
-  std::unordered_map<T, int64_t> symbol_data2id_;
+  HashMap<T, int64_t> symbol_data2id_;
 };
 
 }  // namespace symbol

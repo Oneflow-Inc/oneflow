@@ -256,7 +256,9 @@ def GetCurrentJob():
     return ret
 
 
-def LoadSavedModel():
-    serialized_saved_model = oneflow._oneflow_internal.LoadSavedModel()
+def LoadSavedModel(saved_model_meta_file, is_prototxt_file):
+    serialized_saved_model = oneflow._oneflow_internal.LoadSavedModel(
+        saved_model_meta_file, is_prototxt_file
+    )
     saved_model = text_format.Parse(serialized_saved_model, SavedModel())
     return saved_model
