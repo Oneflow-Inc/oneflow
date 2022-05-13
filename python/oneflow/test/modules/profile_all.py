@@ -30,7 +30,7 @@ def get_all_cpu_time(prof):
         total = get_sole_value(filter(lambda x: x.key == "total", prof.key_averages()))
     except:
         # oneflow
-        total = get_sole_value(filter(lambda x: x.name == "total", prof.key_averages()))
+        total = list(filter(lambda x: x.name == "total", prof.key_averages()))[0]
     return round(total.cpu_time / prof.num, 1)
 
 
@@ -61,7 +61,7 @@ writer.writerow(
 )
 
 
-def add_row(profs, writer):
+def add_row(profs):
     op_name = get_sole_value([prof.op_name for prof in profs])
     args_description = get_sole_value([prof.args_description for prof in profs])
     additional_description = get_sole_value(
@@ -95,9 +95,10 @@ def add_row(profs, writer):
             get_all_cpu_time(profs[3]),
         ]
     )
+    f.flush()
 
 
-auto_profiler.set_profiler_hook(lambda profs: add_row(profs, writer))
+auto_profiler.set_profiler_hook(add_row)
 
 loader = unittest.TestLoader()
 loader.testMethodPrefix = "profile_"

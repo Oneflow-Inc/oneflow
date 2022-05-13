@@ -1,14 +1,10 @@
-from typing import Union, List
 import functools
-from pathlib import Path
 
 import torch
 import oneflow as flow
 import oneflow.test_utils.automated_test_util.torch_flow_dual_object as dual_object_module
-import matplotlib.pyplot as plt
-import numpy as np
 
-__all__ = ['profile_torch', 'get_auto_profiler', '_profile', 'profile', 'set_profiler_hook']
+__all__ = ['profile', 'set_profiler_hook', 'profile_dual_object']
 
 
 def compose(*fs):
@@ -104,13 +100,6 @@ def profile_flow(op):
     return profiled_op
 
 
-def _profile(op):
-    if isinstance(op, dual_object_module.DualObject):
-        return profile_dual_object(op)
-    else:
-        return profile_flow(op)
-
-
 def add_hook(hook):
     def decorator(op):
         def new_op(*args, **kwargs):
@@ -121,7 +110,7 @@ def add_hook(hook):
     return decorator
 
 
-profiler_hook = lambda x: x
+_profiler_hook = lambda x: x
 
 
 def set_profiler_hook(hook):
@@ -138,70 +127,3 @@ def profile(op):
             return res
         return new_f
     return deco
-
-
-# NOTE:
-# What get_auto_profiler does is like applying multiple decorators to a function:
-# @add_hook(hook)
-# @_profile
-# def f(...):
-#    ...
-# Every decorator has type T -> T,
-# so decorator composition is indeed function composition
-def get_auto_profiler(hook):
-    return compose(add_hook(hook), _profile)
-
-
-def profile_torch(op):
-    def profiled_op(*args, **kwargs):
-        return run_torch(op, args, kwargs, 32, None, None)
-    return profiled_op
-
-
-def draw_picture(path: Union[Path, str], label: str, profs: List[ProfResult]):
-    if isinstance(path, str):
-        path = Path(path)
-
-    torch_profs = list(filter(lambda x: x.kind == 'torch', profs))
-    flow_profs = list(filter(lambda x: x.kind == 'flow', profs))
-    torch_profs = sorted(torch_profs, key=lambda x: x.thread_num)
-    flow_profs = sorted(flow_profs, key=lambda x: x.thread_num)
-    i = 0
-    labels = []
-    torch_times = []
-    flow_times = []
-    for torch_prof in torch_profs:
-        if torch_prof.thread_num == flow_profs[i].thread_num:
-            i += 1
-            labels.append(f'{torch_prof.thread_num} threads')
-            torch_times.append(torch_prof.total_time)
-
-
-    labels = ['G1', 'G2', 'G3', 'G4', 'G5']
-    men_means = [20, 34, 30, 35, 27]
-    women_means = [25, 32, 34, 20, 25]
-
-    x = np.arange(len(labels))  # the label locations
-    width = 0.35  # the width of the bars
-
-    fig, ax = plt.subplots()
-    rects1 = ax.bar(x - width/2, men_means, width, label='Men')
-    rects2 = ax.bar(x + width/2, women_means, width, label='Women')
-
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('Time')
-    ax.set_title('Op Time')
-    ax.set_xticks(x, labels)
-    ax.legend()
-
-    ax.bar_label(rects1, padding=3)
-    ax.bar_label(rects2, padding=3)
-
-    fig.tight_layout()
-
-    plt.show()
-
-
-
-
-
