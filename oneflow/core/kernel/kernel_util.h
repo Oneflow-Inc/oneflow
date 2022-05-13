@@ -29,7 +29,6 @@ limitations under the License.
 namespace oneflow {
 
 class Blob;
-class InitializerConf;
 class MemoryCase;
 class StreamContext;
 
@@ -40,46 +39,6 @@ void SyncAutoMemcpy(ep::Stream* stream, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 void AutoMemset(ep::Stream* stream, void* dst, const char value, size_t sz,
                 const MemoryCase& dst_mem_case);
-
-template<DeviceType device_type, typename T, typename U = void>
-struct KernelUtil;
-
-// CPU, Integral, Floating
-template<typename T, typename Derived>
-struct CpuKernelUtilIf {};
-
-// CPU, Floating
-template<typename T>
-struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>
-    : public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
-  static void InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob);
-};
-
-// CPU, Integral
-template<typename T>
-struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
-    : public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
-  static void InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob);
-};
-
-// GPU, Integral, Floating
-template<typename T, typename Derived>
-struct GpuKernelUtilIf {
-  static void InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob);
-};
-
-// GPU, Floating
-template<typename T>
-struct KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsFloating<T>::value>::type>
-    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kCUDA, T>> {};
-
-// GPU, Integral
-template<typename T>
-struct KernelUtil<DeviceType::kCUDA, T, typename std::enable_if<IsIntegral<T>::value>::type>
-    : public GpuKernelUtilIf<T, KernelUtil<DeviceType::kCUDA, T>> {};
 
 }  // namespace oneflow
 
