@@ -149,25 +149,13 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   const int64_t like_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, like_num_axes) {
-    if (i == axis) { continue; }
-    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    if (i == axis || i < 1) { continue; }
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i - 1).Build();
   }
   std::vector<user_op::OpArg> like_arg_vec;
   const size_t like_arg_size = ctx->outputs().size();
   like_arg_vec.reserve(like_arg_size);
   FOR_RANGE(int32_t, i, 0, like_arg_size) { like_arg_vec.emplace_back("like", i); }
-  FOR_RANGE(int64_t, i, like_num_axes, in_num_axes) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("in", 0), i)
-        .Broadcast(like_arg_vec)
-        .Split(ctx->outputs(), i)
-        .Build();
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("in", 0), i)
-        .PartialSum(like_arg_vec)
-        .Split(ctx->outputs(), i)
-        .Build();
-  }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("in", 0))
       .PartialSum(like_arg_vec)
