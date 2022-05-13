@@ -38,13 +38,10 @@ class TensorMeta : public user_op::TensorDesc {
       : shape_(shape),
         stride_(std::make_shared<Stride>(*shape)),
         data_type_(dtype),
-        is_dynamic_(false)  {}
+        is_dynamic_(false) {}
   TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
              DataType dtype)
-      : shape_(shape),
-        stride_(stride),
-        data_type_(dtype),
-        is_dynamic_(false) {}
+      : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(false) {}
   TensorMeta(const TensorMeta&) = default;
   TensorMeta(TensorMeta&&) = default;
   virtual ~TensorMeta() = default;
@@ -61,9 +58,7 @@ class TensorMeta : public user_op::TensorDesc {
 
   void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
   Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
-  void set_stride(const std::shared_ptr<const Stride>& val) {
-    stride_ = val;
-  }
+  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
   Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
   DataType* mut_dtype() { return &data_type_; }
   void set_dtype(DataType data_type) { data_type_ = data_type; }
