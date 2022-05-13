@@ -28,11 +28,27 @@ class TopoStruct {
  public:
   TaskNode* node;
   int32_t MinLayer = -1;
+  int32_t TributaryLayer = -1;
+  bool IfMainstem = false;
+  int32_t counter = 0;
+  int32_t MinDistance2Transfer = -1;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;
   // Or we can omit all the pointers and leave all the useful parameters.
+
+  // Drop down the tributary layer
+  void DropTributaryLayer(int32_t upper_bound);
+
+  void SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
+
+  void SpreadMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
+
+  // The minimum computation distance from the beginning of this op to the next transfer
+  int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
 };
+
+void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
 
 Maybe<void> StraightenNodes(const OpGraph& op_graph, Job* job);
 

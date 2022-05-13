@@ -621,27 +621,33 @@ void TaskGraph::StraightenNodes() {
       topo_struct.MinLayer = max_min_layer + 1;
     }
   });
+  // Generate other parameters in the topological data structure
+  FindMainstem(task_node2topo_struct);
 
   // Order in the waiting sets
   // Decide which node should run first
   struct comp {
     bool operator()(const TopoStruct* a, const TopoStruct* b) const {
-      // if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
-      if (a->MinLayer == b->MinLayer) {
-        auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
-        if (comp_str == 0) {
-          // the order does not matter right now, but we need a strict order
-          return a < b;
+      if (a->TributaryLayer == b->TributaryLayer) {
+        if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
+          if (a->MinLayer == b->MinLayer) {
+            auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
+            if (comp_str == 0) {
+              // the order does not matter right now, but we need a strict order
+              return a < b;
+            } else {
+              return comp_str < 0;
+            }
+          } else {
+            // the node that shows up first has higher priority
+            return a->MinLayer < b->MinLayer;
+          }
         } else {
-          return comp_str < 0;
+          return a->MinDistance2Transfer < b->MinDistance2Transfer;
         }
       } else {
-        // the node that shows up first has higher priority
-        return a->MinLayer < b->MinLayer;
+        return a->TributaryLayer < b->TributaryLayer;
       }
-      // } else {
-      //   return a->MinDistance2Transfer < b->MinDistance2Transfer;
-      // }
     }
   };
 
