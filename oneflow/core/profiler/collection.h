@@ -69,31 +69,39 @@ class CustomEvent final : public IEvent {
 
   nlohmann::json ToJson() override;
 
-  static std::shared_ptr<IEvent> Create(const std::string& name);
+  static std::shared_ptr<CustomEvent> Create(const std::string& name);
 };
 
 #if defined(WITH_CUDA)
 
-struct CUDAEventPair {
+class CUDAEventPair {
+ public:
   OF_DISALLOW_COPY_AND_MOVE(CUDAEventPair);
 
-  cudaEvent_t cuda_event_start = nullptr;
-  cudaEvent_t cuda_event_finish = nullptr;
-  CUDAEventPair() {
-    cudaEventCreate(&cuda_event_start);
-    cudaEventCreate(&cuda_event_finish);
+  explicit CUDAEventPair(cudaStream_t cuda_stream) : cuda_stream_(cuda_stream) {
+    cudaEventCreate(&cuda_event_start_);
+    cudaEventCreate(&cuda_event_finish_);
   }
-  void Start(cudaStream_t cuda_stream) { cudaEventRecord(cuda_event_start, cuda_stream); }
-  void Finish(cudaStream_t cuda_stream) { cudaEventRecord(cuda_event_finish, cuda_stream); }
-  double ElapsedTime() {
-    float elapsed_time = 0;
-    cudaEventElapsedTime(&elapsed_time, cuda_event_start, cuda_event_finish);
-    return elapsed_time * 1000.0;
+
+  void Start() { cudaEventRecord(cuda_event_start_, cuda_stream_); }
+
+  void Finish() { cudaEventRecord(cuda_event_finish_, cuda_stream_); }
+
+  double ElapsedTime() const {
+    float elapsed_time_ms = 0;
+    cudaEventElapsedTime(&elapsed_time_ms, cuda_event_start_, cuda_event_finish_);
+    return elapsed_time_ms * 1000.0;  // convert to us
   }
+
   ~CUDAEventPair() {
-    if (cuda_event_start) { cudaEventDestroy(cuda_event_start); }
-    if (cuda_event_finish) { cudaEventDestroy(cuda_event_finish); }
+    if (cuda_event_start_) { cudaEventDestroy(cuda_event_start_); }
+    if (cuda_event_finish_) { cudaEventDestroy(cuda_event_finish_); }
   }
+
+ private:
+  cudaStream_t cuda_stream_ = nullptr;
+  cudaEvent_t cuda_event_start_ = nullptr;
+  cudaEvent_t cuda_event_finish_ = nullptr;
 };
 
 #endif  // WITH_CUDA
@@ -110,7 +118,7 @@ class KernelEvent final : public IEvent {
 
   nlohmann::json ToJson() override;
 
-  static std::shared_ptr<IEvent> Create(
+  static std::shared_ptr<KernelEvent> Create(
       const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter);
 
   void RecordShape(const Shape& shape);
@@ -119,16 +127,14 @@ class KernelEvent final : public IEvent {
   void Finish() override;
 
 #if defined(WITH_CUDA)
-  void SetCudaStream(cudaStream_t cuda_stream) {
-    cuda_stream_ = cuda_stream;
-    cuda_event_pair_ = std::make_shared<CUDAEventPair>();
+  void InitCudaEventPair(cudaStream_t cuda_stream) {
+    cuda_event_pair_ = std::make_shared<CUDAEventPair>(cuda_stream);
   }
 #endif  // WITH_CUDA
 
  private:
 #if defined(WITH_CUDA)
-  cudaStream_t cuda_stream_;
-  std::shared_ptr<CUDAEventPair> cuda_event_pair_;
+  std::shared_ptr<CUDAEventPair> cuda_event_pair_ = nullptr;
 #endif  // WITH_CUDA
 
   std::vector<Shape> input_shapes_;

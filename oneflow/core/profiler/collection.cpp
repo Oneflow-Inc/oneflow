@@ -37,8 +37,10 @@ namespace profiler {
 
 nlohmann::json IEvent::ToJson() {
   return json{{"name", name_},
-              {"cpu_time", static_cast<double>(GetDuration()) / 1000},
-              {"input_shapes", "-"}};
+              {"time", static_cast<double>(GetDuration())
+                           / 1000},  // convert to us,the unit of GetDuration is ns
+              {"input_shapes", "-"},
+              {"on_gpu", false}};
 }
 
 void IEvent::Start() { started_at_ = GetTimeNow(); }
@@ -54,7 +56,10 @@ nlohmann::json KernelEvent::ToJson() {
   j["type"] = EventType::kKernel;
   j["input_shapes"] = FormatShapes();
 #if defined(WITH_CUDA)
-  if (cuda_stream_) { j["cuda_time"] = cuda_event_pair_->ElapsedTime(); }
+  if (cuda_event_pair_) {
+    j["time"] = cuda_event_pair_->ElapsedTime();
+    j["on_gpu"] = true;
+  }
 #endif
   return j;
 }
@@ -82,10 +87,10 @@ void KernelEvent::RecordShape(const Shape& shape) { input_shapes_.emplace_back(s
 
 void KernelEvent::Start() {
 #if defined(WITH_CUDA)
-  if (!cuda_stream_) {
+  if (!cuda_event_pair_) {
     IEvent::Start();
   } else {
-    cuda_event_pair_->Start(cuda_stream_);
+    cuda_event_pair_->Start();
   }
 #else
   IEvent::Start();
@@ -94,17 +99,17 @@ void KernelEvent::Start() {
 
 void KernelEvent::Finish() {
 #if defined(WITH_CUDA)
-  if (!cuda_stream_) {
+  if (!cuda_event_pair_) {
     IEvent::Finish();
   } else {
-    cuda_event_pair_->Finish(cuda_stream_);
+    cuda_event_pair_->Finish();
   }
 #else
   IEvent::Finish();
 #endif  // WITH_CUDA
 }
 
-std::shared_ptr<IEvent> KernelEvent::Create(
+std::shared_ptr<KernelEvent> KernelEvent::Create(
     const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter) {
   return std::make_shared<KernelEvent>(name, shape_getter);
 }
@@ -117,7 +122,7 @@ nlohmann::json CustomEvent::ToJson() {
 
 std::string CustomEvent::Key() { return name_; }
 
-std::shared_ptr<IEvent> CustomEvent::Create(const std::string& name) {
+std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name) {
   return std::make_shared<CustomEvent>(name);
 }
 
@@ -167,8 +172,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
   if (pmgr) {
     if ((pmgr->use_cpu_ && (!cuda_stream)) || (pmgr->use_cuda_ && cuda_stream)) {
       auto event = KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr);
-      auto kernel_event = std::dynamic_pointer_cast<KernelEvent>(event);
-      kernel_event->SetCudaStream(cuda_stream);
+      if (pmgr->use_cuda_) { event->InitCudaEventPair(cuda_stream); }
       return std::make_shared<EventRecorder>(event);
     }
   }

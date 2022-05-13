@@ -69,14 +69,16 @@ class TestProfileLenet(flow.unittest.TestCase):
 
         conv_event = get_event(events, "conv2d", "[(2,3,32,32), (6,3,5,5)]")
         test_case.assertIsNotNone(conv_event)
-        test_case.assertGreater(conv_event.cpu_time, 0.0)
-        test_case.assertGreater(conv_event.cpu_time_total, 0.0)
+        test_case.assertGreater(conv_event.time, 0.0)
+        test_case.assertGreater(conv_event.time_total, 0.0)
+        test_case.assertEqual(conv_event.on_gpu, False)
         test_case.assertEqual(conv_event.count, 2)
 
         relu_grad_event = get_event(events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]")
         test_case.assertIsNotNone(relu_grad_event)
-        test_case.assertGreater(relu_grad_event.cpu_time, 0.0)
-        test_case.assertGreater(relu_grad_event.cpu_time_total, 0.0)
+        test_case.assertGreater(relu_grad_event.time, 0.0)
+        test_case.assertGreater(relu_grad_event.time_total, 0.0)
+        test_case.assertEqual(conv_event.on_gpu, False)
         test_case.assertEqual(relu_grad_event.count, 1)
 
         test_case.assertIsNotNone(get_event(events, "lenet_forward_total_time"))
@@ -105,14 +107,16 @@ class TestProfileLenet(flow.unittest.TestCase):
 
         conv_event = get_event(events, "conv2d", "[(2,3,32,32), (6,3,5,5)]")
         test_case.assertIsNotNone(conv_event)
-        test_case.assertGreater(conv_event.gpu_time, 0.0)
-        test_case.assertGreater(conv_event.gpu_time_total, 0.0)
+        test_case.assertGreater(conv_event.time, 0.0)
+        test_case.assertGreater(conv_event.time_total, 0.0)
+        test_case.assertEqual(conv_event.on_gpu, True)
         test_case.assertEqual(conv_event.count, 2)
 
         relu_grad_event = get_event(events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]")
         test_case.assertIsNotNone(relu_grad_event)
-        test_case.assertGreater(relu_grad_event.gpu_time, 0.0)
-        test_case.assertGreater(relu_grad_event.gpu_time_total, 0.0)
+        test_case.assertGreater(relu_grad_event.time, 0.0)
+        test_case.assertGreater(relu_grad_event.time_total, 0.0)
+        test_case.assertEqual(conv_event.on_gpu, True)
         test_case.assertEqual(relu_grad_event.count, 1)
 
         test_case.assertIsNotNone(get_event(events, "lenet_forward_total_time"))

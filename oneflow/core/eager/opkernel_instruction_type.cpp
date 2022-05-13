@@ -138,7 +138,7 @@ struct LocalCallOpKernelUtil final {
               ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
               : nullptr,
 #endif
-          [&]() -> std::vector<Shape> {
+          [compute_ctx]() -> std::vector<Shape> {
             std::vector<Shape> shapes;
             for (const auto& pair : compute_ctx->inputs()) {
               shapes.push_back(
