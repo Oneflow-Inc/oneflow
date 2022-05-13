@@ -111,7 +111,7 @@ void KernelEvent::Finish() {
 
 std::shared_ptr<KernelEvent> KernelEvent::Create(
     const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter) {
-  return std::make_shared<KernelEvent>(name, shape_getter);
+  return std::shared_ptr<KernelEvent>(new KernelEvent(name, shape_getter));
 }
 
 nlohmann::json CustomEvent::ToJson() {
@@ -123,7 +123,7 @@ nlohmann::json CustomEvent::ToJson() {
 std::string CustomEvent::Key() { return name_; }
 
 std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name) {
-  return std::make_shared<CustomEvent>(name);
+  return std::shared_ptr<CustomEvent>(new CustomEvent(name));
 }
 
 std::string ProfileMgr::RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,

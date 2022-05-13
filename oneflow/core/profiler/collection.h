@@ -63,13 +63,14 @@ class IEvent {
 
 class CustomEvent final : public IEvent {
  public:
-  explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
-
   std::string Key() override;
 
   nlohmann::json ToJson() override;
 
   static std::shared_ptr<CustomEvent> Create(const std::string& name);
+
+ private:
+  explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
 };
 
 #if defined(WITH_CUDA)
@@ -108,12 +109,6 @@ class CUDAEventPair {
 
 class KernelEvent final : public IEvent {
  public:
-  explicit KernelEvent(const std::string& kernel_name,
-                       const std::function<std::vector<Shape>(void)>& shape_getter)
-      : IEvent(kernel_name) {
-    if (shape_getter) { input_shapes_ = shape_getter(); }
-  }
-
   std::string Key() override;
 
   nlohmann::json ToJson() override;
@@ -133,6 +128,12 @@ class KernelEvent final : public IEvent {
 #endif  // WITH_CUDA
 
  private:
+  explicit KernelEvent(const std::string& kernel_name,
+                       const std::function<std::vector<Shape>(void)>& shape_getter)
+      : IEvent(kernel_name) {
+    if (shape_getter) { input_shapes_ = shape_getter(); }
+  }
+
 #if defined(WITH_CUDA)
   std::shared_ptr<CUDAEventPair> cuda_event_pair_ = nullptr;
 #endif  // WITH_CUDA
