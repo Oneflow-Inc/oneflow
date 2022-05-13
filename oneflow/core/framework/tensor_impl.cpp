@@ -52,10 +52,6 @@ Maybe<Tensor> TensorImpl::acc_grad() const { return autograd_meta_->acc_grad(); 
 Maybe<TensorArg> TensorImpl::current_grad() const { return autograd_meta_->current_grad(); }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
-  if (!has_autograd_meta()) {
-    const auto& autograd_meta = NewAutogradMeta(requires_grad(), is_leaf());
-    this->set_autograd_meta(autograd_meta);
-  }
   CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   return autograd_meta_->set_acc_grad(grad);
 }

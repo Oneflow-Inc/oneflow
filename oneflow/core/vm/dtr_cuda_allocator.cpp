@@ -475,6 +475,8 @@ size_t DtrCudaAllocator::allocated_memory() {
   return total_allocate_bytes_ - total_deallocate_bytes_;
 }
 
+COMMAND(Global<DtrCudaAllocator>::SetAllocated(new DtrCudaAllocator(0)));
+
 }  // namespace vm
 }  // namespace oneflow
 

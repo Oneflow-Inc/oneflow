@@ -98,7 +98,7 @@ import resnet50_model as models
 # import resnet50
 
 # run forward, backward and update parameters
-WARMUP_ITERS = 5
+WARMUP_ITERS = 6
 ALL_ITERS = args.iters
 
 # NOTE: it has not effect for dtr allocator
@@ -211,9 +211,9 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     if iter >= WARMUP_ITERS:
         end_time = time.time()
         this_time = end_time - start_time
-        print(f'iter: {iter}, time: {this_time}')
         total_time += this_time
-    print(f'iter {iter} end')
+        if iter % 10 == 0:
+            print(f'iter {iter} end, time: {this_time}')
     flow.comm.barrier()
 
 end_time = time.time()

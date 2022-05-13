@@ -89,7 +89,6 @@ class TensorImpl {
 
   std::shared_ptr<const AutogradMeta> autograd_meta() const { return autograd_meta_; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
-  bool has_autograd_meta() { return autograd_meta_ != nullptr; }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
     autograd_meta_ = autograd_meta;
   }

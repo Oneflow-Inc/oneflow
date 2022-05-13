@@ -93,6 +93,7 @@ Maybe<vm::DTREagerBlobObject*> TensorPool::find_best_tensor() {
         if (shared_object->is_in_memory() && compute_op != "copy") { tensor_pool_mem += mem; }
       }
     } else {
+      // JUST(display());
       LOG(INFO) << "Unable to lock candidates in tensor pool: " << id
                 << ", is_expired: " << object.expired();
     }

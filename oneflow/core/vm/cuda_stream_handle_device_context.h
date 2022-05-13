@@ -35,8 +35,6 @@ namespace vm {
 
 #ifdef WITH_CUDA
 
-COMMAND(Global<DtrCudaAllocator>::SetAllocated(new DtrCudaAllocator(0)));
-
 inline Allocator* GetAllocator(int64_t device_id) {
   if (ParseBooleanFromEnv("OF_DTR", false)) {
     if (ParseBooleanFromEnv("OF_DTR_ALLO", true)) { return Global<DtrCudaAllocator>::Get(); }
