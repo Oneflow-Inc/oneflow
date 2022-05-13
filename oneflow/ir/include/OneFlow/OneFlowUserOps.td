@@ -5947,8 +5947,8 @@ def OneFlow_FtrlUpdateOp : OneFlow_BaseOp<"ftrl_update", [NoGrad, AttrSizedOpera
 #endif // GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
 // Group: PADDING
-// pad, pad_grad, reflection_pad2d, reflection_pad2d_grad, replication_pad2d, replication_pad2d_grad, same_padding, same_padding_grad
-// Total: 8
+// pad, reflection_pad2d, reflection_pad2d_grad, replication_pad2d, replication_pad2d_grad, same_padding, same_padding_grad
+// Total: 7
 
 #ifdef GET_ONEFLOW_PADDING_OP_DEFINITIONS
 
@@ -5973,24 +5973,6 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMetho
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$dy
-  );
-  let output = (outs
-    OneFlow_Tensor:$dx
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$padding_before,
-    SI64ArrayAttr:$padding_after,
-    DefaultValuedAttr<F64Attr, "0.">:$floating_constant_value,
-    DefaultValuedAttr<SI64Attr, "0">:$integral_constant_value
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
 
 def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins

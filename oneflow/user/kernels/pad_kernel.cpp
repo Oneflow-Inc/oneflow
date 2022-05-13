@@ -16,9 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/ep/include/primitive/copy_nd.h"
-#include "oneflow/core/ep/include/primitive/fill.h"
-#include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/constant_pad.h"
 
 namespace oneflow {
@@ -34,22 +31,9 @@ std::unique_ptr<ep::primitive::ConstantPad> NewConstantPadPrimitive(Context* ctx
                                                                         data_type);
 }
 
-template<typename Context>
-std::unique_ptr<ep::primitive::ConstantPad> NewConstantPadGradPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("dx", 0)->data_type();
-  return ep::primitive::NewPrimitive<ep::primitive::ConstantPadFactory>(ctx->device_type(),
-                                                                        data_type);
-}
-
 auto ConstantPadPrimitiveExists() {
   return hob::make_custom("ConstantPadPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewConstantPadPrimitive(&ctx).operator bool();
-  });
-}
-
-auto ConstantPadGradPrimitiveExists() {
-  return hob::make_custom("ConstantPadGradPrimitiveExists", [](const KernelRegContext& ctx) {
-    return NewConstantPadGradPrimitive(&ctx).operator bool();
   });
 }
 
@@ -91,46 +75,6 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
 };
 
 REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob(ConstantPadPrimitiveExists());
-
-class PadGradKernel final : public OpKernel, public CudaGraphSupport {
- public:
-  PadGradKernel() = default;
-  ~PadGradKernel() = default;
-
- private:
-  void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-
-    if ((dy->shape().NumAxes() > 0 && dy->shape().elem_cnt() == 0)
-        || (dx->shape().NumAxes() > 0 && dx->shape().elem_cnt() == 0)) {
-      // if input/output is 0-shape tensor, than do nothing and return
-      return;
-    }
-
-    std::vector<int64_t> padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-    std::vector<int64_t> padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-    const int64_t ndims = dy->shape().NumAxes();
-
-    for (int i = 0; i < ndims; ++i) {
-      padding_before[i] = -padding_before[i];
-      padding_after[i] = -padding_after[i];
-    }
-
-    std::unique_ptr<ep::primitive::ConstantPad> pad_grad_primitive =
-        NewConstantPadGradPrimitive(ctx);
-    CHECK(pad_grad_primitive);
-
-    pad_grad_primitive->Launch(ctx->stream(), ndims, dy->shape().ptr(), dy->dptr(),
-                               padding_before.data(), padding_after.data(), Scalar(0),
-                               dx->mut_dptr());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("pad_grad")
-    .SetCreateFn<PadGradKernel>()
-    .SetIsMatchedHob(ConstantPadGradPrimitiveExists());
 
 }  // namespace user_op
 

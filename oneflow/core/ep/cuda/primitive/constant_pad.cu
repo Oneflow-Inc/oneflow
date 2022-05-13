@@ -44,6 +44,7 @@ __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
 #pragma unroll
     for (int i = 0; i < num_dims; i++) {
       if (dst_index[i] >= params.padding_before[i]
+          // 处理好再传过来
           && dst_index[i] < params.out_size[i] - params.padding_after[i]) {
         src_index[i] = dst_index[i] - params.padding_before[i];
       } else {

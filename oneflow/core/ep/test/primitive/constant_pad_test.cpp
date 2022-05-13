@@ -32,11 +32,14 @@ void TestConstantPad(DeviceManagerRegistry* registry, const std::set<DeviceType>
                      const int dims[NumDims], const std::vector<int64_t> padding_before,
                      const std::vector<int64_t> padding_after) {
   using EigenVec = Eigen::Matrix<T, 1, Eigen::Dynamic>;
-  int elem_cnt = 1;
+  int in_elem_cnt = 1;
+  int out_elem_cnt = 1;
   for (int i = 0; i < NumDims; i++) {
-    elem_cnt *= (dims[i] + padding_before[i] + padding_after[i]);
+    in_elem_cnt *= dims[i];
+    out_elem_cnt *= (dims[i] + padding_before[i] + padding_after[i]);
   }
-  const int matrix_size = elem_cnt * sizeof(T);
+  const int in_matrix_size = in_elem_cnt * sizeof(T);
+  const int out_matrix_size = out_elem_cnt * sizeof(T);
 
   for (const auto& device_type : device_types) {
     Eigen::Tensor<T, NumDims, Eigen::RowMajor> mat(dims[0], dims[1]);
@@ -44,10 +47,10 @@ void TestConstantPad(DeviceManagerRegistry* registry, const std::set<DeviceType>
     mat.setRandom();
     auto device = registry->GetDevice(device_type, 0);
 
-    ep::test::PinnedMemoryGuard host_src(device.get(), matrix_size);
-    ep::test::PinnedMemoryGuard host_dst(device.get(), matrix_size);
-    ep::test::DeviceMemoryGuard device_src(device.get(), matrix_size);
-    ep::test::DeviceMemoryGuard device_dst(device.get(), matrix_size);
+    ep::test::PinnedMemoryGuard host_src(device.get(), in_matrix_size);
+    ep::test::PinnedMemoryGuard host_dst(device.get(), out_matrix_size);
+    ep::test::DeviceMemoryGuard device_src(device.get(), in_matrix_size);
+    ep::test::DeviceMemoryGuard device_dst(device.get(), out_matrix_size);
 
     ep::test::StreamGuard stream(device.get());
     std::unique_ptr<ConstantPad> constant_pad =
@@ -58,13 +61,14 @@ void TestConstantPad(DeviceManagerRegistry* registry, const std::set<DeviceType>
     ASSERT_TRUE(d2h.operator bool());
     ASSERT_TRUE(h2d.operator bool());
     T* mat_data = mat.data();
-    std::memcpy(host_src.ptr(), mat_data, matrix_size);
-    h2d->Launch(stream.stream(), device_src.ptr<T>(), host_src.ptr<T>(), matrix_size);
+
+    std::memcpy(host_src.ptr(), mat_data, in_matrix_size);
+    h2d->Launch(stream.stream(), device_src.ptr<T>(), host_src.ptr<T>(), in_matrix_size);
     const int64_t src_dims[NumDims] = {dims[0], dims[1]};
     constant_pad->Launch(stream.stream(), /*num_dims=*/NumDims, src_dims, device_src.ptr<T>(),
                          padding_before.data(), padding_after.data(), Scalar(0),
                          device_dst.ptr<T>());
-    d2h->Launch(stream.stream(), host_dst.ptr<T>(), device_dst.ptr<T>(), matrix_size);
+    d2h->Launch(stream.stream(), host_dst.ptr<T>(), device_dst.ptr<T>(), out_matrix_size);
     CHECK_JUST(stream.stream()->Sync());
 
     Eigen::array<std::pair<int, int>, NumDims> paddings;
@@ -73,17 +77,16 @@ void TestConstantPad(DeviceManagerRegistry* registry, const std::set<DeviceType>
     }
 
     Eigen::Tensor<T, NumDims, Eigen::RowMajor> mat_padded = mat.pad(paddings);
-
-    auto eigen_padded_res =
-        Eigen::Map<EigenVec, Eigen::Unaligned>(reinterpret_cast<T*>(mat_padded.data()), elem_cnt);
+    auto eigen_padded_res = Eigen::Map<EigenVec, Eigen::Unaligned>(
+        reinterpret_cast<T*>(mat_padded.data()), out_elem_cnt);
     auto constant_pad_primitive_res =
-        Eigen::Map<EigenVec, Eigen::Unaligned>(host_dst.ptr<T>(), elem_cnt);
+        Eigen::Map<EigenVec, Eigen::Unaligned>(host_dst.ptr<T>(), out_elem_cnt);
     ASSERT_TRUE(eigen_padded_res.template isApprox(constant_pad_primitive_res));
   }
 }
 
 TEST_F(PrimitiveTest, TestConstantPad2d) {
-  const int32_t dims1[2] = {7, 9};
+  const int32_t dims1[2] = {4, 4};
   const int32_t dims2[2] = {10, 3};
   const int32_t dims3[2] = {31, 4};
   const int32_t dims4[2] = {6, 8};
