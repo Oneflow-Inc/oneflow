@@ -13,22 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from google.protobuf import text_format
 
-import oneflow._oneflow_internal
-import oneflow.framework.scope_util as scope_util
+import unittest
+
+import oneflow as flow
+import oneflow.unittest
 
 
-def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
-    parallel_hierarchy = None
-    if parallel_conf.has_hierarchy():
-        parallel_hierarchy = oneflow._oneflow_internal.Size(
-            tuple(parallel_conf.hierarchy().dim())
+@flow.unittest.skip_unless_1n1d()
+class TestBmm(flow.unittest.TestCase):
+    def test_bmm_exception_dim_not_right(test_case):
+        x = flow.tensor((2, 2))
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = flow.bmm(x, x)
+        test_case.assertTrue(
+            "Expected 3-dimensional tensor, but got 1-dimensional tensor for argument #1"
+            in str(ctx.exception)
         )
-    return scope_util.MakeInitialScope(
-        job_conf,
-        parallel_conf.device_tag(),
-        list(parallel_conf.device_name()),
-        parallel_hierarchy,
-        is_mirrored,
-    ).symbol_id
+
+
+if __name__ == "__main__":
+    unittest.main()
