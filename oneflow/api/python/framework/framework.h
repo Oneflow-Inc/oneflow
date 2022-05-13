@@ -138,7 +138,7 @@ inline Maybe<std::string> LoadSavedModel(const std::string& saved_model_meta_fil
   } else {
     CHECK_OR_RETURN(TryParseProtoFromPbFile(saved_model_meta_file, &saved_model_proto));
   }
-  return PbMessage2TxtString(saved_model_proto);
+  return saved_model_proto.SerializeAsString();
 }
 
 inline Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }
