@@ -38,15 +38,13 @@ class TensorMeta : public user_op::TensorDesc {
       : shape_(shape),
         stride_(std::make_shared<Stride>(*shape)),
         data_type_(dtype),
-        is_dynamic_(false),
-        is_contiguous_(IsContiguous(*shape_, *stride_)) {}
+        is_dynamic_(false)  {}
   TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
              DataType dtype)
       : shape_(shape),
         stride_(stride),
         data_type_(dtype),
-        is_dynamic_(false),
-        is_contiguous_(IsContiguous(*shape_, *stride_)) {}
+        is_dynamic_(false) {}
   TensorMeta(const TensorMeta&) = default;
   TensorMeta(TensorMeta&&) = default;
   virtual ~TensorMeta() = default;
@@ -59,13 +57,12 @@ class TensorMeta : public user_op::TensorDesc {
   DataType dtype() const { return data_type_; }
   DataType data_type() const override { return data_type_; }
   bool is_dynamic() const override { return is_dynamic_; }
-  bool is_contiguous() const { return is_contiguous_; }
+  bool is_contiguous() const { return IsContiguous(shape(), *stride_); }
 
   void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
   Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
   void set_stride(const std::shared_ptr<const Stride>& val) {
     stride_ = val;
-    is_contiguous_ = IsContiguous(shape(), *stride_);
   }
   Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
   DataType* mut_dtype() { return &data_type_; }
@@ -79,7 +76,6 @@ class TensorMeta : public user_op::TensorDesc {
   std::shared_ptr<const Stride> stride_;
   DataType data_type_;
   bool is_dynamic_;
-  bool is_contiguous_;
 };
 
 class MirroredTensorMeta : public TensorMeta {
