@@ -18,42 +18,28 @@ limitations under the License.
 
 #include <memory>
 #include <glog/logging.h>
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 
-// Interfaces:
-//   - ThreadLocalGuard::CurrentValue()
-//   - ThreadLocalGuard::HasCurrentValue()
 template<typename T>
-class ThreadLocalGuard;
-
-template<>
-class ThreadLocalGuard<bool> {
+class ThreadLocalGuard {
  public:
-  explicit ThreadLocalGuard(bool value) {
+  explicit ThreadLocalGuard(const T& value) {
     old_value_ = *MutThreadLocalValue();
-    *MutThreadLocalValue() = int(value);
+    *MutThreadLocalValue() = Optional<T>(value);
   }
   ~ThreadLocalGuard() { *MutThreadLocalValue() = old_value_; }
 
-  static bool CurrentValue() {
-    int value = *MutThreadLocalValue();
-    CHECK_GE(value, 0);
-    return value > 0;
-  }
-
-  static bool HasCurrentValue() { return *MutThreadLocalValue() >= 0; }
+  static const Optional<T>& Current() { return *MutThreadLocalValue(); }
 
  private:
-  static int* MutThreadLocalValue() {
-    static thread_local int value = -1;
+  static Optional<T>* MutThreadLocalValue() {
+    static thread_local Optional<T> value{};
     return &value;
   }
 
-  // -1: not exists.
-  // 0: false.
-  // 1: true.
-  int old_value_;
+  Optional<T> old_value_;
 };
 
 }  // namespace oneflow

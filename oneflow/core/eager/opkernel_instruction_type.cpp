@@ -141,7 +141,7 @@ struct LocalCallOpKernelUtil final {
               return shapes;
             });
       }
-      operand->user_opkernel()->Compute(compute_ctx, state, cache);
+      operand->user_opkernel()->ComputeIf(compute_ctx, state, cache);
     }
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel

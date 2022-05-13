@@ -476,7 +476,7 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
     if (it != op_kernel_state_map_.end()) {
       *state = it->second.get();
     } else {
-      auto created_state = op_kernel->CreateOpKernelState(&init_and_cache_ctx);
+      auto created_state = op_kernel->CreateOpKernelStateIf(&init_and_cache_ctx);
       op_kernel_state_map_.emplace(op_kernel, created_state);
       *state = created_state.get();
     }
@@ -484,8 +484,8 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
 
   {
     auto& cache_in_map = op_kernel_cache_map_[op_kernel];
-    op_kernel->InitOpKernelCacheWithFlags(&init_and_cache_ctx,
-                                          user_op::OpKernelCache::kAllMayChanged, &cache_in_map);
+    op_kernel->InitOpKernelCacheWithFlagsIf(&init_and_cache_ctx,
+                                            user_op::OpKernelCache::kAllMayChanged, &cache_in_map);
     *cache = cache_in_map.get();
   }
 }

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <typeinfo>
+#include "oneflow/core/vm/sync_vm_mode_guard.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -103,6 +104,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
 }
 
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
+  SyncVmModeGuard guard(true);
   Initializer(thread_ctx);
   while (thread_ctx->mut_notifier()->WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
     while (thread_ctx->TryReceiveAndRun()) {}
@@ -289,6 +291,7 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
 }  // namespace
 
 void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
+  SyncVmModeGuard guard(true);
   Initializer();
   MultiThreadScheduleCtx schedule_ctx(&callback_notifier_);
   auto* vm = mut_vm();

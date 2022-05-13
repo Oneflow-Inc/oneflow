@@ -610,7 +610,7 @@ void UserKernel::InitUserKernel(ep::Stream* stream) {
 
 std::shared_ptr<user_op::OpKernelState> UserKernel::CreateOpKernelState(KernelContext* ctx) {
   UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
-  return kernel_->CreateOpKernelState(&init_ctx);
+  return kernel_->CreateOpKernelStateIf(&init_ctx);
 }
 
 const std::shared_ptr<user_op::OpKernelState>& UserKernel::GetOpKernelState() const {
@@ -623,8 +623,8 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
 
   if (updated) {
     cache_ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-    kernel_->InitOpKernelCacheWithFlags(cache_ctx_.get(), user_op::OpKernelCache::kAttrNotChanged,
-                                        &opkernel_cache_);
+    kernel_->InitOpKernelCacheWithFlagsIf(cache_ctx_.get(), user_op::OpKernelCache::kAttrNotChanged,
+                                          &opkernel_cache_);
   } else {
     // do nothing
   }
@@ -643,7 +643,7 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
   }
 #endif  // WITH_CUDA_GRAPHS
 
-  kernel_->Compute(ctx_.get(), opkernel_state, opkernel_cache_.get());
+  kernel_->ComputeIf(ctx_.get(), opkernel_state, opkernel_cache_.get());
 
 #ifdef WITH_CUDA_GRAPHS
   if (cuda_graph_exec_ && current_scope_capturing) {
@@ -666,8 +666,8 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   InitUserKernel(ctx->stream());
   CHECK(opkernel_state_.get() == nullptr);
   opkernel_state_ = CreateOpKernelState(ctx);
-  kernel_->InitOpKernelCacheWithFlags(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
-                                      &opkernel_cache_);
+  kernel_->InitOpKernelCacheWithFlagsIf(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
+                                        &opkernel_cache_);
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
     UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
@@ -701,7 +701,7 @@ void UserKernel::ForwardShape(KernelContext* ctx) const {
     auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx_->MutOpInferContext());
     CHECK_NOTNULL(op_infer_ctx);
     op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob);
-    kernel_->InferShape(infer_ctx_.get());
+    kernel_->InferShapeIf(infer_ctx_.get());
     for (const auto& out_arg_pair : infer_ctx_->outputs()) {
       const Shape& static_shape =
           infer_ctx_->TensorDesc4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second)->shape();
@@ -750,7 +750,7 @@ void EagerKernel::Infer(std::function<Blob*(const std::string&)> BnInOp2Blob) co
   infer_ctx.UpdateArg2Tensor(BnInOp2Blob);
   auto* op_infer_ctx = dynamic_cast<UserKernelOpInferContext*>(infer_ctx.MutOpInferContext());
   if (op_infer_ctx) { op_infer_ctx->UpdateArg2TensorDesc(BnInOp2Blob); }
-  kernel_->InferShape(&infer_ctx);
+  kernel_->InferShapeIf(&infer_ctx);
 }
 
 std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
@@ -762,10 +762,10 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   if (old_opkernel_state) {
     new_opkernel_state = old_opkernel_state;
   } else {
-    new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
+    new_opkernel_state = kernel_->CreateOpKernelStateIf(&init_and_cache_ctx);
   }
-  kernel_->InitOpKernelCacheWithFlags(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
-                                      &cache_);
+  kernel_->InitOpKernelCacheWithFlagsIf(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
+                                        &cache_);
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {
@@ -775,7 +775,7 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   // TODO(lixinqi): refactor to a lightweight KernelComputeContext
   UserKernelComputeContext compute_ctx(device_ctx->stream(), kernel_conf());
   compute_ctx.UpdateTensorWithCorrBlob(BnInOp2Blob);
-  kernel_->Compute(&compute_ctx, new_opkernel_state.get(), cache_.get());
+  kernel_->ComputeIf(&compute_ctx, new_opkernel_state.get(), cache_.get());
   return new_opkernel_state;
 }
 

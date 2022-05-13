@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/vm/sync_vm_mode_guard.h"
 
 namespace oneflow {
 
@@ -294,6 +295,36 @@ class OpKernel {
   OF_DISALLOW_COPY_AND_MOVE(OpKernel);
   virtual ~OpKernel() = default;
 
+  std::shared_ptr<OpKernelState> CreateOpKernelStateIf(KernelInitContext* ctx) const {
+    SyncVmModeGuard guard(true);
+    return CreateOpKernelState(ctx);
+  }
+  std::shared_ptr<OpKernelCache> InitOpKernelCacheIf(KernelCacheContext* ctx) const {
+    SyncVmModeGuard guard(true);
+    return InitOpKernelCache(ctx);
+  }
+  void InitOpKernelCacheWithFlagsIf(KernelCacheContext* ctx, int8_t flag,
+                                    std::shared_ptr<OpKernelCache>* cache_ptr) const {
+    SyncVmModeGuard guard(true);
+    return InitOpKernelCacheWithFlags(ctx, flag, cache_ptr);
+  }
+  void ComputeIf(KernelComputeContext* ctx, OpKernelState* state,
+                 const OpKernelCache* cache) const {
+    SyncVmModeGuard guard(true);
+    return Compute(ctx, state, cache);
+  }
+  void InferShapeIf(KernelInferContext* ctx) const {
+    SyncVmModeGuard guard(true);
+    return InferShape(ctx);
+  }
+  virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
+  virtual bool IsKernelLaunchSynchronized() const { return true; }
+
+  bool has_state_or_cache() const { return has_state_or_cache_; }
+
+ protected:
+  OpKernel() : has_state_or_cache_(true) {}
+
   virtual std::shared_ptr<OpKernelState> CreateOpKernelState(KernelInitContext* ctx) const {
     return std::shared_ptr<OpKernelState>();
   }
@@ -312,13 +343,6 @@ class OpKernel {
   }
   virtual void Compute(KernelComputeContext*) const { LOG(WARNING) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
-  virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
-  virtual bool IsKernelLaunchSynchronized() const { return true; }
-
-  bool has_state_or_cache() const { return has_state_or_cache_; }
-
- protected:
-  OpKernel() : has_state_or_cache_(true) {}
 
  private:
   template<typename T, typename... Args>
