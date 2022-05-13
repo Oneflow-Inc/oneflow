@@ -356,7 +356,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
   std::string serialized_scope_proto = PbMessage2TxtString(*scope_proto);
   std::string new_serialized_scope_proto = StrSetter(serialized_scope_proto);
   CHECK_OR_RETURN(TxtString2PbMessage(new_serialized_scope_proto, scope_proto.get()))
-      << "scope_proto parse failed";
+      << Error::RuntimeError() << "scope_proto parse failed";
   return GetScopeSymbol(*scope_proto);
 }
 
