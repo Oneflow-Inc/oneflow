@@ -1110,49 +1110,48 @@ __global__ void UnsortedSegmentHalfGpu(const IDX in_h2_elem_cnt, const IDX h2_in
     const IDX segment_id_idx = i / h2_inner_dim_size;
     const IDX h2_inner_idx = i - segment_id_idx * h2_inner_dim_size;
     const IDX inner_idx_0 = 2 * h2_inner_idx;
-    const IDX inner_idx_1 = 2 * h2_inner_idx + 1;
+    const IDX inner_idx_1 = inner_idx_0 + 1;
     const half* data_row = data + segment_id_idx * inner_dim_size;
     half2 val;
     val.x = data_row[inner_idx_0];
     val.y = (inner_idx_1 >= inner_dim_size) ? static_cast<half>(0) : data_row[inner_idx_1];
-    const K origin_idx = segment_ids[segment_id_idx];
-    const IDX idx = origin_idx;
+    const IDX idx = segment_ids[segment_id_idx];
     const IDX out_h2_offset = idx * h2_inner_dim_size + h2_inner_idx;
     cuda::atomic::Add(out_h2 + out_h2_offset, val);
   }
 }
 
 template<typename T, typename K>
-struct UnsortedSegmentSumDiffInnerSize {
+struct UnsortedSegmentSumPad {
   void operator()(ep::Stream* stream, const K* segment_ids, const T* data, int64_t num_segment_ids,
-                  int64_t num_segments, int64_t in_inner_dim_size, int64_t out_inner_dim_size,
+                  int64_t num_segments, int64_t inner_dim_size, int64_t padded_inner_dim_size,
                   T* out) const {
     UNIMPLEMENTED();
   }
 };
 
 template<typename K>
-struct UnsortedSegmentSumDiffInnerSize<half, K> {
+struct UnsortedSegmentSumPad<half, K> {
   void operator()(ep::Stream* stream, const K* segment_ids, const half* data,
-                  int64_t num_segment_ids, int64_t num_segments, int64_t in_inner_dim_size,
-                  int64_t out_inner_dim_size, half* out) const {
-    const int64_t data_elem_cnt = num_segment_ids * in_inner_dim_size;
-    const int64_t out_elem_cnt = num_segments * out_inner_dim_size;
-    CHECK_EQ(out_inner_dim_size % 2, 0);
-    CHECK_EQ(in_inner_dim_size + 1, out_inner_dim_size);
-    const int64_t h2_inner_dim_size = out_inner_dim_size / 2;
+                  int64_t num_segment_ids, int64_t num_segments, int64_t inner_dim_size,
+                  int64_t padded_inner_dim_size, half* out) const {
+    const int64_t data_elem_cnt = num_segment_ids * inner_dim_size;
+    const int64_t out_elem_cnt = num_segments * padded_inner_dim_size;
+    CHECK_EQ(padded_inner_dim_size % 2, 0);
+    CHECK_EQ(inner_dim_size + 1, padded_inner_dim_size);
+    const int64_t h2_inner_dim_size = padded_inner_dim_size / 2;
     const int64_t in_h2_elem_cnt = num_segment_ids * h2_inner_dim_size;
     if (std::max(data_elem_cnt, out_elem_cnt) < GetMaxVal<int32_t>() / 2) {
       UnsortedSegmentHalfGpu<K, int32_t>
           <<<BlocksNum4ThreadsNum(in_h2_elem_cnt), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              in_h2_elem_cnt, h2_inner_dim_size, in_inner_dim_size, data, segment_ids, num_segments,
+              in_h2_elem_cnt, h2_inner_dim_size, inner_dim_size, data, segment_ids, num_segments,
               reinterpret_cast<half2*>(out));
     } else {
       UnsortedSegmentHalfGpu<K, int64_t>
           <<<BlocksNum4ThreadsNum(in_h2_elem_cnt), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              in_h2_elem_cnt, h2_inner_dim_size, in_inner_dim_size, data, segment_ids, num_segments,
+              in_h2_elem_cnt, h2_inner_dim_size, inner_dim_size, data, segment_ids, num_segments,
               reinterpret_cast<half2*>(out));
     }
   }
@@ -1160,58 +1159,57 @@ struct UnsortedSegmentSumDiffInnerSize<half, K> {
 
 template<typename T, typename K>
 void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const T* data,
-                        int64_t num_segment_ids, int64_t num_segments, int64_t in_inner_dim_size,
-                        int64_t out_inner_dim_size, T* out) {
-  if (in_inner_dim_size == out_inner_dim_size) {
+                        int64_t num_segment_ids, int64_t num_segments, int64_t inner_dim_size,
+                        int64_t padded_inner_dim_size, T* out) {
+  if (inner_dim_size == padded_inner_dim_size) {
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, K, T>::UnsortedSegmentSum(
-        stream, segment_ids, data, num_segment_ids, num_segments, 1, in_inner_dim_size, 0, out);
+        stream, segment_ids, data, num_segment_ids, num_segments, 1, inner_dim_size, 0, out);
   } else {
-    CHECK_EQ(in_inner_dim_size + 1, out_inner_dim_size);
-    UnsortedSegmentSumDiffInnerSize<T, K>()(stream, segment_ids, data, num_segment_ids,
-                                            num_segments, in_inner_dim_size, out_inner_dim_size,
-                                            out);
+    CHECK_EQ(inner_dim_size + 1, padded_inner_dim_size);
+    UnsortedSegmentSumPad<T, K>()(stream, segment_ids, data, num_segment_ids, num_segments,
+                                  inner_dim_size, padded_inner_dim_size, out);
   }
 }
 
 template<typename T, typename IDX>
 void UniquePartitionEmbeddingGrad(ep::Stream* stream, int64_t parallel_id, int64_t parallel_num,
                                   int64_t num_ids, int64_t embedding_size,
-                                  int64_t buffer_embedding_size, const IDX* host_num_unique_matrix,
+                                  int64_t padded_embedding_size, const IDX* host_num_unique_matrix,
                                   const T* embedding_grad,
                                   const IDX* inverse_unique_partition_indices,
                                   T* unique_partition_embedding_grad) {
   for (int64_t i = 0; i < parallel_num; ++i) {
-    const int64_t offset = i * num_ids * buffer_embedding_size;
+    const int64_t offset = i * num_ids * padded_embedding_size;
     const int64_t valid_value_size =
-        host_num_unique_matrix[parallel_id * parallel_num + i] * buffer_embedding_size * sizeof(T);
+        host_num_unique_matrix[parallel_id * parallel_num + i] * padded_embedding_size * sizeof(T);
     OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad + offset, 0, valid_value_size,
                                   stream->As<ep::CudaStream>()->cuda_stream()));
   }
   UnsortedSegmentSum<T, IDX>(stream, inverse_unique_partition_indices, embedding_grad, num_ids,
-                             parallel_num * num_ids, embedding_size, buffer_embedding_size,
+                             parallel_num * num_ids, embedding_size, padded_embedding_size,
                              unique_partition_embedding_grad);
 }
 
 template<typename T, typename IDX>
 void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t cur_rank_num_ids,
-                                int64_t embedding_size, int64_t buffer_embedding_size,
+                                int64_t embedding_size, int64_t padded_embedding_size,
                                 const T* cur_rank_embedding_grad,
                                 const IDX* cur_rank_inverse_indices,
                                 T* cur_rank_unique_embedding_grad, T* tmp_buffer) {
   T* unsorted_segment_sum_out =
-      (embedding_size == buffer_embedding_size) ? cur_rank_unique_embedding_grad : tmp_buffer;
+      (embedding_size == padded_embedding_size) ? cur_rank_unique_embedding_grad : tmp_buffer;
   OF_CUDA_CHECK(cudaMemsetAsync(unsorted_segment_sum_out, 0,
-                                cur_rank_num_ids * buffer_embedding_size * sizeof(T),
+                                cur_rank_num_ids * padded_embedding_size * sizeof(T),
                                 stream->As<ep::CudaStream>()->cuda_stream()));
   UnsortedSegmentSum<T, IDX>(stream, cur_rank_inverse_indices, cur_rank_embedding_grad,
-                             cur_rank_num_ids, cur_rank_num_ids, buffer_embedding_size,
-                             buffer_embedding_size, unsorted_segment_sum_out);
-  if (embedding_size != buffer_embedding_size) {
+                             cur_rank_num_ids, cur_rank_num_ids, padded_embedding_size,
+                             padded_embedding_size, unsorted_segment_sum_out);
+  if (embedding_size != padded_embedding_size) {
     std::unique_ptr<ep::primitive::CopyNd> primitive =
         ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, 2);
     DimVector dst_shape = {cur_rank_num_ids, embedding_size};
     DimVector dst_pos_vec = {0, 0};
-    DimVector src_shape = {cur_rank_num_ids, buffer_embedding_size};
+    DimVector src_shape = {cur_rank_num_ids, padded_embedding_size};
     DimVector src_pos_vec = {0, 0};
     DimVector extent_vec = {cur_rank_num_ids, embedding_size};
     primitive->Launch(stream, data_type, 2, cur_rank_unique_embedding_grad, dst_shape.data(),
@@ -1220,7 +1218,7 @@ void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t 
   }
 }
 
-int64_t GetBufferEmbeddingSize(DataType data_type, int64_t embedding_size) {
+int64_t GetPaddedEmbeddingSize(DataType data_type, int64_t embedding_size) {
   if (data_type == DataType::kFloat16 && embedding_size % 2 != 0) {
     return embedding_size + 1;
   } else {
@@ -1260,14 +1258,14 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     const int64_t num_ids = inverse_unique_partition_indices->shape().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    const int64_t buffer_embedding_size = GetBufferEmbeddingSize(data_type, embedding_size);
+    const int64_t padded_embedding_size = GetPaddedEmbeddingSize(data_type, embedding_size);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     ncclComm_t comm = kernel_state->comm();
     using ComputeType = typename DefaultComputeType<T>::type;
     bool enable_quantized_comm_env_var =
         ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);
     bool enable_quantized_comm =
-        enable_quantized_comm_env_var && (buffer_embedding_size < kMaxColSize);
+        enable_quantized_comm_env_var && (padded_embedding_size < kMaxColSize);
     if (enable_quantized_comm_env_var && !enable_quantized_comm) {
       LOG(WARNING) << "Only envrionment variable ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM=1 and "
                       "embedding_size less equal than 1024 can use quantized communication. ";
@@ -1283,7 +1281,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       cur_rank_num_ids += host_num_unique_matrix[i * parallel_num + parallel_id];
     }
     size_t full_num_ids = parallel_num * num_ids;
-    size_t full_elem_cnt = full_num_ids * buffer_embedding_size;
+    size_t full_elem_cnt = full_num_ids * padded_embedding_size;
     size_t unique_partition_embedding_grad_size = GetCudaAlignedSize(full_elem_cnt * sizeof(T));
 
     if (!enable_quantized_comm) {
@@ -1295,19 +1293,19 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                unique_partition_embedding_grad_size + received_embedding_grad_size);
 
       UniquePartitionEmbeddingGrad(
-          ctx->stream(), parallel_id, parallel_num, num_ids, embedding_size, buffer_embedding_size,
+          ctx->stream(), parallel_id, parallel_num, num_ids, embedding_size, padded_embedding_size,
           host_num_unique_matrix, embedding_grad->dptr<T>(),
           reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           unique_partition_embedding_grad);
 
       ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids,
-                            buffer_embedding_size, data_type, host_num_unique_matrix,
+                            padded_embedding_size, data_type, host_num_unique_matrix,
                             unique_partition_embedding_grad, received_embedding_grad);
 
       // use unique_partition_embedding_grad as UniqueCurRankEmbeddingGrad buffer.
       T* buffer_ptr = unique_partition_embedding_grad;
       UniqueCurRankEmbeddingGrad(ctx->stream(), data_type, cur_rank_num_ids, embedding_size,
-                                 buffer_embedding_size, received_embedding_grad,
+                                 padded_embedding_size, received_embedding_grad,
                                  reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
                                  cur_rank_unique_embedding_grad->mut_dptr<T>(), buffer_ptr);
     } else {
@@ -1342,25 +1340,25 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           + cur_rank_quantize_factor_size + received_cur_rank_quantize_factor_size);
 
       UniquePartitionEmbeddingGrad(
-          ctx->stream(), parallel_id, parallel_num, num_ids, embedding_size, buffer_embedding_size,
+          ctx->stream(), parallel_id, parallel_num, num_ids, embedding_size, padded_embedding_size,
           host_num_unique_matrix, embedding_grad->dptr<T>(),
           reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           unique_partition_embedding_grad);
 
       // Quantize.
       for (int64_t i = 0; i < parallel_num; ++i) {
-        const int64_t embedding_grad_offset = i * num_ids * buffer_embedding_size;
+        const int64_t embedding_grad_offset = i * num_ids * padded_embedding_size;
         const int64_t quantize_factor_offset = i * num_ids;
         const int64_t valid_row_size = host_num_unique_matrix[parallel_id * parallel_num + i];
         DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
             cuda_stream, unique_partition_embedding_grad + embedding_grad_offset,
             quantize_cur_rank_embedding_grad + embedding_grad_offset,
             cur_rank_quantize_factor + quantize_factor_offset, valid_row_size,
-            buffer_embedding_size);
+            padded_embedding_size);
       }
 
       ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids,
-                            buffer_embedding_size, data_type, host_num_unique_matrix,
+                            padded_embedding_size, data_type, host_num_unique_matrix,
                             quantize_cur_rank_embedding_grad, received_embedding_grad,
                             cur_rank_quantize_factor, received_cur_rank_quantize_factor);
 
@@ -1378,14 +1376,14 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         */
         dequantize_cur_rank_num += host_num_unique_matrix[i * parallel_num + parallel_id];
       }
-      IDX dequantize_elem_cnt = dequantize_cur_rank_num * buffer_embedding_size;
+      IDX dequantize_elem_cnt = dequantize_cur_rank_num * padded_embedding_size;
       OF_CUDA_CHECK((LaunchDequantizeKernel<T, ComputeType, IDX>(
           cuda_stream, received_embedding_grad, received_cur_rank_quantize_factor,
-          dequantize_cur_rank_embedding_grad, buffer_embedding_size, dequantize_elem_cnt)));
+          dequantize_cur_rank_embedding_grad, padded_embedding_size, dequantize_elem_cnt)));
       // use unique_partition_embedding_grad as UniqueCurRankEmbeddingGrad buffer.
       T* buffer_ptr = unique_partition_embedding_grad;
       UniqueCurRankEmbeddingGrad(ctx->stream(), data_type, cur_rank_num_ids, embedding_size,
-                                 buffer_embedding_size, dequantize_cur_rank_embedding_grad,
+                                 padded_embedding_size, dequantize_cur_rank_embedding_grad,
                                  reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
                                  cur_rank_unique_embedding_grad->mut_dptr<T>(), buffer_ptr);
     }
@@ -1406,13 +1404,13 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
             ctx->InputTensorDesc("cur_rank_unique_embedding_grad", 0);                            \
         size_t cur_rank_embedding_grad_num = cur_rank_unique_embedding_grad.shape().At(0);        \
         size_t embedding_size = cur_rank_unique_embedding_grad.shape().At(1);                     \
-        size_t buffer_embedding_size =                                                            \
-            GetBufferEmbeddingSize(cur_rank_unique_embedding_grad.data_type(), embedding_size);   \
+        size_t padded_embedding_size =                                                            \
+            GetPaddedEmbeddingSize(cur_rank_unique_embedding_grad.data_type(), embedding_size);   \
         size_t cur_rank_embedding_grad_elem_cnt =                                                 \
-            cur_rank_embedding_grad_num * buffer_embedding_size;                                  \
+            cur_rank_embedding_grad_num * padded_embedding_size;                                  \
         bool enable_quantized_comm =                                                              \
             ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false)             \
-            && (buffer_embedding_size < kMaxColSize);                                             \
+            && (padded_embedding_size < kMaxColSize);                                             \
         size_t tmp_size = 0;                                                                      \
         if (!enable_quantized_comm) {                                                             \
           size_t cur_rank_embedding_grad_size = GetCudaAlignedSize(                               \
