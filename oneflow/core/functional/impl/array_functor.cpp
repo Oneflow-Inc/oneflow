@@ -1385,7 +1385,7 @@ class CopyFunctor {
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    if (device_->type() == "cuda") {
+    if (device_->type() == "cuda" || !x->is_local()) {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(

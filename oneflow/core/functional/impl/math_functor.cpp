@@ -1116,15 +1116,17 @@ class CastFunctor {
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
                            const bool pin_memory) const {
-    if (x->dtype() == dtype) { return x; }
-
+    if (x->dtype() == dtype) { 
+      return x; 
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    if (JUST(x->device())->type() == "cuda") {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-    } else {
+    if(x->is_local()){
+      bool cast_pin_memory = JUST(x->device())->type() == "cuda" ? false: pin_memory;
       return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/pin_memory));
+          *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/cast_pin_memory));
+    }else{
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     }
   }
 
