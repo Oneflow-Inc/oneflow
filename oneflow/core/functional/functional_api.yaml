@@ -37,9 +37,9 @@
 - name: "sub"
   signature:
     [
-      "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Sub",
-      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarSub",
-      "Tensor (Scalar input, Tensor other) =>  ScalarSub",
+      "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=False) => Sub",
+      "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=False) => ScalarSub",
+      "Tensor (Scalar input, Tensor other, *, Scalar alpha=1) =>  ScalarSub",
     ]
   bind_python: true
 
@@ -728,10 +728,7 @@
   bind_python: True
 
 - name: "cast"
-  signature: [
-    "Tensor (Tensor x, DataType dtype) => Cast",
-    "Tensor (Tensor x, *, DataType dtype, Bool pin_memory=False) => PinMemoryCast"
-  ]
+  signature: "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
   bind_python: True
 
 - name: "constant"
@@ -1282,10 +1279,7 @@
   bind_python: True
 
 - name: "copy"
-  signature: [
-    "Tensor (Tensor x, String device_type, Int64 device_id) => Copy",
-    "Tensor (Tensor x, Device device=None, Bool pin_memory=False) => PinMemoryCopy"
-  ]
+  signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
   bind_python: True
 
 - name: "to"

@@ -187,7 +187,7 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
       output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
     } else {
       const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
-      *JUST(oneflow::VectorAt(&output_grads, i)) =
+      JUST(oneflow::VectorAt(output_grads, i)) =
           JUST(JUST(oneflow::VectorAt(output_meta_data_, i))->current_grad()->GetAccTensor(hooks));
     }
   }

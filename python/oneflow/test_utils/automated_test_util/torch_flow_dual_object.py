@@ -804,12 +804,27 @@ class DualObject:
                 pytorch.load_state_dict(broadcast(pytorch).state_dict())
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
+            oneflow_state_dict = oneflow.state_dict()
+            oneflow_state_dict = {
+                k: v.detach() for (k, v) in oneflow_state_dict.items()
+            }
+            already_global = any([v.is_global for v in oneflow_state_dict.values()])
             oneflow.load_state_dict(state_dict, strict=False)
             if is_global():
-                oneflow = oneflow.to_global(
-                    placement=flow.env.all_device_placement("cpu"),
-                    sbp=[flow.sbp.broadcast,],
-                )
+                if already_global:
+                    for (k, v) in oneflow_state_dict.items():
+                        if v.is_global:
+                            t = getattr(oneflow, k)
+                            setattr(
+                                oneflow,
+                                k,
+                                t.to_global(placement=v.placement, sbp=v.sbp),
+                            )
+                else:
+                    oneflow = oneflow.to_global(
+                        placement=flow.env.all_device_placement("cpu"),
+                        sbp=[flow.sbp.broadcast,],
+                    )
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
@@ -832,6 +847,12 @@ class DualObject:
             pytorch_attr = identity
         elif key in ["placement", "sbp"]:
             pytorch_attr = "unused"
+        elif key in ["broadcast_like"]:
+
+            def broadcast_like(x, y, *args, **kwargs):
+                return self.pytorch.broadcast_to(x, y.size())
+
+            pytorch_attr = broadcast_like
         else:
             pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)

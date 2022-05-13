@@ -142,26 +142,26 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device,
-                                      const bool& requires_grad, const bool& pin_memory);
+                                      const bool requires_grad, const bool pin_memory);
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
                                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           const bool& requires_grad);
+                                           const bool requires_grad);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
-                                        const bool& pin_memory);
+                                        const bool pin_memory);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Optional<Symbol<Device>>& device,
-                                        const bool& requires_grad, const bool& pin_memory);
+                                        const bool requires_grad, const bool pin_memory);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Symbol<ParallelDesc>& placement,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                        const bool& requires_grad);
+                                        const bool requires_grad);
 
 }  // namespace one
 }  // namespace oneflow
