@@ -52,11 +52,11 @@ writer.writerow(
         "Description",
         "Library",
         "Kernel Time (us, N=1)",
-        "All Time (us, N=1)",
+        "Total Time (us, N=1)",
         "Kernel Time (us, N=8)",
-        "All Time (us, N=8)",
+        "Total Time (us, N=8)",
         "Kernel Time (us, N=32)",
-        "All Time (us, N=32)",
+        "Total Time (us, N=32)",
     ]
 )
 
