@@ -23,6 +23,7 @@ limitations under the License.
 
 #include "binary_set.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "algorithm_util.h"
 
