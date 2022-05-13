@@ -55,7 +55,7 @@ class ScalarDiv : public OpExprGradFunction<ScalarDivCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      *JUST(VectorAt(in_grads, 0)) =
+      JUST(VectorAt(*in_grads, 0)) =
           JUST(functional::ScalarDiv(JUST(VectorAt(out_grads, 0)), ctx->operand));
     }
     return Maybe<void>::Ok();
