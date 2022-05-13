@@ -80,23 +80,23 @@ class CUDAEventPair {
   OF_DISALLOW_COPY_AND_MOVE(CUDAEventPair);
 
   explicit CUDAEventPair(cudaStream_t cuda_stream) : cuda_stream_(cuda_stream) {
-    cudaEventCreate(&cuda_event_start_);
-    cudaEventCreate(&cuda_event_finish_);
+    OF_CUDA_CHECK(cudaEventCreate(&cuda_event_start_));
+    OF_CUDA_CHECK(cudaEventCreate(&cuda_event_finish_));
   }
 
-  void Start() { cudaEventRecord(cuda_event_start_, cuda_stream_); }
+  void Start() { OF_CUDA_CHECK(cudaEventRecord(cuda_event_start_, cuda_stream_)); }
 
-  void Finish() { cudaEventRecord(cuda_event_finish_, cuda_stream_); }
+  void Finish() { OF_CUDA_CHECK(cudaEventRecord(cuda_event_finish_, cuda_stream_)); }
 
   double ElapsedTime() const {
     float elapsed_time_ms = 0;
-    cudaEventElapsedTime(&elapsed_time_ms, cuda_event_start_, cuda_event_finish_);
+    OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_time_ms, cuda_event_start_, cuda_event_finish_));
     return elapsed_time_ms * 1000.0;  // convert to us
   }
 
   ~CUDAEventPair() {
-    if (cuda_event_start_) { cudaEventDestroy(cuda_event_start_); }
-    if (cuda_event_finish_) { cudaEventDestroy(cuda_event_finish_); }
+    if (cuda_event_start_) { OF_CUDA_CHECK(cudaEventDestroy(cuda_event_start_)); }
+    if (cuda_event_finish_) { OF_CUDA_CHECK(cudaEventDestroy(cuda_event_finish_)); }
   }
 
  private:
