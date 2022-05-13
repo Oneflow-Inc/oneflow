@@ -2353,7 +2353,7 @@ class SplitLikeFunctor {
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
     inputs[0] = x;
-    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = like[i]; }
+    for (int i = 0; i < like.size(); ++i) { inputs[i + 1] = JUST(like[i]->detach()); }
     return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(like.size() - 1), inputs, attrs);
   }
 
