@@ -33,7 +33,6 @@ constexpr int kBlockDim = 256;
 template<size_t num_dims, typename IndexType, typename StorageType>
 __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
                                   StorageType packed_pad_val) {
-  IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   const StorageType* src = reinterpret_cast<const StorageType*>(params.src);
   StorageType* dst = reinterpret_cast<StorageType*>(params.dst);
   IndexType src_index[num_dims];
