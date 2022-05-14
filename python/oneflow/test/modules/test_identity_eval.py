@@ -21,7 +21,9 @@ import oneflow.unittest
 @flow.unittest.skip_unless_1n1d()
 class TestIdentityEval(flow.unittest.TestCase):
     def test_simple(test_case):
-        flow._C.identity_eval(flow.ones(1, 2, 3), 'print("TestIdentityEval.test_simple")')
+        flow._C.identity_eval(
+            flow.ones(1, 2, 3), 'print("TestIdentityEval.test_simple")'
+        )
 
     def test_fork_in_opkernel(test_case):
         code = "import os; os._exit(0) if os.fork() <= 0 else os.wait()"
