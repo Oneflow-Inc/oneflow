@@ -671,7 +671,8 @@
 - name: "normalization_add_relu_grad"
   signature:
     "TensorTuple (Tensor x, Tensor dy, Tensor moving_mean, Tensor moving_variance,
-    Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, Float epsilon=1e-5) => NormalizationAddReluGrad"
+    Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, 
+    Float epsilon=1e-5, Bool has_addend) => NormalizationAddReluGrad"
   bind_python: False
 
 - name: "eye"
