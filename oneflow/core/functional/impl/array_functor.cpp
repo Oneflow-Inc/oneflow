@@ -2597,7 +2597,8 @@ class IndexSelectFunctor {
       index_new = JUST(Unsqueeze(index, 0));
     }
     auto index_gather = JUST(functional::Expand(
-        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/true)), expand_shape));
+        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/true)),
+        expand_shape));
     for (int i = 1; i < index->dim(0); i++) {
       index_gather = JUST(functional::Concat(
           {index_gather,
