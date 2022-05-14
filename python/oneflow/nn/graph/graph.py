@@ -826,11 +826,11 @@ class Graph(object):
                 if enable_mlir_inference_opt is None
                 else bool(enable_mlir_inference_opt)
             )
-            if self.training and enable_mlir_inference_opt:
+            if (self.training or self._is_global_view) and enable_mlir_inference_opt:
                 logging.warn(
                     "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode. "
                 )
-                enable_mlir_inference_opt - False
+                enable_mlir_inference_opt = False
                 del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
             if enable_mlir_inference_opt:
                 oneflow._oneflow_internal.FillVariableTensorMgr(
