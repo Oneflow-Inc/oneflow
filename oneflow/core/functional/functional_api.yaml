@@ -2235,3 +2235,7 @@
       "TensorTuple (Tensor input, TensorTuple hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => LstmInput",
     ]
   bind_python: True
+
+- name: "pack_padded_sequence"
+  signature: "TensorTuple (Tensor input, Tensor lengths, Bool batch_first) => PackPaddedSequence"
+  bind_python: True

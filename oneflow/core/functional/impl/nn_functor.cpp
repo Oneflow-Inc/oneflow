@@ -3605,6 +3605,126 @@ class LstmInputFunctor {
   }
 };
 
+Maybe<void> checkLongTensor(const std::shared_ptr<one::Tensor>& tensor) {
+  auto& device = JUST(tensor->device())->type();
+  CHECK_OR_RETURN(tensor->ndim() == 1 && device == "cpu" && tensor->dtype() != DType::Int64())
+      << "'lengths' argument should be a 1D CPU int64 tensor, but got " << tensor->ndim() << "D "
+      << device << " " << tensor->dtype()->name() << " tensor";
+  return Maybe<void>::Ok();
+}
+
+class PackPaddedSequenceFunctor {
+ public:
+  PackPaddedSequenceFunctor() {}
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& lengths,
+                                const bool& batch_first) const {
+    CHECK_OR_RETURN(input->is_local() && lengths->is_local())
+        << "pack_padded_sequence only accept local tensors as input.";
+    std::shared_ptr<one::Tensor> new_input = input;
+    if (batch_first) {
+      std::vector<int32_t> dims = {1, 0, 2};
+      new_input = JUST(functional::Permute(input, dims));
+    }
+    checkLongTensor(lengths);
+
+    int64_t batch_size = input->shape()->At(1);
+    std::vector<int64_t> lengths_vec;
+    lengths_vec.resize(lengths->nelement());
+    const auto& callback = [&](uint64_t of_blob_ptr) {
+      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+      of_blob->AutoMemCopyTo<int64_t>(
+          lengths_vec.data(), lengths_vec.size());  // copy 1 scalar(int64_t) tensor's value to max
+    };
+    JUST(SyncAccessTensorWithTimeOut(lengths, callback, "const"));
+
+    CHECK_OR_RETURN(input->nelement() > 0) << "Cannot pack empty tensors.";
+    CHECK_OR_RETURN(lengths->shape()->At(0) == batch_size)
+        << "Expected `len(lengths)` to be equal to batch_size, but got " << lengths->shape()->At(0)
+        << " (batch_size=" << batch_size << ")";
+    CHECK_OR_RETURN(lengths_vec[batch_size - 1] > 0)
+        << "Length of all samples has to be greater than 0, but found an element in 'lengths' that "
+           "is <= 0";
+    for (int i = 0; i < batch_size - 1; ++i) {
+      if (lengths_vec[batch_size - 1 - i] > lengths_vec[batch_size - 2 - i]) {
+        CHECK_OR_RETURN(false) << "`lengths` array must be sorted in decreasing order when "
+                                  "`enforce_sorted` is True. You can pass `enforce_sorted=False` "
+                                  "to pack_padded_sequence and/or pack_sequence to sidestep this "
+                                  "requirement if you do not need ONNX exportability.";
+      }
+    }
+
+    std::vector<int64_t> step_shape_vec;  // == [-1, *input.shape[2:]]
+    {
+      const auto& input_sizes = input->shape();
+      step_shape_vec.push_back(-1);
+      for (int i = 2; i < input_sizes->NumAxes(); ++i) {
+        step_shape_vec.push_back(input_sizes->At(i));
+      }
+    }
+    DimVector rsv(step_shape_vec.size());
+    for (int i = 0; i < step_shape_vec.size(); ++i) { rsv[i] = step_shape_vec[i]; }
+    const Shape step_shape(rsv);
+
+    // To understand what's going on in this loop imagine that the input is a padded 2D
+    // array that looks like this (x = valid entry, . = padding)
+    //
+    //  1 1 1 1 1
+    //  2 2 2 . .
+    //  2 2 2 . .
+    //  4 . . . .
+    //  4 . . . .
+    //
+    // Where the vertical dimension corresponds to time, and horizontal dim to batch.
+    // In this example, the lengths array will be equal to [5, 3, 3, 1, 1], and we will
+    // iterate over them in reverse order (from the rightmost column to the left).
+    // We want to avoid eager slicing of the input at every time step, and wait for
+    // the moments where the length increases. In this example, that will happen at the
+    // first, second and fourth steps. Then, we slice out the whole block of the input
+    // that corresponds to this length, and hasn't been sliced yet (the steps at which each
+    // element is sliced are annotated in the array above).  You can think of this as if we
+    // were scanning the sequences from the shortest one, and every time we realize there's
+    // more elements below in our column, we lower the counter (prev_l), and append the new
+    // block to the output.
+    std::vector<int64_t> batch_sizes;
+    batch_sizes.resize(lengths_vec[0]);
+    int64_t* batch_sizes_ptr = batch_sizes.data();
+    TensorTuple steps;
+    int64_t prev_l = 0;
+    for (int i = 0; i < batch_size; ++i) {
+      int64_t l = lengths_vec[batch_size - 1 - i];
+      if (l > prev_l) {
+        auto current_batch_size = batch_size - i;
+        std::shared_ptr<Tensor> slice_res = JUST(functional::Narrow(input, 0, prev_l, l - prev_l));
+        slice_res = JUST(functional::Narrow(slice_res, 1, 0, current_batch_size));
+        slice_res = JUST(functional::View(slice_res->contiguous(), step_shape));
+        steps.emplace_back(slice_res);
+        for (int64_t j = 0; j < (l - prev_l); ++j) { (*batch_sizes_ptr++) = current_batch_size; }
+        prev_l = l;
+      }
+      CHECK_OR_RETURN(l >= prev_l);
+    }
+
+    DimVector lsv(1);
+    lsv[0] = lengths_vec[0];
+    const Shape ls(lsv);
+    std::shared_ptr<Tensor> batch_sizes_t =
+        JUST(functional::Empty(ls, lengths->dtype(), JUST(lengths->device()), false));
+    const auto& callback2 = [&](uint64_t of_blob_ptr) {
+      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+      of_blob->AutoMemCopyFrom<int64_t>(
+          batch_sizes.data(), batch_sizes.size());  // copy 1 scalar(int64_t) tensor's value to max
+    };
+    JUST(SyncAccessTensorWithTimeOut(batch_sizes_t, callback2, "const"));
+
+    std::shared_ptr<TensorTuple> output = std::make_shared<TensorTuple>(2);
+    (*output)[0] = JUST(functional::Concat(steps, 0));
+    (*output)[1] = batch_sizes_t;
+    return output;
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3698,6 +3818,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RnnTanhInputFunctor>("RnnTanhInput");
   m.add_functor<impl::RnnReluInputFunctor>("RnnReluInput");
   m.add_functor<impl::LstmInputFunctor>("LstmInput");
+  m.add_functor<impl::PackPaddedSequenceFunctor>("PackPaddedSequence");
 }
 
 }  // namespace functional

@@ -22,6 +22,7 @@ from typing import List, Tuple, Optional
 import oneflow as flow
 from oneflow import nn
 from oneflow.framework.tensor import Tensor
+from oneflow.nn.utils.rnn import PackedSequence
 
 
 class RNN(nn.Module):

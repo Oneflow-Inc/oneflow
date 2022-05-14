@@ -284,7 +284,7 @@ def _test_gru(test_case, device):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestRNNModule(flow.unittest.TestCase):
+class TestRNNModules(flow.unittest.TestCase):
     def test_rnn(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_rnn, _test_lstm]
