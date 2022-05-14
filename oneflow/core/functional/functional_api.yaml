@@ -728,7 +728,7 @@
   bind_python: True
 
 - name: "cast"
-  signature: "Tensor (Tensor x, DataType dtype) => Cast"
+  signature: "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
   bind_python: True
 
 - name: "constant"
@@ -1251,7 +1251,7 @@
   bind_python: True
 
 - name: "slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => Slice"
+  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => Slice"
   bind_python: True
 
 - name: "slice_grad"
@@ -1271,7 +1271,7 @@
   bind_python: True
 
 - name: "logical_slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => LogicalSlice"
+  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => LogicalSlice"
   bind_python: True
 
 - name: "logical_slice_assign"
@@ -1279,7 +1279,7 @@
   bind_python: True
 
 - name: "copy"
-  signature: "Tensor (Tensor x, String device_type, Int64 device_id) => Copy"
+  signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
   bind_python: True
 
 - name: "to"

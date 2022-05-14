@@ -70,7 +70,7 @@ class ArgMaxFunctor {
         << "," << ndims << " ] but got " << new_dim << ")";
     if (new_dim < 0) { new_dim += ndims; }
     const auto do_cast = [&](const std::shared_ptr<one::Tensor>& x) -> Maybe<Tensor> {
-      return Cast(x, JUST(dtype));
+      return Cast(x, JUST(dtype), /*pin_memory=*/false);
     };
 
     if (new_dim == ndims - 1) {
@@ -1197,10 +1197,11 @@ class SliceBaseFunctor {
   SliceBaseFunctor() = default;
   virtual ~SliceBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
-                           const std::vector<int64_t>& stop,
-                           const std::vector<int64_t>& step) const {
-    // TODO:(zhaoluyang) use view::Slice
-    // if (view::IsViewApplicable(x)) { return view::Slice(x, start, stop, step); }
+                           const std::vector<int64_t>& stop, const std::vector<int64_t>& step,
+                           const Optional<bool>& enable_view_slice) const {
+    if (view::IsViewApplicable(x) && enable_view_slice.value_or(true)) {
+      return view::Slice(x, start, stop, step);
+    }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
@@ -1387,14 +1388,22 @@ class CopyFunctor {
  public:
   CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
-                           const int64_t& device_id) const {
+                           const int64_t& device_id, const bool pin_memory) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", device_type));
     JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+
 #ifdef WITH_CUDA
     if (device_type == "cuda") { InitCudaContextOnce(device_id); }
 #endif
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    if (!x->is_local() || device_type == "cuda") {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {x},
+          OpExprInterpContext(attrs, JUST(Device::New(device_type, device_id)),
+                              /*pin_memory=*/pin_memory));
+    }
   }
 
  private:
@@ -1915,7 +1924,7 @@ class SliceView1dContiguousFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start,
                            int64_t end) const {
     if (view::IsViewApplicable(x)) { return JUST(view::Slice(x, {start}, {end}, {1})); }
-    return JUST(functional::Slice(x, {start}, {end}, {1}));
+    return JUST(functional::Slice(x, {start}, {end}, {1}, /*enable_view_slice=*/true));
   }
 };
 
@@ -1923,6 +1932,14 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
+    if (x->is_local() && !(LazyMode::is_enabled()) && x->requires_grad() == false
+        && index.size() == 1 && index[0].IsInteger()) {
+      // NOTE: speed up in special case, e.g. dataloader(refer to torch)
+      // function call chain of pytorch : tensor getitem -> select -> as_strided
+      // function call chain of oneflow : tensor getitem -> as_strided
+      return ApplySelectIndexing(x, index);
+    }
+
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
@@ -1960,7 +1977,7 @@ class TensorGetItemFunctor {
     if (is_identity) {
       result = expand_input;
     } else {
-      result = JUST(Slice(expand_input, start, end, step));
+      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
@@ -2579,12 +2596,14 @@ class IndexSelectFunctor {
     } else {
       index_new = JUST(Unsqueeze(index, 0));
     }
-    auto index_gather =
-        JUST(functional::Expand(JUST(functional::Slice(index_new, {0}, {1}, {1})), expand_shape));
-    for (int i = 1; i < index_new->dim(0); i++) {
+    auto index_gather = JUST(functional::Expand(
+        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/true)), expand_shape));
+    for (int i = 1; i < index->dim(0); i++) {
       index_gather = JUST(functional::Concat(
-          {index_gather, JUST(functional::Expand(
-                             JUST(functional::Slice(index_new, {i}, {i + 1}, {1})), expand_shape))},
+          {index_gather,
+           JUST(functional::Expand(
+               JUST(functional::Slice(index_new, {i}, {i + 1}, {1}, /*enable_view_slice=*/true)),
+               expand_shape))},
           new_dim));
     }
     return JUST(functional::DimGather(input, new_dim, index_gather, false));
@@ -2601,10 +2620,12 @@ Maybe<Tensor> LocalTensorTo(const std::shared_ptr<Tensor>& x, const std::string&
                             const int device_id, const Symbol<DType>& dtype, const bool& copy) {
   std::shared_ptr<Tensor> tensor = x;
   if (!JUST(device_equal(device_name, device_id, JUST(x->device())))) {
-    tensor = JUST(Copy(tensor, device_name, device_id));
+    tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
   }
-  if (dtype != x->dtype()) { tensor = JUST(Cast(tensor, dtype)); }
-  if (copy && tensor == x) { tensor = JUST(Copy(tensor, device_name, device_id)); }
+  if (dtype != x->dtype()) { tensor = JUST(Cast(tensor, dtype, /*pin_memory=*/false)); }
+  if (copy && tensor == x) {
+    tensor = JUST(Copy(tensor, device_name, device_id, /*pin_memory=*/false));
+  }
   return tensor;
 }
 
@@ -2617,13 +2638,13 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     if (dtype == x->dtype()) {
       return (copy ? JUST(x->clone()) : x);
     } else {
-      return JUST(Cast(x, dtype));
+      return JUST(Cast(x, dtype, /*pin_memory=*/false));
     }
   }
   if (LazyMode::is_enabled()) {
-    if (dtype != x->dtype()) { tensor = JUST(Cast(x, dtype)); }
+    if (dtype != x->dtype()) { tensor = JUST(Cast(x, dtype, /*pin_memory=*/false)); }
     if (device_type != JUST(x->parallel_desc())->device_tag()) {
-      tensor = JUST(Copy(tensor ? tensor : x, device_type, 0));
+      tensor = JUST(Copy(tensor ? tensor : x, device_type, 0, /*pin_memory=*/false));
     }
     return tensor;
   } else {
