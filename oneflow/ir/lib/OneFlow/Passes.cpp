@@ -484,6 +484,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     auto op = ::llvm::dyn_cast<oneflow::VariableOp>(op0);
     if (!op) return failure();
     NamedAttrList attrs;
+    if (op.op_name().str().find("FreeEagerTensor") != std::string::npos) { return failure(); }
     attrs.set(StringAttr::get(getContext(), "value"),
               support::TensorToDenseElementsAttr(
                   ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
