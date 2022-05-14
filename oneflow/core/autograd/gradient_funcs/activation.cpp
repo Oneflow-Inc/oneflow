@@ -154,7 +154,7 @@ class HardShrink : public OpExprGradFunction<HardShrinkCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& y = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
-      *JUST(oneflow::VectorAt(in_grads, 0)) =
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
           JUST(functional::HardShrinkGrad(y, JUST(oneflow::VectorAt(out_grads, 0)), ctx->lambd));
     }
     return Maybe<void>::Ok();
@@ -282,7 +282,7 @@ class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
-      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::SoftplusGrad(
+      JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::SoftplusGrad(
           x, JUST(oneflow::VectorAt(out_grads, 0)), ctx->beta, ctx->threshold));
     }
     return Maybe<void>::Ok();
@@ -450,7 +450,7 @@ class SoftShrink : public OpExprGradFunction<SoftShrinkCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& y = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
-      *JUST(oneflow::VectorAt(in_grads, 0)) =
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
           JUST(functional::SoftShrinkGrad(y, JUST(oneflow::VectorAt(out_grads, 0)), ctx->alpha));
     }
     return Maybe<void>::Ok();
@@ -531,7 +531,7 @@ class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
-      *JUST(oneflow::VectorAt(in_grads, 0)) =
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
           JUST(functional::ThresholdGrad(x, JUST(oneflow::VectorAt(out_grads, 0)), ctx->threshold));
     }
     return Maybe<void>::Ok();
