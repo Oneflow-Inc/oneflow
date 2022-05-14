@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +12,22 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
-#define ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
+"""
+import unittest
+import oneflow as flow
+import oneflow.unittest
 
-#include "oneflow/core/common/thread_local_guard.h"
 
-namespace oneflow {
+@flow.unittest.skip_unless_1n1d()
+class TestIdentityEval(flow.unittest.TestCase):
+    def test_simple(test_case):
+        flow._C.identity_eval(flow.ones(1, 2, 3), 'print("TestIdentityEval.test_simple")')
 
-class SyncVmModeGuard final : public ThreadLocalGuard<bool> {
- public:
-  using ThreadLocalGuard<bool>::ThreadLocalGuard;
-  ~SyncVmModeGuard() = default;
-};
+    def test_fork_in_opkernel(test_case):
+        code = "import os; os._exit(0) if os.fork() <= 0 else os.wait()"
+        flow._C.identity_eval(flow.ones(1, 2, 3), 'exec("%s")' % code)
+        flow._oneflow_internal.eager.Sync()
 
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_SYNC_VM_MODE_GUARD_H_
+if __name__ == "__main__":
+    unittest.main()

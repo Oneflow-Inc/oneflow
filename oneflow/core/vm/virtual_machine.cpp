@@ -335,6 +335,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
 }
 
 void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
+  SyncVmModeGuard guard(true);
   Initializer();
   auto* vm = mut_vm();
   while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) { vm->Callback(); }

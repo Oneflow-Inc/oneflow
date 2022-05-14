@@ -2201,6 +2201,21 @@ class IdentityFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class IdentityEvalFunctor {
+ public:
+  IdentityEvalFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("identity_eval").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const std::string& code) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("code", code));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class AmpWhiteIdentityFunctor {
  public:
   AmpWhiteIdentityFunctor() {
@@ -3031,6 +3046,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastPowYGradFunctor>("BroadcastPowYGrad");
   m.add_functor<impl::DivGradFunctor>("DivGrad");
   m.add_functor<impl::IdentityFunctor>("Identity");
+  m.add_functor<impl::IdentityEvalFunctor>("IdentityEval");
   m.add_functor<impl::AmpWhiteIdentityFunctor>("AmpWhiteIdentity");
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");

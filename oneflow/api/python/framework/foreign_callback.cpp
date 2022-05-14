@@ -45,12 +45,8 @@ class PyForeignCallback : public ForeignCallback {
                       parallel_conf);
   }
 
-  void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const override {
-    PYBIND11_OVERRIDE(void, ForeignCallback, OfBlobCall, unique_id, ofblob_ptr);
-  }
-
-  void RemoveForeignCallback(int64_t unique_id) const override {
-    PYBIND11_OVERRIDE(void, ForeignCallback, RemoveForeignCallback, unique_id);
+  void Eval(const std::string& code) const override {
+    PYBIND11_OVERRIDE(void, ForeignCallback, Eval, code);
   }
 };
 
@@ -64,6 +60,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init<>())
       .def("EagerMirroredCast", &ForeignCallback::EagerMirroredCast)
       .def("EagerInterpretCompletedOp", &ForeignCallback::EagerInterpretCompletedOp)
-      .def("OfBlobCall", &ForeignCallback::OfBlobCall)
-      .def("RemoveForeignCallback", &ForeignCallback::RemoveForeignCallback);
+      .def("Eval", &ForeignCallback::Eval);
 }

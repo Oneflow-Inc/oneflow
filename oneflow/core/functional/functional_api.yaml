@@ -1866,6 +1866,10 @@
   signature: "Tensor (Tensor in) => Identity"
   bind_python: True
 
+- name: "identity_eval"
+  signature: 'Tensor (Tensor in, String code="0") => IdentityEval'
+  bind_python: True
+
 - name: "amp_white_identity"
   signature: "Tensor (Tensor in) => AmpWhiteIdentity"
   bind_python: True

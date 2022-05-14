@@ -30,7 +30,7 @@ static void SetIsForkedSubProcess() { is_fork = true; }
 
 namespace {
 void CurrentRankVmSync() {
-  if (SyncVmModeGuard::Current().has_value()) { return; }
+  if (SyncVmModeGuard::IsCurrentSyncVmMode()) { return; }
   // Instructions in forked subprocesses are not dispatched to vm,
   // so no need to sync vm in these processes.
   if (!is_fork && Global<VirtualMachine>::Get() != nullptr) { CHECK_JUST(vm::CurrentRankSync()); }

@@ -37,10 +37,7 @@ class ForeignCallback {
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
     UNIMPLEMENTED();
   }
-
-  virtual void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
-
-  virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
+  virtual void Eval(const std::string& code) const { UNIMPLEMENTED(); }
 };
 
 }  // namespace oneflow
