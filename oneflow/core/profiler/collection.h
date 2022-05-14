@@ -197,7 +197,7 @@ class EventRecorder {
   static Maybe<EventRecorder> CreateKernelEventRecorder(const std::string& name,
                                                         cudaStream_t cuda_stream,
                                                         const ShapeGetterFuncType& shape_getter);
-#else   // WITH_CUDA
+#else  // WITH_CUDA
   static Maybe<EventRecorder> CreateKernelEventRecorder(const std::string& name,
                                                         const ShapeGetterFuncType& shape_getter);
 #endif  // WITH_CUDA

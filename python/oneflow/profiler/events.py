@@ -73,14 +73,7 @@ class Event:
 
     @classmethod
     def from_dict(cls, d: dict):
-        return cls(
-            d["name"],
-            d["time"],
-            d["on_gpu"],
-            1,
-            d["input_shapes"],
-            d["type"],
-        )
+        return cls(d["name"], d["time"], d["on_gpu"], 1, d["input_shapes"], d["type"],)
 
 
 class Events(list):

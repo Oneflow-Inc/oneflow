@@ -180,7 +180,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
   std::shared_ptr<EventRecorder> null_recorder;
   return null_recorder;
 }
-#else   // WITH_CUDA
+#else  // WITH_CUDA
 Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
     const std::string& name, const ShapeGetterFuncType& shape_getter) {
   auto pmgr = Global<ProfileMgr>::Get();
