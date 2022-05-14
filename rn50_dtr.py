@@ -184,39 +184,33 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
 
     flow.comm.barrier()
 
-    if iter >= WARMUP_ITERS:
-        start_time = time.time()
-
     train_data = train_data.to(cuda0)
     train_label = train_label.to(cuda0)
 
     logits = model(train_data)
     loss = logits.sum() # criterion(logits, train_label)
-    del logits
     loss.backward()
     # train_bar.set_description(
     #     "Epoch {}: loss: {:.4f}".format(iter + 1, loss.item())
     # )
     # writer.add_scalar("Loss/train/loss", loss.item(), iter)
     # writer.flush()
-    del loss
-    del train_data
-    del train_label
 
     optimizer.step()
     optimizer.zero_grad(True)
+    del logits
+    del loss
 
     flow.comm.barrier()
 
     if iter >= WARMUP_ITERS:
-        end_time = time.time()
-        this_time = end_time - start_time
+        this_time = time.time() - last_time
         total_time += this_time
         if iter % 1 == 0:
             print(f'iter {iter} end, time: {this_time}')
-    flow.comm.barrier()
 
-end_time = time.time()
+    last_time = time.time()
+
 print(
 f"{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s"
 )
