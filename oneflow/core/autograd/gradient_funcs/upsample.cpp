@@ -71,7 +71,7 @@ Maybe<void> Upsample::Apply(const UpsampleCaptureState* ctx, const TensorTuple& 
 
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::UpsampleGrad(
+  JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleGrad(
       JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->height_scale, ctx->width_scale,
       ctx->align_corners, ctx->data_format, ctx->interpolation));
   return Maybe<void>::Ok();
@@ -115,7 +115,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::UpsampleNearest2DGrad(
+    JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleNearest2DGrad(
         JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->height_scale, ctx->width_scale,
         ctx->output_size, ctx->data_format));
 
@@ -166,7 +166,7 @@ class UpsampleBilinear2D : public OpExprGradFunction<UpsampleBilinear2DCaptureSt
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::UpsampleBilinear2DGrad(
+    JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleBilinear2DGrad(
         JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->height_scale, ctx->width_scale,
         ctx->align_corners, ctx->output_size, ctx->data_format));
 
@@ -215,7 +215,7 @@ class UpsampleLinear1D : public OpExprGradFunction<UpsampleLinear1DCaptureState>
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::UpsampleLinear1DGrad(
+    JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleLinear1DGrad(
         JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->scale_factor, ctx->align_corners,
         ctx->output_size, ctx->data_format));
 
@@ -262,7 +262,7 @@ class UpsampleNearest1D : public OpExprGradFunction<UpsampleNearest1DCaptureStat
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(
+    JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(
         functional::UpsampleNearest1DGrad(JUST(oneflow::VectorAt(out_grads, 0)), x,
                                           ctx->scale_factor, ctx->output_size, ctx->data_format));
 
@@ -313,7 +313,7 @@ class UpsampleBicubic2D : public OpExprGradFunction<UpsampleBicubic2DCaptureStat
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::UpsampleBicubic2DGrad(
+    JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleBicubic2DGrad(
         JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->height_scale, ctx->width_scale,
         ctx->align_corners, ctx->output_size, ctx->data_format));
     return Maybe<void>::Ok();
@@ -363,7 +363,7 @@ class UpsampleNearest3D : public OpExprGradFunction<UpsampleNearest3DCaptureStat
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::UpsampleNearest3DGrad(
+    JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleNearest3DGrad(
         JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->depth_scale, ctx->height_scale,
         ctx->width_scale, ctx->output_size, ctx->data_format));
 
@@ -416,7 +416,7 @@ class UpsampleTrilinear3D : public OpExprGradFunction<UpsampleTrilinear3DCapture
     MutableAttrMap attrs;
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::UpsampleTrilinear3DGrad(
+    JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleTrilinear3DGrad(
         JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->depth_scale, ctx->height_scale,
         ctx->width_scale, ctx->align_corners, ctx->output_size, ctx->data_format));
 
