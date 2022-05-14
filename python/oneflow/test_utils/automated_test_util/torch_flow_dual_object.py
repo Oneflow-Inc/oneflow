@@ -313,6 +313,7 @@ def get_functional_graph_res(
         of_sgd = flow.optim.SGD(
             graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
         )
+
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
