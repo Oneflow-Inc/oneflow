@@ -56,9 +56,7 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
             }
           }
         } else {
-          if (dtr::is_enabled_and_debug()) {
-            LOG(INFO) << "not dtr allocator, " << typeid(*allocator).name();
-          }
+          OF_RUNTIME_ERROR() << "not dtr allocator, " << typeid(*b_allocator->backend_allocator()).name();
         }
       }
     }
