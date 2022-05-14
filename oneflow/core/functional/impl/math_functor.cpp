@@ -2158,11 +2158,11 @@ class TensorSplitVecFunctor {
     for (int32_t i = 0; i < num_indices; i++) {
       int32_t end_idx = indices_or_sections[i];
       stop[pos_dim] = end_idx;
-      output[i] = JUST(Slice(input, start, stop, step));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
       start[pos_dim] = end_idx;
     }
     stop[pos_dim] = input->shape()->At(ndim - 1);
-    output[num_indices] = JUST(Slice(input, start, stop, step));
+    output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
 
     return output;
   }
@@ -2195,7 +2195,7 @@ class TensorSplitIntFunctor {
     for (int32_t i = 0; i < indices_or_sections; i++) {
       int64_t split_size = (i < num_splits_one_extra) ? (min_split_size + 1) : min_split_size;
       stop[pos_dim] += split_size;
-      output[i] = JUST(Slice(input, start, stop, step));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
       start[pos_dim] += split_size;
     }
 
