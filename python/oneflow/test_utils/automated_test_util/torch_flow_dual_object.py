@@ -301,8 +301,8 @@ def get_functional_graph_res(
     if (
         global_backward
         and flow.is_tensor(oneflow_res)
+        and flow.is_floating_point(oneflow_res)
         and oneflow_res.ndim > 1
-        and oneflow_res.size()
         and oneflow_res.nelement() > 0
     ):
         # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
@@ -313,13 +313,13 @@ def get_functional_graph_res(
         of_sgd = flow.optim.SGD(
             graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
         )
-
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
             if (
                 global_backward
                 and flow.is_tensor(oneflow_res)
+                and flow.is_floating_point(oneflow_res)
                 and oneflow_res.ndim > 1
                 and oneflow_res.nelement() > 0
             ):
@@ -332,6 +332,7 @@ def get_functional_graph_res(
             if (
                 global_backward
                 and flow.is_tensor(oneflow_res)
+                and flow.is_floating_point(oneflow_res)
                 and oneflow_res.ndim > 1
                 and oneflow_res.nelement() > 0
             ):
@@ -373,6 +374,7 @@ def get_functional_graph_res(
                     "Run graph of function: ", repr(oneflow),
                 )
                 test_g.debug(2)
+
             test_g_res = test_g()
             if verbose:
                 print(
@@ -399,6 +401,7 @@ def get_tensor_graph_res(
     if (
         global_backward
         and flow.is_tensor(oneflow_res)
+        and flow.is_floating_point(oneflow_res)
         and oneflow_res.ndim > 1
         and oneflow_res.nelement() > 0
     ):
@@ -417,6 +420,7 @@ def get_tensor_graph_res(
             if (
                 global_backward
                 and flow.is_tensor(oneflow_res)
+                and flow.is_floating_point(oneflow_res)
                 and oneflow_res.ndim > 1
                 and oneflow_res.nelement() > 0
             ):
@@ -429,6 +433,7 @@ def get_tensor_graph_res(
             if (
                 global_backward
                 and flow.is_tensor(oneflow_res)
+                and flow.is_floating_point(oneflow_res)
                 and oneflow_res.ndim > 1
                 and oneflow_res.nelement() > 0
             ):
