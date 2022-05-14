@@ -59,7 +59,7 @@ class JobBuilder final {
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
   // Mut op with transaction
   Maybe<bool> IsInMutOpTransaction(const std::string& op_name) const;
-  Maybe<OperatorConf*> MutOpTransactionGet(const std::string& op_name);
+  Maybe<OperatorConf&> MutOpTransactionGet(const std::string& op_name);
   Maybe<void> MutOpTransactionMut(const OperatorConf& op_conf);
   Maybe<void> MutOpTransactionCommit();
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);

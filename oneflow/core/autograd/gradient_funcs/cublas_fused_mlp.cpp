@@ -183,7 +183,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
 
   if (ctx->x_requires_grad) {
     // dx:
-    *JUST(VectorAt(in_grads, 0)) =
+    JUST(VectorAt(*in_grads, 0)) =
         JUST(functional::MatMul(last_dy, JUST(VectorAt(weights, 0)), false, false, 1.0));
   }
   if (JUST(VectorAt(ctx->weights_requires_grad, 0)) && weight_num >= 2) {

@@ -257,12 +257,16 @@ class BatchMatMulFunctor {
                            const bool& transpose_b, const double& alpha) const {
     const auto& a_shape = a->shape();
     const auto& b_shape = b->shape();
-    CHECK_GE_OR_RETURN(a_shape->NumAxes(), 3) << "Tensor a's dim should >= 3";
-    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 3) << "Tensor b's dim should >= 3";
-    CHECK_GE_OR_RETURN(a_shape->At(0), b_shape->At(0))
-        << "batch dim not match, please check input!";
-    CHECK_GE_OR_RETURN(a_shape->At(2), b_shape->At(1))
-        << "matmul dim not match, please check input!";
+    CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 3)
+        << Error::RuntimeError() << "Expected 3-dimensional tensor, but got " << a_shape->NumAxes()
+        << "-dimensional tensor for argument #1";
+    CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 3)
+        << Error::RuntimeError() << "Expected 3-dimensional tensor, but got " << b_shape->NumAxes()
+        << "-dimensional tensor for argument #2";
+    CHECK_EQ_OR_RETURN(a_shape->At(0), b_shape->At(0))
+        << Error::RuntimeError() << "Batch dim not match, please check input!";
+    CHECK_EQ_OR_RETURN(a_shape->At(2), b_shape->At(1))
+        << Error::RuntimeError() << "Matmul dim not match, please check input!";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
