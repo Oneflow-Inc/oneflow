@@ -533,7 +533,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     rewriter.replaceOp(op0, op_new->getResults());
     const std::string tensor_name = op.op_nameAttr().str();
     ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Set(
-        tensor_name,  // tensor_name can't be replaced by op_new.op_name().str() directly when
+        tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
                       // compiling with gcc and I has no idea why.
                       // But it works when compiling with clang.
                       // Maybe temporary objects would be released earlier when using gcc.
