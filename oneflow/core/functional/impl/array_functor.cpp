@@ -1124,8 +1124,6 @@ class ReshapeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     Shape infered_shape = *JUST(InferShape(x, shape));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
@@ -1134,6 +1132,8 @@ class ReshapeFunctor {
         return view::Reshape(x, infered_shape, *JUST(infered_stride));
       }
     }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2071,7 +2071,11 @@ class TensorSetItemFunctor {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
       if (x->is_local()) {
-        JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+          JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+        } else {
+          JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+        }
       } else {
         if (x->requires_grad() && autograd::GradMode::is_enabled()) {
           return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
