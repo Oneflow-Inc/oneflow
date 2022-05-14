@@ -176,17 +176,17 @@ class ScalarAdd2Functor {
 
 class ScalarSubFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
-                           bool inplace) const {
-    return ScalarAdd(x, Scalar(-1) * scalar, /*alpha=*/1, inplace);
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& scalar,
+                           const Scalar& alpha, bool inplace) const {
+    return ScalarAdd(input, Scalar(-1) * scalar, alpha, inplace);
   }
 };
 
 class ScalarSub2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*alpha=*/1,
-                     /*inplace=*/false);
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& input,
+                           const Scalar& alpha) const {
+    return ScalarAdd(scalar, JUST(ScalarMul(input, Scalar(-1), false)), alpha);
   }
 };
 
@@ -836,10 +836,8 @@ class MedianWithIndicesFunctor {
     std::shared_ptr<TensorTuple> result;
     result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
     if (keepdim) {
-      *JUST(VectorAt(result.get(), 0)) =
-          JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 0)), axis));
-      *JUST(VectorAt(result.get(), 1)) =
-          JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 1)), axis));
+      JUST(VectorAt(*result, 0)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 0)), axis));
+      JUST(VectorAt(*result, 1)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 1)), axis));
     }
     return result;
   }
@@ -1969,7 +1967,7 @@ class StandardDeviationFunctor {
           Scalar((double)reduce_count)));
       const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(input, axis, keepdims)), Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
+      const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
       if (unbias) {
         return functional::Sqrt(JUST(functional::ScalarMul(
             sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
@@ -2002,7 +2000,7 @@ class StandardDeviationFunctor {
       const auto& square = JUST(functional::Square(
           JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims)),
                                      Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
+      const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
       if (unbias) {
         return functional::Cast(
             JUST(functional::Sqrt(JUST(functional::ScalarMul(
@@ -2160,11 +2158,11 @@ class TensorSplitVecFunctor {
     for (int32_t i = 0; i < num_indices; i++) {
       int32_t end_idx = indices_or_sections[i];
       stop[pos_dim] = end_idx;
-      output[i] = JUST(Slice(input, start, stop, step));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
       start[pos_dim] = end_idx;
     }
     stop[pos_dim] = input->shape()->At(ndim - 1);
-    output[num_indices] = JUST(Slice(input, start, stop, step));
+    output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
 
     return output;
   }
@@ -2197,7 +2195,7 @@ class TensorSplitIntFunctor {
     for (int32_t i = 0; i < indices_or_sections; i++) {
       int64_t split_size = (i < num_splits_one_extra) ? (min_split_size + 1) : min_split_size;
       stop[pos_dim] += split_size;
-      output[i] = JUST(Slice(input, start, stop, step));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
       start[pos_dim] += split_size;
     }
 
