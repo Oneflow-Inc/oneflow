@@ -36,7 +36,7 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
     # This setting is thread local, and prevents the copy in pin_memory from
     # consuming all CPU cores.
     flow.set_num_threads(1)
-    
+
     # TODO: support flow.cuda.set_device
     # flow.cuda.set_device(device_id)
 
@@ -53,7 +53,8 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
                 data = pin_memory(data)
             except Exception:
                 data = ExceptionWrapper(
-                    where="in pin memory thread for device {}".format(device_id))
+                    where="in pin memory thread for device {}".format(device_id)
+                )
             r = (idx, data)
         while not done_event.is_set():
             try:
@@ -71,7 +72,7 @@ def pin_memory(data):
         return data
     elif isinstance(data, container_abcs.Mapping):
         return {k: pin_memory(sample) for k, sample in data.items()}
-    elif isinstance(data, tuple) and hasattr(data, '_fields'):  # namedtuple
+    elif isinstance(data, tuple) and hasattr(data, "_fields"):  # namedtuple
         return type(data)(*(pin_memory(sample) for sample in data))
     elif isinstance(data, container_abcs.Sequence):
         return [pin_memory(sample) for sample in data]

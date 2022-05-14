@@ -214,7 +214,7 @@ class DataLoader(Generic[T_co]):
         batch_sampler: Optional[Sampler[Sequence[int]]] = None,
         num_workers: int = 0,
         collate_fn: Optional[_collate_fn_t] = None,
-        pin_memory: bool = False, 
+        pin_memory: bool = False,
         drop_last: bool = False,
         timeout: float = 0,
         worker_init_fn: Optional[_worker_init_fn_t] = None,
