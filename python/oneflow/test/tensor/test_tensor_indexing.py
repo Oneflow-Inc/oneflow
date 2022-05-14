@@ -421,6 +421,15 @@ class TestTensorIndexing(flow.unittest.TestCase):
         res = data[ranges]
         return res
 
+    @autotest(n=1)
+    def test_dataloader_indexing_with_1_dim_tensor(test_case):
+        device = random_device()
+        x = random_tensor(ndim=1, dim0=512).to(device)
+        batch_data = list()
+        for i in range(512):
+            batch_data.append(x[i])
+        return torch.stack(batch_data)
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_indecies_on_different_devices(test_case):
         x = flow.ones(3, 10)

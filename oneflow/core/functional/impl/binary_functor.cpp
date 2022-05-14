@@ -117,6 +117,23 @@ class SubFunctor : public InplaceableBinaryFunctor {
   SubFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
   }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
+                           bool inplace) const {
+    if (IsIntegralDataType(input->dtype()->data_type())
+        && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
+    if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+        || (alpha.IsFloatingPoint()
+            && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
+      return InplaceableBinaryFunctor::operator()(input, other, inplace);
+    } else {
+      return InplaceableBinaryFunctor::operator()(input, JUST(functional::ScalarMul(alpha, other)),
+                                                  inplace);
+    }
+  }
 };
 
 class MulFunctor {
@@ -389,14 +406,6 @@ class ScalarDivByTensorFunctor : public BinaryFunctor {
   }
 };
 
-class ReshapeLikeFunctor : public BinaryFunctor {
- public:
-  ReshapeLikeFunctor() {
-    op_ =
-        CHECK_JUST(one::OpBuilder("reshape_like").Input("in").Input("like").Output("out").Build());
-  }
-};
-
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -425,7 +434,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");
   m.add_functor<impl::ScalarDivByTensorFunctor>("ScalarDivByTensor");
   m.add_functor<impl::BroadcastFModFunctor>("BroadcastFMod");
-  m.add_functor<impl::ReshapeLikeFunctor>("ReshapeLike");
   m.add_functor<impl::FloorDivFunctor>("FloorDiv");
 };
 
