@@ -32,6 +32,7 @@ add_docstr(
         placement (oneflow.placement, optional): the desired placement of returned tensor.
         sbp (oneflow.sbp or tuple of oneflow.sbp, optional): the desired sbp of returned tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False
+        pin_memory(bool, optional): If set, returned tensor would be allocated in the pinned memory. Works only for CPU tensors. Default: False.
 
     Note:
         The Keyword Argument device is mutually exclusive with placement and sbp.
