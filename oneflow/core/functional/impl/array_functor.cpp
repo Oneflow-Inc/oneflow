@@ -1905,13 +1905,13 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    // if (x->is_local() && !(LazyMode::is_enabled()) && x->requires_grad() == false
-    //     && index.size() == 1 && index[0].IsInteger()) {
-    //   // NOTE: speed up in special case, e.g. dataloader(refer to torch)
-    //   // function call chain of pytorch : tensor getitem -> select -> as_strided
-    //   // function call chain of oneflow : tensor getitem -> as_strided
-    //   return ApplySelectIndexing(x, index);
-    // }
+    if (x->is_local() && !(LazyMode::is_enabled()) && x->requires_grad() == false
+        && index.size() == 1 && index[0].IsInteger()) {
+      // NOTE: speed up in special case, e.g. dataloader(refer to torch)
+      // function call chain of pytorch : tensor getitem -> select -> as_strided
+      // function call chain of oneflow : tensor getitem -> as_strided
+      return ApplySelectIndexing(x, index);
+    }
 
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
