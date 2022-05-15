@@ -55,9 +55,9 @@ class IdentityEvalKernel final : public user_op::OpKernel {
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_IDENTITY_KERNEL("identity_eval", DeviceType::kCPU)
+REGISTER_IDENTITY_KERNEL("identity_eval", DeviceType::kCPU)  // NOLINT
 #ifdef WITH_CUDA
-REGISTER_IDENTITY_KERNEL("identity_eval", DeviceType::kCUDA)
+REGISTER_IDENTITY_KERNEL("identity_eval", DeviceType::kCUDA)  // NOLINT
 #endif
 
 }  // namespace
