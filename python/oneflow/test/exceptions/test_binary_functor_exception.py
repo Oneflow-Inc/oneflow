@@ -24,16 +24,6 @@ import oneflow.unittest
 
 
 class TestBinaryFunctorError(flow.unittest.TestCase):
-    def test_add_device_runtime_error(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
-            x = flow.ones((4, 4))
-            y = flow.ones((4, 4)).cuda()
-            z = flow.add(x, y)
-        test_case.assertTrue(
-            "Expected all tensors to be on the same device, but found at least two devices, cpu:0 and cuda:0!"
-            in str(context.exception)
-        )
-
     def test_add_inplace_runtime_error(test_case):
         with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
@@ -51,26 +41,6 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
             x.add_(y)
         test_case.assertTrue(
             "Can not expand shape (2,4) to (2,3)" in str(context.exception)
-        )
-
-    def test_mul_device_runtime_error(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
-            x = flow.ones((4, 4))
-            y = flow.ones((4, 4)).cuda()
-            z = flow.mul(x, y)
-        test_case.assertTrue(
-            "Expected all tensors to be on the same device, but found at least two devices, cpu:0 and cuda:0!"
-            in str(context.exception)
-        )
-
-    def test_mul_inplace_runtime_error(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
-            x = flow.ones((4, 4))
-            y = flow.ones((4, 4)).cuda()
-            x.mul_(y)
-        test_case.assertTrue(
-            "Expected all tensors to be on the same device, but found at least two devices, cpu:0 and cuda:0!"
-            in str(context.exception)
         )
 
         with test_case.assertRaises(RuntimeError) as context:
@@ -91,15 +61,6 @@ class TestBinaryFunctorError(flow.unittest.TestCase):
         )
 
     def test_div_inplace_runtime_error(test_case):
-        with test_case.assertRaises(RuntimeError) as context:
-            x = flow.ones((4, 4))
-            y = flow.ones((4, 4)).cuda()
-            x.div_(y)
-        test_case.assertTrue(
-            "Expected all tensors to be on the same device, but found at least two devices, cpu:0 and cuda:0!"
-            in str(context.exception)
-        )
-
         with test_case.assertRaises(RuntimeError) as context:
             x = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             y = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
