@@ -472,9 +472,6 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
-  const auto* operand = sequnential_instruction->instr_msg().phy_instr_operand().get();
-  const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
-  CHECK_NOTNULL(barrier_operand)->callback();
   auto* stream = sequnential_instruction->mut_stream();
   stream->DeleteInstruction(LivelyInstructionListErase(sequnential_instruction, schedule_ctx));
 }
