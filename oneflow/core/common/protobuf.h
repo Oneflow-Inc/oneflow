@@ -29,6 +29,8 @@ limitations under the License.
 #include "oneflow/core/register/op_blob_arg.pb.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -190,6 +192,14 @@ class BlobDescProto;
 bool operator==(const BlobDescProto& lhs, const BlobDescProto& rhs);
 inline bool operator!=(const BlobDescProto& lhs, const BlobDescProto& rhs) { return !(lhs == rhs); }
 
+inline bool operator==(const JobConfigProto& lhs, const JobConfigProto& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
+inline bool operator==(const ScopeProto& lhs, const ScopeProto& rhs) {
+  return PbMd().Equals(lhs, rhs);
+}
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
@@ -258,6 +268,20 @@ struct hash<oneflow::NdSbp> {
       oneflow::HashCombine(&hash, sbp_hash(nd_sbp.sbp_parallel(i)));
     }
     return hash;
+  }
+};
+
+template<>
+struct hash<oneflow::JobConfigProto> {
+  size_t operator()(const oneflow::JobConfigProto& job_conf) const {
+    return oneflow::SerializedHashPb<oneflow::JobConfigProto>()(job_conf);
+  }
+};
+
+template<>
+struct hash<oneflow::ScopeProto> {
+  size_t operator()(const oneflow::ScopeProto& scope) const {
+    return oneflow::SerializedHashPb<oneflow::ScopeProto>()(scope);
   }
 };
 
