@@ -23,8 +23,8 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_functional_normalize(test_case, placement, sbp):
-    ndim = random(low=2).to(int).value()
-    shape = [random(low=2, high=4) * 8 for i in range(ndim)]
+    ndim = random(low=2, high=5).to(int).value()
+    shape = [random(low=2, high=3) * 8 for i in range(ndim)]
     x = random_tensor(len(shape), *shape).to_global(placement=placement, sbp=sbp)
     dim = random(low=0, high=ndim).to(int).value()
     y = torch.nn.functional.normalize(x, oneof(2, 3, 4), dim, 1e-12)
