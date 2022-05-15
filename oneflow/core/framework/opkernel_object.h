@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/framework/object.h"
-#include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 
@@ -28,17 +27,17 @@ namespace compatible_py {
 
 class OpKernelObject : public Object {
  public:
-  OpKernelObject(int64_t object_id, const std::shared_ptr<cfg::OperatorConf>& op_conf,
+  OpKernelObject(int64_t object_id, const std::shared_ptr<OperatorConf>& op_conf,
                  const std::function<void(Object*)>& release);
   ~OpKernelObject() override { ForceReleaseAll(); }
 
-  std::shared_ptr<cfg::OperatorConf> op_conf() const { return op_conf_; }
+  std::shared_ptr<OperatorConf> op_conf() const { return op_conf_; }
   std::shared_ptr<Scope> scope_symbol() const { return scope_symbol_; }
 
  private:
   void ForceReleaseAll();
 
-  std::shared_ptr<cfg::OperatorConf> op_conf_;
+  std::shared_ptr<OperatorConf> op_conf_;
   std::shared_ptr<Scope> scope_symbol_;
   std::vector<std::function<void(Object*)>> release_;
 };
