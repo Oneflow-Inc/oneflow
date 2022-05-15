@@ -27,13 +27,6 @@ const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_d
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
     const Placement& placement);
 
-namespace cfg {
-class SbpParallel;
-class SbpSignature;
-class NdSbp;
-class NdSbpSignature;
-}  // namespace cfg
-
 class SbpParallel;
 class LogicalBlobId;
 class Operator;
