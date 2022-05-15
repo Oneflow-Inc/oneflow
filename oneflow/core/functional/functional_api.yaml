@@ -724,7 +724,7 @@
   bind_python: True
 
 - name: "broadcast_like"
-  signature: "Tensor (Tensor x, Tensor like, Int32List broadcast_axes) => BroadcastLike"
+  signature: "Tensor (Tensor x, Tensor like, Int32List broadcast_axes=[]) => BroadcastLike"
   bind_python: True
 
 - name: "cast"
@@ -1708,7 +1708,7 @@
 
 - name: "tensor_getitem"
   signature: "Tensor (Tensor x, TensorIndex index) => TensorGetItem"
-  bind_python: True
+  bind_python: False
 
 - name: "scatter"
   signature:
@@ -2036,10 +2036,6 @@
 
 - name: "recv"
   signature: "Tensor (Int64 src, Shape shape=None, DataType dtype=None, Device device=None, *, Tensor out=None) => Recv"
-  bind_python: True
-
-- name: "batch_gather"
-  signature: "Tensor (Tensor in, Tensor indices) => BatchGather"
   bind_python: True
 
 - name: "batch_gather"
