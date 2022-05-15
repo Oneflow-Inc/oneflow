@@ -66,8 +66,18 @@ class EitherPtr final {
   }
 
   template<typename T>
-  const std::shared_ptr<T>& Get() const {
+  const std::shared_ptr<T>& Get() const& {
     return Get(tag<T>{});
+  }
+
+  template<typename T>
+  std::shared_ptr<T>& Get() & {
+    return const_cast<std::shared_ptr<T>&>(Get(tag<T>{}));
+  }
+
+  template<typename T>
+  std::shared_ptr<T>&& Get() && {
+    return const_cast<std::shared_ptr<T>&&>(Get(tag<T>{}));
   }
 
  private:

@@ -53,9 +53,17 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   ~Maybe() = default;
 
   bool IsOk() const { return data_or_error_.template Has<T>(); }
-  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {
-    return data_or_error_.template Get<T>();
+
+  const std::shared_ptr<T>& Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const& {
+    return data();
   }
+
+  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() && {
+    return std::move(*this).data();
+  }
+
+  std::shared_ptr<T> Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const&& = delete;
+
   std::shared_ptr<cfg::ErrorProto> error() const {
     return data_or_error_.template Get<cfg::ErrorProto>();
   }
@@ -70,7 +78,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
     static_assert(std::is_same<T, Type>::value, "error type for argument 1");
     if (IsOk()) {
       *error_str = cfg::ErrorProto().DebugString();
-      return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+      return *data();
     } else {
       *error_str = this->error()->DebugString();
       return default_for_error;
@@ -81,8 +89,7 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
   std::pair<Type, std::shared_ptr<cfg::ErrorProto>> GetDataAndErrorProto(
       const Type& default_for_error) const {
     if (IsOk()) {
-      return std::make_pair(*Data_YouAreNotAllowedToCallThisFuncOutsideThisFile(),
-                            std::shared_ptr<cfg::ErrorProto>());
+      return std::make_pair(*data(), std::shared_ptr<cfg::ErrorProto>());
     } else {
       return std::make_pair(default_for_error, error());
     }
@@ -90,26 +97,40 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 
   std::pair<std::shared_ptr<T>, std::shared_ptr<cfg::ErrorProto>> GetDataPtrAndErrorProto() const {
     if (IsOk()) {
-      return std::make_pair(Data_YouAreNotAllowedToCallThisFuncOutsideThisFile(),
-                            std::shared_ptr<cfg::ErrorProto>());
+      return std::make_pair(data(), std::shared_ptr<cfg::ErrorProto>());
     } else {
       return std::make_pair(std::shared_ptr<T>(), error());
     }
   }
 
   template<typename Type = T>
-  Type GetOrThrow() const {
+  const Type& GetOrThrow() const& {
     if (!IsOk()) { ThrowError(error()); }
-    return *Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+    return *data();
   }
 
-  std::shared_ptr<T> GetPtrOrThrow() const {
+  template<typename Type = T>
+  Type&& GetOrThrow() && {
     if (!IsOk()) { ThrowError(error()); }
-    return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
+    return std::move(*data());
+  }
+
+  const std::shared_ptr<T>& GetPtrOrThrow() const& {
+    if (!IsOk()) { ThrowError(error()); }
+    return data();
+  }
+
+  std::shared_ptr<T>&& GetPtrOrThrow() && {
+    if (!IsOk()) { ThrowError(error()); }
+    return std::move(*this).data();
   }
 
  private:
   EitherPtr<T, cfg::ErrorProto> data_or_error_;
+
+  const std::shared_ptr<T>& data() const& { return data_or_error_.template Get<T>(); }
+
+  std::shared_ptr<T>&& data() && { return std::move(data_or_error_).template Get<T>(); }
 };
 
 template<typename T>
