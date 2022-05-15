@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/session_util.h"
-#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/job_conf.pb.h"
 
 namespace oneflow {
@@ -43,8 +42,6 @@ std::list<std::shared_ptr<Scope>>* ThreadLocalScopeStack() {
 
 Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device) {
   std::shared_ptr<Scope> scope;
-  std::shared_ptr<cfg::JobConfigProto> cfg_config_proto =
-      std::make_shared<cfg::JobConfigProto>(config_proto);
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     int64_t session_id = JUST(GetDefaultSessionId());
     std::string device_tag = "cpu";
@@ -54,7 +51,7 @@ Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device)
       device_tag = device.type();
       device_ids = std::to_string(device.device_id());
     }
-    scope = JUST(builder->BuildInitialScope(session_id, cfg_config_proto, device_tag,
+    scope = JUST(builder->BuildInitialScope(session_id, config_proto, device_tag,
                                             {machine_ids + ":" + device_ids}, nullptr, false));
     return Maybe<void>::Ok();
   }));
@@ -64,13 +61,13 @@ Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device)
 Maybe<Scope> MakeInitialScope(const JobConfigProto& job_conf, Symbol<ParallelDesc> placement,
                               bool is_mirrored) {
   std::shared_ptr<Scope> scope;
-  JUST(PhysicalRun(
-      [&scope, &job_conf, placement, is_mirrored](InstructionsBuilder* builder) -> Maybe<void> {
-        int64_t session_id = JUST(GetDefaultSessionId());
-        scope = JUST(builder->BuildInitialScopeWithPlacement(
-            session_id, std::make_shared<cfg::JobConfigProto>(job_conf), placement, is_mirrored));
-        return Maybe<void>::Ok();
-      }));
+  JUST(PhysicalRun([&scope, &job_conf, placement,
+                    is_mirrored](InstructionsBuilder* builder) -> Maybe<void> {
+    int64_t session_id = JUST(GetDefaultSessionId());
+    scope =
+        JUST(builder->BuildInitialScopeWithPlacement(session_id, job_conf, placement, is_mirrored));
+    return Maybe<void>::Ok();
+  }));
   return scope;
 }
 
