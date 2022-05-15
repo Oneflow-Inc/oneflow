@@ -1123,8 +1123,6 @@ class ReshapeFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
     Shape infered_shape = *JUST(InferShape(x, shape));
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
@@ -1133,6 +1131,8 @@ class ReshapeFunctor {
         return view::Reshape(x, infered_shape, *JUST(infered_stride));
       }
     }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1924,13 +1924,13 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    // if (x->is_local() && !(LazyMode::is_enabled()) && x->requires_grad() == false
-    //     && index.size() == 1 && index[0].IsInteger()) {
-    //   // NOTE: speed up in special case, e.g. dataloader(refer to torch)
-    //   // function call chain of pytorch : tensor getitem -> select -> as_strided
-    //   // function call chain of oneflow : tensor getitem -> as_strided
-    //   return ApplySelectIndexing(x, index);
-    // }
+    if (x->is_local() && !(LazyMode::is_enabled()) && x->requires_grad() == false
+        && index.size() == 1 && index[0].IsInteger()) {
+      // NOTE: speed up in special case, e.g. dataloader(refer to torch)
+      // function call chain of pytorch : tensor getitem -> select -> as_strided
+      // function call chain of oneflow : tensor getitem -> as_strided
+      return ApplySelectIndexing(x, index);
+    }
 
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
@@ -2070,7 +2070,11 @@ class TensorSetItemFunctor {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
       if (x->is_local()) {
-        JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+          JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
+        } else {
+          JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
+        }
       } else {
         if (x->requires_grad() && autograd::GradMode::is_enabled()) {
           return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"

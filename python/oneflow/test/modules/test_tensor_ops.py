@@ -208,7 +208,6 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.int8,
             flow.int32,
             flow.int64,
-            flow.char,
             flow.float32,
             flow.float64,
             flow.double,
