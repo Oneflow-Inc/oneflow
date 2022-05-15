@@ -2341,7 +2341,7 @@ class ChunkFunctor {
     CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError()
                               << "chunk expects at least a 1-dimensional tensor.";
     CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError()
-                                << "chunk expects `chunks` to be greater than 0, got " << chunks;
+                                << "chunk expects `chunks` to be greater than 0, got: " << chunks;
     CHECK_OR_RETURN(-ndim <= dim && dim <= (ndim - 1))
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
         << ", " << ndim - 1 << "], but got " << dim << ")";
@@ -2378,7 +2378,6 @@ class SplitLikeFunctor {
     CHECK_LE_OR_RETURN(like.size(), kMaxInputCount)
         << Error::RuntimeError() << "like.size() must not greater than " << kMaxInputCount
         << ", but got " << like.size();
-    ;
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     TensorTuple inputs(like.size() + 1);
