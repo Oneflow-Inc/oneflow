@@ -23,9 +23,8 @@ namespace oneflow {
 
 Maybe<Symbol<ParallelDesc>> ReplacePlacementDeviceTag(Symbol<ParallelDesc> parallel_desc,
                                                       const std::string& device_type) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf =
-      std::make_shared<cfg::ParallelConf>(*parallel_desc->cfg_parallel_conf());
-  parallel_conf->set_device_tag(device_type);
+  ParallelConf parallel_conf = parallel_desc->parallel_conf();
+  parallel_conf.set_device_tag(device_type);
   std::shared_ptr<ParallelDesc> out_parallel_desc;
   JUST(PhysicalRun(
       [&out_parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
