@@ -90,34 +90,33 @@ void ProfilerStop() {
 #endif  // OF_ENABLE_PROFILER
 }
 
-void EnableProfiler() {
+void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes) {
   CHECK_JUST(vm::ClusterSync());
-  if (Global<ProfileMgr>::Get() == nullptr) { Global<ProfileMgr>::New(); }
+  if (Global<ProfileMgr>::Get() == nullptr) {
+    Global<ProfileMgr>::New(use_cpu, use_cuda, record_shapes);
+  }
 }
 
 // DisableProfilerAndReturnResult will return a json of profile results.
-std::string DisableProfilerAndReturnResult() {
-  CHECK_JUST(vm::ClusterSync());
+Maybe<std::string> DisableProfilerAndReturnResult() {
+  JUST(vm::ClusterSync());
 
-  auto pmgr = Global<ProfileMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
+  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
   std::string results = pmgr->DumpResultsJson();
   Global<ProfileMgr>::Delete();
   return results;
 }
 
 Maybe<std::string> StartRecord(const std::string& name) {
-  auto pmgr = Global<ProfileMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
-  CHECK_JUST(vm::ClusterSync());
+  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  JUST(vm::ClusterSync());
   return pmgr->RegisterEventRecorder(profiler::EventRecorder::CreateCustomEventRecorder(name),
                                      name);
 }
 
 Maybe<void> EndRecord(const std::string& event_recorder_key) {
-  auto pmgr = Global<ProfileMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
-  CHECK_JUST(vm::ClusterSync());
+  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  JUST(vm::ClusterSync());
   pmgr->UnregisterEventRecorder(event_recorder_key);
   return Maybe<void>::Ok();
 }
