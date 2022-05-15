@@ -20,7 +20,7 @@ limitations under the License.
 #include <memory>
 #include <type_traits>
 #include <utility>
-#include "oneflow/core/common/error.cfg.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/just.h"
 
@@ -449,6 +449,41 @@ class Optional final : private internal::OptionalBase<T> {
   }
 
   bool operator!=(const Optional& other) const { return !operator==(other); }
+
+  // TODO: replace `const char*` with `string_view`
+  decltype(auto) value_or_throw(const char* message = "") const& {
+    if (!has_value()) {
+      auto error = Error::ValueNotFoundError();
+      error->set_msg(message);
+      ThrowError(error.error_proto());
+    }
+
+    return base::value();
+  }
+
+  decltype(auto) value_or_throw(const char* message = "") && {
+    if (!has_value()) {
+      auto error = Error::ValueNotFoundError();
+      error->set_msg(message);
+      ThrowError(error.error_proto());
+    }
+
+    return std::move(*this).base::value();
+  }
+
+  template<typename F>
+  decltype(auto) value_or_throw(F&& f) const& {
+    if (!has_value()) { ThrowError(std::forward<F>(f)()); }
+
+    return base::value();
+  }
+
+  template<typename F>
+  decltype(auto) value_or_throw(F&& f) && {
+    if (!has_value()) { ThrowError(std::forward<F>(f)()); }
+
+    return std::move(*this).base::value();
+  }
 
   void reset() { base::reset(); }
 };
