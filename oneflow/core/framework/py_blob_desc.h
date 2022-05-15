@@ -20,18 +20,10 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/job/placement.cfg.h"
-#include "oneflow/core/register/logical_blob_id.cfg.h"
+#include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/framework/py_distribute.h"
 
 namespace oneflow {
-
-namespace cfg {
-
-class LogicalBlobId;
-class ParallelConf;
-
-}  // namespace cfg
 
 namespace compatible_py {
 
@@ -41,30 +33,30 @@ class Tensor {
  public:
   virtual ~Tensor() = default;
 
-  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const = 0;
+  virtual std::shared_ptr<LogicalBlobId> lbi() const = 0;
   virtual std::string logical_blob_name() const = 0;
   virtual std::string op_name() const = 0;
   virtual std::string blob_name() const = 0;
   virtual std::shared_ptr<Shape> shape() const = 0;
   virtual DataType dtype() const = 0;
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
+  virtual const ParallelConf& parallel_conf() const = 0;
 };
 
 class BlobDesc : public Tensor {
  public:
-  BlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+  BlobDesc(const std::shared_ptr<LogicalBlobId>& lbi,
            const std::shared_ptr<Distribute>& distribute);
 
   BlobDesc(const BlobDesc& blob_desc) = default;
   virtual ~BlobDesc() override = default;
 
-  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const override;
+  virtual std::shared_ptr<LogicalBlobId> lbi() const override;
   virtual std::string logical_blob_name() const override;
   virtual std::string op_name() const override;
   virtual std::string blob_name() const override;
   virtual std::shared_ptr<Shape> shape() const override;
   virtual DataType dtype() const override;
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
+  virtual const ParallelConf& parallel_conf() const override;
 
   virtual bool is_dynamic() const;
   virtual std::shared_ptr<Distribute> distribute() const;
@@ -75,7 +67,7 @@ class BlobDesc : public Tensor {
  protected:
   Maybe<std::string> Distribute2Str() const;
 
-  std::shared_ptr<cfg::LogicalBlobId> lbi_;
+  std::shared_ptr<LogicalBlobId> lbi_;
   std::shared_ptr<Distribute> distribute_;
   std::string lbn_;
 };
