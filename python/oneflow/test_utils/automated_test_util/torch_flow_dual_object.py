@@ -785,15 +785,7 @@ def clear_note_fake_program():
     flow.set_printoptions(profile="full")
 
 
-gc_interval = int(os.getenv("ONEFLOW_TEST_GC_INTERVAL", 10))
-gc_counter = 0
-
-
-def manual_gc_collect():
-    global gc_counter
-    gc_counter += 1
-    if gc_counter % gc_interval == 0:
-        gc.collect()
+tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 32))
 
 
 class DualObject:
@@ -828,6 +820,10 @@ class DualObject:
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
+            tensor_size_mb = pytorch.nelement() * pytorch.element_size() / 1024 / 1024
+            assert (
+                tensor_size_mb < tensor_size_limit_mb
+            ), f"Tensor memory in autotest cannot be larger than {tensor_size_limit_mb}MB, but got {tensor_size_mb}MB"
             if testing:
                 dual_objects_to_test.append(self)
         self.pytorch = pytorch
@@ -878,14 +874,6 @@ class DualObject:
             return self.pytorch == other.pytorch and self.oneflow == other.oneflow
         else:
             return self.pytorch == other
-
-    def __del__(self):
-        # force running gc to avoid the periodic gc related to metaclass
-        # 'gc' will be None if Python is shutting down
-        try:
-            manual_gc_collect()
-        except Exception:
-            pass
 
 
 dual_modules_to_test = []
