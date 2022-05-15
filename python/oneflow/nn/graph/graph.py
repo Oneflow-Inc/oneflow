@@ -827,7 +827,7 @@ class Graph(object):
                 else bool(enable_mlir_inference_opt)
             )
             if (self.training or self._is_global_view) and enable_mlir_inference_opt:
-                logging.warn(
+                logging.warning(
                     "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode. "
                 )
                 enable_mlir_inference_opt = False

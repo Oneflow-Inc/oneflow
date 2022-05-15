@@ -810,6 +810,9 @@ class DualObject:
             }
             already_global = any([v.is_global for v in oneflow_state_dict.values()])
             oneflow.load_state_dict(state_dict, strict=False)
+            if not global_backward:
+                oneflow.eval()
+                pytorch.eval()
             if is_global():
                 if already_global:
                     for (k, v) in oneflow_state_dict.items():
