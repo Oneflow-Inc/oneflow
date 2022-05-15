@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
-#include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {

@@ -30,6 +30,7 @@ import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
+from oneflow.core.serving.saved_model_pb2 import SavedModel
 
 
 def CurrentResource():
@@ -253,3 +254,11 @@ def GetCurrentJob():
     ret = job_pb.Job()
     ret.ParseFromString(serialized_job)
     return ret
+
+
+def LoadSavedModel(saved_model_meta_file, is_prototxt_file):
+    serialized_saved_model = oneflow._oneflow_internal.LoadSavedModel(
+        saved_model_meta_file, is_prototxt_file
+    )
+    saved_model = text_format.Parse(serialized_saved_model, SavedModel())
+    return saved_model

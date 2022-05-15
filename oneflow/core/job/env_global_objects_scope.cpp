@@ -40,7 +40,6 @@ limitations under the License.
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
-#include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
@@ -112,16 +111,16 @@ void SetCpuDeviceManagerNumThreads() {
 
 void ClearAllSymbolAndIdCache() {
   Global<symbol::Storage<Scope>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
+  Global<symbol::IdCache<ScopeProto>>::Get()->ClearAll();
 
   Global<symbol::Storage<JobDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::JobConfigProto>>::Get()->ClearAll();
+  Global<symbol::IdCache<JobConfigProto>>::Get()->ClearAll();
 
   Global<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::ParallelConf>>::Get()->ClearAll();
+  Global<symbol::IdCache<ParallelConf>>::Get()->ClearAll();
 
   Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
+  Global<symbol::IdCache<OperatorConf>>::Get()->ClearAll();
 }
 
 #if defined(__linux__) && defined(WITH_RDMA)

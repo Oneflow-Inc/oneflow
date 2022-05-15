@@ -29,24 +29,12 @@ class PyForeignCallback : public ForeignCallback {
   using ForeignCallback::ForeignCallback;
 
   // Trampoline (need one for each virtual function)
-  void EagerMirroredCast(const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-                         const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
-    PYBIND11_OVERRIDE(void,              /* Return type */
-                      ForeignCallback,   /* Parent class */
-                      EagerMirroredCast, /* Name of function in C++ (must match Python name) */
-                      op_attribute, parallel_conf /* Argument(s) */
-    );
-  }
-
-  void EagerInterpretCompletedOp(
-      const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const override {
-    PYBIND11_OVERRIDE(void, ForeignCallback, EagerInterpretCompletedOp, op_attribute,
-                      parallel_conf);
-  }
-
   void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const override {
-    PYBIND11_OVERRIDE(void, ForeignCallback, OfBlobCall, unique_id, ofblob_ptr);
+    PYBIND11_OVERRIDE(void,                 /* Return type */
+                      ForeignCallback,      /* Parent class */
+                      OfBlobCall,           /* Name of function in C++ (must match Python name) */
+                      unique_id, ofblob_ptr /* Argument(s) */
+    );
   }
 
   void RemoveForeignCallback(int64_t unique_id) const override {
@@ -62,8 +50,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<ForeignCallback, PyForeignCallback, std::shared_ptr<ForeignCallback>>(
       m, "ForeignCallback")
       .def(py::init<>())
-      .def("EagerMirroredCast", &ForeignCallback::EagerMirroredCast)
-      .def("EagerInterpretCompletedOp", &ForeignCallback::EagerInterpretCompletedOp)
       .def("OfBlobCall", &ForeignCallback::OfBlobCall)
       .def("RemoveForeignCallback", &ForeignCallback::RemoveForeignCallback);
 }
