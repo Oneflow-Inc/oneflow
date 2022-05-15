@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -44,15 +45,15 @@ class IEvent {
 
   IEvent() = delete;
   explicit IEvent(const std::string& name) : name_(name) {}
+
   virtual std::string Key() = 0;
   virtual nlohmann::json ToJson();
   virtual ~IEvent() = default;
+  virtual void Start();
+  virtual void Finish();
 
-  void Start();
-  void Finish();
   const std::string& GetName() const;
   time_t GetDuration();
-  static std::shared_ptr<IEvent> Create(EventType type, const std::string& name);
 
  protected:
   std::string name_;
@@ -62,19 +63,81 @@ class IEvent {
 
 class CustomEvent final : public IEvent {
  public:
-  explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
   std::string Key() override;
+
   nlohmann::json ToJson() override;
+
+  static std::shared_ptr<CustomEvent> Create(const std::string& name);
+
+ private:
+  explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
 };
+
+#if defined(WITH_CUDA)
+
+class CUDAEventPair {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CUDAEventPair);
+
+  explicit CUDAEventPair(cudaStream_t cuda_stream) : cuda_stream_(cuda_stream) {
+    OF_CUDA_CHECK(cudaEventCreate(&cuda_event_start_));
+    OF_CUDA_CHECK(cudaEventCreate(&cuda_event_finish_));
+  }
+
+  void Start() { OF_CUDA_CHECK(cudaEventRecord(cuda_event_start_, cuda_stream_)); }
+
+  void Finish() { OF_CUDA_CHECK(cudaEventRecord(cuda_event_finish_, cuda_stream_)); }
+
+  double ElapsedTime() const {
+    float elapsed_time_ms = 0;
+    OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_time_ms, cuda_event_start_, cuda_event_finish_));
+    return elapsed_time_ms * 1000.0;  // convert to us
+  }
+
+  ~CUDAEventPair() {
+    if (cuda_event_start_) { OF_CUDA_CHECK(cudaEventDestroy(cuda_event_start_)); }
+    if (cuda_event_finish_) { OF_CUDA_CHECK(cudaEventDestroy(cuda_event_finish_)); }
+  }
+
+ private:
+  cudaStream_t cuda_stream_ = nullptr;
+  cudaEvent_t cuda_event_start_ = nullptr;
+  cudaEvent_t cuda_event_finish_ = nullptr;
+};
+
+#endif  // WITH_CUDA
 
 class KernelEvent final : public IEvent {
  public:
-  explicit KernelEvent(const std::string& kernel_name) : IEvent(kernel_name) {}
   std::string Key() override;
+
   nlohmann::json ToJson() override;
+
+  static std::shared_ptr<KernelEvent> Create(
+      const std::string& name, const std::function<std::vector<Shape>(void)>& shape_getter);
+
   void RecordShape(const Shape& shape);
 
+  void Start() override;
+  void Finish() override;
+
+#if defined(WITH_CUDA)
+  void InitCudaEventPair(cudaStream_t cuda_stream) {
+    cuda_event_pair_ = std::make_shared<CUDAEventPair>(cuda_stream);
+  }
+#endif  // WITH_CUDA
+
  private:
+  explicit KernelEvent(const std::string& kernel_name,
+                       const std::function<std::vector<Shape>(void)>& shape_getter)
+      : IEvent(kernel_name) {
+    if (shape_getter) { input_shapes_ = shape_getter(); }
+  }
+
+#if defined(WITH_CUDA)
+  std::shared_ptr<CUDAEventPair> cuda_event_pair_ = nullptr;
+#endif  // WITH_CUDA
+
   std::vector<Shape> input_shapes_;
   std::string FormatShapes(size_t max_num_to_format = 4);
 };
@@ -84,7 +147,9 @@ class EventRecorder;
 class ProfileMgr {
  public:
   friend class EventRecorder;
-  ProfileMgr() = default;
+
+  ProfileMgr(bool use_cpu, bool use_cuda, bool record_shapes)
+      : use_cpu_(use_cpu), use_cuda_(use_cuda), record_shapes_(record_shapes) {}
 
   std::string RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,
                                     const std::string& name);
@@ -92,6 +157,9 @@ class ProfileMgr {
   std::string DumpResultsJson();
 
  private:
+  bool use_cpu_;
+  bool use_cuda_;
+  bool record_shapes_;
   std::queue<std::shared_ptr<IEvent>> events_;
   std::unordered_map<std::string, std::shared_ptr<EventRecorder>> event_recorders_;
   // To prevent releasing EventRecorders of the same name.
@@ -108,24 +176,31 @@ class EventRecorder {
   OF_DISALLOW_COPY_AND_MOVE(EventRecorder);
 
   explicit EventRecorder(const std::shared_ptr<IEvent>& event) : event_(event) {
-    RegisterEventToProfileMgr(event);
+    CHECK_JUST(RegisterEventToProfileMgr(event));
     event_->Start();
   }
 
   Maybe<void> RegisterEventToProfileMgr(const std::shared_ptr<IEvent>& event) {
-    auto pmgr = Global<profiler::ProfileMgr>::Get();
-    CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
+    auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
     pmgr->events_.push(event_);
     return Maybe<void>::Ok();
   }
 
   ~EventRecorder() {
-    event_->Finish();
-    event_.reset();
+    if (event_) {
+      event_->Finish();
+      event_.reset();
+    }
   }
   static std::shared_ptr<EventRecorder> CreateCustomEventRecorder(const std::string& name);
-  static std::shared_ptr<EventRecorder> CreateKernelEventRecorder(
-      const std::string& name, const ShapeGetterFuncType& shape_getter = {});
+#if defined(WITH_CUDA)
+  static Maybe<EventRecorder> CreateKernelEventRecorder(const std::string& name,
+                                                        cudaStream_t cuda_stream,
+                                                        const ShapeGetterFuncType& shape_getter);
+#else  // WITH_CUDA
+  static Maybe<EventRecorder> CreateKernelEventRecorder(const std::string& name,
+                                                        const ShapeGetterFuncType& shape_getter);
+#endif  // WITH_CUDA
 
  private:
   std::shared_ptr<IEvent> event_;
