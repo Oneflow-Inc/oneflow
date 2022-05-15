@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -128,18 +130,21 @@ struct LocalCallOpKernelUtil final {
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
     {
-      std::shared_ptr<profiler::EventRecorder> er_guard;
-      if (Global<profiler::ProfileMgr>::Get() != nullptr) {
-        er_guard = profiler::EventRecorder::CreateKernelEventRecorder(
-            opkernel->op_type_name(), [&]() -> std::vector<Shape> {
-              std::vector<Shape> shapes;
-              for (const auto& pair : compute_ctx->inputs()) {
-                shapes.push_back(
-                    compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
-              }
-              return shapes;
-            });
-      }
+      auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
+          opkernel->op_type_name(),
+#if defined(WITH_CUDA)
+          compute_ctx->device_type() == DeviceType::kCUDA
+              ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
+              : nullptr,
+#endif
+          [compute_ctx]() -> std::vector<Shape> {
+            std::vector<Shape> shapes;
+            for (const auto& pair : compute_ctx->inputs()) {
+              shapes.push_back(
+                  compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
+            }
+            return shapes;
+          }));
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
     }
     OF_PROFILER_RANGE_POP();
