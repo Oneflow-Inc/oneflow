@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/job/parallel_signature.cfg.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
