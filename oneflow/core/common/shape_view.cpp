@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-ShapeView::ShapeView(const Int64ListProto& shape_proto)
+ShapeView::ShapeView(const ShapeProto& shape_proto)
     : ShapeViewBase<const int64_t>(shape_proto.dim().data(), shape_proto.dim_size()) {}
 ShapeView::ShapeView(const Shape& shape)
     : ShapeViewBase<const int64_t>(shape.dim_vec().data(), shape.dim_vec().size()) {}

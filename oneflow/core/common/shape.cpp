@@ -63,7 +63,7 @@ Shape::Shape(const std::initializer_list<int64_t>& dim_vec)
     : dim_vec_(dim_vec), is_initialized_(true) {}
 Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec), is_initialized_(true) {}
 Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)), is_initialized_(true) {}
-Shape::Shape(const Int64ListProto& shape_proto) : is_initialized_(true) {
+Shape::Shape(const ShapeProto& shape_proto) : is_initialized_(true) {
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
 }
 
@@ -109,7 +109,7 @@ std::string Shape::ToString() const {
 
 std::string Shape::DebugStr() const { return ToString(); }
 
-void Shape::ToProto(Int64ListProto* ret) const {
+void Shape::ToProto(ShapeProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(dim_vec_.begin(), dim_vec_.end());
 }
 
