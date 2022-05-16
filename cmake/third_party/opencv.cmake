@@ -9,7 +9,7 @@ set(OPENCV_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
 set(OPENCV_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
-set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/51cef2651.tar.gz)
+set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/refs/tags/51cef2651.tar.gz)
 use_mirror(VARIABLE OPENCV_URL URL ${OPENCV_URL})
 
 set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
