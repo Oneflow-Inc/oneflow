@@ -1,8 +1,10 @@
 import functools
+import os
 from typing import Any, Callable, Iterable, List, Optional, Tuple
 
 import torch
 import oneflow as flow
+import oneflow.support.env_var_util
 import oneflow.test_utils.automated_test_util.torch_flow_dual_object as dual_object_module
 
 __all__ = ['profile', 'set_profiler_hook', 'profile_dual_object']
@@ -32,6 +34,7 @@ class ProfResult:
 
 WARMUP_NUM = 10
 RUN_NUM = 1000
+PRINT_PROF_RESULT = flow.support.env_var_util.parse_boolean_form_env("ONEFLOW_PROFILE_PRINT_RESULT", True)
 
 def run_torch(op, args, kwargs, device, num_threads, op_name, args_description, additional_description=None):
     assert device in ['cpu', 'cuda']
@@ -47,13 +50,15 @@ def run_torch(op, args, kwargs, device, num_threads, op_name, args_description, 
     for _ in range(WARMUP_NUM):
         op(*args, **kwargs)
 
-    print(f'PyTorch ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):')
+    if PRINT_PROF_RESULT:
+        print(f'PyTorch ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):')
     with torch.profiler.profile() as prof:
         with torch.profiler.record_function("end-to-end"):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
-    print(prof.key_averages().table(row_limit=10))
+    if PRINT_PROF_RESULT:
+        print(prof.key_averages().table(row_limit=10))
     return ProfResult(prof, RUN_NUM, 'PyTorch', device, num_threads, op_name, args_description, additional_description)
 
 
@@ -71,13 +76,15 @@ def run_flow(op, args, kwargs, device, num_threads, op_name, args_description, a
     for _ in range(WARMUP_NUM):
         op(*args, **kwargs)
 
-    print(f'OneFlow ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):')
+    if PRINT_PROF_RESULT:
+        print(f'OneFlow ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):')
     with flow.profiler.profile() as prof:
         with flow.profiler.record_function("end-to-end"):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
-    print(prof.key_averages())
+    if PRINT_PROF_RESULT:
+        print(prof.key_averages())
     return ProfResult(prof, RUN_NUM, 'OneFlow', device, num_threads, op_name, args_description, additional_description)
 
 
