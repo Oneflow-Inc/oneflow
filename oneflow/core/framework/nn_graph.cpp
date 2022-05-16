@@ -281,6 +281,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
     Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
+    PlanUtil::ClearCtrlAcrossVariableInplaceBuffer(&plan_);
     PlanUtil::SetRegstVariableOpNamesInPlan(&plan_, variable_op_names_);
     PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(&plan_);
     PlanUtil::SetForceInplaceMemBlock(&plan_);

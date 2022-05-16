@@ -50,6 +50,13 @@ int RegstSlot::TryPopFrontRegst(int64_t regst_desc_id) {
   return 0;
 }
 
+int64_t RegstSlot::GetReadyRegstSize(int64_t regst_desc_id) const {
+  CHECK(is_inited_);
+  auto it = regst_desc_id2regsts_.find(regst_desc_id);
+  if (it == regst_desc_id2regsts_.end()) { return -1; }
+  return it->second.size();
+}
+
 void RegstSlot::PopFrontRegsts(const std::vector<int64_t>& regst_desc_ids) {
   CHECK(is_inited_);
   for (int64_t regst_desc_id : regst_desc_ids) { CHECK_EQ(0, TryPopFrontRegst(regst_desc_id)); }

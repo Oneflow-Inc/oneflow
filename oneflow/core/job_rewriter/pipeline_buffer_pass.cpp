@@ -81,7 +81,7 @@ int64_t GetStageIdHint(const OpNode* node) {
   return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
 }
 
-void TryInsertOrUseConstantInplaceBufferOpToSrcNode(
+void TryInsertOrUseVariableInplaceBufferOpToSrcNode(
     const OpEdge* op_edge, const int64_t buffer_size,
     HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
     HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
@@ -93,7 +93,7 @@ void TryInsertOrUseConstantInplaceBufferOpToSrcNode(
   const std::string& src_op_name = src_node->op().op_name();
   const std::string& dst_op_name = dst_node->op().op_name();
   if (!src_node->parallel_desc().EqualsIgnoringHierarchy(dst_node->parallel_desc())) {
-    LOG(WARNING) << " Try Insert ConstantInplaceBuffer between [" << src_op_name << "] -> ["
+    LOG(WARNING) << " Try Insert VariableInplaceBuffer between [" << src_op_name << "] -> ["
                  << dst_op_name << "] but with different parallel_desc of [ "
                  << src_node->parallel_desc().parallel_conf().DebugString() << " ] -> [ "
                  << dst_node->parallel_desc().parallel_conf().DebugString() << "]\n";
@@ -109,7 +109,7 @@ void TryInsertOrUseConstantInplaceBufferOpToSrcNode(
       it = buffer_op_name2op_conf
                ->emplace(buffer_op_name,
                          user_op::UserOpConfWrapperBuilder(buffer_op_name)
-                             .Op("_constant_inplace_buffer")
+                             .Op("_variable_inplace_buffer")
                              .Input("in", lbn)
                              .Output("out")
                              .Attr<int64_t>("buffer_size", buffer_size)
@@ -349,13 +349,14 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                        << "). Make sure to change the tensor's placment before it enter the module "
                           "of a next pipeline stage.\n";
         }
-        const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
         if (equivalent_var_ops.find(src_node) != equivalent_var_ops.end()) {
-          // NOTE(chengcheng): inplaced buffer has regst num = 1 for memory cost.
-          TryInsertOrUseConstantInplaceBufferOpToSrcNode(
+          // NOTE(chengcheng): inplace buffer has regst num = 1 for memory cost.
+          const int64_t buffer_size = GlobalJobDesc().job_conf().num_gradient_accumulation_steps();
+          TryInsertOrUseVariableInplaceBufferOpToSrcNode(
               in_edge, buffer_size, &buffer_op_name2op_conf, &buffer_op_name2parallel_conf,
               &mut_op_name2conf);
         } else {
+          const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
           TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,
                                           &buffer_op_name2parallel_conf, &mut_op_name2conf);
         }
@@ -430,8 +431,13 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
   for (auto& pair : buffer_op_name2op_conf) {
     CHECK(buffer_op_name2parallel_conf.find(pair.first) != buffer_op_name2parallel_conf.end());
     JUST(job_builder->AddOp(buffer_op_name2parallel_conf.at(pair.first), pair.second));
+    const OperatorConf& op_conf = pair.second;
+    if (op_conf.ctrl_in_op_name_size() > 0) {
+      LOG(INFO) << " cclog_v2:  insert buffer op conf: " << pair.second.DebugString();
+    }
   }
   for (auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
+
   return Maybe<void>::Ok();
 }
 

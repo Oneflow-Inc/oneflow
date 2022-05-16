@@ -32,6 +32,7 @@ struct PlanUtil {
   static void GenMemBlockAndChunk4Plan(Plan* plan);
   static void SetRegstVariableOpNamesInPlan(Plan*, const HashSet<std::string>& variable_op_names);
   static void CleanUselessMemBlockAndCheckValid(Plan* plan);
+  static void ClearCtrlAcrossVariableInplaceBuffer(Plan* plan);
   static void ToDotFile(const Plan& plan, const std::string& filepath);
   static std::function<RegstDescProto*(int64_t)> MakeMutRegstDesc4Id(Plan* plan);
   static void SetForceInplaceMemBlock(Plan* plan);

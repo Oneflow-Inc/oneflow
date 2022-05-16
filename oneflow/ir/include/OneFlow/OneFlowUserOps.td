@@ -2632,7 +2632,7 @@ def OneFlow_SignOp : OneFlow_IdempotentBaseOp<"sign", [NoSideEffect, DeclareOpIn
 #endif // GET_ONEFLOW_IDEMPOTENT_OP_DEFINITIONS
 
 // Group: IDENTITY
-// amp_white_identity, identity, identity_buffer, tuple_identity, _constant_inplace_buffer
+// amp_white_identity, identity, identity_buffer, tuple_identity, _variable_inplace_buffer
 // Total: 4
 
 #ifdef GET_ONEFLOW_IDENTITY_OP_DEFINITIONS
@@ -2694,7 +2694,7 @@ def OneFlow_TupleIdentityOp : OneFlow_BaseOp<"tuple_identity", [NoSideEffect, De
   let has_sbp_signature_infer_fn = 1;
 }
 
-def OneFlow_ConstantInplaceBufferOp : OneFlow_BaseOp<"_constant_inplace_buffer", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_VariableInplaceBufferOp : OneFlow_BaseOp<"_variable_inplace_buffer", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );

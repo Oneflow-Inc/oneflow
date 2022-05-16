@@ -45,6 +45,8 @@ class RegstSlot final {
       std::function<bool(int64_t)>,
       std::function<void(int64_t regst_desc_id, const std::deque<Regst*>&)>) const;
 
+  int64_t GetReadyRegstSize(int64_t regst_desc_id) const;
+
   Regst* Front(int64_t regst_desc_id) const;
   Regst* SoleFront() const;
   Regst* FirstFront() const;

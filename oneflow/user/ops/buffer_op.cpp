@@ -45,19 +45,19 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> ConstantInplaceBufferOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> VariableInplaceBufferOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ConstantInplaceBufferOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> VariableInplaceBufferOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> ConstantInplaceBufferOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> VariableInplaceBufferOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
     ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
@@ -69,7 +69,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> ConstantInplaceBufferOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> VariableInplaceBufferOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }

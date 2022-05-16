@@ -18,34 +18,34 @@ limitations under the License.
 
 namespace oneflow {
 
-class ConstantInplaceBufferCompTaskNode final : public CompTaskNode {
+class VariableInplaceBufferCompTaskNode final : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConstantInplaceBufferCompTaskNode);
-  ConstantInplaceBufferCompTaskNode() = default;
-  ~ConstantInplaceBufferCompTaskNode() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(VariableInplaceBufferCompTaskNode);
+  VariableInplaceBufferCompTaskNode() = default;
+  ~VariableInplaceBufferCompTaskNode() override = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
 
-  TaskType GetTaskType() const override { return TaskType::kConstantInplaceBuffer; }
+  TaskType GetTaskType() const override { return TaskType::kVariableInplaceBuffer; }
 
  private:
   void BuildExecGphAndRegst() override;
 };
 
-void ConstantInplaceBufferCompTaskNode::ConsumeAllRegsts() {
+void VariableInplaceBufferCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst());
 }
 
-void ConstantInplaceBufferCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void VariableInplaceBufferCompTaskNode::ProduceAllRegstsAndBindEdges() {
   // NOTE(chengcheng):
-  //   In compiler: ConstantInplaceBufferCompTaskNode has 1 regst num for inplace.
-  //   In Runtime: ConstantInplaceBufferActor will create n regst by buffer size with same dptr.
+  //   In compiler: VariableInplaceBufferCompTaskNode has 1 regst num for inplace.
+  //   In Runtime: VariableInplaceBufferActor will create n regst by buffer size with same dptr.
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", out_regst); });
 }
 
-void ConstantInplaceBufferCompTaskNode::BuildExecGphAndRegst() {
+void VariableInplaceBufferCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<const Operator> sole_op = op();
   node->mut_op() = sole_op;
@@ -61,8 +61,8 @@ void ConstantInplaceBufferCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx());
 }
 
-REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kConstantInplaceBuffer);
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kVariableInplaceBuffer);
 
-REGISTER_USER_OP_COMP_TASK_NODE_TYPE("_constant_inplace_buffer", ConstantInplaceBufferCompTaskNode);
+REGISTER_USER_OP_COMP_TASK_NODE_TYPE("_variable_inplace_buffer", VariableInplaceBufferCompTaskNode);
 
 }  // namespace oneflow

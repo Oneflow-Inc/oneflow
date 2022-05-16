@@ -416,6 +416,133 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
   }
 }
 
+void PlanUtil::ClearCtrlAcrossVariableInplaceBuffer(Plan* plan) {
+  HashMap<int64_t, RegstDescProto*> regst_desc_id2proto;
+  HashMap<int64_t, TaskProto*> task_id2proto;
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task = plan->mutable_task(i);
+    task_id2proto.emplace(task->task_id(), task);
+    for (auto& pair : *(task->mutable_produced_regst_desc())) {
+      regst_desc_id2proto.emplace(pair.second.regst_desc_id(), &pair.second);
+    }
+  }
+
+  auto RemoveCtrlInConsumer = [&](int64_t regst_desc_id) {
+    auto* out_ctrl_regst = regst_desc_id2proto.at(regst_desc_id);
+    for (int64_t consumer_task_id : out_ctrl_regst->consumer_task_id()) {
+      TaskProto* consumer = task_id2proto.at(consumer_task_id);
+      bool removed = false;
+      for (auto& pair : consumer->consumed_regst_desc_id()) {
+        if (pair.second.regst_desc_id_size() == 1) {
+          if (pair.second.regst_desc_id(0) == regst_desc_id) {
+            consumer->mutable_consumed_regst_desc_id()->erase(pair.first);
+            LOG(WARNING) << " Remove in ctrl consumed regst: " << regst_desc_id
+                         << " in task: " << consumer_task_id;
+            removed = true;
+            break;
+          }
+        } else {
+          std::vector<int64_t> consumed_regst_desc_ids;
+          bool find_in = false;
+          for (int64_t consumed_regst_desc_id : pair.second.regst_desc_id()) {
+            if (consumed_regst_desc_id == regst_desc_id) {
+              find_in = true;
+            } else {
+              consumed_regst_desc_ids.push_back(consumed_regst_desc_id);
+            }
+          }
+          if (find_in) {
+            auto& regst_ids = consumer->mutable_consumed_regst_desc_id()->at(pair.first);
+            LOG(WARNING) << " Remove in ctrl consumed regst: " << regst_desc_id
+                         << " in task: " << consumer_task_id
+                         << " with regst_id_set before: " << regst_ids.DebugString();
+            regst_ids.clear_regst_desc_id();
+            for (int64_t consumed_regst_desc_id : consumed_regst_desc_ids) {
+              regst_ids.add_regst_desc_id(consumed_regst_desc_id);
+            }
+            LOG(WARNING) << " after: " << regst_ids.DebugString();
+            removed = true;
+            break;
+          }
+        }
+      }
+      CHECK(removed) << " task proto: " << consumer->DebugString()
+                     << " cannot find consumer regst desc id : " << regst_desc_id;
+      LOG(WARNING) << " task_proto: " << consumer->DebugString()
+                   << " Removed consumed ctrl regst desc id : " << regst_desc_id;
+    }
+  };
+
+  for (auto& pair : task_id2proto) {
+    TaskProto* task = pair.second;
+    if (task->task_type() == TaskType::kVariableInplaceBuffer) {
+      if (task->consumed_regst_desc_id().size() == 1 && task->produced_regst_desc().size() == 1) {
+        continue;
+      }
+      LOG(WARNING) << " VariableInplaceBufferActor : " << task->DebugString()
+                   << " has ctrl regst but will be removed.";
+      if (task->consumed_regst_desc_id().size() > 1) {
+        CHECK(task->consumed_regst_desc_id().find("in_ctrl")
+              != task->consumed_regst_desc_id().end());
+        const RegstDescIdSet consumed_ids = task->consumed_regst_desc_id().at("in_ctrl");
+        task->mutable_consumed_regst_desc_id()->erase("in_ctrl");
+        for (int64_t regst_desc_id : consumed_ids.regst_desc_id()) {
+          CHECK(regst_desc_id2proto.find(regst_desc_id) != regst_desc_id2proto.end());
+          RegstDescProto* in_ctrl = regst_desc_id2proto.at(regst_desc_id);
+          if (in_ctrl->consumer_task_id_size() == 1) {
+            CHECK_EQ(in_ctrl->consumer_task_id(0), task->task_id());
+            auto* in_ctrl_task = task_id2proto.at(in_ctrl->producer_task_id());
+            auto* in_ctrl_task_produced_regsts = in_ctrl_task->mutable_produced_regst_desc();
+            auto in_ctrl_task_ctrl_regst_it = in_ctrl_task_produced_regsts->begin();
+            for (; in_ctrl_task_ctrl_regst_it != in_ctrl_task_produced_regsts->end();
+                 ++in_ctrl_task_ctrl_regst_it) {
+              if (in_ctrl_task_ctrl_regst_it->second.regst_desc_id() == regst_desc_id) {
+                LOG(WARNING) << " Remove ctrl regst : "
+                             << in_ctrl_task_ctrl_regst_it->second.DebugString();
+                in_ctrl_task_produced_regsts->erase(in_ctrl_task_ctrl_regst_it);
+                break;
+              }
+            }
+          } else {
+            LOG(WARNING) << " Remove consumer_task_id: " << task->task_id()
+                         << " in regst: " << in_ctrl->DebugString();
+            std::vector<int64_t> consumer_task_ids;
+            for (int64_t consumer_task_id : in_ctrl->consumer_task_id()) {
+              if (consumer_task_id != task->task_id()) {
+                consumer_task_ids.push_back(consumer_task_id);
+              }
+            }
+            CHECK_EQ(consumer_task_ids.size(), in_ctrl->consumer_task_id_size() - 1);
+            in_ctrl->clear_consumer_task_id();
+            for (int64_t consumer_task_id : consumer_task_ids) {
+              in_ctrl->add_consumer_task_id(consumer_task_id);
+            }
+          }
+        }
+      }
+      if (task->produced_regst_desc().size() > 1) {
+        std::vector<std::string> ctrl_names;
+        bool find_out = false;
+        for (const auto& produce_pair : task->produced_regst_desc()) {
+          if (produce_pair.first == "out") {
+            find_out = true;
+            continue;
+          }
+          ctrl_names.push_back(produce_pair.first);
+        }
+        CHECK(find_out);
+        for (const std::string& ctrl_regst_name : ctrl_names) {
+          RemoveCtrlInConsumer(task->produced_regst_desc().at(ctrl_regst_name).regst_desc_id());
+          task->mutable_produced_regst_desc()->erase(ctrl_regst_name);
+          LOG(WARNING) << " Remove ctrl regst : " << ctrl_regst_name;
+        }
+      }
+      LOG(WARNING) << " After Clear, VariableInplaceBufferActor proto now is : "
+                   << task->DebugString();
+    }
+  }
+}
+
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
   size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
@@ -873,7 +1000,7 @@ void PlanUtil::GenRegisterHint(Plan* plan) {
   for (const TaskProto& task : plan->task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       if (pair.second.register_num() != 1 || task.task_type() == TaskType::kRepeat
-          || task.task_type() == TaskType::kConstantInplaceBuffer) {
+          || task.task_type() == TaskType::kVariableInplaceBuffer) {
         multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
       }
     }
