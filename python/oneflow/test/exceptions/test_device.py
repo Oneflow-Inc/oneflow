@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import re
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -25,8 +26,11 @@ class TestDevice(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as exp:
             flow.device("xpu")
         test_case.assertTrue(
-            "Expected one of cpu, cuda device type at start of device string: xpu"
-            in str(exp.exception)
+            re.match(
+                "Expected one of (.*) device type at start of device string: xpu",
+                str(exp.exception),
+            )
+            is not None
         )
 
     def test_device_index(test_case):
