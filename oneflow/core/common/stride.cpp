@@ -45,9 +45,6 @@ Stride::Stride(DimVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
 Stride::Stride(const Int64ListProto& stride_proto) {
   stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
-Stride::Stride(const cfg::Int64ListProto& stride_proto) {
-  stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
-}
 
 Stride& Stride::assign(const DimVector& stride_vec) {
   stride_vec_ = stride_vec;

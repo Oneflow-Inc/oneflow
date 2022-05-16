@@ -30,12 +30,6 @@ class Stride;
 class ParallelDesc;
 class PlacedNdSbp;
 
-namespace cfg {
-
-class NdSbp;
-
-}
-
 namespace one {
 
 class ConsistentTensorMeta;

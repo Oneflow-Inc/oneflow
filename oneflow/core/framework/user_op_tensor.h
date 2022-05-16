@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"

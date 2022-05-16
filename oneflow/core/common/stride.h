@@ -17,17 +17,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
-#include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 class StrideView;
-
-namespace cfg {
-class Int64ListProto;
-}
 
 class Stride final {
  public:
@@ -37,7 +32,6 @@ class Stride final {
   explicit Stride(DimVector&& stride_vec);
   explicit Stride(const DimVector& stride_vec);
   explicit Stride(const Int64ListProto& stride_proto);
-  explicit Stride(const cfg::Int64ListProto& stride_proto);
   Stride(const std::initializer_list<int64_t>& stride_vec);
   Stride& operator=(const Stride& stride);
   Stride& assign(const DimVector& stride_vec);

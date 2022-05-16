@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace oneflow {
 
@@ -31,11 +30,6 @@ namespace user_op {
   cpp_type AttrValueAccessor<cpp_type>::Attr(const AttrValue& val) {                     \
     CHECK(val.has_##field());                                                            \
     return val.field();                                                                  \
-  }                                                                                      \
-  template<>                                                                             \
-  cpp_type AttrValueAccessor<cpp_type>::Attr(const cfg::AttrValue& val) {                \
-    CHECK(val.has_##field());                                                            \
-    return static_cast<cpp_type>(val.field());                                           \
   }                                                                                      \
   template<>                                                                             \
   void AttrValueAccessor<cpp_type>::Attr(const cpp_type& cpp_val, AttrValue* attr_val) { \
@@ -58,22 +52,12 @@ Shape AttrValueAccessor<Shape>::Attr(const AttrValue& val) {
 }
 
 template<>
-Shape AttrValueAccessor<Shape>::Attr(const cfg::AttrValue& val) {
-  return Shape(val.at_shape());
-}
-
-template<>
 void AttrValueAccessor<Shape>::Attr(const Shape& cpp_val, AttrValue* attr_val) {
   cpp_val.ToProto(attr_val->mutable_at_shape());
 }
 
 template<>
 Stride AttrValueAccessor<Stride>::Attr(const AttrValue& val) {
-  return Stride(val.at_stride());
-}
-
-template<>
-Stride AttrValueAccessor<Stride>::Attr(const cfg::AttrValue& val) {
   return Stride(val.at_stride());
 }
 
@@ -89,11 +73,6 @@ void AttrValueAccessor<Stride>::Attr(const Stride& cpp_val, AttrValue* attr_val)
     return PbRf2StdVec<cpp_type::value_type>(val.field().val());                                \
   }                                                                                             \
   template<>                                                                                    \
-  cpp_type AttrValueAccessor<cpp_type>::Attr(const cfg::AttrValue& val) {                       \
-    const auto& rp_val = val.field().val();                                                     \
-    return cpp_type(rp_val.begin(), rp_val.end());                                              \
-  }                                                                                             \
-  template<>                                                                                    \
   void AttrValueAccessor<cpp_type>::Attr(const cpp_type& cpp_val, AttrValue* attr_val) {        \
     *(attr_val->mutable_##field()->mutable_val()) = StdVec2PbRf<cpp_type::value_type>(cpp_val); \
   }
@@ -106,15 +85,6 @@ OF_PP_FOR_EACH_TUPLE(LIST_BASIC_ATTR_SEQ_ENTRY, LIST_BASIC_ATTR_SEQ)
 #define LIST_ENUM_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                   \
   template<>                                                                                   \
   cpp_type AttrValueAccessor<cpp_type>::Attr(const AttrValue& val) {                           \
-    std::vector<cpp_type::value_type> ret;                                                     \
-    ret.reserve(val.field().val_size());                                                       \
-    for (const auto& value : val.field().val()) {                                              \
-      ret.emplace_back(static_cast<cpp_type::value_type>(value));                              \
-    }                                                                                          \
-    return ret;                                                                                \
-  }                                                                                            \
-  template<>                                                                                   \
-  cpp_type AttrValueAccessor<cpp_type>::Attr(const cfg::AttrValue& val) {                      \
     std::vector<cpp_type::value_type> ret;                                                     \
     ret.reserve(val.field().val_size());                                                       \
     for (const auto& value : val.field().val()) {                                              \
@@ -191,12 +161,6 @@ Maybe<AttrVal> MakeCppAttrValueFromProtoOrCfgAttrValue(const ProtoT& cfg_attr_va
 }
 
 /* static */ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const AttrValue& proto_attr_value) {
-  return MakeCppAttrValueFromProtoOrCfgAttrValue(proto_attr_value);
-}
-
-/* static */ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const cfg::AttrValue& cfg_attr_value) {
-  AttrValue proto_attr_value;
-  cfg_attr_value.ToProto(&proto_attr_value);
   return MakeCppAttrValueFromProtoOrCfgAttrValue(proto_attr_value);
 }
 
