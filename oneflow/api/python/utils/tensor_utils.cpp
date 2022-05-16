@@ -228,13 +228,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
     JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
   }
 
-  const std::string& device_tag = placement->device_tag();
-  Symbol<Device> device;
-  if (device_tag == "cpu") {
-    device = JUST(Device::New("cpu"));
-  } else {
-    device = JUST(Device::New("cuda"));
-  }
+  Symbol<Device> device = JUST(Device::New(placement->device_tag()));
   std::shared_ptr<Tensor> local_tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), local_tensor, array));
