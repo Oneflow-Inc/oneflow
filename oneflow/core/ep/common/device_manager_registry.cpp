@@ -72,22 +72,35 @@ class DeviceManagerRegistry::Impl {
   }
 
   static std::string GetDeviceTypeNameByDeviceType(DeviceType device_type) {
+    static thread_local std::vector<std::string> device_type2device_type_name(DeviceType_ARRAYSIZE);
+    {
+      const std::string& name = device_type2device_type_name.at(device_type);
+      if (!name.empty()) { return name; }
+    }
     std::lock_guard<std::mutex> factories_lock(factories_mutex_);
     if (factories_.size() <= device_type) { return ""; }
     auto& factory = factories_.at(device_type);
     if (!factory) {
       return "";
     } else {
-      return factory->device_type_name();
+      std::string name = factory->device_type_name();
+      device_type2device_type_name.at(device_type) = name;
+      return name;
     }
   }
 
   static DeviceType GetDeviceTypeByDeviceTypeName(const std::string& device_type_name) {
+    static thread_local HashMap<std::string, DeviceType> device_type_name2device_type;
+    {
+      auto it = device_type_name2device_type.find(device_type_name);
+      if (it != device_type_name2device_type.end()) { return it->second; }
+    }
     std::lock_guard<std::mutex> factories_lock(factories_mutex_);
     auto it = device_type_name2device_type_.find(device_type_name);
     if (it == device_type_name2device_type_.end()) {
       return DeviceType::kInvalidDevice;
     } else {
+      device_type_name2device_type[device_type_name] = it->second;
       return it->second;
     }
   }
