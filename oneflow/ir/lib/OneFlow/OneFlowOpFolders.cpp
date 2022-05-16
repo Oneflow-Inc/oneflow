@@ -140,7 +140,7 @@ OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
   return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> MaybeTensor {
-    return functional::Sub(lhs, rhs, false);
+    return functional::Sub(lhs, rhs, /*alpha=*/1.0, false);
   });
 }
 

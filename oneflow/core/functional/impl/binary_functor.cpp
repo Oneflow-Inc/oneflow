@@ -49,11 +49,17 @@ class AddFunctor {
       return Error::RuntimeError()
              << "For integral input tensors, argument alpha must not be a floating point number.";
     }
+
     bool input_static_zeros = IsStaticZerosTensor(input);
     if (input_static_zeros || IsStaticZerosTensor(other)) {
-      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
-      CHECK_OR_RETURN(*input->shape() == *other->shape());
-      CHECK_OR_RETURN(input->dtype() == other->dtype());
+      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()))
+          << Error::RuntimeError()
+          << "Expected all tensors to be on the same device, but found at least two devices, "
+          << JUST(input->device())->ToString() << " and " << JUST(other->device())->ToString()
+          << "!";
+      CHECK_OR_RETURN(*input->shape() == *other->shape())
+          << Error::RuntimeError() << "The size of tensor a " << input->shape()->ToString()
+          << " must match the size of tensor b " << other->shape();
       if (input_static_zeros) {
         if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
             || (alpha.IsFloatingPoint()
@@ -116,6 +122,23 @@ class SubFunctor : public InplaceableBinaryFunctor {
  public:
   SubFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
+                           bool inplace) const {
+    if (IsIntegralDataType(input->dtype()->data_type())
+        && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
+    if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+        || (alpha.IsFloatingPoint()
+            && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
+      return InplaceableBinaryFunctor::operator()(input, other, inplace);
+    } else {
+      return InplaceableBinaryFunctor::operator()(input, JUST(functional::ScalarMul(alpha, other)),
+                                                  inplace);
+    }
   }
 };
 
