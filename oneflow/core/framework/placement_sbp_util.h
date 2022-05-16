@@ -21,18 +21,13 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/framework/stride.h"
 
 namespace oneflow {
 
 class Shape;
 class ParallelDesc;
 class PlacedNdSbp;
-
-namespace cfg {
-
-class NdSbp;
-
-}
 
 namespace one {
 
@@ -72,6 +67,8 @@ Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
     Symbol<NdSbp> sub_nd_sbp);
 
+Maybe<Symbol<ParallelDesc>> CalcSubParallelDesc4Axis(Symbol<ParallelDesc> parallel_desc, int axis);
+
 }  // namespace private_details
 
 extern Maybe<void> (*CheckIsNdSbpBoxingAcyclic)(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out);
@@ -79,6 +76,8 @@ extern Maybe<void> (*CheckIsNdSbpBoxingAcyclic)(Symbol<PlacedNdSbp> in, Symbol<P
 extern Maybe<void> (*CheckIsNdSbpBoxingAcyclicWithDecompose)(Symbol<PlacedNdSbp> in,
                                                              Symbol<PlacedNdSbp> out,
                                                              const Shape& logical_shape);
+
+int64_t CalcIndex4Axis(int64_t offset, const Stride& stride, int axis);
 
 static constexpr auto* GetSubConsistentTensorMeta =
     DECORATE(&private_details::CalcSubConsistentTensorMeta, ThreadLocal);
@@ -88,6 +87,9 @@ static constexpr auto* GetBroadcastSubParallelDesc =
 
 static constexpr auto* DecomposeIntoNaiveTransformations =
     DECORATE(&private_details::DecomposeIntoNaiveTransformations, ThreadLocal);
+
+static constexpr auto* CalcSubParallelDesc4Axis =
+    DECORATE(&private_details::CalcSubParallelDesc4Axis, ThreadLocal);
 
 Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
     Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc);

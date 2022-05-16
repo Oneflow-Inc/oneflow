@@ -29,19 +29,39 @@ class DeviceManagerRegistry::Impl {
   }
   ~Impl() = default;
 
-  DeviceManager* GetDeviceManager(DeviceType device_type) {
+  DeviceManager* GetDeviceManagerOrNull(DeviceType device_type) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!managers_.at(device_type)) {
       std::lock_guard<std::mutex> factories_lock(factories_mutex_);
       auto& factory = factories_.at(device_type);
-      CHECK(factory);
-      managers_.at(device_type) = factory->NewDeviceManager(registry_);
+      if (factory) {
+        managers_.at(device_type) = factory->NewDeviceManager(registry_);
+      } else {
+        return nullptr;
+      }
     }
     return managers_.at(device_type).get();
   }
 
+  DeviceManager* GetDeviceManager(DeviceType device_type) {
+    return CHECK_NOTNULL(GetDeviceManagerOrNull(device_type));
+  }
+
   std::shared_ptr<Device> GetDevice(DeviceType device_type, size_t device_index) {
     return GetDeviceManager(device_type)->GetDevice(device_index);
+  }
+
+  size_t GetDeviceCount(DeviceType device_type) {
+    DeviceManager* manager = GetDeviceManagerOrNull(device_type);
+    if (manager == nullptr) {
+      return 0;
+    } else {
+      return manager->GetDeviceCount();
+    }
+  }
+
+  size_t GetDeviceCount(const std::string& device_type_name) {
+    return GetDeviceCount(GetDeviceTypeByDeviceTypeName(device_type_name));
   }
 
   static void DumpVersionInfo() {
@@ -84,6 +104,20 @@ class DeviceManagerRegistry::Impl {
     factories_.at(device_type) = std::move(factory);
   }
 
+  static std::set<DeviceType> GetRegisteredDeviceTypes() {
+    std::lock_guard<std::mutex> lock(factories_mutex_);
+    std::set<DeviceType> types;
+    for (auto& factory : factories_) {
+      if (factory) { types.insert(factory->device_type()); }
+    }
+    return types;
+  }
+
+  static bool IsDeviceTypeRegistered(DeviceType device_type) {
+    std::lock_guard<std::mutex> lock(factories_mutex_);
+    return factories_.at(device_type).operator bool();
+  }
+
  private:
   std::mutex mutex_;
   std::vector<std::unique_ptr<DeviceManager>> managers_;
@@ -105,9 +139,21 @@ DeviceManager* DeviceManagerRegistry::GetDeviceManager(DeviceType device_type) {
   return impl_->GetDeviceManager(device_type);
 }
 
+DeviceManager* DeviceManagerRegistry::GetDeviceManagerOrNull(DeviceType device_type) {
+  return impl_->GetDeviceManagerOrNull(device_type);
+}
+
 std::shared_ptr<Device> DeviceManagerRegistry::GetDevice(DeviceType device_type,
                                                          size_t device_index) {
   return impl_->GetDevice(device_type, device_index);
+}
+
+size_t DeviceManagerRegistry::GetDeviceCount(DeviceType device_type) {
+  return impl_->GetDeviceCount(device_type);
+}
+
+size_t DeviceManagerRegistry::GetDeviceCount(const std::string& device_type_name) {
+  return impl_->GetDeviceCount(device_type_name);
 }
 
 /*static*/ void DeviceManagerRegistry::RegisterDeviceManagerFactory(
@@ -125,6 +171,14 @@ std::shared_ptr<Device> DeviceManagerRegistry::GetDevice(DeviceType device_type,
 /*static*/ DeviceType DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(
     const std::string& device_type_name) {
   return Impl::GetDeviceTypeByDeviceTypeName(device_type_name);
+}
+
+/*static*/ std::set<DeviceType> DeviceManagerRegistry::GetRegisteredDeviceTypes() {
+  return Impl::GetRegisteredDeviceTypes();
+}
+
+/*static*/ bool DeviceManagerRegistry::IsDeviceTypeRegistered(DeviceType device_type) {
+  return Impl::IsDeviceTypeRegistered(device_type);
 }
 
 }  // namespace ep

@@ -288,6 +288,7 @@ class random_pytorch_tensor(generator):
         low=0,
         high=1,
         dtype=float,
+        pin_memory=False,
     ):
         if ndim is None:
             ndim = random(1, 6)
@@ -310,6 +311,7 @@ class random_pytorch_tensor(generator):
         self.low = pack(low).to(float)
         self.high = pack(high).to(float)
         self.dtype = pack(dtype)
+        self.pin_memory = pin_memory
         super().__init__(
             [
                 self.ndim,
@@ -321,6 +323,7 @@ class random_pytorch_tensor(generator):
                 self.low,
                 self.high,
                 self.dtype,
+                self.pin_memory,
             ]
         )
 
@@ -334,6 +337,7 @@ class random_pytorch_tensor(generator):
         low = self.low.value()
         high = self.high.value()
         dtype = self.dtype.value()
+        pin_memory = self.pin_memory
 
         shape = rng.integers(low=1, high=8, size=ndim)
         if ndim == 0:
@@ -352,10 +356,16 @@ class random_pytorch_tensor(generator):
         pytorch_tensor = None
         if dtype == float:
             np_arr = rng.uniform(low=low, high=high, size=shape)
-            return torch.Tensor(np_arr)
+            res = torch.Tensor(np_arr)
+            if pin_memory:
+                res = res.pin_memory()
+            return res
         elif dtype == int:
             np_arr = rng.integers(low=low, high=high, size=shape)
-            return torch.tensor(np_arr, dtype=torch.int64)
+            res = torch.tensor(np_arr, dtype=torch.int64)
+            if pin_memory:
+                res = res.pin_memory()
+            return res
         else:
             raise NotImplementedError(f"Not implemented dtype {dtype} in random")
 
@@ -459,7 +469,7 @@ class all_sbp(generator):
         dim=1,
         max_dim=0,
         except_split=False,
-        excpet_broadcast=False,
+        except_broadcast=False,
         except_partial_sum=False,
         valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
     ):
@@ -477,7 +487,7 @@ class all_sbp(generator):
             self.dim = dim
         self.max_dim = max_dim
         self.except_split = except_split
-        self.excpet_broadcast = excpet_broadcast
+        self.except_broadcast = except_broadcast
         self.except_partial_sum = except_partial_sum
         if valid_split_axis is not None:
             if isinstance(valid_split_axis, int):
@@ -506,7 +516,7 @@ class all_sbp(generator):
             for i in range(self.max_dim):
                 if i in self.valid_split_axis:
                     all_sbps.append(flow.sbp.split(i))
-        if not self.excpet_broadcast:
+        if not self.except_broadcast:
             all_sbps.append(flow.sbp.broadcast)
         if not self.except_partial_sum:
             all_sbps.append(flow.sbp.partial_sum)
@@ -523,7 +533,7 @@ class random_sbp(all_sbp):
         dim=1,
         max_dim=0,
         except_split=False,
-        excpet_broadcast=False,
+        except_broadcast=False,
         except_partial_sum=False,
         valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
     ):
@@ -532,7 +542,7 @@ class random_sbp(all_sbp):
             dim,
             max_dim,
             except_split,
-            excpet_broadcast,
+            except_broadcast,
             except_partial_sum,
             valid_split_axis,
         )

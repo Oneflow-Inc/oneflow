@@ -48,9 +48,7 @@ def _test_different_dtype(test_case, device, shape):
     test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
 
-    with test_case.assertRaises(
-        oneflow._oneflow_internal.exception.UnimplementedException
-    ):
+    with test_case.assertRaises(NotImplementedError):
         flow.randn(*shape, dtype=flow.int32, device=flow.device(device))
 
 
@@ -76,6 +74,22 @@ def _test_with_generator(test_case, device, shape):
     test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
+def _test_randn_tuple_shape(test_case, device, shape):
+    y1 = flow.randn(shape, device=flow.device(device))
+    y2 = flow.randn(shape, device=flow.device(device))
+
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape)
+
+
+def _test_randn_with_flow_size(test_case, device, shape):
+    y1 = flow.randn(flow.Size(shape), device=flow.device(device))
+    y2 = flow.randn(flow.Size(shape), device=flow.device(device))
+
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestRandnModule(flow.unittest.TestCase):
     def test_global_naive(test_case):
@@ -92,6 +106,8 @@ class TestRandnModule(flow.unittest.TestCase):
             _test_different_dtype,
             _test_backward,
             _test_with_generator,
+            _test_randn_tuple_shape,
+            _test_randn_with_flow_size,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
@@ -107,6 +123,19 @@ class TestRandnModule(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestRandnOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.randn(2, 3, device="cuda:1")
+        test_case.assertEqual(x.device, flow.device("cuda:1"))
+
+    def test_with_generator(test_case):
+        gen = flow.Generator("cuda")
+        x = flow.randn(2, 3, device="cuda", generator=gen)
+        test_case.assertEqual(x.device, flow.device(f"cuda:{flow.env.get_rank()}"))
 
 
 if __name__ == "__main__":

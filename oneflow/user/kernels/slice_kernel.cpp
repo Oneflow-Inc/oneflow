@@ -205,6 +205,7 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
     Memset<device_type>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
+    if (dy_tensor->shape().elem_cnt() == 0) { return; }
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
@@ -331,19 +332,9 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    if (y_tensor->mem_case().has_host_mem()) {
-      memset(y_tensor->mut_dptr(), 0,
-             y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
-    } else if (y_tensor->mem_case().has_device_cuda_mem()) {
-#if defined(WITH_CUDA)
-      cudaMemset(y_tensor->mut_dptr(), 0,
-                 y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
-#else
-      UNIMPLEMENTED();
-#endif
-    } else {
-      UNIMPLEMENTED();
-    }
+    AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0,
+               y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()),
+               y_tensor->mem_case());
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
                      y_tensor, slice_ctx, true);
   }
@@ -370,10 +361,18 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
+    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    // When eager executing, y_tensor shared the same memory with ref_tensor
+    if (ref_tensor->dptr<T>() != y_tensor->dptr<T>()) {
+      // lazy run
+      AutoMemcpy(ctx->stream(), y_tensor->mut_dptr<T>(), ref_tensor->dptr<T>(),
+                 y_tensor->shape().elem_cnt() * sizeof(T), ref_tensor->mem_case(),
+                 y_tensor->mem_case());
+    }
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
     SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
-                     value_tensor, ref_tensor, slice_ctx, false);
+                     value_tensor, y_tensor, slice_ctx, false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

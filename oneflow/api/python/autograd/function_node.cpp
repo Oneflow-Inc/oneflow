@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <vector>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 
@@ -29,7 +30,7 @@ struct FunctionNodeUtil final {
   static std::string ToString(const one::FunctionNode& func_node) {
     std::stringstream ss;
     ss << "<";
-    ss << func_node.GetOpTypeName();
+    ss << func_node.name();
     ss << " at " << &func_node;
     ss << ">";
     return ss.str();
@@ -45,11 +46,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_register_hook_dict", []() { TODO(); })
       .def_property_readonly(
           "next_functions",
-          [](const one::FunctionNode& func_node) { return func_node.GetNextFunctions(); })
+          [](const one::FunctionNode& func_node) { return func_node.next_functions(); })
       .def_property_readonly("metadata", []() { TODO(); })
       .def_property_readonly("requires_grad", []() { TODO(); })
       .def("register_hook", []() { TODO(); })
-      .def("name", [](const one::FunctionNode& func_node) { return func_node.GetOpTypeName(); });
+      .def("name", [](const one::FunctionNode& func_node) { return func_node.name(); });
 }
 
 }  // namespace oneflow

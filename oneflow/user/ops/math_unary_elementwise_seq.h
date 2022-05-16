@@ -51,10 +51,10 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                         \
   OF_PP_MAKE_TUPLE_SEQ("sin", Sin)                           \
   OF_PP_MAKE_TUPLE_SEQ("sinh", Sinh)                         \
-  OF_PP_MAKE_TUPLE_SEQ("softplus", Softplus)                 \
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
-  OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
+  OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                           \
+  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
 
 #define MATH_UNARY_ELEMENTWISE_FUNC_SEQ_ODS                  \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
@@ -87,10 +87,10 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                         \
   OF_PP_MAKE_TUPLE_SEQ("sin", Sin)                           \
   OF_PP_MAKE_TUPLE_SEQ("sinh", Sinh)                         \
-  OF_PP_MAKE_TUPLE_SEQ("softplus", Softplus)                 \
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                         \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)                     \
-  OF_PP_MAKE_TUPLE_SEQ("tan", Tan)
+  OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                           \
+  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
 
 }  // namespace oneflow
 

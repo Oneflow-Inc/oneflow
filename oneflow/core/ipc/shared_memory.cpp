@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/pcheck.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/common/env_var.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #ifdef __linux__
 #include <sys/types.h>
 #include <sys/mman.h>

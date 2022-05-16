@@ -22,6 +22,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 
+#include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
@@ -31,7 +32,6 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace py = pybind11;
@@ -58,14 +58,14 @@ namespace one {
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 
 template<typename T>
-inline static Maybe<py::array> EagerMirroredTensorToNumpy(const py::handle& py_tensor) {
-  const std::shared_ptr<Tensor> t = py::cast<const std::shared_ptr<Tensor>>(py_tensor);
+inline static Maybe<PyObject*> EagerMirroredTensorToNumpy(PyObject* py_tensor) {
+  const auto& t = PyTensor_Unpack(py_tensor);
 
   std::shared_ptr<MirroredTensor> tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(JUST(tensor->device()) == JUST(Device::New("cpu")));
   CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
   // set base object attr
-  py::handle handle = py::handle(py_tensor.ptr());
+  py::handle handle = py::handle(py_tensor);
 
   const size_t ndim = tensor->ndim();
   const auto shape = numpy::OFShapeToNumpyShape(tensor->shape()->dim_vec());
@@ -82,9 +82,11 @@ inline static Maybe<py::array> EagerMirroredTensorToNumpy(const py::handle& py_t
     return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "mut");
   }));
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
-  return py::array(
-      py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim, shape, stride),
-      handle);
+  return py::array(py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim,
+                                   shape, stride),
+                   handle)
+      .release()
+      .ptr();
 }
 
 template<typename T>
@@ -139,25 +141,27 @@ Maybe<void> RegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                                      const Optional<Symbol<Device>>& device, bool requires_grad);
+                                      const Optional<Symbol<Device>>& device,
+                                      const bool requires_grad, const bool pin_memory);
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
                                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           bool requires_grad);
+                                           const bool requires_grad);
 
-Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
+                                        const bool pin_memory);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Optional<Symbol<Device>>& device,
-                                        const bool& requires_grad);
+                                        const bool requires_grad, const bool pin_memory);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Symbol<ParallelDesc>& placement,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                        const bool& requires_grad);
+                                        const bool requires_grad);
 
 }  // namespace one
 }  // namespace oneflow

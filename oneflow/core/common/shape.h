@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SHAPE_H_
 
 #include "oneflow/core/common/shape.pb.h"
+#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
@@ -26,18 +27,13 @@ namespace oneflow {
 
 class ShapeView;
 
-namespace cfg {
-class ShapeProto;
-}
-
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
-  Shape() = default;
+  Shape() : is_initialized_(false) {}
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
-  explicit Shape(const cfg::ShapeProto& shape_proto);
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
@@ -56,9 +52,12 @@ class Shape final {
   void SerializeWithTextFormat(StreamT& out_stream) const;
 
   // Getters and Setters
-  bool is_initialized() const { return elem_cnt_.has_value(); }
+  bool is_initialized() const { return is_initialized_; }
   const DimVector& dim_vec() const { return dim_vec_; }
-  int64_t elem_cnt() const { return CHECK_JUST(elem_cnt_); }
+  DimVector& dim_vec() { return dim_vec_; }
+  int64_t elem_cnt() const {
+    return std::accumulate(dim_vec_.begin(), dim_vec_.end(), int64_t(1), std::multiplies<>());
+  }
   int64_t At(int64_t index) const;
   void Set(int64_t index, int64_t val);
   int64_t NumAxes() const {
@@ -74,14 +73,17 @@ class Shape final {
   AxisVector Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
 
   bool Containing(const Shape& small_shape) const;
+  bool MatchBeforeLastDim(const Shape& next_shape) const;
 
   Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
 
- private:
-  void UpdateElemCnt();
+  ShapeView ToShapeView() const { return ShapeView(dim_vec_.data(), dim_vec_.size()); }
 
+  MutShapeView ToMutShapeView() { return MutShapeView(dim_vec_.data(), dim_vec_.size()); }
+
+ private:
   DimVector dim_vec_;
-  Optional<int64_t> elem_cnt_;
+  bool is_initialized_;
 };
 
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);

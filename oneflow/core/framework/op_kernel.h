@@ -164,10 +164,9 @@ class KernelInferContext {
 
   virtual ep::Stream* stream() = 0;
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
-  virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
-  virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
+  virtual ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
+  virtual MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                                    int32_t arg_index) = 0;
 
   const std::string& input(const std::string& arg_name, int32_t index) const {
     return user_op_conf().input(arg_name, index);
@@ -314,6 +313,7 @@ class OpKernel {
   virtual void Compute(KernelComputeContext*) const { LOG(WARNING) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
+  virtual bool IsKernelLaunchSynchronized() const { return true; }
 
   bool has_state_or_cache() const { return has_state_or_cache_; }
 

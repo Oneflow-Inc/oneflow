@@ -28,13 +28,13 @@ namespace {
 
 bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
+static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
 bool RawIsPartialSumSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_partial_sum_parallel();
 }
 
-static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocal);
+static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocalCached);
 
 Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
                                           Symbol<SbpParallel> src_sbp, const Shape& logical_shape) {
@@ -47,7 +47,7 @@ Maybe<one::UserOpExpr> EagerSymmetricSToP(Symbol<ParallelDesc> parallel_desc,
 }
 
 static constexpr auto* CachedEagerSymmetricSToPOpExpr =
-    DECORATE(&EagerSymmetricSToP, ThreadLocalCopiable);
+    DECORATE(&EagerSymmetricSToP, ThreadLocalCachedCopiable);
 
 Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                   const Shape& logical_shape) {
@@ -61,7 +61,8 @@ Maybe<void> RawCheckSymmetricSToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricSToP = DECORATE(&RawCheckSymmetricSToP, ThreadLocalCopiable);
+static constexpr auto* CheckSymmetricSToP =
+    DECORATE(&RawCheckSymmetricSToP, ThreadLocalCachedCopiable);
 
 }  // namespace
 

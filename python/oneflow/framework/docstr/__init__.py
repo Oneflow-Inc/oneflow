@@ -16,11 +16,13 @@ limitations under the License.
 from .math_ops import *
 from .random import *
 from .conv import *
+from .as_tensor import *
 from .pooling import *
 from .activation import *
 from .dropout import *
 from .vision import *
 from .norm import *
+from .normalization import *
 from .loss import *
 from .onehot import *
 from .comparison import *
@@ -44,6 +46,8 @@ from .split import *
 from .clamp import *
 from .erfinv import *
 from .swapaxes import *
+from .amax import *
+from .unbind import *
 from .repeat import *
 from .tile import *
 from .tensor_t import *
@@ -58,7 +62,13 @@ from .in_top_k import *
 from .index_select import *
 from .sort import *
 from .is_floating_point import *
+from .swapdims import *
 from .where import *
 from .einsum import *
 from .oneflow import *
+from .argsort import *
 from .module import *
+from .util_ops import *
+from .searchsorted import *
+from .amin import *
+from .deconv import *

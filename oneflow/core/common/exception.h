@@ -18,13 +18,12 @@ limitations under the License.
 
 #include <exception>
 #include <string>
-#include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
 class Exception : public std::exception {
  public:
-  Exception(const std::string& what) : what_(what) {}
+  explicit Exception(const std::string& what) : what_(what) {}
   virtual ~Exception() = default;
 
   const char* what() const noexcept override { return what_.c_str(); }
@@ -33,59 +32,20 @@ class Exception : public std::exception {
   std::string what_;
 };
 
-#define EXCEPTION_SEQ                             \
-  OF_PP_MAKE_TUPLE_SEQ(ConfigAssertFailed)        \
-  OF_PP_MAKE_TUPLE_SEQ(ConfigResourceUnavailable) \
-  OF_PP_MAKE_TUPLE_SEQ(ProtoParseFailed)          \
-  OF_PP_MAKE_TUPLE_SEQ(CheckFailed)               \
-  OF_PP_MAKE_TUPLE_SEQ(Todo)                      \
-  OF_PP_MAKE_TUPLE_SEQ(Unimplemented)             \
-  OF_PP_MAKE_TUPLE_SEQ(BoxingNotSupported)        \
-  OF_PP_MAKE_TUPLE_SEQ(GradientFunctionNotFound)  \
-  OF_PP_MAKE_TUPLE_SEQ(OpKernelNotFound)          \
-  OF_PP_MAKE_TUPLE_SEQ(MultipleOpKernelsMatched)  \
-  OF_PP_MAKE_TUPLE_SEQ(MemoryZoneOutOfMemory)     \
-  OF_PP_MAKE_TUPLE_SEQ(LossBlobNotFound)          \
-  OF_PP_MAKE_TUPLE_SEQ(JobSetEmpty)               \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceTagNotFound)         \
-  OF_PP_MAKE_TUPLE_SEQ(JobNameExist)              \
-  OF_PP_MAKE_TUPLE_SEQ(JobNameEmpty)              \
-  OF_PP_MAKE_TUPLE_SEQ(JobNameNotEqual)           \
-  OF_PP_MAKE_TUPLE_SEQ(NoJobBuildAndInferCtx)     \
-  OF_PP_MAKE_TUPLE_SEQ(JobConfFrozen)             \
-  OF_PP_MAKE_TUPLE_SEQ(JobConfNotSet)             \
-  OF_PP_MAKE_TUPLE_SEQ(JobConfRepeatedSet)        \
-  OF_PP_MAKE_TUPLE_SEQ(JobTypeNotSet)             \
-  OF_PP_MAKE_TUPLE_SEQ(LogicalBlobNameNotExist)   \
-  OF_PP_MAKE_TUPLE_SEQ(LogicalBlobNameExist)      \
-  OF_PP_MAKE_TUPLE_SEQ(LogicalBlobNameInvalid)    \
-  OF_PP_MAKE_TUPLE_SEQ(OpNameExist)               \
-  OF_PP_MAKE_TUPLE_SEQ(OpConfDeviceTagNoSet)      \
-  OF_PP_MAKE_TUPLE_SEQ(Placement)                 \
-  OF_PP_MAKE_TUPLE_SEQ(BlobSplitAxisInfer)        \
-  OF_PP_MAKE_TUPLE_SEQ(UnknownJobBuildAndInfer)   \
-  OF_PP_MAKE_TUPLE_SEQ(RwMutexedObjectNotFound)   \
-  OF_PP_MAKE_TUPLE_SEQ(SymbolIdUninitialized)     \
-  OF_PP_MAKE_TUPLE_SEQ(Unknown)                   \
-  OF_PP_MAKE_TUPLE_SEQ(CompileOptionWrong)        \
-  OF_PP_MAKE_TUPLE_SEQ(InvalidValue)              \
-  OF_PP_MAKE_TUPLE_SEQ(ValueNotFound)             \
-  OF_PP_MAKE_TUPLE_SEQ(Index)                     \
-  OF_PP_MAKE_TUPLE_SEQ(Type)                      \
-  OF_PP_MAKE_TUPLE_SEQ(Timeout)                   \
-  OF_PP_MAKE_TUPLE_SEQ(InputDeviceNotMatch)       \
-  OF_PP_MAKE_TUPLE_SEQ(Runtime)
+class RuntimeException : public Exception {
+ public:
+  using Exception::Exception;
+};
 
-#define DEFINE_EXCEPTION_CLASS(cls)                                         \
-  class OF_PP_CAT(cls, Exception) : public Exception {                      \
-   public:                                                                  \
-    OF_PP_CAT(cls, Exception)(const std::string& what) : Exception(what) {} \
-    ~OF_PP_CAT(cls, Exception)() override = default;                        \
-  };
+class IndexException : public Exception {
+ public:
+  using Exception::Exception;
+};
 
-OF_PP_FOR_EACH_TUPLE(DEFINE_EXCEPTION_CLASS, EXCEPTION_SEQ)
-
-#undef DEFINE_EXCEPTION_CLASS
+class NotImplementedException : public Exception {
+ public:
+  using Exception::Exception;
+};
 
 }  // namespace oneflow
 

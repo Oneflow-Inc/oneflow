@@ -19,19 +19,19 @@ namespace oneflow {
 
 namespace compatible_py {
 
-BlobDesc::BlobDesc(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+BlobDesc::BlobDesc(const std::shared_ptr<LogicalBlobId>& lbi,
                    const std::shared_ptr<Distribute>& distribute)
     : lbi_(lbi), distribute_(distribute) {
   lbn_ = lbi->op_name() + "/" + lbi->blob_name();
 }
 
-std::shared_ptr<cfg::LogicalBlobId> BlobDesc::lbi() const { return lbi_; }
+std::shared_ptr<LogicalBlobId> BlobDesc::lbi() const { return lbi_; }
 std::string BlobDesc::logical_blob_name() const { return lbn_; }
 std::string BlobDesc::op_name() const { return lbi_->op_name(); }
 std::string BlobDesc::blob_name() const { return lbi_->blob_name(); }
 std::shared_ptr<Shape> BlobDesc::shape() const { UNIMPLEMENTED(); }
 DataType BlobDesc::dtype() const { UNIMPLEMENTED(); }
-std::shared_ptr<cfg::ParallelConf> BlobDesc::parallel_conf() const { UNIMPLEMENTED(); }
+const ParallelConf& BlobDesc::parallel_conf() const { UNIMPLEMENTED(); }
 
 bool BlobDesc::is_dynamic() const { UNIMPLEMENTED(); }
 std::shared_ptr<Distribute> BlobDesc::distribute() const { return distribute_; }
