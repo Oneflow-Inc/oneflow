@@ -170,9 +170,8 @@ template<size_t num_dims, typename IndexType>
 struct ConstantPadParams {
   NdIndexOffsetHelper<IndexType, num_dims> src_index_helper;
   OffsetToIndexCalculator<IndexType, num_dims> dst_index_helper;
-  IndexType padding_before[num_dims];
-  IndexType padding_after[num_dims];
-  IndexType valid_end_range[num_dims];
+  IndexType valid_start[num_dims];
+  IndexType valid_end[num_dims];
   IndexType elem_cnt{};
   const void* src{};
   void* dst{};

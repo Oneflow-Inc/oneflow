@@ -42,8 +42,8 @@ __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
     bool if_pad = false;
 #pragma unroll
     for (int i = 0; i < num_dims; i++) {
-      if (dst_index[i] >= params.padding_before[i] && dst_index[i] < params.valid_end_range[i]) {
-        src_index[i] = dst_index[i] - params.padding_before[i];
+      if (dst_index[i] >= params.valid_start[i] && dst_index[i] < params.valid_end[i]) {
+        src_index[i] = dst_index[i] - params.valid_start[i];
       } else {
         if_pad = true;
         break;
@@ -95,45 +95,40 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
 
 template<size_t num_dims, typename IndexType, typename StorageType>
 void LaunchKernel(Stream* stream, ConstantPadParams<num_dims, IndexType> params,
-                  StorageType packed_pad_val, int num_blocks) {
-  cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
-
-  ConstantPadKernel<num_dims, IndexType, StorageType>
-      <<<num_blocks, kBlockDim, 0, cuda_stream>>>(params, packed_pad_val);
+                  StorageType packed_pad_val, size_t elem_cnt) {
+  stream->As<CudaStream>()->LaunchKernelDefaultWaves(
+      (ConstantPadKernel<num_dims, IndexType, StorageType>), elem_cnt, params, packed_pad_val);
 }
 
 template<size_t num_dims, typename IndexType, typename StorageType>
 void LaunchKernel(Stream* stream, void* dst, const int64_t* dst_dims, const void* src,
                   const int64_t* src_dims, const int64_t* padding_before,
-                  const int64_t* padding_after, StorageType packed_pad_val, int num_blocks,
-                  size_t elem_cnt) {
+                  const int64_t* padding_after, StorageType packed_pad_val, size_t elem_cnt) {
   ConstantPadParams<num_dims, IndexType> params;
   params.dst_index_helper = OffsetToIndexCalculator<IndexType, num_dims>(dst_dims);
   params.src_index_helper = NdIndexOffsetHelper<IndexType, num_dims>(src_dims);
   params.dst = dst;
   params.src = src;
   for (int i = 0; i < num_dims; i++) {
-    params.padding_before[i] = padding_before[i];
-    params.padding_after[i] = padding_after[i];
-    params.valid_end_range[i] = dst_dims[i] - padding_after[i];
+    params.valid_start[i] = padding_before[i];
+    params.valid_end[i] = dst_dims[i] - padding_after[i];
   }
   params.elem_cnt = elem_cnt;
-  LaunchKernel<num_dims, IndexType, StorageType>(stream, params, packed_pad_val, num_blocks);
+  LaunchKernel<num_dims, IndexType, StorageType>(stream, params, packed_pad_val, elem_cnt);
 }
 
 template<size_t num_dims, typename StorageType>
 void DispatchIndexType(Stream* stream, void* dst, const int64_t* dst_dims, const void* src,
                        const int64_t* src_dims, const int64_t* padding_before,
-                       const int64_t* padding_after, StorageType packed_pad_val, int num_blocks,
-                       size_t elem_cnt) {
+                       const int64_t* padding_after, StorageType packed_pad_val, size_t elem_cnt) {
   if (elem_cnt < GetMaxVal<int32_t>()) {
     LaunchKernel<num_dims, int32_t, StorageType>(stream, dst, dst_dims, src, src_dims,
                                                  padding_before, padding_after, packed_pad_val,
-                                                 num_blocks, elem_cnt);
+                                                 elem_cnt);
   } else {
     LaunchKernel<num_dims, int64_t, StorageType>(stream, dst, dst_dims, src, src_dims,
                                                  padding_before, padding_after, packed_pad_val,
-                                                 num_blocks, elem_cnt);
+                                                 elem_cnt);
   }
 }
 
@@ -152,34 +147,32 @@ void DispatchPackSize(Stream* stream, void* dst, int64_t* dst_dims, const void* 
 
   size_t elem_cnt = 1;
   for (int i = 0; i < num_dims; i++) { elem_cnt *= dst_dims[i]; }
-
-  int num_blocks = 0;
-  GetNumBlocks(elem_cnt / launch_pack_size, &num_blocks);
+  elem_cnt /= launch_pack_size;
   if (launch_pack_size == 1) {
     Pack<T, 1> packed_pad_val(pad_val);
     DispatchIndexType<num_dims, PackType<T, 1>>(stream, dst, dst_dims, src, src_dims,
                                                 padding_before, padding_after,
-                                                packed_pad_val.storage, num_blocks, elem_cnt);
+                                                packed_pad_val.storage, elem_cnt);
   } else if (launch_pack_size == 2) {
     Pack<T, 2> packed_pad_val(pad_val);
     DispatchIndexType<num_dims, PackType<T, 2>>(stream, dst, dst_dims, src, src_dims,
                                                 padding_before, padding_after,
-                                                packed_pad_val.storage, num_blocks, elem_cnt);
+                                                packed_pad_val.storage, elem_cnt);
   } else if (launch_pack_size == 4) {
     Pack<T, 4> packed_pad_val(pad_val);
     DispatchIndexType<num_dims, PackType<T, 4>>(stream, dst, dst_dims, src, src_dims,
                                                 padding_before, padding_after,
-                                                packed_pad_val.storage, num_blocks, elem_cnt);
+                                                packed_pad_val.storage, elem_cnt);
   } else if (launch_pack_size == 8) {
     Pack<T, 8> packed_pad_val(pad_val);
     DispatchIndexType<num_dims, PackType<T, 8>>(stream, dst, dst_dims, src, src_dims,
                                                 padding_before, padding_after,
-                                                packed_pad_val.storage, num_blocks, elem_cnt);
+                                                packed_pad_val.storage, elem_cnt);
   } else if (launch_pack_size == 16) {
     Pack<T, 16> packed_pad_val(pad_val);
     DispatchIndexType<num_dims, PackType<T, 16>>(stream, dst, dst_dims, src, src_dims,
                                                  padding_before, padding_after,
-                                                 packed_pad_val.storage, num_blocks, elem_cnt);
+                                                 packed_pad_val.storage, elem_cnt);
   } else {
     UNIMPLEMENTED();
   }

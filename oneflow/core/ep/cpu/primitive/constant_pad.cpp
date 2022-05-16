@@ -36,8 +36,8 @@ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, StorageTyp
     bool if_pad = false;
 #pragma unroll
     for (int i = 0; i < num_dims; i++) {
-      if (dst_index[i] >= params.padding_before[i] && dst_index[i] < params.valid_end_range[i]) {
-        src_index[i] = dst_index[i] - params.padding_before[i];
+      if (dst_index[i] >= params.valid_start[i] && dst_index[i] < params.valid_end[i]) {
+        src_index[i] = dst_index[i] - params.valid_start[i];
       } else {
         if_pad = true;
         break;
@@ -72,9 +72,8 @@ void LaunchKernel(void* dst, const int64_t* dst_dims, const void* src, const int
   params.dst = dst;
   params.src = src;
   for (int i = 0; i < num_dims; i++) {
-    params.padding_before[i] = padding_before[i];
-    params.padding_after[i] = padding_after[i];
-    params.valid_end_range[i] = dst_dims[i] - padding_after[i];
+    params.valid_start[i] = padding_before[i];
+    params.valid_end[i] = dst_dims[i] - padding_after[i];
   }
   params.elem_cnt = elem_cnt;
   LaunchKernel<num_dims, IndexType, StorageType>(params, packed_pad_val);
