@@ -29,6 +29,11 @@ class ShapeView;
 class Int64ListProto;
 using ShapeProto = Int64ListProto;
 
+namespace cfg {
+// TODO: use Int64ListProto replace ShapeProto
+class ShapeProto;
+}  // namespace cfg
+
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);

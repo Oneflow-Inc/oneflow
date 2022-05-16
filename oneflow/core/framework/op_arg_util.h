@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -42,6 +43,8 @@ class OpArgBlobAttribute {
 
   std::shared_ptr<Shape> shape() const;
 
+  std::shared_ptr<Stride> stride() const;
+
   std::string logical_blob_name() const;
 
   DataType get_dtype() const;
@@ -58,6 +61,7 @@ class OpArgBlobAttribute {
   std::shared_ptr<BlobDescProto> blob_desc_;
   std::string logical_blob_name_;
   std::shared_ptr<Shape> shape_;
+  std::shared_ptr<Stride> stride_;
 };
 
 }  // namespace compatible_py
