@@ -119,12 +119,6 @@ def profile_dual_object(op):
     return profiled_op
 
 
-def profile_flow(op):
-    def profiled_op(*args, **kwargs):
-        return run_flow(op, args, kwargs, 32, None, None)
-    return profiled_op
-
-
 HardwareInfo = Tuple[str, Optional[int]]
 _hardware_info_list: List[HardwareInfo] = [('cpu', 1), ('cuda', None)]
 _profiler_hook: Callable[[List[ProfResult]], Any] = lambda x: x
