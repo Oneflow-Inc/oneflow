@@ -27,9 +27,6 @@ namespace primitive {
 
 namespace {
 
-constexpr int kNumWaves = 32;
-constexpr int kBlockDim = 256;
-
 template<size_t num_dims, typename IndexType, typename StorageType>
 __global__ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params,
                                   StorageType packed_pad_val) {
@@ -71,27 +68,6 @@ nv_bfloat16 GetValue<nv_bfloat16>(Scalar value) {
 }
 
 #endif  // CUDA_VERSION >= 11000
-
-inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
-  int dev;
-  {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
-  }
-  int sm_count;
-  {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
-  }
-  int tpm;
-  {
-    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
-    if (err != cudaSuccess) { return err; }
-  }
-  *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockDim - 1) / kBlockDim,
-                                                   sm_count * tpm / kBlockDim * kNumWaves));
-  return cudaSuccess;
-}
 
 template<size_t num_dims, typename IndexType, typename StorageType>
 void LaunchKernel(Stream* stream, ConstantPadParams<num_dims, IndexType> params,
