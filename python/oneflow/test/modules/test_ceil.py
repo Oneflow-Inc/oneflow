@@ -23,6 +23,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 from random import shuffle
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestCeilModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
@@ -31,7 +32,7 @@ class TestCeilModule(flow.unittest.TestCase):
         input = random_tensor().to(device)
         y = torch.ceil(input)
         return y
-    
+
     @autotest(check_graph=True)
     def test_ceil_flow_stride_with_random_data(test_case):
         device = random_device()

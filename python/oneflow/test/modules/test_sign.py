@@ -60,7 +60,7 @@ class TestSign(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_sign_stride_with_random_data(test_case):
         device = random_device()
-        x = random_tensor().to(device)        
+        x = random_tensor().to(device)
         permute_list = list(range(5))
         shuffle(permute_list)
         x2 = x.permute(permute_list)

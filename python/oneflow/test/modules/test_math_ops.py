@@ -132,6 +132,7 @@ class TestLogModule(flow.unittest.TestCase):
         x2 = x.permute(permute_list)
         return torch.log(x2)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
     @autotest()
@@ -177,6 +178,7 @@ class TestExp(flow.unittest.TestCase):
         x2 = x.permute(permute_list)
         y = torch.exp(x2)
         return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestRsqrt(flow.unittest.TestCase):
@@ -295,7 +297,7 @@ class TestAsin(flow.unittest.TestCase):
         x = random_tensor(low=-0.5, high=0.5).to(device)
         y = torch.asin(x)
         return y
-    
+
     @autotest(n=5)
     def test_flow_asin_stride_with_random_data(test_case):
         device = random_device()
@@ -413,7 +415,7 @@ class TestAtan(flow.unittest.TestCase):
         x = random_tensor(low=-0.5, high=0.5).to(device)
         y = torch.atanh(x)
         return y
-    
+
     @autotest(n=5)
     def test_flow_atanh_stride_with_random_data(test_case):
         device = random_device()
@@ -501,7 +503,7 @@ class TestAcos(flow.unittest.TestCase):
         x = random_tensor(low=-1, high=1).to(device)
         y = torch.acos(x)
         return y
-    
+
     @autotest(n=5)
     def test_acos_flow_stride_with_random_data(test_case):
         device = random_device()
@@ -521,7 +523,7 @@ class TestArccosh(flow.unittest.TestCase):
         x = random_tensor(low=2, high=3).to(device)
         y = torch.arccosh(x)
         return y
-    
+
     @autotest(n=5)
     def test_arccosh_flow_stride_with_random_data(test_case):
         device = random_device()
