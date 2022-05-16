@@ -4,7 +4,7 @@ package oneflow;
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/memory/memory_case.proto";
-import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/sequential.proto";
 
 message LbiBlobDescPair {
   required LogicalBlobId lbi = 1;
@@ -13,7 +13,7 @@ message LbiBlobDescPair {
 
 message DataRegstDesc {
   repeated LbiBlobDescPair lbi2blob_desc = 1;
-  required ShapeProto time_shape = 3;
+  required Int64ListProto time_shape = 3;
 }
 
 message CtrlRegstDesc {

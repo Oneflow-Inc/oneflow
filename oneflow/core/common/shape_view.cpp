@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/shape.pb.h"
+#include "oneflow/core/common/sequential.pb.h"
 #include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
-ShapeView::ShapeView(const ShapeProto& shape_proto)
+ShapeView::ShapeView(const Int64ListProto& shape_proto)
     : ShapeViewBase<const int64_t>(shape_proto.dim().data(), shape_proto.dim_size()) {}
 ShapeView::ShapeView(const Shape& shape)
     : ShapeViewBase<const int64_t>(shape.dim_vec().data(), shape.dim_vec().size()) {}

@@ -15,9 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
-#include "oneflow/core/common/shape.pb.h"
+#include "oneflow/core/common/sequential.pb.h"
 
 namespace oneflow {
+
 
 Maybe<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<ShapeProto>>>
 GetDeviceTagAndMachineDeviceIdsAndHierarchy(const ParallelConf& parallel_conf) {
