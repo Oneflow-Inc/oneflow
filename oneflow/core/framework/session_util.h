@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.h"
 
 namespace oneflow {

@@ -21,9 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace cfg {
-class AttrValue;
-}
 namespace user_op {
 class AttrVal;
 }
@@ -133,9 +130,9 @@ class MutableAttrMap : public std::map<std::string, std::shared_ptr<user_op::Att
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
 };
 
-class MutableCfgAttrMap : public std::map<std::string, std::shared_ptr<cfg::AttrValue>> {
+class MutableCfgAttrMap : public std::map<std::string, std::shared_ptr<AttrValue>> {
  public:
-  using std::map<std::string, std::shared_ptr<cfg::AttrValue>>::map;
+  using std::map<std::string, std::shared_ptr<AttrValue>>::map;
 
   template<typename T>
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
