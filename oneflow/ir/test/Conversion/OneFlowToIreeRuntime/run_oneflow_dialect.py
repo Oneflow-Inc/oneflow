@@ -1,4 +1,5 @@
 import numpy as np
+import oneflow as flow
 
 from iree import runtime as ireert
 from iree.compiler import compile_str
@@ -33,8 +34,10 @@ ctx = ireert.SystemContext(config=config)
 ctx.add_vm_module(vm_module)
 print("INVOKE simple_relu")
 
-arg0 = np.array([[-1., -1.], [0., 1.]], dtype=np.float32)
+tensor = flow.tensor([[-1., -1.], [0., 1.]]).cuda()
 
+input = tensor.cpu().detach().numpy()
 f = ctx.modules.module['main']
-results = f(arg0)
-print("Results:", results)
+output = f(input).to_host()
+
+print("Results:", output)
