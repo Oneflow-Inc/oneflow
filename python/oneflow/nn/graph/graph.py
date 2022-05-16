@@ -124,6 +124,7 @@ class Graph(object):
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
         self._full_job_proto = None
+        self._job_id = -1
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
@@ -136,9 +137,7 @@ class Graph(object):
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
-        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
-            self._name, self._session._session_ctx
-        )
+        self._c_nn_graph = None
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -563,7 +562,8 @@ class Graph(object):
 
     def restore_full_job(self, full_job):
         self._full_job_proto = full_job
-        self._c_nn_graph.job = full_job.SerializeToString()
+        if self._c_nn_graph is not None:
+            self._c_nn_graph.job = full_job.SerializeToString()
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -851,8 +851,7 @@ class Graph(object):
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
-            self._c_nn_graph.job = self._full_job_proto.SerializeToString()
-            self._c_nn_graph.job_id = (
+            self._job_id = (
                 oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobId()
             )
             self.__print(
@@ -873,7 +872,12 @@ class Graph(object):
                 self._shallow_repr()
                 + " end re-building graph outputs for optimizatioin.",
             )
-
+            self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+                self._name,
+                self._full_job_proto.SerializeToString(),
+                self._job_id,
+                self._session._session_ctx,
+            )
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
                 arg_op_names,

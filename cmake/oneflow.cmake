@@ -513,6 +513,7 @@ if(BUILD_PYTHON)
     PATTERN "oneflow/core/graph/task_id.h"
     PATTERN "oneflow/core/graph/task_id_generator.h"
     PATTERN "oneflow/core/graph/stream_id.h"
+    PATTERN "oneflow/core/vm/vm_sync.h"
     PATTERN "oneflow/api" EXCLUDE
     PATTERN "oneflow/xrt" EXCLUDE
     PATTERN "oneflow/user" EXCLUDE
