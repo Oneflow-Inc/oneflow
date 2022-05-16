@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/user_op_conf.h"
 
@@ -53,6 +54,16 @@ Shape AttrValueAccessor<Shape>::Attr(const AttrValue& val) {
 template<>
 void AttrValueAccessor<Shape>::Attr(const Shape& cpp_val, AttrValue* attr_val) {
   cpp_val.ToProto(attr_val->mutable_at_shape());
+}
+
+template<>
+Stride AttrValueAccessor<Stride>::Attr(const AttrValue& val) {
+  return Stride(val.at_stride());
+}
+
+template<>
+void AttrValueAccessor<Stride>::Attr(const Stride& cpp_val, AttrValue* attr_val) {
+  cpp_val.ToProto(attr_val->mutable_at_stride());
 }
 
 // List of Basic Attr
@@ -110,7 +121,21 @@ void AttrValueAccessor<std::vector<Shape>>::Attr(const std::vector<Shape>& cpp_v
     cpp_val.at(i).ToProto(attr_val->mutable_at_list_shape()->add_val());
   }
 }
-
+template<>
+std::vector<Stride> AttrValueAccessor<std::vector<Stride>>::Attr(const AttrValue& val) {
+  std::vector<Stride> ret;
+  ret.reserve(val.at_list_stride().val_size());
+  for (const auto& value : val.at_list_stride().val()) { ret.emplace_back(value); }
+  return ret;
+}
+template<>
+void AttrValueAccessor<std::vector<Stride>>::Attr(const std::vector<Stride>& cpp_val,
+                                                  AttrValue* attr_val) {
+  attr_val->mutable_at_list_stride()->clear_val();
+  FOR_RANGE(int32_t, i, 0, cpp_val.size()) {
+    cpp_val.at(i).ToProto(attr_val->mutable_at_list_stride()->add_val());
+  }
+}
 // List of String Attr
 template<>
 std::vector<std::string> AttrValueAccessor<std::vector<std::string>>::Attr(const AttrValue& val) {
