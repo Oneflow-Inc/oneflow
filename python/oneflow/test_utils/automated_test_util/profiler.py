@@ -1,4 +1,5 @@
 import functools
+from typing import Any, Callable, Iterable, List, Optional, Tuple
 
 import torch
 import oneflow as flow
@@ -15,10 +16,11 @@ def compose(*fs):
 
 
 class ProfResult:
-    def __init__(self, prof, num, kind, thread_num, op_name, args_description, additional_description=None):
+    def __init__(self, prof, num, kind, device, thread_num, op_name, args_description, additional_description=None):
         self.prof = prof
         self.num = num
         self.kind = kind
+        self.device = device
         self.thread_num = thread_num
         self.op_name = op_name
         self.args_description = args_description
@@ -28,37 +30,55 @@ class ProfResult:
         return getattr(self.prof, attr)
 
 
+WARMUP_NUM = 10
 RUN_NUM = 1000
 
-def run_torch(op, args, kwargs, num_threads, op_name, args_description, additional_description=None):
-    torch.set_num_threads(num_threads)
-    for _ in range(10):
+def run_torch(op, args, kwargs, device, num_threads, op_name, args_description, additional_description=None):
+    assert device in ['cpu', 'cuda']
+    if device == 'cpu':
+        torch.set_num_threads(num_threads)
+        assert torch.get_num_threads() == num_threads
+    def tensor_to_device(x):
+        if isinstance(x, torch.Tensor):
+            return x.to(device)
+        return x
+    args = [tensor_to_device(arg) for arg in args]
+    kwargs = {k: tensor_to_device(v) for k, v in kwargs.items()}
+    for _ in range(WARMUP_NUM):
         op(*args, **kwargs)
 
-    print(f'torch (num_threads={torch.get_num_threads()}):')
+    print(f'PyTorch ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):')
     with torch.profiler.profile() as prof:
         with torch.profiler.record_function("end-to-end"):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
     print(prof.key_averages().table(row_limit=10))
-    return ProfResult(prof, RUN_NUM, 'torch', torch.get_num_threads(), op_name, args_description, additional_description)
+    return ProfResult(prof, RUN_NUM, 'PyTorch', device, num_threads, op_name, args_description, additional_description)
 
 
-def run_flow(op, args, kwargs, num_threads, op_name, args_description, additional_description=None):
-    flow.set_num_threads(num_threads)
-    for _ in range(10):
+def run_flow(op, args, kwargs, device, num_threads, op_name, args_description, additional_description=None):
+    assert device in ['cpu', 'cuda']
+    if device == 'cpu':
+        flow.set_num_threads(num_threads)
+    # NOTE: there is no flow.get_num_threads()
+    def tensor_to_device(x):
+        if isinstance(x, flow.Tensor):
+            return x.to(device)
+        return x
+    args = [tensor_to_device(arg) for arg in args]
+    kwargs = {k: tensor_to_device(v) for k, v in kwargs.items()}
+    for _ in range(WARMUP_NUM):
         op(*args, **kwargs)
 
-    # NOTE: there is no flow.get_num_threads()
-    print(f'flow (num_threads={num_threads}):')
+    print(f'OneFlow ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):')
     with flow.profiler.profile() as prof:
         with flow.profiler.record_function("end-to-end"):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
     print(prof.key_averages())
-    return ProfResult(prof, RUN_NUM, 'flow', num_threads, op_name, args_description, additional_description)
+    return ProfResult(prof, RUN_NUM, 'OneFlow', device, num_threads, op_name, args_description, additional_description)
 
 
 def profile_dual_object(op):
@@ -83,12 +103,10 @@ def profile_dual_object(op):
         args_description = dual_object_module.to_string(*args, **kwargs)
 
         result = []
-        result.append(run_flow(flow_op, flow_args, flow_kwargs, 32, op_name, args_description, additional_description))
-        result.append(run_flow(flow_op, flow_args, flow_kwargs, 8, op_name, args_description, additional_description))
-        result.append(run_flow(flow_op, flow_args, flow_kwargs, 1, op_name, args_description, additional_description))
-        result.append(run_torch(torch_op, torch_args, torch_kwargs, 32, op_name, args_description, additional_description))
-        result.append(run_torch(torch_op, torch_args, torch_kwargs, 8, op_name, args_description, additional_description))
-        result.append(run_torch(torch_op, torch_args, torch_kwargs, 1, op_name, args_description, additional_description))
+        for hardware_info in _hardware_info_list:
+            result.append(run_flow(flow_op, flow_args, flow_kwargs, *hardware_info, op_name, args_description, additional_description))
+        for hardware_info in _hardware_info_list:
+            result.append(run_torch(torch_op, torch_args, torch_kwargs, *hardware_info, op_name, args_description, additional_description))
         return _profiler_hook(result)
 
     return profiled_op
@@ -100,20 +118,17 @@ def profile_flow(op):
     return profiled_op
 
 
-def add_hook(hook):
-    def decorator(op):
-        def new_op(*args, **kwargs):
-            res = op(*args, **kwargs)
-            hook(res)
-            return res
-        return new_op
-    return decorator
+HardwareInfo = Tuple[str, Optional[int]]
+_hardware_info_list: List[HardwareInfo] = [('cpu', 1), ('cuda', None)]
+_profiler_hook: Callable[[List[ProfResult]], Any] = lambda x: x
 
 
-_profiler_hook = lambda x: x
+def set_hardware_info_list(hardware_info_list: List[HardwareInfo]) -> None:
+    global _hardware_info_list
+    _hardware_info_list = hardware_info_list
 
 
-def set_profiler_hook(hook):
+def set_profiler_hook(hook: Callable[[List[ProfResult]], Any]) -> None:
     global _profiler_hook
     _profiler_hook = hook
 
