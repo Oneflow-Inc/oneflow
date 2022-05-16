@@ -746,10 +746,6 @@ void InsertNcclLogicalOpsInSubGraph(
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
-    if (nccl_op_confs.size() == 0 || subgraph_id_in_same_placement_group <= 0) {
-      break;  // NOTE(chengcheng): skip for first subgraph using compute stream(0).
-    }
-
     int64_t nccl_compute_stream_id = *stream_offset;
     if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
