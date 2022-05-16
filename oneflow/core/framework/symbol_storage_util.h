@@ -38,18 +38,16 @@ Maybe<SymbolT> GetSymbol(const SymbolConfT& symbol_conf) {
 }
 
 // TODO(hanbibin): the second template arg will be moved after symbol_storage is refactored
-template<typename SymbolConfT, typename SymbolPbT, typename SymbolT>
-Maybe<void> AddSymbol(int64_t symbol_id, const SymbolConfT& symbol_conf) {
-  SymbolPbT symbol_pb;
-  symbol_conf.ToProto(&symbol_pb);
-  JUST(Global<symbol::Storage<SymbolT>>::Get()->Add(symbol_id, symbol_pb));
-  auto* id_cache = JUST(GlobalMaybe<symbol::IdCache<SymbolConfT>>());
+template<typename SymbolPbT, typename SymbolT>
+Maybe<void> AddSymbol(int64_t symbol_id, const SymbolPbT& symbol_conf) {
+  JUST(Global<symbol::Storage<SymbolT>>::Get()->Add(symbol_id, symbol_conf));
+  auto* id_cache = JUST(GlobalMaybe<symbol::IdCache<SymbolPbT>>());
   CHECK_OR_RETURN(!id_cache->Has(symbol_conf));
   JUST(id_cache->FindOrCreate(symbol_conf, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
   return Maybe<void>::Ok();
 }
 
-template<typename SymbolConfT, typename SymbolT>
+template<typename SymbolT>
 Maybe<SymbolT> GetSymbol(int64_t symbol_id) {
   const auto& symbol_storage = *Global<symbol::Storage<SymbolT>>::Get();
   const auto& ptr = JUST(symbol_storage.MaybeGetPtr(symbol_id));
