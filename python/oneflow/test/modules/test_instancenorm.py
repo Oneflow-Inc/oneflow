@@ -420,7 +420,8 @@ class TestInstanceNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-
+    # NOTE: in the following tese cases, if set track_running_stats=True, will fail!
+    # it could be some bud to be fixed in nn.InstanceNorm
     @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
     def test_instancenorm_with_random_data(test_case):
         height = random(1, 6).to(int)
