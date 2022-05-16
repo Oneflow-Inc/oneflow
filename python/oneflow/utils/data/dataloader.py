@@ -158,7 +158,7 @@ class DataLoader(Generic[T_co]):
         pin_memory (bool, optional): If ``True``, the data loader will copy Tensors
             into CUDA pinned memory before returning them.  If your data elements
             are a custom type, or your :attr:`collate_fn` returns a batch that is a custom type,
-            see the example below.
+            see the example below. (default: ``False``)
         drop_last (bool, optional): set to ``True`` to drop the last incomplete batch,
             if the dataset size is not divisible by the batch size. If ``False`` and
             the size of dataset is not divisible by the batch size, then the last batch
