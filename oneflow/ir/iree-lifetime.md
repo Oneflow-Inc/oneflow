@@ -83,3 +83,9 @@ res50_nn_graph(image_tensor)
 
 - How IREE's asynchronous execution works with oneflow? Are there CUDA stream involved?
 - iree是否可以直接使用外部资源
+
+## iree input and output:
+iree的io array在Python API DeviceArray中依赖于Numpy来实现，所以如果显式compile `nn.graph` to a callable function，cuda的资源需要通过numpy才能与iree进行交互。
+
+iree的扩展通过静态库的方式去实现，借助mlir语言实现相关逻辑。我们可以需要借助该扩展去实现哪些功能：
+？
