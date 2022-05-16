@@ -44,8 +44,8 @@ class ReluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     const int64_t elem_cnt = x->shape().elem_cnt();
 
     // compute is_contiguous and construct input/output stride params
-    const StrideVector& in_stride_vec = x->stride().StrideVec();
-    const StrideVector& out_stride_vec = y->stride().StrideVec();
+    const DimVector& in_stride_vec = x->stride().StrideVec();
+    const DimVector& out_stride_vec = y->stride().StrideVec();
     DimVector in_shape_vec;
     x->shape().ToDimVector(&in_shape_vec);
     bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);

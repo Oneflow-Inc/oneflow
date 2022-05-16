@@ -97,8 +97,8 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::C
     const int32_t ndim = input_a_shape.NumAxes();
 
     // compute is_contiguous and construct input/output stride params
-    const StrideVector& in_stride_vec = input_a_tensor->stride().StrideVec();
-    const StrideVector& out_stride_vec = out_tensor->stride().StrideVec();
+    const DimVector& in_stride_vec = input_a_tensor->stride().StrideVec();
+    const DimVector& out_stride_vec = out_tensor->stride().StrideVec();
     DimVector in_shape_vec;
     input_a_shape.ToDimVector(&in_shape_vec);
     bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);

@@ -79,7 +79,7 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
   return contig_if_nonempty;
 }
 
-bool IsContiguous(const DimVector& shape_vec, const StrideVector& stride_vec) {
+bool IsContiguous(const DimVector& shape_vec, const DimVector& stride_vec) {
   const size_t ndim = shape_vec.size();
   const size_t stride_ndim = stride_vec.size();
   if (ndim < 1 || stride_ndim < 1) { return true; }
@@ -100,7 +100,7 @@ bool IsContiguous(const DimVector& shape_vec, const StrideVector& stride_vec) {
 }
 
 bool IsContiguous(const user_op::Tensor* tensor) {
-  const StrideVector& stride_vec = tensor->stride().StrideVec();
+  const DimVector& stride_vec = tensor->stride().StrideVec();
   DimVector shape_vec;
   tensor->shape().ToDimVector(&shape_vec);
   return IsContiguous(shape_vec, stride_vec);
@@ -108,7 +108,7 @@ bool IsContiguous(const user_op::Tensor* tensor) {
 
 StrideParam GetStrideParam(const user_op::Tensor* tensor) {
   const int32_t ndim = tensor->shape().NumAxes();
-  const StrideVector& stride_vec = tensor->stride().StrideVec();
+  const DimVector& stride_vec = tensor->stride().StrideVec();
   DimVector shape_vec;
   tensor->shape().ToDimVector(&shape_vec);
   return StrideParam(stride_vec.data(), ndim);

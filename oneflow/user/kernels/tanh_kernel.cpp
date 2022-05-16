@@ -45,8 +45,8 @@ class TanhKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
 
     // compute is_contiguous and construct input/output stride params
     const int32_t ndim = x->shape().NumAxes();
-    const StrideVector& in_stride_vec = x->stride().StrideVec();
-    const StrideVector& out_stride_vec = y->stride().StrideVec();
+    const DimVector& in_stride_vec = x->stride().StrideVec();
+    const DimVector& out_stride_vec = y->stride().StrideVec();
     DimVector in_shape_vec;
     x->shape().ToDimVector(&in_shape_vec);
     bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);

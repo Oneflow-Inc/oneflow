@@ -62,8 +62,8 @@ class ScalarMathKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = out->shape().elem_cnt();
     const int32_t ndim = in->shape().NumAxes();
     // compute is_contiguous and construct input/output stride params
-    const StrideVector& in_stride_vec = in->stride().StrideVec();
-    const StrideVector& out_stride_vec = out->stride().StrideVec();
+    const DimVector& in_stride_vec = in->stride().StrideVec();
+    const DimVector& out_stride_vec = out->stride().StrideVec();
     DimVector in_shape_vec;
     in->shape().ToDimVector(&in_shape_vec);
     bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);

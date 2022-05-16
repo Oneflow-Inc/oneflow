@@ -31,7 +31,7 @@ class ParallelDesc;
 namespace one {
 
 bool IsContiguous(const Shape& shape, const Stride& stride);
-bool IsContiguous(const DimVector& shape, const StrideVector& stride);
+bool IsContiguous(const DimVector& shape, const DimVector& stride);
 bool IsContiguous(const user_op::Tensor* tensor);
 StrideParam GetStrideParam(const user_op::Tensor* tensor);
 
