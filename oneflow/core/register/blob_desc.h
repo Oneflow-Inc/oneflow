@@ -19,6 +19,7 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/blob_desc.pb.h"
@@ -34,10 +35,14 @@ class BlobDesc final {
   // NOTE(chengcheng): Cannot using std::make_shared in header file, because it will cause
   //  Segmentation fault with unknown reason.
   BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic);
-  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype, bool is_dynamic);
+  BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic);
+  BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
+           DataType dtype, bool is_dynamic);
 
   BlobDesc(const Shape& shape, DataType dtype);
-  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype);
+  BlobDesc(const Shape& shape, const Stride& stride, DataType dtype);
+  BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
+           DataType dtype);
   explicit BlobDesc(DataType dtype);
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
@@ -45,9 +50,13 @@ class BlobDesc final {
   BlobDesc& operator=(const BlobDesc&);
 
   const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
+  const Stride& stride() const { return *CHECK_NOTNULL(stride_.get()); }
   const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
+  const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
   Shape& mut_shape() { return *CHECK_NOTNULL(mut_shape_ptr().get()); }
+  Stride& mut_stride() { return *CHECK_NOTNULL(mut_stride_ptr().get()); }
   void set_shape(const Shape& shape) { *CHECK_NOTNULL(mut_shape_ptr().get()) = shape; }
+  void set_stride(const Stride& stride) { stride_ = std::make_shared<Stride>(stride); }
 
   DataType data_type() const { return data_type_; }
   DataType* mut_data_type() { return &data_type_; }
@@ -70,7 +79,11 @@ class BlobDesc final {
 
  private:
   std::shared_ptr<const Shape> shape_;
+  std::shared_ptr<const Stride> stride_;
   std::shared_ptr<Shape> mut_shape_ptr() const { return std::const_pointer_cast<Shape>(shape_); }
+  std::shared_ptr<Stride> mut_stride_ptr() const {
+    return std::const_pointer_cast<Stride>(stride_);
+  }
   DataType data_type_;
   bool is_dynamic_;
 };
