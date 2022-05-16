@@ -78,18 +78,6 @@ auto CastPrimitiveExists() {
   });
 }
 
-// REGISTER_USER_KERNEL("optim_fuse_cast")
-//     .SetCreateFn<OptimFuseCast>()
-//     .SetIsMatchedHob(CastPrimitiveExists() == true)
-//     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-//                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) ->
-//                              Maybe<void> {
-//       if (ctx.InputDType("in", 0) == ctx.Attr<DataType>("dtype")) {
-//         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));
-//       }
-//       return Maybe<void>::Ok();
-//     });
-
 REGISTER_USER_KERNEL("optim_fuse_cast")
     .SetCreateFn<OptimFuseCast>()
     .SetIsMatchedHob(CastPrimitiveExists() == true);

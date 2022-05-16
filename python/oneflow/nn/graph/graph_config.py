@@ -163,6 +163,35 @@ class GraphConfig(object):
         """
         self.proto.set_enable_fuse_cast_scale(mode)
 
+    def allow_fuse_optimizer_cast(self, mode: bool = True):
+        r"""If set to true, try to fuse optimizer update and AMP cast to fp16 to improve performance.
+        It need to enable_amp as True. 
+    
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            def model(x):
+                return flow.mul(1,flow.cast(x,flow.int8))
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.m=model
+                    self.config.enable_amp(True)
+                    self.config.allow_fuse_optimizer_cast(True)
+                def build(self, x):
+                    return self.m(x)
+
+            graph = Graph()
+
+        Args:
+            mode (bool, optional): The default vaule is True.
+        """
+        self.proto.set_enable_fuse_optimizer_update_cast(mode)
+
     def set_gradient_accumulation_steps(self, value):
         r"""Set num of steps to accumulate gradient.
 
