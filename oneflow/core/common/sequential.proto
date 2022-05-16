@@ -2,6 +2,6 @@ syntax = "proto2";
 package oneflow;
 
 message Int64ListProto {
-  repeated int64 dim = 1;
+  repeated int64 elem = 1;
 }
 

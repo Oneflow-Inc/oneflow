@@ -43,7 +43,7 @@ Stride::Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(s
 Stride::Stride(const DimVector& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(DimVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
 Stride::Stride(const Int64ListProto& stride_proto) {
-  stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
+  stride_vec_.assign(stride_proto.elem().begin(), stride_proto.elem().end());
 }
 
 Stride& Stride::assign(const DimVector& stride_vec) {
@@ -77,7 +77,7 @@ std::string Stride::ToString() const {
 }
 
 void Stride::ToProto(Int64ListProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(stride_vec_.begin(), stride_vec_.end());
+  *(ret->mutable_elem()) = PbRf<int64_t>(stride_vec_.begin(), stride_vec_.end());
 }
 
 }  // namespace oneflow

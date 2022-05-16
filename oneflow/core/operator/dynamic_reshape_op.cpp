@@ -33,7 +33,7 @@ class DynamicReshapeOp final : public Operator {
     const BlobDesc* in = BlobDesc4BnInOp("in");
     BlobDesc* out = BlobDesc4BnInOp("out");
     *out = *in;
-    DimVector out_dim_vec(conf.shape().dim().begin(), conf.shape().dim().end());
+    DimVector out_dim_vec(conf.shape().elem().begin(), conf.shape().elem().end());
     int32_t inferred_axis = -1;
     int32_t product = 1;
     for (int32_t i = 0; i < out_dim_vec.size(); ++i) {
@@ -63,7 +63,7 @@ class DynamicReshapeOp final : public Operator {
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
     BlobDesc* out = GetBlobDesc4BnInOp("out");
     *out = *in;
-    DimVector out_dim_vec(conf.shape().dim().begin(), conf.shape().dim().end());
+    DimVector out_dim_vec(conf.shape().elem().begin(), conf.shape().elem().end());
     if (parallel_ctx->parallel_num() > 1) {
       // consistent strategy
       //   ONLY support sbp: S(0); and -1 must at axis 0
