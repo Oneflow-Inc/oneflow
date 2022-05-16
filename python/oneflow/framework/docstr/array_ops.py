@@ -338,32 +338,6 @@ add_docstr(
     r"""
     cat(inputs, dim=0) -> Tensor 
 
-    Concatenate two or more `Tensor` s at specified dim.
-
-    Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
-
-    Args:
-        inputs: a `list` of `Tensor`
-        dim: a `int`.
-
-    Returns:
-        A `Tensor`
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-
-        >>> input1 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input2 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input3 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-
-        >>> out = flow.cat([input1, input2, input3], dim=1) # equal to using flow.concat()
-        >>> out.shape
-        oneflow.Size([2, 18, 5, 3])
-
     """,
 )
 
