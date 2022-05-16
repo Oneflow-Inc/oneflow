@@ -13,11 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "oneflow/user/kernels/max_pool_kernel_util.h"
-#include "oneflow/core/ep/cpu/cpu_stream.h"
-#include "oneflow/core/ep/cpu/cpu_device.h"
-
 
 namespace oneflow {
 
@@ -99,95 +95,17 @@ void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helpe
 
 }  // namespace
 
-#ifdef WITH_ONEDNN
-
-template<typename T>
-dnnl::memory::data_type CppTypeToOneDnnDtype();
-
-template<>
-dnnl::memory::data_type CppTypeToOneDnnDtype<int32_t>(){ return dnnl::memory::data_type::s32;}
-
-template<>
-dnnl::memory::data_type CppTypeToOneDnnDtype<float>(){ return dnnl::memory::data_type::f32;}
-
-template<typename T, typename IDX>
-struct OneDnnPoolKernelUtil {
-  static void OneDnnPool1dForwardCompute(ep::Stream* stream, const int64_t batch_size, const int64_t width,
-                               const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                               const MaxPoolParams3D& params_3d) {
-    auto data_type = CppTypeToOneDnnDtype<T>();
-    ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
-    size_t num_threads = cpu_stream->device()->GetNumThreads();
-    ep::CpuNumThreadsGuard guard(num_threads);
-    dnnl::engine* onednn_engine = cpu_stream->onednn_engine();
-    dnnl::stream* onednn_stream = cpu_stream->onednn_stream();
-  
-    const dnnl::memory::dim n = 1, input_channel = 1,
-            input_height = batch_size, input_width = width,
-            kernel_height = 1, kernel_width = params_3d.pool_size_3d()[2],
-            padding_height_left = 0,  padding_height_right = 0,
-            padding_width_left = params_3d.padding()[2],
-            padding_width_right = params_3d.padding()[2],
-            stride_height = 1, stride_width = params_3d.stride_3d()[2],
-            dilation_height = 1,dilation_width = 1;
-
-    const dnnl::memory::dim output_height = (input_height - ((kernel_height - 1) * dilation_height+ kernel_height) + padding_height_left + padding_height_right) / stride_height + 1;
-    const dnnl::memory::dim output_width = (input_width - ((kernel_width - 1) * dilation_width + kernel_width) + padding_width_left + padding_width_right) / stride_width + 1;
-    
-    dnnl::memory::dims kernel_dims = {kernel_height, kernel_width};
-    dnnl::memory::dims src_dims = {n, input_channel, input_height, input_width};
-    dnnl::memory::dims dst_dims = {n, input_channel, output_height, output_width};
-    dnnl::memory::dims strides_dims = {stride_height, stride_width};
-    dnnl::memory::dims padding_dims_l = {padding_height_left, padding_width_left};
-    dnnl::memory::dims padding_dims_r = {padding_height_right, padding_width_right};
-    dnnl::memory::dims dilation = {dilation_height, dilation_width};
-    
-    auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nchw);
-    auto dst_md = dnnl::memory::desc(dst_dims, data_type, dnnl::memory::format_tag::nchw);
-    auto src_mem = dnnl::memory(src_md, *onednn_engine, (void*)src);
-    auto dst_mem = dnnl::memory(dst_md, *onednn_engine, (void*)dest);
-    
-    auto pooling_d = dnnl::pooling_v2_forward::desc(dnnl::prop_kind::forward_training,
-            dnnl::algorithm::pooling_max, src_md, dst_md, strides_dims, kernel_dims,
-            dilation, padding_dims_l, padding_dims_r);
-    auto pooling_pd = dnnl::pooling_v2_forward::primitive_desc(pooling_d, *onednn_engine);
-    auto workspace_mem = dnnl::memory(pooling_pd.workspace_desc(), *onednn_engine);
-    auto pooling_prim = dnnl::pooling_v2_forward(pooling_pd);
-
-    pooling_prim.execute(*onednn_stream, {{DNNL_ARG_SRC, src_mem}, {DNNL_ARG_DST, dst_mem}, {DNNL_ARG_WORKSPACE, workspace_mem}});
-    onednn_stream->wait();
-
-  }
-};
-
-template< typename IDX>
-struct OneDnnPoolKernelUtil <double, IDX> {
-  static void OneDnnPool1dForwardCompute(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
-                               const IDX elem_num, const double* src, double* dest, int64_t* indice_ptr,
-                               const MaxPoolParams3D& params_3d) {
-    Maxpool1dForwardCompute<double, IDX>(
-        index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
-        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
-        params_3d.pool_size_3d()[2], params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
-  }
-};
-
-#endif  // WITH_ONEDNN
-
 template<typename T, typename IDX>
 struct PoolKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolParams3D& params_3d) {
-  #ifdef WITH_ONEDNN
-    OneDnnPoolKernelUtil<T, IDX>::OneDnnPool1dForwardCompute(stream,
-        index_helper, elem_num, src, dest, indice_ptr, params_3d);
-  #else
+
     Maxpool1dForwardCompute<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
         params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
         params_3d.pool_size_3d()[2], params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
- #endif  // WITH_ONEDNN
+
   }
 
   static void Maxpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
@@ -602,7 +520,80 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
   REGISTER_POOL_KERNELS(device, float)    \
   REGISTER_POOL_KERNELS(device, double)
 
+
+#ifdef WITH_ONEDNN
+
+template<DeviceType device_type, typename T>
+class OneDnnMaxPool1dKernel final : public user_op::OpKernel {
+ public:
+  OneDnnMaxPool1dKernel() = default;
+  ~OneDnnMaxPool1dKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreatePoolOpKernelCache(ctx, 1);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
+
+    const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
+    const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
+
+    // const int64_t elem_num = y->shape().elem_cnt();
+    const T* src = x->dptr<T>();
+    T* dest = y->mut_dptr<T>();
+    int64_t* indice_ptr = indice->mut_dptr<int64_t>();
+
+    DimVector y_vector(2);
+    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+    y_vector.at(1) = y->shape().At(2);
+
+    // 
+    printf(" max pool ---->\n");
+  }
+};
+
+
+#define REGISTER_ONEDNN_POOL_KERNELS(device, dtype)                                     \
+  REGISTER_USER_KERNEL("max_pool_1d")                                                   \
+      .SetCreateFn<OneDnnMaxPool1dKernel<device, dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_1d_grad")                                              \
+      .SetCreateFn<MaxPool1dGradKernel<device, dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_2d")                                                   \
+      .SetCreateFn<MaxPool2dKernel<device, dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_2d_grad")                                              \
+      .SetCreateFn<MaxPool2dGradKernel<device, dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_3d")                                                   \
+      .SetCreateFn<MaxPool3dKernel<device, dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("max_pool_3d_grad")                                              \
+      .SetCreateFn<MaxPool3dGradKernel<device, dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+
+REGISTER_ONEDNN_POOL_KERNELS(DeviceType::kCPU, int32_t)
+REGISTER_ONEDNN_POOL_KERNELS(DeviceType::kCPU, float)
+REGISTER_POOL_KERNELS(DeviceType::kCPU, double)
+
+#else
 REGISTER_POOL_WITH_DEVICE(DeviceType::kCPU)
+#endif // WITH_ONEDNN
 
 #ifdef WITH_CUDA
 REGISTER_POOL_WITH_DEVICE(DeviceType::kCUDA)
