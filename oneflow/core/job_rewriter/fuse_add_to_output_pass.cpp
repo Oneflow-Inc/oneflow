@@ -126,7 +126,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     // Make a new_add_to_op to fuse add_n into this op.
     if (JUST(job_builder->IsInMutOpTransaction(add_to_node->op().op_name()))) {
       OperatorConf& new_add_to_op_conf =
-          *JUST(job_builder->MutOpTransactionGet(add_to_node->op().op_name()));
+          JUST(job_builder->MutOpTransactionGet(add_to_node->op().op_name()));
       *(*(new_add_to_op_conf.mutable_user_conf()->mutable_input()))["_add_to_output"]
            .mutable_s()
            ->Add() = GenLogicalBlobName(*add_to_lbi);
@@ -149,8 +149,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       // Make add_n op's consumer to consume the new_add_to_op
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
-          OperatorConf& consumer_op_conf =
-              *JUST(job_builder->MutOpTransactionGet(consumer_op_name));
+          OperatorConf& consumer_op_conf = JUST(job_builder->MutOpTransactionGet(consumer_op_name));
           const auto& new_val = GenLogicalBlobName(*sum_lbi);
           const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
           CHECK_EQ(GenLogicalBlobName(out), old_val);
