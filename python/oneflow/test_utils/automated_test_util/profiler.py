@@ -32,15 +32,20 @@ class ProfResult:
         return getattr(self.prof, attr)
 
 
-WARMUP_NUM = 10
-RUN_NUM = 1000
+WARMUP_NUM = int(os.getenv("ONEFLOW_PROFILE_WARMUP_NUM", 10))
+RUN_NUM = int(os.getenv("ONEFLOW_PROFILE_RUN_NUM", 1000))
 PRINT_PROF_RESULT = flow.support.env_var_util.parse_boolean_form_env("ONEFLOW_PROFILE_PRINT_RESULT", True)
+END_TO_END = 'end-to-end'
 
 def run_torch(op, args, kwargs, device, num_threads, op_name, args_description, additional_description=None):
     assert device in ['cpu', 'cuda']
     if device == 'cpu':
         torch.set_num_threads(num_threads)
         assert torch.get_num_threads() == num_threads
+        activities = [torch.profiler.ProfilerActivity.CPU]
+    else:
+        activities = [torch.profiler.ProfilerActivity.CUDA]
+
     def tensor_to_device(x):
         if isinstance(x, torch.Tensor):
             return x.to(device)
@@ -52,8 +57,8 @@ def run_torch(op, args, kwargs, device, num_threads, op_name, args_description, 
 
     if PRINT_PROF_RESULT:
         print(f'PyTorch ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):')
-    with torch.profiler.profile() as prof:
-        with torch.profiler.record_function("end-to-end"):
+    with torch.profiler.profile(activities=activities) as prof:
+        with torch.profiler.record_function(END_TO_END):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
@@ -65,8 +70,11 @@ def run_torch(op, args, kwargs, device, num_threads, op_name, args_description, 
 def run_flow(op, args, kwargs, device, num_threads, op_name, args_description, additional_description=None):
     assert device in ['cpu', 'cuda']
     if device == 'cpu':
+        # NOTE: there is no flow.get_num_threads()
         flow.set_num_threads(num_threads)
-    # NOTE: there is no flow.get_num_threads()
+        activities = [flow.profiler.ProfilerActivity.CPU]
+    else:
+        activities = [flow.profiler.ProfilerActivity.CUDA]
     def tensor_to_device(x):
         if isinstance(x, flow.Tensor):
             return x.to(device)
@@ -78,8 +86,8 @@ def run_flow(op, args, kwargs, device, num_threads, op_name, args_description, a
 
     if PRINT_PROF_RESULT:
         print(f'OneFlow ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):')
-    with flow.profiler.profile() as prof:
-        with flow.profiler.record_function("end-to-end"):
+    with flow.profiler.profile(activities=activities) as prof:
+        with flow.profiler.record_function(END_TO_END):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
@@ -119,7 +127,7 @@ def profile_dual_object(op):
     return profiled_op
 
 
-HardwareInfo = Tuple[str, Optional[int]]
+HardwareInfo = Tuple[str, Optional[int]] # (device_type, num_threads)
 _hardware_info_list: List[HardwareInfo] = [('cpu', 1), ('cuda', None)]
 _profiler_hook: Callable[[List[ProfResult]], Any] = lambda x: x
 

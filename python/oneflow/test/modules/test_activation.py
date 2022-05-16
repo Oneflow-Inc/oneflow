@@ -62,7 +62,7 @@ class TestReLUModule(flow.unittest.TestCase):
     @profile(torch.nn.functional.relu)
     def profile_relu(test_case):
         torch.nn.functional.relu(torch.ones(1, 32, 64, 64))
-        torch.nn.functional.relu(torch.ones(16, 32, 64, 64))
+        # torch.nn.functional.relu(torch.ones(16, 32, 64, 64))
 
 
 @flow.unittest.skip_unless_1n1d()
