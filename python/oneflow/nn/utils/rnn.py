@@ -21,6 +21,8 @@ import warnings
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 
+# The implementation of rnn util is modified from: https://github.com/pytorch/pytorch/blob/master/torch/nn/utils/rnn.py
+
 
 def bind(optional, fn):
     if optional is None:

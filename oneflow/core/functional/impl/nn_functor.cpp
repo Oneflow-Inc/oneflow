@@ -3392,12 +3392,6 @@ Maybe<TensorTuple> _rnn_impl(const std::shared_ptr<one::Tensor>& input,
         (*fw_outputs)[i] = fw_hidden;
       }
       final_hiddens.emplace_back(fw_hidden);
-      if (dropout != 0 && train && l < num_layers - 1) {
-        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*fw_outputs, 0));
-        std::shared_ptr<one::Tensor> dropout_res =
-            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
-        fw_outputs = JUST(functional::Unbind(dropout_res, 0));
-      }
 
       // reverse direction
       std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
@@ -3408,20 +3402,20 @@ Maybe<TensorTuple> _rnn_impl(const std::shared_ptr<one::Tensor>& input,
         (*bw_outputs)[i] = bw_hidden;
       }
       final_hiddens.emplace_back(bw_hidden);
-      if (dropout != 0 && train && l < num_layers - 1) {
-        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*bw_outputs, 0));
-        std::shared_ptr<one::Tensor> dropout_res =
-            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
-        bw_outputs = JUST(functional::Unbind(dropout_res, 0));
-      }
 
       // concat fw_outputs and bw_outputs
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
         rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
                                                     bw_hidden->shape()->NumAxes() - 1));
       }
-    }
 
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*rnn_inputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        rnn_inputs = JUST(functional::Unbind(dropout_res, 0));
+      }
+    }
   } else {
     for (int32_t l = 0; l < num_layers; ++l) {
       std::shared_ptr<one::Tensor> hidden = rnn_hiddens->at(l);
@@ -3433,9 +3427,9 @@ Maybe<TensorTuple> _rnn_impl(const std::shared_ptr<one::Tensor>& input,
       final_hiddens.emplace_back(hidden);
       if (dropout != 0 && train && l < num_layers - 1) {
         std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*rnn_inputs, 0));
-        std::shared_ptr<one::Tensor> layer_input =
+        std::shared_ptr<one::Tensor> dropout_res =
             JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
-        rnn_inputs = JUST(functional::Unbind(layer_input, 0));
+        rnn_inputs = JUST(functional::Unbind(dropout_res, 0));
       }
     }
   }
@@ -3480,6 +3474,185 @@ class RnnReluInputFunctor {
   }
 };
 
+template<typename cell_type>
+Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& input,
+                                           const std::shared_ptr<one::Tensor>& batch_sizes,
+                                           const std::shared_ptr<one::Tensor>& hx,
+                                           const one::TensorTuple& params, const bool& has_biases,
+                                           const int32_t& num_layers, const float& dropout,
+                                           const bool& train, const bool& bidirectional) {
+  auto rnn_params = JUST(gather_params(params, has_biases));
+  std::shared_ptr<TensorTuple> rnn_hiddens = JUST(functional::Unbind(hx, 0));
+  auto generator = JUST(one::DefaultAutoGenerator());
+
+  TensorTuple final_hiddens;
+
+  std::vector<int64_t> batch_sizes_vec;
+  batch_sizes_vec.resize(batch_sizes->nelement());
+  const auto& callback = [&](uint64_t of_blob_ptr) {
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    of_blob->AutoMemCopyTo<int64_t>(batch_sizes_vec.data(), batch_sizes_vec.size());
+  };
+  JUST(SyncAccessTensorWithTimeOut(batch_sizes, callback, "const"));
+  int64_t num_steps = batch_sizes->shape()->At(0);
+  std::shared_ptr<TensorTuple> rnn_inputs = std::make_shared<TensorTuple>(num_steps);
+  int64_t input_offset = 0;
+  for (int32_t i = 0; i < num_steps; ++i) {
+    const int64_t batch_size = batch_sizes_vec[i];
+    (*rnn_inputs)[i] = JUST(functional::Narrow(input, 0, input_offset, batch_size));
+    input_offset += batch_size;
+  }
+
+  if (bidirectional) {
+    for (int32_t l = 0; l < num_layers; ++l) {
+      // forward direction
+      std::shared_ptr<TensorTuple> fw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
+      int64_t last_batch_size = batch_sizes_vec[0];
+      std::shared_ptr<one::Tensor> fw_hidden = rnn_hiddens->at(l * 2);
+      auto& fw_cell_param = rnn_params->at(l * 2);
+
+      TensorTuple fw_final_hiddens_for_single_layer;
+      for (int32_t i = 0; i < num_steps; ++i) {
+        const int64_t batch_size = batch_sizes_vec[i];
+        const int64_t dec = last_batch_size - batch_size;
+        if (dec > 0) {
+          fw_final_hiddens_for_single_layer.emplace_back(
+              JUST(functional::Narrow(fw_hidden, 0, last_batch_size - dec, dec)));
+          fw_hidden = JUST(functional::Narrow(fw_hidden, 0, 0, last_batch_size - dec));
+        }
+        last_batch_size = batch_size;
+        fw_hidden = JUST(cell_type{}(rnn_inputs->at(i), fw_hidden, fw_cell_param));
+        (*fw_outputs)[i] = fw_hidden;
+      }
+      fw_final_hiddens_for_single_layer.emplace_back(fw_hidden);
+      std::reverse(fw_final_hiddens_for_single_layer.begin(),
+                   fw_final_hiddens_for_single_layer.end());
+      final_hiddens.emplace_back(JUST(functional::Concat(fw_final_hiddens_for_single_layer, 0)));
+
+      // reverse direction
+      std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
+      last_batch_size = batch_sizes_vec[num_steps - 1];
+      std::shared_ptr<one::Tensor> bw_hidden =
+          JUST(functional::Narrow(rnn_hiddens->at(l * 2 + 1), 0, 0, last_batch_size));
+      auto& bw_cell_param = rnn_params->at(l * 2 + 1);
+      // Here the situation is similar to that above, except we start out with
+      // the smallest batch size (and a small set of hidden states we actually use),
+      // and progressively expand the hidden states, as we move backwards over the
+      // 1D list of inputs.
+      for (int64_t i = num_steps - 1; i >= 0; --i) {
+        const int64_t batch_size = batch_sizes_vec[i];
+        const int64_t inc = batch_size - last_batch_size;
+        if (inc > 0) {
+          std::shared_ptr<one::Tensor> hidden_slice = JUST(functional::Narrow(
+              rnn_hiddens->at(l * 2 + 1), 0, last_batch_size, batch_size - last_batch_size));
+          std::shared_ptr<TensorTuple> tmp = std::make_shared<TensorTuple>(2);
+          (*tmp)[0] = bw_hidden;
+          (*tmp)[1] = hidden_slice;
+          bw_hidden = JUST(functional::Concat(*tmp, 0));
+        }
+        last_batch_size = batch_size;
+        bw_hidden = JUST(cell_type{}(rnn_inputs->at(i), bw_hidden, bw_cell_param));
+        (*bw_outputs)[i] = bw_hidden;
+      }
+
+      final_hiddens.emplace_back(bw_hidden);
+
+      // concat fw_outputs and bw_outputs
+      for (int32_t i = 0; i < num_steps; ++i) {
+        rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
+                                                    bw_hidden->shape()->NumAxes() - 1));
+      }
+
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Concat(*rnn_inputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        int64_t input_offset = 0;
+        for (int32_t i = 0; i < num_steps; ++i) {
+          const int64_t batch_size = batch_sizes_vec[i];
+          (*rnn_inputs)[i] = JUST(functional::Narrow(dropout_res, 0, input_offset, batch_size));
+          input_offset += batch_size;
+        }
+      }
+    }
+  } else {
+    // Batch sizes is a sequence of decreasing lengths, which are offsets
+    // into a 1D list of inputs. At every step we slice out batch_size elements,
+    // and possibly account for the decrease in the batch size since the last step,
+    // which requires us to slice the hidden state (since some sequences
+    // are completed now). The sliced parts are also saved, because we will need
+    // to return a tensor of final hidden state.
+    for (int32_t l = 0; l < num_layers; ++l) {
+      int64_t last_batch_size = batch_sizes_vec[0];
+      std::shared_ptr<one::Tensor> hidden = rnn_hiddens->at(l);
+      auto& cell_param = rnn_params->at(l);
+      TensorTuple final_hiddens_for_single_layer;
+      for (int32_t i = 0; i < num_steps; ++i) {
+        const int64_t batch_size = batch_sizes_vec[i];
+        const int64_t dec = last_batch_size - batch_size;
+        if (dec > 0) {
+          final_hiddens_for_single_layer.emplace_back(
+              JUST(functional::Narrow(hidden, 0, last_batch_size - dec, dec)));
+          hidden = JUST(functional::Narrow(hidden, 0, 0, last_batch_size - dec));
+        }
+        last_batch_size = batch_size;
+        hidden = JUST(cell_type{}(rnn_inputs->at(i), hidden, cell_param));
+        rnn_inputs->at(i) = hidden;
+      }
+      final_hiddens_for_single_layer.emplace_back(hidden);
+      std::reverse(final_hiddens_for_single_layer.begin(), final_hiddens_for_single_layer.end());
+      final_hiddens.emplace_back(JUST(functional::Concat(final_hiddens_for_single_layer, 0)));
+
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Concat(*rnn_inputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        int64_t input_offset = 0;
+        for (int32_t i = 0; i < num_steps; ++i) {
+          const int64_t batch_size = batch_sizes_vec[i];
+          (*rnn_inputs)[i] = JUST(functional::Narrow(dropout_res, 0, input_offset, batch_size));
+          input_offset += batch_size;
+        }
+      }
+    }
+  }
+
+  TensorTuple output;
+  output.emplace_back(JUST(functional::Concat(*rnn_inputs, 0)));
+  output.emplace_back(JUST(functional::Stack(final_hiddens, 0)));
+  return output;
+}
+
+class RnnTanhDataFunctor {
+ public:
+  RnnTanhDataFunctor() {}
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& data,
+                                const std::shared_ptr<one::Tensor>& batch_sizes,
+                                const std::shared_ptr<one::Tensor>& hx,
+                                const one::TensorTuple& params, const bool& has_biases,
+                                const int32_t& num_layers, const float& dropout, const bool& train,
+                                const bool& bidirectional) const {
+    return _rnn_pack_sequence_impl<SimpleCell<tanh_f, CellParams>>(
+        data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional);
+  }
+};
+
+class RnnReluDataFunctor {
+ public:
+  RnnReluDataFunctor() {}
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& data,
+                                const std::shared_ptr<one::Tensor>& batch_sizes,
+                                const std::shared_ptr<one::Tensor>& hx,
+                                const one::TensorTuple& params, const bool& has_biases,
+                                const int32_t& num_layers, const float& dropout, const bool& train,
+                                const bool& bidirectional) const {
+    return _rnn_pack_sequence_impl<SimpleCell<relu_f, CellParams>>(
+        data, batch_sizes, hx, params, has_biases, num_layers, dropout, train, bidirectional);
+  }
+};
+
 Maybe<TensorTuple> _lstm_impl(const std::shared_ptr<one::Tensor>& input, const one::TensorTuple& hx,
                               const one::TensorTuple& params, const bool& has_biases,
                               const int32_t& num_layers, const float& dropout, const bool& train,
@@ -3521,13 +3694,6 @@ Maybe<TensorTuple> _lstm_impl(const std::shared_ptr<one::Tensor>& input, const o
       final_hy.emplace_back(lstm_cell_out->at(0));
       final_cy.emplace_back(lstm_cell_out->at(1));
 
-      if (dropout != 0 && train && l < num_layers - 1) {
-        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*fw_outputs, 0));
-        std::shared_ptr<one::Tensor> dropout_res =
-            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
-        fw_outputs = JUST(functional::Unbind(dropout_res, 0));
-      }
-
       // reverse direction
       std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
       (*lstm_cell_out)[0] = layer_hxs->at(l * 2 + 1);
@@ -3541,17 +3707,17 @@ Maybe<TensorTuple> _lstm_impl(const std::shared_ptr<one::Tensor>& input, const o
       final_hy.emplace_back(lstm_cell_out->at(0));
       final_cy.emplace_back(lstm_cell_out->at(1));
 
-      if (dropout != 0 && train && l < num_layers - 1) {
-        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*bw_outputs, 0));
-        std::shared_ptr<one::Tensor> dropout_res =
-            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
-        bw_outputs = JUST(functional::Unbind(dropout_res, 0));
-      }
-
       // concat fw_outputs and bw_outputs
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
         rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
                                                     bw_outputs->at(0)->shape()->NumAxes() - 1));
+      }
+
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*rnn_inputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        rnn_inputs = JUST(functional::Unbind(dropout_res, 0));
       }
     }
 
@@ -3571,9 +3737,9 @@ Maybe<TensorTuple> _lstm_impl(const std::shared_ptr<one::Tensor>& input, const o
 
       if (dropout != 0 && train && l < num_layers - 1) {
         std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*rnn_inputs, 0));
-        std::shared_ptr<one::Tensor> layer_input =
+        std::shared_ptr<one::Tensor> dropout_res =
             JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
-        rnn_inputs = JUST(functional::Unbind(layer_input, 0));
+        rnn_inputs = JUST(functional::Unbind(dropout_res, 0));
       }
     }
   }
@@ -3602,6 +3768,204 @@ class LstmInputFunctor {
                                 const bool& batch_first) const {
     return _lstm_impl(input, hx, params, has_biases, num_layers, dropout, train, bidirectional,
                       batch_first);
+  }
+};
+
+Maybe<TensorTuple> _lstm_pack_sequence_impl(const std::shared_ptr<one::Tensor>& input,
+                                            const std::shared_ptr<one::Tensor>& batch_sizes,
+                                            const one::TensorTuple& hx,
+                                            const one::TensorTuple& params, const bool& has_biases,
+                                            const int32_t& num_layers, const float& dropout,
+                                            const bool& train, const bool& bidirectional) {
+  CHECK_OR_RETURN(hx.size() == 2) << "lstm expects two hidden states";
+  // if cells are of different size, that means projections are used
+  bool has_projections = (hx[0]->shape()->At(2) != hx[1]->shape()->At(2));
+  auto rnn_params = JUST(gather_params(params, has_biases, has_projections));
+
+  std::shared_ptr<TensorTuple> layer_hxs = JUST(functional::Unbind(hx[0], 0));
+  std::shared_ptr<TensorTuple> layer_cxs = JUST(functional::Unbind(hx[1], 0));
+
+  std::vector<int64_t> batch_sizes_vec;
+  batch_sizes_vec.resize(batch_sizes->nelement());
+  const auto& callback = [&](uint64_t of_blob_ptr) {
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    of_blob->AutoMemCopyTo<int64_t>(batch_sizes_vec.data(), batch_sizes_vec.size());
+  };
+  JUST(SyncAccessTensorWithTimeOut(batch_sizes, callback, "const"));
+  int64_t num_steps = batch_sizes->shape()->At(0);
+  std::shared_ptr<TensorTuple> rnn_inputs = std::make_shared<TensorTuple>(num_steps);
+  int64_t input_offset = 0;
+  for (int32_t i = 0; i < num_steps; ++i) {
+    const int64_t batch_size = batch_sizes_vec[i];
+    (*rnn_inputs)[i] = JUST(functional::Narrow(input, 0, input_offset, batch_size));
+    input_offset += batch_size;
+  }
+
+  auto generator = JUST(one::DefaultAutoGenerator());
+
+  TensorTuple final_hy;
+  TensorTuple final_cy;
+
+  if (bidirectional) {
+    for (int32_t l = 0; l < num_layers; ++l) {
+      int64_t last_batch_size = batch_sizes_vec[0];
+      // forward direction
+      std::shared_ptr<TensorTuple> fw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
+      std::shared_ptr<TensorTuple> lstm_cell_out = std::make_shared<TensorTuple>(2);
+      (*lstm_cell_out)[0] = layer_hxs->at(l * 2);
+      (*lstm_cell_out)[1] = layer_cxs->at(l * 2);
+      auto& fw_cell_param = rnn_params->at(l * 2);
+
+      TensorTuple final_hy_for_single_layer;
+      TensorTuple final_cy_for_single_layer;
+      for (int32_t i = 0; i < num_steps; ++i) {
+        const int64_t batch_size = batch_sizes_vec[i];
+        const int64_t dec = last_batch_size - batch_size;
+        if (dec > 0) {
+          final_hy_for_single_layer.emplace_back(
+              JUST(functional::Narrow(lstm_cell_out->at(0), 0, last_batch_size - dec, dec)));
+          (*lstm_cell_out)[0] =
+              JUST(functional::Narrow(lstm_cell_out->at(0), 0, 0, last_batch_size - dec));
+
+          final_cy_for_single_layer.emplace_back(
+              JUST(functional::Narrow(lstm_cell_out->at(1), 0, last_batch_size - dec, dec)));
+          (*lstm_cell_out)[1] =
+              JUST(functional::Narrow(lstm_cell_out->at(1), 0, 0, last_batch_size - dec));
+        }
+        last_batch_size = batch_size;
+        lstm_cell_out =
+            JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, fw_cell_param));
+        (*fw_outputs)[i] = lstm_cell_out->at(0);
+      }
+      final_hy_for_single_layer.emplace_back(lstm_cell_out->at(0));
+      final_cy_for_single_layer.emplace_back(lstm_cell_out->at(1));
+      std::reverse(final_hy_for_single_layer.begin(), final_hy_for_single_layer.end());
+      std::reverse(final_cy_for_single_layer.begin(), final_cy_for_single_layer.end());
+      final_hy.emplace_back(JUST(functional::Concat(final_hy_for_single_layer, 0)));
+      final_cy.emplace_back(JUST(functional::Concat(final_cy_for_single_layer, 0)));
+
+      // reverse direction
+      last_batch_size = batch_sizes_vec[num_steps - 1];
+      std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
+      (*lstm_cell_out)[0] =
+          JUST(functional::Narrow(layer_hxs->at(l * 2 + 1), 0, 0, last_batch_size));
+      (*lstm_cell_out)[1] =
+          JUST(functional::Narrow(layer_cxs->at(l * 2 + 1), 0, 0, last_batch_size));
+
+      auto& bw_cell_param = rnn_params->at(l * 2 + 1);
+
+      for (int64_t i = num_steps - 1; i >= 0; --i) {
+        const int64_t batch_size = batch_sizes_vec[i];
+        const int64_t inc = batch_size - last_batch_size;
+        if (inc > 0) {
+          std::shared_ptr<one::Tensor> hxs_slice = JUST(functional::Narrow(
+              layer_hxs->at(l * 2 + 1), 0, last_batch_size, batch_size - last_batch_size));
+          std::shared_ptr<TensorTuple> tmp = std::make_shared<TensorTuple>(2);
+          (*tmp)[0] = lstm_cell_out->at(0);
+          (*tmp)[1] = hxs_slice;
+          (*lstm_cell_out)[0] = JUST(functional::Concat(*tmp, 0));
+
+          std::shared_ptr<one::Tensor> cxs_slice = JUST(functional::Narrow(
+              layer_cxs->at(l * 2 + 1), 0, last_batch_size, batch_size - last_batch_size));
+          (*tmp)[0] = lstm_cell_out->at(1);
+          (*tmp)[1] = cxs_slice;
+          (*lstm_cell_out)[1] = JUST(functional::Concat(*tmp, 0));
+        }
+        last_batch_size = batch_size;
+        lstm_cell_out =
+            JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, bw_cell_param));
+        (*bw_outputs)[i] = lstm_cell_out->at(0);
+      }
+      final_hy.emplace_back(lstm_cell_out->at(0));
+      final_cy.emplace_back(lstm_cell_out->at(1));
+
+      // concat fw_outputs and bw_outputs
+      for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
+        rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
+                                                    bw_outputs->at(0)->shape()->NumAxes() - 1));
+      }
+
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Concat(*rnn_inputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        int64_t input_offset = 0;
+        for (int32_t i = 0; i < num_steps; ++i) {
+          const int64_t batch_size = batch_sizes_vec[i];
+          (*rnn_inputs)[i] = JUST(functional::Narrow(dropout_res, 0, input_offset, batch_size));
+          input_offset += batch_size;
+        }
+      }
+    }
+  } else {
+    std::shared_ptr<TensorTuple> lstm_cell_out = std::make_shared<TensorTuple>(2);
+    for (int32_t l = 0; l < num_layers; ++l) {
+      int64_t last_batch_size = batch_sizes_vec[0];
+      (*lstm_cell_out)[0] = layer_hxs->at(l);
+      (*lstm_cell_out)[1] = layer_cxs->at(l);
+      auto& cell_param = rnn_params->at(l);
+      TensorTuple final_hy_for_single_layer;
+      TensorTuple final_cy_for_single_layer;
+      for (int32_t i = 0; i < num_steps; ++i) {
+        const int64_t batch_size = batch_sizes_vec[i];
+        const int64_t dec = last_batch_size - batch_size;
+        if (dec > 0) {
+          final_hy_for_single_layer.emplace_back(
+              JUST(functional::Narrow(lstm_cell_out->at(0), 0, last_batch_size - dec, dec)));
+          (*lstm_cell_out)[0] =
+              JUST(functional::Narrow(lstm_cell_out->at(0), 0, 0, last_batch_size - dec));
+
+          final_cy_for_single_layer.emplace_back(
+              JUST(functional::Narrow(lstm_cell_out->at(1), 0, last_batch_size - dec, dec)));
+          (*lstm_cell_out)[1] =
+              JUST(functional::Narrow(lstm_cell_out->at(1), 0, 0, last_batch_size - dec));
+        }
+        last_batch_size = batch_size;
+        lstm_cell_out = JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, cell_param));
+        rnn_inputs->at(i) = lstm_cell_out->at(0);
+        ;
+      }
+      final_hy_for_single_layer.emplace_back(lstm_cell_out->at(0));
+      final_cy_for_single_layer.emplace_back(lstm_cell_out->at(1));
+      std::reverse(final_hy_for_single_layer.begin(), final_hy_for_single_layer.end());
+      std::reverse(final_cy_for_single_layer.begin(), final_cy_for_single_layer.end());
+      final_hy.emplace_back(JUST(functional::Concat(final_hy_for_single_layer, 0)));
+      final_cy.emplace_back(JUST(functional::Concat(final_cy_for_single_layer, 0)));
+
+      if (dropout != 0 && train && l < num_layers - 1) {
+        std::shared_ptr<one::Tensor> stack_res = JUST(functional::Concat(*rnn_inputs, 0));
+        std::shared_ptr<one::Tensor> dropout_res =
+            JUST(functional::Dropout(stack_res, dropout, train, false, generator, nullptr));
+        int64_t input_offset = 0;
+        for (int32_t i = 0; i < num_steps; ++i) {
+          const int64_t batch_size = batch_sizes_vec[i];
+          (*rnn_inputs)[i] = JUST(functional::Narrow(dropout_res, 0, input_offset, batch_size));
+          input_offset += batch_size;
+        }
+      }
+    }
+  }
+
+  TensorTuple output;
+  std::shared_ptr<one::Tensor> output_0 = JUST(functional::Concat(*rnn_inputs, 0));
+  output.emplace_back(output_0);
+  output.emplace_back(JUST(functional::Stack(final_hy, 0)));
+  output.emplace_back(JUST(functional::Stack(final_cy, 0)));
+  return output;
+}
+
+class LstmDataFunctor {
+ public:
+  LstmDataFunctor() {}
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& data,
+                                const std::shared_ptr<one::Tensor>& batch_sizes,
+                                const one::TensorTuple& hx, const one::TensorTuple& params,
+                                const bool& has_biases, const int32_t& num_layers,
+                                const float& dropout, const bool& train,
+                                const bool& bidirectional) const {
+    return _lstm_pack_sequence_impl(data, batch_sizes, hx, params, has_biases, num_layers, dropout,
+                                    train, bidirectional);
   }
 };
 
@@ -3816,8 +4180,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedLstmCellFunctor>("FusedLstmCell");
   m.add_functor<impl::FusedLstmCellGradFunctor>("FusedLstmCellGrad");
   m.add_functor<impl::RnnTanhInputFunctor>("RnnTanhInput");
+  m.add_functor<impl::RnnTanhDataFunctor>("RnnTanhData");
   m.add_functor<impl::RnnReluInputFunctor>("RnnReluInput");
+  m.add_functor<impl::RnnReluDataFunctor>("RnnReluData");
   m.add_functor<impl::LstmInputFunctor>("LstmInput");
+  m.add_functor<impl::LstmDataFunctor>("LstmData");
   m.add_functor<impl::PackPaddedSequenceFunctor>("PackPaddedSequence");
 }
 

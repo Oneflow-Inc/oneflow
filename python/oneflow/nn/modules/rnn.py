@@ -1434,10 +1434,6 @@ class RNNV2(RNNBase):
     .. note::
         ``batch_first`` argument is ignored for unbatched inputs.
 
-    .. include:: ../cudnn_rnn_determinism.rst
-
-    .. include:: ../cudnn_persistent_rnn.rst
-
     Examples::
 
         >>> rnn = nn.RNN(10, 20, 2)
@@ -1462,30 +1458,32 @@ class RNNV2(RNNBase):
 
     def forward(self, input, hx=None):  # noqa: F811
         orig_input = input
-        # TODO(Liang Depeng): Support PackedSequence
-        # if isinstance(orig_input, PackedSequence):
-        #     input, batch_sizes, sorted_indices, unsorted_indices = input
-        #     max_batch_size = int(batch_sizes[0])
-        # else:
-        batch_sizes = None
-        is_batched = input.dim() == 3
-        batch_dim = 0 if self.batch_first else 1
-        if not is_batched:
-            input = input.unsqueeze(batch_dim)
-            if hx is not None:
-                if hx.dim() != 2:
-                    raise RuntimeError(
-                        f"For unbatched 2-D input, hx should also be 2-D but got {hx.dim()}-D tensor"
-                    )
-                hx = hx.unsqueeze(1)
+        if isinstance(orig_input, PackedSequence):
+            input = orig_input.data
+            batch_sizes = orig_input.batch_sizes
+            sorted_indices = orig_input.sorted_indices
+            unsorted_indices = orig_input.unsorted_indices
+            max_batch_size = int(batch_sizes[0])
         else:
-            if hx is not None and hx.dim() != 3:
-                raise RuntimeError(
-                    f"For batched 3-D input, hx should also be 3-D but got {hx.dim()}-D tensor"
-                )
-        max_batch_size = input.size(0) if self.batch_first else input.size(1)
-        sorted_indices = None
-        unsorted_indices = None
+            batch_sizes = None
+            is_batched = input.dim() == 3
+            batch_dim = 0 if self.batch_first else 1
+            if not is_batched:
+                input = input.unsqueeze(batch_dim)
+                if hx is not None:
+                    if hx.dim() != 2:
+                        raise RuntimeError(
+                            f"For unbatched 2-D input, hx should also be 2-D but got {hx.dim()}-D tensor"
+                        )
+                    hx = hx.unsqueeze(1)
+            else:
+                if hx is not None and hx.dim() != 3:
+                    raise RuntimeError(
+                        f"For batched 3-D input, hx should also be 3-D but got {hx.dim()}-D tensor"
+                    )
+            max_batch_size = input.size(0) if self.batch_first else input.size(1)
+            sorted_indices = None
+            unsorted_indices = None
 
         if hx is None:
             num_directions = 2 if self.bidirectional else 1
@@ -1514,49 +1512,65 @@ class RNNV2(RNNBase):
         assert hx is not None
         self.check_forward_args(input, hx, batch_sizes)
         assert self.mode == "RNN_TANH" or self.mode == "RNN_RELU"
-        # if batch_sizes is None:
-        if self.mode == "RNN_TANH":
-            result = flow._C.rnn_tanh(
-                input,
-                hx,
-                self._flat_weights,
-                self.bias,
-                self.num_layers,
-                self.dropout,
-                self.training,
-                self.bidirectional,
-                self.batch_first,
-            )
+        if batch_sizes is None:
+            if self.mode == "RNN_TANH":
+                result = flow._C.rnn_tanh(
+                    input,
+                    hx,
+                    self._flat_weights,
+                    self.bias,
+                    self.num_layers,
+                    self.dropout,
+                    self.training,
+                    self.bidirectional,
+                    self.batch_first,
+                )
+            else:
+                result = flow._C.rnn_relu(
+                    input,
+                    hx,
+                    self._flat_weights,
+                    self.bias,
+                    self.num_layers,
+                    self.dropout,
+                    self.training,
+                    self.bidirectional,
+                    self.batch_first,
+                )
         else:
-            result = flow._C.rnn_relu(
-                input,
-                hx,
-                self._flat_weights,
-                self.bias,
-                self.num_layers,
-                self.dropout,
-                self.training,
-                self.bidirectional,
-                self.batch_first,
-            )
-        # TODO(Liang Depeng): Support PackedSequence
-        # else:
-        #     if self.mode == 'RNN_TANH':
-        #         result = _VF.rnn_tanh(input, batch_sizes, hx, self._flat_weights, self.bias,
-        #                               self.num_layers, self.dropout, self.training,
-        #                               self.bidirectional)
-        #     else:
-        #         result = _VF.rnn_relu(input, batch_sizes, hx, self._flat_weights, self.bias,
-        #                               self.num_layers, self.dropout, self.training,
-        #                               self.bidirectional)
+            if self.mode == "RNN_TANH":
+                result = flow._C.rnn_tanh(
+                    input,
+                    batch_sizes,
+                    hx,
+                    self._flat_weights,
+                    self.bias,
+                    self.num_layers,
+                    self.dropout,
+                    self.training,
+                    self.bidirectional,
+                )
+            else:
+                result = flow._C.rnn_relu(
+                    input,
+                    batch_sizes,
+                    hx,
+                    self._flat_weights,
+                    self.bias,
+                    self.num_layers,
+                    self.dropout,
+                    self.training,
+                    self.bidirectional,
+                )
 
         output = result[0]
         hidden = result[1]
 
-        # TODO(Liang Depeng): Support PackedSequence
-        # if isinstance(orig_input, PackedSequence):
-        #     output_packed = PackedSequence(output, batch_sizes, sorted_indices, unsorted_indices)
-        #     return output_packed, self.permute_hidden(hidden, unsorted_indices)
+        if isinstance(orig_input, PackedSequence):
+            output_packed = PackedSequence(
+                output, batch_sizes, sorted_indices, unsorted_indices
+            )
+            return output_packed, self.permute_hidden(hidden, unsorted_indices)
 
         if not is_batched:
             output = output.squeeze(batch_dim)
@@ -1711,10 +1725,6 @@ class LSTMV2(RNNBase):
     .. note::
         ``batch_first`` argument is ignored for unbatched inputs.
 
-    .. include:: ../cudnn_rnn_determinism.rst
-
-    .. include:: ../cudnn_persistent_rnn.rst
-
     Examples::
 
         >>> rnn = nn.LSTM(10, 20, 2)
@@ -1773,20 +1783,21 @@ class LSTMV2(RNNBase):
     def forward(self, input, hx=None):
         orig_input = input
         batch_sizes = None
-        # TODO(Liang Depeng): Support PackedSequence
-        # if isinstance(orig_input, PackedSequence):
-        #     input, batch_sizes, sorted_indices, unsorted_indices = input
-        #     max_batch_size = batch_sizes[0]
-        #     max_batch_size = int(max_batch_size)
-        # else:
-        batch_sizes = None
-        is_batched = input.dim() == 3
-        batch_dim = 0 if self.batch_first else 1
-        if not is_batched:
-            input = input.unsqueeze(batch_dim)
-        max_batch_size = input.size(0) if self.batch_first else input.size(1)
-        sorted_indices = None
-        unsorted_indices = None
+        if isinstance(orig_input, PackedSequence):
+            input = orig_input.data
+            batch_sizes = orig_input.batch_sizes
+            sorted_indices = orig_input.sorted_indices
+            unsorted_indices = orig_input.unsorted_indices
+            max_batch_size = int(batch_sizes[0])
+        else:
+            batch_sizes = None
+            is_batched = input.dim() == 3
+            batch_dim = 0 if self.batch_first else 1
+            if not is_batched:
+                input = input.unsqueeze(batch_dim)
+            max_batch_size = input.size(0) if self.batch_first else input.size(1)
+            sorted_indices = None
+            unsorted_indices = None
 
         if hx is None:
             num_directions = 2 if self.bidirectional else 1
@@ -1850,33 +1861,42 @@ class LSTMV2(RNNBase):
             hx = self.permute_hidden(hx, sorted_indices)
 
         self.check_forward_args(input, hx, batch_sizes)
-        # if batch_sizes is None:
-        result = flow._C.lstm(
-            input,
-            hx,
-            self._flat_weights,
-            self.bias,
-            self.num_layers,
-            self.dropout,
-            self.training,
-            self.bidirectional,
-            self.batch_first,
-        )
-        # TODO(Liang Depeng): Support PackedSequence
-        # else:
-        #     result = _VF.lstm(input, batch_sizes, hx, self._flat_weights, self.bias,
-        #                       self.num_layers, self.dropout, self.training, self.bidirectional)
+        if batch_sizes is None:
+            result = flow._C.lstm(
+                input,
+                hx,
+                self._flat_weights,
+                self.bias,
+                self.num_layers,
+                self.dropout,
+                self.training,
+                self.bidirectional,
+                self.batch_first,
+            )
+        else:
+            result = flow._C.lstm(
+                input,
+                batch_sizes,
+                hx,
+                self._flat_weights,
+                self.bias,
+                self.num_layers,
+                self.dropout,
+                self.training,
+                self.bidirectional,
+            )
         output = result[0]
         hidden = result[1:]
-        # TODO(Liang Depeng): Support PackedSequence
-        # if isinstance(orig_input, PackedSequence):
-        #     output_packed = PackedSequence(output, batch_sizes, sorted_indices, unsorted_indices)
-        #     return output_packed, self.permute_hidden(hidden, unsorted_indices)
-        # else:
-        if not is_batched:
-            output = output.squeeze(batch_dim)
-            hidden = (hidden[0].squeeze(1), hidden[1].squeeze(1))
-        return output, self.permute_hidden(hidden, unsorted_indices)
+        if isinstance(orig_input, PackedSequence):
+            output_packed = PackedSequence(
+                output, batch_sizes, sorted_indices, unsorted_indices
+            )
+            return output_packed, self.permute_hidden(hidden, unsorted_indices)
+        else:
+            if not is_batched:
+                output = output.squeeze(batch_dim)
+                hidden = (hidden[0].squeeze(1), hidden[1].squeeze(1))
+            return output, self.permute_hidden(hidden, unsorted_indices)
 
 
 class RNNCellBase(nn.Module):
