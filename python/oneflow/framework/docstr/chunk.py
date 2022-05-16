@@ -18,7 +18,8 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.chunk,
-    """Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be bigger if the tensor size along the given dimension dim is not divisible by chunks.
+    """chunk(input, chunks, dim)
+    Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be bigger if the tensor size along the given dimension dim is not divisible by chunks.
 
     Args:
         input (oneflow.Tensor): The tensor to split.
@@ -35,27 +36,16 @@ add_docstr(
         >>> import oneflow as flow
         >>> import numpy as np
                
-        >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
-        >>> input = flow.Tensor(np_arr)
-        >>> of_out = []
-        >>> of_out = flow.chunk(input, chunks=3, dim=2)
+        >>> arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
+        >>> input = flow.tensor(arr)
+        >>> output = []
         >>> chunks = 3
-        >>> of_out_shape = []
+        >>> output = flow.chunk(input, chunks=chunks, dim=2)
+        >>> out_shape = []
         >>> for i in range(0, chunks):
-        ...     of_out_shape.append(of_out[i].numpy().shape)
-        >>> of_out_shape
+        ...     out_shape.append(output[i].numpy().shape)
+        >>> out_shape
         [(5, 3, 2, 9), (5, 3, 2, 9), (5, 3, 2, 9)]
-
-        >>> np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
-        >>> input = flow.Tensor(np_arr)
-        >>> of_out = []
-        >>> of_out = flow.chunk(input, chunks=4, dim=3)
-        >>> chunks = 4
-        >>> of_out_shape = []
-        >>> for i in range(0, chunks):
-        ...     of_out_shape.append(of_out[i].numpy().shape)
-        >>> of_out_shape
-        [(5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 2), (5, 3, 6, 3)]
 
     """,
 )

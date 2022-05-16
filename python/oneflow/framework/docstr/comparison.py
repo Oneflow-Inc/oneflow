@@ -19,14 +19,15 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.greater,
-    """Returns the truth value of :math:`input > other` element-wise.
+    """gt(input, other)
+    Returns the truth value of :math:`input > other` element-wise.
 
     Args:
         input (oneflow.Tensor): A Tensor
         other (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with bool type.
 
     For example:
 
@@ -54,7 +55,7 @@ add_docstr(
         other (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with bool type.
 
     For example:
 
