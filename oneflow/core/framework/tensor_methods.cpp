@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -65,8 +65,8 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
-      std::make_shared<Shape>(target_shape), input->dtype()->data_type(), device,
-      std::make_shared<Stride>(target_stride), storage_offset);
+      std::make_shared<Shape>(target_shape), std::make_shared<Stride>(target_stride),
+      input->dtype()->data_type(), device, storage_offset);
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
@@ -134,7 +134,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
       << " size is not equal to start.";
 
   DimVector target_dims(ndim);
-  StrideVector target_strides(ndim);
+  DimVector target_strides(ndim);
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   for (int i = 0; i < ndim; ++i) {
     int64_t step = std::min(steps[i], shape->At(i));
@@ -177,7 +177,7 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
   const auto& ndim = shape->NumAxes();
 
   DimVector target_dim_vec(ndim + 1);
-  StrideVector target_stride_vec(ndim + 1);
+  DimVector target_stride_vec(ndim + 1);
 
   {
     int cnt = 0;
@@ -222,7 +222,7 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
 
   const int target_ndim = ndim - squeeze_dims.size();
   DimVector target_dim_vec(target_ndim);
-  StrideVector target_stride_vec(target_ndim);
+  DimVector target_stride_vec(target_ndim);
 
   {
     int cnt = 0;
@@ -266,7 +266,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
 
   const int64_t target_ndim = expand_shape.size();
   DimVector target_dim_vec(target_ndim);
-  StrideVector target_stride_vec(target_ndim);
+  DimVector target_stride_vec(target_ndim);
 
   for (int i = 0; i < target_ndim; i++) {
     if (i < ndim) {
@@ -334,7 +334,7 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   Shape target_shape(dim_vec);
 
-  StrideVector stride_vec(ndim);
+  DimVector stride_vec(ndim);
   for (int i = 0; i < ndim; ++i) {
     stride_vec[i] = strides->At(i);
     if (dim == i) { storage_offset += start * strides->At(i); }
@@ -367,7 +367,7 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
   DimVector dim_vec;
   dim_vec.insert(dim_vec.end(), size.begin(), size.end());
   Shape target_shape(dim_vec);
-  StrideVector stride_vec(stride.size());
+  DimVector stride_vec(stride.size());
   for (int i = 0; i < stride.size(); ++i) { stride_vec[i] = stride[i]; }
   auto output = JUST(view::BasicView(input, target_shape, Stride(stride_vec), storage_offset));
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
@@ -409,8 +409,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   }
 
   DimVector target_dims(ndim);
-
-  StrideVector stride_vec(ndim);
+  DimVector stride_vec(ndim);
   for (int i = 0; i < ndim; ++i) {
     target_dims[i] = shape->At(permute[i]);
     stride_vec[i] = strides->At(permute[i]);
@@ -457,7 +456,7 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& 
   CHECK_GT_OR_RETURN(step, 0) << "attibute step should be > 0, but got " << size;
 
   DimVector out_shape(ndim + 1);
-  StrideVector out_stride(ndim + 1);
+  DimVector out_stride(ndim + 1);
   out_shape[ndim] = size;
   out_stride[ndim] = ndim == 0 ? 1 : stride->At(dimension);
   for (int64_t d = 0; d < ndim; ++d) {
@@ -518,7 +517,7 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
   CHECK_GE_OR_RETURN(ndim, 2) << "input tensor's ndim should be >= 2, but got " << ndim;
   // infer output shape and stride
   DimVector out_shape(shape->dim_vec());
-  StrideVector out_stride(stride->StrideVec());
+  DimVector out_stride(stride->StrideVec());
   out_shape.erase(out_shape.begin() + std::max(dim1, dim2));
   out_stride.erase(out_stride.begin() + std::max(dim1, dim2));
   out_shape.erase(out_shape.begin() + std::min(dim1, dim2));
