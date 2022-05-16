@@ -261,7 +261,7 @@ class LocalTensorSharedNumpyDataFunctor {
       stride /= element_size_in_bytes;
     }
     const auto strides = std::make_shared<Stride>(strides_vec);
-    auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, data_type, device, strides, 0);
+    auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, strides, data_type, device, 0);
 
     // Build TensorBuffer
     const auto& Free = [obj](char* dptr) {
