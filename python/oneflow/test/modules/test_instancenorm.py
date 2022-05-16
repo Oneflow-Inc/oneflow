@@ -440,7 +440,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
+    @autotest(n=5, rtol=1e-3, atol=1e-3)
     def test_instancenorm_with_random_data2(test_case):
         channel = random(1, 6).to(int)
         height = random(1, 6).to(int)
@@ -459,7 +459,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
+    @autotest(n=5, rtol=1e-3, atol=1e-3)
     def test_instancenorm_with_random_data3(test_case):
         channel = random(1, 6).to(int)
         depth = random(1, 6).to(int)
