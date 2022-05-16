@@ -30,7 +30,7 @@ namespace compatible_py {
 
 class ConsistentBlob : public BlobDesc {
  public:
-  ConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
+  ConsistentBlob(const std::shared_ptr<LogicalBlobId>& lbi, const std::string& job_name,
                  const std::shared_ptr<Distribute>& distribute);
   ConsistentBlob(const ConsistentBlob& consistent_blob) = default;
   ~ConsistentBlob() = default;
@@ -48,7 +48,7 @@ class ConsistentBlob : public BlobDesc {
 
 class LazyConsistentBlob : public ConsistentBlob {
  public:
-  LazyConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
+  LazyConsistentBlob(const std::shared_ptr<LogicalBlobId>& lbi, const std::string& job_name,
                      const std::shared_ptr<Distribute>& distribute);
   LazyConsistentBlob(const LazyConsistentBlob& lazy_consistent_blob) = default;
   ~LazyConsistentBlob() = default;
@@ -62,14 +62,14 @@ class LazyConsistentBlob : public ConsistentBlob {
 
   bool is_dynamic() const override;
 
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
+  const ParallelConf& parallel_conf() const override;
 
   bool IdenticalTo(const std::shared_ptr<LazyConsistentBlob>& rhs) const;
 };
 
 class MirroredBlob : public BlobDesc {
  public:
-  MirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
+  MirroredBlob(const std::shared_ptr<LogicalBlobId>& lbi, const std::string& job_name,
                const std::shared_ptr<Distribute>& distribute);
   MirroredBlob(const MirroredBlob& mirrored_blob) = default;
   ~MirroredBlob() = default;
@@ -87,7 +87,7 @@ class MirroredBlob : public BlobDesc {
 
 class LazyMirroredBlob : public MirroredBlob {
  public:
-  LazyMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi, const std::string& job_name,
+  LazyMirroredBlob(const std::shared_ptr<LogicalBlobId>& lbi, const std::string& job_name,
                    const std::shared_ptr<Distribute>& distribute);
   LazyMirroredBlob(const LazyMirroredBlob& lazy_mirrored_blob) = default;
   ~LazyMirroredBlob() = default;
@@ -104,7 +104,7 @@ class LazyMirroredBlob : public MirroredBlob {
 
   bool is_dynamic() const override;
 
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() const override;
+  const ParallelConf& parallel_conf() const override;
 
  private:
   std::vector<std::shared_ptr<LazyConsistentBlob>> sub_consistent_blob_list_;
@@ -118,10 +118,10 @@ class EagerBlobTrait {
   int64_t numpy_size() const;
   int64_t numpy_list_size() const;
   std::shared_ptr<Shape> shape() const;
-  cfg::DataType dtype() const;
+  DataType dtype() const;
   int64_t split_axis() const;
   bool is_dynamic() const;
-  std::shared_ptr<cfg::ParallelConf> parallel_conf() const;
+  const ParallelConf& parallel_conf() const;
   int64_t parallel_size();
   std::shared_ptr<BlobObject> blob_object() const;
   void _Init(const std::string logical_blob_name, const std::shared_ptr<BlobObject>& blob_object,
@@ -136,7 +136,7 @@ class EagerBlobTrait {
 
 class EagerConsistentBlob : public EagerBlobTrait, public ConsistentBlob {
  public:
-  EagerConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+  EagerConsistentBlob(const std::shared_ptr<LogicalBlobId>& lbi,
                       const std::shared_ptr<BlobObject>& blob_object,
                       const std::shared_ptr<BlobRegister>& blob_register,
                       const std::string& job_name, const std::shared_ptr<Distribute>& distribute);
@@ -145,7 +145,7 @@ class EagerConsistentBlob : public EagerBlobTrait, public ConsistentBlob {
 
 class EagerMirroredBlob : public EagerBlobTrait, public MirroredBlob {
  public:
-  EagerMirroredBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
+  EagerMirroredBlob(const std::shared_ptr<LogicalBlobId>& lbi,
                     const std::shared_ptr<BlobObject>& blob_object,
                     const std::shared_ptr<BlobRegister>& blob_register, const std::string& job_name,
                     const std::shared_ptr<Distribute>& distribute);

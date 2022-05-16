@@ -45,7 +45,7 @@ def _test_gather(test_case, device):
     output = flow.gather(
         flow.tensor(input, dtype=flow.float32, device=flow.device(device)),
         0,
-        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
+        flow.tensor(index, dtype=flow.int64, device=flow.device(device)),
     )
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
@@ -55,7 +55,7 @@ def _test_gather_tensor_function(test_case, device):
     index = np.array([[0, 0], [1, 0]])
     np_out = np.take_along_axis(input, index, 1)
     input = flow.tensor(input, dtype=flow.float32, device=flow.device(device))
-    index = flow.tensor(index, dtype=flow.int, device=flow.device(device))
+    index = flow.tensor(index, dtype=flow.int64, device=flow.device(device))
     output = input.gather(1, index)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
@@ -67,21 +67,21 @@ def _test_gather_random_array(test_case, device):
     output = flow.gather(
         flow.tensor(input, dtype=flow.float32, device=flow.device(device)),
         1,
-        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
+        flow.tensor(index, dtype=flow.int64, device=flow.device(device)),
     )
     test_case.assertTrue(np.allclose(output.numpy(), np_out))
     np_out2 = np.take_along_axis(input, index, 2)
     output2 = flow.gather(
         flow.tensor(input, dtype=flow.float32, device=flow.device(device)),
         2,
-        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
+        flow.tensor(index, dtype=flow.int64, device=flow.device(device)),
     )
     test_case.assertTrue(np.allclose(output2.numpy(), np_out2))
     np_out3 = np.take_along_axis(input, index, 3)
     output3 = flow.gather(
         flow.tensor(input, dtype=flow.float32, device=flow.device(device)),
         3,
-        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
+        flow.tensor(index, dtype=flow.int64, device=flow.device(device)),
     )
     test_case.assertTrue(np.allclose(output3.numpy(), np_out3))
 
@@ -95,7 +95,7 @@ def _test_gather_backward(test_case, device):
         input, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
     output = flow.gather(
-        of_input, 0, flow.tensor(index, dtype=flow.int, device=flow.device(device)),
+        of_input, 0, flow.tensor(index, dtype=flow.int64, device=flow.device(device)),
     )
     out_sum = output.sum()
     out_sum.backward()
