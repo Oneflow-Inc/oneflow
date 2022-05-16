@@ -47,9 +47,6 @@ class BlobDesc final {
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
 
-  static const int32_t kBodyAlignSize = 512;
-  static const int32_t kHeaderAlignSize = 64;
-
   BlobDesc& operator=(const BlobDesc&);
 
   const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
@@ -89,7 +86,6 @@ class BlobDesc final {
   }
   DataType data_type_;
   bool is_dynamic_;
-  bool is_contiguous_;
 };
 
 bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs);

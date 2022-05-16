@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -165,8 +166,19 @@ Maybe<void> CheckInputParallelDescIdentical(const ConsistentTensorMetaInferArgs&
   if (infer_args.input_consistent_tensor_metas().empty()) { return Maybe<void>::Ok(); }
   const auto& first_parallel_desc =
       infer_args.input_consistent_tensor_metas().begin()->tensor_meta()->parallel_desc();
-  for (const auto& input_meta : infer_args.input_consistent_tensor_metas()) {
-    CHECK_OR_RETURN(first_parallel_desc == input_meta.tensor_meta()->parallel_desc());
+  for (int i = 0; i < infer_args.input_consistent_tensor_metas().size(); ++i) {
+    CHECK_OR_RETURN(first_parallel_desc
+                    == JUST(VectorAt(infer_args.input_consistent_tensor_metas(), i))
+                           .tensor_meta()
+                           ->parallel_desc())
+        << Error::RuntimeError()
+        << "Expected all tensors to be on the same placement, but found "
+           "at least two placements, "
+        << *JUST(PlacementToString(first_parallel_desc)) << " (positional 0) and "
+        << *JUST(PlacementToString(JUST(VectorAt(infer_args.input_consistent_tensor_metas(), i))
+                                       .tensor_meta()
+                                       ->parallel_desc()))
+        << " (positional " << i << ")!";
   }
   return Maybe<void>::Ok();
 }
@@ -254,7 +266,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   {
     // Infer OpArgMutConsistentTensorMeta.
     const auto& input_metas = infer_args.input_consistent_tensor_metas();
-    JUST(user_op_expr.InferLogicalShapeAndDType(
+    JUST(user_op_expr.InferLogicalTensorDesc(
         infer_args.attrs(), parallel_desc,
         [&](int32_t i) { return &*input_metas.at(i).tensor_meta(); },
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
@@ -288,23 +300,19 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
         infer_args.input_consistent_tensor_metas().at(i).tensor_meta();
     const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(ibn)));
-    ConsistentTensorMeta consistent_tensor_meta(
-        old_consistent_tensor_meta->shape_ptr(),
-        // old_consistent_tensor_meta->stride_ptr(),
-        std::make_shared<const Stride>(Stride(old_consistent_tensor_meta->shape())),
-        old_consistent_tensor_meta->dtype(), nd_sbp, old_consistent_tensor_meta->parallel_desc());
+    ConsistentTensorMeta consistent_tensor_meta(old_consistent_tensor_meta->shape_ptr(),
+                                                old_consistent_tensor_meta->dtype(), nd_sbp,
+                                                old_consistent_tensor_meta->parallel_desc());
     input_metas->at(i) = SymbolOf(consistent_tensor_meta);
   }
   auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
-    // const auto& stride = output_mut_meta.tensor_meta().stride_ptr();
-    const auto& stride = std::make_shared<Stride>(Stride(output_mut_meta.tensor_meta().shape()));
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& obn = user_op_expr.output_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(obn)));
-    ConsistentTensorMeta tensor_meta(shape, stride, data_type, nd_sbp, parallel_desc);
+    ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
   result->set_stream(JUST(InferDeviceAndStream(user_op_expr, infer_args)));
@@ -322,7 +330,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
       UNIMPLEMENTED();
       return nullptr;
     };
-    JUST(user_op_expr.InferLogicalShapeAndDType(
+    JUST(user_op_expr.InferLogicalTensorDesc(
         infer_args.attrs(), parallel_desc, GetInputTensorMeta,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
@@ -332,11 +340,9 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
-    // const auto& stride = output_mut_meta.tensor_meta().stride_ptr();
-    const auto& stride = std::make_shared<Stride>(Stride(output_mut_meta.tensor_meta().shape()));
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& nd_sbp = infer_args.nd_sbp();
-    ConsistentTensorMeta tensor_meta(shape, stride, data_type, nd_sbp, parallel_desc);
+    ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
   result->set_stream(JUST(GetDefaultStreamByPlacement(parallel_desc)));

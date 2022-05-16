@@ -67,10 +67,8 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symb
                                             out_parallel_desc));
 }
 
-}  // namespace
-
-Maybe<void> CheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                                             const Shape& logical_shape) {
+Maybe<void> RawCheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                                const Shape& logical_shape) {
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), out->nd_sbp()->sbp_parallel_size());
@@ -78,6 +76,11 @@ Maybe<void> CheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<Plac
   JUST(CheckIsNdSbpBoxingAcyclicWithDecompose(in, out, logical_shape));
   return Maybe<void>::Ok();
 }
+
+static constexpr auto* CheckSymmetricAcyclicNdSbpBoxing =
+    DECORATE(&RawCheckSymmetricAcyclicNdSbpBoxing, ThreadLocalCopiable);
+
+}  // namespace
 
 Maybe<one::Tensor> SymmetricAcyclicNdSbpBoxing(const std::shared_ptr<one::Tensor>& input,
                                                Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
@@ -104,8 +107,7 @@ Maybe<one::Tensor> SymmetricAcyclicNdSbpBoxing(const std::shared_ptr<one::Tensor
     output =
         JUST(ReinterpterConsistentTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
   } else {
-    one::ConsistentTensorMeta tensor_meta(input->shape(), JUST(input->stride()),
-                                          input->dtype()->data_type(), out_nd_sbp,
+    one::ConsistentTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
                                           out_parallel_desc);
     const auto& tensor_impl = JUST(
         one::EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));

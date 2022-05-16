@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/stride.h"
-#include "oneflow/core/common/stride.cfg.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/cplusplus_17.h"
 
 namespace oneflow {
 
@@ -33,34 +33,28 @@ int64_t compute_index(int64_t out_offset, const StrideParam& in_stride,
 }
 
 Stride::Stride(const Shape& shape) {
-  if (shape.NumAxes() > 0) {
+  if (shape.is_initialized()) {
+    const int64_t ndim = shape.NumAxes();
     stride_vec_.resize(shape.NumAxes());
-    int64_t stride = 1;
-    for (size_t i = shape.NumAxes(); i > 0; --i) {
-      stride_vec_.at(i - 1) = stride;
-      stride *= shape.At(i - 1);
+    if (ndim > 0 && shape.elem_cnt() > 0) {
+      std::exclusive_scan(shape.dim_vec().rbegin(), shape.dim_vec().rend(), stride_vec_.rbegin(), 1,
+                          std::multiplies<>{});
+    } else if (ndim > 0 && shape.elem_cnt() == 0) {
+      // 0-size shape
+      std::vector<int64_t> tmp_shape(ndim);
+      for (int64_t i = 0; i < ndim; ++i) { tmp_shape[i] = shape.At(i) > 0 ? shape.At(i) : 1; }
+      std::exclusive_scan(tmp_shape.rbegin(), tmp_shape.rend(), stride_vec_.rbegin(), 1,
+                          std::multiplies<>{});
     }
   }
 }
 
-Stride::Stride(const std::shared_ptr<Shape>& shape) {
-  if (shape->NumAxes() > 0) {
-    stride_vec_.resize(shape->NumAxes());
-    int64_t stride = 1;
-    for (size_t i = shape->NumAxes(); i > 0; --i) {
-      stride_vec_.at(i - 1) = stride;
-      stride *= shape->At(i - 1);
-    }
-  }
-}
+Stride::Stride(const std::shared_ptr<Shape>& shape) : Stride(*shape) {}
 
 Stride::Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(const DimVector& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(DimVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
-Stride::Stride(const StrideProto& stride_proto) {
-  stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
-}
-Stride::Stride(const cfg::StrideProto& stride_proto) {
+Stride::Stride(const Int64ListProto& stride_proto) {
   stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
 
@@ -74,13 +68,6 @@ Stride& Stride::CheckNumAxesIdenticalAndAssign(const Stride& stride) {
   stride_vec_.assign(stride.StrideVec().begin(), stride.StrideVec().end());
   return *this;
 }
-
-// TODO:delete
-// Stride& Stride::CheckNumAxesIdenticalAndAssign(const StrideView& stride_view) {
-//   CHECK_EQ(NumAxes(), stride_view.NumAxes());
-//   std::copy(stride_view.ptr(), stride_view.ptr() + stride_view.NumAxes(), stride_vec_.data());
-//   return *this;
-// }
 
 Stride& Stride::operator=(const Stride& stride) {
   stride_vec_ = stride.stride_vec_;
@@ -101,7 +88,7 @@ std::string Stride::ToString() const {
   return ss.str();
 }
 
-void Stride::ToProto(StrideProto* ret) const {
+void Stride::ToProto(Int64ListProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(stride_vec_.begin(), stride_vec_.end());
 }
 

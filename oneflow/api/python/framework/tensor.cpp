@@ -31,9 +31,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/stride.h"
-#include "oneflow/core/framework/py_distribute.h"
-#include "oneflow/core/job/placement.cfg.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
@@ -175,6 +172,12 @@ static PyObject* PyTensorObject_is_contiguous(PyObject* self, PyObject* unused) 
 static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(PyTensor_Unpack(self)->contiguous());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return PyTensor_New(PyTensor_Unpack(self)->pin_memory());
   END_HANDLE_ERRORS
 }
 
@@ -322,6 +325,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
+    {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"retain_grad", PyTensorObject_retain_grad, METH_NOARGS, NULL},

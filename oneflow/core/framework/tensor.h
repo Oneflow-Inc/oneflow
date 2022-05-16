@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
@@ -48,7 +47,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   int64_t nelement() const { return shape()->elem_cnt(); }
   int64_t ndim() const { return shape()->NumAxes(); }
 
-  virtual const std::shared_ptr<const Shape>& shape() const = 0;
+  virtual std::shared_ptr<const Shape> shape() const = 0;
   virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<TransportToken> transport_token() const = 0;
   virtual Maybe<Symbol<NdSbp>> nd_sbp() const = 0;
@@ -63,6 +62,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_contiguous() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
+  virtual std::shared_ptr<Tensor> pin_memory() const = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -135,7 +135,7 @@ class StaticZerosTensor final : public Tensor {
     return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
   }
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
+  std::shared_ptr<const Shape> shape() const override { return shape_; }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -158,6 +158,9 @@ class StaticZerosTensor final : public Tensor {
     return *(TensorMeta*)nullptr;
   }
   Maybe<Tensor> data() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  std::shared_ptr<Tensor> pin_memory() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
@@ -292,7 +295,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   ProxyTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
   virtual ~ProxyTensor() = default;
 
-  virtual const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
+  virtual std::shared_ptr<const Shape> shape() const override { return tensor_->shape(); }
   virtual Symbol<DType> dtype() const override { return tensor_->dtype(); }
   virtual Maybe<Symbol<NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
@@ -310,6 +313,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return tensor_->consistent_tensor_meta();
   }
   virtual Maybe<Tensor> data() override { return tensor_->detach(); }
+  virtual std::shared_ptr<Tensor> pin_memory() const override { return tensor_->pin_memory(); }
 
   // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
   // and it will be wrong when use Tensor.data() in operators.
@@ -417,6 +421,7 @@ class Parameter final : public ProxyTensor<Parameter> {
   }
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
+  std::shared_ptr<Tensor> pin_memory() const override;
 
  private:
   Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
@@ -433,7 +438,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   ~MirroredTensor() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
+  std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override {
     OF_RUNTIME_ERROR() << "Only global tensors have 'global_id', global id is used to "
@@ -462,6 +467,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override { return this->detach(); }
+  std::shared_ptr<Tensor> pin_memory() const override;
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -550,8 +556,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   ~ConsistentTensor() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-
+  std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
@@ -575,6 +580,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
   Maybe<const Stride> stride() const override { return impl_->stride(); }
+  std::shared_ptr<Tensor> pin_memory() const override;
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -628,7 +634,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Tensor> clone() const override;
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                            const std::shared_ptr<const Stride>& stride,
                                             DataType dtype, Symbol<NdSbp> nd_sbp,
                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                             bool requires_grad, bool is_leaf);

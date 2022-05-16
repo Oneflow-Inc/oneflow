@@ -5,7 +5,6 @@ import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/memory/memory_case.proto";
 import "oneflow/core/common/shape.proto";
-import "oneflow/core/common/stride.proto";
 
 message LbiBlobDescPair {
   required LogicalBlobId lbi = 1;

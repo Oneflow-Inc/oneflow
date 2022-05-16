@@ -75,14 +75,17 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
       tensor_meta, JUST(input->tensor_storage()), requires_grad,
       /*is_leaf=*/!requires_grad);
-  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
-  std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
+  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory();
+  JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()),
+                                        /*pin_memory=*/pin_memory));
 
-  // NOTE: TensorView instruction will be remove in the future
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
-  }));
-  return output;
+  auto view_tensor = std::make_shared<MirroredTensor>(tensor_impl);
+
+  const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
+      JUST(view_tensor->eager_blob_object());
+  view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
+  view_eager_blob_object->set_is_shape_synced(true);
+  return std::static_pointer_cast<Tensor>(view_tensor);
 }
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
@@ -104,7 +107,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      *JUST(oneflow::VectorAt(in_grads, 0)) =
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
           JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), input_shape));
       return Maybe<void>::Ok();
     };
@@ -199,7 +202,7 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      *JUST(oneflow::VectorAt(in_grads, 0)) =
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
           JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *shape));
       return Maybe<void>::Ok();
     };
@@ -243,7 +246,7 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::Reshape(
+      JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::Reshape(
           JUST(oneflow::VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec())));
       return Maybe<void>::Ok();
     };
@@ -346,7 +349,7 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                         JUST(input->device())));
+                                         JUST(input->device()), /*pin_memory=*/false));
       in_grads->resize(1);
       (*in_grads)[0] = JUST(functional::NarrowGrad(out_grads[0], like, dim, start, length));
       return Maybe<void>::Ok();
@@ -375,7 +378,7 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                         JUST(input->device())));
+                                         JUST(input->device()), /*pin_memory=*/false));
       in_grads->resize(1);
       (*in_grads)[0] =
           JUST(functional::AsStridedGrad(out_grads[0], like, size, stride, storage_offset));
@@ -406,7 +409,6 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   }
 
   DimVector target_dims(ndim);
-
   DimVector stride_vec(ndim);
   for (int i = 0; i < ndim; ++i) {
     target_dims[i] = shape->At(permute[i]);

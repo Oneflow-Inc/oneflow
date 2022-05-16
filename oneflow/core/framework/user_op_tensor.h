@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
@@ -39,8 +38,8 @@ class Tensor {
   ~Tensor() = default;
 #pragma GCC diagnostic pop
 
-  virtual const ShapeView& shape() const = 0;
-  virtual MutShapeView* mut_shape() = 0;
+  virtual ShapeView shape() const = 0;
+  virtual MutShapeView mut_shape() = 0;
   virtual const Stride& stride() const = 0;
   virtual DataType data_type() const = 0;
   virtual const MemoryCase& mem_case() const = 0;

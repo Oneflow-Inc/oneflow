@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
 #include "oneflow/core/common/constant.h"
 #include "oneflow/core/common/check_level.h"
+#include "oneflow/core/framework/sync_symbol_consistent_tensor_meta.h"
 
 namespace oneflow {
 
@@ -151,7 +152,9 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement) {
-  if (!placement->containing_current_rank()) { return Maybe<void>::Ok(); }
+  if (!placement->containing_current_rank() || placement->parallel_num() == 1) {
+    return Maybe<void>::Ok();
+  }
 
   const auto& rank_group = JUST(RankGroup::New(placement));
 

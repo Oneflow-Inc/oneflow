@@ -2,12 +2,11 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
-import "oneflow/core/common/stride.proto";
 import "oneflow/core/common/data_type.proto";
 
 message BlobDescProto {
   required ShapeProto shape = 1;
-  required StrideProto stride = 2;
+  required Int64ListProto stride = 2;
   required DataType data_type = 3;
   required bool is_dynamic = 4;
 }

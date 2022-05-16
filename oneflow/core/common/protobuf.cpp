@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/shape.pb.h"
-#include "oneflow/core/common/stride.pb.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 #include <google/protobuf/io/coded_stream.h>
@@ -134,7 +133,6 @@ PbMessage* MutableMessageInPbMessage(PbMessage* msg, int field_index) {
   }
 
 DEFINE_MESSAGE_VAL_GETTER_AND_SETTER(ShapeProto);
-DEFINE_MESSAGE_VAL_GETTER_AND_SETTER(StrideProto);
 
 #define DEFINE_ENUM_VAL_GETTER_AND_SETTER(enum_type)         \
   DECLARE_GETTER_FUNC_HEADER(enum_type) {                    \

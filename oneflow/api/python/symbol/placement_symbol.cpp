@@ -28,10 +28,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
-
-#ifdef WITH_CUDA
-#include <cuda_runtime_api.h>
-#endif  // WITH_CUDA
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace py = pybind11;
 
@@ -39,14 +36,8 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
+int64_t GetDeviceCount(const std::string& device_name) {
+  return Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_name);
 }
 
 struct PlacementSymbolExportUtil {
@@ -64,7 +55,7 @@ struct PlacementSymbolExportUtil {
     auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy_shape));
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+      parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
       return Maybe<void>::Ok();
     }));
 
@@ -158,11 +149,11 @@ struct PlacementSymbolExportUtil {
     if (it == device_tag2placement.end()) {
       int64_t node_size = GlobalProcessCtx::NodeSize();
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
-      if (type == "cuda") {
-        const int64_t gpu_device_num = GetGpuDeviceNum();
-        CHECK_NE_OR_RETURN(gpu_device_num, 0)
-            << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
-        device_num = std::min(device_num, gpu_device_num);
+      if (type != "cpu") {
+        const int64_t device_count = GetDeviceCount(type);
+        CHECK_NE_OR_RETURN(device_count, 0) << "Can\'t construct placement with \"" << type
+                                            << "\" type because there is no device!";
+        device_num = std::min(device_num, device_count);
       }
       std::vector<std::string> machine_device_ids;
       for (int64_t node_id = 0; node_id < node_size; ++node_id) {

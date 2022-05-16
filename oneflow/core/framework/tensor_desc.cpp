@@ -21,7 +21,7 @@ namespace user_op {
 
 TensorDesc& TensorDesc::operator=(const TensorDesc& rhs) {
   *this->mut_shape() = rhs.shape();
-  // *this->mut_stride() = rhs.stride();
+  *this->mut_stride() = rhs.stride();
   *this->mut_data_type() = rhs.data_type();
   *this->mut_is_dynamic() = rhs.is_dynamic();
   return *this;
@@ -39,7 +39,7 @@ NaiveTensorDesc::NaiveTensorDesc(const BlobDescProto& proto) { *this = proto; }
 NaiveTensorDesc& NaiveTensorDesc::operator=(const BlobDescProto& proto) {
   data_type_ = proto.data_type();
   shape_ = Shape(proto.shape());
-  // stride_ = Stride(proto.stride());
+  stride_ = Stride(proto.stride());
   is_dynamic_ = proto.is_dynamic();
   return *this;
 }

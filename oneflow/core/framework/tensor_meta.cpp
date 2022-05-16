@@ -21,7 +21,8 @@ namespace oneflow {
 namespace one {
 
 MirroredTensorMeta::MirroredTensorMeta()
-    : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(), DataType::kInvalidDataType),
+    : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
+                 DataType::kInvalidDataType),
       device_(Symbol<Device>()),
       storage_offset_(0) {}
 
@@ -31,12 +32,10 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
       device_(device),
       storage_offset_(0) {}
 
-MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, 
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape,
                                        const std::shared_ptr<const Stride>& stride, DataType dtype,
                                        Symbol<Device> device, int64_t storage_offset)
-    : TensorMeta(shape, stride, dtype),
-      device_(device),
-      storage_offset_(storage_offset) {}
+    : TensorMeta(shape, stride, dtype), device_(device), storage_offset_(storage_offset) {}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.

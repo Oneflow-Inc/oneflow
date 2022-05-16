@@ -17,17 +17,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
-#include "oneflow/core/common/stride.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
-
-class StrideView;
-
-namespace cfg {
-class StrideProto;
-}
 
 struct StrideParam {
   int64_t stride[SHAPE_MAX_AXIS_SIZE];
@@ -48,13 +41,10 @@ class Stride final {
   explicit Stride(const std::shared_ptr<Shape>& shape);
   explicit Stride(DimVector&& stride_vec);
   explicit Stride(const DimVector& stride_vec);
-  explicit Stride(const StrideProto& stride_proto);
-  explicit Stride(const cfg::StrideProto& stride_proto);
+  explicit Stride(const Int64ListProto& stride_proto);
   Stride(const std::initializer_list<int64_t>& stride_vec);
   Stride& operator=(const Stride& stride);
   Stride& assign(const DimVector& stride_vec);
-  // TODO:delete
-  // Stride& CheckNumAxesIdenticalAndAssign(const StrideView& stride_view);
   Stride& CheckNumAxesIdenticalAndAssign(const Stride& stride);
   ~Stride() = default;
 
@@ -62,7 +52,7 @@ class Stride final {
   bool operator!=(const Stride& rhs) const { return !(*this == rhs); }
 
   std::string ToString() const;
-  void ToProto(StrideProto*) const;
+  void ToProto(Int64ListProto*) const;
 
   // Getters and Setters
   const DimVector& StrideVec() const { return stride_vec_; }
