@@ -40,8 +40,6 @@ def _pin_memory_loop(in_queue, out_queue, device_id, done_event):
     # TODO: support flow.cuda.set_device
     # flow.cuda.set_device(device_id)
 
-    # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
-    # logic of this function.
     while not done_event.is_set():
         try:
             r = in_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
