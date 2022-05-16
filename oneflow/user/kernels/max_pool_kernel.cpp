@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/max_pool_kernel_util.h"
+#include "oneflow/user/kernels/onednn_pool_kernel_util.h"
 
 namespace oneflow {
 
@@ -518,7 +519,6 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
   REGISTER_POOL_KERNELS(device, float)    \
   REGISTER_POOL_KERNELS(device, double)
 
-
 #ifdef WITH_ONEDNN
 
 template<DeviceType device_type, typename T>
@@ -552,11 +552,20 @@ class OneDnnMaxPool1dKernel final : public user_op::OpKernel {
     y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
     y_vector.at(1) = y->shape().At(2);
 
-    // 
     printf(" max pool ---->\n");
+    dnnl::memory::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
+    dnnl::memory::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
+    dnnl::memory::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {1, params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {0, 0};
+
+    OneDnnPoolKernelUtil<T>::OneDnnPool1dForwardCompute(
+        ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+        padding_dims_r, dilation, (void*)src, (void*)dest, indice_ptr);
   }
 };
-
 
 #define REGISTER_ONEDNN_POOL_KERNELS(device, dtype)                                     \
   REGISTER_USER_KERNEL("max_pool_1d")                                                   \
@@ -584,14 +593,13 @@ class OneDnnMaxPool1dKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-
 REGISTER_ONEDNN_POOL_KERNELS(DeviceType::kCPU, int32_t)
 REGISTER_ONEDNN_POOL_KERNELS(DeviceType::kCPU, float)
 REGISTER_POOL_KERNELS(DeviceType::kCPU, double)
 
 #else
 REGISTER_POOL_WITH_DEVICE(DeviceType::kCPU)
-#endif // WITH_ONEDNN
+#endif  // WITH_ONEDNN
 
 #ifdef WITH_CUDA
 REGISTER_POOL_WITH_DEVICE(DeviceType::kCUDA)
