@@ -100,12 +100,10 @@ struct PoolKernelUtil<DeviceType::kCPU, T, IDX> {
   static void Maxpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
                                const IDX elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const MaxPoolParams3D& params_3d) {
-
     Maxpool1dForwardCompute<T, IDX>(
         index_helper, elem_num, src, dest, indice_ptr, params_3d.padding()[2],
         params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(4),
         params_3d.pool_size_3d()[2], params_3d.stride_3d()[2], params_3d.dilation_3d()[2]);
-
   }
 
   static void Maxpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
