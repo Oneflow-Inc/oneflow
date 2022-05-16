@@ -48,7 +48,7 @@ add_docstr(
 
 add_docstr(
     oneflow.diag,
-    r"""
+    r"""diag(input, diagonal)
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
     If input is a matrix (2-D tensor), then returns a 1-D tensor with diagonal elements of input.
 
@@ -82,7 +82,8 @@ add_docstr(
 
 add_docstr(
     oneflow.tril,
-    r"""Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
+    r"""tril(input, diagonal)
+    Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
     the other elements of the result tensor out are set to 0.
     
     .. note::
@@ -243,7 +244,8 @@ add_docstr(
 
 add_docstr(
     oneflow.transpose,
-    r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
+    r"""transpose(input, dim0, dim1)
+    Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
 
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
 
@@ -270,7 +272,8 @@ add_docstr(
 
 add_docstr(
     oneflow.stack,
-    r"""Concatenates a sequence of tensors along a new dimension.
+    r"""stack(inputs, dim)
+    Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
 
     A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1]`
@@ -301,7 +304,8 @@ add_docstr(
 
 add_docstr(
     oneflow.squeeze,
-    r"""This operator removes the specified dimention which size is 1 of the input Tensor.
+    r"""squeeze(input, dim)
+    This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
 
     The amount of element in return value is the same as Tensor `input`.
@@ -333,32 +337,7 @@ add_docstr(
     oneflow.cat,
     r"""
     cat(tensors, dim=0) -> Tensor 
-
-    Concatenate two or more `Tensor` s at specified dim.
-
-    Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
-
-    Args:
-        inputs: a `list` of `Tensor`
-        dim: a `int`.
-
-    Returns:
-        A `Tensor`
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-
-        >>> input1 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input2 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> input3 = flow.tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-
-        >>> out = flow.cat([input1, input2, input3], dim=1) # equal to using flow.concat()
-        >>> out.shape
-        oneflow.Size([2, 18, 5, 3])
+    Alias for :func:`oneflow.concat`.
 
     """,
 )

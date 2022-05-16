@@ -18,7 +18,8 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.flatten,
-    """Flattens a contiguous range of dims into a tensor.
+    """flatten(start_dim, end_dim)
+    Flattens a contiguous range of dims into a tensor.
 
     Args:
         start_dim: first dim to flatten (default = 0).
