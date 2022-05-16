@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/record/record.pb.h"
 
