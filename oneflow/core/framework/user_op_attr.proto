@@ -19,6 +19,8 @@ enum AttrType {
   kAtListDataType = 12;
   kAtListShape = 13;
   kAtListString = 14;
+  kAtStride = 15;
+  kAtListStride = 16;
 }
 
 message AttrValue {
@@ -36,6 +38,9 @@ message AttrValue {
   }
   message ListShape {
     repeated ShapeProto val = 1;
+  }
+  message ListStride {
+    repeated Int64ListProto val = 1;
   }
   // order and naming convention of the oneof field must be consistent with the enum AttrType
   message ListString {
@@ -56,6 +61,8 @@ message AttrValue {
     ListDataType at_list_data_type = 12;
     ListShape at_list_shape = 13;
     ListString at_list_string = 14;
+    Int64ListProto at_stride = 15;
+    ListStride at_list_stride = 16;
   }
 }
 

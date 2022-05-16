@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/register/ofblob.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
@@ -344,7 +344,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
-      packed_indices = JUST(Copy(packed_indices, device->type(), device->device_id()));
+      packed_indices =
+          JUST(Copy(packed_indices, device->type(), device->device_id(), /*pin_memory=*/false));
     }
   }
   auto result = JUST(GatherNd(transposed_input, packed_indices));
@@ -399,7 +400,8 @@ Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
       const auto tensor_index_device = JUST(tensor_index->device());
       if ((tensor_index_device->type() != x_device->type())
           || (tensor_index_device->device_id() != x_device->device_id())) {
-        tensor_indices[i] = JUST(Copy(tensor_index, x_device->type(), x_device->device_id()));
+        tensor_indices[i] =
+            JUST(Copy(tensor_index, x_device->type(), x_device->device_id(), /*pin_memory=*/false));
       }
     }
   }
