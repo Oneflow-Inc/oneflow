@@ -16,12 +16,14 @@ limitations under the License.
 
 import os
 import unittest
+from threading import Thread
 
 import numpy as np
 
 import oneflow
 import oneflow as flow
 import oneflow.framework.graph_build_util as graph_build_util
+import oneflow.framework.scope_util as scope_util
 import oneflow.unittest
 
 
@@ -143,7 +145,7 @@ class TestGraph(flow.unittest.TestCase):
                 test_case.assertEqual(type(session), MultiClientSession)
                 import oneflow.framework.scope_util as scope_util
 
-                scope = oneflow.current_scope()
+                scope = scope_util.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 test_case.assertEqual(session.id, scope_proto.session_id)
                 test_case.assertEqual(
@@ -152,7 +154,6 @@ class TestGraph(flow.unittest.TestCase):
                 )
                 return x
 
-        test_case.assertTrue(oneflow._oneflow_internal.IsMultiClient())
         g = CustomGraphGraphBuildCtx()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         data = np.array([2.0, 1.0, 0.0, -1.0, -2.0])
@@ -168,7 +169,7 @@ class TestGraph(flow.unittest.TestCase):
                 self.conv1 = flow.nn.Conv2d(1, 1, 5)
 
             def forward(self, x):
-                scope = oneflow.current_scope()
+                scope = scope_util.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
                 test_case.assertEqual(ck_bool, True)
@@ -188,7 +189,7 @@ class TestGraph(flow.unittest.TestCase):
                 self.register_buffer("dummy_buff", flow.Tensor(1, 4))
 
             def forward(self, x):
-                scope = oneflow.current_scope()
+                scope = scope_util.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 test_case.assertEqual(
                     scope_proto.parent_scope_symbol_id, self.prev_scope.symbol_id
@@ -274,6 +275,26 @@ class TestGraph(flow.unittest.TestCase):
 
         g = OptCreatedInGraph()
         print(g)
+
+    def test_graph_in_subthread(test_case):
+        class TinyGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, input):
+                return input + 1
+
+        def f():
+            tiny_graph = TinyGraph()
+            input = flow.randn(1, 4)
+            return tiny_graph(input)
+
+        f()
+
+        new_thread = Thread(target=f)
+
+        new_thread.start()
+        new_thread.join()
 
 
 if __name__ == "__main__":

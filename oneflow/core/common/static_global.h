@@ -24,6 +24,15 @@ namespace oneflow {
 template<typename... Args>
 struct StaticGlobalCopiable;
 
+template<typename RetT>
+struct StaticGlobalCopiable<RetT> {
+  template<RetT (*func)()>
+  static RetT Call() {
+    static RetT value = func();
+    return value;
+  }
+};
+
 template<typename RetT, typename Arg0>
 struct StaticGlobalCopiable<RetT, Arg0> {
   template<RetT (*func)(Arg0)>
@@ -47,6 +56,33 @@ struct StaticGlobalCopiable<RetT, Arg0> {
  private:
   static_assert(!IsOutArg<Arg0>::value, "");
   static_assert(!StaticAny<IsOutArg, Arg0>::value, "");
+};
+
+template<typename RetT, typename Arg0, typename Arg1, typename... Args>
+struct StaticGlobalCopiable<RetT, Arg0, Arg1, Args...> {
+  template<RetT (*func)(Arg0, Arg1, Args...)>
+  static RetT Call(Arg0 arg0, Arg1 arg1, Args... args) {
+    using KeyT0 = typename std::decay<Arg0>::type;
+    using KeyT1 = typename std::decay<Arg1>::type;
+    using KeyT = std::tuple<KeyT0, KeyT1, typename std::decay<Args>::type...>;
+    using MappedT = typename std::decay<RetT>::type;
+    static std::mutex mutex;
+    static std::unordered_map<KeyT, MappedT> map;
+    const auto& key = KeyT(arg0, arg1, args...);
+    {
+      std::unique_lock<std::mutex> lock(mutex);
+      auto iter = map.find(key);
+      if (iter != map.end()) { return iter->second; }
+    }
+    auto obj = func(arg0, arg1, args...);
+    {
+      std::unique_lock<std::mutex> lock(mutex);
+      return map.emplace(key, std::move(obj)).first->second;
+    }
+  }
+
+ private:
+  static_assert(!StaticAny<IsOutArg, Arg0, Arg1, Args...>::value, "");
 };
 
 }  // namespace oneflow

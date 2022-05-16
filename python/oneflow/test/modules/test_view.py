@@ -18,7 +18,8 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
@@ -74,6 +75,7 @@ def _test_view_flow_size(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestView(flow.unittest.TestCase):
+    # TODO:(zhaoluyang) add test case that trigger tensor.view's check
     def test_view(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
@@ -83,6 +85,17 @@ class TestView(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=5, check_graph=False)
+    def test_view_with_0_dim_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
+        y1 = torch.reshape(x, shape=(-1,))
+        y2 = x.view((1, 1, 1))
+        test_case.assertTrue(x.oneflow.stride() == x.pytorch.stride())
+        test_case.assertTrue(y1.oneflow.stride() == y1.pytorch.stride())
+        test_case.assertTrue(y2.oneflow.stride() == y2.pytorch.stride())
+        return y2
 
 
 if __name__ == "__main__":

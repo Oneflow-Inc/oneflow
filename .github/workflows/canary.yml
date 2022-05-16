@@ -21,6 +21,7 @@ jobs:
     runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         entry: ["canary", "profiler"]
@@ -54,7 +55,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         if: ${{ github.event.inputs.oneflow-ref == '' }}
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@fix-oom
+      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
         name: Build manylinux
         id: build-cuda
         with:

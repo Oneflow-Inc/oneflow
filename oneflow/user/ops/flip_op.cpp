@@ -32,7 +32,20 @@ namespace oneflow {
   return FlipOp::InferLogicalTensorDesc(ctx);
 }
 /*static*/ auto FlipOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
-  ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("y", 0), 0).Build();
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
+  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+    bool flag = true;
+    for (auto x : dims) {
+      if (x == i) {
+        flag = false;
+        break;
+      }
+    }
+    if (flag) {
+      ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+    }
+  }
   return Maybe<void>::Ok();
 }
 /*static*/ auto FlipOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {

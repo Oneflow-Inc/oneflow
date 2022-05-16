@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 namespace vm {
@@ -23,14 +24,15 @@ namespace vm {
 namespace {
 
 #ifdef WITH_CUDA
-Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
+Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(StreamRole stream_role) {
   // NOTE(chengcheng):
   //   Lazy Job instruction need mutual exclusion nccl with Eager nccl. However, when the number of
   //   processes is more than the number of physical GPUs, the following processes will make an
   //   error when using local rank to create a EagerNcclLocalDepObject, but we only need an legal
   //   device so we use device 0.
-  const auto& device = JUST(Device::New(type, 0));
-  const auto& local_dep_object = device->mut_transport_local_dep_object();
+  const auto& device = JUST(Device::New("cpu", 0));
+  const auto& stream = Stream::New(device, stream_role);
+  const auto& local_dep_object = stream->mut_transport_local_dep_object();
   CHECK_OR_RETURN(local_dep_object.has_value());
   return JUST(local_dep_object);
 }
@@ -46,13 +48,7 @@ void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
-
-#ifdef WITH_CUDA
-  auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
-  auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));
-  CHECK_EQ(sync_launched_nccl, async_launched_nccl);
-  DoEach(async_launched_nccl);
-#endif  // WITH_CUDA
+  DoEach(GetStaticGlobalTransportLocalDepObject());
 }
 
 }  // namespace vm

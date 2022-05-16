@@ -23,7 +23,7 @@ class LRScheduler(object):
         if not isinstance(optimizer, Optimizer):
             raise TypeError(f"{type(optimizer).__name__} is not an Optimizer object")
 
-        self._optimizer = optimizer
+        self.optimizer = optimizer
         self.last_step = last_step
         self.verbose = verbose
         self._init_base_lrs()
@@ -36,7 +36,7 @@ class LRScheduler(object):
         is not the optimizer.
         """
         return {
-            key: value for (key, value) in self.__dict__.items() if key != "_optimizer"
+            key: value for (key, value) in self.__dict__.items() if key != "optimizer"
         }
 
     def load_state_dict(self, state_dict):
@@ -48,19 +48,16 @@ class LRScheduler(object):
         """
         self.__dict__.update(state_dict)
 
-    def get_lr(self):
-        """Compute learning rate using chainable form of the scheduler
-        """
+    def get_lr(self, base_lr, step):
+        """Compute learning rate using chainable form of the scheduler"""
         raise NotImplementedError
 
     def get_last_lr(self):
-        """Return last computed learning rate by current scheduler.
-        """
+        """Return last computed learning rate by current scheduler."""
         return self._last_lr
 
     def print_lr(self, group, lr):
-        """Display the current learning rate.
-        """
+        """Display the current learning rate."""
         print(
             f"Last step {self.last_step} of {type(self)} adjusting learning rate "
             f"of param_groups[{group}] to {lr:.5f}"
@@ -68,10 +65,12 @@ class LRScheduler(object):
 
     def step(self):
         self.last_step += 1
-        lrs = self.get_lr()
+        lrs = [self.get_lr(base_lr, self.last_step) for base_lr in self.base_lrs]
+        self.update_lrs(lrs)
 
+    def update_lrs(self, lrs):
         self._last_lr = []
-        for i, (group, lr) in enumerate(zip(self._optimizer.param_groups, lrs)):
+        for i, (group, lr) in enumerate(zip(self.optimizer.param_groups, lrs)):
             group["lr"] = lr
             self._last_lr.append(lr)
             if self.verbose:
@@ -79,29 +78,15 @@ class LRScheduler(object):
 
     def _init_base_lrs(self):
         if self.last_step == -1:
-            for group in self._optimizer.param_groups:
+            for group in self.optimizer.param_groups:
                 if "initial_lr" not in group:
                     group.setdefault("initial_lr", group["lr"])
         else:
-            for (i, group) in enumerate(self._optimizer.param_groups):
+            for (i, group) in enumerate(self.optimizer.param_groups):
                 if "initial_lr" not in group:
                     raise KeyError(
                         "param 'initial_lr' is not specified "
                         f"in param_groups[{i}] when resuming an optimizer"
                     )
 
-        self.base_lrs = [group["initial_lr"] for group in self._optimizer.param_groups]
-
-
-class _scheduler_with_step(object):
-    def __init__(self, scheduler, step):
-        self._scheduler = scheduler
-        self._step = step
-        self._origin_step = scheduler.last_step
-
-    def __enter__(self):
-        self._scheduler.last_step = self._step
-        return self._scheduler
-
-    def __exit__(self, type, value, traceback):
-        self._scheduler.last_step = self._origin_step
+        self.base_lrs = [group["initial_lr"] for group in self.optimizer.param_groups]

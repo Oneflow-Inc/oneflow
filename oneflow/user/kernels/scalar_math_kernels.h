@@ -31,6 +31,15 @@ namespace oneflow {
   template struct ScalarMathFunctor<device_type, binary_op, double>;  \
   template struct ScalarMathFunctor<device_type, binary_op, float16>;
 
+#define INSTANTIATE_SCALAR_REVERSE_MATH_FUNCTORS(device_type, binary_op)     \
+  template struct ScalarReverseMathFunctor<device_type, binary_op, uint8_t>; \
+  template struct ScalarReverseMathFunctor<device_type, binary_op, int8_t>;  \
+  template struct ScalarReverseMathFunctor<device_type, binary_op, int32_t>; \
+  template struct ScalarReverseMathFunctor<device_type, binary_op, int64_t>; \
+  template struct ScalarReverseMathFunctor<device_type, binary_op, float>;   \
+  template struct ScalarReverseMathFunctor<device_type, binary_op, double>;  \
+  template struct ScalarReverseMathFunctor<device_type, binary_op, float16>;
+
 template<DeviceType device_type, template<typename> class BIN_OP, typename T>
 struct ScalarMathFunctor final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out);
@@ -39,6 +48,17 @@ struct ScalarMathFunctor final {
 template<template<typename> class UnaryFunctor, typename T>
 OF_DEVICE_FUNC void DoScalarMath(const int64_t elem_cnt, const T scalar, const T* in, T* out) {
   XPU_1D_KERNEL_LOOP(idx, elem_cnt) { out[idx] = UnaryFunctor<T>::Invoke(in[idx], scalar); }
+}
+
+template<DeviceType device_type, template<typename> class BIN_OP, typename T>
+struct ScalarReverseMathFunctor final {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out);
+};
+
+template<template<typename> class UnaryFunctor, typename T>
+OF_DEVICE_FUNC void DoScalarReverseMath(const int64_t elem_cnt, const T scalar, const T* in,
+                                        T* out) {
+  XPU_1D_KERNEL_LOOP(idx, elem_cnt) { out[idx] = UnaryFunctor<T>::Invoke(scalar, in[idx]); }
 }
 
 }  // namespace oneflow

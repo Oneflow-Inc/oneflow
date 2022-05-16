@@ -129,13 +129,14 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitAttrs(def, &op);
     emitInt(def, "same_output_regst_num", &op);
     emitTrait(def, "no_grad", "NoGrad", &op);
+    emitTrait(def, "support_non_contiguous", "SupportNonContiguous", &op);
     emitTrait(def, "cpu_only", "CpuOnly", &op);
     emitBit(def, "has_nd_sbp_infer_fn", &op);
     emitBit(def, "has_get_sbp_fn", &op);
     emitBit(def, "has_logical_tensor_desc_infer_fn", &op);
     emitBit(def, "has_physical_tensor_desc_infer_fn", &op);
     emitBit(def, "has_data_type_infer_fn", &op);
-    emitBit(def, "has_device_infer_fn", &op);
+    emitBit(def, "has_device_and_stream_infer_fn", &op);
     emitBit(def, "has_input_arg_modify_fn", &op);
     emitBit(def, "has_output_arg_modify_fn", &op);
     emitBit(def, "has_output_blob_time_shape_infer_fn", &op);

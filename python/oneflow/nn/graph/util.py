@@ -40,13 +40,10 @@ def sys_exc_error_msg():
     return msg
 
 
-def seq_to_func_return(li):
-    if len(li) == 0:
-        return None
-    elif len(li) == 1:
-        return li[0]
-    else:
-        return tuple(li)
+def seq_to_func_return(seq, need_unpack=False):
+    if need_unpack:
+        return seq[0]
+    return seq
 
 
 class IONodeType:

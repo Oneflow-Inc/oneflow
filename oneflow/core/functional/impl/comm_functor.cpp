@@ -40,21 +40,21 @@ namespace impl {
 
 namespace {
 
-bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_broadcast_parallel()) { return false; }
   }
   return true;
 }
 
-bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
   }
   return true;
 }
 
-bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis) {
+bool IsAllSplitNdSbp(Symbol<NdSbp> nd_sbp, int64_t axis) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
       return false;
@@ -63,9 +63,7 @@ bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis) {
   return true;
 }
 
-bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_split_parallel();
-}
+bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
 Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
@@ -99,9 +97,8 @@ Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
 
 static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
-                                    Symbol<cfg::SbpParallel> src_sbp,
-                                    Symbol<cfg::SbpParallel> dst_sbp) {
+Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<SbpParallel> src_sbp,
+                                    Symbol<SbpParallel> dst_sbp) {
   return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
       .Input("in")
       .Output("out")
@@ -264,9 +261,9 @@ class ConsistentS2SFunctor {
  public:
   ConsistentS2SFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) const {
-    Symbol<cfg::NdSbp> in_nd_sbp = JUST(x->nd_sbp());
-    Symbol<cfg::NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
+                           const std::vector<Symbol<SbpParallel>>& sbp_parallels) const {
+    Symbol<NdSbp> in_nd_sbp = JUST(x->nd_sbp());
+    Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
@@ -338,7 +335,7 @@ class RecvFunctor {
       DeviceType device_type = DeviceType::kInvalidDevice;
       JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
                                        nullptr));
-      device = JUST(Device::New(Device::Type4DeviceTag(*JUST(DeviceTag4DeviceType(device_type)))));
+      device = JUST(Device::New(*JUST(DeviceTag4DeviceType(device_type))));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
     }
@@ -378,7 +375,7 @@ class LocalReduceFunctor {
     Symbol<ParallelDesc> parallel_desc;
     if (iter == rank_group2parallel_desc.end()) {
       ParallelConf parallel_conf;
-      parallel_conf.set_device_tag(JUST(device->of_type()));
+      parallel_conf.set_device_tag(device->type());
       JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
         parallel_conf.add_device_name("@" + std::to_string(rank) + ":"
                                       + std::to_string(GlobalProcessCtx::LocalRank(rank)));

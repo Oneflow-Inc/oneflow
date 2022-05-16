@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
@@ -434,6 +434,14 @@ class TestConv1d(flow.unittest.TestCase):
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=3)
+    def test_nn_functional_conv1d(test_case):
+        device = random_device()
+        img = torch.ones((1, 3, 224), requires_grad=True).to(device)
+        kernel = torch.ones((3, 1, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv1d(img, kernel, groups=3)
+        return y
 
     @autotest()
     def test_conv1d_with_random_data(test_case):

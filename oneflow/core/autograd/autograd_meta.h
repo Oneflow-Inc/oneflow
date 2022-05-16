@@ -20,7 +20,6 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
@@ -31,9 +30,7 @@ class Shape;
 
 class Device;
 class ParallelDesc;
-namespace cfg {
 class NdSbp;
-}
 
 namespace one {
 
@@ -44,12 +41,7 @@ class MirroredTensor;
 class AutogradMeta final {
  public:
   AutogradMeta() = delete;
-  AutogradMeta(bool requires_grad, bool is_leaf)
-      : is_leaf_(is_leaf),
-        requires_grad_(requires_grad),
-        retain_grad_(false),
-        is_grad_acc_inplace_(false),
-        current_grad_(new TensorArg) {}
+  AutogradMeta(bool requires_grad, bool is_leaf);
 
   // Getters
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
@@ -105,13 +97,15 @@ class TensorInfo final {
   explicit TensorInfo(const Tensor& tensor);
 
   Maybe<Tensor> zeros() const;
+  Optional<Symbol<ParallelDesc>> placement() const { return parallel_desc_; }
+  Optional<Symbol<NdSbp>> sbp() const { return nd_sbp_; }
 
  private:
   std::shared_ptr<const Shape> shape_;
   Symbol<DType> dtype_;
   Optional<Symbol<Device>> device_;               // for local tensor
   Optional<Symbol<ParallelDesc>> parallel_desc_;  // for consistent tensor
-  Optional<Symbol<cfg::NdSbp>> nd_sbp_;           // for consistent tensor
+  Optional<Symbol<NdSbp>> nd_sbp_;                // for consistent tensor
 };
 
 }  // namespace one

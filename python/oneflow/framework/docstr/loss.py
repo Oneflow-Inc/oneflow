@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.triplet_margin_loss,
     r"""    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.triplet_margin_loss.html?highlight=triplet_margin_loss
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.triplet_margin_loss.html.
 
     Creates a criterion that measures the triplet loss given an input
     tensors :math:`x1`, :math:`x2`, :math:`x3` and a margin with a value greater than :math:`0`.
@@ -75,5 +75,50 @@ add_docstr(
         >>> output
         tensor(6.2971, dtype=oneflow.float32)
     
+    """,
+)
+
+add_docstr(
+    oneflow._C.cross_entropy,
+    r"""
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cross_entropy.html.
+
+    See :class:`~oneflow.nn.CrossEntropyLoss` for details.
+
+    Args:
+        input (Tensor) : :math:`(N, C)` where `C = number of classes` or :math:`(N, C, H, W)`
+            in case of 2D Loss, or :math:`(N, C, d_1, d_2, ..., d_K)` where :math:`K \geq 1`
+            in the case of K-dimensional loss. `input` is expected to contain unnormalized scores
+            (often referred to as logits).
+        target (Tensor) : If containing class indices, shape :math:`(N)` where each value is
+            :math:`0 \leq \text{targets}[i] \leq C-1`, or :math:`(N, d_1, d_2, ..., d_K)` with
+            :math:`K \geq 1` in the case of K-dimensional loss. If containing class probabilities,
+            same shape as the input.
+        weight (Tensor, optional): a manual rescaling weight given to each
+            class. If given, has to be a Tensor of size `C`
+        ignore_index (int, optional): Specifies a target value that is ignored
+            and does not contribute to the input gradient. When :attr:`size_average` is
+            ``True``, the loss is averaged over non-ignored targets. Note that
+            :attr:`ignore_index` is only applicable when the target contains class indices.
+            Default: -100
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+            specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        >>> input = flow.randn(3, 5, requires_grad=True)
+        >>> target = flow.ones(3, dtype=flow.int64)
+        >>> loss = F.cross_entropy(input, target)
+        >>> loss.backward()
+
+
     """,
 )

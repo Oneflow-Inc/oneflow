@@ -15,12 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -79,8 +77,8 @@ std::string ParallelDesc2HashString(const ParallelDesc& parallel_desc) {
 Maybe<int64_t> NewScopeWithStageId(int64_t old_scope_symbol_id, int64_t stage_id) {
   return NewScopeSymbolId(
       old_scope_symbol_id,
-      [stage_id](std::shared_ptr<cfg::ScopeProto>
-                     new_scope) {  // NOLINT(performance-unnecessary-value-param)
+      [stage_id](
+          std::shared_ptr<ScopeProto> new_scope) {  // NOLINT(performance-unnecessary-value-param)
         auto* attr_map = new_scope->mutable_attr_name2attr_value();
         (*attr_map)["pipeline_stage_id_hint"].set_at_int64(stage_id);
       });
@@ -101,7 +99,7 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
 
   if (max_stage_id == 0) { return Maybe<void>::Ok(); }
   const int64_t total_stage_num = max_stage_id + 1;
-  LOG(INFO) << "total stage num = " << total_stage_num;
+  VLOG(3) << "total stage num = " << total_stage_num;
 
   HashMap<std::string, const OpNode*> op_name2node;
   HashMap<std::string, std::vector<const OpNode*>> placement2op_nodes;
@@ -125,11 +123,11 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
     for (const OpNode* this_node : pair.second) {
       int64_t this_stage_id = GetStageIdHint(this_node);
       if (this_stage_id != max_stage_id) {
-        LOG(INFO) << " In FixPipelineStageIdPass, op_name: " << this_node->op().op_name()
-                  << " origin_stage_id = " << this_stage_id
-                  << " is different with same placement : " << pair.first
-                  << " max_stage_id: " << max_stage_id
-                  << " , so change this op to the max stage id.\n";
+        VLOG(3) << " In FixPipelineStageIdPass, op_name: " << this_node->op().op_name()
+                << " origin_stage_id = " << this_stage_id
+                << " is different with same placement : " << pair.first
+                << " max_stage_id: " << max_stage_id
+                << " , so change this op to the max stage id.\n";
         OperatorConf new_op_conf = this_node->op().op_conf();
         int64_t new_scope_symbol_id =
             JUST(NewScopeWithStageId(new_op_conf.scope_symbol_id(), max_stage_id));

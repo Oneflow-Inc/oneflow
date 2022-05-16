@@ -94,12 +94,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
   CHECK_NOTNULL(var_op);
 
-  OperatorConf m_var(GenerateAdamHelperVariableOpConf(*var_op, "m", 0.f));
-  OperatorConf v_var(GenerateAdamHelperVariableOpConf(*var_op, "v", 0.f));
-  OperatorConf max_v_var(GenerateAdamHelperVariableOpConf(*var_op, "max_v", 0.f));
-
-  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var, max_v_var});
-
   user_op::UserOpConfWrapperBuilder adam_update_op_builder(var_op->op_name() + "_optimizer");
   float beta1 = 0.9;
   float beta2 = 0.999;
@@ -123,6 +117,17 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   } else {
     UNIMPLEMENTED();
   }
+
+  OperatorConf m_var(GenerateAdamHelperVariableOpConf(*var_op, "m", 0.f));
+  OperatorConf v_var(GenerateAdamHelperVariableOpConf(*var_op, "v", 0.f));
+  OperatorConf max_v_var{};
+  if (amsgrad) {
+    max_v_var = GenerateAdamHelperVariableOpConf(*var_op, "max_v", 0.f);
+    job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var, max_v_var});
+  } else {
+    job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var});
+  }
+
   const std::string& train_step_lbn = job_builder->job().job_conf().train_conf().train_step_lbn();
   const std::string& learning_rate_lbn = optimizer_conf.learning_rate_lbn();
 
@@ -173,7 +178,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Input("bias_correction2", bias_correction2_lbn)
         .Input("m", GenVariableOutputLbn(m_var))
         .Input("v", GenVariableOutputLbn(v_var))
-        .Input("max_v", GenVariableOutputLbn(max_v_var))
         .Attr<float>("beta1", beta1)
         .Attr<float>("beta2", beta2)
         .Attr<float>("epsilon", epsilon)
@@ -188,7 +192,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Input("learning_rate", learning_rate_lbn)
         .Input("m", GenVariableOutputLbn(m_var))
         .Input("v", GenVariableOutputLbn(v_var))
-        .Input("max_v", GenVariableOutputLbn(max_v_var))
         .Attr<float>("beta1", beta1)
         .Attr<float>("beta2", beta2)
         .Attr<float>("epsilon", epsilon)
@@ -197,6 +200,9 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Attr<bool>("do_bias_correction", false)
         .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   }
+
+  if (amsgrad) { adam_update_op_builder.Input("max_v", GenVariableOutputLbn(max_v_var)); }
+
   SetDynamicLossScaleSkipIf(ctx, &adam_update_op_builder);
   const auto adam_update_op = adam_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {adam_update_op.op_conf()});

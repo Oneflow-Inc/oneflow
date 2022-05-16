@@ -84,7 +84,7 @@ uint16_t PullPort(int64_t machine_id) {
 
 EpollCommNet::~EpollCommNet() {
   for (size_t i = 0; i < pollers_.size(); ++i) {
-    LOG(INFO) << "CommNet Thread " << i << " finish";
+    VLOG(1) << "CommNet Thread " << i << " finish";
     pollers_[i]->Stop();
   }
   OF_ENV_BARRIER();
@@ -194,7 +194,7 @@ void EpollCommNet::InitSockets() {
 
   // useful log
   FOR_RANGE(int64_t, machine_id, 0, total_machine_num) {
-    LOG(INFO) << "machine " << machine_id << " sockfd " << machine_id2sockfd_[machine_id];
+    VLOG(2) << "machine " << machine_id << " sockfd " << machine_id2sockfd_[machine_id];
   }
 }
 

@@ -47,12 +47,11 @@ class KernelInitContext {
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
-  virtual const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&,
-                                                              int32_t) const = 0;
+  virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const ParallelDesc& parallel_desc() const = 0;
-  virtual const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
@@ -105,12 +104,11 @@ class KernelCacheContext {
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
-  virtual const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&,
-                                                              int32_t) const = 0;
+  virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const ParallelDesc& parallel_desc() const = 0;
-  virtual const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
@@ -166,10 +164,9 @@ class KernelInferContext {
 
   virtual ep::Stream* stream() = 0;
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
-  virtual const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
-  virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
+  virtual ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) = 0;
+  virtual MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                                    int32_t arg_index) = 0;
 
   const std::string& input(const std::string& arg_name, int32_t index) const {
     return user_op_conf().input(arg_name, index);
@@ -313,9 +310,10 @@ class OpKernel {
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const {
     Compute(ctx);
   }
-  virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
+  virtual void Compute(KernelComputeContext*) const { LOG(WARNING) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
+  virtual bool IsKernelLaunchSynchronized() const { return true; }
 
   bool has_state_or_cache() const { return has_state_or_cache_; }
 

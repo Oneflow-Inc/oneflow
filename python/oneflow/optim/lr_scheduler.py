@@ -26,3 +26,8 @@ from oneflow.nn.optimizer.constant_lr import ConstantLR
 from oneflow.nn.optimizer.linear_lr import LinearLR
 from oneflow.nn.optimizer.warmup_lr import WarmupLR
 from oneflow.nn.optimizer.warmup_lr import WarmupLR as WarmUpLR
+from oneflow.nn.optimizer.cosine_annealing_warm_restarts import (
+    CosineAnnealingWarmRestarts,
+)
+from oneflow.nn.optimizer.chained_scheduler import ChainedScheduler
+from oneflow.nn.optimizer.sequential_lr import SequentialLR

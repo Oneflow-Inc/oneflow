@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_attrs.h"
 #include "oneflow/core/framework/op_base.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 
@@ -64,7 +64,7 @@ class OpInterpCtx {
 
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
-  Optional<Symbol<cfg::NdSbp>> sbp;              // for consistent op
+  Optional<Symbol<NdSbp>> sbp;                   // for consistent op
   Optional<user_op::OpKernelState> state;
 };
 

@@ -17,18 +17,13 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/eager/opkernel_object.h"
-#include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
-#include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/async_cuda_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/object.h"
 
 namespace oneflow {
 namespace vm {
@@ -40,7 +35,8 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
 
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
+COMMAND(
+    vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("cuda.LocalCallOpKernel"));
 
 class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:
@@ -50,7 +46,7 @@ class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernel
   using stream_type = vm::AsyncCudaStreamType;
 };
 COMMAND(vm::RegisterInstructionType<AsyncCudaLocalCallOpKernelInstructionType>(
-    "async.gpu.LocalCallOpKernel"));
+    "async.cuda.LocalCallOpKernel"));
 
 class CudaH2DLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:
@@ -71,93 +67,6 @@ class CudaD2HLocalCallOpKernelInstructionType final : public LocalCallOpKernelIn
 };
 COMMAND(vm::RegisterInstructionType<CudaD2HLocalCallOpKernelInstructionType>(
     "cuda_d2h.LocalCallOpKernel"));
-
-class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType {
- public:
-  CudaCallOpKernelInstructionType() = default;
-  ~CudaCallOpKernelInstructionType() override = default;
-
-  using stream_type = vm::AsyncCudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<CudaCallOpKernelInstructionType>("gpu.CallOpKernel"));
-
-class CudaUserStatelessCallOpKernelInstructionType final
-    : public UserStatelessCallOpKernelInstructionType {
- public:
-  CudaUserStatelessCallOpKernelInstructionType() = default;
-  ~CudaUserStatelessCallOpKernelInstructionType() override = default;
-
-  using stream_type = vm::AsyncCudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<CudaUserStatelessCallOpKernelInstructionType>(
-    "gpu.compute.UserStatelessCallOpKernel"));
-
-class CudaSystemStatelessCallOpKernelInstructionType final
-    : public SystemStatelessCallOpKernelInstructionType {
- public:
-  CudaSystemStatelessCallOpKernelInstructionType() = default;
-  ~CudaSystemStatelessCallOpKernelInstructionType() override = default;
-
-  using stream_type = vm::AsyncCudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<CudaSystemStatelessCallOpKernelInstructionType>(
-    "gpu.compute.SystemStatelessCallOpKernel"));
-
-class CudaCopyH2DSystemStatelessCallOpKernelInstructionType final
-    : public SystemStatelessCallOpKernelInstructionType {
- public:
-  CudaCopyH2DSystemStatelessCallOpKernelInstructionType() = default;
-  ~CudaCopyH2DSystemStatelessCallOpKernelInstructionType() override = default;
-
-  using stream_type = vm::CudaCopyH2DStreamType;
-};
-COMMAND(vm::RegisterInstructionType<CudaCopyH2DSystemStatelessCallOpKernelInstructionType>(
-    "gpu.copy_h2d.SystemStatelessCallOpKernel"));
-
-class CudaCopyD2HSystemStatelessCallOpKernelInstructionType final
-    : public SystemStatelessCallOpKernelInstructionType {
- public:
-  CudaCopyD2HSystemStatelessCallOpKernelInstructionType() = default;
-  ~CudaCopyD2HSystemStatelessCallOpKernelInstructionType() override = default;
-
-  using stream_type = vm::CudaCopyD2HStreamType;
-
-  std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
-                                                const int64_t device_id) const override {
-    auto mem_case = std::make_shared<MemoryCase>();
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(device_id);
-    return mem_case;
-  }
-};
-COMMAND(vm::RegisterInstructionType<CudaCopyD2HSystemStatelessCallOpKernelInstructionType>(
-    "gpu.copy_d2h.SystemStatelessCallOpKernel"));
-
-class GpuFetchBlobHeaderInstructionType final : public FetchBlobHeaderInstructionType {
- public:
-  GpuFetchBlobHeaderInstructionType() = default;
-  ~GpuFetchBlobHeaderInstructionType() override = default;
-
-  using stream_type = vm::AsyncCudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<GpuFetchBlobHeaderInstructionType>("gpu.FetchBlobHeader"));
-
-class GpuFetchBlobBodyInstructionType final : public FetchBlobBodyInstructionType {
- public:
-  GpuFetchBlobBodyInstructionType() = default;
-  ~GpuFetchBlobBodyInstructionType() override = default;
-
-  using stream_type = vm::AsyncCudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<GpuFetchBlobBodyInstructionType>("gpu.FetchBlobBody"));
-
-class GpuFeedBlobInstructionType final : public FeedBlobInstructionType {
- public:
-  GpuFeedBlobInstructionType() = default;
-  ~GpuFeedBlobInstructionType() override = default;
-
-  using stream_type = vm::AsyncCudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<GpuFeedBlobInstructionType>("gpu.FeedBlob"));
 
 }  // namespace vm
 }  // namespace oneflow

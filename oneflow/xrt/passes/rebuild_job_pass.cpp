@@ -385,17 +385,17 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
 
 void FoldSubgraphBuilder::FixupSbpSignatures() {
   for (const XrtNode* node : launch_nodes_) {
-    cfg::SbpSignature sbp_conf;
+    SbpSignature sbp_conf;
     auto* sbp_parallel = sbp_conf.mutable_bn_in_op2sbp_parallel();
     for (const XrtEdge* edge : node->in_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
       const std::string& bn = edge->argument().meta_data().consume_key;
-      (*sbp_parallel)[bn] = edge->Attr<std::vector<cfg::SbpParallel>>("sbp_policy")[1];
+      (*sbp_parallel)[bn] = edge->Attr<std::vector<SbpParallel>>("sbp_policy")[1];
     }
     for (const XrtEdge* edge : node->out_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
       const std::string& bn = edge->argument().meta_data().produce_key;
-      (*sbp_parallel)[bn] = edge->Attr<std::vector<cfg::SbpParallel>>("sbp_policy")[0];
+      (*sbp_parallel)[bn] = edge->Attr<std::vector<SbpParallel>>("sbp_policy")[0];
     }
     // Append sbp signatures to helper
     builder_->AddSbpSignature4OpName(node->name(), sbp_conf);
@@ -406,7 +406,7 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
     auto* sbp_signatures = launch_conf->mutable_sbp_signatures();
     for (const auto& node_conf : launch_conf->function().node()) {
       const std::string& node_name = node_conf.name();
-      builder_->SbpSignature4OpName(node_name).ToProto(&(*sbp_signatures)[node_name]);
+      (*sbp_signatures)[node_name] = builder_->SbpSignature4OpName(node_name);
     }
   }
 }

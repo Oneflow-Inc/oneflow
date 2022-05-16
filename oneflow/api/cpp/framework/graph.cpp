@@ -15,8 +15,9 @@ limitations under the License.
 */
 
 #include "oneflow/api/common/ofblob.h"
-#include "oneflow/api/common/scope.h"
+#include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/api/cpp/framework/device.h"
+#include "oneflow/api/cpp/framework/dtype.h"
 #include "oneflow/api/cpp/framework/graph.h"
 #include "oneflow/api/cpp/framework/ivalue.h"
 #include "oneflow/api/cpp/framework/shape.h"
@@ -43,7 +44,6 @@ limitations under the License.
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
-#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/job_conf.pb.h"
 #include "oneflow/core/job/job_ir.h"
 #include "oneflow/core/job/job_set.pb.h"
@@ -54,25 +54,26 @@ limitations under the License.
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow_api {
 
 namespace of = oneflow;
 
-enum class XrtKind : int { kNone = 0, kTensorRT = 1 };
+enum class XrtKind : int { kNone = 0, kTensorRT = 1, kOpenVino = 2 };
 
 namespace {
 
 class CompileScope {
  public:
   CompileScope(const of::JobConfigProto& job_config, const of::Device& device, XrtKind kind) {
-    const std::shared_ptr<of::Scope> scope = CHECK_JUST(of::MakeScope(job_config, device));
+    of::JobConfigProto mut_job_config = job_config;
+    const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(mut_job_config, device));
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
-    of::cfg::JobConfigProto job_config_cfg(job_config);
-    ConfigXrt(job_config_cfg, kind);
-    CHECK_JUST(of::JobBuildAndInferCtx_Open(job_config.job_name()));
-    CHECK_JUST(of::CurJobBuildAndInferCtx_SetJobConf(job_config_cfg));
+    ConfigXrt(mut_job_config, kind);
+    CHECK_JUST(of::JobBuildAndInferCtx_Open(mut_job_config.job_name()));
+    CHECK_JUST(CHECK_JUST(of::GetCurInferCtx())->SetJobConf(mut_job_config));
   }
 
   ~CompileScope() {
@@ -83,12 +84,18 @@ class CompileScope {
  private:
   of::LazyMode::Guard lazy_mode_enabled_guard{true};
 
-  void ConfigXrt(of::cfg::JobConfigProto& job_config_cfg, XrtKind kind) {
+  void ConfigXrt(of::JobConfigProto& job_config, XrtKind kind) {
     if (kind == XrtKind::kTensorRT) {
 #ifdef WITH_TENSORRT
-      *(job_config_cfg.mutable_xrt_config()->mutable_use_tensorrt()) = true;
+      job_config.mutable_xrt_config()->set_use_tensorrt(true);
 #else
       LOG(WARNING) << "XRT TensorRT is unavailable while tensorrt is enabled";
+#endif
+    } else if (kind == XrtKind::kOpenVino) {
+#ifdef WITH_OPENVINO
+      job_config.mutable_xrt_config()->set_use_openvino(true);
+#else
+      LOG(WARNING) << "XRT OpenVINO is unavailable while openvino is enabled";
 #endif
     }
   }
@@ -101,13 +108,7 @@ std::shared_ptr<of::one::TensorTuple> ConvertToTensorTuple(
   return tensor_tuple;
 }
 
-std::string GetDeviceTag(const Device& device) {
-  if (device.type() == "cuda") {
-    return "gpu";
-  } else {
-    return "cpu";
-  }
-}
+std::string GetDeviceTag(const Device& device) { return device.type(); }
 
 template<class T1, class T2>
 const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2>& hash_map) {
@@ -120,6 +121,11 @@ const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2
   return std::make_pair(vec1, vec2);
 }
 
+Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
+  std::vector<int64_t> dims(of_shape.dim_vec().begin(), of_shape.dim_vec().end());
+  return Shape(dims);
+}
+
 }  // namespace
 
 class Graph::GraphImpl final {
@@ -127,38 +133,43 @@ class Graph::GraphImpl final {
   explicit GraphImpl(const std::string& model_path, const Device& device = Device("cpu"));
 
   GraphImpl(const GraphImpl& graph) = delete;
-  GraphImpl(GraphImpl&& graph) noexcept;
+  GraphImpl(GraphImpl&& graph) = default;
 
-  ~GraphImpl() = default;
+  ~GraphImpl();
 
   GraphImpl& operator=(const GraphImpl& graph) = delete;
-  GraphImpl& operator=(GraphImpl&& graph) noexcept;
+  GraphImpl& operator=(GraphImpl&& graph) = default;
 
+  InputOutputInfos GetInputInfos();
+  InputOutputInfos GetOutputInfos();
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
   void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
+  void enable_openvino() { xrt_kind_ = XrtKind::kOpenVino; }
 
  private:
-  oneflow::Maybe<void> Compile(const std::vector<Tensor>& inputs);
-  oneflow::Maybe<std::vector<Tensor>> Run(const std::vector<Tensor>& inputs) const;
-  oneflow::Maybe<void> AddOp(oneflow::OperatorConf op_conf);
-  oneflow::Maybe<void> BuildGraph(const std::vector<Tensor>& inputs);
-  oneflow::Maybe<void> LoadCheckpoint();
-  oneflow::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
+  of::Maybe<void> CollectInputOutputInfos();
+  of::Maybe<void> Compile(const std::vector<Tensor>& inputs);
+  of::Maybe<std::vector<Tensor>> Run(const std::vector<Tensor>& inputs) const;
+  of::Maybe<void> AddOp(of::OperatorConf op_conf);
+  of::Maybe<void> BuildGraph();
+  of::Maybe<void> LoadCheckpoint();
+  of::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
 
-  std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
+  std::shared_ptr<of::NNGraph> graph_ = nullptr;
   std::string model_path_;
   bool is_compiled_ = false;
   int batch_size_ = 0;
   XrtKind xrt_kind_ = XrtKind::kNone;
   Device device_;
-  oneflow::Job job_;
+  of::Job job_;
 
-  oneflow::HashMap<std::string, int> input_name_to_order_;
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> output_name_to_tensor_;
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> variable_op_name_to_tensor_;
-  std::shared_ptr<oneflow::one::TensorTuple> output_tensor_tuple_;
-  std::shared_ptr<oneflow::one::TensorTuple> parameter_tensor_tuple_;
+  InputOutputInfos input_infos_;
+  InputOutputInfos output_infos_;
+  of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> output_name_to_tensor_;
+  of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> variable_op_name_to_tensor_;
+  std::shared_ptr<of::one::TensorTuple> output_tensor_tuple_;
+  std::shared_ptr<of::one::TensorTuple> parameter_tensor_tuple_;
 };
 
 Graph::Graph(const std::string& model_path, const Device& device)
@@ -173,6 +184,10 @@ Graph& Graph::operator=(Graph&& graph) noexcept {
   graph_ = std::move(graph.graph_);
   return *this;
 }
+
+InputOutputInfos Graph::GetInputInfos() { return graph_->GetInputInfos(); }
+
+InputOutputInfos Graph::GetOutputInfos() { return graph_->GetOutputInfos(); }
 
 IValue Graph::Forward(const IValue& inputs) {
   std::vector<Tensor> input_tensors;
@@ -200,6 +215,8 @@ void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size);
 
 void Graph::enable_tensorrt() { graph_->enable_tensorrt(); }
 
+void Graph::enable_openvino() { graph_->enable_openvino(); }
+
 Graph Graph::Load(const std::string& model_path, const Device& device) {
   Graph graph(model_path, device);
   return graph;
@@ -208,44 +225,41 @@ Graph Graph::Load(const std::string& model_path, const Device& device) {
 Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
   CHECK_JUST(of::LoadJobFromIR(&job_, model_path + "/model.mlir"));
-  if (oneflow::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) {
-    LOG(ERROR) << job_.DebugString();
-  }
+  CollectInputOutputInfos();
+  if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) { LOG(ERROR) << job_.DebugString(); }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
-  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
-  of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
+  CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
+  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(),
+                                         of::Global<OneFlowEnv>::Get()->GetSessionCtx());
 }
 
-Graph::GraphImpl::GraphImpl(GraphImpl&& graph) noexcept
-    : graph_(std::move(graph.graph_)),
-      model_path_(std::move(graph.model_path_)),
-      is_compiled_(graph.is_compiled_),
-      batch_size_(graph.batch_size_),
-      xrt_kind_(graph.xrt_kind_),
-      device_(std::move(graph.device_)),
-      job_(std::move(graph.job_)),
-      input_name_to_order_(std::move(graph.input_name_to_order_)),
-      output_name_to_tensor_(std::move(graph.output_name_to_tensor_)),
-      variable_op_name_to_tensor_(std::move(graph.variable_op_name_to_tensor_)),
-      output_tensor_tuple_(std::move(graph.output_tensor_tuple_)),
-      parameter_tensor_tuple_(std::move(graph.parameter_tensor_tuple_)) {}
+InputOutputInfos Graph::GraphImpl::GetInputInfos() { return input_infos_; }
 
-Graph::GraphImpl& Graph::GraphImpl::operator=(Graph::GraphImpl&& graph) noexcept {
-  if (&graph == this) { return *this; }
-  graph_ = std::move(graph.graph_);
-  model_path_ = std::move(graph.model_path_);
-  is_compiled_ = graph.is_compiled_;
-  batch_size_ = graph.batch_size_;
-  xrt_kind_ = graph.xrt_kind_;
-  device_ = std::move(graph.device_);
-  job_ = std::move(graph.job_);
-  input_name_to_order_ = std::move(graph.input_name_to_order_);
-  output_name_to_tensor_ = std::move(graph.output_name_to_tensor_);
-  variable_op_name_to_tensor_ = std::move(graph.variable_op_name_to_tensor_);
-  output_tensor_tuple_ = std::move(graph.output_tensor_tuple_);
-  parameter_tensor_tuple_ = std::move(graph.parameter_tensor_tuple_);
-  return *this;
+InputOutputInfos Graph::GraphImpl::GetOutputInfos() { return output_infos_; }
+
+of::Maybe<void> Graph::GraphImpl::CollectInputOutputInfos() {
+  const of::OpGraph op_graph(job_);
+  size_t input_order = 0;
+  size_t output_order = 0;
+  op_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
+    const of::OperatorConf& op_conf = node->op().op_conf();
+    if (op_conf.has_input_conf()) {
+      of::InterfaceBlobConf blob_conf = op_conf.input_conf().blob_conf();
+      input_infos_[op_conf.name()] =
+          InputOutputAttribute(static_cast<DType>(blob_conf.data_type()),
+                               OfShapeToOfApiShape(of::Shape(blob_conf.shape())), input_order);
+      input_order += 1;
+    } else if (op_conf.has_output_conf()) {
+      of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
+      output_infos_[op_conf.name()] =
+          InputOutputAttribute(static_cast<DType>(blob_conf.data_type()),
+                               OfShapeToOfApiShape(of::Shape(blob_conf.shape())), output_order);
+      output_order += 1;
+    }
+    return of::Maybe<void>::Ok();
+  });
+  return of::Maybe<void>::Ok();
 }
 
 std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
@@ -259,7 +273,7 @@ std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs)
 }
 
 of::Maybe<void> Graph::GraphImpl::Compile(const std::vector<Tensor>& inputs) {
-  JUST(BuildGraph(inputs));
+  JUST(BuildGraph());
   JUST(LoadCheckpoint());
   JUST(RegisterTensors(inputs));
   JUST(graph_->CompileAndInitRuntime());
@@ -294,25 +308,21 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) {
+of::Maybe<void> Graph::GraphImpl::BuildGraph() {
   CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(),
                                  xrt_kind_);
   {
-    int input_tensor_order = 0;
     const of::OpGraph op_graph(job_);
     op_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
       const of::OperatorConf& op_conf = node->op().op_conf();
       JUST(AddOp(op_conf));
-      if (op_conf.has_input_conf()) {
-        input_name_to_order_[op_conf.name()] = input_tensor_order;
-        input_tensor_order += 1;
-      } else if (op_conf.has_variable_conf()) {
+      if (op_conf.has_variable_conf()) {
         const of::LazyMode::Guard lazy_mode_disabled_guard{false};
         const of::VariableOpConf& variable_conf = op_conf.variable_conf();
         variable_op_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(variable_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(variable_conf.data_type()))),
-            *device_.device_));
+            *device_.device_, /*pin_memory=*/false));
       }
       return of::Maybe<void>::Ok();
     });
@@ -335,7 +345,7 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) 
         output_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
             of::Shape(blob_conf.shape()),
             JUST(of::DType::Get(static_cast<of::DataType>(blob_conf.data_type()))),
-            *device_.device_));
+            *device_.device_, /*pin_memory=*/false));
       }
       return of::Maybe<void>::Ok();
     });
@@ -371,9 +381,10 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
   {
     std::vector<std::string> input_op_names(inputs.size());
     std::vector<std::shared_ptr<of::one::Tensor>> input_tensors(inputs.size());
-    for (const auto& name_order : input_name_to_order_) {
-      input_op_names[name_order.second] = name_order.first;
-      input_tensors[name_order.second] = inputs.at(name_order.second).tensor_;
+    for (const auto& input_info : input_infos_) {
+      size_t index = input_info.second.input_output_index_;
+      input_op_names[index] = input_info.first;
+      input_tensors[index] = inputs.at(index).tensor_;
     }
     JUST(graph_->RegisterInputOpNamesAndTensors(input_op_names, input_tensors));
   }
@@ -393,5 +404,7 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
   }
   return of::Maybe<void>::Ok();
 }
+
+Graph::GraphImpl::~GraphImpl() { of::vm::ClusterSync().GetOrThrow(); }
 
 }  // namespace oneflow_api

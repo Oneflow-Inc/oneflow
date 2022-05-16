@@ -71,7 +71,7 @@ void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) 
 
 namespace {
 
-Maybe<void> CheckPhysicalBlobDesc(const BlobDesc& logical, const cfg::NdSbp& nd_sbp,
+Maybe<void> CheckPhysicalBlobDesc(const BlobDesc& logical, const NdSbp& nd_sbp,
                                   const ParallelDesc& parallel_desc,
                                   const ParallelContext* parallel_ctx, const BlobDesc& physical) {
   CHECK_EQ_OR_RETURN(physical.shape(), *JUST(GetPhysicalShape(logical.shape(), nd_sbp,
@@ -82,7 +82,7 @@ Maybe<void> CheckPhysicalBlobDesc(const BlobDesc& logical, const cfg::NdSbp& nd_
 Maybe<void> CheckPhysicalBlobDesc(
     const Operator& op, const PbRpf<std::string>& bns,
     const std::function<Maybe<const BlobDesc>(const std::string&)>& GetLogicalBlobDesc,
-    const cfg::NdSbpSignature* nd_sbp_signature, const ParallelContext* parallel_ctx,
+    const NdSbpSignature* nd_sbp_signature, const ParallelContext* parallel_ctx,
     const std::function<BlobDesc*(const std::string&)>& GetPhysicalBlobDesc) {
   const std::shared_ptr<const ParallelDesc> op_parallel_desc = JUST(op.GetOpParallelDesc());
   for (const auto& bn : bns) {
@@ -105,7 +105,7 @@ Maybe<void> CheckPhysicalBlobDesc(
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
   auto GetBlobDesc4BnInOp = GetBlobDesc4BnInOpFunc();
   const OpNode* op_node = Global<OpGraph>::Get()->OpNode4OpName(op()->op_name());
-  const cfg::NdSbpSignature* nd_sbp_signature = nullptr;
+  const NdSbpSignature* nd_sbp_signature = nullptr;
   if (op_node != nullptr) { nd_sbp_signature = &op_node->nd_sbp_signature(); }
 
   if (op_node != nullptr && parallel_ctx->parallel_num() > 1 && nd_sbp_signature != nullptr) {

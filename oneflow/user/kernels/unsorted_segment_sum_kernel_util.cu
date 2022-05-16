@@ -197,7 +197,8 @@ struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, float, K, float16> final 
                                                OF_PP_PAIR_FIRST(index_type_pair),                 \
                                                OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA,
-                                 UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+                                 UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ,
+                                 UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ);
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA
 
 #define INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA(in_type_pair, index_type_pair,             \
@@ -207,11 +208,12 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CUDA,
                                                OF_PP_PAIR_FIRST(out_type_pair)>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA,
-                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat), INDEX_DATA_TYPE_SEQ,
-                                 FLOAT16_DATA_TYPE_SEQ);
+                                 OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat),
+                                 UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ, FLOAT16_DATA_TYPE_SEQ);
 
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_HALF_CUDA
 
+template struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, half, uint32_t, half>;
 template struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, half, int32_t, half>;
 template struct UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, half, int64_t, half>;
 

@@ -24,7 +24,7 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
   }
@@ -39,7 +39,7 @@ Maybe<void> RawCheckNaive1ToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaive1ToP = DECORATE(&RawCheckNaive1ToP, ThreadLocalCopiable);
+static constexpr auto* CheckNaive1ToP = DECORATE(&RawCheckNaive1ToP, ThreadLocalCachedCopiable);
 
 }  // namespace
 
@@ -56,7 +56,7 @@ Maybe<one::Tensor> Naive1ToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   if (root == GlobalProcessCtx::Rank() || !out_parallel_id->has_value()) {
     // do nothing
   } else {
-    const std::string& device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
+    const std::string& device_type = tensor_placement->device_tag();
     local_tensor = JUST(one::functional::Constant(*tensor->shape(), 0, tensor->dtype(),
                                                   JUST(Device::New(device_type))));
   }

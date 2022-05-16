@@ -22,7 +22,7 @@ import oneflow as flow
 import os
 
 import oneflow.unittest
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 @flow.unittest.skip_unless_1n4d()

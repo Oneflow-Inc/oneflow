@@ -23,11 +23,9 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_split_parallel();
-}
+bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
+static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
 Maybe<void> RawCheckNaiveSToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
@@ -41,7 +39,7 @@ Maybe<void> RawCheckNaiveSToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveSToS = DECORATE(&RawCheckNaiveSToS, ThreadLocalCopiable);
+static constexpr auto* CheckNaiveSToS = DECORATE(&RawCheckNaiveSToS, ThreadLocalCachedCopiable);
 
 }  // namespace
 

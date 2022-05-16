@@ -36,7 +36,7 @@ Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
   of::LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
   tensor_ = functional::Empty(*shape.shape_,
                               of::DType::Get(static_cast<of::DataType>(dtype)).GetOrThrow(),
-                              *device.device_)
+                              *device.device_, /*pin_memory=*/false)
                 .GetPtrOrThrow();
 }
 Tensor::Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor) : tensor_(tensor) {}
@@ -123,6 +123,7 @@ const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const {
 
 REGISTER_TENSOR_COPY_TO(float)
 REGISTER_TENSOR_COPY_TO(double)
+REGISTER_TENSOR_COPY_TO(bool)
 REGISTER_TENSOR_COPY_TO(int8_t)
 REGISTER_TENSOR_COPY_TO(int32_t)
 REGISTER_TENSOR_COPY_TO(int64_t)

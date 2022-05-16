@@ -15,9 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
-__all__ = [
-    "SharedMemory",
-]
+__all__ = ["SharedMemory"]
 
 
 class SharedMemory:
@@ -33,7 +31,8 @@ class SharedMemory:
 
     def __del__(self):
         try:
-            self.close()
+            if hasattr(self, "shm_"):
+                self.close()
         except OSError:
             pass
 

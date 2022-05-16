@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/random_generator.h"
+#include "oneflow/core/framework/to_string.h"
 
 #include <mutex>
 #include "oneflow/core/control/global_process_ctx.h"
@@ -24,9 +25,33 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-Maybe<void> ManualSeed(uint64_t seed) {
-  JUST(DefaultAutoGenerator())->set_current_seed(seed);
+Maybe<Generator> ManualSeed(uint64_t seed) {
+  const auto& default_auto_generator = JUST(DefaultAutoGenerator());
+  default_auto_generator->set_current_seed(seed);
+  return default_auto_generator;
+}
+
+Maybe<void> ManualSeed(uint64_t seed, const std::string& device, int device_index) {
+  if (device == "cpu") {
+    JUST(DefaultCPUGenerator())->set_current_seed(seed);
+  }
+#ifdef WITH_CUDA
+  else if (device == "cuda") {
+    JUST(DefaultCUDAGenerator(device_index))->set_current_seed(seed);
+  }
+#endif  // WITH_CUDA
+  else if (device == "auto") {
+    JUST(DefaultAutoGenerator())->set_current_seed(seed);
+  } else {
+    return Error::RuntimeError() << "Invalid device " << device
+                                 << " for making generator, please make sure the device is one of "
+                                 << PrintAvailableDevices();
+  }
   return Maybe<void>::Ok();
+}
+
+Maybe<void> ManualSeed(uint64_t seed, DeviceType device, int device_index) {
+  return ManualSeed(seed, *JUST(DeviceTag4DeviceType(device)), device_index);
 }
 
 namespace detail {
@@ -99,6 +124,17 @@ Maybe<Generator> MakeCUDAGenerator(int device_index) {
 }
 #endif  // WITH_CUDA
 
+Maybe<void> ManualSeedAllCudaGenerator(uint64_t seed) {
+#ifdef WITH_CUDA
+  static int device_count = GetCudaDeviceCount();
+  FOR_RANGE(int, device_id, 0, device_count) {
+    const auto& cuda_gen = JUST(DefaultCUDAGenerator(device_id));
+    cuda_gen->set_current_seed(seed);
+  }
+#endif  // WITH_CUDA
+  return Maybe<void>::Ok();
+}
+
 Maybe<Generator> MakeGenerator(const std::string& device, int device_index) {
   if (device == "cpu") {
     return MakeCPUGenerator();
@@ -136,11 +172,11 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
 }
 
 Maybe<Generator> DefaultGenerator(DeviceType device, int device_index) {
-  return DefaultGenerator(DeviceTypeName(device), device_index);
+  return DefaultGenerator(*JUST(DeviceTag4DeviceType(device)), device_index);
 }
 
 Maybe<Generator> MakeGenerator(DeviceType device, int device_index) {
-  return MakeGenerator(DeviceTypeName(device), device_index);
+  return MakeGenerator(*JUST(DeviceTag4DeviceType(device)), device_index);
 }
 
 }  // namespace one

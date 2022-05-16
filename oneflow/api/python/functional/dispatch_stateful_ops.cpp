@@ -71,7 +71,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          const std::string& part_name_prefix, int32_t part_name_suffix_length, int32_t batch_size,
          int32_t shuffle_buffer_size, bool random_shuffle, bool shuffle_after_epoch, int64_t seed,
          const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("data_dir", data_dir));
         JUST(attrs.SetAttr("data_part_num", data_part_num));
@@ -113,7 +113,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor("DispatchCoinFlip",
                 [](const std::shared_ptr<OpExpr>& op, int64_t batch_size, Scalar probability,
                    int64_t seed, bool has_seed, const Symbol<ParallelDesc>& placement,
-                   const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+                   const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("probability", JUST(probability.As<float>())));
                   JUST(attrs.SetAttr("batch_size", batch_size));
@@ -124,6 +124,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   return OpInterpUtil::Dispatch<Tensor>(
                       *op, {}, OpExprInterpContext(attrs, placement, nd_sbp));
                 });
+  m.add_functor(
+      "DispatchDistributedPariticalFCSample",
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& weight,
+         const std::shared_ptr<Tensor>& label, const int64_t& num_sample) -> Maybe<TensorTuple> {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
+        return OpInterpUtil::Dispatch<TensorTuple>(*op, {weight, label}, attrs);
+      });
   m.add_functor(
       "DispatchCropMirrorNormalizeFromUint8",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& input, int64_t crop_h,
@@ -287,7 +295,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
          int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
          bool stride_partition, int64_t session_id, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("session_id", session_id));
         JUST(attrs.SetAttr("annotation_file", annotation_file));
@@ -344,7 +352,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          const int64_t batch_size, const bool random_shuffle, const std::string& shuffle_mode,
          const int32_t shuffle_buffer_size, const bool shuffle_after_epoch, int64_t random_seed,
          const bool verify_example, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
         JUST(attrs.SetAttr<int64_t>("batch_size", batch_size));
@@ -384,7 +392,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          int64_t label_length, int64_t num_samples, int64_t batch_size, const Symbol<DType>& dtype,
          const std::vector<int64_t>& split_sizes, int64_t split_index, bool shuffle,
          int64_t random_seed, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("data_file_prefix", data_file_prefix));
         JUST(attrs.SetAttr("seq_length", seq_length));
@@ -497,6 +505,23 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                   JUST(attrs.SetAttr("epsilon", epsilon));
                   JUST(attrs.SetAttr("weight_decay", weight_decay));
                   JUST(attrs.SetAttr("do_bias_correction", do_bias_correction));
+                  JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
+                  return Maybe<void>::Ok();
+                });
+  m.add_functor("DispatchFtrlUpdate",
+                [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs,
+                   float learning_rate, double scale, float l1, float l2, float lr_power,
+                   float lambda1, float lambda2, float beta, float weight_decay) -> Maybe<void> {
+                  MutableAttrMap attrs;
+                  JUST(attrs.SetAttr("learning_rate_val", learning_rate));
+                  JUST(attrs.SetAttr("scale", scale));
+                  JUST(attrs.SetAttr("l1", l1));
+                  JUST(attrs.SetAttr("l2", l2));
+                  JUST(attrs.SetAttr("lr_power", lr_power));
+                  JUST(attrs.SetAttr("lambda1", lambda1));
+                  JUST(attrs.SetAttr("lambda2", lambda2));
+                  JUST(attrs.SetAttr("beta", beta));
+                  JUST(attrs.SetAttr("weight_decay", weight_decay));
                   JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
                   return Maybe<void>::Ok();
                 });

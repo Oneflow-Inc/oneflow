@@ -77,7 +77,7 @@ class ConsistentEyeSbpListFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     MutableAttrMap attrs;
     CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
         << "len(sbp) == len(placement.hierarchy) required, but "
@@ -117,8 +117,8 @@ class ConsistentEyeSbpFunctor {
   Maybe<Tensor> operator()(const Scalar& rows, const Optional<Scalar>& cols,
                            const Symbol<DType>& dtype, const bool& requires_grad,
                            const Symbol<ParallelDesc>& placement,
-                           const Symbol<cfg::SbpParallel>& sbp) const {
-    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple{sbp};
+                           const Symbol<SbpParallel>& sbp) const {
+    std::vector<Symbol<SbpParallel>> sbp_tuple{sbp};
     return JUST(functional::Eye(rows, cols, dtype, requires_grad, placement, sbp_tuple));
   }
 };

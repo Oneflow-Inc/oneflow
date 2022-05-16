@@ -18,15 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace vm {
-class CpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
- public:
-  CpuLazyReferenceInstructionType() = default;
-  ~CpuLazyReferenceInstructionType() override = default;
-
-  using stream_type = vm::CpuStreamType;
-};
-
-COMMAND(vm::RegisterInstructionType<CpuLazyReferenceInstructionType>("cpu.LazyReference"));
 
 class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
  public:
@@ -37,15 +28,6 @@ class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 };
 COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
     "cpu.AccessBlobByCallback"));
-
-class CpuTensorViewInstructionType final : public TensorViewInstructionType {
- public:
-  CpuTensorViewInstructionType() = default;
-  ~CpuTensorViewInstructionType() override = default;
-
-  using stream_type = vm::CpuStreamType;
-};
-COMMAND(vm::RegisterInstructionType<CpuTensorViewInstructionType>("cpu.TensorView"));
 
 }  // namespace vm
 }  // namespace oneflow

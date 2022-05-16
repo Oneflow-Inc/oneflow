@@ -7,6 +7,22 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "/mlir/Interfaces/InferTypeOpInterface.td"
 
+def OneFlow_InvalidElement: TypeDef<OneFlow_Dialect, "InvalidElement"> {
+  let mnemonic = "invalid_element";
+}
+def OneFlow_CharElement: TypeDef<OneFlow_Dialect, "CharElement"> {
+  let mnemonic = "char_element";
+}
+def OneFlow_TensorBufferElement: TypeDef<OneFlow_Dialect, "TensorBufferElement"> {
+  let mnemonic = "tensor_buffer_element";
+}
+def OneFlow_OFRecordElement: TypeDef<OneFlow_Dialect, "OFRecordElement"> {
+  let mnemonic = "of_record_element";
+}
+
+def OneFlow_OFRecordTensor : TensorOf<[OneFlow_OFRecordElement]>;
+def OneFlow_TensorBufferTensor : TensorOf<[OneFlow_TensorBufferElement]>;
+
 def OneFlow_Tensor : TensorOf<[AnyType]>;
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
@@ -22,6 +38,11 @@ def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 def OneFlow_TensorSource : NativeOpTrait<"TensorSource">;
+def OneFlow_OnlyExistsInIR : NativeOpTrait<"OnlyExistsInIR">;
+def OneFlow_ElementwiseOp : NativeOpTrait<"IsElementwise">;
+
+class OneFlow_IROp<string mnemonic, list<Trait> traits = []> :
+        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_OnlyExistsInIR])> {}
 
 class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
@@ -35,7 +56,9 @@ class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
   dag attrs = (ins);
   dag trait_attrs = (ins);
   dag user_op_attrs = (ins);
-  dag input = (ins);
+  dag input = (ins
+    Optional<OneFlow_Tensor>:$UserSourceOpTickInput
+  );
   dag output = (outs);
   dag ctrl_input = (ins);
   dag ctrl_output = (outs);
@@ -59,7 +82,7 @@ class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
   bit has_get_sbp_fn = 0;
   bit has_sbp_signature_infer_fn = 0;
   bit has_data_type_infer_fn = 0;
-  bit has_device_infer_fn = 0;
+  bit has_device_and_stream_infer_fn = 0;
   bit has_input_arg_modify_fn = 0;
   bit has_output_arg_modify_fn = 0;
   bit has_output_blob_time_shape_infer_fn = 0;
@@ -110,12 +133,12 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
     "computes the output."
     }];
     let input = (ins
-      AnyType:$in,
-      AnyType:$weight,
-      Optional<AnyType>:$bias,
-      Optional<AnyType>:$bias_multiplier
+      OneFlow_Tensor:$in,
+      OneFlow_Tensor:$weight,
+      Optional<OneFlow_Tensor>:$bias,
+      Optional<OneFlow_Tensor>:$bias_multiplier
     );
-    let output = (outs AnyType:$out);
+    let output = (outs OneFlow_Tensor:$out);
     let attrs = (ins
       DefaultValuedAttr<SI32Attr, "0">:$filters,
       SI32ArrayAttr:$padding_before,
@@ -221,7 +244,7 @@ class OneFlow_AvgPoolBaseOp<string mnemonic, list<Trait> traits = []> :
     SI32ArrayAttr:$stride,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode,
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
-    DefaultValuedAttr<SI64Attr, "0">:$divisor_override
+    DefaultValuedAttr<SI32Attr, "0">:$divisor_override
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -234,7 +257,6 @@ class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let summary = "OneFlow Max Pooling Grad operation";
   let input = (ins
     AnyType:$x,
-    AnyType:$y,
     AnyType:$indice,
     AnyType:$dy
   );
@@ -261,7 +283,6 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let summary = "OneFlow Average Pooling Grad operation";
   let input = (ins
     AnyType:$x,
-    AnyType:$y,
     AnyType:$dy
   );
   let output = (outs
@@ -274,7 +295,7 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
     SI32ArrayAttr:$stride,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode,
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
-    DefaultValuedAttr<SI64Attr, "0">:$divisor_override
+    DefaultValuedAttr<SI32Attr, "0">:$divisor_override
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

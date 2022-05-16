@@ -32,8 +32,9 @@ class NormalizationOp : public OpenvinoOpKernel {
     std::shared_ptr<ngraph::Node> moving_mean = ctx->Weight("moving_mean_0");
     std::shared_ptr<ngraph::Node> moving_variance = ctx->Weight("moving_variance_0");
     float epsilon = ctx->Attr<float>("epsilon");
-    std::shared_ptr<ngraph::Node> ngraph_node = std::make_shared<ngraph::op::BatchNormInference>(
-        input, gamma, beta, moving_mean, moving_variance, epsilon);
+    std::shared_ptr<ngraph::Node> ngraph_node =
+        std::make_shared<ngraph::op::v0::BatchNormInference>(input, gamma, beta, moving_mean,
+                                                             moving_variance, epsilon);
     ngraph_node->set_friendly_name(ctx->op_name().c_str());
     ctx->SetOutput("y_0", ngraph_node);
   }

@@ -46,50 +46,41 @@ namespace ep {
 class CpuNumThreadsGuard {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuNumThreadsGuard);
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+  explicit CpuNumThreadsGuard(size_t num_threads)
+      : global_thread_limit(tbb::global_control::max_allowed_parallelism, num_threads) {}
+  ~CpuNumThreadsGuard() {}
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
   explicit CpuNumThreadsGuard(size_t num_threads) : set_num_threads_(num_threads) {
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
     saved_num_threads_ = omp_get_max_threads();
     omp_set_num_threads(set_num_threads_);
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    saved_num_threads_ =
-        tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism);
-    if (set_num_threads_ != saved_num_threads_) {
-      tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
-                                              set_num_threads_);
-    }
+  }
+  ~CpuNumThreadsGuard() { omp_set_num_threads(saved_num_threads_); }
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-// Nothing
+  explicit CpuNumThreadsGuard(size_t num_threads) {}
+  ~CpuNumThreadsGuard() {}
 #else
 #error OF_CPU_THREADING_RUNTIME Error setting
 #endif
-  }
-
-  ~CpuNumThreadsGuard() {
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
-    omp_set_num_threads(saved_num_threads_);
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    if (set_num_threads_ != saved_num_threads_) {
-      tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
-                                              saved_num_threads_);
-    }
-
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-// Nothing
-#else
-#error OF_CPU_THREADING_RUNTIME Error setting
-#endif
-  }
 
  private:
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+  tbb::global_control global_thread_limit;
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
   size_t set_num_threads_;
   size_t saved_num_threads_;
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
+
+#else
+#error OF_CPU_THREADING_RUNTIME Error setting
+#endif
 };
 
 class CpuStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
-  explicit CpuStream(Device* device) : device_(device) {
+  explicit CpuStream(CpuDevice* device) : device_(device) {
 #ifdef WITH_ONEDNN
     onednn_engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
     onednn_stream_.reset(new dnnl::stream(*onednn_engine_));
@@ -99,7 +90,7 @@ class CpuStream : public Stream {
   ~CpuStream() override = default;
 
   DeviceType device_type() const override;
-  Device* device() const override;
+  CpuDevice* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
 
@@ -112,7 +103,7 @@ class CpuStream : public Stream {
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
 #if OF_CPU_THREADING_RUNTIME != OF_RUNTIME_SEQ
     auto DivUp = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
-    size_t num_threads = dynamic_cast<CpuDevice*>(device())->GetNumThreads();
+    size_t num_threads = device()->GetNumThreads();
 #endif
     if (begin >= end) { return; }
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
@@ -158,7 +149,7 @@ class CpuStream : public Stream {
   std::unique_ptr<dnnl::engine> onednn_engine_;
   std::unique_ptr<dnnl::stream> onednn_stream_;
 #endif
-  Device* device_;
+  CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
 };
 

@@ -24,7 +24,7 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_broadcast_parallel()) { return false; }
   }
@@ -39,7 +39,7 @@ Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocalCopiable);
+static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocalCachedCopiable);
 
 }  // namespace
 

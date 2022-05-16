@@ -18,16 +18,12 @@ limitations under the License.
 
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
-#include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/id_generator.h"
-#include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job/scope.pb.h"
-#include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/maybe.h"
@@ -37,9 +33,6 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/framework/opkernel_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
-#include "oneflow/core/operator/op_attribute.cfg.h"
-#include "oneflow/core/operator/arg_modifier_signature.cfg.h"
-#include "oneflow/core/job/parallel_signature.cfg.h"
 
 namespace oneflow {
 
@@ -59,26 +52,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
   explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                               vm::InstructionMsgList* instruction_list,
-                               vm::cfg::EagerSymbolList* eager_symbol_list)
-      : id_generator_(id_generator),
-        instruction_list_(instruction_list),
-        eager_symbol_list_(eager_symbol_list) {}
-  InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                      vm::InstructionMsgList* instruction_list,
-                      vm::cfg::EagerSymbolList* eager_symbol_list,
-                      const std::function<void(compatible_py::Object*)>& release_object)
-      : id_generator_(id_generator),
-        instruction_list_(instruction_list),
-        eager_symbol_list_(eager_symbol_list) {}
-  ~InstructionsBuilder() {
-    instruction_list_->Clear();
-    eager_symbol_list_->clear_eager_symbol();
-  }
+                               vm::InstructionMsgList* instruction_list)
+      : id_generator_(id_generator), instruction_list_(instruction_list) {}
+  ~InstructionsBuilder() { instruction_list_->Clear(); }
 
   const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
   const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
-  const vm::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
@@ -92,22 +71,21 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> SoftSyncNNGraphBuffers(const one::EagerBlobObjectListPtr& eager_blob_objects,
                                      const std::shared_ptr<NNGraphIf>& nn_graph);
 
-  Maybe<int64_t> CreateSymbolId(const cfg::JobConfigProto& job_conf);
+  Maybe<int64_t> CreateSymbolId(const JobConfigProto& job_conf);
 
-  Maybe<int64_t> CreateSymbolId(const cfg::ParallelConf& parallel_conf);
+  Maybe<int64_t> CreateSymbolId(const ParallelConf& parallel_conf);
 
-  Maybe<int64_t> CreateSymbolId(const cfg::ScopeProto& scope_proto);
+  Maybe<int64_t> CreateSymbolId(const ScopeProto& scope_proto);
 
-  Maybe<int64_t> CreateSymbolId(const cfg::OperatorConf& op_conf);
+  Maybe<int64_t> CreateSymbolId(const OperatorConf& op_conf);
 
-  Maybe<JobDesc> GetJobConfSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf);
+  Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
 
-  Maybe<ParallelDesc> GetParallelDescSymbol(
-      const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+  Maybe<ParallelDesc> GetParallelDescSymbol(const ParallelConf& parallel_conf);
 
-  Maybe<Scope> GetScopeSymbol(const std::shared_ptr<cfg::ScopeProto>& scope_proto);
+  Maybe<Scope> GetScopeSymbol(const ScopeProto& scope_proto);
 
-  Maybe<OperatorConfSymbol> GetOpConfSymbol(const std::shared_ptr<cfg::OperatorConf>& op_conf);
+  Maybe<OperatorConfSymbol> GetOpConfSymbol(const OperatorConf& op_conf);
 
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
@@ -121,35 +99,38 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> AccessBlobByCallback(const T tensor, const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
 
-  template<typename T>
-  Maybe<void> TensorView(const T input_tensor, const T view_tensor);
-
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
 
   Maybe<void> ComputeGlobalFrontSeqBarrier();
 
-  Maybe<Scope> BuildInitialScope(int64_t session_id,
-                                 const std::shared_ptr<cfg::JobConfigProto>& job_conf,
+  Maybe<Scope> BuildInitialScope(int64_t session_id, const JobConfigProto& job_conf,
                                  const std::string& device_tag,
                                  const std::vector<std::string>& machine_device_ids,
                                  const std::shared_ptr<Shape>& hierarchy, bool is_mirrored);
+
+  Maybe<Scope> BuildInitialScopeWithPlacement(int64_t session_id, const JobConfigProto& job_conf,
+                                              Symbol<ParallelDesc> placement, bool is_mirrored);
 
   Maybe<Scope> BuildScopeWithNewParallelDesc(const std::shared_ptr<Scope>& scope,
                                              const std::string& device_tag,
                                              const std::vector<std::string>& machine_device_ids,
                                              const std::shared_ptr<Shape>& hierarchy);
 
-  Maybe<Scope> BuildScopeWithNewParallelConf(
-      const std::shared_ptr<Scope>& scope, const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
+  Maybe<Scope> BuildScopeWithNewParallelConf(const std::shared_ptr<Scope>& scope,
+                                             const ParallelConf& parallel_conf);
 
   Maybe<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope, bool is_mirrored);
 
   Maybe<Scope> BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
-                                          std::string scope_name);
+                                          const std::string& scope_name);
 
   Maybe<Scope> BuildScopeByProtoSetter(
       const std::shared_ptr<Scope>& scope,
-      const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter);
+      const std::function<void(const std::shared_ptr<ScopeProto>&)>& Setter);
+
+  Maybe<Scope> BuildScopeByProtoStrSetter(
+      const std::shared_ptr<Scope>& scope,
+      const std::function<std::string(const std::string&)>& StrSetter);
 
   template<typename T>
   Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
@@ -160,23 +141,21 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
+                                const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> LocalCallOpKernel(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
+      const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:
   Maybe<void> SoftSyncStream(const one::EagerBlobObjectListPtr& eager_blob_objects,
-                             Symbol<Device> op_device);
+                             Symbol<Stream> stream);
   Maybe<void> SoftSyncStream(
       std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-      const std::string& modifier, Symbol<Device> op_device);
-
-  vm::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
+      const std::string& modifier, Symbol<Stream> stream);
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
@@ -189,7 +168,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
-  vm::cfg::EagerSymbolList* eager_symbol_list_;
 };
 
 // Make VM instructions with instruction builder and run instructions with physical/local view.

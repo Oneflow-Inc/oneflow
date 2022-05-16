@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_USER_DATA_OFRECORD_DATASET_H_
 
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
@@ -65,7 +64,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
       auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
       // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
       // we assume that it works in DDP
-      if (nd_sbp_str_vec.empty() && CHECK_JUST(IsMultiClient())) { is_local = true; }
+      if (nd_sbp_str_vec.empty()) { is_local = true; }
     }
     if (is_local) {
       parallel_id_ = GlobalProcessCtx::Rank();

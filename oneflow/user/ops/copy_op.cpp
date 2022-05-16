@@ -15,20 +15,25 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Device>> MakeOpDevice(const Symbol<Device>& in_device,
-                                   const Symbol<Device>& out_device) {
-  if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "cpu") {
-    return Device::New("cuda_d2h", in_device->device_id());
-  } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
-    return Device::New("cuda_h2d", out_device->device_id());
+Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
+                                     const Symbol<Device>& out_device) {
+  if (in_device->type() != "cpu" && out_device->type() == "cpu") {
+    const auto device = JUST(Device::New(in_device->type(), in_device->device_id()));
+    return Stream::New(device, StreamRole::kDevice2Host);
+  } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
+    const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
+    return Stream::New(device, StreamRole::kHost2Device);
   } else {
-    return Device::New(out_device->type(), out_device->device_id());
+    CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());
+    const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
+    return Stream::New(device, StreamRole::kCompute);
   }
 }
 
@@ -36,6 +41,7 @@ Maybe<Symbol<Device>> MakeOpDevice(const Symbol<Device>& in_device,
 
 /* static */ Maybe<void> CopyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputStride("out", 0) = ctx->InputStride("in", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }
@@ -61,12 +67,13 @@ Maybe<Symbol<Device>> MakeOpDevice(const Symbol<Device>& in_device,
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> CopyOp::InferDevice(user_op::DeviceInferContext* ctx) {
+/* static */ Maybe<Symbol<Stream>> CopyOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
   Symbol<Device> out_device =
       JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
   const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  return MakeOpDevice(in_device, out_device);
+  return MakeCopyStream(in_device, out_device);
 }
 
 }  // namespace oneflow

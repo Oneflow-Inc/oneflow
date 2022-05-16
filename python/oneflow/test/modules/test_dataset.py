@@ -302,7 +302,7 @@ class TestCocoReader(flow.unittest.TestCase):
     def test_coco_reader(test_case):
         anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
         image_dir = "/dataset/mscoco_2017/val2017"
-        num_iterations = 100
+        num_iterations = 10
         coco_reader = flow.nn.COCOReader(
             annotation_file=anno_file,
             image_dir=image_dir,

@@ -61,4 +61,8 @@ limitations under the License.
   OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8) \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat)
 
+#define NO_BOXING_DATA_TYPE_SEQ                       \
+  OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord) \
+  OF_PP_MAKE_TUPLE_SEQ(TensorBuffer, DataType::kTensorBuffer)
+
 #endif  // ONEFLOW_CORE_COMMON_DATA_TYPE_SEQ_H_

@@ -37,7 +37,7 @@ class InTopkKernel final : public user_op::OpKernel {
     const int32_t classes_num = predictions->shape().At(1);
     InTopkKernelUtil<device_type, T>::InTopk(ctx->stream(), instance_num, classes_num,
                                              targets->dptr<T>(), predictions->dptr<float>(), k,
-                                             out->mut_dptr<int8_t>());
+                                             out->mut_dptr<bool>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

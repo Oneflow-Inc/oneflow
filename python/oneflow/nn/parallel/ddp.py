@@ -13,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import warnings
 from collections import OrderedDict
 
 import oneflow as flow
+from oneflow.support.env_var_util import parse_boolean_form_env
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
 
@@ -67,7 +69,11 @@ def DistributedDataParallel(
     module: "flow.nn.Module", *, broadcast_buffers: bool = True, bucket_size: int = 10
 ):
     assert all(x.dtype == flow.float32 for x in module.parameters())
-
+    if parse_boolean_form_env("ONEFLOW_DISABLE_VIEW", False):
+        warnings.warn(
+            "because the environment variable 'ONEFLOW_DISABLE_VIEW' is set to true, so the view mechanism is disabled, and we will set bucket_size = 1"
+        )
+        bucket_size = 1
     world_size = flow.env.get_world_size()
     with flow.no_grad():
         for x in module.parameters():
@@ -81,7 +87,9 @@ def DistributedDataParallel(
     if all_grad_size > 0:
         device = list(module.parameters())[0].device
         assert all(x.device == device for x in module.parameters())
-    reversed_param_list = list(reversed(list(module.parameters())))
+    reversed_param_list = list(
+        reversed(list([param for param in module.parameters() if param.requires_grad]))
+    )
     module._param_grad_offset_in_bucket = {}
 
     def numel_in_bucket(tensor: flow.Tensor):
@@ -136,9 +144,10 @@ def DistributedDataParallel(
         return None
 
     for param in module.parameters():
-        param.register_hook(grad_setting_fn(module, param))
-        param._register_post_grad_accumulation_hook(inplace_mul_and_return_none)
-        param._register_post_grad_accumulation_hook(allreduce_fn(module, param))
+        if param.requires_grad:
+            param.register_hook(grad_setting_fn(module, param))
+            param._register_post_grad_accumulation_hook(inplace_mul_and_return_none)
+            param._register_post_grad_accumulation_hook(allreduce_fn(module, param))
 
     def post_forward_hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params

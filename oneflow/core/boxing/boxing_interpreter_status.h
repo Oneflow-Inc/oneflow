@@ -19,12 +19,14 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
 class BoxingInterpreterStatus;
 
 extern Maybe<BoxingInterpreterStatus> (*MakeBoxingInterpreterStatus)(const std::string& boxing_name,
+                                                                     const Shape& logical_shape,
                                                                      Symbol<PlacedNdSbp> in,
                                                                      Symbol<PlacedNdSbp> out);
 
@@ -35,17 +37,18 @@ extern Maybe<BoxingInterpreterStatus> (*MakeComposedBoxingInterpreterStatus)(
 class BoxingInterpreterStatus final {
  public:
   BoxingInterpreterStatus(Symbol<std::vector<std::string>> sorted_boxing_names,
-                          Symbol<PlacedNdSbp> src_placed_nd_sbp,
+                          const Shape& logical_shape, Symbol<PlacedNdSbp> src_placed_nd_sbp,
                           Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp,
                           Symbol<PlacedNdSbp> dst_placed_nd_sbp)
       : sorted_boxing_names_(sorted_boxing_names),
+        logical_shape_(logical_shape),
         src_placed_nd_sbp_(src_placed_nd_sbp),
         mid_placed_nd_sbp_(mid_placed_nd_sbp),
         dst_placed_nd_sbp_(dst_placed_nd_sbp) {}
   BoxingInterpreterStatus(Symbol<std::vector<std::string>> sorted_boxing_names,
-                          Symbol<PlacedNdSbp> src_placed_nd_sbp,
+                          const Shape& logical_shape, Symbol<PlacedNdSbp> src_placed_nd_sbp,
                           Symbol<PlacedNdSbp> dst_placed_nd_sbp)
-      : BoxingInterpreterStatus(sorted_boxing_names, src_placed_nd_sbp,
+      : BoxingInterpreterStatus(sorted_boxing_names, logical_shape, src_placed_nd_sbp,
                                 SymbolOf(std::vector<Symbol<PlacedNdSbp>>()), dst_placed_nd_sbp) {}
   ~BoxingInterpreterStatus() = default;
 
@@ -58,16 +61,18 @@ class BoxingInterpreterStatus final {
 
   // Getters
   Symbol<std::vector<std::string>> sorted_boxing_names() const { return sorted_boxing_names_; }
+  const Shape& logical_shape() const { return logical_shape_; }
   Symbol<PlacedNdSbp> src_placed_nd_sbp() const { return src_placed_nd_sbp_; }
   Symbol<PlacedNdSbp> dst_placed_nd_sbp() const { return dst_placed_nd_sbp_; }
   Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp() const { return mid_placed_nd_sbp_; }
 
-  const std::string& boxing_interpreter_routing() const;
+  const std::string& boxing_routing() const;
   const std::string& nd_sbp_routing() const;
   const std::string& placement_routing() const;
 
  private:
   Symbol<std::vector<std::string>> sorted_boxing_names_;
+  const Shape logical_shape_;
   Symbol<PlacedNdSbp> src_placed_nd_sbp_;
   Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp_;
   Symbol<PlacedNdSbp> dst_placed_nd_sbp_;

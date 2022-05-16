@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/cuda/cuda_device_manager.h"
-#include "oneflow/core/ep/cuda/cuda_device.h"
 #include "oneflow/core/device/cuda_util.h"
 
 #ifdef WITH_CUDA
@@ -46,7 +45,9 @@ size_t CudaDeviceManager::GetDeviceCount(size_t primary_device_index) {
 
 size_t CudaDeviceManager::GetDeviceCount() {
   int count = 0;
-  OF_CUDA_CHECK(cudaGetDeviceCount(&count));
+  cudaError_t err = cudaGetDeviceCount(&count);
+  if (err == cudaErrorNoDevice) { return 0; }
+  OF_CUDA_CHECK(err);
   return count;
 }
 

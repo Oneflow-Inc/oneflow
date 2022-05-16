@@ -24,17 +24,47 @@ namespace one {
 
 class Tensor;
 
-Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
-
 namespace view {
 
-Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                        const Stride& target_strides, int64_t storage_offset);
+bool IsEnvViewDisabled();
 
-Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
+bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
+
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        int64_t storage_offset);
+
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        const Stride& target_stride, int64_t storage_offset);
+
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape);
+
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                      const Stride& target_stride);
 
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps);
+
+Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
+
+Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
+                      const std::vector<int32_t>& squeeze_dims);
+
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
+                     const std::vector<int32_t>& expand_shape);
+
+Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
+                     const int64_t& length);
+
+Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::vector<int32_t>& size,
+                        const std::vector<int32_t>& stride, const int32_t& storage_offset);
+
+Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
+
+Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& dimension,
+                           const int32_t& size, const int32_t& step);
+
+Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offset,
+                       const int32_t dim1, const int32_t dim2);
 
 }  // namespace view
 }  // namespace one

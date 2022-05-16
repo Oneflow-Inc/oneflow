@@ -73,7 +73,6 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   LaunchLazyJobInstructionType() = default;
   ~LaunchLazyJobInstructionType() = default;
   using stream_type = LazyJobStreamType;
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);

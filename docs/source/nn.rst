@@ -27,6 +27,7 @@ Operators for neural networks
         ConvTranspose1d,
         ConvTranspose2d,
         ConvTranspose3d,
+        CosineSimilarity,
         CombinedMarginLoss,
         CropMirrorNormalize,
         CrossEntropyLoss,
@@ -39,6 +40,7 @@ Operators for neural networks
         GLU,
         GroupNorm,
         Hardsigmoid,
+        Hardshrink,
         Hardswish,
         Hardtanh,
         Identity,
@@ -83,8 +85,10 @@ Operators for neural networks
         SmoothL1Loss,
         Softmax,
         Softplus, 
+        Softshrink,
         Softsign, 
         Tanh,
+        Threshold,
         Upsample,
         UpsamplingBilinear2d,
         UpsamplingNearest2d,
@@ -95,7 +99,10 @@ Operators for neural networks
         Quantization, 
         FusedBatchNorm1d, 
         FusedBatchNorm2d, 
-        FusedBatchNorm3d
+        FusedBatchNorm3d, 
+        FusedMLP, 
+
+.. autofunction:: oneflow.nn.modules.pixelshuffle.PixelShufflev2
 
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
 

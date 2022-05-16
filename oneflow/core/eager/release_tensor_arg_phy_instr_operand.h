@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 
@@ -35,11 +36,11 @@ class EagerBlobObject;
 class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
  public:
   ReleaseTensorArgPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                  const Optional<Symbol<Device>>& op_device)
+                                  const Optional<Symbol<::oneflow::Stream>>& stream)
       : eager_blob_object_(eager_blob_object), output_dependences_() {
     output_dependences_.push_back(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
-    if (op_device.has_value()) {
-      stream_sequential_dependence_ = CHECK_JUST(op_device)->mut_schedule_local_dep_object();
+    if (stream.has_value()) {
+      stream_sequential_dependence_ = CHECK_JUST(stream)->mut_schedule_local_dep_object();
     }
   }
   ~ReleaseTensorArgPhyInstrOperand() override = default;

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/user/image/image_util.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
@@ -149,16 +150,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CoinFlipOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-  const ParallelContext& parallel_ctx = ctx->parallel_ctx();
-  const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-  if (parallel_ctx.parallel_num() > 1 && out_sbp.has_split_parallel()) {
-    BalancedSplitter bs(batch_size, parallel_ctx.parallel_num());
-    *out_tensor->mut_shape() = Shape({bs.At(parallel_ctx.parallel_id()).size()});
-  } else {
-    *out_tensor->mut_shape() = Shape({batch_size});
-  }
+  const Shape logical_shape = Shape({batch_size});
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+
+  const Shape& physical_shape =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
+  *ctx->OutputShape("out", 0) = physical_shape;
   return Maybe<void>::Ok();
 }
 
@@ -169,9 +169,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> CoinFlipOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const Shape& hierarchy = ctx->parallel_hierarchy();
-  cfg::NdSbp* output_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* output_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
   // the input may be produced by tick which should be broadcast parallel dist
-  std::vector<cfg::NdSbp*> inputs_dist;
+  std::vector<NdSbp*> inputs_dist;
   for (const auto& arg_pair : ctx->inputs()) {
     inputs_dist.emplace_back(ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second));
   }
@@ -186,7 +186,7 @@ namespace oneflow {
   } else {
     CHECK_EQ_OR_RETURN(dist_conf.size(), hierarchy.NumAxes());
     for (const std::string& sbp_str : dist_conf) {
-      cfg::SbpParallel sbp_parallel;
+      SbpParallel sbp_parallel;
       CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
       CHECK_OR_RETURN(
           (sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0)

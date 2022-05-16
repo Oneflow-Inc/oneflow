@@ -39,10 +39,10 @@ Maybe<scalar_or_const_ref_t<typename MapT::mapped_type>> MapAt(const MapT& map, 
 }
 
 template<typename MapT, typename KeyT>
-Maybe<typename MapT::mapped_type*> MapAt(MapT* map, const KeyT& key) {
-  const auto& iter = map->find(key);
-  CHECK_OR_RETURN(iter != map->end());
-  return &iter->second;
+Maybe<typename MapT::mapped_type&> MapAt(MapT& map, const KeyT& key) {
+  const auto& iter = map.find(key);
+  CHECK_OR_RETURN(iter != map.end());
+  return iter->second;
 }
 
 template<typename VecT>
@@ -53,9 +53,19 @@ Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec
 }
 
 template<typename VecT>
-Maybe<typename VecT::value_type*> VectorAt(VecT* vec, typename VecT::size_type index) {
-  CHECK_LT_OR_RETURN(index, vec->size());
-  return &(*vec)[index];
+Maybe<typename VecT::value_type&> VectorAt(VecT& vec, typename VecT::size_type index) {
+  static_assert(!std::is_same<typename VecT::value_type, bool>::value,
+                "VectorAt(vector<bool>&, size_t) is not supported.");
+  CHECK_LT_OR_RETURN(index, vec.size());
+  return vec[index];
+}
+
+template<>
+inline Maybe<bool> VectorAt(const std::vector<bool>& vec,
+                            typename std::vector<bool>::size_type index) {
+  CHECK_LT_OR_RETURN(index, vec.size());
+  // convert vector bool proxy to bool
+  return static_cast<bool>(vec[index]);
 }
 
 template<typename T>

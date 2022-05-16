@@ -29,11 +29,6 @@ namespace oneflow {
 class ParallelDesc;
 class MemoryCase;
 
-namespace vm {
-class MirroredObject;
-}
-using LocalDepObject = vm::MirroredObject;
-
 inline size_t GetInstructionHighWaterMark() { return 40000; }
 inline size_t GetInstructionLowWaterMark() { return 20000; }
 
@@ -45,7 +40,6 @@ class Device final {
   Device& operator=(const Device&) = delete;
   const std::string& type() const { return type_; }
   DeviceType enum_type() const { return enum_type_; }
-  Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
   std::string ToRepr() const;
@@ -64,21 +58,8 @@ class Device final {
   static Maybe<Symbol<Device>> ParseAndNew(const std::string& type_or_type_with_device_id);
 
   static Maybe<Symbol<Device>> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
-  static const std::unordered_set<std::string> type_supported;
 
-  static std::string Type4DeviceTag(const std::string& device_tag);
   static Maybe<Symbol<ParallelDesc>> (*GetPlacement)(const Device& device);
-  Maybe<const Optional<std::string>&> GetSharedTransportDeviceType() const;
-  Maybe<const std::string&> GetSharedScheduleDeviceType() const;
-
-  Maybe<const std::string&> local_call_instruction_name() const;
-  const Optional<LocalDepObject*>& mut_transport_local_dep_object() const {
-    return transport_local_dep_object_;
-  }
-  LocalDepObject* mut_schedule_local_dep_object() const { return schedule_local_dep_object_; }
-  Maybe<size_t> instr_local_dep_object_pool_size() const;
-
-  Maybe<bool> need_soft_sync_stream() const;
 
  private:
   Device(const std::string& type, int64_t device_id);
@@ -89,11 +70,7 @@ class Device final {
   const int64_t device_id_;
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;
-  Optional<LocalDepObject*> transport_local_dep_object_;
-  LocalDepObject* schedule_local_dep_object_;
 };
-
-Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
 
 extern Maybe<Symbol<ParallelDesc>> (*Placement4Device)(Symbol<Device> device);
 

@@ -41,6 +41,7 @@ if(WITH_TENSORRT)
 endif()
 
 include(hwloc)
+include(liburing)
 if(WITH_ONEDNN)
   include(oneDNN)
 endif()
@@ -168,12 +169,11 @@ endif()
 
 set(oneflow_third_party_dependencies
     protobuf
-    opencv_copy_headers_to_destination
-    libpng_copy_headers_to_destination
-    opencv_copy_libs_to_destination
     eigen
     half_copy_headers_to_destination
     re2
+    opencv
+    install_libpng_headers
     flatbuffers
     lz4_copy_libs_to_destination
     lz4_copy_headers_to_destination)
@@ -199,6 +199,7 @@ list(
   ${ZLIB_INCLUDE_DIR}
   ${PROTOBUF_INCLUDE_DIR}
   ${GRPC_INCLUDE_DIR}
+  ${GLOG_INCLUDE_DIR}
   ${LIBJPEG_INCLUDE_DIR}
   ${OPENCV_INCLUDE_DIR}
   ${LIBPNG_INCLUDE_DIR}
@@ -263,6 +264,13 @@ if(BUILD_HWLOC)
   list(APPEND oneflow_third_party_libs ${PCIACCESS_STATIC_LIBRARIES})
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${HWLOC_INCLUDE_DIR})
   add_definitions(-DWITH_HWLOC)
+endif()
+
+if(WITH_LIBURING)
+  list(APPEND oneflow_third_party_dependencies liburing)
+  list(APPEND oneflow_third_party_libs ${LIBURING_STATIC_LIBRARIES})
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${LIBURING_INCLUDE_DIR})
+  add_definitions(-DWITH_LIBURING)
 endif()
 
 include_directories(SYSTEM ${ONEFLOW_THIRD_PARTY_INCLUDE_DIRS})

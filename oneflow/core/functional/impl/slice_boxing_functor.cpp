@@ -33,13 +33,11 @@ namespace impl {
 
 namespace {
 
-bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_split_parallel();
-}
+bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
 Maybe<one::UserOpExpr> EagerSToB(Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc,
-                                 Symbol<cfg::SbpParallel> src_sbp, const Shape& shape) {
+                                 Symbol<SbpParallel> src_sbp, const Shape& shape) {
   return one::OpBuilder("eager_s_to_b", *JUST(UniqueStr("eager_s_to_b")))
       .Input("in")
       .Output("out")
@@ -69,8 +67,8 @@ static constexpr auto* CachedEagerPToBOpExpr = DECORATE(&EagerPToB, ThreadLocalC
 
 Maybe<one::UserOpExpr> EagerNaiveSToS(Symbol<ParallelDesc> in_parallel_desc,
                                       Symbol<ParallelDesc> out_parallel_desc,
-                                      Symbol<cfg::SbpParallel> src_sbp,
-                                      Symbol<cfg::SbpParallel> dst_sbp, const Shape& shape) {
+                                      Symbol<SbpParallel> src_sbp, Symbol<SbpParallel> dst_sbp,
+                                      const Shape& shape) {
   return one::OpBuilder("eager_naive_s_to_s", *JUST(UniqueStr("eager_naive_s_to_s")))
       .Input("in")
       .Output("out")
@@ -87,7 +85,7 @@ static constexpr auto* CachedEagerNaiveSToSOpExpr = DECORATE(&EagerNaiveSToS, Th
 
 Maybe<one::UserOpExpr> EagerBToS(Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc,
-                                 Symbol<cfg::SbpParallel> dst_sbp, const Shape& shape) {
+                                 Symbol<SbpParallel> dst_sbp, const Shape& shape) {
   return one::OpBuilder("eager_b_to_s", *JUST(UniqueStr("eager_b_to_s")))
       .Input("in")
       .Output("out")
@@ -103,7 +101,7 @@ static constexpr auto* CachedEagerBToSOpExpr = DECORATE(&EagerBToS, ThreadLocalC
 
 Maybe<one::UserOpExpr> EagerPToS(Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc,
-                                 Symbol<cfg::SbpParallel> dst_sbp, const Shape& shape) {
+                                 Symbol<SbpParallel> dst_sbp, const Shape& shape) {
   return one::OpBuilder("eager_p_to_s", *JUST(UniqueStr("eager_p_to_s")))
       .Input("in")
       .Output("out")
@@ -119,7 +117,7 @@ static constexpr auto* CachedEagerPToSOpExpr = DECORATE(&EagerPToS, ThreadLocalC
 
 Maybe<one::UserOpExpr> EagerSToP(Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc,
-                                 Symbol<cfg::SbpParallel> src_sbp, const Shape& shape) {
+                                 Symbol<SbpParallel> src_sbp, const Shape& shape) {
   return one::OpBuilder("eager_s_to_p", *JUST(UniqueStr("eager_s_to_p")))
       .Input("in")
       .Output("out")
@@ -141,9 +139,9 @@ class EagerSToBFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> in_parallel_desc,
                            Symbol<ParallelDesc> out_parallel_desc,
-                           const std::vector<Symbol<cfg::SbpParallel>>& in_sbp_parallels,
+                           const std::vector<Symbol<SbpParallel>>& in_sbp_parallels,
                            const Shape& shape) const {
-    Symbol<cfg::NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
+    Symbol<NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());
@@ -178,11 +176,11 @@ class EagerNaiveSToSFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> in_parallel_desc,
                            Symbol<ParallelDesc> out_parallel_desc,
-                           const std::vector<Symbol<cfg::SbpParallel>>& in_sbp_parallels,
-                           const std::vector<Symbol<cfg::SbpParallel>>& out_sbp_parallels,
+                           const std::vector<Symbol<SbpParallel>>& in_sbp_parallels,
+                           const std::vector<Symbol<SbpParallel>>& out_sbp_parallels,
                            const Shape& shape) const {
-    Symbol<cfg::NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
-    Symbol<cfg::NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
+    Symbol<NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
+    Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());
@@ -204,9 +202,9 @@ class EagerBToSFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> in_parallel_desc,
                            Symbol<ParallelDesc> out_parallel_desc,
-                           const std::vector<Symbol<cfg::SbpParallel>>& out_sbp_parallels,
+                           const std::vector<Symbol<SbpParallel>>& out_sbp_parallels,
                            const Shape& shape) const {
-    Symbol<cfg::NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
+    Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());
@@ -225,9 +223,9 @@ class EagerPToSFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> in_parallel_desc,
                            Symbol<ParallelDesc> out_parallel_desc,
-                           const std::vector<Symbol<cfg::SbpParallel>>& out_sbp_parallels,
+                           const std::vector<Symbol<SbpParallel>>& out_sbp_parallels,
                            const Shape& shape) const {
-    Symbol<cfg::NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
+    Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(out_sbp_parallels));
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());
@@ -246,9 +244,9 @@ class EagerSToPFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> in_parallel_desc,
                            Symbol<ParallelDesc> out_parallel_desc,
-                           const std::vector<Symbol<cfg::SbpParallel>>& in_sbp_parallels,
+                           const std::vector<Symbol<SbpParallel>>& in_sbp_parallels,
                            const Shape& shape) const {
-    Symbol<cfg::NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
+    Symbol<NdSbp> in_nd_sbp = JUST(GetNdSbp(in_sbp_parallels));
     {
       CHECK_OR_RETURN(x->is_local());
       CHECK_OR_RETURN(x->is_eager());

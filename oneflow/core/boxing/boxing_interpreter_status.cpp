@@ -24,10 +24,11 @@ namespace oneflow {
 namespace {
 
 Maybe<BoxingInterpreterStatus> RawMakeBoxingInterpreterStatus(const std::string& boxing_name,
+                                                              const Shape& logical_shape,
                                                               Symbol<PlacedNdSbp> in,
                                                               Symbol<PlacedNdSbp> out) {
   std::vector<std::string> sorted_boxing_names{boxing_name};
-  BoxingInterpreterStatus status(SymbolOf(sorted_boxing_names), in, out);
+  BoxingInterpreterStatus status(SymbolOf(sorted_boxing_names), logical_shape, in, out);
   return status;
 }
 
@@ -42,6 +43,10 @@ Maybe<BoxingInterpreterStatus> RawMakeComposedBoxingInterpreterStatus(
       << *JUST(PlacementToString(lhs_status->dst_placed_nd_sbp()->placement()))
       << ", rhs_status.dst_placement: "
       << *JUST(PlacementToString(rhs_status->src_placed_nd_sbp()->placement()));
+  CHECK_OR_RETURN(lhs_status->logical_shape() == rhs_status->logical_shape())
+      << "Logical_shape must be equal when compose boxing interpreter status"
+      << ". lhs_status.logical_shape: " << (lhs_status->logical_shape().ToString())
+      << ". rhs_status.logical_shape: " << (rhs_status->logical_shape().ToString());
   std::vector<std::string> sorted_boxing_names(*lhs_status->sorted_boxing_names());
   sorted_boxing_names.insert(sorted_boxing_names.end(), rhs_status->sorted_boxing_names()->begin(),
                              rhs_status->sorted_boxing_names()->end());
@@ -49,17 +54,18 @@ Maybe<BoxingInterpreterStatus> RawMakeComposedBoxingInterpreterStatus(
   mid_placed_nd_sbp.emplace_back(lhs_status->dst_placed_nd_sbp());
   mid_placed_nd_sbp.insert(mid_placed_nd_sbp.end(), rhs_status->mid_placed_nd_sbp()->begin(),
                            rhs_status->mid_placed_nd_sbp()->end());
-  BoxingInterpreterStatus status(sorted_boxing_names, lhs_status->src_placed_nd_sbp(),
-                                 SymbolOf(mid_placed_nd_sbp), rhs_status->dst_placed_nd_sbp());
+  BoxingInterpreterStatus status(sorted_boxing_names, lhs_status->logical_shape(),
+                                 lhs_status->src_placed_nd_sbp(), SymbolOf(mid_placed_nd_sbp),
+                                 rhs_status->dst_placed_nd_sbp());
   return status;
 }
 
 }  // namespace
 
 decltype(MakeBoxingInterpreterStatus) MakeBoxingInterpreterStatus =
-    DECORATE(&RawMakeBoxingInterpreterStatus, ThreadLocalCopiable);
+    DECORATE(&RawMakeBoxingInterpreterStatus, ThreadLocalCachedCopiable);
 decltype(MakeComposedBoxingInterpreterStatus) MakeComposedBoxingInterpreterStatus =
-    DECORATE(&RawMakeComposedBoxingInterpreterStatus, ThreadLocalCopiable);
+    DECORATE(&RawMakeComposedBoxingInterpreterStatus, ThreadLocalCachedCopiable);
 
 namespace {
 
@@ -98,13 +104,13 @@ Maybe<std::string> RawGetBoxingDesc(Symbol<std::vector<std::string>> sorted_boxi
   return ss.str();
 }
 
-static constexpr auto* GetNdSbpRouting = DECORATE(&RawGetNdSbpRouting, ThreadLocal);
-static constexpr auto* GetPlacementRouting = DECORATE(&RawGetPlacementRouting, ThreadLocal);
-static constexpr auto* GetBoxingDesc = DECORATE(&RawGetBoxingDesc, ThreadLocal);
+static constexpr auto* GetNdSbpRouting = DECORATE(&RawGetNdSbpRouting, ThreadLocalCached);
+static constexpr auto* GetPlacementRouting = DECORATE(&RawGetPlacementRouting, ThreadLocalCached);
+static constexpr auto* GetBoxingDesc = DECORATE(&RawGetBoxingDesc, ThreadLocalCached);
 
 }  // namespace
 
-const std::string& BoxingInterpreterStatus::boxing_interpreter_routing() const {
+const std::string& BoxingInterpreterStatus::boxing_routing() const {
   return *CHECK_JUST(GetBoxingDesc(sorted_boxing_names_));
 }
 

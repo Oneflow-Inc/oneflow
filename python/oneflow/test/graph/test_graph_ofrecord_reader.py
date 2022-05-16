@@ -74,7 +74,6 @@ class OFRecordDataLoader(flow.nn.Module):
         return image, label
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestOFRecordReaderGraph(oneflow.unittest.TestCase):
     def test_ofrecord_reader_graph(test_case):

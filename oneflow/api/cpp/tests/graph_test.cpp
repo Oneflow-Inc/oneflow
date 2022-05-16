@@ -24,6 +24,8 @@ limitations under the License.
 #include <thread>
 #include <vector>
 #include "oneflow/api/cpp/framework.h"
+#include "oneflow/api/cpp/framework/dtype.h"
+#include "oneflow/api/cpp/framework/shape.h"
 #include "oneflow/api/cpp/tests/api_test.h"
 
 namespace oneflow_api {
@@ -80,12 +82,24 @@ TEST(Api, graph_multi_gpu_test) {
   Graph graph1 = LoadGraph(device1);
   Forward(graph1, device1);
 }
+#endif
 
+#ifdef WITH_TENSORRT
 TEST(Api, graph_trt_test) {
   EnvScope scope;
   Device device("cuda:0");
   Graph graph = LoadGraph(device);
   graph.enable_tensorrt();
+  Forward(graph, device);
+}
+#endif
+
+#ifdef WITH_OPENVINO
+TEST(Api, graph_openvino_test) {
+  EnvScope scope;
+  Device device("cpu");
+  Graph graph = LoadGraph(device);
+  graph.enable_openvino();
   Forward(graph, device);
 }
 #endif
@@ -192,6 +206,38 @@ TEST(Api, graph_input_order_test) {
   output.copy_to(buf.data());
   ASSERT_EQ(buf[0], 4);
   ASSERT_EQ(buf[1], 4);
+}
+
+TEST(Api, graph_input_output_infos_test) {
+  EnvScope scope;
+  Device device("cpu");
+  Graph graph = LoadGraph(device);
+
+  auto input_infos = graph.GetInputInfos();
+  auto output_infos = graph.GetOutputInfos();
+
+  ASSERT_EQ(input_infos.size(), 1);
+  ASSERT_EQ(output_infos.size(), 1);
+
+  auto it = input_infos.begin();
+  DType dtype = it->second.datatype_;
+  Shape shape = it->second.input_output_shape_;
+  size_t order = it->second.input_output_index_;
+  ASSERT_EQ(dtype, DType::kFloat);
+  ASSERT_EQ(shape.NumAxes(), 2);
+  ASSERT_EQ(shape.At(0), 1);
+  ASSERT_EQ(shape.At(1), 3);
+  ASSERT_EQ(order, 0);
+
+  it = output_infos.begin();
+  dtype = it->second.datatype_;
+  shape = it->second.input_output_shape_;
+  order = it->second.input_output_index_;
+  ASSERT_EQ(dtype, DType::kFloat);
+  ASSERT_EQ(shape.NumAxes(), 2);
+  ASSERT_EQ(shape.At(0), 1);
+  ASSERT_EQ(shape.At(1), 4);
+  ASSERT_EQ(order, 0);
 }
 
 }  // namespace oneflow_api

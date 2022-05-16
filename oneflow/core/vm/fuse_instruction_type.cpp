@@ -45,15 +45,13 @@ class FuseInstructionType : public vm::InstructionType {
     last_instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(instruction);
   }
 
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
     auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
-      OF_PROFILER_RANGE_PUSH("F:" + instr_msg->DebugName());
+      OF_PROFILER_RANGE_GUARD("F:" + instr_msg->DebugName());
       instr_msg->instr_type_id().instruction_type().ComputeInFuseMode(instr_msg);
-      OF_PROFILER_RANGE_POP();
     }
   }
 };
@@ -62,7 +60,6 @@ COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("cpu.Fus
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("comm_net.Fuse"));
 
 #ifdef WITH_CUDA
-COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("gpu.Fuse"));
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("cuda.Fuse"));
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaCopyH2DStreamType>>("cuda_h2d.Fuse"));
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaCopyD2HStreamType>>("cuda_d2h.Fuse"));

@@ -22,19 +22,22 @@ limitations under the License.
 #include "oneflow/core/framework/synced_symbol_map.h"
 #include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
+#include "oneflow/core/common/constant.h"
+#include "oneflow/core/common/check_level.h"
+#include "oneflow/core/framework/sync_symbol_consistent_tensor_meta.h"
 
 namespace oneflow {
 
 namespace {
 
-class FlatMetaInfoConsistency;
+struct FlatMetaInfoConsistency;
 
 class CheckMetaInfoConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:
   CheckMetaInfoConsistencyAsyncTransportCtx(const TransportToken& transport_token,
                                             const Symbol<ParallelDesc>& placement,
-                                            const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
-                                            const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp)
+                                            const Optional<Symbol<NdSbp>>& nd_sbp,
+                                            const Optional<Symbol<NdSbp>>& grad_nd_sbp)
       : AsyncTransportCtx(transport_token),
         placement_(placement),
         nd_sbp_(nd_sbp),
@@ -52,8 +55,8 @@ class CheckMetaInfoConsistencyAsyncTransportCtx : public AsyncTransportCtx {
 
  private:
   Symbol<ParallelDesc> placement_;
-  Optional<Symbol<cfg::NdSbp>> nd_sbp_;
-  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp_;
+  Optional<Symbol<NdSbp>> nd_sbp_;
+  Optional<Symbol<NdSbp>> grad_nd_sbp_;
   std::shared_ptr<FlatMetaInfoConsistency> flat_meta_info_consistency_;
 };
 
@@ -66,7 +69,7 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
     return consistency;
   }
   static Maybe<FlatMetaInfoConsistency> New(const Symbol<ParallelDesc>& placement,
-    const Optional<Symbol<cfg::NdSbp>>& nd_sbp, const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+    const Optional<Symbol<NdSbp>>& nd_sbp, const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
     const auto& consistency = std::make_shared<FlatMetaInfoConsistency>();
     consistency->clear();
     JUST(consistency->Init(placement, nd_sbp, grad_nd_sbp));
@@ -74,7 +77,7 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
   }
 
   Maybe<void> Check(const Symbol<ParallelDesc>& placement,
-    const Optional<Symbol<cfg::NdSbp>>& nd_sbp, const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+    const Optional<Symbol<NdSbp>>& nd_sbp, const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
     
     const auto& this_placement =
         JUST(SyncedSymbolMap<ParallelDesc>::Symbol4SyncedSymbolId(
@@ -83,7 +86,7 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
     CHECK_EQ_OR_RETURN(nd_sbp.has_value(), this->has_nd_sbp_symbol_id());
     if (this->has_nd_sbp_symbol_id()) {
       const auto& that_nd_sbp =
-          JUST(SyncedSymbolMap<cfg::NdSbp>::Symbol4SyncedSymbolId(
+          JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(
               this->nd_sbp_symbol_id()));
       const auto& this_nd_sbp = JUST(nd_sbp);
       CHECK_OR_RETURN(this_nd_sbp == that_nd_sbp)  << "Each rank must have same input sbp";
@@ -91,7 +94,7 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
     CHECK_EQ_OR_RETURN(grad_nd_sbp.has_value(), this->has_grad_nd_sbp_symbol_id());
     if (this->has_grad_nd_sbp_symbol_id()) {
        const auto& that_grad_nd_sbp =
-          JUST(SyncedSymbolMap<cfg::NdSbp>::Symbol4SyncedSymbolId(
+          JUST(SyncedSymbolMap<NdSbp>::Symbol4SyncedSymbolId(
               this->grad_nd_sbp_symbol_id()));
       const auto& this_grad_nd_sbp = JUST(grad_nd_sbp);
       CHECK_OR_RETURN(this_grad_nd_sbp == that_grad_nd_sbp) << "Each rank must have same input grad sbp";
@@ -99,17 +102,17 @@ FLAT_MSG_BEGIN(FlatMetaInfoConsistency);
     return Maybe<void>::Ok();
   }
  private:
-  Maybe<void> Init(const Symbol<ParallelDesc>& placement, const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
-    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+  Maybe<void> Init(const Symbol<ParallelDesc>& placement, const Optional<Symbol<NdSbp>>& nd_sbp,
+    const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
     this->set_placement_symbol_id(
         JUST(SyncedSymbolMap<ParallelDesc>::FindOrSync(placement, &SyncSymbolParallelDesc)));
     if (nd_sbp.has_value()) {
       this->set_nd_sbp_symbol_id(
-          JUST(SyncedSymbolMap<cfg::NdSbp>::FindOrSync(JUST(nd_sbp), &SyncSymbolNdSbp)));
+          JUST(SyncedSymbolMap<NdSbp>::FindOrSync(JUST(nd_sbp), &SyncSymbolNdSbp)));
     }
     if (grad_nd_sbp.has_value()) {
       this->set_grad_nd_sbp_symbol_id(
-          JUST(SyncedSymbolMap<cfg::NdSbp>::FindOrSync(JUST(grad_nd_sbp), &SyncSymbolNdSbp)));
+          JUST(SyncedSymbolMap<NdSbp>::FindOrSync(JUST(grad_nd_sbp), &SyncSymbolNdSbp)));
     }
     return Maybe<void>::Ok();
   }
@@ -149,7 +152,9 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement) {
-  if (!placement->containing_current_rank()) { return Maybe<void>::Ok(); }
+  if (!placement->containing_current_rank() || placement->parallel_num() == 1) {
+    return Maybe<void>::Ok();
+  }
 
   const auto& rank_group = JUST(RankGroup::New(placement));
 
@@ -173,7 +178,7 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
       });
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST(ctx.WaitDone());
+  JUST_MSG(ctx.WaitDone(), kAsymmetricCodeErrorMsg);
   CHECK_OR_RETURN(std::memcmp(buffer_ptr, reinterpret_cast<const void*>(recv_ptr), buffer_size)
                   == 0)
       << "Each rank must have same input sequence or numpy array";
@@ -183,8 +188,8 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
 namespace {
 
 Maybe<void> MetaInfoConsistencyCheckUtil(const Symbol<ParallelDesc>& placement,
-                                         const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
-                                         const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+                                         const Optional<Symbol<NdSbp>>& nd_sbp,
+                                         const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
@@ -192,7 +197,7 @@ Maybe<void> MetaInfoConsistencyCheckUtil(const Symbol<ParallelDesc>& placement,
       transport_token, placement, nd_sbp, grad_nd_sbp);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
-  JUST(ctx->WaitDone());
+  JUST_MSG(ctx->WaitDone(), kAsymmetricCodeErrorMsg);
   JUST(ctx->Check());
   return Maybe<void>::Ok();
 }
@@ -219,39 +224,43 @@ NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheck
 }
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                     const Optional<Symbol<cfg::NdSbp>>& nd_sbp,
-                                     const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
-  if (!IsMetaInfoConsistencyCheckDisable()) {
+                                     const Optional<Symbol<NdSbp>>& nd_sbp,
+                                     const Optional<Symbol<NdSbp>>& grad_nd_sbp,
+                                     const size_t debug_level, bool force_check) {
+  if ((IsEnvEnabled(debug_level) || force_check) && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                     const Optional<Symbol<cfg::NdSbp>>& nd_sbp) {
-  if (!IsMetaInfoConsistencyCheckDisable()) {
-    JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<cfg::NdSbp>>()));
+                                     const Optional<Symbol<NdSbp>>& nd_sbp,
+                                     const size_t debug_level, bool force_check) {
+  if ((IsEnvEnabled(debug_level) || force_check) && !IsMetaInfoConsistencyCheckDisable()) {
+    JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<NdSbp>>()));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
-                                     const std::vector<Symbol<cfg::SbpParallel>>& grad_sbp_tuple) {
-  Optional<Symbol<cfg::NdSbp>> nd_sbp;
-  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp;
+                                     const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                                     const std::vector<Symbol<SbpParallel>>& grad_sbp_tuple,
+                                     const size_t debug_level, bool force_check) {
+  Optional<Symbol<NdSbp>> nd_sbp;
+  Optional<Symbol<NdSbp>> grad_nd_sbp;
   if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
   if (!grad_sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_tuple)); }
-  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp));
+  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level, force_check));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                     const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) {
-  Optional<Symbol<cfg::NdSbp>> nd_sbp;
-  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp;
+                                     const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                                     const size_t debug_level, bool force_check) {
+  Optional<Symbol<NdSbp>> nd_sbp;
+  Optional<Symbol<NdSbp>> grad_nd_sbp;
   if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
-  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp));
+  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level, force_check));
   return Maybe<void>::Ok();
 }
 

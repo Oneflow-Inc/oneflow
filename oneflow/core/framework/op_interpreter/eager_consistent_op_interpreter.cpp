@@ -79,7 +79,7 @@ Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<ConsistentTensorMet
 constexpr auto* CachedIsAllZeroSizeTensorMeta =
     DECORATE(&IsAllZeroSizeTensorMeta, ThreadLocalCopiable);
 
-Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
+Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> out_parallel_desc,
                                bool current_rank_local_is_valid) {
   const auto& logical_shape = input->shape();
@@ -118,11 +118,17 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   if (inputs.empty()) {
     // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
-    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp));
+    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1, /* force_check */ false));
     const auto& infer_args =
         JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
+    for (int i = 0; i < outputs->size(); ++i) {
+      if ((*outputs)[i]) {
+        const auto& nd_sbp = JUST((*outputs)[i]->nd_sbp());
+        JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
+      }
+    }
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
@@ -133,7 +139,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     if (!outputs->at(i)) {
       const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
           output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
-      outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+      (*outputs)[i].reset(new ConsistentTensor(tensor_impl));
+    } else {
+      JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
     }
   }
   // Do nothing if output_tensors has 0-size shape. Since the input of some ops is 0-size but the
@@ -142,7 +150,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     return Maybe<void>::Ok();
   }
   // Run instruction LocalCallOpKernel
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError()
       << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
@@ -174,7 +182,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, result->op_device());
+                                      result, ctx, result->stream());
   }));
   return Maybe<void>::Ok();
 }

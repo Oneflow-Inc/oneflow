@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -60,6 +60,14 @@ class TestCuda(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         x = x.cuda()
+        y = x.sum()
+        return y
+
+    @autotest(n=5)
+    def test_cuda_int_device(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        x = x.cuda(0)
         y = x.sum()
         return y
 
@@ -200,7 +208,6 @@ class TestTensorOps(flow.unittest.TestCase):
             flow.int8,
             flow.int32,
             flow.int64,
-            flow.char,
             flow.float32,
             flow.float64,
             flow.double,

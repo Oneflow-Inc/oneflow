@@ -46,8 +46,6 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
 
   using stream_type = CriticalSectionStreamType;
 
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
-
   void Compute(vm::Instruction* instruction) const override {
     OF_PROFILER_RANGE_GUARD("CriticalSectionBegin");
     {
@@ -121,8 +119,6 @@ class CriticalSectionEndInstructionType final : public InstructionType {
   ~CriticalSectionEndInstructionType() = default;
 
   using stream_type = CriticalSectionStreamType;
-
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 
   void Compute(vm::Instruction* instruction) const override {
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();

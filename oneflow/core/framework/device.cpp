@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <sstream>
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/decorator.h"
@@ -25,10 +24,9 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
-
-const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
 
 namespace {
 
@@ -37,9 +35,8 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 }
 
 void CheckDeviceType(const std::string& type) {
-  if (Device::type_supported.find(type) == Device::type_supported.end()) {
-    std::string error_msg =
-        "Expected one of cpu, cuda device type at start of device string " + type;
+  if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
+    std::string error_msg = "Device type `" + type + "` not found.";
     throw std::runtime_error(error_msg);
   }
 }
@@ -50,22 +47,16 @@ Device::Device(const std::string& type, int64_t device_id)
     : type_(type),
       enum_type_(kInvalidDevice),
       device_id_(device_id),
-      hash_value_(HashDevice(type, device_id)),
-      transport_local_dep_object_(),
-      schedule_local_dep_object_(nullptr) {}
+      hash_value_(HashDevice(type, device_id)) {}
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
-  enum_type_ = JUST(DeviceType4DeviceTag(JUST(of_type())));
-  mem_case_ = MemoryCaseUtil::MakeMemCase(enum_type_, device_id_);
-  const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
-  if (opt_device_transport_tag.has_value()) {
-    const auto& device_transport_tag = *JUST(opt_device_transport_tag);
-    transport_local_dep_object_ = GetStaticLocalDepObject4Device(Device(device_transport_tag, 0));
+  enum_type_ = JUST(DeviceType4DeviceTag(type()));
+  {
+    DeviceType dev_type = enum_type_;
+    if (dev_type == kMockDevice) { dev_type = DeviceType::kCPU; }
+    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
   }
-  const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
-  schedule_local_dep_object_ =
-      GetStaticLocalDepObject4Device(Device(schedule_device_type, device_id_));
   return Maybe<void>::Ok();
 }
 
@@ -104,94 +95,6 @@ Maybe<void> Device::Init() {
   }
 }
 
-Maybe<const std::string&> Device::of_type() const {
-  static const HashMap<std::string, std::string> type2device_tag{
-      {"cpu", "cpu"},
-      {"gpu", "gpu"},
-      {"cuda", "gpu"},
-      {"cuda_h2d", "gpu"},
-      {"cuda_d2h", "gpu"},
-      {"comm_net", "cpu"},
-      {"sync_launched_nccl", "gpu"},
-      {"async_launched_nccl", "gpu"},
-      {"critical_section", "cpu"},
-      {"auto", "auto"},  // Only used for auto generator currently.
-  };
-  return MapAt(type2device_tag, type());
-}
-
-Maybe<const Optional<std::string>&> Device::GetSharedTransportDeviceType() const {
-  // share LocalDepObject between sync_launched_nccl and async_launched_nccl
-  static const HashMap<std::string, Optional<std::string>> type2type_for_shared_local_dep_object{
-      {"cpu", Optional<std::string>()},
-      {"gpu", Optional<std::string>()},
-      {"cuda", Optional<std::string>()},
-      {"cuda_h2d", Optional<std::string>()},
-      {"cuda_d2h", Optional<std::string>()},
-      {"comm_net", Optional<std::string>()},
-      {"sync_launched_nccl", Optional<std::string>("async_launched_nccl")},
-      {"async_launched_nccl", Optional<std::string>("async_launched_nccl")},
-      {"critical_section", Optional<std::string>()},
-  };
-  return MapAt(type2type_for_shared_local_dep_object, type());
-}
-
-Maybe<const std::string&> Device::GetSharedScheduleDeviceType() const {
-  // share LocalDepObject between comm_net and sync_launched_nccl
-  static const HashMap<std::string, std::string> type2type_for_shared_local_dep_object{
-      {"cpu", "cpu"},
-      {"gpu", "cuda"},
-      {"cuda", "cuda"},
-      {"cuda_h2d", "cuda_h2d"},
-      {"cuda_d2h", "cuda_d2h"},
-      {"comm_net", "comm_net"},
-      {"sync_launched_nccl", "comm_net"},
-      {"async_launched_nccl", "async_launched_nccl"},
-      {"critical_section", "critical_section"},
-  };
-  return MapAt(type2type_for_shared_local_dep_object, type());
-}
-
-Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
-  static const HashMap<std::string, std::string> type2instr_name{
-      {"cpu", "cpu.LocalCallOpKernel"},
-      {"gpu", "gpu.LocalCallOpKernel"},
-      {"cuda", "gpu.LocalCallOpKernel"},
-      {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
-      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
-      {"comm_net", "cpu.LocalCallOpKernel"},
-      {"sync_launched_nccl", "gpu.LocalCallOpKernel"},
-      {"async_launched_nccl", "async.gpu.LocalCallOpKernel"},
-      // no compute instruction on critical_section device.
-      {"critical_section", "UNIMPLEMENTED INSTRUCTION NAME"},
-  };
-  return MapAt(type2instr_name, type);
-}
-
-Maybe<size_t> Device::instr_local_dep_object_pool_size() const {
-  static const size_t kSmallPoolSize = 4;
-  static const HashMap<std::string, size_t> type2pool_size{
-      {"cpu", GetInstructionHighWaterMark()},
-      {"gpu", GetInstructionHighWaterMark()},
-      {"cuda", GetInstructionHighWaterMark()},
-      {"cuda_h2d", kSmallPoolSize},
-      {"cuda_d2h", GetInstructionHighWaterMark()},
-      {"comm_net", GetInstructionHighWaterMark()},
-      {"sync_launched_nccl", GetInstructionHighWaterMark()},
-      {"async_launched_nccl", GetInstructionHighWaterMark()},
-  };
-  return MapAt(type2pool_size, type());
-}
-
-// TODO(jianhao): move this configuration into stream
-Maybe<bool> Device::need_soft_sync_stream() const {
-  return JUST(local_call_instruction_name()) == "gpu.LocalCallOpKernel";
-}
-
-Maybe<const std::string&> Device::local_call_instruction_name() const {
-  return GetLocalCallInstructionName(type());
-}
-
 std::string Device::ToRepr() const {
   std::stringstream ss;
   ss << "device(type='";
@@ -210,7 +113,7 @@ std::string Device::ToString() const {
 }
 
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
-  std::string type = Type4DeviceTag(parallel_desc.device_tag());
+  const std::string& type = parallel_desc.device_tag();
   std::vector<std::string> machine_device_ids;
   machine_device_ids.reserve(parallel_desc.parallel_conf().device_name().size());
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
@@ -226,17 +129,13 @@ Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& paral
   return Device::New(type, std::stoi(device_id));
 }
 
-std::string Device::Type4DeviceTag(const std::string& device_tag) {
-  return device_tag == "gpu" ? "cuda" : device_tag;
-}
-
 namespace {
 
 Maybe<Symbol<ParallelDesc>> RawGetPlacement(const Device& device) {
   std::string machine_device_id =
       "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
   ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(JUST(device.of_type()));
+  parallel_conf.set_device_tag(device.type());
   parallel_conf.add_device_name(machine_device_id);
   return SymbolOf(ParallelDesc(parallel_conf));
 }

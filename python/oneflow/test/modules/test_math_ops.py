@@ -22,7 +22,11 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+from oneflow.test_utils.test_util import (
+    GenArgList,
+    type_name_to_flow_type,
+    type_name_to_np_type,
+)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -167,6 +171,20 @@ class TestPow(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = random().to(int)
         return torch.pow(x, y)
+
+    @autotest(n=10)
+    def test_reverse_pow_int_scalar_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = random().to(int)
+        return torch.pow(y, x)
+
+    @autotest(n=10)
+    def test_symbolic_reverse_pow_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = random().to(int)
+        return y ** x
 
     @autotest()
     def test_pow_elementwise_with_random_data(test_case):
@@ -319,7 +337,7 @@ class TestArccos(flow.unittest.TestCase):
     @autotest()
     def test_arccos_flow_with_random_data(test_case):
         device = random_device()
-        x = random_tensor(low=2, high=3).to(device)
+        x = random_tensor(low=-1, high=1).to(device)
         y = torch.arccos(x)
         return y
 
@@ -329,7 +347,7 @@ class TestAcos(flow.unittest.TestCase):
     @autotest()
     def test_acos_flow_with_random_data(test_case):
         device = random_device()
-        x = random_tensor(low=2, high=3).to(device)
+        x = random_tensor(low=-1, high=1).to(device)
         y = torch.acos(x)
         return y
 

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -76,25 +77,35 @@ const std::string& CastFromConsistentOpExpr::op_type_name() const {
   return kOpTypeName;
 }
 
-#define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool) \
-  template<>                                                    \
-  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {   \
-    return _bool;                                               \
+#define DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(_T, flag) \
+  template<>                                                                              \
+  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {                             \
+    return flag;                                                                          \
+  }                                                                                       \
+  template<>                                                                              \
+  Maybe<bool> BuiltinOpExprImpl<_T>::SupportNonContiguous() const {                       \
+    return false;                                                                         \
   }
 
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedInputOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedVariableOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FetchOutputOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(VariableOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(ImageDecoderRandomCropResizeOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastToMirroredOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastFromMirroredOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeSplitOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeCloneOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeConcatOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeAddOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedInputOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedVariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOutputOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(VariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(
+    ImageDecoderRandomCropResizeOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToMirroredOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromMirroredOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeSplitOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeCloneOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeConcatOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeAddOpConf, false);
 
-#undef DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE
+#undef DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
@@ -111,17 +122,17 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(Symbol<Device> device) const {
-  const auto& it = device2kernel_.find(device);
-  if (it != device2kernel_.end()) { return it->second; }
+Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Stream> stream) const {
+  const auto& it = stream2kernel_.find(stream);
+  if (it != stream2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
   JUST(BuildOpConf(op_conf.get(), {}));
-  op_conf->set_device_tag(JUST(device->of_type()));
-  auto parallel_desc = JUST(Placement4Device(device)).shared_from_symbol();
+  op_conf->set_device_tag(stream->device()->type());
+  auto parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& opkernel = JUST(StatefulLocalOpKernel::New(
-      op_conf, device, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
-  device2kernel_.emplace(device, opkernel);
+      op_conf, stream, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
+  stream2kernel_.emplace(stream, opkernel);
   return opkernel;
 }
 
@@ -131,6 +142,16 @@ Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsGradDisabled() const {
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);
   return registry->no_grad;
+}
+
+template<>
+Maybe<bool> BuiltinOpExprImpl<UserOpConf>::SupportNonContiguous() const {
+  const auto* registry =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
+  CHECK_NOTNULL_OR_RETURN(registry)
+      << "The op(operation) " << proto().op_type_name()
+      << " is not found. Please check whether it has been registered correctly.";
+  return registry->non_contiguous_supported;
 }
 
 template<>
@@ -212,6 +233,25 @@ class UserOpExprInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+
+  const Stride& InputStride(const std::string& name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return tensor_meta4input_index_(tuple_index)->stride();
+  }
+
+  Stride* OutputStride(const std::string& name, int32_t index) override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return tensor_meta4output_index_(tuple_index)->mut_stride();
+  }
+
+  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  }
+
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
@@ -297,13 +337,13 @@ class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const ParallelDesc*)nullptr;
   }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const cfg::SbpParallel*)nullptr;
+    return *(const SbpParallel*)nullptr;
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const cfg::NdSbp*)nullptr;
+    return *(const NdSbp*)nullptr;
   }
   int64_t parallel_num() const override { return 1; }
 };
@@ -334,16 +374,16 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
 
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
   const ParallelDesc& parallel_desc() const override { return *parallel_desc_; }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
+                                                 int32_t index) const override {
     auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
-    Symbol<cfg::NdSbp> nd_sbp = tensor_meta->nd_sbp();
+    Symbol<NdSbp> nd_sbp = tensor_meta->nd_sbp();
     CHECK_EQ(nd_sbp->sbp_parallel_size(), 1);
     return nd_sbp->sbp_parallel(0);
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
     auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
@@ -356,10 +396,11 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
   ParallelContext parallel_ctx_;
 };
 
-class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
+class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStreamInferContext {
  public:
-  UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
-                               const TensorTuple& input_tensors, TensorTuple* output_tensors)
+  UserOpExprDeviceAndStreamInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
+                                        const TensorTuple& input_tensors,
+                                        TensorTuple* output_tensors)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
         input_tensors_(&input_tensors),
@@ -412,11 +453,15 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);
-  shape_infer_fn_ = registry->logical_tensor_desc_infer_fn;
-  CHECK_OR_RETURN(static_cast<bool>(shape_infer_fn_));
+  tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(tensor_desc_infer_fn_))
+      << Error::RuntimeError() << "registry->logical_tensor_desc_infer_fn failed.";
   dtype_infer_fn_ = registry->data_type_infer_fn;
-  CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
-  if (registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+  CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_))
+      << Error::RuntimeError() << "registry->data_type_infer_fn failed.";
+  if (registry->device_and_stream_infer_fn) {
+    device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn;
+  }
   consistent_tensor_infer_cache_.reset(new ConsistentTensorInferCache(self));
   return Maybe<void>::Ok();
 }
@@ -432,42 +477,43 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   return op_expr;
 }
 
-Maybe<void> UserOpExpr::InferPhysicalShapeAndDType(
+Maybe<void> UserOpExpr::InferPhysicalTensorDesc(
     const AttrMap& attrs, const std::string& device_tag,
     const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprPhysicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
                                            TensorMeta4OutputIndex);
-  JUST(shape_infer_fn_(&infer_ctx));
+  JUST(tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
+Maybe<void> UserOpExpr::InferLogicalTensorDesc(
     const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
     const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprLogicalInferContext infer_ctx(this, attrs, parallel_desc, TensorMeta4InputIndex,
                                           TensorMeta4OutputIndex);
-  JUST(shape_infer_fn_(&infer_ctx));
+  JUST(tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
 
-Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
-                                               const TensorTuple& input_tensors,
-                                               TensorTuple* output_tensors) const {
-  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
-  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
-  return TRY(device_infer_fn_(&device_infer_ctx));
+Maybe<Symbol<Stream>> UserOpExpr::InferDeviceAndStream(const AttrMap& attrs,
+                                                       const TensorTuple& input_tensors,
+                                                       TensorTuple* output_tensors) const {
+  CHECK_OR_RETURN(static_cast<bool>(device_and_stream_infer_fn_));
+  UserOpExprDeviceAndStreamInferContext device_infer_ctx(this, attrs, input_tensors,
+                                                         output_tensors);
+  return TRY(device_and_stream_infer_fn_(&device_infer_ctx));
 }
 
 ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(
-    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp)
+    const Optional<Symbol<NdSbp>>& grad_nd_sbp)
     : grad_nd_sbp_(grad_nd_sbp) {}
 
 /* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
-    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+    const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
   auto* ptr = new ConsistentToConsistentOpExpr(grad_nd_sbp);
   return std::shared_ptr<ConsistentToConsistentOpExpr>(ptr);
 }

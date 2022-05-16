@@ -1,35 +1,26 @@
 include(ExternalProject)
+include(GNUInstallDirs)
 
-set(OPENCV_INCLUDE_DIR ${THIRD_PARTY_DIR}/opencv/include)
-set(LIBPNG_INCLUDE_DIR ${THIRD_PARTY_DIR}/libpng/include)
-set(OPENCV_LIBRARY_DIR ${THIRD_PARTY_DIR}/opencv/lib)
-set(OPENCV_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build/install)
+set(OPENCV_INSTALL_DIR ${THIRD_PARTY_DIR}/opencv)
+set(OPENCV_INCLUDE_DIR ${OPENCV_INSTALL_DIR}/include)
+set(LIBPNG_INSTALL_DIR ${THIRD_PARTY_DIR}/libpng)
+set(LIBPNG_INCLUDE_DIR ${LIBPNG_INSTALL_DIR}/include)
+set(OPENCV_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(OPENCV_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
 
 set(OPENCV_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/src)
 set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/51cef2651.tar.gz)
 use_mirror(VARIABLE OPENCV_URL URL ${OPENCV_URL})
 
-if(WIN32)
-  # pass
-else()
-  include(GNUInstallDirs)
-  set(OPENCV_BUILD_INCLUDE_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
-  set(OPENCV_BUILD_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
-  set(OPENCV_BUILD_3RDPARTY_LIBRARY_DIR
-      ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
-  set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
-  set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a
-                                    liblibwebp.a)
-endif()
+set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
+set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})
   list(APPEND OPENCV_STATIC_LIBRARIES ${OPENCV_LIBRARY_DIR}/${LIBRARY_NAME})
-  list(APPEND OPENCV_BUILD_STATIC_LIBRARIES ${OPENCV_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
 foreach(LIBRARY_NAME ${OPENCV_3RDPARTY_LIBRARY_NAMES})
-  list(APPEND OPENCV_STATIC_LIBRARIES ${OPENCV_LIBRARY_DIR}/${LIBRARY_NAME})
-  list(APPEND OPENCV_BUILD_STATIC_LIBRARIES ${OPENCV_BUILD_3RDPARTY_LIBRARY_DIR}/${LIBRARY_NAME})
+  list(APPEND OPENCV_STATIC_LIBRARIES ${OPENCV_3RDPARTY_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
 if(THIRD_PARTY)
@@ -152,38 +143,21 @@ if(THIRD_PARTY)
     add_dependencies(opencv zlib)
   endif()
 
-  # put opencv includes in the 'THIRD_PARTY_DIR'
-  add_copy_headers_target(
-    NAME
-    opencv
-    SRC
-    ${OPENCV_BUILD_INCLUDE_DIR}
-    DST
-    ${OPENCV_INCLUDE_DIR}
-    DEPS
-    opencv
-    INDEX_FILE
-    "${oneflow_cmake_dir}/third_party/header_index/opencv_headers.txt")
-
-  add_copy_headers_target(
-    NAME
-    libpng
-    SRC
-    ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng
-    DST
-    ${LIBPNG_INCLUDE_DIR}
-    DEPS
-    opencv
-    INDEX_FILE
-    "${oneflow_cmake_dir}/third_party/header_index/libpng_headers.txt")
-
-  # put opencv librarys in the 'THIRD_PARTY_DIR'
-  add_custom_target(opencv_create_library_dir COMMAND ${CMAKE_COMMAND} -E make_directory
-                                                      ${OPENCV_LIBRARY_DIR} DEPENDS opencv)
-
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngconf.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngdebug.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/png.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pnginfo.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pnglibconf.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngpriv.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngstruct.h
+    TYPE INCLUDE
+    COMPONENT libpng_headers)
   add_custom_target(
-    opencv_copy_libs_to_destination COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                                            ${OPENCV_BUILD_STATIC_LIBRARIES} ${OPENCV_LIBRARY_DIR}
-    DEPENDS opencv_create_library_dir)
-
+    install_libpng_headers
+    COMMAND
+      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=libpng_headers
+      -DCMAKE_INSTALL_PREFIX="${LIBPNG_INSTALL_DIR}"
+      -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE} -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+    DEPENDS opencv)
 endif(THIRD_PARTY)

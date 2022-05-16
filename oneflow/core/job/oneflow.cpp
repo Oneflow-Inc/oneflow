@@ -26,11 +26,8 @@ limitations under the License.
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
-#include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/job/oneflow.h"
-#include "oneflow/core/job/model_io_v2_job.h"
-#include "oneflow/core/job/model_io_job.h"
 #include "oneflow/core/job/inter_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/operator/interface_op_util.h"
@@ -40,7 +37,7 @@ limitations under the License.
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace std {
 
@@ -56,22 +53,6 @@ struct hash<oneflow::ParallelBlobConf> {
 }  // namespace std
 
 namespace oneflow {
-
-bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
-  return lhs.parallel_type_case() == rhs.parallel_type_case();
-}
-
-bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
-
-bool operator==(const NdSbp& lhs, const NdSbp& rhs) {
-  if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
-  for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
-    if (lhs.sbp_parallel().Get(i) != rhs.sbp_parallel().Get(i)) { return false; }
-  }
-  return true;
-}
-
-bool operator!=(const NdSbp& lhs, const NdSbp& rhs) { return !(lhs == rhs); }
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
@@ -921,19 +902,6 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
                                 &var_op_name2parallel_blob_conf);
-  auto AppendJob = [&](Job* job) {
-    JobDesc job_desc(job->job_conf(), jobs.size());
-    CHECK(!job_desc.Bool("__is_user_function__"));
-    jobs.emplace_back(new Job(*job));
-  };
-
-  if (Global<ResourceDesc, ForSession>::Get()->resource().enable_legacy_model_io()) {
-    if (Global<ResourceDesc, ForSession>::Get()->resource().enable_model_io_v2()) {
-      MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
-    } else {
-      MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
-    }
-  }
   std::vector<std::shared_ptr<Job>> function_jobs;
   function_jobs.reserve(jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) {
@@ -1026,8 +994,8 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
     exit(0);
   }
 
-  HashMap<std::string, Blob*> variable_op_name2eager_blob;
-  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob));
+  HashMap<std::string, vm::EagerBlobObject*> variable_op_name2eager_blob_object;
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object));
   OF_PROFILER_RANGE_POP();  // new Runtime
   return Maybe<void>::Ok();
 }

@@ -34,6 +34,7 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> OnesLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
+  *ctx->OutputStride("out", 0) = ctx->InputStride("like", 0);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> OnesLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -44,15 +45,15 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> OnesLikeOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_sbp = ctx->NdSbpHint4InputArgNameAndIndex("like", 0);
-  cfg::NdSbp* like_distribution = ctx->NdSbp4ArgNameAndIndex("like", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_sbp = ctx->NdSbpHint4InputArgNameAndIndex("like", 0);
+  NdSbp* like_distribution = ctx->NdSbp4ArgNameAndIndex("like", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *like_distribution = in_sbp;
   *out_distribution = in_sbp;
   for (auto& sbp : *out_distribution->mutable_sbp_parallel()) {
     if (sbp.has_partial_sum_parallel()) {
       sbp.Clear();
-      *sbp.mutable_broadcast_parallel() = cfg::BroadcastParallel();
+      *sbp.mutable_broadcast_parallel() = BroadcastParallel();
     }
   }
   return Maybe<void>::Ok();

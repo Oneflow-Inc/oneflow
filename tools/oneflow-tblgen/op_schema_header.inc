@@ -11,6 +11,7 @@ R"OP_SCHEMA_INC(
 namespace oneflow {
 
 class Device;
+class Stream;
 class InputBlobModifier;
 class OutputBlobModifier;
 
@@ -22,7 +23,7 @@ class SbpContext;
 class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
-class DeviceInferContext;
+class DeviceAndStreamInferContext;
 }  // namespace user_op
 
 using GetInputArgModifier =
@@ -49,8 +50,8 @@ class {{opname}} : public OpBase {
   {% if op.has_data_type_infer_fn -%}
   static Maybe<void> InferDataType(user_op::InferContext* ctx);
   {% endif -%}
-  {% if op.has_device_infer_fn -%}
-  static Maybe<Symbol<Device>> InferDevice(user_op::DeviceInferContext* ctx);
+  {% if op.has_device_and_stream_infer_fn -%}
+  static Maybe<Symbol<Stream>> InferDeviceAndStream(user_op::DeviceAndStreamInferContext* ctx);
   {% endif -%}
   {% if op.has_sbp_signature_infer_fn -%}
   static Maybe<void> InferSbpSignature(user_op::InferSbpSignatureFnContext* ctx);

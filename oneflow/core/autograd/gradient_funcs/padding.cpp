@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -37,7 +38,7 @@ class Pad2d : public OpExprGradFunction<Pad2dCaptureState> {
                       const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -56,7 +57,8 @@ class ReflectionPad2d : public Pad2d {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) = JUST(functional::PadGrad(out_grads.at(0), ctx->paddings, "reflect", 0));
+      (*in_grads)[0] =
+          JUST(functional::PadGrad(JUST(VectorAt(out_grads, 0)), ctx->paddings, "reflect", 0));
     }
     return Maybe<void>::Ok();
   }
@@ -69,7 +71,8 @@ class ReplicationPad2d : public Pad2d {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) = JUST(functional::PadGrad(out_grads.at(0), ctx->paddings, "replicate", 0));
+      (*in_grads)[0] =
+          JUST(functional::PadGrad(JUST(VectorAt(out_grads, 0)), ctx->paddings, "replicate", 0));
     }
     return Maybe<void>::Ok();
   }
@@ -94,14 +97,16 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    const std::shared_ptr<Tensor>& input_0 = JUST(VectorAt(inputs, 0));
+    ctx->requires_grad = input_0->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding"));
-    if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
+    if (IsFloatingDataType(input_0->dtype()->data_type())
+        || input_0->dtype()->data_type() == DataType::kFloat16) {
       ctx->padding_value = JUST(composed_attrs.GetAttr<double>("floating_constant_value"));
-    } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
+    } else if (IsIntegralDataType(input_0->dtype()->data_type())) {
       ctx->padding_value = JUST(composed_attrs.GetAttr<int64_t>("integral_constant_value"));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
@@ -114,8 +119,8 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) =
-          JUST(functional::PadGrad(out_grads.at(0), ctx->paddings, "constant", ctx->padding_value));
+      (*in_grads)[0] = JUST(functional::PadGrad(JUST(VectorAt(out_grads, 0)), ctx->paddings,
+                                                "constant", ctx->padding_value));
     }
     return Maybe<void>::Ok();
   }

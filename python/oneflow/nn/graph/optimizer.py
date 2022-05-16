@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 
 
@@ -26,16 +25,15 @@ class OptDict(object):
         if "optim" in opt_dict:
             if isinstance(opt_dict["optim"], Optimizer):
                 self._optimizer = opt_dict["optim"]
-                self._is_sparse = False
-            elif isinstance(opt_dict["optim"], SparseOptimizer):
-                self._optimizer = opt_dict["optim"]._nested_optim
-                self._is_sparse = True
             else:
-                raise ValueError(
-                    'opt_dict["optim"] is not an instance of Optimizer or SparseOptimizer.'
-                )
+                raise ValueError('opt_dict["optim"] is not an instance of Optimizer.')
         else:
             raise ValueError("Key 'optim' doesn't exist in opt_dict.")
+
+        if "is_sparse" in opt_dict and opt_dict["is_sparse"] is True:
+            self._is_sparse = True
+        else:
+            self._is_sparse = False
 
         self._lr_scheduler = None
         if "lr_sch" in opt_dict:
@@ -44,28 +42,31 @@ class OptDict(object):
                     'opt_dict["lr_sch"] is not an instance of LRScheduler.'
                 )
 
-            if opt_dict["lr_sch"]._optimizer is not self._optimizer:
+            if opt_dict["lr_sch"].optimizer is not self._optimizer:
                 raise ValueError("lr_scheduler doesn't match optimizer.")
 
             self._lr_scheduler = opt_dict["lr_sch"]
 
     def generate_optimizer_and_variable_configs(self, job_conf, vars_conf):
-        train_conf = job_conf.mutable_train_conf()
+        train_conf = job_conf.train_conf
 
-        if self._optimizer is not None:
-            # Check first
-            self._optimizer._check_variables_in_graph(vars_conf)
-            self._optimizer._check_variables_optimizer_bound(vars_conf)
+        if self._optimizer is None:
+            return
 
-            opt_confs = self._optimizer._generate_conf_for_graph(train_conf, vars_conf)
+        # Check first
+        self._optimizer._check_variables_in_graph(vars_conf)
+        self._optimizer._check_variables_optimizer_bound(vars_conf)
 
-            if self._is_sparse:
-                self._optimizer._generate_indexed_slices_optimizer_conf(
-                    job_conf, vars_conf
-                )
+        opt_confs = self._optimizer._generate_conf_for_graph(train_conf, vars_conf)
 
-        if self._lr_scheduler is not None:
-            self._lr_scheduler._generate_conf_for_graph(opt_confs)
+        if self._is_sparse:
+            self._optimizer._generate_indexed_slices_optimizer_conf(job_conf, vars_conf)
+
+        if self._lr_scheduler is None:
+            return
+
+        for opt_conf in opt_confs:
+            self._lr_scheduler._generate_conf_for_graph(opt_conf.learning_rate_decay)
 
 
 class VariableConfig(object):

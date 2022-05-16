@@ -35,9 +35,11 @@ class VarKernel final : public user_op::OpKernel {
     const T* in_ptr = input->dptr<T>();
     T* out_ptr = output->mut_dptr<T>();
     const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
-    T* tmp_buffer_ptr = axis.size() == input->shape().NumAxes()
-                            ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
-                            : nullptr;
+    // only all dims cuda case will use tmp buffer.
+    T* tmp_buffer_ptr =
+        (axis.size() == input->shape().NumAxes() && DeviceType::kCUDA == device_type)
+            ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
+            : nullptr;
     VarParamHelper param_helper(input->shape(), axis, unbiased);
     VarFunctor<device_type, T>()(ctx->stream(), in_ptr, out_ptr, tmp_buffer_ptr,
                                  param_helper.param);
@@ -45,66 +47,40 @@ class VarKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+#define REGISTER_VAR_CPU_KERNEL(dtype)                                                           \
+  REGISTER_USER_KERNEL("var").SetCreateFn<VarKernel<DeviceType::kCPU, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                             \
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+REGISTER_VAR_CPU_KERNEL(float)
+REGISTER_VAR_CPU_KERNEL(double)
+#undef REGISTER_VAR_CPU_KERNEL
+
+#ifdef WITH_CUDA
+
 size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const TensorDesc& input = ctx->InputTensorDesc("input", 0);
   const Shape& input_shape = input.shape();
   const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
   if (axis.size() == input_shape.NumAxes()) {
-    return static_cast<size_t>(std::ceil(std::sqrt(input.shape().elem_cnt())))
-           * GetSizeOfDataType(input.data_type()) * 3;
+    return GetCudaAlignedSize(
+        std::min(static_cast<int32_t>(std::ceil(std::sqrt(input.shape().elem_cnt()))),
+                 kCudaMaxBlocksNum)
+        * GetSizeOfDataType(input.data_type()) * 3);
   }
   return 0;
 }
 
-#define REGISTER_VAR_KERNEL(device, dtype)                                                    \
+#define REGISTER_VAR_CUDA_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("var")                                                                 \
-      .SetCreateFn<VarKernel<device, dtype>>()                                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+      .SetCreateFn<VarKernel<DeviceType::kCUDA, dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                        \
                        && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTmpBufferSize);
 
-#define REGISTER_VAR_KERNELS_WITH_DEVICE(device) \
-  REGISTER_VAR_KERNEL(device, float)             \
-  REGISTER_VAR_KERNEL(device, double)
-
-REGISTER_VAR_KERNELS_WITH_DEVICE(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_VAR_KERNELS_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_VAR_CUDA_KERNEL(float)
+REGISTER_VAR_CUDA_KERNEL(double)
+#undef REGISTER_VAR_CUDA_KERNEL
 #endif
-
-#undef REGISTER_VAR_KERNELS_WITH_DEVICE
-#undef REGISTER_VAR_KERNEL
-
-template<DeviceType device_type, typename T>
-class VarGradKernel final : public user_op::OpKernel {
- public:
-  VarGradKernel() = default;
-  ~VarGradKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    // TODO(liufengwei): Kernel implementation replaces functional::xx
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_VAR_GRAD_KERNEL(device, dtype)             \
-  REGISTER_USER_KERNEL("var_grad")                          \
-      .SetCreateFn<VarGradKernel<device, dtype>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
-                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
-
-#define REGISTER_VAR_GRAD_KERNELS_WITH_DEVICE(device) \
-  REGISTER_VAR_GRAD_KERNEL(device, float)             \
-  REGISTER_VAR_GRAD_KERNEL(device, double)
-
-REGISTER_VAR_GRAD_KERNELS_WITH_DEVICE(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_VAR_GRAD_KERNELS_WITH_DEVICE(DeviceType::kCUDA)
-#endif
-
-#undef REGISTER_VAR_GRAD_KERNELS_WITH_DEVICE
-#undef REGISTER_VAR_GRAD_KERNEL
 
 }  // namespace user_op
 }  // namespace oneflow

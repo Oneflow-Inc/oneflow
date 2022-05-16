@@ -37,7 +37,6 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
 
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Release(const vm::InstructionMsg& instr_msg) const {
     const auto& phy_instr_operand = instr_msg.phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
@@ -72,8 +71,6 @@ class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType<Str
   }
 };
 
-COMMAND(vm::RegisterInstructionType<CudaReleaseTensorInstructionType<CudaStreamType>>(
-    "gpu.ReleaseTensor"));
 COMMAND(vm::RegisterInstructionType<CudaReleaseTensorInstructionType<CudaStreamType>>(
     "cuda.ReleaseTensor"));
 COMMAND(vm::RegisterInstructionType<CudaReleaseTensorInstructionType<CudaCopyH2DStreamType>>(

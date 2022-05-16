@@ -35,6 +35,13 @@ __global__ void CudaScatterNdAdd(NdIndexSliceArgs<T, I> args, const I* indices, 
 }
 
 template<typename T, typename I>
+__global__ void CudaScatterNdUpdate(NdIndexSliceArgs<T, I> args, const I* indices, const T* slices,
+                                    T* dense) {
+  DoScatterNdUpdate<DeviceType::kCUDA>(args.num_slices * args.slice_size, args.slice_size,
+                                       args.index_ndims, args.dense_shape, indices, slices, dense);
+}
+
+template<typename T, typename I>
 __global__ void CudaFillByNdIndex(NdIndexSliceArgs<T, I> args, const I* indices, T* dense,
                                   T value) {
   DoFillByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
@@ -62,6 +69,15 @@ struct ScatterNdAddFunctor<DeviceType::kCUDA, T, I> final {
 };
 
 template<typename T, typename I>
+struct ScatterNdUpdateFunctor<DeviceType::kCUDA, T, I> final {
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                  const T* slices, T* dense) const {
+    RUN_CUDA_KERNEL((CudaScatterNdUpdate<T, I>), stream, args.num_slices * args.slice_size, args,
+                    indices, slices, dense);
+  }
+};
+
+template<typename T, typename I>
 struct FillByNdIndexFunctor<DeviceType::kCUDA, T, I> final {
   void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
                   T* dense, T value) const {
@@ -73,6 +89,11 @@ struct FillByNdIndexFunctor<DeviceType::kCUDA, T, I> final {
 template<typename T>
 struct DeviceAdd<DeviceType::kCUDA, T> {
   __device__ __forceinline__ static void Invoke(const T* x, T* y) { cuda::atomic::Add(y, *x); }
+};
+
+template<>
+struct DeviceAdd<DeviceType::kCUDA, bool> {
+  __device__ __forceinline__ static void Invoke(const bool* x, bool* y) { *y += *x; }
 };
 
 template<>
@@ -94,30 +115,32 @@ struct DeviceAdd<DeviceType::kCUDA, int64_t> {
   FLOATING_DATA_TYPE_SEQ                        \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GATHER_ND_FUNCTOR, (DeviceType::kCUDA),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    INSTANTIATE_GATHER_ND_FUNCTOR, (DeviceType::kCUDA),
+    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_SCATTER_ND_ADD_FUNCTOR, (DeviceType::kCUDA),
-                                 CUDA_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+                                 CUDA_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_FILL_BY_ND_INDEX_FUNCTOR, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_ND_KERNELS, (DeviceType::kCUDA),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_GATHER_ND_KERNELS, (DeviceType::kCUDA),
+    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_ND_KERNELS, (DeviceType::kCUDA),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_SCATTER_ND_KERNELS, (DeviceType::kCUDA),
+    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCATTER_ND_LIKE_KERNELS, (DeviceType::kCUDA),
-                                 CUDA_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS, (DeviceType::kCUDA),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
+                                 CUDA_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_TENSOR_GATHER_ND_UPDATE_KERNELS, (DeviceType::kCUDA),
+    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_TENSOR_GATHER_ND_ADD_KERNELS, (DeviceType::kCUDA),
                                  CUDA_ATOMIC_ADD_SUPPORTED_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

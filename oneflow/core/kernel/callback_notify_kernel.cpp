@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/job_instance.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/buffer_manager.h"
@@ -38,13 +37,8 @@ template<typename T>
 void CallbackNotifyKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
   std::string buffer_name;
-  if (CHECK_JUST(IsMultiClient())) {
-    CHECK(this->op_conf().callback_notify_conf().has_job_name());
-    buffer_name = GetCallbackNotifierBufferName(this->op_conf().callback_notify_conf().job_name());
-  } else {
-    T job_id = *ctx->BnInOp2Blob("in")->dptr<T>();
-    buffer_name = this->op_conf().callback_notify_conf().callback_buffer_name(job_id);
-  }
+  CHECK(this->op_conf().callback_notify_conf().has_job_name());
+  buffer_name = GetCallbackNotifierBufferName(this->op_conf().callback_notify_conf().job_name());
   std::shared_ptr<JobInstance> foreign_job_instance;
   BufferStatus buffer_status = buffer_mgr->Get(buffer_name)->TryReceive(&foreign_job_instance);
   CHECK_NE(buffer_status, kBufferStatusEmpty);

@@ -51,10 +51,12 @@ namespace {
 void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_desc) {
   BlobDescProto proto;
   blob->blob_desc().shape().ToProto(proto.mutable_shape());
+  blob->blob_desc().stride().ToProto(proto.mutable_stride());
   proto.set_data_type(blob->blob_desc().data_type());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   *tensor_desc = proto;
   tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
+  tensor_desc->mut_stride()->CheckNumAxesIdenticalAndAssign(blob->stride());
 }
 
 }  // namespace
@@ -118,9 +120,9 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
         stream_(stream),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
-    nd_sbp_signature_ = cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
+    nd_sbp_signature_ = NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
+      sbp_signature_ = SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     bool is_dynamic = false;
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
@@ -166,8 +168,8 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
       return &(it->second);
     }
   }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_.bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -176,8 +178,7 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
     return it->second;
   }
 
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
@@ -200,10 +201,10 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
   user_op::UserOpConfWrapper user_op_conf_;
   ep::Stream* stream_;
   UserKernelBaseContext base_ctx_;
-  cfg::SbpSignature sbp_signature_;
+  SbpSignature sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  cfg::NdSbpSignature nd_sbp_signature_;
+  NdSbpSignature nd_sbp_signature_;
 };
 
 using UserKernelInitContext = UserKernelInitAndCacheContext;
@@ -217,7 +218,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
         nd_sbp_signature_(kernel_conf.op_attribute().nd_sbp_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
+      sbp_signature_ = SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                               ArgVec* arg_vec) {
@@ -270,6 +271,15 @@ class UserKernelOpInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
+    return Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserKernelOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
@@ -293,8 +303,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   const ArgVec& outputs() const override { return outputs_; }
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; };
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_.bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -302,8 +312,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != bn2sbp.end());
     return it->second;
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
@@ -318,6 +327,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
       CHECK_NOTNULL(blob);
       if (*arg_tensor_desc_ptr) {
         (*arg_tensor_desc_ptr)->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
+        (*arg_tensor_desc_ptr)->mut_stride()->CheckNumAxesIdenticalAndAssign(blob->stride());
       } else {
         arg_tensor_desc_ptr->reset(new user_op::NaiveTensorDesc());
         FillTensorDescWithBlob(blob, arg_tensor_desc_ptr->get());
@@ -361,8 +371,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec inputs_;
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
-  cfg::SbpSignature sbp_signature_;
-  cfg::NdSbpSignature nd_sbp_signature_;
+  SbpSignature sbp_signature_;
+  NdSbpSignature nd_sbp_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;
@@ -413,15 +423,14 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     CHECK(it != arg2tensor_.end()) << "Arg (" << arg_name << "," << arg_index << ") is not found";
     return it->second.get();
   }
-  const ShapeView& ShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                             int32_t arg_index) override {
+  ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
     return arg_tensor->shape();
   }
-  MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                             int32_t arg_index) override {
+  MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
+                                            int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
@@ -680,11 +689,11 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
       if (cuda_graph_support != nullptr
           && cuda_graph_support->IsCudaGraphSupported(&init_ctx, opkernel_state_.get())) {
         cuda_graph_exec_.reset(new ep::CudaGraphExecutable());
-        LOG(INFO) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
-                  << op_conf().user_conf().op_type_name() << ")";
+        VLOG(3) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
+                << op_conf().user_conf().op_type_name() << ")";
       } else {
-        LOG(INFO) << "CUDA Graphs not supported: " << op_conf().name() << " ("
-                  << op_conf().user_conf().op_type_name() << ")";
+        VLOG(3) << "CUDA Graphs not supported: " << op_conf().name() << " ("
+                << op_conf().user_conf().op_type_name() << ")";
       }
     }
   }
@@ -722,9 +731,9 @@ void UserKernel::ForwardShape(KernelContext* ctx) const {
     std::shared_ptr<const OpInferCacheValue> cache_value_ptr = infer_cache_->GetCacheValue();
     FOR_RANGE(int, i, 0, infer_ctx_->outputs().size()) {
       const auto& out_arg_pair = infer_ctx_->outputs().at(i);
-      MutShapeView* mut_shape_view =
+      MutShapeView mut_shape_view =
           infer_ctx_->MutShapeView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
-      if (mut_shape_view) { mut_shape_view->set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i)); }
+      mut_shape_view.set_shape(*cache_value_ptr->obn_idx2shape_sym.at(i));
     }
   }
 }

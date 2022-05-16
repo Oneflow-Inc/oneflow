@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 
 import oneflow.unittest
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -37,14 +37,7 @@ def _test_different_dtype(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
-    def test_global_naive(test_case):
-        placement = flow.placement("cpu", ranks=[0])
-        sbp = (flow.sbp.broadcast,)
-        x = flow.ones((16, 16), placement=placement, sbp=sbp)
-        test_case.assertEqual(x.sbp, sbp)
-        test_case.assertEqual(x.placement, placement)
-
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_flow_zeros_list_with_random_data(test_case):
         device = random_device()
         y1 = torch.zeros(random().to(int)).to(device)
@@ -57,7 +50,7 @@ class TestConstantModule(flow.unittest.TestCase):
         ).to(device)
         return y1, y2, y3, y4
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_flow_ones_list_with_random_data(test_case):
         device = random_device()
         y1 = torch.ones(random().to(int)).to(device)
@@ -112,6 +105,17 @@ class TestConstantModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = x.new_ones(
+            (random().to(int), random().to(int), random().to(int)),
+            device=device.value(),
+            requires_grad=constant(True),
+        )
+        return y
+
+    @autotest(n=5)
+    def test_new_zeros(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.new_zeros(
             (random().to(int), random().to(int), random().to(int)),
             device=device.value(),
             requires_grad=constant(True),

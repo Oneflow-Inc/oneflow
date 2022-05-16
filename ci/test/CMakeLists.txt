@@ -18,8 +18,3 @@ foreach(PYTHON_TEST_FILE ${PYTHON_TEST_FILES})
         "vram:2000"
   )
 endforeach()
-set_tests_properties(python/oneflow/test/modules/test_rnn.py
-  PROPERTIES
-    RESOURCE_GROUPS
-      "vram:4000"
-)

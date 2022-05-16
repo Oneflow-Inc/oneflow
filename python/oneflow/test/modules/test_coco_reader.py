@@ -65,7 +65,6 @@ class DataLoaderGraph(flow.nn.Graph):
         return self.loader_()
 
 
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class COCODataLoaderDistributedTestCase(oneflow.unittest.TestCase):
     def test_case1(test_case):

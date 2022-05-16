@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def box_area(boxes):
@@ -70,7 +70,9 @@ def create_tensors_with_iou(N, iou_thresh):
     x0, y0, x1, y1 = boxes[-1].tolist()
     iou_thresh += 1e-5
     boxes[-1, 2] += (x1 - x0) * (1 - iou_thresh) / iou_thresh
-    scores = np.random.rand(N)
+    # Avoid score lists have the same score which will
+    # result in an unstable sort.
+    scores = np.random.choice(N, N, replace=False)
     return boxes, scores
 
 

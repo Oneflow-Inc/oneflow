@@ -15,7 +15,6 @@ limitations under the License.
 */
 #ifdef RPC_BACKEND_GRPC
 
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/control/ctrl_bootstrap.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/rpc/include/grpc.h"

@@ -21,36 +21,43 @@ limitations under the License.
 
 namespace oneflow {
 
+enum SbpInferRuleTag : int {
+  kAllMatch = 1,   // All match first, then lowest cost
+  kMatchAMAP = 2,  // Match as much as possible
+  kMinCost = 3     // Lowest cost
+};
+
 double GetValidMaxCopyCost();
 
-void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size);
+double GetTransferCost();
 
-void SetNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                       const cfg::SbpSignature& sbp_signature, int32_t sbp_axis);
+void ResizeNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t size);
 
-void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
-                          const cfg::SbpSignatureList& sbp_sig_list,
-                          std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list);
+void SetNdSbpSignature(NdSbpSignature* nd_sbp_signature, const SbpSignature& sbp_signature,
+                       int32_t sbp_axis);
+
+void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
+                          const SbpSignatureList& sbp_sig_list,
+                          std::vector<NdSbpSignature>* nd_sbp_sig_list);
 
 // Compute storage for given NdSbp
-double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
-                     const Shape& parallel_hierarchy);
+double Storage4NdSbp(const NdSbp& nd_sbp, Shape& logical_shape, const Shape& parallel_hierarchy);
 
 // Judge whether an NdSbp could be applied on a tensor with given logical shape
-Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
+Maybe<bool> FilterNdSbpByLogicalShape(const NdSbp& nd_sbp, Shape& logical_shape,
                                       const Shape& parallel_hierarchy);
 
 // TODO: Unify lazy and eager boxing
-Maybe<double> ComputeCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                          const cfg::NdSbp& consumer_sbp_parallel,
+Maybe<double> ComputeCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
+                                          const NdSbp& consumer_sbp_parallel,
                                           const BlobDesc& logical_blob_desc,
                                           const ParallelDesc& producer_parallel_desc,
                                           const ParallelDesc& consumer_parallel_desc,
-                                          bool is_same_sbp);
+                                          bool requires_same_sbp);
 
 // Cost for boxing in lazy
-Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                              const cfg::NdSbp& consumer_sbp_parallel,
+Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
+                                              const NdSbp& consumer_sbp_parallel,
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& producer_parallel_desc,
                                               const ParallelDesc& consumer_parallel_desc,
@@ -58,12 +65,22 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
 
 // The public interface for computing cost
 // It uses the middle nodes algorithm.
-Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_parallel,
-                                             const cfg::NdSbp& consumer_sbp_parallel,
+Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
+                                             const NdSbp& consumer_sbp_parallel,
                                              const BlobDesc& logical_blob_desc,
                                              const ParallelDesc& producer_parallel_desc,
                                              const ParallelDesc& consumer_parallel_desc,
                                              bool requires_same_sbp);
+
+// Decide the priority to infer sbp
+// 0: highest priority
+// 1.0: normal priority
+// 2.0: Penality, the same as infinity
+double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
+                               const NdSbp& consumer_sbp_parallel,
+                               const BlobDesc& logical_blob_desc,
+                               const ParallelDesc& producer_parallel_desc,
+                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp);
 
 }  // namespace oneflow
 

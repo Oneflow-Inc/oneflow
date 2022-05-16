@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -72,6 +73,11 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 OpRegistry& OpRegistry::SupportCpuOnly() {
   result_.cpu_only_supported = true;
+  return *this;
+}
+
+OpRegistry& OpRegistry::SupportNonContiguous() {
+  result_.non_contiguous_supported = true;
   return *this;
 }
 
@@ -196,8 +202,9 @@ OpRegistry& OpRegistry::SetDataTypeInferFn(DataTypeInferFn data_type_infer_fn) {
   return *this;
 }
 
-OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
-  result_.device_infer_fn = std::move(device_infer_fn);
+OpRegistry& OpRegistry::SetDeviceAndStreamInferFn(
+    DeviceAndStreamInferFn device_and_stream_infer_fn) {
+  result_.device_and_stream_infer_fn = std::move(device_and_stream_infer_fn);
   return *this;
 }
 
@@ -226,6 +233,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
           const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
           *desc->mut_shape() = *JUST(
               GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+          *desc->mut_stride() = Stride(desc->shape());
         }
       }
       return Maybe<void>::Ok();
@@ -233,12 +241,13 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
   }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   CHECK_OR_RETURN(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
-  if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
-    result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
+  if (result_.cpu_only_supported && result_.device_and_stream_infer_fn == nullptr) {
+    result_.device_and_stream_infer_fn =
+        [](DeviceAndStreamInferContext* ctx) -> Maybe<Symbol<Stream>> {
       for (const auto& pair : ctx->inputs()) {
         const Symbol<Device>& input_device =
             ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
-        CHECK_EQ(JUST(input_device->of_type()), "cpu");
+        CHECK_EQ(input_device->type(), "cpu");
       }
       Symbol<Device> default_device;
       {
@@ -252,7 +261,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       for (const auto& pair : ctx->outputs()) {
         *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = default_device;
       }
-      return default_device;
+      return Stream::New(default_device, StreamRole::kCompute);
     };
   }
   return *this;

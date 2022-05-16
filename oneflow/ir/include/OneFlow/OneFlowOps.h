@@ -25,6 +25,7 @@ limitations under the License.
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 
+#include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
 #include "OneFlow/OneFlowOpTraits.h"
@@ -33,7 +34,20 @@ limitations under the License.
 
 namespace mlir {
 
+namespace func {
 class FuncOp;
+}  // namespace func
+
+}  // namespace mlir
+
+#define GET_OP_CLASSES
+#include "OneFlow/OneFlowOps.h.inc"
+#define GET_OP_CLASSES
+#include "OneFlow/OneFlow.gen_ops.h.inc"
+
+namespace mlir {
+
+namespace oneflow {
 
 template<typename T>
 inline std::string GetOpTypeName(T op) {
@@ -46,14 +60,18 @@ inline std::string GetOpTypeName(T op) {
   if (auto alternative_name = dyn_cast<oneflow::HasAlternativeOpTypeName>(op)) {
     op_type_name = alternative_name.getOriginalOpTypeName();
   }
+  if (auto user_op = dyn_cast<oneflow::UserOp>(op)) { op_type_name = user_op.op_type_name().str(); }
   return op_type_name;
 }
+ResultRange GetDataOutputResults(Operation* op);
+OperandRange GetDataInputOperands(Operation* op);
+llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op);
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
+
+ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> values);
+
+}  // namespace oneflow
 
 }  // namespace mlir
-
-#define GET_OP_CLASSES
-#include "OneFlow/OneFlowOps.h.inc"
-#define GET_OP_CLASSES
-#include "OneFlow/OneFlow.gen_ops.h.inc"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWOPS_H_

@@ -34,7 +34,7 @@ class SrcSubsetTickOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 Maybe<void> SrcSubsetTickOp::InitFromOpConf() {
@@ -67,7 +67,7 @@ Maybe<void> SrcSubsetTickOp::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
-Maybe<void> SrcSubsetTickOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SrcSubsetTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Broadcast(output_bns())

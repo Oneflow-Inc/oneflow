@@ -250,7 +250,7 @@ add_docstr(
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
 
     Args:
-        input (oneflow.Tensor): The input tensor.
+        input (oneflow.Tensor): the input tensor.
         dim0 (int): the first dimension to be transposed.
         dim1 (int): the second dimension to be transposed.
     Returns:
@@ -311,7 +311,7 @@ add_docstr(
     The amount of element in return value is the same as Tensor `input`.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
+        input (oneflow.Tensor): the input Tensor.
         dim (int, optinal): Defaults to None, if given, the input will be squeezed only in this dimension.
 
     Returns:

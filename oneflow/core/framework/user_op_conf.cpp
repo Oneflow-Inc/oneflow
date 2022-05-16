@@ -217,9 +217,15 @@ UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::ScopeSymbolId(int64_t scope_
   return *this;
 }
 
+UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::DeviceTag(const std::string& device_tag) {
+  device_tag_ = device_tag;
+  return *this;
+}
+
 UserOpConfWrapper UserOpConfWrapperBuilder::Build() {
   OperatorConf op_conf;
   op_conf.set_name(op_name_);
+  if (!device_tag_.empty()) { op_conf.set_device_tag(device_tag_); }
   if (scope_symbol_id_.has_value()) { op_conf.set_scope_symbol_id(scope_symbol_id_.value()); }
   UserOpConf* user_conf = op_conf.mutable_user_conf();
   user_conf->set_op_type_name(op_type_name_);

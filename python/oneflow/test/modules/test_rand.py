@@ -19,16 +19,23 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-
 import oneflow.unittest
-from test_util import GenArgList
-
 from oneflow.test_utils.automated_test_util import *
+
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_rand(test_case, device, shape):
     y1 = flow.rand(*shape, device=flow.device(device))
     y2 = flow.rand(*shape, device=flow.device(device))
+
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape)
+
+
+def _test_rand_tuple_shape(test_case, device, shape):
+    y1 = flow.rand(shape, device=flow.device(device))
+    y2 = flow.rand(shape, device=flow.device(device))
 
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
@@ -49,9 +56,7 @@ def _test_different_dtype(test_case, device, shape):
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
-    with test_case.assertRaises(
-        oneflow._oneflow_internal.exception.UnimplementedException
-    ):
+    with test_case.assertRaises(NotImplementedError):
         flow.rand(*shape, dtype=flow.int32, device=flow.device(device))
 
 
@@ -75,15 +80,16 @@ def _test_with_generator(test_case, device, shape):
     test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestConstantModule(flow.unittest.TestCase):
-    def test_global_naive(test_case):
-        placement = flow.placement("cpu", ranks=[0])
-        sbp = (flow.sbp.broadcast,)
-        x = flow.rand(16, 16, placement=placement, sbp=sbp)
-        test_case.assertEqual(x.sbp, sbp)
-        test_case.assertEqual(x.placement, placement)
+def _test_rand_with_flow_size(test_case, device, shape):
+    y1 = flow.rand(flow.Size(shape), device=flow.device(device))
+    y2 = flow.rand(flow.Size(shape), device=flow.device(device))
 
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestRandModule(flow.unittest.TestCase):
     def test_0d_randint(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_0d_rand]
@@ -96,9 +102,11 @@ class TestConstantModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_rand,
+            _test_rand_tuple_shape,
             _test_different_dtype,
             _test_backward,
             _test_with_generator,
+            _test_rand_with_flow_size,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5), (2, 4)]
@@ -106,43 +114,12 @@ class TestConstantModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-def _test_consistent_rand(test_case, shape, placement, sbp):
-    x = flow.rand(*shape, placement=placement, sbp=sbp)
-    test_case.assertEqual(x.shape, shape)
-    test_case.assertEqual(x.sbp, sbp)
-    test_case.assertEqual(x.placement, placement)
-
-
-def _test_consistent_rand_graph(test_case, shape, placement, sbp):
-    class ConsistentRandGraph(flow.nn.Graph):
-        def __init__(self,):
-            super().__init__()
-
-        def build(self):
-            x = flow.rand(*shape, placement=placement, sbp=sbp)
-            return x
-
-    c_rand_g = ConsistentRandGraph()
-    x = c_rand_g()
-    test_case.assertEqual(x.shape, shape)
-    test_case.assertEqual(x.sbp, sbp)
-    test_case.assertEqual(x.placement, placement)
-
-
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class TestRandConsistent(flow.unittest.TestCase):
-    def test_rand_consistent(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_consistent_rand, _test_consistent_rand_graph]
-        arg_dict["shape"] = [(2, 3, 4), (2, 5, 2)]
-        arg_dict["placement"] = [
-            flow.placement("cpu", ranks=[0, 1]),
-            flow.placement("cuda", ranks=[0, 1]),
-        ]
-        arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+class TestRandOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.rand(2, 3, device="cuda:1")
+        test_case.assertEqual(x.device, flow.device("cuda:1"))
 
 
 if __name__ == "__main__":

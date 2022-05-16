@@ -25,7 +25,7 @@ void CheckShape(const Shape& shape) {
 }
 
 Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std::string>& input_bns,
-                            const PbRpf<std::string>& output_bns, cfg::SbpSignature* sbp_signature,
+                            const PbRpf<std::string>& output_bns, SbpSignature* sbp_signature,
                             bool is_for_input_op) {
   if (!blob_conf.has_nd_sbp()) {
     SbpSignatureBuilder().Broadcast(input_bns).Broadcast(output_bns).Build(sbp_signature);
@@ -58,7 +58,7 @@ Maybe<void> InterfaceOpUtil::InferOutBlobDesc(const InterfaceBlobConf& blob_conf
                                               BlobDesc* out_blob_desc,
                                               const ParallelContext* parallel_ctx,
                                               const ParallelDesc& parallel_desc) {
-  cfg::NdSbp nd_sbp;
+  NdSbp nd_sbp;
   JUST(ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &nd_sbp));
   out_blob_desc->mut_shape() =
       *JUST(GetPhysicalShape(Shape(blob_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx));
@@ -84,7 +84,7 @@ Maybe<void> InterfaceOpUtil::InferLogicalOutBlobDesc(const InterfaceBlobConf& bl
 Maybe<void> InterfaceOpUtil::GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                         const PbRpf<std::string>& input_bns,
                                                         const PbRpf<std::string>& output_bns,
-                                                        cfg::SbpSignature* sbp_signature) {
+                                                        SbpSignature* sbp_signature) {
   JUST(GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, true));
   return Maybe<void>::Ok();
 }
@@ -92,7 +92,7 @@ Maybe<void> InterfaceOpUtil::GetInputLikeOpSbpSignature(const InterfaceBlobConf&
 Maybe<void> InterfaceOpUtil::GetOutputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                          const PbRpf<std::string>& input_bns,
                                                          const PbRpf<std::string>& output_bns,
-                                                         cfg::SbpSignature* sbp_signature) {
+                                                         SbpSignature* sbp_signature) {
   JUST(GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, false));
   return Maybe<void>::Ok();
 }
@@ -109,10 +109,10 @@ Maybe<void> InterfaceOpUtil::InitBlobConf(InterfaceBlobConf* blob_conf,
 
 Maybe<void> InterfaceOpUtil::ParseNdSbpFromBlobConf(const InterfaceBlobConf& blob_conf,
                                                     const ParallelDesc& parallel_desc,
-                                                    cfg::NdSbp* nd_sbp) {
+                                                    NdSbp* nd_sbp) {
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (blob_conf.has_nd_sbp()) {
-    *nd_sbp = cfg::NdSbp(blob_conf.nd_sbp());
+    *nd_sbp = NdSbp(blob_conf.nd_sbp());
   } else {
     nd_sbp->clear_sbp_parallel();
     FOR_RANGE(int64_t, i, 0, num_axes) { nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel(); }

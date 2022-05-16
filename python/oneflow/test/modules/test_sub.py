@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -100,7 +100,7 @@ class TestSubModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sub_impl(test_case, *arg)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_random_dim_sub(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -110,7 +110,7 @@ class TestSubModule(flow.unittest.TestCase):
         z = x - y
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_random_dim_scalar_sub(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -120,7 +120,7 @@ class TestSubModule(flow.unittest.TestCase):
         z = x - y
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_sub_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device)
@@ -131,7 +131,7 @@ class TestSubModule(flow.unittest.TestCase):
         out4 = torch.sub(x, y)
         return out1, out2, out3, out4
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_sub_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
@@ -141,6 +141,20 @@ class TestSubModule(flow.unittest.TestCase):
         out3 = 2 - x
         out4 = torch.sub(x, y)
         return out1, out2, out3, out4
+
+    @autotest(n=5)
+    def test_sub_with_alpha(test_case):
+        device = random_device()
+        x1 = random_tensor(2, 2, 3).to(device)
+        x2 = random_tensor(2, 2, 3).to(device)
+        x3 = random_tensor(2, 2, 3).to(device)
+        y = random_tensor(2, 2, 3).to(device)
+        s = random().to(float)
+        alpha = random().to(float)
+        z1 = torch.sub(x1, y, alpha=alpha)
+        z2 = torch.sub(x2, s, alpha=alpha)
+        z3 = torch.sub(s, x3, alpha=alpha)
+        return z1, z2, z3
 
 
 if __name__ == "__main__":

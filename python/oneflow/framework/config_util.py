@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import sys
 import traceback
 
 import oneflow._oneflow_internal
@@ -552,6 +553,4 @@ def nccl_enable_mixed_fusion(val):
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def do_nothing(*args, **kwargs):
-    raise NotImplementedError(
-        "This action donot working because session is initialized."
-    )
+    print("This action donot working because session is initialized.", file=sys.stderr)

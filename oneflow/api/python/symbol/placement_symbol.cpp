@@ -24,13 +24,11 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
-
-#ifdef WITH_CUDA
-#include <cuda_runtime_api.h>
-#endif  // WITH_CUDA
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace py = pybind11;
 
@@ -38,37 +36,26 @@ namespace oneflow {
 
 namespace {
 
-int64_t GetGpuDeviceNum() {
-#ifndef WITH_CUDA
-  return 0;
-#else
-  int device_count = 0;
-  cudaGetDeviceCount(&device_count);
-  return device_count;
-#endif
+int64_t GetDeviceCount(const std::string& device_name) {
+  return Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(device_name);
 }
 
 struct PlacementSymbolExportUtil {
-  static Maybe<std::string> GetDeviceTag(const std::string& type) {
-    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
-    const auto& it = type2device_tag.find(type);
-    if (it == type2device_tag.end()) {
-      return Error::RuntimeError() << "placement type should only be cpu or cuda, but got " << type;
+  static Maybe<void> CheckDeviceTag(const std::string& type) {
+    if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
+      return Error::RuntimeError() << "placement type " << type << " not supported.";
     }
-    return it->second;
+    return Maybe<void>::Ok();
   }
 
   static Maybe<ParallelDesc> CreateParallelDesc(
       const std::string& type, const std::vector<std::string>& formated_machine_device_ids,
       const std::shared_ptr<Shape>& hierarchy_shape) {
-    CHECK_OR_RETURN(type == "cpu" || type == "cuda")
-        << "placement type must be \"cpu\" or \"cuda\".";
-    const auto& device_tag = JUST(GetDeviceTag(type));
-    auto parallel_conf =
-        JUST(MakeParallelConf(*device_tag, formated_machine_device_ids, hierarchy_shape));
+    JUST(CheckDeviceTag(type));
+    auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy_shape));
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+      parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
       return Maybe<void>::Ok();
     }));
 
@@ -157,16 +144,16 @@ struct PlacementSymbolExportUtil {
   static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& type) {
     static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
     CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
-    const auto& device_tag = JUST(GetDeviceTag(type));
-    auto it = device_tag2placement.find(*device_tag);
+    JUST(CheckDeviceTag(type));
+    auto it = device_tag2placement.find(type);
     if (it == device_tag2placement.end()) {
       int64_t node_size = GlobalProcessCtx::NodeSize();
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
-      if (*device_tag == "gpu") {
-        const int64_t gpu_device_num = GetGpuDeviceNum();
-        CHECK_NE_OR_RETURN(gpu_device_num, 0)
-            << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
-        device_num = std::min(device_num, gpu_device_num);
+      if (type != "cpu") {
+        const int64_t device_count = GetDeviceCount(type);
+        CHECK_NE_OR_RETURN(device_count, 0) << "Can\'t construct placement with \"" << type
+                                            << "\" type because there is no device!";
+        device_num = std::min(device_num, device_count);
       }
       std::vector<std::string> machine_device_ids;
       for (int64_t node_id = 0; node_id < node_size; ++node_id) {
@@ -175,7 +162,7 @@ struct PlacementSymbolExportUtil {
       }
       Symbol<ParallelDesc> placement =
           SymbolOf(*JUST(CreateParallelDesc(type, machine_device_ids, std::shared_ptr<Shape>())));
-      it = device_tag2placement.emplace(*device_tag, placement).first;
+      it = device_tag2placement.emplace(type, placement).first;
     }
     return it->second;
   }
@@ -236,10 +223,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                 PyExc_UserWarning,
                 "The property .device_type of placement is deprecated, please use .type instead",
                 1);
-            return p->device_tag() == "gpu" ? "cuda" : "cpu";
+            return p->device_tag();
           })
-      .def_property_readonly(
-          "type", [](Symbol<ParallelDesc> p) { return p->device_tag() == "gpu" ? "cuda" : "cpu"; })
+      .def_property_readonly("type", [](Symbol<ParallelDesc> p) { return p->device_tag(); })
       .def_property_readonly("hierarchy",
                              [](Symbol<ParallelDesc> p) {
                                PyErr_WarnEx(PyExc_UserWarning,
@@ -248,17 +234,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                             1);
                                return p->hierarchy();
                              })
-      .def_property_readonly("ranks",
-                             [](Symbol<ParallelDesc> p) {
-                               return PlacementSymbolExportUtil::GetPlacementRanks(p).GetOrThrow();
-                             })
-      .def("__str__", [](Symbol<ParallelDesc> p) { return PlacementToString(p).GetOrThrow(); })
-      .def("__repr__", [](Symbol<ParallelDesc> p) { return PlacementToString(p).GetOrThrow(); })
+      .def_property_readonly("ranks", &PlacementSymbolExportUtil::GetPlacementRanks)
+      .def("__str__", PlacementToString)
+      .def("__repr__", PlacementToString)
       .def(py::self == py::self)
       .def(py::hash(py::self));
-  m.def("AllDevicePlacement", [](const std::string& type) {
-    return PlacementSymbolExportUtil::AllDevicePlacement(type).GetOrThrow();
-  });
+  m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
 }
 
 }  // namespace oneflow

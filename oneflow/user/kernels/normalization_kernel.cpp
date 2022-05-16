@@ -320,6 +320,7 @@ class NormalizationInferenceCpuKernel final : public user_op::OpKernel {
       }
 
     } else {  // TODO(Liang Depeng): NHWC format
+      UNIMPLEMENTED() << "cpu normalization op only support nchw data_format now!";
     }
   }
 
