@@ -32,7 +32,6 @@ limitations under the License.
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/framework/load_library.h"
-#include "oneflow/core/serving/saved_model.cfg.h"
 #include "oneflow/core/serving/saved_model.pb.h"
 
 namespace oneflow {
@@ -131,15 +130,15 @@ inline Maybe<std::string> GetSerializedMachineId2DeviceIdListOFRecord(
   return PbMessage2TxtString(*JUST(ParseMachineAndDeviceIdList(parallel_conf)));
 }
 
-inline Maybe<cfg::SavedModel> LoadSavedModel(const std::string& saved_model_meta_file,
-                                             bool is_prototxt_file) {
+inline Maybe<std::string> LoadSavedModel(const std::string& saved_model_meta_file,
+                                         bool is_prototxt_file) {
   SavedModel saved_model_proto;
   if (is_prototxt_file) {
     CHECK_OR_RETURN(TryParseProtoFromTextFile(saved_model_meta_file, &saved_model_proto));
   } else {
     CHECK_OR_RETURN(TryParseProtoFromPbFile(saved_model_meta_file, &saved_model_proto));
   }
-  return cfg::SavedModel(saved_model_proto);
+  return saved_model_proto.SerializeAsString();
 }
 
 inline Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }

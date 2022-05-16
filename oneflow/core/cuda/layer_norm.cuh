@@ -411,8 +411,6 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormWarp
           stream, load, store, rows, cols, epsilon, mean, inv_variance);                      \
     }                                                                                         \
   }
-  DEFINE_ONE_ELIF(1)
-  DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(4)
   DEFINE_ONE_ELIF(8)
   DEFINE_ONE_ELIF(16)
@@ -425,35 +423,13 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormWarp
                                                inv_variance);                                    \
   }
   DEFINE_ONE_ELIF(2)
-  DEFINE_ONE_ELIF(3)
   DEFINE_ONE_ELIF(4)
-  DEFINE_ONE_ELIF(5)
-  DEFINE_ONE_ELIF(6)
-  DEFINE_ONE_ELIF(7)
   DEFINE_ONE_ELIF(8)
-  DEFINE_ONE_ELIF(9)
-  DEFINE_ONE_ELIF(10)
-  DEFINE_ONE_ELIF(11)
   DEFINE_ONE_ELIF(12)
-  DEFINE_ONE_ELIF(13)
-  DEFINE_ONE_ELIF(14)
-  DEFINE_ONE_ELIF(15)
   DEFINE_ONE_ELIF(16)
-  DEFINE_ONE_ELIF(17)
-  DEFINE_ONE_ELIF(18)
-  DEFINE_ONE_ELIF(19)
   DEFINE_ONE_ELIF(20)
-  DEFINE_ONE_ELIF(21)
-  DEFINE_ONE_ELIF(22)
-  DEFINE_ONE_ELIF(23)
   DEFINE_ONE_ELIF(24)
-  DEFINE_ONE_ELIF(25)
-  DEFINE_ONE_ELIF(26)
-  DEFINE_ONE_ELIF(27)
   DEFINE_ONE_ELIF(28)
-  DEFINE_ONE_ELIF(29)
-  DEFINE_ONE_ELIF(30)
-  DEFINE_ONE_ELIF(31)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
@@ -478,8 +454,6 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchLayerNormWarp
           stream, load, store, rows, cols, epsilon, mean, inv_variance);                      \
     }                                                                                         \
   }
-  DEFINE_ONE_ELIF(1)
-  DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(4)
   DEFINE_ONE_ELIF(8)
   DEFINE_ONE_ELIF(16)
@@ -492,19 +466,12 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchLayerNormWarp
                                                inv_variance);                                    \
   }
   DEFINE_ONE_ELIF(4)
-  DEFINE_ONE_ELIF(6)
   DEFINE_ONE_ELIF(8)
-  DEFINE_ONE_ELIF(10)
   DEFINE_ONE_ELIF(12)
-  DEFINE_ONE_ELIF(14)
   DEFINE_ONE_ELIF(16)
-  DEFINE_ONE_ELIF(18)
   DEFINE_ONE_ELIF(20)
-  DEFINE_ONE_ELIF(22)
   DEFINE_ONE_ELIF(24)
-  DEFINE_ONE_ELIF(26)
   DEFINE_ONE_ELIF(28)
-  DEFINE_ONE_ELIF(30)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
@@ -1017,8 +984,6 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormGrad
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);               \
     }                                                                                           \
   }
-  DEFINE_ONE_ELIF(1)
-  DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(4)
   DEFINE_ONE_ELIF(8)
   DEFINE_ONE_ELIF(16)
@@ -1031,35 +996,13 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormGrad
         stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);             \
   }
   DEFINE_ONE_ELIF(2)
-  DEFINE_ONE_ELIF(3)
   DEFINE_ONE_ELIF(4)
-  DEFINE_ONE_ELIF(5)
-  DEFINE_ONE_ELIF(6)
-  DEFINE_ONE_ELIF(7)
   DEFINE_ONE_ELIF(8)
-  DEFINE_ONE_ELIF(9)
-  DEFINE_ONE_ELIF(10)
-  DEFINE_ONE_ELIF(11)
   DEFINE_ONE_ELIF(12)
-  DEFINE_ONE_ELIF(13)
-  DEFINE_ONE_ELIF(14)
-  DEFINE_ONE_ELIF(15)
   DEFINE_ONE_ELIF(16)
-  DEFINE_ONE_ELIF(17)
-  DEFINE_ONE_ELIF(18)
-  DEFINE_ONE_ELIF(19)
   DEFINE_ONE_ELIF(20)
-  DEFINE_ONE_ELIF(21)
-  DEFINE_ONE_ELIF(22)
-  DEFINE_ONE_ELIF(23)
   DEFINE_ONE_ELIF(24)
-  DEFINE_ONE_ELIF(25)
-  DEFINE_ONE_ELIF(26)
-  DEFINE_ONE_ELIF(27)
   DEFINE_ONE_ELIF(28)
-  DEFINE_ONE_ELIF(29)
-  DEFINE_ONE_ELIF(30)
-  DEFINE_ONE_ELIF(31)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
@@ -1086,8 +1029,6 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchLayerNormGrad
           stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);               \
     }                                                                                           \
   }
-  DEFINE_ONE_ELIF(1)
-  DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(4)
   DEFINE_ONE_ELIF(8)
   DEFINE_ONE_ELIF(16)
@@ -1100,19 +1041,12 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchLayerNormGrad
         stream, load_x, load_scaled_dy, store, mean, inv_variance, rows, cols);             \
   }
   DEFINE_ONE_ELIF(4)
-  DEFINE_ONE_ELIF(6)
   DEFINE_ONE_ELIF(8)
-  DEFINE_ONE_ELIF(10)
   DEFINE_ONE_ELIF(12)
-  DEFINE_ONE_ELIF(14)
   DEFINE_ONE_ELIF(16)
-  DEFINE_ONE_ELIF(18)
   DEFINE_ONE_ELIF(20)
-  DEFINE_ONE_ELIF(22)
   DEFINE_ONE_ELIF(24)
-  DEFINE_ONE_ELIF(26)
   DEFINE_ONE_ELIF(28)
-  DEFINE_ONE_ELIF(30)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
   else {
