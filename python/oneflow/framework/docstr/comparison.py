@@ -19,7 +19,8 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.greater,
-    """Returns the truth value of :math:`input > other` element-wise.
+    """gt(input, other)
+    Returns the truth value of :math:`input > other` element-wise.
 
     Args:
         input (oneflow.Tensor): A Tensor

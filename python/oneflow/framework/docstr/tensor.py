@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.tensor,
-    r"""
+    r"""tensor(data, dtype, device, placement, sbp, requires_grad)
     Constructs a tensor with data, return a global tensor if placement and sbp are in kwargs,
        otherwise return a local tensor.
 

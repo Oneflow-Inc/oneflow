@@ -18,7 +18,8 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.erfinv,
-    """Computes the inverse error function of :attr:`input`. The inverse error function is defined in the range :math:`(-1, 1)` as:
+    """erfinv(input)
+    Computes the inverse error function of :attr:`input`. The inverse error function is defined in the range :math:`(-1, 1)` as:
 
     .. math::
         \mathrm{erfinv}(\mathrm{erf}(x)) = x
