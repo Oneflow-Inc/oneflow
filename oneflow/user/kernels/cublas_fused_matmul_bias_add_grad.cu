@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 cudaDataType_t GetGemmComputeType(cudaDataType_t data_type) {
   switch (data_type) {
     case CUDA_R_32F: return CUDA_R_32F;
@@ -133,6 +135,8 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
 REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(float)
 REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(double)
 REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(half)
+
+}  // namespace 
 
 }  // namespace oneflow
 
