@@ -22,6 +22,7 @@ namespace oneflow {
   const user_op::TensorDesc& input_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
   *output_tensor_desc->mut_shape() = input_tensor_desc.shape();
+  *output_tensor_desc->mut_stride() = input_tensor_desc.stride();
   *output_tensor_desc->mut_is_dynamic() = input_tensor_desc.is_dynamic();
   return Maybe<void>::Ok();
 }

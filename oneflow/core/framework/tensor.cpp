@@ -50,8 +50,8 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
-    const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
-    bool is_lazy, bool requires_grad, bool is_leaf) {
+    const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
+    DataType dtype, const Symbol<Device>& device, bool is_lazy, bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
       std::make_shared<MirroredTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
   if (is_lazy) {
