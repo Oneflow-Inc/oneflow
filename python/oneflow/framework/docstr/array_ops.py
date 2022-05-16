@@ -338,6 +338,8 @@ add_docstr(
     r"""
     cat(inputs, dim=0) -> Tensor 
 
+    Alias for :func:`oneflow.concat`.
+
     """,
 )
 
@@ -406,7 +408,7 @@ add_docstr(
         >>> import numpy as np
         >>> input = np.random.randn(3, 4, 3, 5)
         >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
-        >>> output = flow.gather(flow.Tensor(input), 1, flow.tensor(index, dtype=flow.int))
+        >>> output = flow.gather(flow.Tensor(input), 1, flow.tensor(index, dtype=flow.int64))
         >>> output.shape
         oneflow.Size([3, 4, 3, 5])
 
