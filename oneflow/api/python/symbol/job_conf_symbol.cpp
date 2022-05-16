@@ -16,25 +16,27 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include "oneflow/core/common/throw.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/job/job_conf.cfg.h"
+#include "oneflow/core/job/job_conf.pb.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<JobDesc> CreateJobConfSymbol(int64_t symbol_id,
-                                   const std::shared_ptr<cfg::JobConfigProto>& symbol_conf) {
+Maybe<JobDesc> CreateJobConfSymbol(int64_t symbol_id, const std::string& serialized_symbol_conf) {
   JobConfigProto symbol_pb;
-  symbol_conf->ToProto(&symbol_pb);
+  if (!TxtString2PbMessage(serialized_symbol_conf, &symbol_pb)) {
+    THROW(RuntimeError) << "job conf parse failed.\n" << serialized_symbol_conf;
+  }
   return JobDesc::New(symbol_id, symbol_pb);
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<JobDesc, std::shared_ptr<JobDesc>>(m, "JobConfSymbol")
-      .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::JobConfigProto>& symbol_conf) {
-        return CreateJobConfSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
+      .def(py::init([](int64_t symbol_id, const std::string& serialized_symbol_conf) {
+        return CreateJobConfSymbol(symbol_id, serialized_symbol_conf).GetPtrOrThrow();
       }))
       .def_property_readonly("symbol_id",
                              [](const JobDesc& x) {
@@ -43,7 +45,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                }
                                return CHECK_JUST(x.symbol_id());
                              })
-      .def_property_readonly("data", &JobDesc::cfg_job_conf);
+      .def_property_readonly("data", [](const JobDesc& job_conf_sym) -> std::string {
+        return PbMessage2TxtString(job_conf_sym.job_conf());
+      });
 }
 
 }  // namespace oneflow

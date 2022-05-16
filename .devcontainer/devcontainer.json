@@ -22,6 +22,7 @@
 		"ONEFLOW_CI_SRC_DIR": "${containerWorkspaceFolder}",
 		"ONEFLOW_CI_BUILD_DIR": "${containerWorkspaceFolder}/build",
 		"ONEFLOW_CI_CMAKE_INIT_CACHE": "${containerWorkspaceFolder}/cmake/caches/ci/cuda.cmake",
+		"ONEFLOW_CI_BUILD_PARALLEL": "20"
 	},
 	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/ccache && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/local && mkdir -p ${localWorkspaceFolder}/devcontainer-cache/dot/cache",
 	"mounts": [
@@ -46,7 +47,8 @@
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
 		"llvm-vs-code-extensions.vscode-clangd",
-		"ms-vscode.cmake-tools"
+		"ms-vscode.cmake-tools",
+		"ms-python.python"
 	],
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "root",

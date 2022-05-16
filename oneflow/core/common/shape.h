@@ -27,10 +27,6 @@ namespace oneflow {
 
 class ShapeView;
 
-namespace cfg {
-class ShapeProto;
-}
-
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
@@ -38,7 +34,6 @@ class Shape final {
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
-  explicit Shape(const cfg::ShapeProto& shape_proto);
   Shape(const std::initializer_list<int64_t>& dim_vec);
   ~Shape() = default;
   Shape& operator=(const Shape& shape);
@@ -61,7 +56,7 @@ class Shape final {
   const DimVector& dim_vec() const { return dim_vec_; }
   DimVector& dim_vec() { return dim_vec_; }
   int64_t elem_cnt() const {
-    return std::accumulate(dim_vec_.begin(), dim_vec_.end(), 1, std::multiplies<int>());
+    return std::accumulate(dim_vec_.begin(), dim_vec_.end(), int64_t(1), std::multiplies<>());
   }
   int64_t At(int64_t index) const;
   void Set(int64_t index, int64_t val);
