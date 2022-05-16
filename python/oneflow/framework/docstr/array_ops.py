@@ -337,9 +337,7 @@ add_docstr(
     oneflow.cat,
     r"""
     cat(inputs, dim=0) -> Tensor 
-
     Alias for :func:`oneflow.concat`.
-
     """,
 )
 
