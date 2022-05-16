@@ -218,12 +218,13 @@ def to_string(*args, **kwargs) -> str:
         if isinstance(x, DualObject):
             return x.name
         return str(x)
+
     strs = []
     if len(args) > 0:
-        strs.append(', '.join([_to_string(arg) for arg in args]))
+        strs.append(", ".join([_to_string(arg) for arg in args]))
     if len(kwargs) > 0:
-        strs.append(', '.join([f'{k}={_to_string(v)}' for k, v in kwargs.items()]))
-    return ', '.join(strs)
+        strs.append(", ".join([f"{k}={_to_string(v)}" for k, v in kwargs.items()]))
+    return ", ".join(strs)
 
 
 counter = 0
@@ -649,8 +650,12 @@ def GetDualObject(name, pytorch, oneflow):
                 if method_name == "__call__":
 
                     if name in profiled_method_name:
+
                         def method(self, *args, **kwargs):
-                            return auto_profiler.profile_dual_object(self)(*args, **kwargs)
+                            return auto_profiler.profile_dual_object(self)(
+                                *args, **kwargs
+                            )
+
                         return method
 
                     def dual_method(self, *args, **kwargs):
@@ -674,7 +679,9 @@ def GetDualObject(name, pytorch, oneflow):
                             testing_graph,
                             *args,
                         )
-                        return GetDualObject(f'{name}({param_str})', pytorch_res, oneflow_res)
+                        return GetDualObject(
+                            f"{name}({param_str})", pytorch_res, oneflow_res
+                        )
 
                 else:
 
