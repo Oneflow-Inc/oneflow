@@ -14,18 +14,21 @@ def get_sole_value(x):
 
 def get_pytorch_cpu_kernel_time(prof):
     assert prof.num > 1
-    kernel_cpu_time = sum(map(lambda x: x.self_cpu_time_total, filter(lambda x: x.count >= prof.num, prof.key_averages()))) / prof.num
+    cpu_kernel_items = filter(lambda x: x.count >= prof.num, prof.key_averages())
+    kernel_cpu_time = sum(map(lambda x: x.self_cpu_time_total, cpu_kernel_items)) / prof.num
     return round(kernel_cpu_time, 1)
 
 
 def get_oneflow_cpu_kernel_time(prof):
     assert prof.num > 1
-    kernel_cpu_time = sum(map(lambda x: x.cpu_time_total, filter(lambda x: x.count >= prof.num, prof.key_averages()))) / prof.num
+    cpu_kernel_items = filter(lambda x: x.count >= prof.num, prof.key_averages())
+    kernel_cpu_time = sum(map(lambda x: x.cpu_time_total, cpu_kernel_items)) / prof.num
     return round(kernel_cpu_time, 1)
 
 
 def get_pytorch_gpu_kernel_time(prof):
-    kernel_gpu_time = sum(map(lambda x: x.self_cuda_time_total, filter(lambda x: x.count >= prof.num and x.key[:6] == 'aten::', prof.key_averages()))) / prof.num
+    gpu_kernel_items = filter(lambda x: x.count >= prof.num and x.key[:6] == 'aten::', prof.key_averages())
+    kernel_gpu_time = sum(map(lambda x: x.self_cuda_time_total, gpu_kernel_items)) / prof.num
     return round(kernel_gpu_time, 1)
 
 
