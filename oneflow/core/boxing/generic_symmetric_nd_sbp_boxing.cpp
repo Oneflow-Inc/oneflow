@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 
