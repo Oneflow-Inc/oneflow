@@ -45,7 +45,9 @@ size_t CudaDeviceManager::GetDeviceCount(size_t primary_device_index) {
 
 size_t CudaDeviceManager::GetDeviceCount() {
   int count = 0;
-  OF_CUDA_CHECK(cudaGetDeviceCount(&count));
+  cudaError_t err = cudaGetDeviceCount(&count);
+  if (err == cudaErrorNoDevice) { return 0; }
+  OF_CUDA_CHECK(err);
   return count;
 }
 

@@ -43,8 +43,8 @@ namespace impl {
 class TensorWithDataFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                           const Optional<Symbol<Device>>& device,
-                           const bool& requires_grad) const {
+                           const Optional<Symbol<Device>>& device, const bool requires_grad,
+                           const bool pin_memory) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     //  even if in nn.Graph build (module forward function), if you create a flow.Tensor,
     //  its a eager tensor by Run functional::Empty() in LazyMode::Grad(false)
@@ -61,10 +61,10 @@ class TensorWithDataFunctor {
       if (ret != 0) { return Error::RuntimeError(); }
 
       const auto& other = PyTensor_Unpack(data);
-      return MakeTensorFromOtherTensor(other, dtype, device, requires_grad);
+      return MakeTensorFromOtherTensor(other, dtype, device, requires_grad, pin_memory);
     } else {
       // Make tensor from python sequence or numpy array.
-      return MakeLocalTensorFromData(data, dtype, device, requires_grad);
+      return MakeLocalTensorFromData(data, dtype, device, requires_grad, pin_memory);
     }
   }
 };
@@ -74,7 +74,7 @@ class ConsistentTensorWithDataFunctor {
   Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                           const bool& requires_grad) const {
+                           const bool requires_grad) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
@@ -120,7 +120,11 @@ class TensorWithOtherCtorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
-    return MakeTensorFromOtherTensor(other);
+    bool pin_memory = false;
+    if (other->is_local()) {
+      pin_memory = JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory();
+    }
+    return MakeTensorFromOtherTensor(other, pin_memory);
   }
 };
 
@@ -140,11 +144,16 @@ class TensorWithDataCtorFunctor {
     const auto& dtype = DType::Float();
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
+      const bool pin_memory =
+          other->is_local()
+              ? JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory()
+              : false;
       return MakeTensorFromOtherTensor(other, dtype, device,
-                                       /*requires_grad=*/false);
+                                       /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
     // Make tensor from python sequence or numpy array.
-    return MakeLocalTensorFromData(data, dtype, device, /*requires_grad=*/false);
+    return MakeLocalTensorFromData(data, dtype, device, /*requires_grad=*/false,
+                                   /*pin_memory=*/false);
   }
 };
 
@@ -185,7 +194,7 @@ class TensorWithShapeCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, DType::Float(), device_);
+    return functional::Empty(shape, DType::Float(), device_, /*pin_memory=*/false);
   }
 };
 
@@ -207,6 +216,7 @@ class AssignLocalTensorFunctor {
   }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
                          const std::shared_ptr<one::Tensor>& value) const {
+    // JUST(CheckInplaceValid(ref)); // align check to torch
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
@@ -277,7 +287,7 @@ class LocalTensorSharedNumpyDataFunctor {
                                                                  /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject(), /*pin_memory=*/false));
     const auto& stream = GetDefaultStreamByDevice(device);
     JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
@@ -297,7 +307,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentTensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
   m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
-  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensorFunctor");
+  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensor");
   m.add_functor<impl::LocalTensorSharedNumpyDataFunctor>("LocalTensorSharedNumpyData");
 }
 

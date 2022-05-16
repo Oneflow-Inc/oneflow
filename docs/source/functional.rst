@@ -49,4 +49,5 @@ Functional operations for neural networks
 .. autofunction:: sparse_softmax_cross_entropy
 .. autofunction:: embedding
 .. autofunction:: linear
+.. autofunction:: cosine_similarity
 .. autofunction:: cross_entropy

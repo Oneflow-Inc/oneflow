@@ -44,6 +44,11 @@ std::shared_ptr<Tensor> Parameter::contiguous() const {
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
+std::shared_ptr<Tensor> Parameter::pin_memory() const {
+  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+  return CHECK_JUST(functional::PinMemory(tensor));
+}
+
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
     bool is_lazy, bool requires_grad, bool is_leaf) {
@@ -73,11 +78,17 @@ std::shared_ptr<Tensor> MirroredTensor::contiguous() const {
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
+std::shared_ptr<Tensor> MirroredTensor::pin_memory() const {
+  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+  return CHECK_JUST(functional::PinMemory(tensor));
+}
+
 Maybe<Tensor> MirroredTensor::clone() const {
   const auto& device_type = JUST(this->device())->type();
   int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
-  return JUST(functional::Copy(input, device_type, device_id));
+  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory();
+  return JUST(functional::Copy(input, device_type, device_id, /*pin_memory=*/pin_memory));
 }
 
 std::shared_ptr<Tensor> ConsistentTensor::contiguous() const {
@@ -86,11 +97,17 @@ std::shared_ptr<Tensor> ConsistentTensor::contiguous() const {
   return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
+std::shared_ptr<Tensor> ConsistentTensor::pin_memory() const {
+  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+  return CHECK_JUST(functional::PinMemory(tensor));
+}
+
 Maybe<Tensor> ConsistentTensor::clone() const {
   const auto& local_tensor = JUST(cur_rank_phy_tensor());
   const auto& device_type = JUST(local_tensor->device())->type();
   int64_t device_id = JUST(local_tensor->device())->device_id();
-  const auto& cloned_local_tensor = JUST(functional::Copy(local_tensor, device_type, device_id));
+  const auto& cloned_local_tensor =
+      JUST(functional::Copy(local_tensor, device_type, device_id, /*pin_memory=*/false));
   DisableCheckConsistentTensorMetaScope disable_meta_check{};
   return functional::LocalToConsistent(cloned_local_tensor, JUST(parallel_desc()),
                                        *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype());

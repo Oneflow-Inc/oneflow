@@ -108,11 +108,12 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
     if (ctx->requires_grad_x) {
       const auto& update = ctx->SavedTensors().at(0);
       const auto& temp = JUST(functional::ZerosLike(update));
-      in_grads->at(0) = JUST(functional::SliceUpdate(out_grads.at(0), temp, ctx->start, ctx->stop,
-                                                     ctx->step, /*inplace=*/false));
+      (*in_grads)[0] = JUST(functional::SliceUpdate(out_grads[0], temp, ctx->start, ctx->stop,
+                                                    ctx->step, /*inplace=*/false));
     }
     if (ctx->requires_grad_update) {
-      in_grads->at(1) = JUST(functional::Slice(out_grads.at(0), ctx->start, ctx->stop, ctx->step));
+      (*in_grads)[1] = JUST(functional::Slice(out_grads[0], ctx->start, ctx->stop, ctx->step,
+                                              /*enable_view_slice=*/true));
     }
     return Maybe<void>::Ok();
   }

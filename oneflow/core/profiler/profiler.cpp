@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/vm/vm_util.h"
 #ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
@@ -86,6 +88,37 @@ void ProfilerStop() {
 #ifdef OF_ENABLE_PROFILER
   OF_CUDA_CHECK(cudaProfilerStop());
 #endif  // OF_ENABLE_PROFILER
+}
+
+void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes) {
+  CHECK_JUST(vm::ClusterSync());
+  if (Global<ProfileMgr>::Get() == nullptr) {
+    Global<ProfileMgr>::New(use_cpu, use_cuda, record_shapes);
+  }
+}
+
+// DisableProfilerAndReturnResult will return a json of profile results.
+Maybe<std::string> DisableProfilerAndReturnResult() {
+  JUST(vm::ClusterSync());
+
+  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  std::string results = pmgr->DumpResultsJson();
+  Global<ProfileMgr>::Delete();
+  return results;
+}
+
+Maybe<std::string> StartRecord(const std::string& name) {
+  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  JUST(vm::ClusterSync());
+  return pmgr->RegisterEventRecorder(profiler::EventRecorder::CreateCustomEventRecorder(name),
+                                     name);
+}
+
+Maybe<void> EndRecord(const std::string& event_recorder_key) {
+  auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
+  JUST(vm::ClusterSync());
+  pmgr->UnregisterEventRecorder(event_recorder_key);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace profiler
