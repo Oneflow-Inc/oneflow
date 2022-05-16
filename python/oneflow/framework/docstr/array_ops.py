@@ -82,8 +82,7 @@ add_docstr(
 
 add_docstr(
     oneflow.tril,
-    r"""tril(input, diagonal)
-    Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
+    r"""Returns the lower triangular part of a matrix (2-D tensor) or batch of matrices input along the specified diagonal, 
     the other elements of the result tensor out are set to 0.
     
     .. note::
@@ -244,13 +243,12 @@ add_docstr(
 
 add_docstr(
     oneflow.transpose,
-    r"""transpose(input, dim0, dim1)
-    Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
+    r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
 
     The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
 
     Args:
-        input (oneflow.Tensor): the input tensor.
+        input (oneflow.Tensor): The input tensor.
         dim0 (int): the first dimension to be transposed.
         dim1 (int): the second dimension to be transposed.
     Returns:
@@ -272,8 +270,7 @@ add_docstr(
 
 add_docstr(
     oneflow.stack,
-    r"""stack(inputs, dim)
-    Concatenates a sequence of tensors along a new dimension.
+    r"""Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
 
     A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1]`
@@ -304,14 +301,13 @@ add_docstr(
 
 add_docstr(
     oneflow.squeeze,
-    r"""squeeze(input, dim)
-    This operator removes the specified dimention which size is 1 of the input Tensor.
+    r"""This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
 
     The amount of element in return value is the same as Tensor `input`.
 
     Args:
-        input (oneflow.Tensor): the input Tensor.
+        input (oneflow.Tensor): The input Tensor.
         dim (int, optinal): Defaults to None, if given, the input will be squeezed only in this dimension.
 
     Returns:
@@ -336,15 +332,7 @@ add_docstr(
 add_docstr(
     oneflow.cat,
     r"""
-    cat(inputs, dim=0) -> Tensor 
-    Alias for :func:`oneflow.concat`.
-    """,
-)
-
-add_docstr(
-    oneflow.concat,
-    r"""
-    concat(inputs, dim=0) -> Tensor
+    cat(tensors, dim=0) -> Tensor 
 
     Concatenate two or more `Tensor` s at specified dim.
 
@@ -406,7 +394,7 @@ add_docstr(
         >>> import numpy as np
         >>> input = np.random.randn(3, 4, 3, 5)
         >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
-        >>> output = flow.gather(flow.Tensor(input), 1, flow.tensor(index, dtype=flow.int64))
+        >>> output = flow.gather(flow.Tensor(input), 1, flow.tensor(index, dtype=flow.int))
         >>> output.shape
         oneflow.Size([3, 4, 3, 5])
 
