@@ -22,5 +22,5 @@ limitations under the License.
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("InitNumpyCAPI", []() { return oneflow::numpy::InitNumpyCAPI().GetOrThrow(); });
+  m.def("InitNumpyCAPI", []() { return oneflow::numpy::InitNumpyCAPI(); });
 }

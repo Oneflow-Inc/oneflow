@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -26,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -58,7 +59,9 @@ Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>&
 
 class MutMirroredTensorMeta : public TensorMeta {
  public:
-  MutMirroredTensorMeta() : TensorMeta(std::make_shared<const Shape>(), kInvalidDataType) {}
+  MutMirroredTensorMeta()
+      : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
+                   kInvalidDataType) {}
   MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
   MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
   ~MutMirroredTensorMeta() override = default;
@@ -91,7 +94,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   for (int i = 0; i < inputs.size(); i++) {
     const auto& input_device = JUST(inputs.at(i)->device());
     if (i > 0) {
-      CHECK_OR_RETURN(*default_device == *input_device) << Error::InputDeviceNotMatchError();
+      CHECK_OR_RETURN(*default_device == *input_device)
+          << Error::RuntimeError()
+          << "Expected all tensors to be on the same device, but found at least two devices, "
+          << default_device->ToString() << " (positional 0) and " << input_device->ToString()
+          << " (positional " << i << ")!";
     }
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
@@ -125,11 +132,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   // Infer shapes and dtypes
-  const auto& device_tag = JUST(stream->device()->of_type());
-  JUST(user_op_expr.InferPhysicalShapeAndDType(
+  const auto& device_tag = stream->device()->type();
+  JUST(user_op_expr.InferPhysicalTensorDesc(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
+        return CHECK_JUST(TensorImpl4Tensor(inputs[i]))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
         // using thread_local TensorMeta pointer if inplace.
@@ -137,17 +144,21 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return output_tensor_metas->at(i);
       }));
 
+  const bool pin_memory = ctx.pin_memory.value_or(false);
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
       tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
       const auto& dep_object = NewLocalDepObject();
-      JUST(tensor_impl->InitEagerBlobObject(dep_object));
+      JUST(tensor_impl->InitEagerBlobObject(dep_object, pin_memory));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
       // output i is inplaced.
       // check thread_local TensorMeta and tensor_impl TensorMeta.
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas->at(i)->shape());
+      // TODO:(thread_local TensorMeta set stride then check)
+      // CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() ==
+      // output_tensor_metas->at(i)->stride());
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
@@ -163,16 +174,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, stream);
   }));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> RunEmptyOp(TensorTuple* outputs) {
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(0)));
-  const auto& shape = tensor_impl->tensor_meta()->shape_ptr();
-  const auto& data_type = tensor_impl->dtype();
-  const auto& device = tensor_impl->device();
-  outputs->at(0) = JUST(functional::Empty(*shape, DType(data_type), device));
   return Maybe<void>::Ok();
 }
 
@@ -414,7 +415,8 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
   int top_n = JUST(ctx.attrs.GetAttr<int32_t>("top_n"));
-  outputs->assign(inputs.begin(), inputs.begin() + top_n);
+  outputs->resize(top_n);
+  for (int i = 0; i < top_n; ++i) { (*outputs)[i] = JUST(JUST(VectorAt(inputs, i))->detach()); }
   return Maybe<void>::Ok();
 }
 

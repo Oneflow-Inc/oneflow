@@ -143,14 +143,10 @@ class TestTensor(flow.unittest.TestCase):
         b = a.to_global(placement=placement, sbp=sbp)
         test_case.assertTrue(b.is_global)
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             b.device()
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             b._tensor_buffer_shapes_and_dtypes
 
     @flow.unittest.skip_unless_1n4d()

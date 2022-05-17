@@ -145,7 +145,7 @@ template<>
   return JUST(GetInterpreter(inputs, ctx, op_expr))->Apply(op_expr, inputs, outputs, ctx);
 }
 
-/* static */ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
+/* static */ Maybe<OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
   std::shared_ptr<OpAttribute> op_attribute = JUST([&]() -> Maybe<OpAttribute> {
     auto infer_ctx = JUST(GetCurInferCtx());
@@ -155,7 +155,7 @@ template<>
       return infer_ctx->AddAndInferConsistentOp(op_conf);
     }
   }());
-  return std::make_shared<cfg::OpAttribute>(*op_attribute);
+  return op_attribute;
 }
 
 /* static */ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
@@ -173,8 +173,9 @@ template<>
   if (is_local) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
-    const auto& tensor = JUST(MirroredTensor::MakeTensor(
-        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/true));
+    const auto& tensor =
+        JUST(MirroredTensor::MakeTensor(blob_attr->shape(), blob_attr->stride(), dtype, device,
+                                        is_lazy, /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
     const auto& nd_sbp = std::make_shared<NdSbp>();

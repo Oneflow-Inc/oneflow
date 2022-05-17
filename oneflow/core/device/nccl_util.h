@@ -49,6 +49,7 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
 #if defined(__CUDA_BF16_TYPES_EXIST__) && NCCL_VERSION_CODE >= 21003
     case DataType::kBFloat16: return ncclBfloat16;
 #endif
+    case DataType::kUInt8: return ncclUint8;
     case DataType::kUInt32: return ncclUint32;
     case DataType::kUInt64: return ncclUint64;
     default: UNIMPLEMENTED();

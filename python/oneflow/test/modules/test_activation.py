@@ -507,7 +507,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
             _test_softplus_threshold,
             _test_softplus_backward,
         ]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
@@ -580,6 +580,18 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
     @autotest()
     def test_leakyrelu_module_with_random_data(test_case):
         m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
+    def test_leakyrelu_module_with_inplace_arg(test_case):
+        m = torch.nn.LeakyReLU(
+            negative_slope=random() | nothing(), inplace=random().to(bool) | nothing()
+        )
         m.train(random())
         device = random_device()
         m.to(device)
@@ -740,6 +752,111 @@ class TestLogSigmoidFunction(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
         y = torch.nn.functional.logsigmoid(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestHardshrinkModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_hardshrink_module_with_random_data(test_case):
+        m = torch.nn.Hardshrink(lambd=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
+    def test_hardshrink_module_with_0dim_data(test_case):
+        m = torch.nn.Hardshrink(lambd=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=0).to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_hardshrink_module_with_0_size_data(test_case):
+        m = torch.nn.Hardshrink(lambd=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(4, 2, 3, 0, 3).to(device)
+        y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestSoftshrinkModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_softshrink_module_with_random_data(test_case):
+        m = torch.nn.Softshrink(alpha=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
+    def test_softshrink_module_with_0dim_data(test_case):
+        m = torch.nn.Softshrink(alpha=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=0).to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_softshrink_module_with_0_size_data(test_case):
+        m = torch.nn.Softshrink(alpha=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(4, 2, 3, 0, 3).to(device)
+        y = m(x)
+        return y
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestThresholdModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_threshold_module_with_random_data(test_case):
+        m = torch.nn.Threshold(
+            threshold=random() | nothing(), value=random() | nothing()
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
+    def test_threshold_module_with_0dim_data(test_case):
+        m = torch.nn.Threshold(
+            threshold=random() | nothing(), value=random() | nothing()
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=0).to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_threshold_module_with_0_size_data(test_case):
+        m = torch.nn.Threshold(
+            threshold=random() | nothing(), value=random() | nothing()
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(4, 2, 3, 0, 3).to(device)
+        y = m(x)
         return y
 
 

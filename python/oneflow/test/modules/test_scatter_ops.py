@@ -22,73 +22,72 @@ import numpy as np
 from oneflow.test_utils.automated_test_util import *
 
 
+def _get_indexes(device):
+    return (
+        constant(
+            torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
+        ),
+        constant(
+            torch.tensor(np.array([[1, 0], [0, 1]]), dtype=torch.int64, device=device)
+        ),
+        constant(
+            torch.tensor(np.array([[1, 0], [1, 0]]), dtype=torch.int64, device=device)
+        ),
+        constant(
+            torch.tensor(np.array([[0, 1], [0, 1]]), dtype=torch.int64, device=device)
+        ),
+    )
+
+
+def _test_scatter_random_data(test_case, test_scalar: bool, dim: int):
+    device = random_device()
+    input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+    src = 3.14 if test_scalar else random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+    y = torch.scatter(input, dim, oneof(*_get_indexes(device)), src)
+    return y
+
+
+def _test_scatter_add_random_data(test_case, dim: int):
+    device = random_device()
+    input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+    src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+    y = torch.scatter_add(input, dim, oneof(*_get_indexes(device)), src)
+    return y
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestScatterOpsModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_scatter_random_data_at_dim_0(test_case):
-        device = random_device()
-        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        index = constant(
-            torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
-        )
-        y = torch.scatter(input, 0, index, src)
-        return y
+        return _test_scatter_random_data(test_case, False, 0)
 
     @autotest(n=5)
     def test_scatter_random_data_at_dim_1(test_case):
-        device = random_device()
-        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        index = constant(
-            torch.tensor(np.array([[1, 0], [0, 1]]), dtype=torch.int64, device=device)
-        )
-        y = torch.scatter(input, 1, index, src)
-        return y
+        return _test_scatter_random_data(test_case, False, 1)
+
+    @autotest(n=5)
+    def test_scatter_random_data_at_negative_dim1(test_case):
+        return _test_scatter_random_data(test_case, False, -1)
 
     @autotest(n=5)
     def test_scatter_scalar_random_data_at_dim0(test_case):
-        device = random_device()
-        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        index = constant(
-            torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
-        )
-        y = torch.scatter(input, 0, index, 3.14)
-        return y
+        return _test_scatter_random_data(test_case, True, 0)
 
     @autotest(n=5)
     def test_scatter_scalar_random_data_at_dim1(test_case):
-        device = random_device()
-        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        index = constant(
-            torch.tensor(np.array([[1, 0], [0, 1]]), dtype=torch.int64, device=device)
-        )
-        y = torch.scatter(input, 1, index, 3.14)
-        return y
+        return _test_scatter_random_data(test_case, True, 1)
+
+    @autotest(n=5)
+    def test_scatter_scalar_random_data_at_negative_dim1(test_case):
+        return _test_scatter_random_data(test_case, True, -1)
 
     @autotest(n=5)
     def test_scatter_add_random_data_at_dim0(test_case):
-        device = random_device()
-        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        index = constant(
-            torch.tensor(np.array([[1, 0], [0, 1]]), dtype=torch.int64, device=device)
-        )
-        y = torch.scatter_add(input, 0, index, src)
-        return y
+        return _test_scatter_add_random_data(test_case, 0)
 
     @autotest(n=5)
     def test_scatter_add_random_data_at_dim1(test_case):
-        device = random_device()
-        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        index = constant(
-            torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
-        )
-        y = torch.scatter_add(input, 1, index, src)
-        return y
+        return _test_scatter_add_random_data(test_case, 1)
 
 
 if __name__ == "__main__":

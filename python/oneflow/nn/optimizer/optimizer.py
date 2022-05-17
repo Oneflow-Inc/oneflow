@@ -46,8 +46,13 @@ class ParamGroup(object):
                 )
 
         self._options = deepcopy(default_options)
+        # rewrite options in default_options
         for key in self._options:
             if key in parameters:
+                self._options[key] = parameters[key]
+        # add excess keys in dict
+        for key in parameters:
+            if key not in self._options and key != "params":
                 self._options[key] = parameters[key]
 
         self._enable_clip_grad = False
@@ -120,7 +125,7 @@ class Optimizer(object):
         r"""
         Load the state of the optimizer which is created by `state_dict` function.
 
-        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict
+        It almost copied from: https://pytorch.org/docs/1.10/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict.
         """
 
         # Validate the state_dict
@@ -194,7 +199,7 @@ class Optimizer(object):
           differs between optimizer classes.
         * param_group - a dict containing all parameter groups.
 
-        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.state_dict
+        It almost copied from: https://pytorch.org/docs/1.10/_modules/torch/optim/optimizer.html#Optimizer.state_dict.
         """
 
         # Save order indices instead of Tensors
@@ -227,6 +232,14 @@ class Optimizer(object):
         }
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
+        """Performs a single optimization step (parameter update).
+
+        Args:
+            closure (Union[Callable, None], optional): A closure that reevaluates the model and returns the loss. Optional for most optimizers.
+
+        Returns:
+            Union[Tensor, None]: The loss. 
+        """
         raise NotImplementedError()
 
     def clip_grad(self):
@@ -278,7 +291,7 @@ class Optimizer(object):
                     if set_to_none:
                         param.grad = None
                     else:
-                        param.grad.zeros_()
+                        param.grad.zero_()
 
     def _parse_input_parameters(self, parameters):
         """
@@ -309,21 +322,22 @@ class Optimizer(object):
             )
 
     def _generate_grad_clip_conf_for_optim_conf(self, param_group, optimizer_conf):
-        if param_group._enable_clip_grad:
-            if (
-                param_group["clip_grad_max_norm"] == 1.0
-                and param_group["clip_grad_norm_type"] == 2.0
-            ):
-                optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm().set_clip_norm(
-                    param_group["clip_grad_max_norm"]
-                )
-            else:
-                warnings.warn(
-                    "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
-                )
+        if not param_group._enable_clip_grad:
+            return
+
+        assert "clip_grad_max_norm" in param_group
+        assert "clip_grad_norm_type" in param_group
+        max_norm = float(param_group["clip_grad_max_norm"])
+        norm_type = float(param_group["clip_grad_norm_type"])
+        clip_grad_norm = optimizer_conf.clip_conf.clip_by_global_norm
+        clip_grad_norm.max_norm = max_norm
+        clip_grad_norm.norm_type = norm_type
 
     @property
     def support_sparse(self):
+        """Whether the Optimizer support sparse update. 
+
+        """
         return False
 
     def _check_variables_in_graph(self, vars_conf):
@@ -361,6 +375,6 @@ class Optimizer(object):
                 if not param.requires_grad:
                     continue
 
-                sparse_opt_conf = job_conf.mutable_indexed_slices_optimizer_conf()
-                sparse_variable_op_names = sparse_opt_conf.mutable_include_op_names()
-                sparse_variable_op_names.add_op_name(vars_conf[param].name)
+                sparse_opt_conf = job_conf.indexed_slices_optimizer_conf
+                sparse_variable_op_names = sparse_opt_conf.include_op_names
+                sparse_variable_op_names.op_name.append(vars_conf[param].name)

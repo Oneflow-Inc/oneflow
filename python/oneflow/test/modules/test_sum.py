@@ -63,6 +63,11 @@ def _test_sum_impl(test_case, device, data_type):
     np_grad = np.ones((4, 5, 6))
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
+    # For 0-dim tensor test
+    input = flow.tensor(1.0)
+    of_out = input.sum()
+    test_case.assertTrue(np.allclose(input.numpy(), of_out.numpy(), 1e-05, 1e-05))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSumModule(flow.unittest.TestCase):

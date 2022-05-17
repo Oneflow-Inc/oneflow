@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -99,7 +100,8 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeInputBlobDescs(
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& tensor_meta = *input_consistent_tensor_metas_.at(i).tensor_meta();
     const auto& shape = std::const_pointer_cast<Shape>(tensor_meta.shape_ptr());
-    blob_descs->emplace_back(shape, tensor_meta.data_type());
+    const auto& stride = std::const_pointer_cast<Stride>(tensor_meta.stride_ptr());
+    blob_descs->emplace_back(shape, stride, tensor_meta.data_type());
   }
   return Maybe<void>::Ok();
 }
@@ -164,8 +166,19 @@ Maybe<void> CheckInputParallelDescIdentical(const ConsistentTensorMetaInferArgs&
   if (infer_args.input_consistent_tensor_metas().empty()) { return Maybe<void>::Ok(); }
   const auto& first_parallel_desc =
       infer_args.input_consistent_tensor_metas().begin()->tensor_meta()->parallel_desc();
-  for (const auto& input_meta : infer_args.input_consistent_tensor_metas()) {
-    CHECK_OR_RETURN(first_parallel_desc == input_meta.tensor_meta()->parallel_desc());
+  for (int i = 0; i < infer_args.input_consistent_tensor_metas().size(); ++i) {
+    CHECK_OR_RETURN(first_parallel_desc
+                    == JUST(VectorAt(infer_args.input_consistent_tensor_metas(), i))
+                           .tensor_meta()
+                           ->parallel_desc())
+        << Error::RuntimeError()
+        << "Expected all tensors to be on the same placement, but found "
+           "at least two placements, "
+        << *JUST(PlacementToString(first_parallel_desc)) << " (positional 0) and "
+        << *JUST(PlacementToString(JUST(VectorAt(infer_args.input_consistent_tensor_metas(), i))
+                                       .tensor_meta()
+                                       ->parallel_desc()))
+        << " (positional " << i << ")!";
   }
   return Maybe<void>::Ok();
 }
@@ -253,7 +266,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   {
     // Infer OpArgMutConsistentTensorMeta.
     const auto& input_metas = infer_args.input_consistent_tensor_metas();
-    JUST(user_op_expr.InferLogicalShapeAndDType(
+    JUST(user_op_expr.InferLogicalTensorDesc(
         infer_args.attrs(), parallel_desc,
         [&](int32_t i) { return &*input_metas.at(i).tensor_meta(); },
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
@@ -317,7 +330,7 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
       UNIMPLEMENTED();
       return nullptr;
     };
-    JUST(user_op_expr.InferLogicalShapeAndDType(
+    JUST(user_op_expr.InferLogicalTensorDesc(
         infer_args.attrs(), parallel_desc, GetInputTensorMeta,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }

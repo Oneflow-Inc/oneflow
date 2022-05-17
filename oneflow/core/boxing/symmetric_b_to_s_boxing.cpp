@@ -30,11 +30,11 @@ bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_broadcast_parallel();
 }
 
-static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocal);
+static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocalCached);
 
 bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
+static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
 Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                  const Shape& logical_shape) {
@@ -47,7 +47,8 @@ Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricB2S = DECORATE(&RawCheckSymmetricB2S, ThreadLocalCopiable);
+static constexpr auto* CheckSymmetricB2S =
+    DECORATE(&RawCheckSymmetricB2S, ThreadLocalCachedCopiable);
 
 }  // namespace
 
@@ -80,7 +81,8 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
       start.emplace_back(range.begin());
       stop.emplace_back(range.end());
     }
-    local_tensor = JUST(one::functional::Slice(local_tensor, start, stop, step));
+    local_tensor =
+        JUST(one::functional::Slice(local_tensor, start, stop, step, /*enable_view_slice=*/false));
   }
 
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),

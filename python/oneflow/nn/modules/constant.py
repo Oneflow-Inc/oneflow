@@ -19,7 +19,7 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.common_types import _size_any_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
 class _ConstantBase(Module):
@@ -96,19 +96,6 @@ class Ones(_ConstantBase):
         super().__init__(size, 1, dtype, device, placement, sbp, requires_grad)
 
 
-def _handle_size_arg(*size):
-    assert len(size) > 0, "size of tensor doesn't exists"
-    if isinstance(size[0], (tuple, flow.Size, list)):
-        assert (
-            len(size) == 1
-        ), "shape should be specified by tuple of ints size, not tuple of tuple/list"
-        if len(size[0]) == 0:
-            size = []
-        else:
-            size = size[0]
-    return size
-
-
 def ones_op(
     *size: Union[_size_any_t, flow.Size, List[int]],
     dtype: Optional[flow.dtype] = None,
@@ -149,7 +136,7 @@ def ones_op(
 
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     return Ones(size, dtype, device, placement, sbp, requires_grad)()
 
 
@@ -201,7 +188,7 @@ def zeros_op(
                 [0., 0., 0.]], dtype=oneflow.float32)
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     return Zeros(size, dtype, device, placement, sbp, requires_grad)()
 
 
@@ -259,7 +246,7 @@ def full_op(
         True
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     if dtype is None:
         dtype = flow.tensor(value).dtype
     return Full(size, value, dtype, device, placement, sbp, requires_grad)()
@@ -317,6 +304,68 @@ def new_ones_op(
         )
     else:
         res = flow._C.constant(new_size, 1.0, dtype=new_dtype, device=new_device)
+    res.requires_grad = new_requires_grad
+    return res
+
+
+def new_zeros_op(
+    x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
+):
+    if isinstance(device, str):
+        device = flow.device(device)
+    if size is None or len(size) == 0:
+        new_size = x.shape
+    else:
+        new_size = _handle_size_arg(size)
+    new_dtype = dtype
+    new_device = device
+    new_placement = placement
+    new_sbp = sbp
+    new_requires_grad = requires_grad
+
+    if dtype is None:
+        new_dtype = x.dtype
+    if device is None:
+        new_device = x.device if x.is_local else None
+    if placement is None:
+        new_placement = x.placement if x.is_global else None
+    if sbp is None:
+        new_sbp = x.sbp if x.is_global else None
+    if new_placement is not None:
+        assert (
+            device is None
+        ), "argument 'device' must be None when argument 'placement' exist"
+        assert (
+            new_sbp is not None
+        ), "argument 'sbp' must not be None when argument 'placement' exist"
+    assert isinstance(
+        new_size, (int, tuple, list, flow.Size)
+    ), f"argument 'size' must be tuple of ints, not %s" % (type(new_size))
+    assert isinstance(
+        new_dtype, flow.dtype
+    ), f"argument 'dtype' must be flow.dtype, not %s" % (type(new_dtype))
+    if new_placement is not None:
+        assert isinstance(
+            new_placement, flow.placement
+        ), f"argument 'placement' must be flow.placement, not %s" % (
+            type(new_placement)
+        )
+        assert isinstance(
+            new_sbp, (flow.sbp.sbp, tuple)
+        ), f"argument 'sbp' must be flow.sbp.sbp, not %s" % (type(new_sbp))
+    else:
+        assert isinstance(
+            new_device, (str, flow.device)
+        ), f"argument 'device' must be flow.device, not %s" % (type(new_device))
+    assert isinstance(
+        new_requires_grad, bool
+    ), f"argument 'requires_grad' must be bool, not %s" % (type(new_requires_grad))
+    if new_placement is not None:
+        res = flow._C.global_constant(
+            new_size, 0.0, dtype=new_dtype, placement=new_placement, sbp=new_sbp
+        )
+    else:
+        res = flow._C.constant(new_size, 0.0, dtype=new_dtype, device=new_device)
     res.requires_grad = new_requires_grad
     return res
 

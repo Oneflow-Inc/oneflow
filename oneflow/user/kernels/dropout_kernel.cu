@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 namespace oneflow {
@@ -421,8 +422,10 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     CHECK_NOTNULL(fused_dropout_kernel_state);
     const auto& generator = fused_dropout_kernel_state->generator();
     CHECK_NOTNULL(generator);
+    auto* stream = ctx->stream();
+    const auto device_index = stream->device()->device_index();
     std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
-        CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+        CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
     uint64_t seed = cuda_generator->current_seed();
 
     const float rate = ctx->Attr<float>("rate");
@@ -433,12 +436,12 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       DispatchTail<T, true>(
-          ctx->stream(), seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
+          stream, seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
           reinterpret_cast<const T*>(in->dptr()), reinterpret_cast<bool*>(mask->mut_dptr()),
           reinterpret_cast<const T*>(addend->dptr()), reinterpret_cast<T*>(out->mut_dptr()));
     } else {
-      DispatchTail<T, false>(ctx->stream(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
-                             scale, reinterpret_cast<const T*>(in->dptr()),
+      DispatchTail<T, false>(stream, seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
+                             reinterpret_cast<const T*>(in->dptr()),
                              reinterpret_cast<bool*>(mask->mut_dptr()), nullptr,
                              reinterpret_cast<T*>(out->mut_dptr()));
     }
