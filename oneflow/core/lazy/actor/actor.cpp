@@ -376,10 +376,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         }
       }
     }
-    ActUntilFail();
+    ActUntilFail(msg);
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
-    ActUntilFail();
+    ActUntilFail(msg);
   } else {
     UNIMPLEMENTED();
   }
@@ -423,10 +423,15 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
-void Actor::ActUntilFail() {
+void Actor::ActUntilFail(const ActorMsg& msg) {
   while (IsReadReady() && IsWriteReady()) {
     if (act_cnt_ % exec_interval_ == 0) { Act(); }
     act_cnt_ += 1;
+
+    if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+      LOG(INFO) << "ccActorLog: actor: " << actor_id() << " recv regst: " << msg.regst_desc_id()
+                << " in act_cnt_: " << act_cnt_ << " to Act. ";
+    }
 
     AsyncSendCustomizedProducedRegstMsgToConsumer();
     AsyncSendNaiveProducedRegstMsgToConsumer();

@@ -135,7 +135,7 @@ class Actor : public ActorBase {
   int TryUpdtStateAsProducedRegst(Regst* regst);
 
   // Act
-  void ActUntilFail();
+  void ActUntilFail(const ActorMsg& msg);
   virtual void Act() { UNIMPLEMENTED(); }
 
   // Ready

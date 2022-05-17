@@ -43,9 +43,17 @@ class VariableInplaceBufferActor final : public Actor {
 
   // NOTE(chengcheng): naive ready for read/write
   bool IsCustomizedReadReady() const override {
+    bool is_ready_ready = (!need_all_regst_return_) && consumed_var_rs_.IsCurSlotReady();
+    LOG(INFO) << " ccActorLog: actor: " << actor_id() << " is_ready_ready: " << is_ready_ready
+              << " of need_all_regst_return_ = " << need_all_regst_return_
+              << " consumed_var_rs_.IsCurSlotReady = " << consumed_var_rs_.IsCurSlotReady();
     return (!need_all_regst_return_) && consumed_var_rs_.IsCurSlotReady();
   }
-  bool IsCustomizedWriteReady() const override { return produced_buffer_rs_.IsCurSlotReady(); }
+  bool IsCustomizedWriteReady() const override {
+    LOG(INFO) << " ccActorLog: actor: " << actor_id()
+              << " is_write_ready: " << produced_buffer_rs_.IsCurSlotReady();
+    return produced_buffer_rs_.IsCurSlotReady();
+  }
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
   bool IsCustomizedReadAlwaysUnReadyFromNow() const override {
     // all Messages are flushed
@@ -58,18 +66,20 @@ class VariableInplaceBufferActor final : public Actor {
   void UpdtStateAsCustomizedProducedRegst(Regst* regst) override {
     CHECK_EQ(regst->regst_desc_id(), produced_buffer_regst_desc_id_);
     CHECK_EQ(produced_buffer_rs_.TryPushBackRegst(regst), 0);
-    // LOG(INFO) << "cclog_v2: regst_desc_id: " << produced_buffer_regst_desc_id_ << " ready size =
-    // "
-    //          << produced_buffer_rs_.GetReadyRegstSize(produced_buffer_regst_desc_id_);
+    LOG(INFO) << "ccActorLog: actor: " << actor_id() << " in count: " << buffer_count_
+              << " regst_desc_id: " << produced_buffer_regst_desc_id_ << " ready size = "
+              << produced_buffer_rs_.GetReadyRegstSize(produced_buffer_regst_desc_id_);
     if (need_all_regst_return_
         && produced_buffer_rs_.GetReadyRegstSize(produced_buffer_regst_desc_id_) == buffer_size_) {
       Regst* in_regst = consumed_var_rs_.Front(consumed_var_regst_desc_id_);
       CHECK(in_regst);
       AsyncSendRegstMsgToProducer(in_regst);
       CHECK_EQ(0, consumed_var_rs_.TryPopFrontRegst(consumed_var_regst_desc_id_));
-      // LOG(INFO) << "cclog_v2: consumed_regst_desc_id: " << consumed_var_regst_desc_id_
-      //          << " return with all produced regst.";
       need_all_regst_return_ = false;
+
+      LOG(INFO) << "ccActorLog: actor: " << actor_id() << " in count: " << buffer_count_
+                << " consumed_regst_desc_id: " << consumed_var_regst_desc_id_
+                << " return with all produced regst.";
     }
   }
 
@@ -79,6 +89,9 @@ class VariableInplaceBufferActor final : public Actor {
     Regst* const buffer_regst = produced_buffer_rs_.Front(produced_buffer_regst_desc_id_);
     CHECK_GT(HandleRegstToConsumer(buffer_regst), 0);
     produced_buffer_rs_.PopFrontRegsts({produced_buffer_regst_desc_id_});
+
+    LOG(INFO) << "ccActorLog: actor: " << actor_id() << " in count: " << buffer_count_
+              << " Send buffer regst " << produced_buffer_regst_desc_id_ << " to Consumer.";
   }
 
   void AsyncSendCustomizedConsumedRegstMsgToProducer() override {
@@ -87,6 +100,12 @@ class VariableInplaceBufferActor final : public Actor {
       CHECK_NOTNULL(var_regst);
       AsyncSendRegstMsgToProducer(var_regst);
       CHECK_EQ(0, consumed_var_rs_.TryPopFrontRegst(consumed_var_regst_desc_id_));
+
+      LOG(INFO) << "ccActorLog: actor: " << actor_id() << " in count: " << buffer_count_
+                << " return var regst " << consumed_var_regst_desc_id_ << " to producer.";
+    } else {
+      LOG(INFO) << "ccActorLog: actor: " << actor_id() << " in count: " << buffer_count_
+                << " NOT return var regst for waiting inplace buffer regst returned. ";
     }
   }
 
@@ -97,6 +116,8 @@ class VariableInplaceBufferActor final : public Actor {
       CHECK_EQ(var_regst_, msg.regst());
     }
     CHECK_EQ(0, consumed_var_rs_.TryPushBackRegst(var_regst_));
+    LOG(INFO) << "ccActorLog: actor: " << actor_id() << " in count: " << buffer_count_
+              << " receive var regst: " << var_regst_->regst_desc_id();
   }
 
   // NOTE(chengcheng) buffer_count_ start from 1 for % == 0 at n - 1 iter to sync.
@@ -155,6 +176,20 @@ void VariableInplaceBufferActor::VirtualActorInit(const TaskProto& proto) {
     CHECK_EQ(0, produced_buffer_rs_.TryPushBackRegst(regst));
   });
 
+  LOG(INFO) << " ccActorLog: actor: " << actor_id() << " has produced_buffer_rs_ regst_descs = "
+            << produced_buffer_rs_.total_regst_desc_cnt() << " with regsts size = "
+            << produced_buffer_rs_.GetReadyRegstSize(produced_buffer_regst_desc_id_);
+  LOG(INFO) << " ccActorLog: actor: " << actor_id()
+            << " has consumed_var_rs_ regst_descs = " << consumed_var_rs_.total_regst_desc_cnt()
+            << " with regsts size = "
+            << consumed_var_rs_.GetReadyRegstSize(consumed_var_regst_desc_id_);
+  LOG(INFO)
+      << " ccActorLog: actor: " << actor_id()
+      << " has inplace_consumed_rs_ regst_descs = " << inplace_consumed_rs_.total_regst_desc_cnt()
+      << " \nhas inplace_produced_rs_ regst_descs = " << inplace_produced_rs_.total_regst_desc_cnt()
+      << " \nhas naive_consumed_rs_ regst_descs = " << naive_consumed_rs_.total_regst_desc_cnt()
+      << " \nhas naive_produced_rs_ regst_descs = " << naive_produced_rs_.total_regst_desc_cnt();
+
   // LOG(WARNING) << "cclog: VariableInplaceBufferActor init " << proto.DebugString();
   OF_SET_MSG_HANDLER(&VariableInplaceBufferActor::HandlerNormal);
 }
@@ -162,11 +197,11 @@ void VariableInplaceBufferActor::VirtualActorInit(const TaskProto& proto) {
 void VariableInplaceBufferActor::Act() {
   // NOTE(chengcheng): add count before act.
   buffer_count_ += 1;
-  // LOG(INFO) << " cclog_v2: buffer_count_ = " << buffer_count_ << " buffer_size = " <<
-  // buffer_size_;
+  LOG(INFO) << " ccActorLog: actor: " << actor_id() << " buffer_count_ = " << buffer_count_
+            << " buffer_size = " << buffer_size_;
   if (buffer_count_ >= buffer_size_) {
     CHECK(!need_all_regst_return_);
-    // LOG(INFO) << " cclog_v2: need_all_regst_return = true";
+    LOG(INFO) << " ccActorLog: actor: " << actor_id() << " need_all_regst_return = true";
     need_all_regst_return_ = true;
   }
   buffer_count_ = buffer_count_ % buffer_size_;
