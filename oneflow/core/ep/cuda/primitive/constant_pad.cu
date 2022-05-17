@@ -123,7 +123,6 @@ void DispatchPackSize(Stream* stream, void* dst, int64_t* dst_dims, const void* 
 
   size_t elem_cnt = 1;
   for (int i = 0; i < num_dims; i++) { elem_cnt *= dst_dims[i]; }
-  elem_cnt /= launch_pack_size;
   if (launch_pack_size == 1) {
     Pack<T, 1> packed_pad_val(pad_val);
     DispatchIndexType<num_dims, PackType<T, 1>>(stream, dst, dst_dims, src, src_dims,
