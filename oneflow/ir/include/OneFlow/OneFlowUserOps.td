@@ -8789,9 +8789,6 @@ def OneFlow_ToContiguousOp : OneFlow_BaseOp<"to_contiguous", [NoSideEffect, Supp
   let output = (outs
     OneFlow_Tensor:$out
   );
-  let attrs = (ins
-    SI64ArrayAttr:$stride
-  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
