@@ -169,7 +169,7 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
   if (pc.has_hierarchy()) {
     attr_vec.push_back(GetBuilder().getNamedAttr(
         OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-        GetBuilder().getI64ArrayAttr({pc.hierarchy().dim().begin(), pc.hierarchy().dim().end()})));
+        GetBuilder().getI64ArrayAttr({pc.hierarchy().elem().begin(), pc.hierarchy().elem().end()})));
   }
   return success();
 }
@@ -603,7 +603,7 @@ void UpdatePlacement(OpType* op, AdaptorType& adaptor, ::oneflow::Job& job) {
   }
   if (::llvm::Optional<ArrayAttr> hierarchy = adaptor.hierarchy()) {
     for (auto dim : hierarchy->getValue()) {
-      pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(
+      pg->mutable_parallel_conf()->mutable_hierarchy()->add_elem(
           dim.template dyn_cast<IntegerAttr>().getInt());
     }
   }
@@ -767,7 +767,7 @@ Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& b
   if (!blob_conf.has_shape()) { return Type{}; }
   auto data_type = GetTypeFromOneFlowDataType(blob_conf.data_type());
   if (!data_type.hasValue()) { return Type{}; }
-  return RankedTensorType::get({blob_conf.shape().dim().begin(), blob_conf.shape().dim().end()},
+  return RankedTensorType::get({blob_conf.shape().elem().begin(), blob_conf.shape().elem().end()},
                                *data_type);
 }
 
