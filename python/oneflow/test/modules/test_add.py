@@ -254,7 +254,7 @@ class TestAddModule(flow.unittest.TestCase):
         z2 = torch.add(x2, s, alpha=alpha)
         z3 = torch.add(s, x3, alpha=alpha)
         return z1, z2, z3
-    
+
     @autotest(n=5, check_graph=True)
     def test_scalar_add_with_strided_random_data(test_case):
         device = random_device()
