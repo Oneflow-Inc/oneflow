@@ -31,11 +31,14 @@ OpArgBlobAttribute::OpArgBlobAttribute(const std::shared_ptr<BlobDescProto>& blo
                                        const std::string& logical_blob_name)
     : blob_desc_(blob_desc), logical_blob_name_(logical_blob_name) {
   shape_ = std::make_shared<Shape>(blob_desc_->shape());
+  stride_ = std::make_shared<Stride>(blob_desc_->stride());
 }
 
 std::shared_ptr<BlobDescProto> OpArgBlobAttribute::blob_desc() const { return blob_desc_; }
 
 std::shared_ptr<Shape> OpArgBlobAttribute::shape() const { return shape_; }
+
+std::shared_ptr<Stride> OpArgBlobAttribute::stride() const { return stride_; }
 
 std::string OpArgBlobAttribute::logical_blob_name() const { return logical_blob_name_; }
 
@@ -44,8 +47,8 @@ DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->data_type();
 bool OpArgBlobAttribute::is_dynamic() const { return blob_desc_->is_dynamic(); }
 
 bool OpArgBlobAttribute::operator==(const OpArgBlobAttribute& other) const {
-  return (*shape_ == *other.shape()) && (get_dtype() == other.get_dtype())
-         && (is_dynamic() == other.is_dynamic())
+  return (*shape_ == *other.shape()) && (*stride_ == *other.stride())
+         && (get_dtype() == other.get_dtype()) && (is_dynamic() == other.is_dynamic())
          && (logical_blob_name_ == other.logical_blob_name());
 }
 
@@ -56,6 +59,7 @@ std::shared_ptr<OpArgBlobAttribute> OpArgBlobAttribute::GetPhysicalOpArgBlobAttr
   int64_t physical_len =
       BalancedSplitter(shape_->At(split_axis), parallel_num).At(parallel_id).size();
   blob_desc->mutable_shape()->set_dim(split_axis, physical_len);
+  blob_desc->mutable_stride()->set_dim(split_axis, physical_len);
   return std::make_shared<OpArgBlobAttribute>(blob_desc, logical_blob_name_);
 }
 

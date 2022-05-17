@@ -43,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 namespace one {
@@ -1181,11 +1182,7 @@ class ToContiguousFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     if (input->is_consistent() || input->is_lazy()) { return input; }
-    MutableAttrMap attrs;
-    const auto& stride = JUST(input->stride())->StrideVec();
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
-
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
   }
 
  private:
@@ -2675,7 +2672,8 @@ class ToFunctor {
     Symbol<DType> dtype = dtype_.value_or(input->dtype());
     if (input->is_consistent()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
-      CHECK_OR_RETURN(device_type == "cpu" || device_type == "cuda")
+      CHECK_OR_RETURN(ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_type)
+                      != DeviceType::kInvalidDevice)
           << Error::RuntimeError()
           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
           << "for consistent tensor, but got " << device_.value_or("");
