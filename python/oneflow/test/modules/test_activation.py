@@ -452,7 +452,7 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = m(x)
         return y
-    
+
     @autotest()
     def test_logsigmoid_module_stride_with_random_data(test_case):
         m = torch.nn.LogSigmoid()
@@ -548,7 +548,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = m(x)
         return y
-    
+
     @unittest.skip("pytorch softplus backward has bug")
     @autotest()
     def test_softplus_module_stride_with_random_data(test_case):

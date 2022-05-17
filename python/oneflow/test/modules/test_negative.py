@@ -38,7 +38,7 @@ class TestNegativeModule(flow.unittest.TestCase):
     def test_tensor_negative_with_random_data(test_case):
         x = random_tensor().to(random_device())
         return x.negative()
-    
+
     @autotest()
     def test_tensor_negative_with_random_data(test_case):
         x = random_tensor().to(random_device())

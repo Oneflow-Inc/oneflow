@@ -42,7 +42,7 @@ class TestReciprocalModule(flow.unittest.TestCase):
     def test_flow_reciprocal_list_stride_with_random_data(test_case):
         device = random_device()
         x = random_tensor(
-        ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
         ).to(device)
         permute_list = list(range(4))
         shuffle(permute_list)
