@@ -150,11 +150,10 @@ class TestEmbedding(flow.unittest.TestCase):
 
         idx_ndim = random(high=4).to(int).value()
         idx_shape = [random(low=2, high=4) for i in range(idx_ndim)]
-        idx_val = random(high=emb_size).to(int).value()
 
         weight = random_tensor(len(emb_shape), *emb_shape).to(device)
         indices = random_tensor(
-            len(idx_shape), *idx_shape, low=idx_val, high=idx_val + 1, dtype=int
+            len(idx_shape), *idx_shape, low=0, high=emb_size, dtype=int
         ).to(device)
 
         embedding = torch.nn.Embedding(
