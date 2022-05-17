@@ -1097,6 +1097,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec \
+            -e ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB=1024 \
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/expensive \
             ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Exception API test

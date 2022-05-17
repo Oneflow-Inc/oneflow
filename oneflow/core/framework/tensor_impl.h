@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/framework/tensor_desc.h"
@@ -35,12 +34,8 @@ namespace oneflow {
 
 class MemoryCase;
 
-namespace cfg {
-
-class NdSbp;
-}
-
 class Shape;
+class Stride;
 class Device;
 
 namespace vm {
@@ -59,6 +54,7 @@ class TensorImpl {
 
   // Getters
   virtual std::shared_ptr<const Shape> shape() const = 0;
+  virtual std::shared_ptr<const Stride> stride() const = 0;
   virtual DataType dtype() const = 0;
   virtual bool is_lazy() const = 0;
 
@@ -67,7 +63,6 @@ class TensorImpl {
   virtual Maybe<LocalDepObject*> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<bool> has_eager_blob_object() const = 0;
-  virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
   virtual bool is_contiguous() const = 0;
 
@@ -142,6 +137,7 @@ class ConsistentTensorImpl : public TensorImpl {
 
   // Getters
   std::shared_ptr<const Shape> shape() const override { return tensor_meta_->shape_ptr(); }
+  std::shared_ptr<const Stride> stride() const override { return tensor_meta_->stride_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
   Symbol<NdSbp> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
@@ -199,6 +195,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters
   std::shared_ptr<const Shape> shape() const override { return tensor_meta()->shape_ptr(); }
+  std::shared_ptr<const Stride> stride() const override { return tensor_meta()->stride_ptr(); }
   bool is_lazy() const override { return true; }
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,
@@ -229,6 +226,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters
   std::shared_ptr<const Shape> shape() const override;
+  std::shared_ptr<const Stride> stride() const override;
   Maybe<MirroredTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
   bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
@@ -244,13 +242,14 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     return tensor_storage_;
   }
   Maybe<bool> has_eager_blob_object() const override { return eager_blob_object_.get(); }
-  Maybe<const Stride> stride() const override { return tensor_meta_->stride_ptr(); }
   Maybe<int64_t> storage_offset() const override { return tensor_meta_->storage_offset(); }
 
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
   Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object);
+  Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object,
+                                  const bool pin_memory);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;
@@ -289,6 +288,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   ~EagerConsistentTensorImpl() override = default;
 
   // Getters
+  std::shared_ptr<const Stride> stride() const override;
   bool is_lazy() const override { return false; }
 
   bool is_contiguous() const override {

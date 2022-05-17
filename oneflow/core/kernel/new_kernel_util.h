@@ -30,7 +30,7 @@ class Stream;
 }
 
 template<DeviceType deivce_type>
-struct NewKernelUtil : public BlasIf<deivce_type>, public ArithemeticIf<deivce_type> {};
+struct NewKernelUtil : public BlasIf<deivce_type> {};
 
 template<DeviceType device_type>
 void Memcpy(ep::Stream* stream, void* dst, const void* src, size_t sz) {
@@ -50,9 +50,6 @@ void Memset(ep::Stream* stream, void* dst, const char value, size_t sz) {
   CHECK(primitive) << "Can not create Memset primitive for device type " << device_type;
   primitive->Launch(stream, dst, value, sz);
 }
-
-void WithHostBlobAndStreamSynchronizeEnv(ep::Stream* stream, Blob* blob,
-                                         std::function<void(Blob*)> Callback);
 
 }  // namespace oneflow
 

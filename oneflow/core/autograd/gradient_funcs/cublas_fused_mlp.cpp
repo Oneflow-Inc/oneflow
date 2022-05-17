@@ -135,10 +135,10 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     const auto& last_layer_wgrad_bgrad =
         JUST(functional::CublasMatmulBiasAddGrad(last_bias_dy, last_layer_x));
     if (last_layer_weight_requires_grad) {
-      *JUST(VectorAt(in_grads, weight_num)) = *JUST(VectorAt(last_layer_wgrad_bgrad, 0));
+      *JUST(VectorAt(in_grads, weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 0));
     }
     if (last_layer_bias_requires_grad) {
-      *JUST(VectorAt(in_grads, 2 * weight_num)) = *JUST(VectorAt(last_layer_wgrad_bgrad, 1));
+      *JUST(VectorAt(in_grads, 2 * weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 1));
     }
   }
 
@@ -183,7 +183,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
 
   if (ctx->x_requires_grad) {
     // dx:
-    *JUST(VectorAt(in_grads, 0)) =
+    JUST(VectorAt(*in_grads, 0)) =
         JUST(functional::MatMul(last_dy, JUST(VectorAt(weights, 0)), false, false, 1.0));
   }
   if (JUST(VectorAt(ctx->weights_requires_grad, 0)) && weight_num >= 2) {

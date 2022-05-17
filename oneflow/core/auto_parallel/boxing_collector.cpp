@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/register/blob_desc.h"
