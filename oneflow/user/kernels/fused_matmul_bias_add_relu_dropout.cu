@@ -464,15 +464,15 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
                            &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
 
       cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BIAS;
-      void* matmul_out_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
-      T* tmp_relu_dropout_out_buf = nullptr;
-
+      T* relu_dropout_out_buf;
+      void* matmul_out_ptr = (void*)(reinterpret_cast<char*>(tmp_buffer->mut_dptr()) + offset);
+      offset += matmul_out_size;
       if (idx == weight_size - 1) {
-        tmp_relu_dropout_out_buf =
+        relu_dropout_out_buf =
             reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr());
       } else {
-        tmp_relu_dropout_out_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + offset);
-        offset += matmul_out_size;
+        relu_dropout_out_buf =
+            reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr());
       }
       SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
@@ -511,10 +511,10 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, rate,
                                       scale, reinterpret_cast<T*>(matmul_out_ptr),
                                       reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
-                                      tmp_relu_dropout_out_buf);
+                                      relu_dropout_out_buf);
 
       // Set relu_droput_out ptr as next layer's input.
-      in_buf_ptr = tmp_relu_dropout_out_buf;
+      in_buf_ptr = relu_dropout_out_buf;
       // Set hidden_layer shape as next layer's input shape.
       in_shape.at(1) = out_feature;
     }

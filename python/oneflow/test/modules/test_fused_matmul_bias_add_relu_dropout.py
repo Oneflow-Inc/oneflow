@@ -57,13 +57,17 @@ def _test_fused_matmul_bias_add_relu_dropout(
         np_first_bias = np.random.uniform(low=-1, high=1, size=hidden_size_list[0])
 
         fused_weight_list.append(
-            flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=False)
+            flow.tensor(
+                np_first_weight, dtype=dtype, device=device, requires_grad=False
+            )
         )
         fused_bias_list.append(
             flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=False)
         )
         naive_weight_list.append(
-            flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=False)
+            flow.tensor(
+                np_first_weight, dtype=dtype, device=device, requires_grad=False
+            )
         )
         naive_bias_list.append(
             flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=False)
@@ -114,7 +118,7 @@ def _test_fused_matmul_bias_add_relu_dropout(
         fused_x,
         fused_weight_list,
         fused_bias_list,
-        dropout_rate_list=[0.0]*len(fused_weight_list), 
+        dropout_rate_list=[0.0] * len(fused_weight_list),
         skip_final_activation=skip_final_activation,
     )
 
@@ -200,6 +204,7 @@ class TestFusedMatmulBiasAddReluDropout(flow.unittest.TestCase):
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()
