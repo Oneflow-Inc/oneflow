@@ -58,7 +58,9 @@ struct Literal final : public Expr<Context, ValueT, Literal<Context, ValueT>> {
   Literal(const std::string& debug_str, const ValueT& val) : val_(val), debug_str_(debug_str) {}
   ALWAYS_INLINE scalar_or_const_ref_t<ValueT> get(const Context&) const override { return val_; }
   std::string DebugStr(const Context&, bool display_result) const override {
-    if (debug_str_.empty()) { debug_str_ = ToString(val_); }
+    if (debug_str_.empty()) {
+      const_cast<Literal<Context, ValueT>*>(this)->debug_str_ = ToString(val_);
+    }
     return debug_str_;
   }
 
