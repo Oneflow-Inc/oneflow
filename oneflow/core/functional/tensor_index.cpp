@@ -179,6 +179,7 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
   if (index_subspace_pos <= 0) { return input; }
   int ndim = input->ndim();
   CHECK_LE_OR_RETURN(index_subspace_pos + index_ndim, ndim)
+      << Error::RuntimeError()
       << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
   std::vector<int> permute;
   permute.reserve(ndim);
@@ -203,7 +204,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   int64_t ndims = shape.NumAxes();
   int64_t specified_ndims = CountSpecifiedDims(index);
   CHECK_LE_OR_RETURN(specified_ndims, ndims)
-      << "Too many indices for tensor of dimension " << ndims;
+      << Error::RuntimeError() << "Too many indices for tensor of dimension " << ndims;
   bool has_false_index = JUST(HasFalseIndex(index));
   bool has_expand_boolean_dim = false;
   int dim = 0;
@@ -235,10 +236,12 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim += unspecified_ndims;
       continue;
     }
-    CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
+    CHECK_LT_OR_RETURN(dim, ndims)
+        << Error::IndexError() << "Invalid index for tensor of dimension " << ndims;
     if (index_item.IsSlice()) {
       const auto& slice = index_item.slice();
-      CHECK_GT_OR_RETURN(slice.step(), 0) << "Step must be greater than zero.";
+      CHECK_GT_OR_RETURN(slice.step(), 0)
+          << Error::RuntimeError() << "Step must be greater than zero.";
       int64_t step = std::min(slice.step(), shape.At(dim));
       int64_t end = std::min(slice.end(), shape.At(dim));
       int64_t start = std::min(slice.start(), shape.At(dim));
@@ -314,7 +317,8 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices) {
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
-      << "Too many indices for tensor of dimension " << input->ndim();
+      << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim()
+      << " but you gived " << indices.size()->ToString();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
   bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 

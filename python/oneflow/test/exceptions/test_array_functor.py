@@ -444,6 +444,14 @@ class TestArrayError(flow.unittest.TestCase):
             "t() expects a tensor with <= 2 dimensions" in str(context.exception)
         )
 
+    def test_tensor_setitem_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.ones(2,2,dtype=flow.int32)
+            x[0,0,0]= 0
+        test_case.assertTrue(
+            "Too many indices for tensor of dimension" in str(context.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
