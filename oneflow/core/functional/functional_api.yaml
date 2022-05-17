@@ -2212,7 +2212,7 @@
   bind_python: False
 
 - name: "_fused_gru_cell_grad"
-  signature: "TensorTuple (Tensor grad_hy, Tensor workspace, Bool has_bias) => FusedGruCellGrad"
+  signature: "TensorTuple (Tensor grad_hy, Tensor workspace, Bool has_bias, Bool hx_needs_grad) => FusedGruCellGrad"
   bind_python: False
 
 - name: "_fused_lstm_cell"
@@ -2244,6 +2244,14 @@
     [
       "TensorTuple (Tensor input, TensorTuple hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => LstmInput",
       "TensorTuple (Tensor data, Tensor batch_sizes, TensorTuple hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional) => LstmData"
+    ]
+  bind_python: True
+
+- name: "gru"
+  signature:
+    [
+      "TensorTuple (Tensor input, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => GruInput",
+      "TensorTuple (Tensor data, Tensor batch_sizes, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional) => GruData"
     ]
   bind_python: True
 

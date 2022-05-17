@@ -1899,6 +1899,217 @@ class LSTMV2(RNNBase):
             return output, self.permute_hidden(hidden, unsorted_indices)
 
 
+class GRUV2(RNNBase):
+    """Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
+
+
+    For each element in the input sequence, each layer computes the following
+    function:
+
+    .. math::
+        \begin{array}{ll}
+            r_t = \sigma(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
+            z_t = \sigma(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
+            n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+            h_t = (1 - z_t) * n_t + z_t * h_{(t-1)}
+        \end{array}
+
+    where :math:`h_t` is the hidden state at time `t`, :math:`x_t` is the input
+    at time `t`, :math:`h_{(t-1)}` is the hidden state of the layer
+    at time `t-1` or the initial hidden state at time `0`, and :math:`r_t`,
+    :math:`z_t`, :math:`n_t` are the reset, update, and new gates, respectively.
+    :math:`\sigma` is the sigmoid function, and :math:`*` is the Hadamard product.
+
+    In a multilayer GRU, the input :math:`x^{(l)}_t` of the :math:`l` -th layer
+    (:math:`l >= 2`) is the hidden state :math:`h^{(l-1)}_t` of the previous layer multiplied by
+    dropout :math:`\delta^{(l-1)}_t` where each :math:`\delta^{(l-1)}_t` is a Bernoulli random
+    variable which is :math:`0` with probability :attr:`dropout`.
+
+    Args:
+        input_size: The number of expected features in the input `x`
+        hidden_size: The number of features in the hidden state `h`
+        num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
+            would mean stacking two GRUs together to form a `stacked GRU`,
+            with the second GRU taking in outputs of the first GRU and
+            computing the final results. Default: 1
+        bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+            Default: ``True``
+        batch_first: If ``True``, then the input and output tensors are provided
+            as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+            Note that this does not apply to hidden or cell states. See the
+            Inputs/Outputs sections below for details.  Default: ``False``
+        dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
+            GRU layer except the last layer, with dropout probability equal to
+            :attr:`dropout`. Default: 0
+        bidirectional: If ``True``, becomes a bidirectional GRU. Default: ``False``
+
+    Inputs: input, h_0
+        * **input**: tensor of shape :math:`(L, H_{in})` for unbatched input,
+          :math:`(L, N, H_{in})` when ``batch_first=False`` or
+          :math:`(N, L, H_{in})` when ``batch_first=True`` containing the features of
+          the input sequence.  The input can also be a packed variable length sequence.
+          See :func:`torch.nn.utils.rnn.pack_padded_sequence` or
+          :func:`torch.nn.utils.rnn.pack_sequence` for details.
+        * **h_0**: tensor of shape :math:`(D * \text{num\_layers}, H_{out})` or
+          :math:`(D * \text{num\_layers}, N, H_{out})`
+          containing the initial hidden state for the input sequence. Defaults to zeros if not provided.
+
+        where:
+
+        .. math::
+            \begin{aligned}
+                N ={} & \text{batch size} \\
+                L ={} & \text{sequence length} \\
+                D ={} & 2 \text{ if bidirectional=True otherwise } 1 \\
+                H_{in} ={} & \text{input\_size} \\
+                H_{out} ={} & \text{hidden\_size}
+            \end{aligned}
+
+    Outputs: output, h_n
+        * **output**: tensor of shape :math:`(L, H_{in})` for unbatched input,
+          :math:`(L, N, D * H_{out})` when ``batch_first=False`` or
+          :math:`(N, L, D * H_{out})` when ``batch_first=True`` containing the output features
+          `(h_t)` from the last layer of the GRU, for each `t`. If a
+          :class:`torch.nn.utils.rnn.PackedSequence` has been given as the input, the output
+          will also be a packed sequence.
+        * **h_n**: tensor of shape :math:`(D * \text{num\_layers}, H_{out})` or
+          :math:`(D * \text{num\_layers}, N, H_{out})` containing the final hidden state
+          for the input sequence.
+
+    Attributes:
+        weight_ih_l[k] : the learnable input-hidden weights of the :math:`\text{k}^{th}` layer
+            (W_ir|W_iz|W_in), of shape `(3*hidden_size, input_size)` for `k = 0`.
+            Otherwise, the shape is `(3*hidden_size, num_directions * hidden_size)`
+        weight_hh_l[k] : the learnable hidden-hidden weights of the :math:`\text{k}^{th}` layer
+            (W_hr|W_hz|W_hn), of shape `(3*hidden_size, hidden_size)`
+        bias_ih_l[k] : the learnable input-hidden bias of the :math:`\text{k}^{th}` layer
+            (b_ir|b_iz|b_in), of shape `(3*hidden_size)`
+        bias_hh_l[k] : the learnable hidden-hidden bias of the :math:`\text{k}^{th}` layer
+            (b_hr|b_hz|b_hn), of shape `(3*hidden_size)`
+
+    .. note::
+        All the weights and biases are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`
+        where :math:`k = \frac{1}{\text{hidden\_size}}`
+
+    .. note::
+        For bidirectional GRUs, forward and backward are directions 0 and 1 respectively.
+        Example of splitting the output layers when ``batch_first=False``:
+        ``output.view(seq_len, batch, num_directions, hidden_size)``.
+
+    .. note::
+        ``batch_first`` argument is ignored for unbatched inputs.
+
+    .. include:: ../cudnn_persistent_rnn.rst
+
+    Examples::
+
+        >>> rnn = nn.GRU(10, 20, 2)
+        >>> input = torch.randn(5, 3, 10)
+        >>> h0 = torch.randn(2, 3, 20)
+        >>> output, hn = rnn(input, h0)
+    """
+
+    def __init__(self, *args, **kwargs):
+        if "proj_size" in kwargs:
+            raise ValueError(
+                "proj_size argument is only supported for LSTM, not RNN or GRU"
+            )
+        super().__init__("GRU", *args, **kwargs)
+
+    def forward(self, input, hx=None):
+        orig_input = input
+        if isinstance(orig_input, PackedSequence):
+            input = orig_input.data
+            batch_sizes = orig_input.batch_sizes
+            sorted_indices = orig_input.sorted_indices
+            unsorted_indices = orig_input.unsorted_indices
+            max_batch_size = int(batch_sizes[0])
+        else:
+            batch_sizes = None
+            is_batched = input.dim() == 3
+            batch_dim = 0 if self.batch_first else 1
+            if not is_batched:
+                input = input.unsqueeze(batch_dim)
+                if hx is not None:
+                    if hx.dim() != 2:
+                        raise RuntimeError(
+                            f"For unbatched 2-D input, hx should also be 2-D but got {hx.dim()}-D tensor"
+                        )
+                    hx = hx.unsqueeze(1)
+            else:
+                if hx is not None and hx.dim() != 3:
+                    raise RuntimeError(
+                        f"For batched 3-D input, hx should also be 3-D but got {hx.dim()}-D tensor"
+                    )
+            max_batch_size = input.size(0) if self.batch_first else input.size(1)
+            sorted_indices = None
+            unsorted_indices = None
+
+        if hx is None:
+            num_directions = 2 if self.bidirectional else 1
+            if input.is_global:
+                hx = flow.zeros(
+                    self.num_layers * num_directions,
+                    max_batch_size,
+                    self.hidden_size,
+                    dtype=input.dtype,
+                    sbp=input.sbp,
+                    placement=input.placement,
+                )
+            else:
+                hx = flow.zeros(
+                    self.num_layers * num_directions,
+                    max_batch_size,
+                    self.hidden_size,
+                    dtype=input.dtype,
+                    device=input.device,
+                )
+        else:
+            # Each batch of the hidden state should match the input sequence that
+            # the user believes he/she is passing in.
+            hx = self.permute_hidden(hx, sorted_indices)
+
+        self.check_forward_args(input, hx, batch_sizes)
+        if batch_sizes is None:
+            result = flow._C.gru(
+                input,
+                hx,
+                self._flat_weights,
+                self.bias,
+                self.num_layers,
+                self.dropout,
+                self.training,
+                self.bidirectional,
+                self.batch_first,
+            )
+        else:
+            result = flow._C.gru(
+                input,
+                batch_sizes,
+                hx,
+                self._flat_weights,
+                self.bias,
+                self.num_layers,
+                self.dropout,
+                self.training,
+                self.bidirectional,
+            )
+        output = result[0]
+        hidden = result[1]
+
+        if isinstance(orig_input, PackedSequence):
+            output_packed = PackedSequence(
+                output, batch_sizes, sorted_indices, unsorted_indices
+            )
+            return output_packed, self.permute_hidden(hidden, unsorted_indices)
+        else:
+            if not is_batched:
+                output = output.squeeze(batch_dim)
+                hidden = hidden.squeeze(1)
+
+            return output, self.permute_hidden(hidden, unsorted_indices)
+
+
 class RNNCellBase(nn.Module):
     def __init__(
         self,

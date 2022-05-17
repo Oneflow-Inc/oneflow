@@ -432,10 +432,11 @@ def _test_gru(test_case, device):
     input_size = random.randint(10, 1000)
     hidden_size = random.randint(10, 1000)
     num_layers = random.randint(1, 6)
-    bias = bool(random.randint(-5, 5))
-    batch_first = bool(random.randint(-5, 5))
+    grad_tol = 1e-4
+    bias = random.randint(-10, 10) <= 0
+    batch_first = random.randint(-10, 10) <= 0
     dropout = 0
-    bidirectional = bool(random.randint(-5, 5))
+    bidirectional = random.randint(-10, 10) <= 0
 
     gru_torch = torch.nn.GRU(
         input_size=input_size,
@@ -443,54 +444,173 @@ def _test_gru(test_case, device):
         num_layers=num_layers,
         bias=bias,
         batch_first=batch_first,
-        dropout=0,
+        dropout=dropout,
         bidirectional=bidirectional,
-    ).to(device)
+    )
 
-    weights_torch = []
-    for w in gru_torch.parameters():
-        weights_torch.append(
-            w.permute(1, 0).cpu().data.numpy()
-            if len(w.size()) > 1
-            else w.cpu().data.numpy()
-        )
-
-    gru_flow = flow.nn.GRU(
+    gru_flow = flow.nn.GRUV2(
         input_size=input_size,
         hidden_size=hidden_size,
         num_layers=num_layers,
         bias=bias,
         batch_first=batch_first,
-        dropout=0,
+        dropout=dropout,
         bidirectional=bidirectional,
-    ).to(device)
+    )
 
-    for i, w in enumerate(gru_flow.parameters()):
-        w_torch = weights_torch[i]
-        w.copy_(flow.tensor(w_torch))
+    torch_state_dict = gru_torch.state_dict()
+    new_dict = {}
+    for k, v in torch_state_dict.items():
+        new_dict[k] = v.detach().numpy()
+    gru_flow.load_state_dict(new_dict)
 
-    x = np.random.rand(32, 10, input_size)
-    x_torch = torch.tensor(x, dtype=torch.float32, requires_grad=True).to(device)
-    x_flow = flow.tensor(x, dtype=flow.float32, requires_grad=True).to(device)
+    gru_flow = gru_flow.to(device)
+    gru_torch = gru_torch.to(device)
+
+    x = np.random.rand(random.randint(10, 50), random.randint(10, 50), input_size)
+    x_torch = torch.tensor(x, dtype=torch.float32, requires_grad=True, device=device)
+    x_flow = flow.tensor(x, dtype=flow.float32, requires_grad=True, device=device)
 
     out_torch, hid_torch = gru_torch(x_torch)
     out_flow, hid_flow = gru_flow(x_flow)
-    test_case.assertTrue(
-        np.allclose(
-            out_torch.cpu().data.numpy(),
-            out_flow.cpu().data.numpy(),
-            rtol=1e-05,
-            atol=1e-05,
-        )
-    )
 
     z_torch = out_torch.sum()
     z_torch.backward()
     z_flow = out_flow.sum()
     z_flow.backward()
+
     test_case.assertTrue(
-        np.allclose(x_torch.cpu().data.numpy(), x_flow.cpu().data.numpy())
+        np.allclose(
+            out_torch.cpu().detach().numpy(),
+            out_flow.cpu().detach().numpy(),
+            atol=1e-5,
+        )
     )
+
+    test_case.assertTrue(
+        np.allclose(
+            hid_torch.cpu().detach().numpy(),
+            hid_flow.cpu().detach().numpy(),
+            atol=1e-5,
+        )
+    )
+
+    all_weights = gru_torch.all_weights
+    torch_params = []
+    for ls in all_weights:
+        for l in ls:
+            torch_params.append(l)
+    all_weights = gru_flow.all_weights
+    flow_params = []
+    for ls in all_weights:
+        for l in ls:
+            flow_params.append(l)
+
+    for i in range(len(flow_params)):
+        torch_np = torch_params[i].grad.cpu().numpy()
+        flow_np = flow_params[i].grad.cpu().numpy()
+        test_case.assertTrue(np.allclose(torch_np, flow_np, atol=grad_tol))
+    test_case.assertTrue(
+        np.allclose(
+            x_torch.grad.cpu().numpy(), x_flow.grad.cpu().numpy(), atol=grad_tol
+        )
+    )
+
+
+def _test_gru_pack_sequence(test_case, device):
+    input_size = random.randint(10, 1000)
+    hidden_size = random.randint(10, 1000)
+    num_layers = random.randint(1, 6)
+    grad_tol = 1e-4
+    bias = random.randint(-10, 10) <= 0
+    batch_first = False
+    dropout = 0
+    bidirectional = random.randint(-10, 10) <= 0
+
+    gru_torch = torch.nn.GRU(
+        input_size=input_size,
+        hidden_size=hidden_size,
+        num_layers=num_layers,
+        bias=bias,
+        batch_first=batch_first,
+        dropout=dropout,
+        bidirectional=bidirectional,
+    )
+
+    gru_flow = flow.nn.GRUV2(
+        input_size=input_size,
+        hidden_size=hidden_size,
+        num_layers=num_layers,
+        bias=bias,
+        batch_first=batch_first,
+        dropout=dropout,
+        bidirectional=bidirectional,
+    )
+
+    torch_state_dict = gru_torch.state_dict()
+    new_dict = {}
+    for k, v in torch_state_dict.items():
+        new_dict[k] = v.detach().numpy()
+    gru_flow.load_state_dict(new_dict)
+
+    gru_flow = gru_flow.to(device)
+    gru_torch = gru_torch.to(device)
+
+    max_seq_len = random.randint(10, 50)
+    batch_size = random.randint(10, 50)
+    lengths = []
+    lengths.append(max_seq_len)
+    for i in range(batch_size - 1):
+        lengths.append(random.randint(1, max_seq_len))
+    lengths.sort(reverse=True)
+
+    sequences = []
+    for i in range(batch_size):
+        sequences.append(flow.rand(lengths[i], input_size).to(device))
+
+    x_flow = flow_rnn_utils.pack_sequence(sequences)
+    torch_inputs = [torch.tensor(ft.numpy(), device=device) for ft in sequences]
+    x_torch = torch_rnn_utils.pack_sequence(torch_inputs)
+
+    out_torch, hid_torch = gru_torch(x_torch)
+    out_flow, hid_flow = gru_flow(x_flow)
+
+    z_torch = out_torch.data.sum()
+    z_torch.backward()
+    z_flow = out_flow.data.sum()
+    z_flow.backward()
+
+    test_case.assertTrue(
+        np.allclose(
+            out_torch.data.cpu().detach().numpy(),
+            out_flow.data.cpu().detach().numpy(),
+            atol=1e-5,
+        )
+    )
+
+    test_case.assertTrue(
+        np.allclose(
+            hid_torch.cpu().detach().numpy(),
+            hid_flow.cpu().detach().numpy(),
+            atol=1e-5,
+        )
+    )
+
+    all_weights = gru_torch.all_weights
+    torch_params = []
+    for ls in all_weights:
+        for l in ls:
+            torch_params.append(l)
+    all_weights = gru_flow.all_weights
+    flow_params = []
+    for ls in all_weights:
+        for l in ls:
+            flow_params.append(l)
+
+    for i in range(len(flow_params)):
+        torch_np = torch_params[i].grad.cpu().numpy()
+        flow_np = flow_params[i].grad.cpu().numpy()
+        test_case.assertTrue(np.allclose(torch_np, flow_np, atol=grad_tol))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -502,6 +622,8 @@ class TestRNNModules(flow.unittest.TestCase):
             _test_lstm,
             _test_rnn_pack_sequence,
             _test_lstm_pack_sequence,
+            _test_gru,
+            _test_gru_pack_sequence,
         ]
         arg_dict["device"] = ["cuda", "cpu"]
         for i in range(10):

@@ -151,7 +151,7 @@ __global__
     grad_hidden_gates_ptr[offset + 0 * hidden_size] = F2H(grg);
     grad_hidden_gates_ptr[offset + 1 * hidden_size] = F2H(gig);
     grad_hidden_gates_ptr[offset + 2 * hidden_size] = F2H(ghn);
-    grad_hx_ptr[linearIndex] = F2H(ghx);
+    if (grad_hx_ptr != nullptr) { grad_hx_ptr[linearIndex] = F2H(ghx); }
   }
 }
 
@@ -303,14 +303,18 @@ class GpuFusedGruCellGradFloatKernel final : public user_op::OpKernel {
     const user_op::Tensor* workspace = ctx->Tensor4ArgNameAndIndex("workspace", 0);
     user_op::Tensor* grad_input_gates = ctx->Tensor4ArgNameAndIndex("grad_input_gates", 0);
     user_op::Tensor* grad_hidden_gates = ctx->Tensor4ArgNameAndIndex("grad_hidden_gates", 0);
-    user_op::Tensor* grad_hx = ctx->Tensor4ArgNameAndIndex("grad_hx", 0);
 
     const float* grad_hy_ptr = grad_hy->dptr<float>();
     const float* workspace_ptr = workspace->dptr<float>();
 
     float* grad_input_gates_ptr = grad_input_gates->mut_dptr<float>();
     float* grad_hidden_gates_ptr = grad_hidden_gates->mut_dptr<float>();
-    float* grad_hx_ptr = grad_hx->mut_dptr<float>();
+
+    float* grad_hx_ptr = nullptr;
+    if (ctx->has_output("grad_hx", 0)) {
+      user_op::Tensor* grad_hx = ctx->Tensor4ArgNameAndIndex("grad_hx", 0);
+      grad_hx_ptr = grad_hx->mut_dptr<float>();
+    }
 
     const int64_t hx_numel = grad_hy->shape().elem_cnt();
     const int64_t workspace_numel = workspace->shape().elem_cnt();

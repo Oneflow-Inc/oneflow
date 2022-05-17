@@ -9547,7 +9547,7 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
   let output = (outs
     OneFlow_Tensor:$grad_input_gates,
     OneFlow_Tensor:$grad_hidden_gates,
-    OneFlow_Tensor:$grad_hx,
+    Optional<OneFlow_Tensor>:$grad_hx,
     Optional<OneFlow_Tensor>:$grad_input_bias,
     Optional<OneFlow_Tensor>:$grad_hidden_bias
   );

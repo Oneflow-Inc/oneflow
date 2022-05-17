@@ -160,4 +160,5 @@ from oneflow.nn.modules.rnn import (
     GRUCell,
     RNNV2,
     LSTMV2,
+    GRUV2,
 )

@@ -78,7 +78,8 @@ namespace oneflow {
   DimVector dim_vec(gates_shape.begin(), gates_shape.end());
   *ctx->OutputShape("grad_input_gates", 0) = Shape(dim_vec);
   *ctx->OutputShape("grad_hidden_gates", 0) = Shape(dim_vec);
-  *ctx->OutputShape("grad_hx", 0) = grad_hy_shape;
+
+  if (ctx->has_output("grad_hx", 0)) { *ctx->OutputShape("grad_hx", 0) = grad_hy_shape; }
 
   if (ctx->has_output("grad_input_bias", 0) && ctx->has_output("grad_hidden_bias", 0)) {
     std::vector<int32_t> bias_shape;
@@ -118,7 +119,8 @@ namespace oneflow {
   split_args.emplace_back("workspace", 0);
   split_args.emplace_back("grad_input_gates", 0);
   split_args.emplace_back("grad_hidden_gates", 0);
-  split_args.emplace_back("grad_hx", 0);
+
+  if (ctx->user_op_conf().has_output("grad_hx", 0)) { split_args.emplace_back("grad_hx", 0); }
 
   ctx->NewBuilder().Split(split_args, 0).PartialSum(partial_sum_args).Build();
   return Maybe<void>::Ok();
@@ -128,7 +130,7 @@ namespace oneflow {
   const oneflow::DataType& in_types = ctx->InputDType("grad_hy", 0);
   *ctx->OutputDType("grad_input_gates", 0) = in_types;
   *ctx->OutputDType("grad_hidden_gates", 0) = in_types;
-  *ctx->OutputDType("grad_hx", 0) = in_types;
+  if (ctx->has_output("grad_hx", 0)) { *ctx->OutputDType("grad_hx", 0) = in_types; }
   if (ctx->has_output("grad_input_bias", 0)) { *ctx->OutputDType("grad_input_bias", 0) = in_types; }
   if (ctx->has_output("grad_hidden_bias", 0)) {
     *ctx->OutputDType("grad_hidden_bias", 0) = in_types;
@@ -144,8 +146,9 @@ REGISTER_USER_OP_GRAD("fused_gru_cell")
             .InputBind("grad_hy", ctx->FwOp().output_grad("hy", 0))
             .InputBind("workspace", ctx->FwOp().output("workspace", 0))
             .Output("grad_input_gates")
-            .Output("grad_hidden_gates")
-            .Output("grad_hx");
+            .Output("grad_hidden_gates");
+
+        if (ctx->FwOp().NeedGenGradTensor4OpInput("hx", 0)) { builder.Output("grad_hx"); }
 
         if (ctx->FwOp().user_op_conf().has_input("input_bias", 0)
             && ctx->FwOp().user_op_conf().has_input("hidden_bias", 0)) {
@@ -164,10 +167,12 @@ REGISTER_USER_OP_GRAD("fused_gru_cell")
                                   return ctx->GetOp(grad_op_name).output("grad_hidden_gates", 0);
                                 });
 
-      ctx->FwOp().InputGradBind(user_op::OpArg("hx", 0),
-                                [&ctx, &grad_op_name]() -> const std::string& {
-                                  return ctx->GetOp(grad_op_name).output("grad_hx", 0);
-                                });
+      if (ctx->FwOp().NeedGenGradTensor4OpInput("hx", 0)) {
+        ctx->FwOp().InputGradBind(user_op::OpArg("hx", 0),
+                                  [&ctx, &grad_op_name]() -> const std::string& {
+                                    return ctx->GetOp(grad_op_name).output("grad_hx", 0);
+                                  });
+      }
 
       if (ctx->FwOp().user_op_conf().has_input("input_bias", 0)
           && ctx->FwOp().user_op_conf().has_input("hidden_bias", 0)) {

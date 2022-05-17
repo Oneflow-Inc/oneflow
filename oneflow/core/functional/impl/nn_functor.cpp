@@ -3372,6 +3372,14 @@ class FusedGruCellGradFunctor {
                                    .Output("grad_input_bias")
                                    .Output("grad_hidden_bias")
                                    .Build());
+    op_with_bias_without_hx_ = CHECK_JUST(one::OpBuilder("fused_gru_cell_grad")
+                                              .Input("grad_hy")
+                                              .Input("workspace")
+                                              .Output("grad_input_gates")
+                                              .Output("grad_hidden_gates")
+                                              .Output("grad_input_bias")
+                                              .Output("grad_hidden_bias")
+                                              .Build());
     op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_gru_cell_grad")
                                       .Input("grad_hy")
                                       .Input("workspace")
@@ -3379,25 +3387,43 @@ class FusedGruCellGradFunctor {
                                       .Output("grad_hidden_gates")
                                       .Output("grad_hx")
                                       .Build());
+    op_without_bias_without_hx_ = CHECK_JUST(one::OpBuilder("fused_gru_cell_grad")
+                                                 .Input("grad_hy")
+                                                 .Input("workspace")
+                                                 .Output("grad_input_gates")
+                                                 .Output("grad_hidden_gates")
+                                                 .Build());
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& grad_hy,
-                                const std::shared_ptr<one::Tensor>& workspace,
-                                bool has_bias) const {
+                                const std::shared_ptr<one::Tensor>& workspace, bool has_bias,
+                                bool hx_needs_grad) const {
     std::shared_ptr<TensorTuple> kernel_result;
     if (has_bias) {
-      kernel_result =
-          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_with_bias_, {grad_hy, workspace}));
+      if (hx_needs_grad) {
+        kernel_result =
+            JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_with_bias_, {grad_hy, workspace}));
+      } else {
+        kernel_result = JUST(
+            OpInterpUtil::Dispatch<TensorTuple>(*op_with_bias_without_hx_, {grad_hy, workspace}));
+      }
     } else {
-      kernel_result =
-          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_without_bias_, {grad_hy, workspace}));
+      if (hx_needs_grad) {
+        kernel_result =
+            JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_without_bias_, {grad_hy, workspace}));
+      } else {
+        kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_without_bias_without_hx_,
+                                                                 {grad_hy, workspace}));
+      }
     }
     return kernel_result;
   }
 
  private:
   std::shared_ptr<OpExpr> op_with_bias_;
+  std::shared_ptr<OpExpr> op_with_bias_without_hx_;
   std::shared_ptr<OpExpr> op_without_bias_;
+  std::shared_ptr<OpExpr> op_without_bias_without_hx_;
 };
 
 class FusedLstmCellFunctor {
@@ -4129,6 +4155,35 @@ class LstmDataFunctor {
   }
 };
 
+class GruInputFunctor {
+ public:
+  GruInputFunctor() {}
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
+                                const std::shared_ptr<one::Tensor>& hx,
+                                const one::TensorTuple& params, const bool& has_biases,
+                                const int32_t& num_layers, const float& dropout, const bool& train,
+                                const bool& bidirectional, const bool& batch_first) const {
+    return _rnn_impl<GRUCell<CellParams>>(input, hx, params, has_biases, num_layers, dropout, train,
+                                          bidirectional, batch_first);
+  }
+};
+
+class GruDataFunctor {
+ public:
+  GruDataFunctor() {}
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& data,
+                                const std::shared_ptr<one::Tensor>& batch_sizes,
+                                const std::shared_ptr<one::Tensor>& hx,
+                                const one::TensorTuple& params, const bool& has_biases,
+                                const int32_t& num_layers, const float& dropout, const bool& train,
+                                const bool& bidirectional) const {
+    return _rnn_pack_sequence_impl<GRUCell<CellParams>>(data, batch_sizes, hx, params, has_biases,
+                                                        num_layers, dropout, train, bidirectional);
+  }
+};
+
 Maybe<void> checkLongTensor(const std::shared_ptr<one::Tensor>& tensor) {
   auto& device = JUST(tensor->device())->type();
   CHECK_OR_RETURN(tensor->ndim() == 1 && device == "cpu" && tensor->dtype() != DType::Int64())
@@ -4348,6 +4403,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RnnReluDataFunctor>("RnnReluData");
   m.add_functor<impl::LstmInputFunctor>("LstmInput");
   m.add_functor<impl::LstmDataFunctor>("LstmData");
+  m.add_functor<impl::GruInputFunctor>("GruInput");
+  m.add_functor<impl::GruDataFunctor>("GruData");
   m.add_functor<impl::PackPaddedSequenceFunctor>("PackPaddedSequence");
 }
 

@@ -23,6 +23,7 @@ namespace one {
 
 struct FusedGruCellGradCaptureState : public AutoGradCaptureState {
   bool has_bias;
+  bool hx_needs_grad;
 };
 
 class FusedGruCellGrad : public OpExprGradFunction<FusedGruCellGradCaptureState> {
@@ -41,6 +42,7 @@ class FusedGruCellGrad : public OpExprGradFunction<FusedGruCellGradCaptureState>
       CHECK_EQ_OR_RETURN(inputs.size(), 5);
       ctx->has_bias = true;
     }
+    if (inputs.at(2)->requires_grad()) { ctx->hx_needs_grad = true; }
     ctx->SaveTensorForBackward(outputs.at(1));  // workspace
     return Maybe<void>::Ok();
   }
@@ -49,7 +51,8 @@ class FusedGruCellGrad : public OpExprGradFunction<FusedGruCellGradCaptureState>
                     TensorTuple* in_grads) const override {
     const auto& workspace = ctx->SavedTensors().at(0);  // workspace
     const auto& grad_hy = out_grads.at(0);
-    const auto& results = JUST(functional::FusedGruCellGrad(grad_hy, workspace, ctx->has_bias));
+    const auto& results =
+        JUST(functional::FusedGruCellGrad(grad_hy, workspace, ctx->has_bias, ctx->hx_needs_grad));
 
     if (ctx->has_bias) {
       in_grads->resize(5);
@@ -58,11 +61,17 @@ class FusedGruCellGrad : public OpExprGradFunction<FusedGruCellGradCaptureState>
     }
     in_grads->at(0) = results->at(0);
     in_grads->at(1) = results->at(1);
-    in_grads->at(2) = results->at(2);
+
+    if (ctx->hx_needs_grad) { in_grads->at(2) = results->at(2); }
 
     if (ctx->has_bias) {
-      in_grads->at(3) = results->at(3);
-      in_grads->at(4) = results->at(4);
+      if (ctx->hx_needs_grad) {
+        in_grads->at(3) = results->at(3);
+        in_grads->at(4) = results->at(4);
+      } else {
+        in_grads->at(3) = results->at(2);
+        in_grads->at(4) = results->at(3);
+      }
     }
     return Maybe<void>::Ok();
   }
