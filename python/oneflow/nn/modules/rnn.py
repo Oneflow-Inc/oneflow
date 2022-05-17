@@ -1255,6 +1255,17 @@ class RNNBase(nn.Module):
             self._flat_weights[idx] = value
         super().__setattr__(attr, value)
 
+    def to_global(self, placement=None, sbp=None):
+        def convert(t):
+            return t.to_global(placement=placement, sbp=sbp)
+
+        self = self._apply(convert)
+        self._flat_weights = [
+            (lambda wn: getattr(self, wn) if hasattr(self, wn) else None)(wn)
+            for wn in self._flat_weights_names
+        ]
+        return self
+
     def reset_parameters(self) -> None:
         stdv = 1.0 / math.sqrt(self.hidden_size) if self.hidden_size > 0 else 0
         for weight in self.parameters():

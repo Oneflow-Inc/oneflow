@@ -156,6 +156,45 @@ def _test_rnn_tanh_cell(test_case, placement, sbp):
     return hx
 
 
+@autotest(n=2, check_graph=False)
+def _test_gru_cell(test_case, placement, sbp):
+    batch_size = random(2, 3) * 8
+    time_steps = random(1, 6)
+    input_size = random(1, 6) * 2
+    hidden_size = random(1, 6) * 2
+    has_bias = random().to(bool)
+    m = torch.nn.GRUCell(input_size=input_size, hidden_size=hidden_size, bias=has_bias,)
+
+    m.weight_ih = torch.nn.Parameter(
+        m.weight_ih.to_global(placement=placement, sbp=sbp)
+    )
+    m.weight_hh = torch.nn.Parameter(
+        m.weight_hh.to_global(placement=placement, sbp=sbp)
+    )
+    if m.bias_ih is not None:
+        # bias is 1-d tensor
+        bias_sbp = random_sbp(placement, max_dim=1)
+        m.bias_ih = torch.nn.Parameter(
+            m.bias_ih.to_global(placement=placement, sbp=bias_sbp)
+        )
+        m.bias_hh = torch.nn.Parameter(
+            m.bias_hh.to_global(placement=placement, sbp=bias_sbp)
+        )
+
+    input_sbp = random_sbp(placement, max_dim=3, valid_split_axis=1)
+    input = random_tensor(
+        ndim=3, dim0=time_steps, dim1=batch_size, dim2=input_size
+    ).to_global(placement=placement, sbp=input_sbp)
+    hx = random_tensor(
+        ndim=2, dim0=batch_size, dim1=hidden_size, requires_grad=False
+    ).to_global(placement=placement, sbp=sbp)
+
+    for i in range(time_steps.to(int).value()):
+        hx = m(input[i], hx)
+
+    return hx
+
+
 class TestRNNCellConsistent(flow.unittest.TestCase):
     @globaltest
     def test_lstm_cell(test_case):
@@ -174,6 +213,12 @@ class TestRNNCellConsistent(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_rnn_tanh_cell(test_case, placement, sbp)
+
+    @globaltest
+    def test_gru_cell(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_gru_cell(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
