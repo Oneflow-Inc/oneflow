@@ -1421,22 +1421,6 @@ class FlipFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FlipGradFunctor {
- public:
-  FlipGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("flip_grad").Input("dy").Output("dx").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::vector<int32_t>& dims) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dims", dims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class UnfoldTensorFunctor {
  public:
   UnfoldTensorFunctor() {
@@ -3043,7 +3027,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::FlipFunctor>("Flip");
-  m.add_functor<impl::FlipGradFunctor>("FlipGrad");
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
   m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
   m.add_functor<impl::UpsampleFunctor>("Upsample");
