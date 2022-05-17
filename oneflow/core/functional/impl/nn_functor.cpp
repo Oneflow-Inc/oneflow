@@ -389,15 +389,18 @@ class FusedMatmulBiasAddReluDropoutFunctor {
 #endif
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
-                           const TensorTuple& biases, bool skip_final_activation, float rate,
+                           const TensorTuple& biases, bool skip_final_activation,
+                           std::vector<float> dropout_rate_list,
                            const Optional<one::Generator>& generator) const {
-    CHECK_GE_OR_RETURN(rate, static_cast<float>(0.0))
-        << Error::RuntimeError() << "Dropout rate should be >= 0.0";
     const int64_t weight_size = weights.size();
     const int64_t bias_size = biases.size();
-    CHECK_GE_OR_RETURN(weight_size, 1) << "The number of weights should be greater equal than 1. ";
+    CHECK_GE_OR_RETURN(weight_size, 1)
+        << Error::RuntimeError() << "The number of weights should be greater equal than 1. ";
     CHECK_EQ_OR_RETURN(weight_size, bias_size)
-        << "The number of weights should be equal to biases. ";
+        << Error::RuntimeError() << "The number of weights should be equal to biases. ";
+    CHECK_EQ_OR_RETURN(weight_size, dropout_rate_list.size())
+        << Error::RuntimeError()
+        << "The dropout rate list length should be equal to the number of weights. ";
     int64_t n = 0, k = 0;
     /*
     x: (m, k)
@@ -409,6 +412,9 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     for (int64_t i = 0; i < weight_size; i++) {
+      CHECK_GE_OR_RETURN(dropout_rate_list.at(i), static_cast<float>(0.0))
+          << Error::RuntimeError() << "Dropout rate should be >= 0.0";
+
       const auto& weight_shape = weights[i]->shape();
       const auto& bias_shape = biases[i]->shape();
       // TODO(): Support Fused batch/broadcast matmul.
@@ -439,7 +445,7 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
-      JUST(attrs.SetAttr<float>("rate", rate));
+      JUST(attrs.SetAttr<std::vector<float>>("dropout_rate_list", dropout_rate_list));
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input,
                                             OpExprInterpContext(attrs, dropout_state));
     }
@@ -453,7 +459,8 @@ class FusedMatmulBiasAddReluDropoutFunctor {
                               biases[layer_idx], 1));
       if ((layer_idx != weight_size - 1)) {
         out = JUST(functional::Relu(out, false));
-        out = JUST(functional::Dropout(out, rate, /*training=*/true, /*inplace=*/false,
+        out = JUST(functional::Dropout(out, dropout_rate_list.at(layer_idx), /*training=*/true,
+                                       /*inplace=*/false,
                                        /*generator=*/gen, /*addend=*/NullOpt));
       }
       if ((layer_idx == weight_size - 1) && (!skip_final_activation)) {

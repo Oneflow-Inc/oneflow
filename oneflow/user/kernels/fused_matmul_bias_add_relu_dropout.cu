@@ -427,9 +427,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
     std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
         CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
     uint64_t seed = cuda_generator->current_seed();
-    const float rate = ctx->Attr<float>("rate");
-    float scale = 0.0;
-    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+    const std::vector<float> dropout_rate_list = ctx->Attr<std::vector<float>>("dropout_rate_list");
     one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
 
     const DataType data_type = out->data_type();
@@ -489,27 +487,31 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
           nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
           cuda_stream->cuda_stream()));
 
-    //   if (idx == weight_size - 1) {
-    //     if (skip_final_activation) {
-    //       break;
-    //     } else {
-    //       // No Dropout
-    //       LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt,
-    //                                       rate, 0.0, reinterpret_cast<T*>(matmul_out_ptr),
-    //                                       reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
-    //                                       tmp_relu_dropout_out_buf);
-    //     }
-    //   } else {
-    //     LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt,
-    //                                     rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-    //                                     reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
-    //                                     tmp_relu_dropout_out_buf);
-    //   }
-      printf("Matmul out elemcnt is: %ld \n", matmul_out_elem_cnt); 
-      LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt,
-        rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-        reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
-        tmp_relu_dropout_out_buf);
+      //   if (idx == weight_size - 1) {
+      //     if (skip_final_activation) {
+      //       break;
+      //     } else {
+      //       // No Dropout
+      //       LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state,
+      //       matmul_out_elem_cnt,
+      //                                       rate, 0.0, reinterpret_cast<T*>(matmul_out_ptr),
+      //                                       reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
+      //                                       tmp_relu_dropout_out_buf);
+      //     }
+      //   } else {
+      //     LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt,
+      //                                     rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
+      //                                     reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
+      //                                     tmp_relu_dropout_out_buf);
+      //   }
+      printf("Matmul out elemcnt is: %ld \n", matmul_out_elem_cnt);
+      float rate = dropout_rate_list.at(idx);
+      float scale = 0.0;
+      if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+      LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, rate,
+                                      scale, reinterpret_cast<T*>(matmul_out_ptr),
+                                      reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
+                                      tmp_relu_dropout_out_buf);
 
       // Set relu_droput_out ptr as next layer's input.
       in_buf_ptr = tmp_relu_dropout_out_buf;
@@ -521,21 +523,21 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(cpp_type, data_type)          \
-  REGISTER_USER_KERNEL("fused_matmul_bias_add_relu_dropout")                                 \
-      .SetCreateFn<FusedMatmulBiasAddReluDropoutKernel<cpp_type>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                       \
-                       && (user_op::HobDataType("out", 0) == data_type))                     \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
-        const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);                         \
-        const int64_t batchsize = x.shape().At(0);                                           \
-        const int32_t weight_size = ctx->input_size("weights");                              \
-        size_t tmp_size = 0;                                                                 \
-        for (int i = 0; i < weight_size - 1; i++) {                                          \
-            const int64_t out_feature = ctx->InputTensorDesc("weights", i).shape().At(0);      \
-            tmp_size += GetCudaAlignedSize(batchsize * out_feature * sizeof(cpp_type)); \
-        }                                                                                    \
-        return tmp_size;                                                                     \
+#define REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(cpp_type, data_type)     \
+  REGISTER_USER_KERNEL("fused_matmul_bias_add_relu_dropout")                            \
+      .SetCreateFn<FusedMatmulBiasAddReluDropoutKernel<cpp_type>>()                     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("out", 0) == data_type))                \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
+        const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);                    \
+        const int64_t batchsize = x.shape().At(0);                                      \
+        const int32_t weight_size = ctx->input_size("weights");                         \
+        size_t tmp_size = 0;                                                            \
+        for (int i = 0; i < weight_size - 1; i++) {                                     \
+          const int64_t out_feature = ctx->InputTensorDesc("weights", i).shape().At(0); \
+          tmp_size += GetCudaAlignedSize(batchsize * out_feature * sizeof(cpp_type));   \
+        }                                                                               \
+        return tmp_size;                                                                \
       });
 
 REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(double, DataType::kDouble)

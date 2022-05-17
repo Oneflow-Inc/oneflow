@@ -959,7 +959,7 @@
 
 - name: "fused_matmul_bias_add_relu_dropout"
   signature:
-    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, Float rate, Generator generator=None) => FusedMatmulBiasAddReluDropout"
+    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, FloatList dropout_rate_list, Generator generator=None) => FusedMatmulBiasAddReluDropout"
   bind_python: True
 
 - name: "broadcast_matmul_grad_b"
