@@ -36,15 +36,12 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
   const std::vector<std::shared_ptr<TensorSliceCopier>>& out_tensor_slice_copier_vec() const {
     return out_tensor_slice_copier_vec_;
   }
-  bool src_nd_sbp_has_no_partial_parallel() const {
-    return src_nd_sbp_no_partial_parallel_;
-  }
+  bool src_nd_sbp_has_no_partial_parallel() const { return src_nd_sbp_no_partial_parallel_; }
   const std::vector<int64_t>& send_elem_cnts() const { return send_elem_cnts_; }
   const std::vector<int64_t>& recv_elem_cnts() const { return recv_elem_cnts_; }
   ncclComm_t comm() const { return GetOrCreateComm().comm; }
 
  private:
-
   struct Comm {
     Comm(ncclComm_t comm) : comm(comm) {}
     ncclComm_t comm;
@@ -137,7 +134,6 @@ void NcclLogicalSendRecvState::InitComm() const {
   comm_.reset(new Comm(comm));
 }
 
-
 class NcclLogicalSendRecv final : public user_op::OpKernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NcclLogicalSendRecv);
@@ -156,7 +152,7 @@ class NcclLogicalSendRecv final : public user_op::OpKernel {
 };
 
 void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-             const user_op::OpKernelCache*) const {
+                                  const user_op::OpKernelCache*) const {
   auto* kernel_state = dynamic_cast<NcclLogicalSendRecvState*>(state);
   CHECK_NOTNULL(kernel_state);
   const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -238,14 +234,14 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
         } else {
           if (recv_elem_cnts.at(i) == out->shape().elem_cnt()) {
             add_primitive->Launch(ctx->stream(), out->dptr(), recv_out_ptr.at(i), out->mut_dptr(),
-                              out->shape().elem_cnt());
+                                  out->shape().elem_cnt());
           } else {
             void* out_buf = reinterpret_cast<void*>(buf_ptr + offset);
             memset_primitive->Launch(ctx->stream(), out_buf, 0,
                                      out->shape().elem_cnt() * GetSizeOfDataType(data_type));
             out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out_buf, recv_out_ptr.at(i));
             add_primitive->Launch(ctx->stream(), out->dptr(), out_buf, out->mut_dptr(),
-                              out->shape().elem_cnt());
+                                  out->shape().elem_cnt());
           }
         }
       }
@@ -283,7 +279,6 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   }
   return buf_count;
 }
-
 
 REGISTER_USER_KERNEL("_nccl_logical_send_recv")
     .SetCreateFn<NcclLogicalSendRecv>()
