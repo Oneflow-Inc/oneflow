@@ -82,10 +82,12 @@ __global__ void grad_indices_freq_kernel(const IndexType* indices_buf, const int
 
 template<typename T, typename IndexType>
 __global__ void emb_scale_kernel(T* dx_buf, const int64_t emb_size, const int64_t emb_dim,
-                                 int32_t* tmp_buf) {
+                                 int32_t* indices_freq) {
   CUDA_1D_KERNEL_LOOP_T(IndexType, i, emb_size * emb_dim) {
     IndexType emb_size_index = i / emb_dim;
-    if (tmp_buf[emb_size_index] > 1) { dx_buf[i] /= tmp_buf[emb_size_index]; }
+    if (indices_freq[emb_size_index] > 1) {
+      dx_buf[i] /= static_cast<T>(indices_freq[emb_size_index]);
+    }
   }
 }
 

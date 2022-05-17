@@ -71,10 +71,9 @@ class GpuEmbeddingKernel final : public user_op::OpKernel {
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
-    const ShapeView& out_shape = out->shape();
-    const int64_t num_indices = out_shape.Count(0, out_shape.NumAxes() - 1);
+    const int64_t num_indices = indices->shape().elem_cnt();
     const int64_t emb_size = weight->shape().At(0);
-    const int64_t emb_dim = out_shape.At(out_shape.NumAxes() - 1);
+    const int64_t emb_dim = weight->shape().At(1);
     const T* weight_buf = weight->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
     T* out_buf = out->mut_dptr<T>();
@@ -102,10 +101,9 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
     const int64_t padding_idx = ctx->Attr<int64_t>("padding_idx");
     const bool scale_grad_by_freq = ctx->Attr<bool>("scale_grad_by_freq");
 
-    const ShapeView& dy_shape = dy->shape();
-    const int64_t num_indices = dy_shape.Count(0, dy_shape.NumAxes() - 1);
+    const int64_t num_indices = indices->shape().elem_cnt();
     const int64_t emb_size = weight->shape().At(0);
-    const int64_t emb_dim = dy_shape.At(dy_shape.NumAxes() - 1);
+    const int64_t emb_dim = weight->shape().At(1);
 
     const T* dy_buf = dy->dptr<T>();
     const IndexType* indices_buf = indices->dptr<IndexType>();
