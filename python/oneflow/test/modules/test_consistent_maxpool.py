@@ -74,15 +74,15 @@ def _test_maxpool2d_functional(test_case, placement, sbp):
 @autotest(n=1, check_graph=False)
 def _test_maxpool3d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
-    dim0 = random().to(int).value() * 8
-    dim1 = random().to(int).value() * 8
+    dim0 = random(high=4).to(int).value() * 8
+    dim1 = random(high=4).to(int).value() * 8
     x = random_tensor(
         ndim=5,
         dim0=dim0,
         dim1=dim1,
-        dim2=random(20, 22),
-        dim3=random(20, 22),
-        dim4=random(20, 22),
+        dim2=random(10, 12),
+        dim3=random(10, 12),
+        dim4=random(10, 12),
     ).to_global(placement, sbp)
     y = torch.nn.functional.max_pool3d(
         x,
@@ -151,8 +151,8 @@ def _test_maxpool2d(test_case, placement, sbp):
 @autotest(n=1, check_graph=False)
 def _test_maxpool3d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
-    dim0 = random().to(int).value() * 8
-    dim1 = random().to(int).value() * 8
+    dim0 = random(high=4).to(int).value() * 8
+    dim1 = random(high=4).to(int).value() * 8
     m = torch.nn.MaxPool3d(
         kernel_size=random(4, 6).to(_size_3_t),
         stride=random(1, 3).to(_size_3_t),
@@ -166,9 +166,9 @@ def _test_maxpool3d(test_case, placement, sbp):
         ndim=5,
         dim0=dim0,
         dim1=dim1,
-        dim2=random(20, 22),
-        dim3=random(20, 22),
-        dim4=random(20, 22),
+        dim2=random(10, 12),
+        dim3=random(10, 12),
+        dim4=random(10, 12),
     ).to_global(placement, sbp)
     y = m(x)
 

@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +12,25 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
-#define ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
+"""
 
-#include <functional>
-#include "oneflow/core/common/maybe.h"
+import unittest
 
-namespace oneflow {
+import oneflow as flow
+import oneflow.unittest
 
-// Note: there is a time interval between catching error and reporting an error,
-// any error occur in this interval can't be displayed.
-Maybe<void> CheckAndClearRegistryFlag();
-void CatchRegistryError(const std::function<Maybe<void>()>&);
 
-}  // namespace oneflow
+@flow.unittest.skip_unless_1n1d()
+class TestBmm(flow.unittest.TestCase):
+    def test_bmm_exception_dim_not_right(test_case):
+        x = flow.tensor((2, 2))
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = flow.bmm(x, x)
+        test_case.assertTrue(
+            "Expected 3-dimensional tensor, but got 1-dimensional tensor for argument #1"
+            in str(ctx.exception)
+        )
 
-#endif  // ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
+
+if __name__ == "__main__":
+    unittest.main()
