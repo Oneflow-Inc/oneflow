@@ -175,8 +175,8 @@ endif()
 message(STATUS "RUN_CLANG_TIDY_ARGS: ${RUN_CLANG_TIDY_ARGS}")
 add_custom_target(
   of_tidy COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py
-                  ${RUN_CLANG_TIDY_ARGS} DEPENDS of_git_version oneflow_deps
-                                                 of_functional_obj of_functional_tensor_obj)
+                  ${RUN_CLANG_TIDY_ARGS} DEPENDS of_git_version oneflow_deps of_functional_obj
+                                                 of_functional_tensor_obj)
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
 set(OF_GIT_VERSION_FILE ${OF_GIT_VERSION_DIR}/version.cpp)
@@ -242,8 +242,8 @@ if(BUILD_PYTHON)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                               ${Python_NumPy_INCLUDE_DIRS})
 
-  set(PYBIND11_SRCS ${FUNCTIONAL_PYBIND11_SRCS}
-                    ${FUNCTIONAL_TENSOR_PYBIND11_SRCS} ${FUNCTIONAL_OPS_PYBIND11_SRCS})
+  set(PYBIND11_SRCS ${FUNCTIONAL_PYBIND11_SRCS} ${FUNCTIONAL_TENSOR_PYBIND11_SRCS}
+                    ${FUNCTIONAL_OPS_PYBIND11_SRCS})
 
 endif(BUILD_PYTHON)
 
@@ -360,8 +360,7 @@ if(BUILD_PYTHON)
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
   set_compile_options_to_oneflow_target(oneflow_internal)
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-  add_dependencies(oneflow_internal of_functional_obj of_functional_tensor_obj
-                   of_op_schema)
+  add_dependencies(oneflow_internal of_functional_obj of_functional_tensor_obj of_op_schema)
   set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
   set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                                     "${ONEFLOW_PYTHON_DIR}/oneflow")
