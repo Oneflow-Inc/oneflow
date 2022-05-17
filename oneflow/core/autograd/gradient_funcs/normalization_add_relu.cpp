@@ -147,9 +147,12 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     const auto& reserve_space = ctx->SavedTensors().at(6);
 
     const auto& results = JUST(functional::NormalizationAddReluGrad(
-        x, y_grad, mean, inv_variance, gamma, beta, reserve_space, y, ctx->axis, ctx->epsilon, ctx->has_addend));
-    CHECK_EQ_OR_RETURN(results->size(),
-                       ctx->has_addend ? 4 : 3);  // here output includes "gamma_diff" "beta_diff" "dx" "addend_diff"
+        x, y_grad, mean, inv_variance, gamma, beta, reserve_space, y, ctx->axis, ctx->epsilon,
+        ctx->has_addend));
+    CHECK_EQ_OR_RETURN(
+        results->size(),
+        ctx->has_addend ? 4
+                        : 3);  // here output includes "gamma_diff" "beta_diff" "dx" "addend_diff"
 
     if (ctx->track_running_stats) {
       // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and
