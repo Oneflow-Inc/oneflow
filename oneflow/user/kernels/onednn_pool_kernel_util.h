@@ -38,11 +38,11 @@ dnnl::memory::data_type CppTypeToOneDnnDtype<float>() {
 
 template<typename T>
 struct OneDnnPoolKernelUtil {
-  static void OneDnnPool1dForwardCompute(
+  static void OneDnnPoolForwardCompute(
       ep::Stream* stream, const dnnl::memory::dims src_dims, const dnnl::memory::dims dst_dims,
       const dnnl::memory::dims kernel_dims, const dnnl::memory::dims strides_dims,
       const dnnl::memory::dims padding_dims_l, const dnnl::memory::dims padding_dims_r,
-      const dnnl::memory::dims dilation, const void* src, void* dest, int64_t* indice_ptr) {
+      const dnnl::memory::dims dilation, dnnl::memory::format_tag format, const void* src, void* dest, int64_t* indice_ptr) {
     auto data_type = CppTypeToOneDnnDtype<T>();
     ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
     size_t num_threads = cpu_stream->device()->GetNumThreads();
@@ -50,8 +50,8 @@ struct OneDnnPoolKernelUtil {
     dnnl::engine* onednn_engine = cpu_stream->onednn_engine();
     dnnl::stream* onednn_stream = cpu_stream->onednn_stream();
 
-    auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nchw);
-    auto dst_md = dnnl::memory::desc(dst_dims, data_type, dnnl::memory::format_tag::nchw);
+    auto src_md = dnnl::memory::desc(src_dims, data_type, format);
+    auto dst_md = dnnl::memory::desc(dst_dims, data_type, format);
     auto src_mem = dnnl::memory(src_md, *onednn_engine, (void*)src);
     auto dst_mem = dnnl::memory(dst_md, *onednn_engine, (void*)dest);
 
@@ -69,12 +69,12 @@ struct OneDnnPoolKernelUtil {
     onednn_stream->wait();
   }
 
-  static void OneDnnpool1dBackwardCompute(
+  static void OneDnnpoolBackwardCompute(
       ep::Stream* stream, const dnnl::memory::dims diff_dst_dims,
       const dnnl::memory::dims diff_src_dims, const dnnl::memory::dims kernel_dims,
       const dnnl::memory::dims strides_dims, const dnnl::memory::dims padding_dims_l,
-      const dnnl::memory::dims padding_dims_r, const dnnl::memory::dims dilation, void* diff_dst,
-      void* diff_src, void* workspace) {
+      const dnnl::memory::dims padding_dims_r, const dnnl::memory::dims dilation,
+      dnnl::memory::format_tag format, void* diff_dst, void* diff_src, void* workspace) {
     auto data_type = CppTypeToOneDnnDtype<T>();
     ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
     size_t num_threads = cpu_stream->device()->GetNumThreads();
@@ -82,8 +82,8 @@ struct OneDnnPoolKernelUtil {
     dnnl::engine* onednn_engine = cpu_stream->onednn_engine();
     dnnl::stream* onednn_stream = cpu_stream->onednn_stream();
 
-    auto diff_dst_md = dnnl::memory::desc(diff_dst_dims, data_type, dnnl::memory::format_tag::nchw);
-    auto diff_src_md = dnnl::memory::desc(diff_src_dims, data_type, dnnl::memory::format_tag::nchw);
+    auto diff_dst_md = dnnl::memory::desc(diff_dst_dims, data_type, format);
+    auto diff_src_md = dnnl::memory::desc(diff_src_dims, data_type, format);
     auto diff_dst_mem = dnnl::memory(diff_dst_md, *onednn_engine, diff_dst);
     auto diff_src_mem = dnnl::memory(diff_src_md, *onednn_engine, diff_src);
 
