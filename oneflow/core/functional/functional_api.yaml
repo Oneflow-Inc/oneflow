@@ -1296,10 +1296,6 @@
   signature: "Tensor (Tensor x, Int32List dims) => Flip"
   bind_python: True
 
-- name: "flip_grad"
-  signature: "Tensor (Tensor dy, Int32List dims) => FlipGrad"
-  bind_python: False
-
 - name: "upsample"
   signature:
     'Tensor (Tensor x, Double height_scale, Double width_scale, Bool align_corners,
@@ -2118,10 +2114,6 @@
 - name: "cumsum"
   signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumsum"
   bind_python: True
-
-- name: "cumsum_grad"
-  signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
-  bind_python: False 
 
 - name: "cumprod"
   signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumprod"
