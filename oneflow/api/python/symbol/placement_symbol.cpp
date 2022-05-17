@@ -56,7 +56,7 @@ struct PlacementSymbolExportUtil {
     auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy_shape));
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
-      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+      parallel_desc = JUST(builder->GetParallelDescSymbol(*parallel_conf));
       return Maybe<void>::Ok();
     }));
 

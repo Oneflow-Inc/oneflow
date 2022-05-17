@@ -67,7 +67,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("embeddings", 0) = ctx->Attr<DataType>("dtype");
+  *ctx->OutputDType("embeddings", 0) = ctx->InputDType("shadow", 0);
   return Maybe<void>::Ok();
 }
 

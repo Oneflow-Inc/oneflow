@@ -24,6 +24,9 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/stride.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
 namespace one {
@@ -72,7 +75,8 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 
   for (int i = 0; i < index->ndim(); ++i) {
-    auto item = JUST(functional::Slice(res->at(0), {0, i}, {size, i + 1}, {1, 1}));
+    auto item = JUST(
+        functional::Slice((*res)[0], {0, i}, {size, i + 1}, {1, 1}, /*enable_view_slice=*/true));
     item = JUST(functional::Reshape(item, {size}));
     indices->emplace_back(item);
   }
@@ -340,7 +344,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {
-      packed_indices = JUST(Copy(packed_indices, device->type(), device->device_id()));
+      packed_indices =
+          JUST(Copy(packed_indices, device->type(), device->device_id(), /*pin_memory=*/false));
     }
   }
   auto result = JUST(GatherNd(transposed_input, packed_indices));
@@ -351,6 +356,37 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
       << required_ndim;
   if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
   return result;
+}
+
+Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
+                                  const TensorIndex& tensor_index) {
+  const int32_t index = tensor_index[0].integer();
+  const int32_t ndim = input->ndim();
+  CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError()
+                            << "select() cannot be applied to a 0-dim tensor.";
+  const int32_t pos_dim = 0;
+  auto size = input->dim(pos_dim);
+  CHECK_OR_RETURN(index >= -size && index < size)
+      << Error::IndexError() << "Index out of range (expected to be in range of [" << -size << ","
+      << size - 1 << "], but got " << index << ")";
+  int32_t pos_index = index >= 0 ? index : index + size;
+  std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1,
+                             input->shape()->dim_vec().end());
+  const auto& stride = JUST(input->stride())->StrideVec();
+  const int32_t storage_offset = JUST(input->storage_offset()) + pos_index * stride[pos_dim];
+  std::vector<int32_t> strides(stride.begin() + 1, stride.end());
+
+  if (view::IsViewApplicable(input)) {
+    return view::AsStrided(input, sizes, strides, storage_offset);
+  } else {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("size", sizes));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", strides));
+    JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
+    std::shared_ptr<OpExpr> op_ =
+        JUST(one::OpBuilder("as_strided").Input("input").Output("output").Build());
+    return one::OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
 }
 
 Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
@@ -364,7 +400,8 @@ Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
       const auto tensor_index_device = JUST(tensor_index->device());
       if ((tensor_index_device->type() != x_device->type())
           || (tensor_index_device->device_id() != x_device->device_id())) {
-        tensor_indices[i] = JUST(Copy(tensor_index, x_device->type(), x_device->device_id()));
+        tensor_indices[i] =
+            JUST(Copy(tensor_index, x_device->type(), x_device->device_id(), /*pin_memory=*/false));
       }
     }
   }
