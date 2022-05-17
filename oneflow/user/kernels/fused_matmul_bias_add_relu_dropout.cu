@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
+#include "oneflow/user/kernels/dropout_kernel.h"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11060
 
@@ -376,17 +377,6 @@ void LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed, one::CU
   }
 }
 
-class FusedDropoutKernelState : public user_op::OpKernelState {
-public:
- explicit FusedDropoutKernelState(const std::shared_ptr<one::Generator>& generator)
-     : generator_(generator) {}
-
- const std::shared_ptr<one::Generator>& generator() const { return generator_; }
-
-private:
- std::shared_ptr<one::Generator> generator_;
-};
-
 template<typename T>
 class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -490,13 +480,22 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
           cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
           cuda_stream->cuda_stream()));
       
-      if (idx == weight_size - 1 && skip_final_activation) {
-        break; 
+      if (idx == weight_size - 1) {
+        if(skip_final_activation){
+            break; 
+        } else {
+            // No Dropout
+            LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, 
+                rate, 0.0, reinterpret_cast<T*>(matmul_out_ptr), reinterpret_cast<bool*>(mask->mut_dptr()), 
+                tmp_relu_dropout_out_buf)
+        }
+      } else {
+        LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, 
+                                        rate, scale, reinterpret_cast<T*>(matmul_out_ptr), reinterpret_cast<bool*>(mask->mut_dptr()), 
+                                        tmp_relu_dropout_out_buf)
       }
       
-      LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, 
-                                      rate, scale, reinterpret_cast<T*>(matmul_out_ptr), reinterpret_cast<bool*>(mask->mut_dptr()), 
-                                      tmp_relu_dropout_out_buf)
+      
 
       // Set relu_droput_out ptr as next layer's input.
       in_buf_ptr = tmp_relu_dropout_out_buf;

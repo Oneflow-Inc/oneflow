@@ -356,7 +356,109 @@ class FusedMLPFunctor {
                               biases[layer_idx], 1));
       if ((layer_idx != weight_size - 1) || (!skip_final_activation)) {
         /*
-        When it is not finaly dense layer, or it is final dense layer and skip_final_activate=False,
+        When it is not last dense layer, or it is last dense layer and skip_final_activate=False,
+        we add relu Layer.
+        */
+        out = JUST(functional::Relu(out, false));
+      }
+    }
+    return out;
+  }
+
+ private:
+#if CUDA_VERSION >= 11040
+  std::vector<std::shared_ptr<OpExpr>> fused_op_;
+#endif
+};
+
+
+class FusedMatmulBiasAddReluDropoutFunctor {
+ public:
+  FusedMatmulBiasAddReluDropoutFunctor() {
+#if CUDA_VERSION >= 11040
+    fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 1; n < fused_op_.size(); ++n) {
+      fused_op_[n] = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu_dropout")
+                                    .Input("x")
+                                    .Input("weights", n)
+                                    .Input("biases", n)
+                                    .Output("out")
+                                    .Output("cublas_aux", n)
+                                    .Output("hidden", n)
+                                    .Build());
+    }
+#endif
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
+                           const TensorTuple& biases, bool skip_final_activation, float rate, 
+                           const Optional<one::Generator>& generator) const {
+    CHECK_GE_OR_RETURN(rate, static_cast<float>(0.0)) << Error::RuntimeError() << "Dropout rate should be >= 0.0"; 
+    const int64_t weight_size = weights.size();
+    const int64_t bias_size = biases.size();
+    CHECK_GE_OR_RETURN(weight_size, 1) << "The number of weights should be greater equal than 1. ";
+    CHECK_EQ_OR_RETURN(weight_size, bias_size)
+        << "The number of weights should be equal to biases. ";
+    int64_t n = 0, k = 0;
+    /*
+    x: (m, k)
+    weight: (n, k) need transpose
+    bias: (n)
+    */
+    const auto& x_shape = x->shape();
+    k = x_shape->At(1);
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
+    for (int64_t i = 0; i < weight_size; i++) {
+      const auto& weight_shape = weights[i]->shape();
+      const auto& bias_shape = biases[i]->shape();
+      // TODO(): Support Fused batch/broadcast matmul.
+      CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2) << "Weight's dim should == 2";
+      CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1) << "Bias's dim should == 1";
+
+      n = weight_shape->At(0);
+      CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's last dim. ";
+      CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+          << "weight's first dim should be equal to input's last dim. ";
+      // Set for next layer.
+      k = n;
+    }
+
+#if CUDA_VERSION >= 11060
+    DeviceType device_type{};
+    if (x->is_consistent()) {
+      device_type = JUST(x->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(x->device())->enum_type();
+    }
+
+    if ((device_type == DeviceType::kCUDA) && (weight_size <= kMaxInputCount)
+        && (!ParseBooleanFromEnv("ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP", false))) {
+      TensorTuple input(2 * weight_size + 1);
+      input[0] = x;
+      std::copy(weights.begin(), weights.end(), input.begin() + 1);
+      std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
+      JUST(attrs.SetAttr<bool>("rate", rate));
+      return OpInterpUtil::Dispatch(*fused_op_[weight_size], input, 
+                                    OpExprInterpContext(attrs, dropout_state));
+    }
+#endif  // CUDA_VERSION >= 11060
+
+    // Fall back to Naive matmul + bias_add + relu + dropout
+    std::shared_ptr<one::Tensor> out = x;
+    for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
+      out = JUST(
+          functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
+                              biases[layer_idx], 1));
+      if ((layer_idx != weight_size - 1)){
+        out = JUST(functional::Relu(out, false));
+        out = JUST(functional::Dropout(out, rate, /*training=*/true, /*inplace=*/false, 
+                                       /*generator=*/gen, /*addend=*/NullOpt)); 
+      }
+      if ((layer_idx == weight_size - 1) && (!skip_final_activation)) {
+        /*
+        When it is not last dense layer, or it is last dense layer and skip_final_activate=False,
         we add relu Layer.
         */
         out = JUST(functional::Relu(out, false));
@@ -2960,6 +3062,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
+  m.add_functor<impl::FusedMatmulBiasAddReluDropoutFunctor>("FusedMatmulBiasAddReluDropout");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
