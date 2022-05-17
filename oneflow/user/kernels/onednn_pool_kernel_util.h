@@ -22,20 +22,6 @@ limitations under the License.
 #include "oneflow/user/kernels/max_pool_kernel_util.h"
 
 namespace oneflow {
-
-template<typename T>
-dnnl::memory::data_type CppTypeToOneDnnDtype();
-
-template<>
-dnnl::memory::data_type CppTypeToOneDnnDtype<int32_t>() {
-  return dnnl::memory::data_type::s32;
-}
-
-template<>
-dnnl::memory::data_type CppTypeToOneDnnDtype<float>() {
-  return dnnl::memory::data_type::f32;
-}
-
 template<typename T>
 struct OneDnnPoolKernelUtil {
   static void OneDnnPoolForwardCompute(
@@ -43,7 +29,7 @@ struct OneDnnPoolKernelUtil {
       const dnnl::memory::dims kernel_dims, const dnnl::memory::dims strides_dims,
       const dnnl::memory::dims padding_dims_l, const dnnl::memory::dims padding_dims_r,
       const dnnl::memory::dims dilation, dnnl::memory::format_tag format, const void* src,
-      void* dest, int64_t* indice_ptr) {
+      void* dest, void* indice_ptr) {
     auto data_type = CppTypeToOneDnnDtype<T>();
     ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
     size_t num_threads = cpu_stream->device()->GetNumThreads();

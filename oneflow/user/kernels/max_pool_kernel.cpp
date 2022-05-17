@@ -543,9 +543,9 @@ class OneDnnMaxPool1dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const T* src = x->dptr<T>();
-    T* dest = y->mut_dptr<T>();
-    int64_t* indice_ptr = indice->mut_dptr<int64_t>();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(x->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(y->mut_dptr<T>()));
+    void* indice_ptr = reinterpret_cast<void*>(indice->mut_dptr<int64_t>());
 
     dnnl::memory::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
     dnnl::memory::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
@@ -557,8 +557,7 @@ class OneDnnMaxPool1dKernel final : public user_op::OpKernel {
 
     OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
         ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-        padding_dims_r, dilation, dnnl::memory::format_tag::nchw, (void*)src, (void*)dest,
-        indice_ptr);
+        padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, indice_ptr);
   }
 };
 
@@ -584,9 +583,9 @@ class OneDnnMaxPool1dGradKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const T* src = dy->dptr<T>();
-    const int64_t* indice_ptr = indice->dptr<int64_t>();
-    T* dest = dx->mut_dptr<T>();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(dy->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(dx->mut_dptr<T>()));
+    void* indice_ptr = reinterpret_cast<void*>(const_cast<int64_t*>(indice->dptr<int64_t>()));
 
     dnnl::memory::dims diff_dst_dims = {1, 1, dy->shape().At(0) * dy->shape().At(1),
                                         dy->shape().At(2)};
@@ -600,8 +599,7 @@ class OneDnnMaxPool1dGradKernel final : public user_op::OpKernel {
 
     OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
         ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-        padding_dims_r, dilation, dnnl::memory::format_tag::nchw, (void*)src, (void*)dest,
-        (void*)indice_ptr);
+        padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, indice_ptr);
   };
 };
 
@@ -627,9 +625,9 @@ class OneDnnMaxPool2dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    const T* src = x->dptr<T>();
-    T* dest = y->mut_dptr<T>();
-    int64_t* indice_ptr = indice->mut_dptr<int64_t>();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(x->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(y->mut_dptr<T>()));
+    void* indice_ptr = reinterpret_cast<void*>(indice->mut_dptr<int64_t>());
 
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
@@ -644,13 +642,11 @@ class OneDnnMaxPool2dKernel final : public user_op::OpKernel {
     if (data_format == "channels_first") {
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, (void*)src, (void*)dest,
-          indice_ptr);
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, indice_ptr);
     } else if (data_format == "channels_last") {
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nhwc, (void*)src, (void*)dest,
-          indice_ptr);
+          padding_dims_r, dilation, dnnl::memory::format_tag::nhwc, src, dest, indice_ptr);
     } else {
       UNIMPLEMENTED() << "Unsupported data_format";
     }
@@ -678,10 +674,9 @@ class OneDnnMaxPool2dGradKernel final : public user_op::OpKernel {
 
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
-
-    const T* src = dy->dptr<T>();
-    const int64_t* indice_ptr = indice->dptr<int64_t>();
-    T* dest = dx->mut_dptr<T>();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(dy->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(dx->mut_dptr<T>()));
+    void* indice_ptr = reinterpret_cast<void*>(const_cast<int64_t*>(indice->dptr<int64_t>()));
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 
     dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
@@ -728,13 +723,11 @@ class OneDnnMaxPool3dKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
-
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
-
-    const T* src = x->dptr<T>();
-    T* dest = y->mut_dptr<T>();
-    int64_t* indice_ptr = indice->mut_dptr<int64_t>();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(x->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(y->mut_dptr<T>()));
+    void* indice_ptr = reinterpret_cast<void*>(indice->mut_dptr<int64_t>());
 
     dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
                                    x->shape().At(3), x->shape().At(4)};
@@ -753,8 +746,7 @@ class OneDnnMaxPool3dKernel final : public user_op::OpKernel {
 
     OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
         ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-        padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, (void*)src, (void*)dest,
-        indice_ptr);
+        padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, src, dest, indice_ptr);
   };
 };
 
@@ -779,10 +771,9 @@ class OneDnnMaxPool3dGradKernel final : public user_op::OpKernel {
 
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
-
-    const T* src = dy->dptr<T>();
-    const int64_t* indice_ptr = indice->dptr<int64_t>();
-    T* dest = dx->mut_dptr<T>();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(dy->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(dx->mut_dptr<T>()));
+    void* indice_ptr = reinterpret_cast<void*>(const_cast<int64_t*>(indice->dptr<int64_t>()));
 
     dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
                                         dy->shape().At(3), dy->shape().At(4)};
@@ -796,12 +787,12 @@ class OneDnnMaxPool3dGradKernel final : public user_op::OpKernel {
                                          params_3d.padding()[2]};
     dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
                                          params_3d.padding()[2]};
-    dnnl::memory::dims dilation = {0, 0, 0};
+    dnnl::memory::dims dilation = {params_3d.dilation_3d()[0] - 1, params_3d.dilation_3d()[1] - 1,
+                                   params_3d.dilation_3d()[2] - 1};
 
     OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
         ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-        padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, (void*)src, (void*)dest,
-        (void*)indice_ptr);
+        padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, src, dest, indice_ptr);
   };
 };
 
