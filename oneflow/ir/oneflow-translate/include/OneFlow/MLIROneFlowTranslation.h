@@ -105,6 +105,7 @@ class Importer {
   }
 
   ArrayAttr GetAttrFromShape(const ::oneflow::ShapeProto& shape);
+  ArrayAttr GetAttrFromStride(const ::oneflow::Int64ListProto& stride);
   llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
   OpBuilder& GetBuilder() { return builder_; }
   MLIRContext* GetMLIRContext() { return context_; }

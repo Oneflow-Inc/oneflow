@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
