@@ -50,29 +50,6 @@ struct OneDnnPoolKernelUtil {
     dnnl::engine* onednn_engine = cpu_stream->onednn_engine();
     dnnl::stream* onednn_stream = cpu_stream->onednn_stream();
 
-    // const dnnl::memory::dim n = 1, input_channel = 1,
-    //         input_height = batch_size, input_width = width,
-    //         kernel_height = 1, kernel_width = params_3d.pool_size_3d()[2],
-    //         padding_height_left = 0,  padding_height_right = 0,
-    //         padding_width_left = params_3d.padding()[2],
-    //         padding_width_right = params_3d.padding()[2],
-    //         stride_height = 1, stride_width = params_3d.stride_3d()[2],
-    //         dilation_height = 1,dilation_width = 1;
-
-    // const dnnl::memory::dim output_height = (input_height - ((kernel_height - 1) *
-    // dilation_height+ kernel_height) + padding_height_left + padding_height_right) / stride_height
-    // + 1; const dnnl::memory::dim output_width = (input_width - ((kernel_width - 1) *
-    // dilation_width + kernel_width) + padding_width_left + padding_width_right) / stride_width +
-    // 1;
-
-    // dnnl::memory::dims kernel_dims = {kernel_height, kernel_width};
-    // dnnl::memory::dims src_dims = {n, input_channel, input_height, input_width};
-    // dnnl::memory::dims dst_dims = {n, input_channel, output_height, output_width};
-    // dnnl::memory::dims strides_dims = {stride_height, stride_width};
-    // dnnl::memory::dims padding_dims_l = {padding_height_left, padding_width_left};
-    // dnnl::memory::dims padding_dims_r = {padding_height_right, padding_width_right};
-    // dnnl::memory::dims dilation = {dilation_height, dilation_width};
-
     auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nchw);
     auto dst_md = dnnl::memory::desc(dst_dims, data_type, dnnl::memory::format_tag::nchw);
     auto src_mem = dnnl::memory(src_md, *onednn_engine, (void*)src);
@@ -82,12 +59,50 @@ struct OneDnnPoolKernelUtil {
         dnnl::prop_kind::forward_training, dnnl::algorithm::pooling_max, src_md, dst_md,
         strides_dims, kernel_dims, dilation, padding_dims_l, padding_dims_r);
     auto pooling_pd = dnnl::pooling_v2_forward::primitive_desc(pooling_d, *onednn_engine);
-    auto workspace_mem = dnnl::memory(pooling_pd.workspace_desc(), *onednn_engine);
     auto pooling_prim = dnnl::pooling_v2_forward(pooling_pd);
+    auto workspace_mem =
+        dnnl::memory(pooling_pd.workspace_desc(), *onednn_engine, (void*)indice_ptr);
 
     pooling_prim.execute(
         *onednn_stream,
         {{DNNL_ARG_SRC, src_mem}, {DNNL_ARG_DST, dst_mem}, {DNNL_ARG_WORKSPACE, workspace_mem}});
+    onednn_stream->wait();
+  }
+
+  static void OneDnnpool1dBackwardCompute(
+      ep::Stream* stream, const dnnl::memory::dims diff_dst_dims,
+      const dnnl::memory::dims diff_src_dims, const dnnl::memory::dims kernel_dims,
+      const dnnl::memory::dims strides_dims, const dnnl::memory::dims padding_dims_l,
+      const dnnl::memory::dims padding_dims_r, const dnnl::memory::dims dilation, void* diff_dst,
+      void* diff_src, void* workspace) {
+    auto data_type = CppTypeToOneDnnDtype<T>();
+    ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
+    size_t num_threads = cpu_stream->device()->GetNumThreads();
+    ep::CpuNumThreadsGuard guard(num_threads);
+    dnnl::engine* onednn_engine = cpu_stream->onednn_engine();
+    dnnl::stream* onednn_stream = cpu_stream->onednn_stream();
+
+    auto diff_dst_md = dnnl::memory::desc(diff_dst_dims, data_type, dnnl::memory::format_tag::nchw);
+    auto diff_src_md = dnnl::memory::desc(diff_src_dims, data_type, dnnl::memory::format_tag::nchw);
+    auto src_mem = dnnl::memory(diff_dst_md, *onednn_engine, diff_dst);
+    auto dst_mem = dnnl::memory(diff_src_md, *onednn_engine, diff_src);
+
+    auto pooling_back_d = dnnl::pooling_v2_backward::desc(dnnl::algorithm::pooling_max, diff_src_md,
+                                                          diff_dst_md, strides_dims, kernel_dims,
+                                                          dilation, padding_dims_l, padding_dims_r);
+    // forward
+    auto pooling_d = dnnl::pooling_v2_forward::desc(
+        dnnl::prop_kind::forward_training, dnnl::algorithm::pooling_max, diff_src_md, diff_dst_md,
+        strides_dims, kernel_dims, dilation, padding_dims_l, padding_dims_r);
+    auto pooling_pd = dnnl::pooling_v2_forward::primitive_desc(pooling_d, engine);
+    auto workspace_mem = dnnl::memory(pooling_pd.workspace_desc(), engine, ws_data.data());
+    // Backward
+    auto pooling_back_pd =
+        dnnl::pooling_v2_backward::primitive_desc(pooling_back_d, *onednn_engine, pooling_pd);
+    auto pooling_prim = dnnl::pooling_v2_backward(pooling_back_pd);
+    pooling_prim.execute(*onednn_stream, {{DNNL_ARG_DIFF_DST, diff_dst_mem},
+                                          {DNNL_ARG_DIFF_SRC, diff_src_mem},
+                                          {DNNL_ARG_WORKSPACE, workspace_mem}});
     onednn_stream->wait();
   }
 };
