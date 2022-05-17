@@ -65,7 +65,12 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
       CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
           << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
           << " vs " << out_grads.at(i)->shape()->ToString() << ")";
-      gradients->at(i) = out_grads.at(i);
+      if (outputs.at(i)->dtype() != out_grads.at(i)->dtype()) {
+        gradients->at(i) = JUST(
+            one::functional::Cast(out_grads.at(i), outputs.at(i)->dtype(), /*pin_memory=*/false));
+      } else {
+        gradients->at(i) = out_grads.at(i);
+      }
     }
   }
   return gradients;
