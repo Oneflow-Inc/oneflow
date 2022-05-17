@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
@@ -377,23 +377,36 @@ class TestUpsample2d(flow.unittest.TestCase):
         "The nearest interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
     )
     @autotest()
-    def test_upsample2d(test_case):
+    def test_upsample2d_nearest(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         m = torch.nn.Upsample(scale_factor=random().to(float), mode="nearest")
         y = m(x)
         return y
 
-    @unittest.skip(
-        "The bilinear interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
-    )
-    @autotest()
+    # The forward and backward result in cpu and cuda of bilinear interpolate operation in PyTorch is different
+    # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
+    # So here we only test cuda device forward result.
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @autotest(n=10, auto_backward=False, atol=1e-8)
     def test_upsample2d_bilinear(test_case):
-        device = random_device()
-        x = random_pytorch_tensor(ndim=4).to(device)
+        x = random_tensor(ndim=4).to("cuda")
+        x = x.permute(1, 3, 0, 2)
         m = torch.nn.Upsample(
             scale_factor=random().to(float),
             mode="bilinear",
+            align_corners=random_bool(),
+        )
+        y = m(x)
+        return y
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @autotest(atol=1e-5)
+    def test_upsample2d_bicubic(test_case):
+        x = random_tensor(ndim=4, dim0=16, dim1=8).to("cuda")
+        m = torch.nn.Upsample(
+            scale_factor=random().to(float),
+            mode="bicubic",
             align_corners=random_bool(),
         )
         y = m(x)

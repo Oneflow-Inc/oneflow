@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/global_for.h"
@@ -24,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -69,44 +69,6 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
 }
 
 namespace {
-
-void GenChunkInSingleClient(
-    Plan* plan, HashMap<int64_t, std::unique_ptr<MemBlockProto>>* mem_block_id2mem_block) {
-  // mzuid = memory zone unique id
-  HashMap<int64_t, ChunkProto> mzuid2chunk;
-  auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    int64_t mzuid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
-    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
-      ChunkProto chunk;
-      chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
-      chunk.add_job_id(mem_block->job_id(0));
-      chunk.set_machine_id(mem_block->machine_id());
-      *(chunk.mutable_mem_case()) = mem_block->mem_case();
-      chunk.set_mem_size(mem_block->mem_size());
-      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
-      mem_block->set_chunk_id(chunk.chunk_id());
-      mem_block->set_chunk_offset(0);
-    } else {
-      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
-      CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
-      mem_block->set_chunk_id(chunk->chunk_id());
-      mem_block->set_chunk_offset(chunk->mem_size());
-      chunk->set_mem_size(chunk->mem_size() + mem_block->mem_size());
-    }
-  };
-
-  for (auto& pair : *mem_block_id2mem_block) {
-    MemBlockProto* mem_block = pair.second.get();
-    CHECK(mem_block->has_chunk_id() == false);
-    CHECK(mem_block->has_chunk_offset() == false);
-    if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
-  }
-
-  for (const auto& pair : mzuid2chunk) {
-    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
-  }
-}
 
 void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     Plan* plan, HashMap<int64_t, std::unique_ptr<MemBlockProto>>* mem_block_id2mem_block) {
@@ -163,7 +125,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
           CHECK_LE(current_chunk_offset + mem_block->mem_size(), chunk->mem_size());
           CHECK_GE(current_chunk_offset, 0);
           // CHECK_GT(mem_block->mem_size(), 0); NOTE(chengcheng): has mem block mem size = 0
-          CHECK_GT(chunk->mem_size(), 0);
+          CHECK_GE(chunk->mem_size(), 0);
           mem_block->set_chunk_id(chunk->chunk_id());
           mem_block->set_chunk_offset(current_chunk_offset);
           current_chunk_offset += mem_block->mem_size();
@@ -261,7 +223,8 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       CHECK(!var_name.empty());
       CHECK_EQ(regst_desc->register_num(), 1);
       CHECK_EQ(regst_desc->min_register_num(), 1);
-      CHECK_EQ(regst_desc->max_register_num(), 1);
+      // NOTE(xuxiaoyu): this check cannot pass when open ZeRO
+      // CHECK_EQ(regst_desc->max_register_num(), 1) << var_name;
       regst_desc->set_variable_op_name(var_name);
     }
 
@@ -324,12 +287,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  if (CHECK_JUST(IsMultiClient())) {
-    GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
-  } else {
-    CHECK(variable_op_names.empty());
-    GenChunkInSingleClient(plan, &mem_block_id2mem_block);
-  }
+  GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
 
   for (const auto& pair : mem_block_id2mem_block) {
     *(plan->mutable_block_chunk_list()->add_mem_block()) = *(pair.second);
@@ -429,7 +387,8 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
 
 void PlanUtil::ToDotFile(const Plan& plan, const std::string& filepath) {
   const auto& process_ranks = Global<ResourceDesc, ForSession>::Get()->process_ranks();
-  size_t gpu_device_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
+  size_t gpu_device_num =
+      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
   std::map<int64_t, std::map<int64_t, std::vector<std::vector<std::string>>>>
       machine_id2job_id_device_id2node_list;
   for (size_t i : process_ranks) {
@@ -869,7 +828,7 @@ void PlanUtil::GenRegisterHint(Plan* plan) {
   HashSet<int64_t> multi_regst_regst_desc_ids;
   for (const TaskProto& task : plan->task()) {
     for (const auto& pair : task.produced_regst_desc()) {
-      if (pair.second.register_num() != 1) {
+      if (pair.second.register_num() != 1 || task.task_type() == TaskType::kRepeat) {
         multi_regst_regst_desc_ids.emplace(pair.second.regst_desc_id());
       }
     }
@@ -924,8 +883,8 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     int64_t rank_id = pair.first.first;
     int64_t device_id = pair.first.second;
     double mem_size = pair.second * 1.0 / 1000000.0;
-    LOG(INFO) << " Plan: " << plan_name << " needs to allocate [ " << mem_size
-              << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << "\n";
+    LOG(INFO) << "Graph name " << plan_name << " needs to allocate [ " << mem_size
+              << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << ".";
   }
 }
 

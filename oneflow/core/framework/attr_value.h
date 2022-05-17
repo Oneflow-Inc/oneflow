@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -40,7 +41,9 @@ namespace user_op {
 
 #define ENUM_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, AttrType::kAtDataType)
 
-#define MESSAGE_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, AttrType::kAtShape)
+#define MESSAGE_ATTR_SEQ                                    \
+  OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, AttrType::kAtShape) \
+  OF_PP_MAKE_TUPLE_SEQ(at_stride, Stride, AttrType::kAtStride)
 
 #define LIST_BASIC_ATTR_SEQ                                                         \
   OF_PP_MAKE_TUPLE_SEQ(at_list_int32, std::vector<int32_t>, AttrType::kAtListInt32) \
@@ -50,8 +53,9 @@ namespace user_op {
 #define LIST_ENUM_ATTR_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(at_list_data_type, std::vector<DataType>, AttrType::kAtListDataType)
 
-#define LIST_MESSAGE_ATTR_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(at_list_shape, std::vector<Shape>, AttrType::kAtListShape)
+#define LIST_MESSAGE_ATTR_SEQ                                                     \
+  OF_PP_MAKE_TUPLE_SEQ(at_list_shape, std::vector<Shape>, AttrType::kAtListShape) \
+  OF_PP_MAKE_TUPLE_SEQ(at_list_stride, std::vector<Stride>, AttrType::kAtListStride)
 
 #define LIST_STRING_ATTR_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(at_list_string, std::vector<std::string>, AttrType::kAtListString)
@@ -97,19 +101,25 @@ class AttrVal {
 };
 
 template<typename T>
-class TypedAttrVal final : public AttrVal {
+class TypedAttrValIf : public AttrVal {
+ public:
+  virtual const T& val() const = 0;
+  size_t hash_value() const override { return std::hash<T>()(val()); }
+
+  bool operator==(const AttrVal& other) const override {
+    auto* that = dynamic_cast<const TypedAttrValIf<T>*>(&other);
+    if (that == nullptr) { return false; }
+    return this->val() == that->val();
+  }
+};
+
+template<typename T>
+class TypedAttrVal final : public TypedAttrValIf<T> {
  public:
   TypedAttrVal(T v) : val_(v) {}
   ~TypedAttrVal() = default;
 
-  size_t hash_value() const override { return std::hash<T>()(val_); }
-  bool operator==(const AttrVal& other) const override {
-    auto* that = dynamic_cast<const TypedAttrVal<T>*>(&other);
-    if (that == nullptr) { return false; }
-    return this->val_ == that->val_;
-  }
-
-  const T& val() const { return val_; }
+  const T& val() const override { return val_; }
 
  private:
   OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal);
@@ -117,10 +127,30 @@ class TypedAttrVal final : public AttrVal {
   T val_;
 };
 
+template<typename T>
+class TypedAttrValRef final : public TypedAttrValIf<T> {
+ public:
+  TypedAttrValRef(const T* v) : val_(v) {}
+  ~TypedAttrValRef() = default;
+
+  const T& val() const override { return *val_; }
+
+ private:
+  OF_DISALLOW_COPY_AND_MOVE(TypedAttrValRef);
+
+  const T* val_;
+};
+
 }  // namespace user_op
 
 template<typename T>
 const T& AttrValueCast(const user_op::AttrVal& val);
+
+template<typename T>
+std::shared_ptr<user_op::AttrVal> CastAttrValue(const T& attr_val);
+
+template<typename T>
+std::shared_ptr<user_op::AttrVal> CastAttrValue(const T* attr_val);
 
 }  // namespace oneflow
 

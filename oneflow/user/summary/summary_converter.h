@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_SUMMARY_SUMMARY_CONVERTER_H_
 #define ONEFLOW_USER_SUMMARY_SUMMARY_CONVERTER_H_
 
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/protobuf.h"
 

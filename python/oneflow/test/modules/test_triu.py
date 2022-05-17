@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.nn as nn
@@ -52,10 +52,10 @@ class TestTriu(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False, check_graph=False)
-    def test_triu_with_0shape_data(test_case):
+    @autotest(auto_backward=False, check_graph=True)
+    def test_triu_with_0_size_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 2, 1, 0, 3).to(device)
+        x = random_tensor(4, 2, 1, 0, 3).to(device)
         y = torch.triu(x)
         return y
 

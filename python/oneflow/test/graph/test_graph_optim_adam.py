@@ -16,6 +16,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 import numpy as np
+import copy
 
 from test_util import GenArgList
 from optimizer_test_util import clip_grad_norm_np
@@ -91,7 +92,7 @@ def compare_with_numpy_adam(
         )
         adam_x = adam_graph(mask_tensor)
 
-        of_res_list.append(simp_module.para0.numpy())
+        of_res_list.append(copy.copy(simp_module.para0.numpy()))
 
     np_res_list = []
 
@@ -205,7 +206,7 @@ def compare_with_numpy_adam_clip_grad(
         )
         adam_x = adam_graph(mask_tensor)
 
-        of_res_list.append(simp_module.para0.numpy())
+        of_res_list.append(copy.copy(simp_module.para0.numpy()))
 
     np_res_list = []
 

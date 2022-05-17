@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
@@ -126,8 +125,8 @@ AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) {
     if (cpp_attr_value.IsOk()) {
       attrs->emplace(kv.first, CHECK_JUST(cpp_attr_value));
     } else {
-      LOG(ERROR) << user_op_conf.DebugString();
-      LOG(ERROR) << "fail to convert to cpp attr value, key: " << kv.first;
+      LOG(ERROR) << user_op_conf.DebugString()
+                 << " failed to convert to cpp attr value, key: " << kv.first;
     }
   }
   return AttrMap(attrs);
@@ -173,16 +172,16 @@ Maybe<void> MutableAttrMap::SetAttr(const std::string& attr_name, const T& attr_
 
 template<>
 Maybe<void> MutableCfgAttrMap::SetAttr(const std::string& attr_name,
-                                       const std::shared_ptr<cfg::AttrValue>& attr_val) {
+                                       const std::shared_ptr<AttrValue>& attr_val) {
   (*this)[attr_name] = attr_val;
   return Maybe<void>::Ok();
 }
 
 template<typename T>
 Maybe<void> MutableCfgAttrMap::SetAttr(const std::string& attr_name, const T& attr_val) {
-  AttrValue proto_attr_val;
-  user_op::AttrValueAccessor<T>::Attr(attr_val, &proto_attr_val);
-  (*this)[attr_name] = std::make_shared<cfg::AttrValue>(proto_attr_val);
+  std::shared_ptr<AttrValue> proto_attr_val = std::make_shared<AttrValue>();
+  user_op::AttrValueAccessor<T>::Attr(attr_val, proto_attr_val.get());
+  (*this)[attr_name] = proto_attr_val;
   return Maybe<void>::Ok();
 }
 

@@ -14,31 +14,39 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_USER_OP("constant")
-    .Output("out")
-    .SetOutputBufferNum(1)
-    .Attr<double>("floating_value")
-    .Attr<int64_t>("integer_value")
-    .Attr<bool>("is_floating_value")
-    .Attr<DataType>("dtype")
-    .Attr<Shape>("shape")
-    .Attr<std::vector<std::string>>("nd_sbp")
-    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
-    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-      cfg::SbpParallel default_sbp;
-      default_sbp.mutable_broadcast_parallel();
-      return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
-    });
+/* static */ Maybe<void> ConstantOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> ConstantOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const Shape& logical_shape = ctx->Attr<Shape>("shape");
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  const Shape& physical_shape =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
+
+  *ctx->OutputShape("out", 0) = physical_shape;
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> ConstantOp::GetSbp(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
+
+/* static */ Maybe<void> ConstantOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  SbpParallel default_sbp;
+  default_sbp.mutable_broadcast_parallel();
+  return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+}
+
+/* static */ Maybe<void> ConstantOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

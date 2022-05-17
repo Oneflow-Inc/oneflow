@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 void RandomMaskGenerator<DeviceType::kCPU>::Generate(ep::Stream* stream, const int64_t n,
-                                                     const float rate, int8_t* mask) {
+                                                     const float rate, bool* mask) {
   CHECK_GE(n, 0);
   std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
                                                             GetOneVal<float>());

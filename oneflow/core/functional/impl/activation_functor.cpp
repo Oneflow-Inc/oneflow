@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -36,9 +37,7 @@ namespace impl {
 
 class ReluFunctor {
  public:
-  ReluFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("relu").Input("in", 1).Output("out", 1).Build());
-  }
+  ReluFunctor() { op_ = CHECK_JUST(one::OpBuilder("relu").Input("x", 1).Output("y", 1).Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
     if (inplace) {
       JUST(CheckInplaceValid(x));
@@ -62,16 +61,6 @@ class ReluGradFunctor : public BinaryFunctor {
   }
 };
 
-namespace {
-Maybe<void> CheckPReLUParametersValid(const std::shared_ptr<Tensor>& x,
-                                      const std::shared_ptr<Tensor>& alpha) {
-  int num_params = alpha->dim(0);
-  CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
-      << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
-  return Maybe<void>::Ok();
-}
-}  // namespace
-
 class PReluFunctor {
  public:
   PReluFunctor() {
@@ -80,7 +69,9 @@ class PReluFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& alpha) const {
-    JUST(CheckPReLUParametersValid(x, alpha));
+    int num_params = alpha->dim(0);
+    CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
+        << Error::RuntimeError() << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
   }
 
@@ -101,7 +92,13 @@ class PReluGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
                                 const std::shared_ptr<Tensor>& alpha) const {
-    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha});
+    MutableAttrMap attrs;
+    if (alpha->requires_grad()) {
+      JUST(attrs.SetAttr<bool>("alpha_requires_grad", true));
+    } else {
+      JUST(attrs.SetAttr<bool>("alpha_requires_grad", false));
+    }
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha}, attrs);
   }
 
  private:
@@ -182,7 +179,7 @@ class CeluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
+      (*outputs)[0] = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
@@ -226,21 +223,23 @@ class GluFunctor {
  public:
   GluFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    auto ndim = input->ndim();
-    CHECK_GT_OR_RETURN(ndim, 0) << "glu does not support 0-dimensional tensors";
+    const auto ndim = input->ndim();
+    CHECK_GT_OR_RETURN(ndim, 0) << Error::RuntimeError()
+                                << "glu does not support scalars because halving size must be even";
     CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
-        << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim << ")";
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << ", " << ndim - 1 << "], but got " << dim << ")";
     if (dim < 0) { dim += ndim; }
     int64_t nc = input->dim(dim);
-    CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
+    CHECK_EQ_OR_RETURN(nc % 2, 0) << Error::RuntimeError()
+                                  << "Halving dimension must be even, but dimension " << dim
                                   << " is size " << nc;
     nc = nc / 2;
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
     return sequence_function(functional::Sigmoid)
-        .then(std::bind(functional::Mul, split_x->at(0), std::placeholders::_1))
-        .call(split_x->at(1));
+        .then(std::bind(functional::Mul, (*split_x)[0], std::placeholders::_1))
+        .call((*split_x)[1]);
   }
 };
 
@@ -272,6 +271,48 @@ class HardSigmoidGradFunctor : public BinaryFunctor {
         CHECK_JUST(one::OpBuilder("hardsigmoid_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
+
+class HardShrinkFunctor {
+ public:
+  HardShrinkFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& lambd,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("lambd", lambd));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return JUST(oneflow::VectorAt(*outputs, 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class HardShrinkGradFunctor {
+ public:
+  HardShrinkGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("dy").Input("y").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+                           const double& lambd) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("lambd", lambd));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SoftmaxFunctorBase {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
@@ -291,8 +332,9 @@ class SoftmaxFunctorBase {
     int64_t dim_ = dim ? JUST(dim) : get_dim();
     if (dim_ < 0) { dim_ += num_axes; }
 
-    CHECK_GE_OR_RETURN(dim_, 0);
-    CHECK_LT_OR_RETURN(dim_, num_axes);
+    CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
+        << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+        << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
 
     if (dim_ != num_axes - 1) {
       std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
@@ -366,10 +408,19 @@ class LeakyReluFunctor {
   LeakyReluFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("leaky_relu").Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& alpha,
+                           bool inplace) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return JUST(oneflow::VectorAt(*outputs, 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:
@@ -385,6 +436,41 @@ class LeakyReluGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy, const float& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftplusFunctor {
+ public:
+  SoftplusFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softplus").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& beta,
+                           const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("beta", beta));
+    JUST(attrs.SetAttr<double>("threshold", threshold));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftplusGradFunctor {
+ public:
+  SoftplusGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softplus_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
+                           const double& beta, const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("beta", beta));
+    JUST(attrs.SetAttr<double>("threshold", threshold));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
 
@@ -442,6 +528,85 @@ class SoftSignGradFunctor : public BinaryFunctor {
   }
 };
 
+class SoftShrinkFunctor {
+ public:
+  SoftShrinkFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softshrink").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& alpha,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    CHECK_GE_OR_RETURN(alpha, 0) << Error::RuntimeError()
+                                 << "alpha must be greater or equal to 0, but found to be " << alpha
+                                 << ".";
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return JUST(oneflow::VectorAt(*outputs, 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ThresholdFunctor {
+ public:
+  ThresholdFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("threshold").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& threshold,
+                           const double& value) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("threshold_val", threshold));
+    JUST(attrs.SetAttr<double>("value", value));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ThresholdGradFunctor {
+ public:
+  ThresholdGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("threshold_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
+                           const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("threshold_val", threshold));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftShrinkGradFunctor {
+ public:
+  SoftShrinkGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("y").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+                           const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -460,6 +625,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
+  m.add_functor<impl::HardShrinkFunctor>("HardShrink");
+  m.add_functor<impl::HardShrinkGradFunctor>("HardShrinkGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
   m.add_functor<impl::SoftmaxGradFunctor>("SoftmaxGrad");
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
@@ -467,6 +634,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::SoftplusFunctor>("Softplus");
+  m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");
   m.add_functor<impl::SiluGradFunctor>("SiluGrad");
   m.add_functor<impl::MishFunctor>("Mish");
@@ -475,6 +644,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SeluGradFunctor>("SeluGrad");
   m.add_functor<impl::SoftSignFunctor>("SoftSign");
   m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
+  m.add_functor<impl::ThresholdFunctor>("Threshold");
+  m.add_functor<impl::ThresholdGradFunctor>("ThresholdGrad");
+  m.add_functor<impl::SoftShrinkFunctor>("SoftShrink");
+  m.add_functor<impl::SoftShrinkGradFunctor>("SoftShrinkGrad");
 };
 
 }  // namespace functional

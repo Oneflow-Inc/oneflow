@@ -14,23 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
 namespace {
 
 Maybe<void> InferDataTypeLogicalNot(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = DataType::kInt8;
+  *ctx->OutputDType("y", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
-REGISTER_NO_GRAD_USER_OP("logical_not")
-    .Input("x")
-    .Output("y")
-    .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
-    .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
-    .SetDataTypeInferFn(InferDataTypeLogicalNot);
+/* static */ Maybe<void> LogicalNotOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return user_op::TensorDescInferFnUtil::Unchanged(ctx);
+}
+
+/*static*/ Maybe<void> LogicalNotOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> LogicalNotOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::SplitForEachAxis(ctx);
+}
+
+/* static */ Maybe<void> LogicalNotOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataTypeLogicalNot(ctx);
+}
 
 }  // namespace oneflow

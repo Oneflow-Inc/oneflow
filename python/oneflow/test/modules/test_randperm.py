@@ -17,7 +17,7 @@ import oneflow as flow
 from collections import OrderedDict
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 import numpy as np
 import unittest
 
@@ -51,16 +51,23 @@ def _test_randperm_randomness(test_case, N, device, dtype):
     test_case.assertFalse(np.all(x1.numpy() == x2.numpy()))
 
 
+def _test_randperm_large_seq_randomness(test_case, N, device, dtype):
+    n = 65536
+    x1 = flow.randperm(n, device=device)
+    x2 = flow.randperm(n, device=device)
+    test_case.assertFalse(np.all(x1.numpy() == x2.numpy()))
+
+
 @flow.unittest.skip_unless_1n1d()
 class Testrandperm(flow.unittest.TestCase):
-    def test_consistent_naive(test_case):
-        placement = flow.placement("cpu", {0: [0]})
+    def test_global_naive(test_case):
+        placement = flow.placement("cpu", ranks=[0])
         sbp = (flow.sbp.broadcast,)
         x = flow.randperm(10, placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
         test_case.assertEqual(x.placement, placement)
 
-    def test_consistent_different_types(test_case):
+    def test_global_different_types(test_case):
         for dtype in [
             flow.uint8,
             flow.int8,
@@ -69,7 +76,7 @@ class Testrandperm(flow.unittest.TestCase):
             flow.float32,
             flow.float64,
         ]:
-            placement = flow.placement("cpu", {0: [0]})
+            placement = flow.placement("cpu", ranks=[0])
             sbp = (flow.sbp.broadcast,)
             x = flow.randperm(10, placement=placement, sbp=sbp, dtype=dtype)
             test_case.assertEqual(x.dtype, dtype)
@@ -81,6 +88,7 @@ class Testrandperm(flow.unittest.TestCase):
         arg_dict["test_functions"] = [
             _test_randperm_with_generator,
             _test_randperm_randomness,
+            _test_randperm_large_seq_randomness,
         ]
         arg_dict["N"] = [i for i in range(10, 100, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -106,17 +114,25 @@ class Testrandperm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_auto_1(test_case):
         device = random_device()
         y = torch.randperm(1, device=device)
         return y
 
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_auto_0(test_case):
         device = random_device()
         y = torch.randperm(0, device=device)
         return y
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestRandpermOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.randperm(3, device="cuda:1")
+        test_case.assertEqual(x.device, flow.device("cuda:1"))
 
 
 if __name__ == "__main__":

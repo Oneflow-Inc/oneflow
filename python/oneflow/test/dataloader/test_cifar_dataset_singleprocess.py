@@ -16,6 +16,9 @@ limitations under the License.
 import os
 import unittest
 
+import flowvision as vision
+import flowvision.transforms as transforms
+
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
@@ -57,7 +60,7 @@ class Net(nn.Module):
         return x
 
 
-def test(test_case):
+def _test(test_case):
     if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
         device = flow.device("cpu")
     else:
@@ -69,11 +72,8 @@ def test(test_case):
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
 
-    transform = flow.utils.vision.transforms.Compose(
-        [
-            flow.utils.vision.transforms.ToTensor(),
-            flow.utils.vision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        ]
+    transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),]
     )
 
     train_epoch = 1
@@ -125,7 +125,7 @@ def test(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestCifarDataset(flow.unittest.TestCase):
     def test_cifar_dataset(test_case):
-        test(test_case)
+        _test(test_case)
 
 
 if __name__ == "__main__":

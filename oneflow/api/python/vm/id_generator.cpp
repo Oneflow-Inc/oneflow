@@ -27,24 +27,14 @@ ONEFLOW_API_PYBIND11_MODULE("vm", m) {
   py::class_<PhysicalIdGenerator, IdGenerator, std::shared_ptr<PhysicalIdGenerator>>(
       m, "PhysicalIdGenerator")
       .def(py::init<>())
-      .def("NewSymbolId",
-           [](const std::shared_ptr<PhysicalIdGenerator>& x) {
-             return x->NewSymbolId().GetOrThrow();
-           })
-      .def("NewObjectId", [](const std::shared_ptr<PhysicalIdGenerator>& x) {
-        return x->NewObjectId().GetOrThrow();
-      });
+      .def("NewSymbolId", &PhysicalIdGenerator::NewSymbolId)
+      .def("NewObjectId", &PhysicalIdGenerator::NewSymbolId);
 
   py::class_<LogicalIdGenerator, IdGenerator, std::shared_ptr<LogicalIdGenerator>>(
       m, "LogicalIdGenerator")
       .def(py::init<>())
-      .def("NewSymbolId",
-           [](const std::shared_ptr<LogicalIdGenerator>& x) {
-             return x->NewSymbolId().GetOrThrow();
-           })
-      .def("NewObjectId", [](const std::shared_ptr<LogicalIdGenerator>& x) {
-        return x->NewObjectId().GetOrThrow();
-      });
+      .def("NewSymbolId", &LogicalIdGenerator::NewSymbolId)
+      .def("NewObjectId", &LogicalIdGenerator::NewObjectId);
 }
 
 }  // namespace vm

@@ -113,34 +113,44 @@ struct AdagradUpdateFunctor {
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
     const T next_sum = *sum + model_diff_t * model_diff_t;
     *sum = next_sum;
-    *model = model_val - learning_rate / (sqrt(next_sum) + epsilon) * model_diff_t;
+    *model = model_val - learning_rate / (sqrt(next_sum) + epsilon) * model_diff_t
+             - learning_rate * weight_decay * model_val;
   }
 };
 
 template<typename T, typename G>
 struct LambGradFunctor {
   OF_DEVICE_FUNC
-  void operator()(const T* beta1_t, const T* beta2_t, const G* model_diff, T* adam_diff, T* model,
-                  T* m, T* v, float scale, float l1, float l2, float beta1, float beta2,
-                  float epsilon) const {
+  void operator()(const G* model_diff, T* adam_diff, T* model, T* m, T* v, float scale, float l1,
+                  float l2, float beta1, float beta2, float epsilon, bool do_bias_correction,
+                  float bias_correction1, float bias_correction2) const {
     const T model_val = *model;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
     const T next_m = beta1 * *m + (1 - beta1) * model_diff_t;
     const T next_v = beta2 * *v + (1 - beta2) * model_diff_t * model_diff_t;
-    *adam_diff = (next_m / (1 - *beta1_t)) / (std::sqrt(next_v / (1 - *beta2_t)) + epsilon);
     *m = next_m;
     *v = next_v;
+    T numerator = 0;
+    T denominator = 0;
+    if (do_bias_correction) {
+      numerator = next_m / bias_correction1;
+      denominator = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon;
+    } else {
+      numerator = next_m;
+      denominator = sqrt(next_v) + epsilon;
+    }
+    *adam_diff = numerator / denominator;
   }
 };
 
 template<typename T>
 struct LambLRFunctor {
   OF_DEVICE_FUNC
-  float operator()(const float learning_rate, const T* w_norm_2, const T* g_norm_2) const {
-    float lr = learning_rate;
-    const T w_norm_val = std::sqrt(*w_norm_2);
-    const T g_norm_val = std::sqrt(*g_norm_2);
+  float operator()(const float learning_rate_val, const T* w_norm_2, const T* g_norm_2) const {
+    float lr = learning_rate_val;
+    const T w_norm_val = sqrt(*w_norm_2);
+    const T g_norm_val = sqrt(*g_norm_2);
     T trust_ratio = 1;
     if (w_norm_val > 0 && g_norm_val > 0) { trust_ratio = w_norm_val / g_norm_val; }
     lr *= trust_ratio;
@@ -155,6 +165,34 @@ struct LambUpdateFunctor {
                   T* model) const {
     const T model_val = *model;
     *model = model_val - learning_rate * (*adam_diff + weight_decay * model_val);
+  }
+};
+
+template<typename T, typename G>
+struct FtrlUpdateFunctor {
+  OF_DEVICE_FUNC void operator()(const G* model_diff, T* model, T* accumulate, T* z, T scale,
+                                 float l1, float l2, float lr_power, float lambda1, float lambda2,
+                                 float beta, float weight_decay, float learning_rate) {
+    const T model_val = *model;
+    const T z_val = *z;
+    const float lr_reciprocal = static_cast<float>(1.0) / learning_rate;
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+    const T accumulate_val = *accumulate;
+    const T next_accumulate_val = accumulate_val + model_diff_t * model_diff_t;
+    const T acc_powered = pow(accumulate_val, lr_power);
+    const T next_acc_powered = pow(next_accumulate_val, lr_power);
+    const T sigma = (next_acc_powered - acc_powered) * lr_reciprocal;
+    const T new_z_val = z_val + model_diff_t - sigma * model_val;
+    T new_model = static_cast<T>(0.0);
+    if (abs(new_z_val) >= lambda1) {
+      new_model = (copysign(lambda1, new_z_val) - new_z_val)
+                      / ((beta + next_acc_powered) * lr_reciprocal + lambda2)
+                  - learning_rate * weight_decay * model_val;
+    }
+    *model = new_model;
+    *accumulate = next_accumulate_val;
+    *z = new_z_val;
   }
 };
 
@@ -216,9 +254,20 @@ template<DeviceType device_type, typename T, typename G>
 struct LambUpdateKernelUtil {
  public:
   static void Update(ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     float beta2, float epsilon, float weight_decay, float learning_rate_val,
+                     bool do_bias_correction, float bias_correction1_val,
+                     float bias_correction2_val, const float* learning_rate_ptr,
+                     const float* bias_correction1_ptr, const float* bias_correction2_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer);
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct FtrlUpdateKernelUtil {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power,
+                     float lambda1, float lambda2, float beta, float weight_decay,
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model, T* accumulate, T* z);
 };
 
 template<typename T, typename G, bool centered>

@@ -115,6 +115,19 @@ config.oneflow_tools_dir = os.path.join(config.oneflow_ir_obj_root, "bin")
 
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
+
+# TODO: these two should be unnecessary
+llvm_config.with_environment(
+    "LD_LIBRARY_PATH",
+    os.path.join(config.oneflow_obj_root, "third_party_install/protobuf/lib"),
+    append_path=True,
+)
+llvm_config.with_environment(
+    "LD_LIBRARY_PATH",
+    os.path.join(config.oneflow_obj_root, "_deps/glog-build"),
+    append_path=True,
+)
+
 llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", "1")
@@ -130,8 +143,11 @@ llvm_config.with_environment(
 )
 
 tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]
-tools = ["oneflow-opt", "oneflow-translate"]
+tools = ["oneflow-opt", "oneflow-translate", "oneflow-runner"]
 tools.extend(
-    [ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),]
+    [
+        ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),
+        ToolSubst("%test_exec_root", config.test_exec_root, unresolved="ignore"),
+    ]
 )
 llvm_config.add_tool_substitutions(tools, tool_dirs)

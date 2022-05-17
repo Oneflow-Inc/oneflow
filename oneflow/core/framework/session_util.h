@@ -17,9 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_SESSION_UTIL_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/eager/eager_symbol.cfg.h"
 
 namespace oneflow {
 
@@ -32,7 +30,6 @@ class Session {
 
   int64_t id() const;
   const std::shared_ptr<vm::InstructionMsgList>& instruction_list() const;
-  std::shared_ptr<vm::cfg::EagerSymbolList> eager_symbol_list() const;
 
   std::shared_ptr<const std::vector<bool>> is_mirrored_strategy_enabled_stack() const {
     return is_mirrored_strategy_enabled_stack_;
@@ -45,7 +42,6 @@ class Session {
  private:
   int64_t id_;
   std::shared_ptr<vm::InstructionMsgList> instruction_list_;
-  std::shared_ptr<vm::cfg::EagerSymbolList> eager_symbol_list_;
   std::shared_ptr<std::vector<bool>> is_mirrored_strategy_enabled_stack_;
 };
 

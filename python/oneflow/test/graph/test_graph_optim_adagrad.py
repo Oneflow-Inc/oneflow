@@ -13,9 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 from collections import OrderedDict
 import numpy as np
+import copy
 
 from test_util import GenArgList
 from optimizer_test_util import clip_grad_norm_np
@@ -86,7 +88,7 @@ def compare_with_numpy_adagrad(
         )
         adagrad_x = adagrad_graph(mask_tensor)
 
-        of_res_list.append(simp_module.para0.numpy())
+        of_res_list.append(copy.copy(simp_module.para0.numpy()))
 
     np_res_list = []
 
@@ -177,7 +179,7 @@ def compare_with_numpy_adagrad_clip_grad(
         )
         adagrad_x = adagrad_graph(mask_tensor)
 
-        of_res_list.append(simp_module.para0.numpy())
+        of_res_list.append(copy.copy(simp_module.para0.numpy()))
 
     np_res_list = []
 
@@ -211,7 +213,9 @@ def compare_with_numpy_adagrad_clip_grad(
 class TestAdagrad(flow.unittest.TestCase):
     def test_adagrad(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            arg_dict["device"] = ["cpu"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
@@ -225,7 +229,9 @@ class TestAdagrad(flow.unittest.TestCase):
 
     def test_adagrad_clip_grad(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            arg_dict["device"] = ["cpu"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]

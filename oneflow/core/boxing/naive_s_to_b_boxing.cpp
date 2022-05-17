@@ -23,19 +23,18 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_split_parallel();
-}
+bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
+static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
-bool RawIsBroadcastSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_broadcast_parallel();
 }
 
-static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocal);
+static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocalCached);
 
-Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                            const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));
@@ -44,7 +43,7 @@ Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckCclSToB = DECORATE(&RawCheckCclSToB, ThreadLocal);
+static constexpr auto* CheckCclSToB = DECORATE(&RawCheckCclSToB, ThreadLocalCachedCopiable);
 
 }  // namespace
 

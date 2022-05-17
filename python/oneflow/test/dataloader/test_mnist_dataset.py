@@ -16,10 +16,12 @@ limitations under the License.
 import os
 import unittest
 
+import flowvision as vision
+import flowvision.transforms as transforms
+
 import oneflow.unittest
 import oneflow as flow
 import oneflow.nn as nn
-import oneflow.utils.vision.transforms as transforms
 from data_utils import load_data_mnist
 
 
@@ -69,7 +71,7 @@ class Net(nn.Module):
         return out
 
 
-def test_train_and_eval(test_case):
+def _test_train_and_eval(test_case):
     if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
         device = flow.device("cpu")
     else:
@@ -112,7 +114,7 @@ def test_train_and_eval(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestMnistDataset(flow.unittest.TestCase):
     def test_mnist_dataset(test_case):
-        test_train_and_eval(test_case)
+        _test_train_and_eval(test_case)
 
 
 if __name__ == "__main__":

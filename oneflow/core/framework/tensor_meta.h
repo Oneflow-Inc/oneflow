@@ -16,39 +16,50 @@ limitations under the License.
 #ifndef ONEFLOW_FRAMEWORK_TENSOR_META_H_
 #define ONEFLOW_FRAMEWORK_TENSOR_META_H_
 
+#include <memory>
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
-namespace cfg {
 
 class NdSbp;
-}
-
 class Shape;
-class Device;
 class Stride;
+class Device;
 class ParallelDesc;
 
 namespace one {
 
+bool IsContiguous(const Shape& shape, const Stride& stride);
+
 class TensorMeta : public user_op::TensorDesc {
  public:
   TensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
-      : shape_(shape), data_type_(dtype), is_dynamic_(false) {}
+      : shape_(shape),
+        stride_(std::make_shared<Stride>(*shape)),
+        data_type_(dtype),
+        is_dynamic_(false) {}
+  TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
+             DataType dtype)
+      : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(false) {}
   TensorMeta(const TensorMeta&) = default;
   TensorMeta(TensorMeta&&) = default;
   virtual ~TensorMeta() = default;
 
   const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
+  const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
 
   const Shape& shape() const override { return *shape_; }
+  const Stride& stride() const override { return *stride_; }
   DataType dtype() const { return data_type_; }
   DataType data_type() const override { return data_type_; }
   bool is_dynamic() const override { return is_dynamic_; }
+  bool is_contiguous() const { return IsContiguous(shape(), *stride_); }
 
   void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
   Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
+  void set_stride(const std::shared_ptr<const Stride>& val) { stride_ = val; }
+  Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
   DataType* mut_dtype() { return &data_type_; }
   void set_dtype(DataType data_type) { data_type_ = data_type; }
   DataType* mut_data_type() override { return &data_type_; }
@@ -57,6 +68,7 @@ class TensorMeta : public user_op::TensorDesc {
 
  private:
   std::shared_ptr<const Shape> shape_;
+  std::shared_ptr<const Stride> stride_;
   DataType data_type_;
   bool is_dynamic_;
 };
@@ -67,18 +79,15 @@ class MirroredTensorMeta : public TensorMeta {
   MirroredTensorMeta();
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                      Symbol<Device> device);
-  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                     Symbol<Device> device, const std::shared_ptr<const Stride>& stride,
-                     int64_t storage_offset);
+  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape,
+                     const std::shared_ptr<const Stride>& stride, DataType dtype,
+                     Symbol<Device> device, int64_t storage_offset);
   virtual ~MirroredTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
-  const Stride& stride() const { return *stride_; }
-  const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
   int64_t storage_offset() const { return storage_offset_; }
 
   Symbol<Device>* mut_device() { return &device_; }
-  void set_stride(const std::shared_ptr<const Stride>& stride) { stride_ = stride; }
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   bool operator==(const MirroredTensorMeta& other) const;
@@ -86,14 +95,13 @@ class MirroredTensorMeta : public TensorMeta {
 
  private:
   Symbol<Device> device_;
-  std::shared_ptr<const Stride> stride_;
   int64_t storage_offset_;
 };
 
 class ConsistentTensorMeta : public TensorMeta {
  public:
   ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                       Symbol<cfg::NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
+                       Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
       : TensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
   ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
@@ -101,17 +109,17 @@ class ConsistentTensorMeta : public TensorMeta {
 
   bool operator==(const ConsistentTensorMeta& other) const;
 
-  Symbol<cfg::NdSbp> nd_sbp() const { return nd_sbp_; }
+  Symbol<NdSbp> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
-  void set_nd_sbp(Symbol<cfg::NdSbp> val) { nd_sbp_ = val; }
+  void set_nd_sbp(Symbol<NdSbp> val) { nd_sbp_ = val; }
 
   void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; }
 
   size_t CalcHashValue() const;
 
  private:
-  Symbol<cfg::NdSbp> nd_sbp_;
+  Symbol<NdSbp> nd_sbp_;
   Symbol<ParallelDesc> parallel_desc_;
 };
 

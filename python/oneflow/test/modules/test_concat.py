@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -134,28 +134,60 @@ class TestModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_cat_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return torch.cat((x, x, x), random(0, 2).to(int))
 
-    @autotest(n=10, auto_backward=False, check_graph=False)
-    def test_concat_with_input_0shape_data(test_case):
+    @autotest(n=5, check_graph=True, check_dtype=True)
+    def test_cat_with_diff_dtypes(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 2, 3, 2, 4).to(device)
-        y = random_pytorch_tensor(4, 2, 3, random(0, 3), 4).to(device)
+        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device).float()
+        y = x.int()
+        z = x.double()
+        return torch.cat((x, y, z), random(0, 2).to(int))
+
+    @autotest(n=1, check_graph=True, check_dtype=True)
+    def test_cat_with_diff_dtype_corner_case(test_case):
+        device = random_device()
+        input_list = list()
+        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        y = x.int()
+        for i in range(128):
+            input_list.append(x)
+        for j in range(128, 257):
+            input_list.append(y)
+        return torch.cat(tuple(input_list), random(0, 2).to(int))
+
+    @autotest(n=10, auto_backward=False, check_graph=True)
+    def test_concat_with_input_0_size_data(test_case):
+        device = random_device()
+        x = random_tensor(4, 2, 3, 2, 4).to(device)
+        y = random_tensor(4, 2, 3, random(0, 3), 4).to(device)
         z = torch.cat((x, y), dim=2)
         return z
 
-    @autotest(n=10, auto_backward=False, check_graph=False)
-    def test_concat_with_output_0shape_data(test_case):
+    @autotest(n=10, auto_backward=False, check_graph=True)
+    def test_concat_with_output_0_size_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
-        y = random_pytorch_tensor(4, 2, 0, 2, 4).to(device)
+        x = random_tensor(4, 2, 0, 2, 4).to(device)
+        y = random_tensor(4, 2, 0, 2, 4).to(device)
         dim = random(0, 4).to(int).value()
         z = torch.cat((x, y), dim=dim)
         return z
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_cat_bool_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device, torch.bool)
+        return torch.cat((x, x, x), random(0, 2).to(int))
+
+    @autotest(n=10, check_graph=True)
+    def test_cat_only_one_tensor(test_case):
+        device = random_device()
+        x = random_tensor(4, 2, 3, random(0, 3)).to(device)
+        return torch.cat((x,), 0)
 
 
 if __name__ == "__main__":

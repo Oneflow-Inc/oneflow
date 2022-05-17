@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -71,68 +72,9 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> AddMsSignature(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& prediction =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("prediction", 0), 0)
-      .Split(user_op::OpArg("label", 0), 0)
-      .Split(user_op::OpArg("out", 0), 0)
-      .Build();
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("prediction", 0), prediction.shape().NumAxes() - 1)
-      .Broadcast(user_op::OpArg("label", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> AddSignature(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("prediction", 0), 0)
-      .Split(user_op::OpArg("label", 0), 0)
-      .Split(user_op::OpArg("out", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> AddGradMsSignature(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& prediction =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("prediction", 0), 0)
-      .Split(user_op::OpArg("label", 0), 0)
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("prediction_diff", 0), 0)
-      .Build();
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("prediction", 0), prediction.shape().NumAxes() - 1)
-      .Broadcast(user_op::OpArg("label", 0))
-      .Broadcast(user_op::OpArg("dy", 0))
-      .Split(user_op::OpArg("prediction_diff", 0), prediction.shape().NumAxes() - 1)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> AddGradSignature(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("prediction", 0), 0)
-      .Split(user_op::OpArg("label", 0), 0)
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("prediction_diff", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
-}
-
-template<Maybe<void> (*GetSbpSignature)(user_op::SbpContext*)>
-Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
-  JUST(GetSbpSignature(ctx));
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
                                                  const user_op::UserOpWrapper& op,
-                                                 user_op::AddOpFn AddOp) {
+                                                 const user_op::AddOpFn& AddOp) {
   if (op.NeedGenGradTensor4OpInput("prediction", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     user_op::UserOpConfWrapper grad_op = builder.Op(op_type_name)
@@ -150,38 +92,112 @@ Maybe<void> GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name
 
 }  // namespace
 
-#define REGISTER_SPAESE_CROSS_ENTROPY_USER_OP(op_name, sbp_sig)                        \
-  REGISTER_USER_OP(op_name)                                                            \
-      .Input("prediction")                                                             \
-      .Input("label")                                                                  \
-      .Output("out")                                                                   \
-      .Attr<int64_t>("depth")                                                          \
-      .SetTensorDescInferFn(InferTensorDescFn)                                         \
-      .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,      \
-                              const user_op::UserOpConfWrapper&) -> Maybe<void> {      \
-        user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0); \
-        CHECK_OR_RETURN(label_modifier != nullptr);                                    \
-        label_modifier->set_requires_grad(false);                                      \
-        return Maybe<void>::Ok();                                                      \
-      })                                                                               \
-      .SetGetSbpFn(GetSbpFn<sbp_sig>)                                                  \
-      .SetDataTypeInferFn(InferDataType);
+/*static*/ Maybe<void> SparseCrossEntropyOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), 0)
+      .Split(user_op::OpArg("label", 0), 0)
+      .Split(user_op::OpArg("out", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SparseCrossEntropyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDescFn(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyOp::InferDataType(user_op::InferContext* ctx) {
+  return oneflow::InferDataType(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
+  CHECK_OR_RETURN(label_modifier != nullptr);
+  label_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
 
-#define REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP(op_name, sbp_sig) \
-  REGISTER_USER_OP(op_name)                                          \
-      .Input("prediction")                                           \
-      .Input("label")                                                \
-      .Input("dy")                                                   \
-      .Output("prediction_diff")                                     \
-      .Attr<int64_t>("depth")                                        \
-      .SetTensorDescInferFn(InferGradTensorDescFn)                   \
-      .SetGetSbpFn(GetSbpFn<sbp_sig>)                                \
-      .SetDataTypeInferFn(InferDataTypeGrad);
+/*static*/ Maybe<void> SparseCrossEntropyMsOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& prediction =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), 0)
+      .Split(user_op::OpArg("label", 0), 0)
+      .Split(user_op::OpArg("out", 0), 0)
+      .Build();
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), prediction.shape().NumAxes() - 1)
+      .Broadcast(user_op::OpArg("label", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SparseCrossEntropyMsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDescFn(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyMsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyMsOp::InferDataType(user_op::InferContext* ctx) {
+  return oneflow::InferDataType(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyMsOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
+  CHECK_OR_RETURN(label_modifier != nullptr);
+  label_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy", AddSignature);
-REGISTER_SPAESE_CROSS_ENTROPY_USER_OP("sparse_cross_entropy_ms", AddMsSignature);
-REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP("sparse_cross_entropy_grad", AddGradSignature);
-REGISTER_SPAESE_CROSS_ENTROPY_GRAD_USER_OP("sparse_cross_entropy_ms_grad", AddGradMsSignature);
+/*static*/ Maybe<void> SparseCrossEntropyGradOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), 0)
+      .Split(user_op::OpArg("label", 0), 0)
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("prediction_diff", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SparseCrossEntropyGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferGradTensorDescFn(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyGradOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataTypeGrad(ctx);
+}
+
+/*static*/ Maybe<void> SparseCrossEntropyMsGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& prediction =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("prediction", 0);
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), 0)
+      .Split(user_op::OpArg("label", 0), 0)
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("prediction_diff", 0), 0)
+      .Build();
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("prediction", 0), prediction.shape().NumAxes() - 1)
+      .Broadcast(user_op::OpArg("label", 0))
+      .Broadcast(user_op::OpArg("dy", 0))
+      .Split(user_op::OpArg("prediction_diff", 0), prediction.shape().NumAxes() - 1)
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferGradTensorDescFn(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SparseCrossEntropyMsGradOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataTypeGrad(ctx);
+}
 
 REGISTER_USER_OP_GRAD("sparse_cross_entropy")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

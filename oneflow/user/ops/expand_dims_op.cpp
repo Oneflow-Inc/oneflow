@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -28,43 +29,45 @@ int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
 
 }  // namespace
 
-REGISTER_USER_OP("expand_dims")
-    .Input("in")
-    .Output("out")
-    .Attr<int32_t>("axis")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes());
+/* static */ Maybe<void> ExpandDimsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
+  const int32_t axis =
+      TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes());
 
-      auto dim_vec = in_shape.dim_vec();
-      dim_vec.insert(dim_vec.begin() + axis, 1);
-      *out_shape = Shape(dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const int32_t axis =
-          TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes());
+  auto dim_vec = in_shape.dim_vec();
+  dim_vec.insert(dim_vec.begin() + axis, 1);
+  *out_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
+}
 
-      auto dim_vec = in_tensor.shape().dim_vec();
-      FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), in_axis)
-            .Split(user_op::OpArg("out", 0), in_axis < axis ? in_axis : in_axis + 1)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> ExpandDimsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> ExpandDimsOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  const int32_t axis =
+      TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_tensor.shape().NumAxes());
+
+  auto dim_vec = in_tensor.shape().dim_vec();
+  FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), in_axis)
+        .Split(user_op::OpArg("out", 0), in_axis < axis ? in_axis : in_axis + 1)
+        .Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> ExpandDimsOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("expand_dims")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

@@ -32,8 +32,8 @@ class DistributeCloneOp final : public Operator {
  private:
   Maybe<void> InferBlobParallelDesc() override;
   Maybe<void> InferSbpSignature(
-      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferLogicalOutBlobDescs(
@@ -99,8 +99,8 @@ Maybe<void> DistributeCloneOp::InferBlobParallelDesc() {
 }
 
 Maybe<void> DistributeCloneOp::InferSbpSignature(
-    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), output_bns().size());

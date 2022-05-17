@@ -17,12 +17,11 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/reshape_user_op_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& shape = ctx->Attr<Shape>("shape");
   const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
@@ -31,21 +30,16 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_num(), &builder);
 }
 
-Maybe<void> InferNdSbpFn(user_op::InferNdSbpFnContext* ctx) {
-  const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-  const Shape& shape = ctx->user_op_conf().attr<Shape>("shape");
-  const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
-  return ReshapeUserOpUtil::InferNdSbp(ctx, in_shape, *out_shape);
-}
-
-Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
+  Stride* out_stride = out_tensor_desc->mut_stride();
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
-  *out_tensor_desc = in_tensor_desc;
+  *out_tensor_desc->mut_data_type() = in_tensor_desc.data_type();
   if (in_shape.NumAxes() == 0 || shape.NumAxes() == 0) {
     // NOTE(chengcheng): input/output Scalar
     // do nothing
@@ -66,17 +60,21 @@ Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
     if (need_infer_axis != -1) { shape.Set(need_infer_axis, in_shape.elem_cnt() / count); }
   }
   *out_shape = shape;
+  *out_stride = Stride(shape);
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   Shape logical_shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
+  Stride* out_stride = out_tensor_desc->mut_stride();
   *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
+  *out_tensor_desc->mut_stride() = Stride(in_tensor_desc.shape());
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
   if (in_shape.NumAxes() == 0 || logical_shape.NumAxes() == 0) {
     // NOTE(chengcheng): input/output Scalar
@@ -106,29 +104,23 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *out_shape =
       *JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+  *out_stride = Stride(*out_shape);
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt())
       << " Reshape infer ERROR! in op_name: " << ctx->op_name()
       << " input shape is : " << in_shape.ToString()
       << " , output shape is : " << out_shape->ToString() << " , output logical shape is "
       << logical_shape.ToString()
-      << " , And reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString();
+      << " , And reshape shape conf is : " << ctx->Attr<Shape>("shape").ToString()
+      << " op_loc: " << ctx->op_loc();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ReshapeOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP("reshape")
-    .Input("in")
-    .Output("out")
-    .Attr<Shape>("shape")
-    .SetLogicalTensorDescInferFn(LogicalTensorDescInferFn)
-    .SetPhysicalTensorDescInferFn(TensorDescInferFn)
-    .SetGetSbpFn(GetSbpFn)
-    .SetNdSbpInferFn(InferNdSbpFn)
-    .SetDataTypeInferFn(InferDataType);
+namespace {
 
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) -> Maybe<void> {

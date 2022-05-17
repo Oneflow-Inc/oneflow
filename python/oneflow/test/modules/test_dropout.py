@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -26,7 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def test_dropout_numpy_p0(test_case, shape, device, dtype):
+def do_test_dropout_numpy_p0(test_case, shape, device, dtype):
     np_x = np.random.randn(*shape).astype(dtype)
     np_one_mask = np.ones_like(np_x)
     x_tensor = flow.tensor(np_x, requires_grad=True, device=device)
@@ -39,7 +39,7 @@ def test_dropout_numpy_p0(test_case, shape, device, dtype):
     )
 
 
-def test_dropout_numpy_p1(test_case, shape, device, dtype):
+def do_test_dropout_numpy_p1(test_case, shape, device, dtype):
     np_x = np.random.randn(*shape).astype(dtype)
     np_zero_mask = np.zeros_like(np_x)
     x_tensor = flow.tensor(np_x, requires_grad=True, device=device)
@@ -52,7 +52,7 @@ def test_dropout_numpy_p1(test_case, shape, device, dtype):
     )
 
 
-def test_dropout_numpy_fp16_p0(test_case, shape):
+def do_test_dropout_numpy_fp16_p0(test_case, shape):
     np_x = np.random.randn(*shape).astype(np.float32)
     np_x_fp16 = np_x.astype(np.float16)
     x_tensor = flow.tensor(np_x, requires_grad=True, device="cuda")
@@ -68,7 +68,7 @@ def test_dropout_numpy_fp16_p0(test_case, shape):
     )
 
 
-def test_dropout_numpy_fp16_p1(test_case, shape):
+def do_test_dropout_numpy_fp16_p1(test_case, shape):
     np_x = np.random.randn(*shape).astype(np.float32)
     x_tensor = flow.tensor(np_x, requires_grad=True, device="cuda")
     x_tensor_fp16 = flow.cast(x_tensor, flow.float16)
@@ -85,7 +85,7 @@ def test_dropout_numpy_fp16_p1(test_case, shape):
     )
 
 
-def test_dropout_addend_numpy_p0(test_case, shape, device, dtype):
+def do_test_dropout_addend_numpy_p0(test_case, shape, device, dtype):
     np_x = np.random.randn(*shape).astype(dtype)
     np_addend = np.random.randn(*shape).astype(dtype)
     np_one_mask = np.ones_like(np_x)
@@ -106,7 +106,7 @@ def test_dropout_addend_numpy_p0(test_case, shape, device, dtype):
     )
 
 
-def test_dropout_addend_numpy_p1(test_case, shape, device, dtype):
+def do_test_dropout_addend_numpy_p1(test_case, shape, device, dtype):
     np_x = np.random.randn(*shape).astype(dtype)
     np_addend = np.random.randn(*shape).astype(dtype)
     np_one_mask = np.ones_like(np_x)
@@ -126,7 +126,7 @@ def test_dropout_addend_numpy_p1(test_case, shape, device, dtype):
     )
 
 
-def test_dropout_addend_numpy_fp16_p0(test_case, shape):
+def do_test_dropout_addend_numpy_fp16_p0(test_case, shape):
     np_x = np.random.randn(*shape).astype(np.float32)
     np_x_fp16 = np_x.astype(np.float16)
     np_addend = np.random.randn(*shape).astype(np.float32)
@@ -152,7 +152,7 @@ def test_dropout_addend_numpy_fp16_p0(test_case, shape):
     )
 
 
-def test_dropout_addend_numpy_fp16_p1(test_case, shape):
+def do_test_dropout_addend_numpy_fp16_p1(test_case, shape):
     np_x = np.random.randn(*shape).astype(np.float32)
     np_addend = np.random.randn(*shape).astype(np.float32)
     np_addend_fp16 = np_addend.astype(np.float16)
@@ -238,9 +238,11 @@ def fixed_gpu_seed_dropout_test(test_case):
 class TestModule(flow.unittest.TestCase):
     def test_dropout_numpy_case(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [test_dropout_numpy_p0, test_dropout_numpy_p1]
-        arg_dict["shape"] = [[4, 127, 256], [5, 63, 49], [7, 32, 64], [16, 1024, 1024]]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["test_fun"] = [do_test_dropout_numpy_p0, do_test_dropout_numpy_p1]
+        arg_dict["shape"] = [[4, 127, 256], [2, 1024, 1024]]
+        arg_dict["device"] = ["cuda"]
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            arg_dict["device"] = ["cpu"]
         arg_dict["dtype"] = [np.float32, np.float64]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
@@ -248,7 +250,10 @@ class TestModule(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dropout_fp16_numpy_case(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [test_dropout_numpy_fp16_p0, test_dropout_numpy_fp16_p1]
+        arg_dict["test_fun"] = [
+            do_test_dropout_numpy_fp16_p0,
+            do_test_dropout_numpy_fp16_p1,
+        ]
         arg_dict["shape"] = [[4, 127, 256], [5, 63, 49], [7, 32, 64], [16, 512, 512]]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
@@ -256,8 +261,8 @@ class TestModule(flow.unittest.TestCase):
     def test_dropout_addend_numpy_case(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            test_dropout_addend_numpy_p0,
-            test_dropout_addend_numpy_p1,
+            do_test_dropout_addend_numpy_p0,
+            do_test_dropout_addend_numpy_p1,
         ]
         arg_dict["shape"] = [[4, 47, 156], [5, 33, 65], [3, 132, 94], [9, 256, 63]]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -269,8 +274,8 @@ class TestModule(flow.unittest.TestCase):
     def test_dropout_addend_fp16_numpy_case(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            test_dropout_addend_numpy_fp16_p0,
-            test_dropout_addend_numpy_fp16_p1,
+            do_test_dropout_addend_numpy_fp16_p0,
+            do_test_dropout_addend_numpy_fp16_p1,
         ]
         arg_dict["shape"] = [[2, 44, 66], [1, 2, 7], [5, 32, 74], [8, 125, 63]]
         for arg in GenArgList(arg_dict):
@@ -296,24 +301,41 @@ class TestModule(flow.unittest.TestCase):
     @autotest()
     def autotest_dropout_p0(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=0)
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout(p=0, inplace=random_bool())
         return m(x)
 
     @autotest()
     def autotest_dropout_p1(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=1.0)
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
         return m(x)
 
     @autotest()
     def autotest_dropout_eval(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=1.0)
+        x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
+        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
         m.eval()
         return m(x)
+
+    @autotest()
+    def autotest_0dim_dropout_eval(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
+        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
+        m.eval()
+        return m(x)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestDropoutOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.tensor([2, 3], dtype=flow.float, device="cuda:1")
+        y = flow._C.dropout(x)
+        test_case.assertEqual(y.device, flow.device("cuda:1"))
 
 
 if __name__ == "__main__":

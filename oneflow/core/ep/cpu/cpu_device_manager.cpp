@@ -20,9 +20,17 @@ namespace oneflow {
 
 namespace ep {
 
+CpuDeviceManager::CpuDeviceManager(DeviceManagerRegistry* registry)
+    : device_num_threads_(1), registry_(registry) {}
+
+CpuDeviceManager::~CpuDeviceManager() = default;
+
+DeviceManagerRegistry* CpuDeviceManager::registry() const { return registry_; }
+
 std::shared_ptr<Device> CpuDeviceManager::GetDevice(size_t device_index) {
   std::lock_guard<std::mutex> lock(device_mutex_);
-  if (!device_) { device_.reset(new CpuDevice()); }
+  if (!device_) { device_.reset(new CpuDevice(this)); }
+  device_->SetNumThreads(device_num_threads_);
   return device_;
 }
 
@@ -34,7 +42,9 @@ size_t CpuDeviceManager::GetActiveDeviceIndex() { return 0; }
 
 void CpuDeviceManager::SetActiveDeviceByIndex(size_t device_index) {}
 
-REGISTER_EP_DEVICE_MANAGER(DeviceType::kCPU, CpuDeviceManager);
+void CpuDeviceManager::SetDeviceNumThreads(size_t num_threads) {
+  device_num_threads_ = num_threads;
+}
 
 }  // namespace ep
 

@@ -47,10 +47,10 @@ class ClusterEdge {
 
   bool IsIdentity() const { return is_control_edge_ || (start_sbp_policy() == end_sbp_policy()); }
 
-  cfg::SbpParallel start_sbp_policy() const { return sbp_policy_[0]; }
-  cfg::SbpParallel end_sbp_policy() const { return sbp_policy_[1]; }
-  void set_start_sbp_policy(const cfg::SbpParallel& sbp_policy) { sbp_policy_[0] = sbp_policy; }
-  void set_end_sbp_policy(const cfg::SbpParallel& sbp_policy) { sbp_policy_[1] = sbp_policy; }
+  SbpParallel start_sbp_policy() const { return sbp_policy_[0]; }
+  SbpParallel end_sbp_policy() const { return sbp_policy_[1]; }
+  void set_start_sbp_policy(const SbpParallel& sbp_policy) { sbp_policy_[0] = sbp_policy; }
+  void set_end_sbp_policy(const SbpParallel& sbp_policy) { sbp_policy_[1] = sbp_policy; }
   Shape start_time_shape() const { return time_shape_[0]; }
   Shape end_time_shape() const { return time_shape_[1]; }
   void set_start_time_shape(const Shape& shape) { time_shape_[0] = shape; }
@@ -60,7 +60,7 @@ class ClusterEdge {
   ClusterNode* start_;
   ClusterNode* end_;
   // A pair of sbp policy, produce sbp and consume sbp.
-  cfg::SbpParallel sbp_policy_[2];
+  SbpParallel sbp_policy_[2];
   // A pair of time shape, produce time shape and consume time shape.
   Shape time_shape_[2];
   bool is_control_edge_ = false;

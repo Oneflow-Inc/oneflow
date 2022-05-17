@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -42,15 +43,13 @@ OpRegistry& OpRegistry::Name(const std::string& op_type_name) {
   return *this;
 }
 
-OpRegistry& OpRegistry::ArgImpl(bool is_input, const std::string& name, bool is_optional,
-                                int32_t num, bool num_as_min) {
-  CHECK(InsertIfNotExists(name, &unique_names_));
+OpRegistry& OpRegistry::ArgImpl(bool is_input, const std::string& name, bool is_optional) {
+  CHECK(InsertIfNotExists(name, &unique_names_))
+      << "op arg registered, name: " << name << ", op: " << result_.op_type_name;
   UserOpDef::ArgDef arg_def;
   {
     arg_def.set_name(name);
     arg_def.set_is_optional(is_optional);
-    arg_def.set_num(num);
-    arg_def.set_num_as_min(num_as_min);
   }
   if (is_input) {
     *(result_.op_def.mutable_input()->Add()) = arg_def;
@@ -60,15 +59,9 @@ OpRegistry& OpRegistry::ArgImpl(bool is_input, const std::string& name, bool is_
   return *this;
 }
 
-#define OP_REG_ARG_MEMBER_FUNC(name_prefix, is_input, is_optional)                             \
-  OpRegistry& OpRegistry::name_prefix(const std::string& name) {                               \
-    return ArgImpl(is_input, name, is_optional, 1, false);                                     \
-  }                                                                                            \
-  OpRegistry& OpRegistry::name_prefix(const std::string& name, int32_t num) {                  \
-    return ArgImpl(is_input, name, is_optional, num, false);                                   \
-  }                                                                                            \
-  OpRegistry& OpRegistry::name_prefix##WithMinimum(const std::string& name, int32_t min_num) { \
-    return ArgImpl(is_input, name, is_optional, min_num, true);                                \
+#define OP_REG_ARG_MEMBER_FUNC(name_prefix, is_input, is_optional) \
+  OpRegistry& OpRegistry::name_prefix(const std::string& name) {   \
+    return ArgImpl(is_input, name, is_optional);                   \
   }
 
 OP_REG_ARG_MEMBER_FUNC(Input, true, false)
@@ -80,6 +73,11 @@ OP_REG_ARG_MEMBER_FUNC(OptionalOutput, false, true)
 
 OpRegistry& OpRegistry::SupportCpuOnly() {
   result_.cpu_only_supported = true;
+  return *this;
+}
+
+OpRegistry& OpRegistry::SupportNonContiguous() {
+  result_.non_contiguous_supported = true;
   return *this;
 }
 
@@ -172,6 +170,7 @@ OpRegistry& OpRegistry::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   result_.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
 }
+
 OpRegistry& OpRegistry::SetSbpSignatureInferFn(SbpSignatureInferFn sbp_signature_infer_fn) {
   result_.sbp_signature_infer_fn = std::move(sbp_signature_infer_fn);
   return *this;
@@ -203,8 +202,9 @@ OpRegistry& OpRegistry::SetDataTypeInferFn(DataTypeInferFn data_type_infer_fn) {
   return *this;
 }
 
-OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
-  result_.device_infer_fn = std::move(device_infer_fn);
+OpRegistry& OpRegistry::SetDeviceAndStreamInferFn(
+    DeviceAndStreamInferFn device_and_stream_infer_fn) {
+  result_.device_and_stream_infer_fn = std::move(device_and_stream_infer_fn);
   return *this;
 }
 
@@ -233,6 +233,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
           const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex(pair.first, pair.second);
           *desc->mut_shape() = *JUST(
               GetPhysicalShape(desc->shape(), nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+          *desc->mut_stride() = Stride(desc->shape());
         }
       }
       return Maybe<void>::Ok();
@@ -240,12 +241,13 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
   }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   CHECK_OR_RETURN(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
-  if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
-    result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
+  if (result_.cpu_only_supported && result_.device_and_stream_infer_fn == nullptr) {
+    result_.device_and_stream_infer_fn =
+        [](DeviceAndStreamInferContext* ctx) -> Maybe<Symbol<Stream>> {
       for (const auto& pair : ctx->inputs()) {
         const Symbol<Device>& input_device =
             ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
-        CHECK_EQ(JUST(input_device->of_type()), "cpu");
+        CHECK_EQ(input_device->type(), "cpu");
       }
       Symbol<Device> default_device;
       {
@@ -259,7 +261,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       for (const auto& pair : ctx->outputs()) {
         *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = default_device;
       }
-      return default_device;
+      return Stream::New(default_device, StreamRole::kCompute);
     };
   }
   return *this;

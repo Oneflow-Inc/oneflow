@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/cuda/cuda_device_manager.h"
-#include "oneflow/core/ep/cuda/cuda_device.h"
 #include "oneflow/core/device/cuda_util.h"
 
 #ifdef WITH_CUDA
@@ -23,12 +22,17 @@ namespace oneflow {
 
 namespace ep {
 
+CudaDeviceManager::CudaDeviceManager(DeviceManagerRegistry* registry) : registry_(registry) {}
+CudaDeviceManager::~CudaDeviceManager() = default;
+
+DeviceManagerRegistry* CudaDeviceManager::registry() const { return registry_; }
+
 std::shared_ptr<Device> CudaDeviceManager::GetDevice(size_t device_index) {
   std::lock_guard<std::mutex> lock(devices_mutex_);
   if (device_index < devices_.size() && devices_.at(device_index)) {
     return devices_.at(device_index);
   }
-  auto device = std::make_shared<CudaDevice>(device_index);
+  auto device = std::make_shared<CudaDevice>(device_index, this);
   if (device_index >= devices_.size()) { devices_.resize(device_index + 1); }
   devices_.at(device_index) = device;
   return device;
@@ -41,7 +45,9 @@ size_t CudaDeviceManager::GetDeviceCount(size_t primary_device_index) {
 
 size_t CudaDeviceManager::GetDeviceCount() {
   int count = 0;
-  OF_CUDA_CHECK(cudaGetDeviceCount(&count));
+  cudaError_t err = cudaGetDeviceCount(&count);
+  if (err == cudaErrorNoDevice) { return 0; }
+  OF_CUDA_CHECK(err);
   return count;
 }
 
@@ -54,8 +60,6 @@ size_t CudaDeviceManager::GetActiveDeviceIndex() {
 void CudaDeviceManager::SetActiveDeviceByIndex(size_t device_index) {
   OF_CUDA_CHECK(cudaSetDevice(static_cast<int>(device_index)));
 }
-
-REGISTER_EP_DEVICE_MANAGER(DeviceType::kCUDA, CudaDeviceManager);
 
 }  // namespace ep
 

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import Optional
+import os
 
 import oneflow as flow
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
@@ -29,7 +30,7 @@ from oneflow.nn.modules.utils import (
 
 class MaxPool1d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool1d.html.
 
     Applies a 1D max pooling over an input signal composed of several input planes.
 
@@ -122,9 +123,48 @@ class MaxPool1d(Module):
         )
 
 
+def get_dhw_offset(channel_pos):
+    if channel_pos == "channels_first":
+        return 2
+    else:
+        return 1
+
+
+def get_ndim_pads_list(padding, dhw_offset, ndims):
+    pads_list = []
+    for i in range(len(padding)):
+        pad = padding[i]
+        if isinstance(pad, int):
+            pad = [pad, pad]
+        elif isinstance(pad, (list, tuple)):
+            assert len(pad) == 2
+            pad = [pad[0], pad[1]]
+        else:
+            raise ValueError("padding must be list tuple or int")
+        if i in range(dhw_offset, dhw_offset + ndims):
+            pads_list.append(pad)
+        else:
+            assert pad == [0, 0]
+    return pads_list
+
+
+def calc_pool_padding(padding, dhw_offset, ndims):
+    if isinstance(padding, str):
+        padding = "SAME_LOWER" if padding.upper() == "SAME" else padding
+        assert padding.upper() in ["VALID", "SAME_LOWER", "SAME_UPPER"]
+        padding_type = padding.lower()
+        ndim_pads_list = [[0, 0]] * ndims
+    elif isinstance(padding, (list, tuple)):
+        padding_type = "customized"
+        ndim_pads_list = get_ndim_pads_list(padding, dhw_offset, ndims)
+    else:
+        raise ValueError("padding must be str or a list.")
+    return (padding_type, ndim_pads_list)
+
+
 class MaxPool2d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool2d.html.
 
     Applies a 2D max pooling over an input signal composed of several input planes.
 
@@ -178,9 +218,9 @@ class MaxPool2d(Module):
         import oneflow as flow 
         import numpy as np
 
-        of_maxpool2d = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=1)
+        m = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=1)
         x = flow.Tensor(np.random.randn(1, 4, 4, 4))
-        y = of_maxpool2d(x)
+        y = m(x)
         y.shape 
         oneflow.Size([1, 4, 4, 4])
 
@@ -197,31 +237,39 @@ class MaxPool2d(Module):
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        data_format = "NCHW"  # only support "NCHW" for now !
-        self.channel_pos = (
-            "channels_first" if data_format == "NCHW" else "channels_last"
-        )
         self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
+        self.padding = _pair(padding)
         self.dilation = _pair(dilation)
         self.return_indices = return_indices
         self.ceil_mode = ceil_mode
-        self.padding = _pair(padding)
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_pos = "channels_last"
+        else:
+            self.channel_pos = "channels_first"
 
     def forward(self, x):
-        y, indice = flow._C.max_pool2d(
-            x,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            dilation=self.dilation,
-            return_indices=True,
-            ceil_mode=self.ceil_mode,
-            data_format=self.channel_pos,
-        )
-        if self.return_indices:
-            return y, indice
+        if not self.return_indices:
+            return flow._C.max_pool2d(
+                x,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                return_indices=self.return_indices,
+                ceil_mode=self.ceil_mode,
+                data_format=self.channel_pos,
+            )[0]
         else:
-            return y
+            return flow._C.max_pool2d(
+                x,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                return_indices=self.return_indices,
+                ceil_mode=self.ceil_mode,
+                data_format=self.channel_pos,
+            )
 
     def extra_repr(self) -> str:
         return "kernel_size={}, stride={}, padding={}, dilation={}".format(
@@ -231,7 +279,7 @@ class MaxPool2d(Module):
 
 class MaxPool3d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool3d.html.
 
     Applies a 3D max pooling over an input signal composed of several input planes.
 
@@ -465,27 +513,71 @@ class AvgPool2d(Module):
     ):
         super().__init__()
         self.kernel_size = _pair(kernel_size)
-        data_format = "NCHW"  # only support "NCHW" for now !
-        self.channel_pos = (
-            "channels_first" if data_format == "NCHW" else "channels_last"
-        )
         self.stride = _pair(stride) if (stride is not None) else _pair(kernel_size)
         self.ceil_mode = ceil_mode
-        self.count_include_pad = count_include_pad
-        self.divisor_override = int(divisor_override)
-        self.padding = _pair(padding)
+
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.data_format = "NHWC"
+            self.channel_pos = "channels_last"
+            assert isinstance(padding, int) or isinstance(
+                padding, tuple
+            ), "padding can only int int or tuple of 2 ints."
+            padding = _pair(padding)
+            if len(padding) == 2:
+                if self.data_format == "NCHW":
+                    padding = (0, 0, padding[0], padding[1])
+                elif self.data_format == "NHWC":
+                    padding = (0, padding[0], padding[1], 0)
+                else:
+                    raise ValueError("error padding param!")
+            self.padding = padding
+
+            if not count_include_pad:
+                raise ValueError(
+                    "AvgPool2d with NHWC data format don't support count_include_pad for now."
+                )
+            if divisor_override != 0:
+                raise ValueError(
+                    "AvgPool2d with NHWC data format don't support divisor_override for now."
+                )
+
+            # TODO(yaochi): align with pytorch when padding is asymmetric
+            self._padding_type, _pads_list = calc_pool_padding(
+                padding, get_dhw_offset(self.channel_pos), 2
+            )
+            self._padding_before = [pad[0] for pad in _pads_list]
+            self._padding_after = [pad[1] for pad in _pads_list]
+
+        else:
+            self.data_format = "NCHW"
+            self.channel_pos = "channels_first"
+            self.padding = _pair(padding)
+            self.count_include_pad = count_include_pad
+            self.divisor_override = int(divisor_override)
 
     def forward(self, x):
-        return flow._C.avg_pool2d(
-            x,
-            kernel_size=self.kernel_size,
-            stride=self.stride,
-            padding=self.padding,
-            ceil_mode=self.ceil_mode,
-            count_include_pad=self.count_include_pad,
-            divisor_override=self.divisor_override,
-            data_format=self.channel_pos,
-        )
+        if self.data_format == "NCHW":
+            return flow._C.avg_pool2d(
+                x,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self.padding,
+                ceil_mode=self.ceil_mode,
+                count_include_pad=self.count_include_pad,
+                divisor_override=self.divisor_override,
+                data_format=self.channel_pos,
+            )
+        else:
+            return flow._C.avg_pool2d_nhwc(
+                x,
+                kernel_size=self.kernel_size,
+                stride=self.stride,
+                padding=self._padding_type,
+                padding_before=self._padding_before,
+                padding_after=self._padding_after,
+                ceil_mode=self.ceil_mode,
+                data_format=self.channel_pos,
+            )
 
     def extra_repr(self) -> str:
         return (

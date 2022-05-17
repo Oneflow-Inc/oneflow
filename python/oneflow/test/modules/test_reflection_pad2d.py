@@ -18,7 +18,12 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
+from oneflow.test_utils.test_util import (
+    Array2Numpy,
+    FlattenArray,
+    GenArgList,
+    Index2Coordinate,
+)
 
 import oneflow as flow
 import oneflow.unittest

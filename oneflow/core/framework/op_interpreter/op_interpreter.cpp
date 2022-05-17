@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -90,27 +91,43 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
+// NOTE: if this op not support stride, then need to tensor->contiguous()
+#define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
+  TensorTuple tmp_inputs;                                                                   \
+  if (!JUST(op_expr.SupportNonContiguous())) {                                              \
+    tmp_inputs.resize(inputs.size());                                                       \
+    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
+    tensor_tuple_ptr = &tmp_inputs;                                                         \
+  }
+
+  const TensorTuple* inputs_ptr = &inputs;
+  HANDLE_NON_CONTIGUOUS_INPUT(inputs_ptr);
+
   {
     autograd::AutoGradMode mode(false);
-    JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
+    JUST(internal_->Apply(op_expr, *inputs_ptr, outputs, ctx));
   }
-  if (requires_grad) {
-    const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
-    JUST(grad_closure->Capture(inputs, *outputs, ctx));
-
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              JUST(grad_closure->Apply(out_grads, in_grads));
-              return Maybe<void>::Ok();
-            });
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
-                                                            backward_fn, inputs, outputs));
+  // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
+  std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
+  if (requires_grad && !LazyMode::is_enabled()) {
+    grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      JUST(grad_closure->Apply(out_grads, in_grads));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = [=]() { return grad_closure->state()->SavedTensors().size() > 0; };
+    JUST(GetThreadLocalAutogradEngine()->AddNode(op_expr.op_type_name() + "_backward", backward_fn,
+                                                 *inputs_ptr, outputs));
   }
+  // Update outputs autograd meta
+  // Note: if requires_grad is True, we will create a new autograd meta for each output
+  // in `AddBackwardFuncPtr` to support inplace operation, so the update should after
+  // `AddBackwardFuncPtr`
   for (auto& output : *outputs) {
-    output->set_is_leaf(inputs.size() == 0 || !requires_grad);
+    output->set_is_leaf(inputs_ptr->size() == 0 || !requires_grad);
     // If the output `requires_grad` is true, it means that the output is inplaced.
     // The output `requires_grad` should be determined by this:
     //   - If the inplaced output `requires_grad` is true, then the autograd must be disabled,
@@ -135,6 +152,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
       JUST(output->set_requires_grad(
           requires_grad && IsSupportRequireGradDataType(output->dtype()->data_type())));
     }
+  }
+  if (requires_grad && !LazyMode::is_enabled()) {
+    // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
+    // node has been attached to them.
+    JUST(grad_closure->Capture(*inputs_ptr, *outputs, ctx));
   }
   return Maybe<void>::Ok();
 }

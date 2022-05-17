@@ -14,19 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-namespace {
 
-Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
+/* static */ Maybe<void> CastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
   *output_tensor_desc->mut_shape() = input_tensor_desc.shape();
+  *output_tensor_desc->mut_stride() = input_tensor_desc.stride();
   *output_tensor_desc->mut_is_dynamic() = input_tensor_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> CastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> CastOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -35,20 +40,12 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> CastOp::InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
   DataType* dtype = output_tensor_desc->mut_data_type();
   *dtype = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
-
-REGISTER_USER_OP("cast")
-    .Input("in")
-    .Attr<DataType>("dtype")
-    .Output("out")
-    .SetTensorDescInferFn(TensorDescInfer)
-    .SetGetSbpFn(GetSbpSignatures)
-    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
@@ -67,5 +64,4 @@ REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWra
   return Maybe<void>::Ok();
 });
 
-}  // namespace
 }  // namespace oneflow

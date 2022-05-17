@@ -19,33 +19,14 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
 
-namespace {
-
-Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
-                               Symbol<ParallelDesc> out_parallel_desc) {
-  const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
-  // Eager boxing
-  const auto& in_nd_sbp = JUST(input->nd_sbp());
-  const auto& in_parallel_desc = JUST(input->parallel_desc());
-  const auto& boxing_interpreter = JUST(
-      mgr->GetEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
-  const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
-                                                          in_parallel_desc, out_parallel_desc));
-  return output;
-}
-
-static constexpr auto* RecursiveGetBoxingOutput =
-    DECORATE(&CalcBoxingOutput, CheckConsistentTensorMeta);
-
-}  // namespace
-
 struct CastConsistentCaptureState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
-  Symbol<cfg::NdSbp> nd_sbp;
+  Symbol<NdSbp> nd_sbp;
   std::shared_ptr<const Shape> shape;
   Symbol<DType> dtype;
 };
@@ -74,10 +55,11 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
     std::shared_ptr<Tensor> out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
     {
-      Symbol<cfg::NdSbp> nd_sbp_constraint = ctx->nd_sbp;
+      Symbol<NdSbp> nd_sbp_constraint = ctx->nd_sbp;
       Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
-      out_grad =
-          JUST(RecursiveGetBoxingOutput(out_grad, nd_sbp_constraint, parallel_desc_constraint));
+      out_grad = JUST(functional::ToConsistent(out_grad, parallel_desc_constraint,
+                                               *JUST(GetSbpList(nd_sbp_constraint)),
+                                               GetNoneSbpList(), /* check_meta */ false));
     }
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grad}));
     return Maybe<void>::Ok();

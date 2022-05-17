@@ -27,7 +27,7 @@ namespace one {
 
 struct ConsistentToConsistentState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
-  Symbol<cfg::NdSbp> nd_sbp;
+  Symbol<NdSbp> nd_sbp;
 };
 
 class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentToConsistentState> {
@@ -57,13 +57,13 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
     const auto& grad_nd_sbp = grad_nd_sbp_.value_or(JUST(out_grad->nd_sbp()));
     const auto& grad_sbp_list = JUST(GetSbpList(grad_nd_sbp));
     const auto& grad_grad_sbp_list = JUST(GetSbpList(ctx->nd_sbp));
-    in_grads->at(0) = JUST(one::functional::ToConsistent(out_grad, ctx->parallel_desc,
-                                                         *grad_sbp_list, *grad_grad_sbp_list));
+    (*in_grads)[0] = JUST(one::functional::ToConsistent(
+        out_grad, ctx->parallel_desc, *grad_sbp_list, *grad_grad_sbp_list, /* check_meta */ false));
     return Maybe<void>::Ok();
   }
 
  private:
-  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp_;
+  Optional<Symbol<NdSbp>> grad_nd_sbp_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("consistent_to_consistent", ConsistentToConsistentGradFunction);

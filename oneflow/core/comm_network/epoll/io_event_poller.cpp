@@ -28,7 +28,7 @@ IOEventPoller::IOEventPoller() {
   io_handlers_.clear();
   break_epoll_loop_fd_ = eventfd(0, 0);
   PCHECK(break_epoll_loop_fd_ != -1);
-  AddFdWithOnlyReadHandler(break_epoll_loop_fd_, []() { LOG(INFO) << "Break Epoll Loop"; });
+  AddFdWithOnlyReadHandler(break_epoll_loop_fd_, []() { VLOG(1) << "Break Epoll Loop"; });
 }
 
 IOEventPoller::~IOEventPoller() {

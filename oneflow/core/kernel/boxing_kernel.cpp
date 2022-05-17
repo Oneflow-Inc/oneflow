@@ -186,7 +186,7 @@ void ConcatSplitDataContent(ep::Stream* stream,
         bc.Decrease();
       });
     }
-    bc.WaitUntilCntEqualZero();
+    bc.WaitForeverUntilCntEqualZero();
   } else {
     ConcatSplitPartDataContent(stream, in_desc, out_desc, 0, 1);
   }

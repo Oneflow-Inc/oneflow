@@ -28,20 +28,17 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> CheckCurrentRankGroupConsistency(int64_t seconds) {
+Maybe<void> CheckCurrentRankGroupConsistency() {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& ctx = JUST(CheckTransportToken(rank_group));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, seconds));
+  JUST(ctx->WaitDone());
   return Maybe<void>::Ok();
 }
 
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("check_current_rank_group_consistency",
-        [](int64_t seconds) { return CheckCurrentRankGroupConsistency(seconds).GetOrThrow(); });
-  m.def("check_current_rank_group_consistency",
-        []() { return CheckCurrentRankGroupConsistency(60 * 5).GetOrThrow(); });
+  m.def("check_current_rank_group_consistency", &CheckCurrentRankGroupConsistency);
 }
 
 }  // namespace oneflow

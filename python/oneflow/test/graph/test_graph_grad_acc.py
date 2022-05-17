@@ -44,6 +44,8 @@ def _test_grad_acc_graph(test_case, device):
         device=device,
         requires_grad=False,
     )
+
+    free_one = flow.tensor([1.0], device=device, requires_grad=False)
     eager_linear, eager_sgd = get_linear_sgd()
     eager_out_list = []
     eager_weight_list = []
@@ -52,6 +54,10 @@ def _test_grad_acc_graph(test_case, device):
         input = x[index : (index + 2)]  # NOTE(chengcheng): unpack x by slice
         # print("i = ", i, " input = ", input)
         of_out = eager_linear(input)
+        of_out += free_one  # Test free eager tensor
+        one = flow.ones(of_out.shape, dtype=of_out.dtype, device=of_out.device)
+        of_out += one
+        of_out = flow.reshape(of_out, shape=[-1])
         of_out = of_out.sum()
         loss = of_out * 0.25  # NOTE(chengcheng): scale loss by grad acc
         loss.backward()
@@ -78,6 +84,10 @@ def _test_grad_acc_graph(test_case, device):
 
         def build(self, x):
             out = self.linear(x)
+            out += free_one  # Test free eager tensor
+            one = flow.ones(out.shape, dtype=out.dtype, device=out.device)
+            out += one
+            out = flow.reshape(out, shape=[-1])
             # print("out.shape: ", out.shape)
             loss = out.sum()
             loss.backward()

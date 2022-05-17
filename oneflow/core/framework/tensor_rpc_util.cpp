@@ -25,17 +25,18 @@ limitations under the License.
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 namespace private_details {
 
-class FlatTensorConsistency;
+struct FlatTensorConsistency;
 
 class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:
   CheckConsistencyAsyncTransportCtx(const TransportToken& transport_token,
                                     Symbol<one::ConsistentTensorMeta> tensor_meta,
-                                    const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint,
+                                    const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
                                     const TransportToken& tensor_transport_token)
       : AsyncTransportCtx(transport_token),
         tensor_meta_(tensor_meta),
@@ -54,7 +55,7 @@ class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
 
  private:
   Symbol<one::ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint_;
+  Optional<Symbol<NdSbp>> consumer_nd_sbp_constraint_;
   TransportToken tensor_transport_token_;
   std::shared_ptr<FlatTensorConsistency> flat_tensor_consistency_;
 };
@@ -69,8 +70,8 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
   }
   static Maybe<FlatTensorConsistency> New(
       Symbol<one::ConsistentTensorMeta> tensor_meta,
-      const Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint,
-                                          const TransportToken& tensor_transport_token) {
+      const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
+      const TransportToken& tensor_transport_token) {
     const auto& consistency = std::make_shared<FlatTensorConsistency>();
     consistency->clear();
     JUST(consistency->Init(tensor_meta, consumer_nd_sbp_constraint, tensor_transport_token));
@@ -78,7 +79,7 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
   }
 
   Maybe<void> Check(Symbol<one::ConsistentTensorMeta> tensor_meta,
-    const Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint,
+    const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
                     const TransportToken& tensor_transport_token) {
     const auto& this_synced_tensor_meta =
         JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::Symbol4SyncedSymbolId(
@@ -99,14 +100,14 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
 
  private:
   Maybe<void> Init(Symbol<one::ConsistentTensorMeta> tensor_meta,
-    const Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint,
+    const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint,
                    const TransportToken& tensor_transport_token) {
     this->set_synced_tensor_meta_symbol_id(JUST(SyncedSymbolMap<one::ConsistentTensorMeta>::FindOrSync(
         tensor_meta, &SyncSymbolConsistentTensorMeta)));
     if (consumer_nd_sbp_constraint.has_value()) {
       const auto& this_rank_constaint = JUST(consumer_nd_sbp_constraint);
       this->set_consumer_nd_sbp_constraint_symbol_id(
-        JUST(SyncedSymbolMap<cfg::NdSbp>::FindOrSync(
+        JUST(SyncedSymbolMap<NdSbp>::FindOrSync(
               this_rank_constaint, &SyncSymbolNdSbp)));
     } else {
       this->clear_consumer_nd_sbp_constraint_symbol_id();
@@ -119,14 +120,14 @@ FLAT_MSG_BEGIN(FlatTensorConsistency);
   FLAT_MSG_DEFINE_OPTIONAL(uint64_t, consumer_nd_sbp_constraint_symbol_id);
   FLAT_MSG_DEFINE_OPTIONAL(uint64_t, tensor_transport_token);
 FLAT_MSG_END(FlatTensorConsistency);
-// clang-format off
+// clang-format on
 
 CheckConsistencyAsyncTransportCtx::~CheckConsistencyAsyncTransportCtx() {}
 
 Maybe<void> CheckConsistencyAsyncTransportCtx::PrepareSendBufferAndCallback(
     int64_t rank, void** buffer, std::size_t* size, std::function<void()>* Callback) {
-  const auto& tensor_consistency =
-      JUST(FlatTensorConsistency::New(tensor_meta_, consumer_nd_sbp_constraint_, tensor_transport_token_));
+  const auto& tensor_consistency = JUST(FlatTensorConsistency::New(
+      tensor_meta_, consumer_nd_sbp_constraint_, tensor_transport_token_));
   *buffer = tensor_consistency.get();
   *size = sizeof(FlatTensorConsistency);
   *Callback = [tensor_consistency] {};
@@ -145,8 +146,8 @@ Maybe<void> CheckConsistencyAsyncTransportCtx::PrepareRecvBufferAndCallback(
 
 Maybe<void> CheckConsistencyAsyncTransportCtx::Check() const {
   if (!flat_tensor_consistency_) { return Maybe<void>::Ok(); }
-  JUST(flat_tensor_consistency_->Check(
-      tensor_meta_, consumer_nd_sbp_constraint_, tensor_transport_token_));
+  JUST(flat_tensor_consistency_->Check(tensor_meta_, consumer_nd_sbp_constraint_,
+                                       tensor_transport_token_));
   return Maybe<void>::Ok();
 }
 
@@ -155,7 +156,8 @@ int64_t* MutThreadLocalTensorMetaCheckDepth() {
   return &depth;
 }
 
-Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(const one::Tensor& tensor) {
+Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
+    const one::Tensor& tensor) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckTensorConsistency));
@@ -163,14 +165,14 @@ Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(const 
   const auto& constaint = JUST(tensor.consumer_nd_sbp_constraint());
   const TransportToken& tensor_transport_token = JUST(tensor.transport_token());
   const auto& ctx = std::make_shared<CheckConsistencyAsyncTransportCtx>(
-    transport_token, tensor_meta, constaint, tensor_transport_token);
+      transport_token, tensor_meta, constaint, tensor_transport_token);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
   return ctx;
 }
 
-Maybe<void> BuzyWaitAndCheck(std::shared_ptr<CheckConsistencyAsyncTransportCtx>& ctx) {
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+Maybe<void> BusyWaitAndCheck(std::shared_ptr<CheckConsistencyAsyncTransportCtx>& ctx) {
+  JUST_MSG(ctx->WaitDone(), kAsymmetricCodeErrorMsg);
   JUST(ctx->Check());
   return Maybe<void>::Ok();
 }
@@ -180,5 +182,5 @@ Maybe<void> RunCallback(const std::shared_ptr<one::Tensor>& tensor,
   return Callback();
 }
 
-}
+}  // namespace private_details
 }  // namespace oneflow

@@ -141,8 +141,8 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
   ibv_gid gid{};
   const int64_t gid_index = ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_GID_INDEX", 0);
   CHECK_EQ(ibv::wrapper.ibv_query_gid(context_, port, gid_index, &gid), 0);
-  LOG(INFO) << "Using IB device " << device->name << " port " << static_cast<int32_t>(port)
-            << " gid index " << gid_index;
+  VLOG(1) << "Using IB device " << device->name << " port " << static_cast<int32_t>(port)
+          << " gid index " << gid_index;
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {
@@ -161,17 +161,17 @@ IBVerbsCommNet::IBVerbsCommNet() : CommNetIf(), poll_exit_flag_(ATOMIC_FLAG_INIT
     IBVerbsConnectionInfo conn_info;
     Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
     if (conn_info.lid() == 0) {
-      LOG(INFO) << "Connecting to peer " << peer_id << " port " << conn_info.port_num() << " qpn "
-                << conn_info.qp_num() << " gid index " << gid_index << " spn "
-                << conn_info.subnet_prefix() << " iid " << conn_info.interface_id() << " mtu "
-                << conn_info.mtu();
+      VLOG(2) << "Connecting to peer " << peer_id << " port " << conn_info.port_num() << " qpn "
+              << conn_info.qp_num() << " gid index " << gid_index << " spn "
+              << conn_info.subnet_prefix() << " iid " << conn_info.interface_id() << " mtu "
+              << conn_info.mtu();
     } else {
-      LOG(INFO) << "Connecting to peer " << peer_id << " port " << conn_info.port_num() << " qpn "
-                << conn_info.qp_num() << " lid " << conn_info.interface_id() << " mtu "
-                << conn_info.mtu();
+      VLOG(2) << "Connecting to peer " << peer_id << " port " << conn_info.port_num() << " qpn "
+              << conn_info.qp_num() << " lid " << conn_info.interface_id() << " mtu "
+              << conn_info.mtu();
     }
     qp_vec_.at(peer_id)->Connect(conn_info);
-    LOG(INFO) << "Connected to peer " << peer_id;
+    VLOG(1) << "Connected to peer " << peer_id;
   }
   OF_ENV_BARRIER();
   for (int64_t peer_id : peer_machine_id()) {

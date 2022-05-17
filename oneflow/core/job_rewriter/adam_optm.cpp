@@ -44,25 +44,6 @@ struct hash<oneflow::BiasCorrectionFactorCacheKey> {
 
 namespace oneflow {
 
-namespace {
-
-std::string GenVariableOutputLbn(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_variable_conf());
-  return GenLogicalBlobName(op_conf.name(), op_conf.variable_conf().out());
-}
-
-OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
-                                              const float initial_value) {
-  OperatorConf helper_variable_op(op.op_conf());
-  helper_variable_op.set_name(op.op_name() + "-" + name);
-  helper_variable_op.mutable_variable_conf()->set_out("out");
-  InitializerConf constant_initializer;
-  constant_initializer.mutable_constant_conf()->set_value(initial_value);
-  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
-  helper_variable_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  return helper_variable_op;
-}
-
 class BiasCorrectionFactorState final : public JobPassState {
  public:
   BiasCorrectionFactorState() {}
@@ -88,17 +69,30 @@ class BiasCorrectionFactorState final : public JobPassState {
   HashMap<BiasCorrectionFactorCacheKey, std::string> key2lbn_;
 };
 
+namespace {
+
+std::string GenVariableOutputLbn(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_variable_conf());
+  return GenLogicalBlobName(op_conf.name(), op_conf.variable_conf().out());
+}
+
+OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
+                                              const float initial_value) {
+  OperatorConf helper_variable_op(op.op_conf());
+  helper_variable_op.set_name(op.op_name() + "-" + name);
+  helper_variable_op.mutable_variable_conf()->set_out("out");
+  InitializerConf constant_initializer;
+  constant_initializer.mutable_constant_conf()->set_value(initial_value);
+  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
+  helper_variable_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
+  return helper_variable_op;
+}
+
 void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                              const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
                              JobBuilder* job_builder) {
   const VariableOp* var_op = dynamic_cast<const VariableOp*>(&var_op_node.op());
   CHECK_NOTNULL(var_op);
-
-  OperatorConf m_var(GenerateAdamHelperVariableOpConf(*var_op, "m", 0.f));
-  OperatorConf v_var(GenerateAdamHelperVariableOpConf(*var_op, "v", 0.f));
-  OperatorConf max_v_var(GenerateAdamHelperVariableOpConf(*var_op, "max_v", 0.f));
-
-  job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var, max_v_var});
 
   user_op::UserOpConfWrapperBuilder adam_update_op_builder(var_op->op_name() + "_optimizer");
   float beta1 = 0.9;
@@ -123,6 +117,17 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   } else {
     UNIMPLEMENTED();
   }
+
+  OperatorConf m_var(GenerateAdamHelperVariableOpConf(*var_op, "m", 0.f));
+  OperatorConf v_var(GenerateAdamHelperVariableOpConf(*var_op, "v", 0.f));
+  OperatorConf max_v_var{};
+  if (amsgrad) {
+    max_v_var = GenerateAdamHelperVariableOpConf(*var_op, "max_v", 0.f);
+    job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var, max_v_var});
+  } else {
+    job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {m_var, v_var});
+  }
+
   const std::string& train_step_lbn = job_builder->job().job_conf().train_conf().train_step_lbn();
   const std::string& learning_rate_lbn = optimizer_conf.learning_rate_lbn();
 
@@ -136,9 +141,9 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
     auto* state = CHECK_JUST(ctx->MutableState<BiasCorrectionFactorState>(job_pass_state_key));
     ParallelConf bias_correction_parallel_conf;
     const auto& lr_parallel_conf =
-        job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn));
+        CHECK_JUST(job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn)));
     const auto& train_step_parallel_conf =
-        job_builder->ParallelConf4Lbi(GenLogicalBlobId(train_step_lbn));
+        CHECK_JUST(job_builder->ParallelConf4Lbi(GenLogicalBlobId(train_step_lbn)));
     if (lr_parallel_conf == train_step_parallel_conf) {
       bias_correction_parallel_conf = lr_parallel_conf;
     } else {
@@ -173,7 +178,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Input("bias_correction2", bias_correction2_lbn)
         .Input("m", GenVariableOutputLbn(m_var))
         .Input("v", GenVariableOutputLbn(v_var))
-        .Input("max_v", GenVariableOutputLbn(max_v_var))
         .Attr<float>("beta1", beta1)
         .Attr<float>("beta2", beta2)
         .Attr<float>("epsilon", epsilon)
@@ -188,7 +192,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Input("learning_rate", learning_rate_lbn)
         .Input("m", GenVariableOutputLbn(m_var))
         .Input("v", GenVariableOutputLbn(v_var))
-        .Input("max_v", GenVariableOutputLbn(max_v_var))
         .Attr<float>("beta1", beta1)
         .Attr<float>("beta2", beta2)
         .Attr<float>("epsilon", epsilon)
@@ -197,6 +200,9 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Attr<bool>("do_bias_correction", false)
         .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
   }
+
+  if (amsgrad) { adam_update_op_builder.Input("max_v", GenVariableOutputLbn(max_v_var)); }
+
   SetDynamicLossScaleSkipIf(ctx, &adam_update_op_builder);
   const auto adam_update_op = adam_update_op_builder.Build();
   job_builder->AddOps(var_op_node.parallel_desc().parallel_conf(), {adam_update_op.op_conf()});

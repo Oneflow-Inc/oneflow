@@ -27,9 +27,7 @@ namespace oneflow {
 
 class Device;
 class ParallelDesc;
-namespace cfg {
 class NdSbp;
-}
 
 namespace one {
 
@@ -37,6 +35,8 @@ struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
       : attrs(attrs_arg), device(device_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg, const bool pin_memory)
+      : attrs(attrs_arg), device(device_arg), pin_memory(pin_memory) {}
   OpExprInterpContext(const AttrMap& attrs_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
       : attrs(attrs_arg), state(state_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg,
@@ -45,17 +45,17 @@ struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg)
       : attrs(attrs_arg), parallel_desc(parallel_desc_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
-                      Symbol<cfg::NdSbp> nd_sbp_arg)
+                      Symbol<NdSbp> nd_sbp_arg)
       : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<ParallelDesc> parallel_desc_arg,
-                      Symbol<cfg::NdSbp> nd_sbp_arg,
-                      std::shared_ptr<user_op::OpKernelState> state_arg)
+                      Symbol<NdSbp> nd_sbp_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
       : attrs(attrs_arg), parallel_desc(parallel_desc_arg), nd_sbp(nd_sbp_arg), state(state_arg) {}
 
   AttrMap attrs;
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
-  Optional<Symbol<cfg::NdSbp>> nd_sbp;           // for consistent op
+  Optional<Symbol<NdSbp>> nd_sbp;                // for consistent op
+  Optional<bool> pin_memory;                     // for pin_memory related op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 

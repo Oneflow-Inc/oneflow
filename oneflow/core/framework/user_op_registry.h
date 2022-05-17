@@ -27,6 +27,7 @@ limitations under the License.
 namespace oneflow {
 
 class Device;
+class Stream;
 
 namespace user_op {
 
@@ -37,33 +38,39 @@ class SbpContext;
 class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
-class DeviceInferContext;
+class DeviceAndStreamInferContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
 using DataTypeInferFn = std::function<Maybe<void>(InferContext*)>;
-using DeviceInferFn = std::function<Maybe<Symbol<Device>>(DeviceInferContext*)>;
+using DeviceAndStreamInferFn = std::function<Maybe<Symbol<Stream>>(DeviceAndStreamInferContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using SbpSignatureInferFn = std::function<Maybe<void>(InferSbpSignatureFnContext*)>;
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
-using InputArgModifyFn = std::function<Maybe<void>(GetInputArgModifier, const UserOpConfWrapper&)>;
+using InputArgModifyFn =
+    std::function<Maybe<void>(const GetInputArgModifier&, const UserOpConfWrapper&)>;
 using OutputArgModifier = OutputBlobModifier;
 using GetOutputArgModifier =
     std::function<OutputArgModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
 using OutputArgModifyFn =
-    std::function<Maybe<void>(GetOutputArgModifier, const UserOpConfWrapper&)>;
+    std::function<Maybe<void>(const GetOutputArgModifier&, const UserOpConfWrapper&)>;
 using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 
 struct OpRegistryResult {
-  OpRegistryResult() : cpu_only_supported(false), no_grad(false), same_output_regst_num(-1) {}
+  OpRegistryResult()
+      : cpu_only_supported(false),
+        no_grad(false),
+        non_contiguous_supported(false),
+        same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
   bool no_grad;
+  bool non_contiguous_supported;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
@@ -72,7 +79,7 @@ struct OpRegistryResult {
   GetSbpFn get_sbp_fn;
   SbpSignatureInferFn sbp_signature_infer_fn;
   DataTypeInferFn data_type_infer_fn;
-  DeviceInferFn device_infer_fn;
+  DeviceAndStreamInferFn device_and_stream_infer_fn;
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
@@ -100,6 +107,7 @@ class OpRegistry final {
   OpRegistry& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
   OpRegistry& SupportCpuOnly();
+  OpRegistry& SupportNonContiguous();
   OpRegistry& NoGrad();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
@@ -123,14 +131,13 @@ class OpRegistry final {
   OpRegistry& SetNdSbpInferFn(NdSbpInferFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
-  OpRegistry& SetDeviceInferFn(DeviceInferFn fn);
+  OpRegistry& SetDeviceAndStreamInferFn(DeviceAndStreamInferFn fn);
 
   Maybe<OpRegistry&> Finish();
   OpRegistryResult GetResult() { return result_; }
 
  private:
-  OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional, int32_t num,
-                      bool num_as_min);
+  OpRegistry& ArgImpl(bool is_input, const std::string& name, bool is_optional);
   OpRegistry& DefaultedAttr(const std::string& name, AttrType type,
                             const std::function<void(UserOpDef::AttrDef*)>& SetDefault);
 

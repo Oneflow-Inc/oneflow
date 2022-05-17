@@ -21,9 +21,7 @@ namespace one {
 
 struct DotCaptureState : public AutoGradCaptureState {
   bool x_requires_grad = false;
-  ;
   bool y_requires_grad = false;
-  ;
   size_t x_offset = 0;
   size_t y_offset = 0;
 };

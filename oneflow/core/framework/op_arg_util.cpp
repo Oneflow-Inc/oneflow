@@ -19,61 +19,54 @@ namespace oneflow {
 
 namespace compatible_py {
 
-OpArgBlobAttribute::OpArgBlobAttribute(const std::shared_ptr<cfg::BlobDescProto>& blob_desc,
-                                       const std::string& logical_blob_name)
-    : blob_desc_(blob_desc), logical_blob_name_(logical_blob_name) {
-  ShapeProto shape_proto;
-  blob_desc_->shape().ToProto(&shape_proto);
-  shape_ = std::make_shared<Shape>(shape_proto);
+namespace {
+
+bool operator==(const OptMirroredParallel& lhs, const OptMirroredParallel& rhs) {
+  return lhs.has_mirrored_parallel() == rhs.has_mirrored_parallel();
 }
 
-std::shared_ptr<cfg::BlobDescProto> OpArgBlobAttribute::blob_desc() const { return blob_desc_; }
+}  // namespace
+
+OpArgBlobAttribute::OpArgBlobAttribute(const std::shared_ptr<BlobDescProto>& blob_desc,
+                                       const std::string& logical_blob_name)
+    : blob_desc_(blob_desc), logical_blob_name_(logical_blob_name) {
+  shape_ = std::make_shared<Shape>(blob_desc_->shape());
+  stride_ = std::make_shared<Stride>(blob_desc_->stride());
+}
+
+std::shared_ptr<BlobDescProto> OpArgBlobAttribute::blob_desc() const { return blob_desc_; }
 
 std::shared_ptr<Shape> OpArgBlobAttribute::shape() const { return shape_; }
 
+std::shared_ptr<Stride> OpArgBlobAttribute::stride() const { return stride_; }
+
 std::string OpArgBlobAttribute::logical_blob_name() const { return logical_blob_name_; }
 
-cfg::DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->data_type(); }
+DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->data_type(); }
 
 bool OpArgBlobAttribute::is_dynamic() const { return blob_desc_->is_dynamic(); }
 
 bool OpArgBlobAttribute::operator==(const OpArgBlobAttribute& other) const {
-  return (*shape_ == *other.shape()) && (get_dtype() == other.get_dtype())
-         && (is_dynamic() == other.is_dynamic())
+  return (*shape_ == *other.shape()) && (*stride_ == *other.stride())
+         && (get_dtype() == other.get_dtype()) && (is_dynamic() == other.is_dynamic())
          && (logical_blob_name_ == other.logical_blob_name());
 }
 
 std::shared_ptr<OpArgBlobAttribute> OpArgBlobAttribute::GetPhysicalOpArgBlobAttr(
     int64_t split_axis, int64_t parallel_num, int64_t parallel_id) const {
-  std::shared_ptr<cfg::BlobDescProto> blob_desc = std::make_shared<cfg::BlobDescProto>();
+  std::shared_ptr<BlobDescProto> blob_desc = std::make_shared<BlobDescProto>();
   blob_desc->CopyFrom(*blob_desc_);
   int64_t physical_len =
       BalancedSplitter(shape_->At(split_axis), parallel_num).At(parallel_id).size();
   blob_desc->mutable_shape()->set_dim(split_axis, physical_len);
+  blob_desc->mutable_stride()->set_dim(split_axis, physical_len);
   return std::make_shared<OpArgBlobAttribute>(blob_desc, logical_blob_name_);
-}
-
-void OpArgBlobAttribute::DumpToInterfaceBlobConf(
-    std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) const {
-  for (int i = 0; i < shape_->NumAxes(); ++i) {
-    interface_blob_conf->mutable_shape()->add_dim(shape_->At(i));
-  }
-  interface_blob_conf->set_data_type(blob_desc_->data_type());
-  interface_blob_conf->set_is_dynamic(is_dynamic());
-}
-
-void OpArgBlobAttribute::DumpToOpNodeSignature(
-    std::string bn_in_op, std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const {
-  auto* blob_sig =
-      op_node_signature->mutable_logical_blob_desc_signature()->mutable_bn_in_op2blob_desc();
-  CHECK(blob_sig->find(bn_in_op) == blob_sig->end());
-  (*blob_sig)[bn_in_op].CopyFrom(*blob_desc_);
 }
 
 OpArgParallelAttribute::OpArgParallelAttribute(
     const std::shared_ptr<ParallelDesc>& parallel_desc,
-    const std::shared_ptr<cfg::SbpParallel>& sbp_parallel,
-    const std::shared_ptr<cfg::OptMirroredParallel>& opt_mirrored_parallel)
+    const std::shared_ptr<SbpParallel>& sbp_parallel,
+    const std::shared_ptr<OptMirroredParallel>& opt_mirrored_parallel)
     : parallel_desc_(parallel_desc),
       sbp_parallel_(sbp_parallel),
       opt_mirrored_parallel_(opt_mirrored_parallel) {
@@ -84,11 +77,9 @@ std::shared_ptr<ParallelDesc> OpArgParallelAttribute::parallel_desc_symbol() con
   return parallel_desc_;
 }
 
-std::shared_ptr<cfg::SbpParallel> OpArgParallelAttribute::sbp_parallel() const {
-  return sbp_parallel_;
-}
+std::shared_ptr<SbpParallel> OpArgParallelAttribute::sbp_parallel() const { return sbp_parallel_; }
 
-std::shared_ptr<cfg::OptMirroredParallel> OpArgParallelAttribute::opt_mirrored_parallel() const {
+std::shared_ptr<OptMirroredParallel> OpArgParallelAttribute::opt_mirrored_parallel() const {
   return opt_mirrored_parallel_;
 }
 
@@ -111,33 +102,6 @@ void OpArgParallelAttribute::Assign(const std::shared_ptr<OpArgParallelAttribute
   hash_ = other->_Hash();
 }
 
-void OpArgParallelAttribute::DumpToInterfaceBlobConf(
-    std::shared_ptr<cfg::InterfaceBlobConf> interface_blob_conf) const {
-  interface_blob_conf->mutable_nd_sbp()->clear_sbp_parallel();
-  if (sbp_parallel_->has_split_parallel()) {
-    *interface_blob_conf->mutable_nd_sbp()->add_sbp_parallel() = *sbp_parallel_;
-  } else {
-    interface_blob_conf->mutable_nd_sbp()->add_sbp_parallel()->mutable_broadcast_parallel();
-  }
-}
-
-void OpArgParallelAttribute::DumpToOpNodeSignature(
-    std::string bn_in_op, std::shared_ptr<cfg::OpNodeSignature> op_node_signature) const {
-  auto* sbp_sig = op_node_signature->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
-  CHECK(sbp_sig->find(bn_in_op) == sbp_sig->end());
-  (*sbp_sig)[bn_in_op].CopyFrom(*sbp_parallel_);
-
-  auto* mirrored_sig =
-      op_node_signature->mutable_mirrored_signature()->mutable_bn_in_op2opt_mirrored_parallel();
-  CHECK(mirrored_sig->find(bn_in_op) == mirrored_sig->end());
-  (*mirrored_sig)[bn_in_op].CopyFrom(*opt_mirrored_parallel_);
-
-  auto* parallel_sig =
-      op_node_signature->mutable_parallel_signature()->mutable_bn_in_op2parallel_desc_symbol_id();
-  CHECK(parallel_sig->find(bn_in_op) == parallel_sig->end());
-  (*parallel_sig)[bn_in_op] = CHECK_JUST(parallel_desc_->symbol_id());
-}
-
 std::string OpArgParallelAttribute::ToString() const {
   return std::string("\nparallel_desc_symbol: ") + parallel_desc_->parallel_conf().DebugString()
          + "\nsbp_parallel: " + sbp_parallel_->DebugString()
@@ -153,9 +117,9 @@ Maybe<OpArgBlobAttribute> GetOpArgBlobAttribute(const OpAttribute& op_attribute,
       op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc();
   const auto& arg_signature_map = op_attribute.arg_signature().bn_in_op2lbi();
   const auto& lbi = arg_signature_map.at(bn_in_op);
-  std::shared_ptr<cfg::BlobDescProto> blob_desc = std::make_shared<cfg::BlobDescProto>();
+  std::shared_ptr<BlobDescProto> blob_desc = std::make_shared<BlobDescProto>();
   if (blob_desc_signature_map.find(bn_in_op) != blob_desc_signature_map.end()) {
-    blob_desc.reset(new cfg::BlobDescProto(blob_desc_signature_map.at(bn_in_op)));
+    blob_desc.reset(new BlobDescProto(blob_desc_signature_map.at(bn_in_op)));
   }
   return std::make_shared<OpArgBlobAttribute>(blob_desc, lbi.op_name() + "/" + lbi.blob_name());
 }
@@ -166,14 +130,14 @@ Maybe<OpArgParallelAttribute> GetOpArgParallelAttribute(
   const auto& sbp_signature_map = op_attribute.sbp_signature().bn_in_op2sbp_parallel();
   const auto& mirrored_signature_map =
       op_attribute.mirrored_signature().bn_in_op2opt_mirrored_parallel();
-  std::shared_ptr<cfg::SbpParallel> sbp_parallel = std::make_shared<cfg::SbpParallel>();
+  std::shared_ptr<SbpParallel> sbp_parallel = std::make_shared<SbpParallel>();
   if (sbp_signature_map.find(bn_in_op) != sbp_signature_map.end()) {
-    sbp_parallel.reset(new cfg::SbpParallel(sbp_signature_map.at(bn_in_op)));
+    sbp_parallel.reset(new SbpParallel(sbp_signature_map.at(bn_in_op)));
   }
-  std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel =
-      std::make_shared<cfg::OptMirroredParallel>();
+  std::shared_ptr<OptMirroredParallel> opt_mirrored_parallel =
+      std::make_shared<OptMirroredParallel>();
   if (mirrored_signature_map.find(bn_in_op) != mirrored_signature_map.end()) {
-    opt_mirrored_parallel.reset(new cfg::OptMirroredParallel(mirrored_signature_map.at(bn_in_op)));
+    opt_mirrored_parallel.reset(new OptMirroredParallel(mirrored_signature_map.at(bn_in_op)));
   }
   return std::make_shared<OpArgParallelAttribute>(parallel_desc_symbol, sbp_parallel,
                                                   opt_mirrored_parallel);
@@ -181,9 +145,9 @@ Maybe<OpArgParallelAttribute> GetOpArgParallelAttribute(
 
 Maybe<OpArgParallelAttribute> MakeMirroredOpArgParallelAttribute(
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
-  std::shared_ptr<cfg::SbpParallel> sbp_parallel = std::make_shared<cfg::SbpParallel>();
-  std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel =
-      std::make_shared<cfg::OptMirroredParallel>();
+  std::shared_ptr<SbpParallel> sbp_parallel = std::make_shared<SbpParallel>();
+  std::shared_ptr<OptMirroredParallel> opt_mirrored_parallel =
+      std::make_shared<OptMirroredParallel>();
   opt_mirrored_parallel->mutable_mirrored_parallel();
   return std::make_shared<OpArgParallelAttribute>(parallel_desc_symbol, sbp_parallel,
                                                   opt_mirrored_parallel);
@@ -191,10 +155,10 @@ Maybe<OpArgParallelAttribute> MakeMirroredOpArgParallelAttribute(
 
 Maybe<OpArgParallelAttribute> MakeBroadcastOpArgParallelAttribute(
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
-  std::shared_ptr<cfg::SbpParallel> sbp_parallel = std::make_shared<cfg::SbpParallel>();
+  std::shared_ptr<SbpParallel> sbp_parallel = std::make_shared<SbpParallel>();
   sbp_parallel->mutable_broadcast_parallel();
-  std::shared_ptr<cfg::OptMirroredParallel> opt_mirrored_parallel =
-      std::make_shared<cfg::OptMirroredParallel>();
+  std::shared_ptr<OptMirroredParallel> opt_mirrored_parallel =
+      std::make_shared<OptMirroredParallel>();
   return std::make_shared<OpArgParallelAttribute>(parallel_desc_symbol, sbp_parallel,
                                                   opt_mirrored_parallel);
 }

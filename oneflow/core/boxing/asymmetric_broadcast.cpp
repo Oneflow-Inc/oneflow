@@ -28,15 +28,15 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-
-bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_broadcast_parallel()) { return false; }
   }
   return true;
 }
 
-Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                        const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));
@@ -47,7 +47,7 @@ Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdS
 }
 
 static constexpr auto* CheckAsymmetricBroadcast =
-    DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocal);
+    DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocalCachedCopiable);
 
 Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
                                 Symbol<ParallelDesc> dst_parallel_desc) {
@@ -69,7 +69,7 @@ Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
   return machine_id;
 }
 
-static constexpr auto* CachedGetBroadcastRoot = DECORATE(&CalBroadcastRoot, ThreadLocal);
+static constexpr auto* CachedGetBroadcastRoot = DECORATE(&CalBroadcastRoot, ThreadLocalCached);
 
 Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root) {
   return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
@@ -80,8 +80,7 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
-static constexpr auto* CachedEagerNcclBroadcast = DECORATE(&EagerNcclBroadcast, ThreadLocal);
-
+static constexpr auto* CachedEagerNcclBroadcast = DECORATE(&EagerNcclBroadcast, ThreadLocalCached);
 }  // namespace
 
 Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tensor,
@@ -98,9 +97,10 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
     if (out_parallel_id->has_value()) {
       const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_placement));
       if (!in_parallel_id->has_value()) {
-        std::string device_type = Device::Type4DeviceTag(in_placement->device_tag());
-        local_tensor = JUST(one::functional::Empty(*tensor->shape(), tensor->dtype(),
-                                                   JUST(Device::New(device_type))));
+        const std::string& device_type = in_placement->device_tag();
+        local_tensor =
+            JUST(one::functional::Empty(*tensor->shape(), tensor->dtype(),
+                                        JUST(Device::New(device_type)), /*pin_memory=*/false));
       }
       const auto& broadcast_group = JUST(GetBroadcastGroup(in_placement, out_placement));
 

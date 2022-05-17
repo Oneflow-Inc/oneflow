@@ -25,7 +25,7 @@ namespace oneflow {
 
 namespace {
 
-const int SPLIT_AXIS_FOR_BROADCAST = -1;
+const int SPLIT_AXIS_FOR_NON_SPLIT = -1;
 
 // [start, end)
 int64_t GetSizeInSlice(const int64_t start, const int64_t end, const int64_t step) {
@@ -205,6 +205,7 @@ class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGrap
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
     Memset<device_type>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
+    if (dy_tensor->shape().elem_cnt() == 0) { return; }
     SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
     SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, dy_tensor->dptr<T>(),
                                               dx_tensor->mut_dptr<T>());
@@ -218,7 +219,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                 const bool from_large_to_small) {
   const user_op::Tensor* large = from_large_to_small ? src : dst;
   const user_op::Tensor* small = from_large_to_small ? dst : src;
-  if (slice_ctx.split_axis != SPLIT_AXIS_FOR_BROADCAST) {
+  if (slice_ctx.split_axis != SPLIT_AXIS_FOR_NON_SPLIT) {
     CHECK_EQ(large->shape().At(slice_ctx.split_axis), slice_ctx.upper - slice_ctx.lower);
   }
 
@@ -271,7 +272,7 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
 #define MAKE_WRITE_SLICE_SWITCH_ENTRY(func_name, N, T) func_name<N, T>
 DEFINE_STATIC_SWITCH_FUNC(
     void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY, MAKE_NDIM_CTRV_SEQ(DIM_SEQ),
-    MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+    MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ
 #if defined(WITH_CUDA)
                                 HALF_DATA_TYPE_SEQ
 #endif
@@ -281,10 +282,10 @@ DEFINE_STATIC_SWITCH_FUNC(
 std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheContext* ctx,
                                                          const std::string& large_tensor_name) {
   if (ctx->parallel_ctx().parallel_num() == 1) {
-    // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
-    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
+    // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
+    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   }
-  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
+  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
   if (in_sbp.has_split_parallel()) {
     const user_op::TensorDesc* in_logical_desc =
         ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0);
@@ -294,10 +295,9 @@ std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheCon
     BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
     return std::make_shared<OpKernelCacheWrapper<SliceContext>>(
         split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
-  } else if (in_sbp.has_broadcast_parallel()) {
-    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
+  } else if (in_sbp.has_broadcast_parallel() || in_sbp.has_partial_sum_parallel()) {
+    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   } else {
-    // TODO(jianhao): support partialsum
     UNIMPLEMENTED();
   }
 }
@@ -310,13 +310,16 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-    const cfg::SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+    const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+    const SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
       if (x_sbp.has_split_parallel()) {
         CHECK(y_sbp.has_partial_sum_parallel());
-      } else {
+      } else if (x_sbp.has_broadcast_parallel()) {
         CHECK(y_sbp.has_broadcast_parallel());
+      } else {
+        CHECK(x_sbp.has_partial_sum_parallel());
+        CHECK(y_sbp.has_partial_sum_parallel());
       }
     }
     return CreateSliceCache(ctx, "x");
@@ -329,19 +332,9 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    if (y_tensor->mem_case().has_host_mem()) {
-      memset(y_tensor->mut_dptr(), 0,
-             y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
-    } else if (y_tensor->mem_case().has_device_cuda_mem()) {
-#if defined(WITH_CUDA)
-      cudaMemset(y_tensor->mut_dptr(), 0,
-                 y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
-#else
-      UNIMPLEMENTED();
-#endif
-    } else {
-      UNIMPLEMENTED();
-    }
+    AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0,
+               y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()),
+               y_tensor->mem_case());
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
                      y_tensor, slice_ctx, true);
   }
@@ -357,7 +350,7 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
-      const cfg::SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
+      const SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
       CHECK(value_sbp.has_broadcast_parallel());
     }
     return CreateSliceCache(ctx, "ref");
@@ -368,10 +361,18 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
+    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    // When eager executing, y_tensor shared the same memory with ref_tensor
+    if (ref_tensor->dptr<T>() != y_tensor->dptr<T>()) {
+      // lazy run
+      AutoMemcpy(ctx->stream(), y_tensor->mut_dptr<T>(), ref_tensor->dptr<T>(),
+                 y_tensor->shape().elem_cnt() * sizeof(T), ref_tensor->mem_case(),
+                 y_tensor->mem_case());
+    }
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
     SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,
-                     value_tensor, ref_tensor, slice_ctx, false);
+                     value_tensor, y_tensor, slice_ctx, false);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -444,6 +445,7 @@ REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int32_t)
 REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int64_t)
 REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int8_t)
 REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(uint8_t)
+REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(bool)
 #ifdef WITH_CUDA
 REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float16)
 #endif

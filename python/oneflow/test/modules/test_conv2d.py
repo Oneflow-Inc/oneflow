@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -1581,6 +1581,14 @@ class TestConv2d(flow.unittest.TestCase):
                 )
             )
 
+    @autotest(n=3)
+    def test_nn_functional_conv2d(test_case):
+        device = random_device()
+        img = torch.ones((1, 3, 224, 224), requires_grad=True).to(device)
+        kernel = torch.ones((3, 1, 3, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv2d(img, kernel, groups=3)
+        return y
+
     def test_conv2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
@@ -1838,7 +1846,27 @@ class TestConv2d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
+        x = random_tensor(ndim=4, dim1=channels).to(device)
+        y = m(x)
+        return y
+
+    @autotest(check_graph=False)
+    def test_conv2d_0size_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=4, dim0=0, dim1=channels).to(device)
         y = m(x)
         return y
 
@@ -1861,7 +1889,7 @@ class TestConv2d(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         m.pytorch.to("cuda")
-        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
+        x = random_tensor(ndim=4, dim1=channels).to(device)
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y

@@ -30,7 +30,8 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 
 }  // namespace
 
-Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                             const Shape& logical_shape) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
   CHECK_OR_RETURN(equal);
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
@@ -39,7 +40,8 @@ Maybe<void> CheckCudaCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckCudaCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> CheckCudaCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                             const Shape& logical_shape) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
   CHECK_OR_RETURN(equal);
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
@@ -57,10 +59,10 @@ Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor, Symbol<P
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
   if (!out_parallel_id->has_value()) {
-    std::string device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
+    const std::string& device_type = tensor_placement->device_tag();
     local_tensor = JUST(one::functional::Empty(
         *JUST(GetPhysicalShape(*tensor->shape(), *tensor_nd_sbp, *tensor_placement, 0)),
-        tensor->dtype(), JUST(Device::New(device_type))));
+        tensor->dtype(), JUST(Device::New(device_type)), /*pin_memory=*/false));
   }
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,

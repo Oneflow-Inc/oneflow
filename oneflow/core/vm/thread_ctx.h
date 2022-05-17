@@ -18,12 +18,18 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/intrusive/intrusive.h"
-#include "oneflow/core/intrusive/channel.h"
+#include "oneflow/core/intrusive/mutexed_list.h"
+#include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/stream_runtime_desc.h"
 
 namespace oneflow {
 namespace vm {
+
+using PendingInstructionMutexedList =
+    intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
+using PendingInstructionList =
+    intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
 
 class ThreadCtx final : public intrusive::Base {
  public:
@@ -31,8 +37,6 @@ class ThreadCtx final : public intrusive::Base {
 
   // types
   using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_hook_)>;
-  using PendingInstructionChannel =
-      intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
 
   // Getters
   bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
@@ -43,19 +47,20 @@ class ThreadCtx final : public intrusive::Base {
   void set_stream_rt_desc(const StreamRtDesc* val) { stream_rt_desc_ = val; }
   void clear_stream_rt_desc() { stream_rt_desc_ = nullptr; }
   StreamList* mut_stream_list() { return &stream_list_; }
-  PendingInstructionChannel* mut_pending_instruction_list() { return &pending_instruction_list_; }
+  PendingInstructionMutexedList* mut_pending_instruction_list() {
+    return &pending_instruction_list_;
+  }
 
   // methods
   void __Init__(const StreamRtDesc& stream_rt_desc) {
     __Init__();
     set_stream_rt_desc(&stream_rt_desc);
   }
-  void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
-  intrusive::ChannelStatus TryReceiveAndRun();
+  size_t TryReceiveAndRun();
+
+  Notifier* mut_notifier() { return &notifier_; }
 
  private:
-  intrusive::ChannelStatus ReceiveAndRun();
-
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
@@ -63,14 +68,17 @@ class ThreadCtx final : public intrusive::Base {
       : intrusive_ref_(),
         stream_rt_desc_(),
         stream_list_(),
-        pending_instruction_list_(),
+        pending_instruction_mutex_(),
+        pending_instruction_list_(&pending_instruction_mutex_),
         thread_ctx_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   const StreamRtDesc* stream_rt_desc_;
   // lists
   StreamList stream_list_;
-  PendingInstructionChannel pending_instruction_list_;
+  std::mutex pending_instruction_mutex_;
+  PendingInstructionMutexedList pending_instruction_list_;
+  Notifier notifier_;
 
  public:
   // list hooks

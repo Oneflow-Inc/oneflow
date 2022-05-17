@@ -23,9 +23,9 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/register/ofblob.h"
-#include "oneflow/core/common/thread_local_callback.h"
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow_api {
 
@@ -36,7 +36,7 @@ Tensor::Tensor(const Shape& shape, const Device& device, const DType& dtype) {
   of::LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
   tensor_ = functional::Empty(*shape.shape_,
                               of::DType::Get(static_cast<of::DataType>(dtype)).GetOrThrow(),
-                              *device.device_)
+                              *device.device_, /*pin_memory=*/false)
                 .GetPtrOrThrow();
 }
 Tensor::Tensor(const std::shared_ptr<oneflow::one::Tensor>& tensor) : tensor_(tensor) {}
@@ -100,40 +100,30 @@ Tensor Tensor::from_buffer(const void* buffer, const Shape& shape, const Device&
 }
 
 template<typename T>
-void Tensor::copy_to(T* buffer) {
+void Tensor::copy_to(T* buffer) const {
   std::shared_ptr<of::one::MirroredTensor> local_tensor =
       tensor_->AsMirroredTensor().GetPtrOrThrow();
   const auto shape = this->shape();
 
-  const auto& Callback =
-      std::make_shared<std::function<void(uint64_t)>>([buffer, shape](uint64_t ofblob_ptr) {
-        CHECK_JUST(of::BlobBufferCopyUtil<T>::To(ofblob_ptr, buffer, shape.Count(0)));
-      });
-
-  bool is_printed = false;
-  of::SpinCounter::SpinWait(
-      1,
-      [&](const std::shared_ptr<of::SpinCounter>& sc) -> of::Maybe<void> {
-        return of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
-          return builder->SyncAccessBlobByCallback(local_tensor, sc, Callback, "const");
-        });
-      },
-      [&is_printed]() {
-        if (!is_printed) {
-          of::blocking::StackInfoCallback();
-          is_printed = true;
-        }
-      })
+  const auto& Callback = [buffer, shape](uint64_t ofblob_ptr) {
+    CHECK_JUST(of::BlobBufferCopyUtil<T>::To(ofblob_ptr, buffer, shape.Count(0)));
+  };
+  auto btb = std::make_shared<of::BlockingThenBusy>(1);
+  CHECK_JUST(of::PhysicalRun([&](of::InstructionsBuilder* builder) -> of::Maybe<void> {
+    return builder->SyncAccessBlobByCallback(local_tensor, btb, Callback, "const");
+  }));
+  TRY(btb->WaitUntilCntEqualZero(of::VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
       .GetOrThrow();
 }
 
 const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const { return tensor_; }
 
 #define REGISTER_TENSOR_COPY_TO(cpp_dtype) \
-  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer);
+  template void Tensor::copy_to<cpp_dtype>(cpp_dtype * buffer) const;
 
 REGISTER_TENSOR_COPY_TO(float)
 REGISTER_TENSOR_COPY_TO(double)
+REGISTER_TENSOR_COPY_TO(bool)
 REGISTER_TENSOR_COPY_TO(int8_t)
 REGISTER_TENSOR_COPY_TO(int32_t)
 REGISTER_TENSOR_COPY_TO(int64_t)

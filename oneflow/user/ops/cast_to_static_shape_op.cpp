@@ -14,38 +14,41 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("cast_to_static_shape")
-    .Input("input")
-    .Output("output")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
-      user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
-      *output_desc->mut_shape() = input_desc.shape();
-      output_desc->set_is_dynamic(false);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& input_desc =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
-      FOR_RANGE(int64_t, i, 0, input_desc.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("input", 0), i)
-            .Split(user_op::OpArg("output", 0), i)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("input", 0))
-          .PartialSum(user_op::OpArg("output", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> CastToStaticShapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
+  user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
+  *output_desc->mut_shape() = input_desc.shape();
+  output_desc->set_is_dynamic(false);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> CastToStaticShapeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> CastToStaticShapeOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& input_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
+  FOR_RANGE(int64_t, i, 0, input_desc.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("input", 0), i)
+        .Split(user_op::OpArg("output", 0), i)
+        .Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("input", 0))
+      .PartialSum(user_op::OpArg("output", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> CastToStaticShapeOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("cast_to_static_shape")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

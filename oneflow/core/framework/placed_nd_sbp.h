@@ -23,20 +23,18 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace cfg {
 class NdSbp;
-}
 class ParallelDesc;
 
 class PlacedNdSbp final {
  public:
-  PlacedNdSbp(const Symbol<cfg::NdSbp>& nd_sbp, const Symbol<ParallelDesc>& placement)
+  PlacedNdSbp(const Symbol<NdSbp>& nd_sbp, const Symbol<ParallelDesc>& placement)
       : nd_sbp_(nd_sbp), placement_(placement) {}
   ~PlacedNdSbp() = default;
 
-  static Maybe<Symbol<PlacedNdSbp>> (*New)(const Symbol<cfg::NdSbp>&, const Symbol<ParallelDesc>&);
+  static Maybe<Symbol<PlacedNdSbp>> (*New)(const Symbol<NdSbp>&, const Symbol<ParallelDesc>&);
 
-  const Symbol<cfg::NdSbp>& nd_sbp() const { return nd_sbp_; }
+  const Symbol<NdSbp>& nd_sbp() const { return nd_sbp_; }
   const Symbol<ParallelDesc>& placement() const { return placement_; }
 
   bool operator==(const PlacedNdSbp& other) const {
@@ -44,7 +42,7 @@ class PlacedNdSbp final {
   }
 
  private:
-  Symbol<cfg::NdSbp> nd_sbp_;
+  Symbol<NdSbp> nd_sbp_;
   Symbol<ParallelDesc> placement_;
 };
 

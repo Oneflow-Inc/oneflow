@@ -119,7 +119,10 @@ class GpuExpandKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const std::vector<int32_t>& logical_expand_shape =
         ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
-
+    if (std::any_of(logical_expand_shape.begin(), logical_expand_shape.end(),
+                    [](int32_t dim_size) { return dim_size == 0; })) {
+      return;
+    }
     std::vector<int32_t> in_shape;
     in_shape.resize(in->shape().NumAxes());
     for (int i = 0; i < in->shape().NumAxes(); ++i) { in_shape[i] = in->shape().At(i); }
@@ -152,6 +155,7 @@ class GpuExpandKernel final : public user_op::OpKernel {
 REGISTER_EXPAND_KERNEL(float);
 REGISTER_EXPAND_KERNEL(double);
 REGISTER_EXPAND_KERNEL(float16);
+REGISTER_EXPAND_KERNEL(bool);
 REGISTER_EXPAND_KERNEL(uint8_t);
 REGISTER_EXPAND_KERNEL(int8_t);
 REGISTER_EXPAND_KERNEL(int32_t);

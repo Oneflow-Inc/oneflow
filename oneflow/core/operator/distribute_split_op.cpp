@@ -32,8 +32,8 @@ class DistributeSplitOp final : public Operator {
  private:
   Maybe<void> InferBlobParallelDesc() override;
   Maybe<void> InferSbpSignature(
-      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferLogicalOutBlobDescs(
@@ -45,7 +45,7 @@ class DistributeSplitOp final : public Operator {
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override;
+      SbpSignatureList* sbp_sig_list) const override;
 
   int32_t FixAxis(const int32_t axis, const int64_t num_axes) const;
 };
@@ -119,8 +119,8 @@ Maybe<void> DistributeSplitOp::InferBlobParallelDesc() {
 }
 
 Maybe<void> DistributeSplitOp::InferSbpSignature(
-    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), output_bns().size());
@@ -128,7 +128,7 @@ Maybe<void> DistributeSplitOp::InferSbpSignature(
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
-  cfg::SbpSignatureList sbp_sig_list;
+  SbpSignatureList sbp_sig_list;
   JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list));
   *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
   return Maybe<void>::Ok();
@@ -136,7 +136,7 @@ Maybe<void> DistributeSplitOp::InferSbpSignature(
 
 Maybe<void> DistributeSplitOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    cfg::SbpSignatureList* sbp_sig_list) const {
+    SbpSignatureList* sbp_sig_list) const {
   const auto& conf = op_conf().distribute_split_conf();
   const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in")).shape().NumAxes();
   const int32_t axis = FixAxis(conf.axis(), num_axes);

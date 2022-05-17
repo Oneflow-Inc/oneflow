@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -66,7 +66,7 @@ class TestCast(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_cast_with_0shape_data(test_case):
+    def test_cast_with_0_size_data(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_cast_float2int,

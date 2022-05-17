@@ -15,7 +15,18 @@ limitations under the License.
 */
 
 #include "oneflow/api/cpp/tests/api_test.h"
+#include <cstddef>
 #include <random>
+#include <string>
+#ifdef __linux__
+
+#include <unistd.h>  // readlink
+
+#elif defined(__APPLE__)
+
+#include <mach-o/dyld.h>  //  _NSGetExecutablePath
+
+#endif
 
 namespace oneflow_api {
 
@@ -46,5 +57,28 @@ REGISTER_RANDOM_DATA(double)
 REGISTER_RANDOM_DATA(int8_t)
 REGISTER_RANDOM_DATA(int32_t)
 REGISTER_RANDOM_DATA(int64_t)
+
+std::string GetExeDir() {
+  const size_t path_max_size = 4096;  // PATH_MAX = 4096 on linux
+  char result[path_max_size];
+
+  const auto get_dir_from_path = [](char result[], size_t count) -> std::string {
+    std::string exe_path(result, (count > 0) ? count : 0);
+
+    // string(path).rfind('/') will never be string::npos on linux or macos.
+    return exe_path.substr(0, exe_path.rfind('/'));
+  };
+
+#ifdef __linux__
+  ssize_t count = readlink("/proc/self/exe", result, path_max_size);
+  return get_dir_from_path(result, count);
+#elif defined(__APPLE__)
+  uint32_t count = path_max_size;
+  CHECK_EQ(_NSGetExecutablePath(result, &count), 0) << "Fail to get executable file path.";
+  return get_dir_from_path(result, count);
+#else
+#error oneflow_api::GetExeDir() has not been supported on windows.
+#endif
+}
 
 }  // namespace oneflow_api

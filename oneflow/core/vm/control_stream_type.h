@@ -22,15 +22,14 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-struct VirtualMachineEngine;
-struct InstructionMsg;
+class InstructionMsg;
 
 class ControlStreamType final : public StreamType {
  public:
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
-  const char* device_tag() const override { return "cpu"; }
+  const char* stream_tag() const override { return "control"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
@@ -47,10 +46,6 @@ class ControlStreamType final : public StreamType {
   bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
   bool IsControlStreamType() const override { return true; }
-  void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override;
-  void Compute(VirtualMachineEngine* vm, Instruction* instruction) const override;
-  void Infer(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override;
-  void Compute(VirtualMachineEngine* vm, InstructionMsg* instr_msg) const override;
 };
 
 }  // namespace vm

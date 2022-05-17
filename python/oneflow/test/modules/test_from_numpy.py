@@ -28,6 +28,9 @@ class TestFromNumpy(flow.unittest.TestCase):
         np_arr = np.random.randn(3, 4, 5)
         tensor = flow.from_numpy(np_arr)
         test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
+        test_case.assertEqual(tensor.size(), (3, 4, 5))
+        test_case.assertEqual(tensor.stride(), (20, 5, 1))
+        test_case.assertEqual(tensor.storage_offset(), 0)
 
         np_arr[1:2, 2:3, 3:4] = random.random()
         test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
@@ -53,6 +56,13 @@ class TestFromNumpy(flow.unittest.TestCase):
             # TODO(wyg): oneflow.float16 do not support to copy from tensor to numpy
             if tensor.dtype not in [flow.float16]:
                 test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
+
+    def test_non_contiguous_input(test_case):
+        np_arr = np.random.randn(4, 5)
+        np_arr = np_arr.transpose(1, 0)
+        tensor = flow.from_numpy(np_arr)
+        # TODO(wyg): support non-contiguous input
+        test_case.assertTrue(tensor.is_contiguous())
 
 
 if __name__ == "__main__":

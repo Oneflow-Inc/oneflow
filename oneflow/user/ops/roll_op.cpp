@@ -14,48 +14,47 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("roll")
-    .Input("in")
-    .Output("out")
-    .Attr<std::vector<int32_t>>("shifts")
-    .Attr<std::vector<int32_t>>("dims")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& in_shape = ctx->InputShape("in", 0);
-      *ctx->OutputShape("out", 0) = in_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      const std::vector<int32_t>& dims = ctx->Attr<std::vector<int32_t>>("dims");
+/*static*/ Maybe<void> RollOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  const std::vector<int32_t>& dims = ctx->Attr<std::vector<int32_t>>("dims");
 
-      CHECK_GT_OR_RETURN(dims.size(), 0);
+  CHECK_GT_OR_RETURN(dims.size(), 0);
 
-      // NOTE(Liang Depeng): (dims.size == 1 && dims[0] == -1) means that user call flow.roll with
-      // dims == None
-      if (dims[0] != -1) {
-        FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-          if (std::find(dims.begin(), dims.end(), i) == dims.end()) {
-            ctx->NewBuilder()
-                .Split(user_op::OpArg("in", 0), i)
-                .Split(user_op::OpArg("out", 0), i)
-                .Build();
-          }
-        }
+  // NOTE(Liang Depeng): (dims.size == 1 && dims[0] == -1) means that user call flow.roll with
+  // dims == None
+  if (dims[0] != -1) {
+    FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+      if (std::find(dims.begin(), dims.end(), i) == dims.end()) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("in", 0), i)
+            .Split(user_op::OpArg("out", 0), i)
+            .Build();
       }
+    }
+  }
 
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("in", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    });
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RollOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  *ctx->OutputShape("out", 0) = in_shape;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RollOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> RollOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("roll").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {

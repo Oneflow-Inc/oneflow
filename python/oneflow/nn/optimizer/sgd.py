@@ -97,7 +97,7 @@ class SGD(Optimizer):
 
     def __init__(
         self,
-        parameters: Union[Iterator[Parameter], List[Dict]],
+        params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         momentum: float = 0.0,
         weight_decay: float = 0.0,
@@ -109,7 +109,7 @@ class SGD(Optimizer):
         options["lr"] = lr
         options["momentum"] = momentum
         options["weight_decay"] = weight_decay
-        super().__init__(parameters, options)
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
@@ -117,24 +117,23 @@ class SGD(Optimizer):
                 self._state[param] = dict()
 
         self._momentum_sgd = (
-            flow.builtin_op("momentum_update")
+            flow.stateful_op("momentum_update")
             .Input("model")
             .Input("model_diff")
             .Input("momentum")
-            .Attr("l1", 0.0)
-            .Attr("weight_decay", 0.0)
             .Build()
         )
         self._sgd = (
-            flow.builtin_op("sgd_update")
-            .Input("model")
-            .Input("model_diff")
-            .Attr("weight_decay", 0.0)
-            .Attr("l1", 0.0)
-            .Build()
+            flow.stateful_op("sgd_update").Input("model").Input("model_diff").Build()
         )
 
     def step(self, closure: Callable = None):
+        """Performs a single optimization step.
+
+        Args:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
         with flow.no_grad():
             loss = None
             if closure is not None:
@@ -146,17 +145,18 @@ class SGD(Optimizer):
                     if param.grad is None:
                         continue
                     if param_group["momentum"] == 0.0:
-                        self._sgd(param, param.grad, learning_rate_val=lr, l2=l2)
+                        flow._C.dispatch_sgd_update(
+                            self._sgd, (param, param.grad), learning_rate=lr, l2=l2
+                        )
                     else:
                         if "momentum_buf" not in self._state[param]:
                             self._state[param]["momentum_buf"] = flow.zeros_like(param)
                         momentum_buf = self._state[param]["momentum_buf"]
                         beta = param_group["momentum"]
-                        self._momentum_sgd(
-                            param,
-                            param.grad,
-                            momentum_buf,
-                            learning_rate_val=lr,
+                        flow._C.dispatch_momentum_update(
+                            self._momentum_sgd,
+                            (param, param.grad, momentum_buf),
+                            learning_rate=lr,
                             l2=l2,
                             beta=beta,
                         )
@@ -166,7 +166,7 @@ class SGD(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
             lr = (
                 param_group["initial_lr"]
                 if "initial_lr" in param_group
@@ -175,22 +175,25 @@ class SGD(Optimizer):
             beta = param_group["momentum"]
             l2 = param_group["weight_decay"]
 
-            optimizer_conf.set_base_learning_rate(lr)
+            optimizer_conf.base_learning_rate = lr
             if beta == 0:
-                optimizer_conf.mutable_naive_conf()
+                optimizer_conf.naive_conf.SetInParent()
             else:
-                optimizer_conf.mutable_momentum_conf().set_beta(beta)
+                optimizer_conf.momentum_conf.beta = beta
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs
 
     @property
     def support_sparse(self):
+        """Whether SGD Optimizer support sparse update. 
+
+        """
         return True

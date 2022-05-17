@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/loss_op_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -44,7 +45,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> NllInferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_OR_RETURN(IsIndexDataType(target_desc.data_type()));
 
@@ -88,41 +89,51 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 }
 }  // namespace
 
-REGISTER_USER_OP("nll")
-    .Input("input")
-    .Input("target")
-    .OptionalInput("weight")
-    .Output("out")
-    .Output("total_weight")
-    .Attr<int64_t>("ignore_index")
-    .SetTensorDescInferFn(InferTensorDescFn)
-    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
-      CHECK_OR_RETURN(target_modifier != nullptr);
-      target_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder,
-                                                  user_op::SbpContext* ctx) {
-      builder.PartialSum(user_op::OpArg("total_weight", 0));
-    }));
+/* static */ Maybe<void> NllOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDescFn(ctx);
+}
 
-REGISTER_USER_OP("nll_grad")
-    .Input("input")
-    .Input("target")
-    .Input("total_weight")
-    .OptionalInput("weight")
-    .Input("dy")
-    .Output("dx")
-    .Attr<int64_t>("ignore_index")
-    .SetTensorDescInferFn(InferGradTensorDescFn)
-    .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder,
-                                                   user_op::SbpContext* ctx) {
-      builder.PartialSum(user_op::OpArg("total_weight", 0));
-    }));
+/*static*/ Maybe<void> NllOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NllOp::GetSbp(user_op::SbpContext* ctx) {
+  return GenLossForwardDefaultGetSbpFn(
+      [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {
+        builder.PartialSum(user_op::OpArg("total_weight", 0));
+      })(ctx);
+}
+
+/* static */ Maybe<void> NllOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
+                                               const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
+  CHECK_OR_RETURN(target_modifier != nullptr);
+  target_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> NllOp::InferDataType(user_op::InferContext* ctx) {
+  return NllInferDataType(ctx);
+}
+
+/* static */ Maybe<void> NllGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> NllGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NllGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GenLossBackwardDefaultGetSbpFn(
+      [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {
+        builder.PartialSum(user_op::OpArg("total_weight", 0));
+      })(ctx);
+}
+
+/* static */ Maybe<void> NllGradOp::InferDataType(user_op::InferContext* ctx) {
+  return InferGradDataType(ctx);
+}
 
 REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {

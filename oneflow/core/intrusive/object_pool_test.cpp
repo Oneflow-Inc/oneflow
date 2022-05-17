@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <sstream>
+#include "gtest/gtest.h"
 #define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/intrusive/intrusive.h"

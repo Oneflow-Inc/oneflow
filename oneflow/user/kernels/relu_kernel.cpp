@@ -21,8 +21,8 @@ namespace oneflow {
 
 template<typename Context>
 std::unique_ptr<ep::primitive::ElementwiseUnary> NewReluPrimitive(Context* ctx) {
-  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
       ctx->device_type(), ep::primitive::UnaryOp::kRelu, src->data_type(), dst->data_type());
 }
@@ -38,8 +38,8 @@ class ReluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     auto primitive = NewReluPrimitive(ctx);
     CHECK(primitive);
 
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
 
     if (elem_cnt != 0) {

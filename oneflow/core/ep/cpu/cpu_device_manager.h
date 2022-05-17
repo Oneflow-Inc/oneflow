@@ -22,21 +22,27 @@ namespace oneflow {
 
 namespace ep {
 
+class CpuDevice;
+
 class CpuDeviceManager : public DeviceManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceManager);
-  CpuDeviceManager() = default;
-  virtual ~CpuDeviceManager() = default;
+  explicit CpuDeviceManager(DeviceManagerRegistry* registry);
+  ~CpuDeviceManager() override;
 
+  DeviceManagerRegistry* registry() const override;
   std::shared_ptr<Device> GetDevice(size_t device_index) override;
   size_t GetDeviceCount(size_t primary_device_index) override;
   size_t GetDeviceCount() override;
   size_t GetActiveDeviceIndex() override;
   void SetActiveDeviceByIndex(size_t device_index) override;
+  void SetDeviceNumThreads(size_t num_threads);
 
  private:
+  size_t device_num_threads_;
   std::mutex device_mutex_;
-  std::shared_ptr<Device> device_;
+  std::shared_ptr<CpuDevice> device_;
+  DeviceManagerRegistry* registry_;
 };
 
 }  // namespace ep

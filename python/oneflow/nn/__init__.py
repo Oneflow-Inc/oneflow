@@ -21,6 +21,7 @@ from oneflow.nn.modules.activation import (
     GELU,
     GLU,
     Hardsigmoid,
+    Hardshrink,
     Hardswish,
     Hardtanh,
     LeakyReLU,
@@ -32,11 +33,13 @@ from oneflow.nn.modules.activation import (
     ReLU6,
     Sigmoid,
     Softmax,
+    Softshrink,
     Softplus,
     Tanh,
     SELU,
     SiLU,
     Softsign,
+    Threshold,
 )
 
 from oneflow.nn.modules.all_reduce import AllReduce
@@ -46,6 +49,8 @@ from oneflow.nn.modules.batchnorm_fused import (
     FusedBatchNorm2d,
     FusedBatchNorm3d,
 )
+from oneflow.nn.modules.fused_mlp import FusedMLP
+
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -61,12 +66,16 @@ from oneflow.nn.modules.conv import (
     ConvTranspose2d,
     ConvTranspose3d,
 )
+from oneflow.nn.modules.distance import CosineSimilarity
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,
 )
 from oneflow.nn.modules.fake_quantization import FakeQuantization
 from oneflow.nn.modules.quantization import Quantization
+from oneflow.nn.modules.distributed_partial_fc_sample import (
+    DistributedPariticalFCSample,
+)
 
 from oneflow.nn.modules.dataset import (
     COCOReader,
@@ -81,6 +90,7 @@ from oneflow.nn.modules.dataset import (
     OFRecordReader as OfrecordReader,
     OFRecordBytesDecoder,
     GPTIndexedBinDataReader,
+    OneRecReader,
 )
 
 from oneflow.nn.modules.dropout import Dropout

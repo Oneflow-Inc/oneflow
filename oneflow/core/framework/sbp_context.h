@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_SBP_CONTEXT_H_
 
 #include "oneflow/core/framework/user_op_conf.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
 
 namespace oneflow {
@@ -28,7 +28,7 @@ class TensorDesc;
 
 class UserOpSbpSignatureBuilder final {
  public:
-  UserOpSbpSignatureBuilder(cfg::SbpSignatureList* sbp_sig_list) : sbp_sig_list_(sbp_sig_list) {}
+  UserOpSbpSignatureBuilder(SbpSignatureList* sbp_sig_list) : sbp_sig_list_(sbp_sig_list) {}
 
   UserOpSbpSignatureBuilder& Split(const OpArg& op_arg, int64_t axis);
   UserOpSbpSignatureBuilder& Split(const std::vector<OpArg>& op_args, int64_t axis);
@@ -47,8 +47,8 @@ class UserOpSbpSignatureBuilder final {
   void Build() { *(sbp_sig_list_->mutable_sbp_signature()->Add()) = sbp_sig_tmp_; }
 
  private:
-  cfg::SbpSignatureList* sbp_sig_list_;
-  cfg::SbpSignature sbp_sig_tmp_;
+  SbpSignatureList* sbp_sig_list_;
+  SbpSignature sbp_sig_tmp_;
 };
 
 class SbpContextBase {
@@ -84,10 +84,10 @@ class InferSbpSignatureFnContext : public SbpContextBase {
   InferSbpSignatureFnContext() = default;
   ~InferSbpSignatureFnContext() override = default;
 
-  virtual cfg::SbpSignature* mutable_sbp_signature() = 0;
-  virtual const cfg::SbpSignature& sbp_signature_conf() const = 0;
-  virtual const cfg::SbpParallel& SbpParallelHint4InputArgNameAndIndex(
-      const std::string& input_arg_name, int32_t index) const = 0;
+  virtual SbpSignature* mutable_sbp_signature() = 0;
+  virtual const SbpSignature& sbp_signature_conf() const = 0;
+  virtual const SbpParallel& SbpParallelHint4InputArgNameAndIndex(const std::string& input_arg_name,
+                                                                  int32_t index) const = 0;
 };
 
 struct GetSbpFnUtil {
@@ -95,8 +95,7 @@ struct GetSbpFnUtil {
   static Maybe<void> SplitForEachAxis(SbpContext*);
 };
 
-Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx,
-                             const cfg::SbpParallel& default_sbp);
+Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx, const SbpParallel& default_sbp);
 
 }  // namespace user_op
 

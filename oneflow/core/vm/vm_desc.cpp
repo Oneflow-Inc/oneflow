@@ -31,23 +31,21 @@ void SetMachineIdRange(Range* range, int64_t machine_num, int64_t this_machine_i
 intrusive::shared_ptr<VmDesc> MakeVmDesc(
     const Resource& resource, int64_t this_machine_id,
     const std::function<void(const std::function<void(const InstrTypeId&)>&)>& ForEachInstrTypeId) {
-  std::set<StreamTypeId> stream_type_ids;
-  ForEachInstrTypeId([&](const InstrTypeId& instr_type_id) {
-    stream_type_ids.insert(instr_type_id.stream_type_id());
-  });
+  std::set<const StreamType*> stream_types;
+  ForEachInstrTypeId(
+      [&](const InstrTypeId& instr_type_id) { stream_types.insert(&instr_type_id.stream_type()); });
   auto vm_desc =
       intrusive::make_shared<VmDesc>(intrusive::make_shared<VmResourceDesc>(resource).Get());
   SetMachineIdRange(vm_desc->mut_machine_id_range(), resource.machine_num(), this_machine_id);
   int cnt = 0;
-  for (const auto& stream_type_id : stream_type_ids) {
-    const StreamType& stream_type = stream_type_id.stream_type();
-    auto stream_desc = stream_type.MakeStreamDesc(resource, this_machine_id);
+  for (const auto* stream_type : stream_types) {
+    auto stream_desc = stream_type->MakeStreamDesc(resource, this_machine_id);
     if (stream_desc) {
       ++cnt;
-      CHECK(vm_desc->mut_stream_type_id2desc()->Insert(stream_desc.Mutable()).second);
+      CHECK(vm_desc->mut_stream_type2desc()->Insert(stream_desc.Mutable()).second);
     }
   }
-  CHECK_EQ(vm_desc->stream_type_id2desc().size(), cnt);
+  CHECK_EQ(vm_desc->stream_type2desc().size(), cnt);
   return vm_desc;
 }
 

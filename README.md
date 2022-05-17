@@ -9,16 +9,33 @@
 
 ## Latest News
 
-- Version 0.5.0 is out!
-  - First class support for eager execution. The deprecated APIs are moved to `oneflow.compatible.single_client`
-  - Drop-in replacement of `import torch` for existing Pytorch projects. You could test it by inter-changing `import oneflow as torch` and `import torch as flow`.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.5.0)
+- Version 0.7.0 is out!
+  - Introducing global tensor
+  - Semi-auto parallelization has landed
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0)
+
+## Publication
+
+- [OneFlow: Redesign the Distributed Deep Learning Framework from Scratch](https://arxiv.org/abs/2110.15032)
+- Bibtex Citation
+
+  ```
+  @misc{yuan2021oneflow,
+        title={OneFlow: Redesign the Distributed Deep Learning Framework from Scratch},
+        author={Jinhui Yuan and Xinqi Li and Cheng Cheng and Juncheng Liu and Ran Guo and Shenghang Cai and Chi Yao and Fei Yang and Xiaodong Yi and Chuan Wu and Haoran Zhang and Jie Zhao},
+        year={2021},
+        eprint={2110.15032},
+        archivePrefix={arXiv},
+        primaryClass={cs.DC}
+  }
+  ```
 
 ## Install OneFlow
 
 ### System Requirements
 
-- Python 3.6, 3.7, 3.8, 3.9
+- Linux. As for now, there is no pre-built release for macOS, Windows.
+- Python 3.6, 3.7, 3.8, 3.9, 3.10
 - (**Highly recommended**) Upgrade pip
 
   ```
@@ -36,34 +53,30 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.5.0+cu102
+  python3 -m pip install -f https://release.oneflow.info oneflow==0.7.0+cu102
   ```
 
 - To install nightly release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install oneflow -f https://staging.oneflow.info/branch/master/cu102
+  python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/cu102
   ```
 
 - To install other available builds for different variants:
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.5.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.7.0+[PLATFORM]
     ```
   - Nightly
     ```
-    python3 -m pip install oneflow -f https://staging.oneflow.info/branch/master/[PLATFORM]
+    python3 -m pip install --pre oneflow -f https://staging.oneflow.info/branch/master/[PLATFORM]
     ```
   - All available `[PLATFORM]`:
     | Platform |CUDA Driver Version| Supported GPUs |
     |---|---|---|
     | cu112 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cu111 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cu110, cu110_xla | >= 450.36.06 | GTX 10xx, RTX 20xx, A100|
-    | cu102, cu102_xla | >= 440.33 | GTX 10xx, RTX 20xx |
-    | cu101, cu101_xla | >= 418.39 | GTX 10xx, RTX 20xx |
-    | cu100, cu100_xla | >= 410.48 | GTX 10xx, RTX 20xx |
+    | cu102 | >= 440.33 | GTX 10xx, RTX 20xx |
     | cpu | N/A | N/A |
 
 - If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
@@ -76,7 +89,7 @@
 
 ```
 docker pull oneflowinc/oneflow:nightly-cuda10.2
-docker pull oneflowinc/oneflow:nightly-cuda11.1
+docker pull oneflowinc/oneflow:nightly-cuda11.2
 ```
 
 ### Build from Source
@@ -110,39 +123,17 @@ docker pull oneflowinc/oneflow:nightly-cuda11.1
 
 - #### Option 2: Build in docker container (recommended)
 
-  - Pull a docker image:
+  - Pull the docker image:
 
-    ```
-    docker pull oneflowinc/oneflow-manylinux2014-cuda10.2:0.1
-    ```
-
-    All images available : https://hub.docker.com/u/oneflowinc
-
-  - In the root directory of OneFlow source code, run:
-
-    ```
-    python3 docker/package/manylinux/build_wheel.py --inplace --python_version=3.6
+    ```bash
+    docker pull oneflowinc/manylinux2014_x86_64_cuda11.2
     ```
 
-    This should produce `.whl` files in the directory `wheelhouse`
-
-  - If you are in China, you might need to add these flags:
-
-    ```
-    --use_tuna --use_system_proxy --use_aliyun_mirror
-    ```
-
-  - You can choose CUDA/Python versions of wheel by adding:
-
-    ```
-    --cuda_version=10.1 --python_version=3.6,3.7
-    ```
-
-  - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
+  - Follow the instructions in the bare metal build guide below.
 
 - #### Option 3: Build on bare metal
 
-  - Install dependencies
+  - Install dependencies (not required if you are using docker):
     - on Ubuntu 20.04, run:
       ```
       sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool
@@ -224,7 +215,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ## Getting Started
 
-- Please refer to [QUICKSTART](https://docs.oneflow.org/en/master/basics/01_quickstart.html) 
+- Please refer to [QUICKSTART](https://docs.oneflow.org/en/master/basics/01_quickstart.html)
 - 中文版请参见 [快速上手](https://docs.oneflow.org/master/basics/01_quickstart.html)
 
 ## Documentation
@@ -235,12 +226,17 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ## Model Zoo and Benchmark
 
-- [OneFlow Models](https://github.com/Oneflow-Inc/models)
-- [OneFlow-Benchmark](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
-- [GPT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/GPT)
-- [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
-- [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
-- [BERT](https://github.com/Oneflow-Inc/models/tree/main/NLP/bert-oneflow)
+- [Libai(Toolbox for Parallel Training Large-Scale Transformer Models)](https://github.com/Oneflow-Inc/libai)
+  - [BERT-large](https://libai.readthedocs.io/en/latest/tutorials/get_started/quick_run.html)
+  - [GPT](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id5)
+  - [T5](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id4)
+  - [VisionTransformer](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id1)
+  - [SwinTransformer](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id2)
+- [FlowVision(Toolbox for Computer Vision Datasets, SOTA Models and Utils)](https://github.com/Oneflow-Inc/vision)
+- [OneFlow-Models(Examples of How to Implement Models in Various Fields with OneFlow)](https://github.com/Oneflow-Inc/models)
+  - [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
+  - [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
+- [OneFlow-Benchmark(Outdated)](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
 
 ## Communication
 

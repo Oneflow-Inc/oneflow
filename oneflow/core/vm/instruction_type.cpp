@@ -30,12 +30,14 @@ HashMap<std::string, InstrTypeId>* InstrTypeId4InstructionName() {
 
 }  // namespace
 
-void InstructionType::Compute(VirtualMachineEngine* vm, Instruction* instruction) const {
-  Compute(vm, instruction->mut_instr_msg());
+void InstructionType::InitInstructionStatus(Instruction* instruction) const {
+  instruction->stream_type().InitInstructionStatus(instruction->stream(),
+                                                   instruction->mut_status_buffer());
 }
 
-void InstructionType::Infer(VirtualMachineEngine* vm, Instruction* instruction) const {
-  Infer(vm, instruction->mut_instr_msg());
+void InstructionType::DeleteInstructionStatus(Instruction* instruction) const {
+  instruction->stream_type().DeleteInstructionStatus(instruction->stream(),
+                                                     instruction->mut_status_buffer());
 }
 
 const InstrTypeId& LookupInstrTypeId(const std::string& name) {
@@ -49,15 +51,10 @@ void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach) {
   for (const auto& pair : *InstrTypeId4InstructionName()) { DoEach(pair.second); }
 }
 
-HashMap<std::type_index, const InstructionType*>* InstructionType4TypeIndex() {
-  static HashMap<std::type_index, const InstructionType*> map;
-  return &map;
-}
-
 void RegisterInstrTypeId(const std::string& instruction_name, const StreamType* stream_type,
-                         const InstructionType* instruction_type, InterpretType interpret_type) {
+                         const InstructionType* instruction_type) {
   InstrTypeId instr_type_id;
-  instr_type_id.__Init__(stream_type, instruction_type, interpret_type);
+  instr_type_id.__Init__(stream_type, instruction_type);
   CHECK(InstrTypeId4InstructionName()->emplace(instruction_name, instr_type_id).second);
 }
 

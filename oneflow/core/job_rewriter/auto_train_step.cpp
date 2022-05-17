@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
+#include "oneflow/core/framework/scope_util.h"
 
 namespace oneflow {
 
@@ -41,7 +42,7 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
     return Maybe<void>::Ok();
   }
   OperatorConf variable_op_conf{};
-  const std::string train_step_name = "System-Train-TrainStep-" + job->job_conf().job_name();
+  const std::string train_step_name = "System-Train-TrainStep";
   variable_op_conf.set_name(train_step_name);
   VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
   variable_conf->set_out("out");
@@ -61,12 +62,13 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
   const ParallelConf& parallel_conf = GenParallelConfOfCpuZeroOnMaster();
   int64_t scope_symbol_id = 0;
   {
-    const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
-        std::make_shared<cfg::JobConfigProto>(job->job_conf());
-    const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-        std::make_shared<cfg::ParallelConf>(parallel_conf);
-    scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
-                          ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+    const auto& opt_scope_symbol_id =
+        JUST(MakeInitialScope(job->job_conf(), SymbolOf(ParallelDesc(parallel_conf)),
+                              /* is_mirrored */ false))
+            ->symbol_id();
+    CHECK_OR_RETURN(opt_scope_symbol_id.has_value())
+        << Error::RuntimeError() << "symbol_id not initialized";
+    scope_symbol_id = JUST(opt_scope_symbol_id);
   }
 
   auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")

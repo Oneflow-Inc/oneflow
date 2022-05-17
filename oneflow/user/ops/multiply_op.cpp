@@ -14,48 +14,51 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("multiply")
-    .Input("x")
-    .Input("y")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-      CHECK_OR_RETURN(x.shape() == y.shape());
-      *out->mut_shape() = x.shape();
-      *out->mut_is_dynamic() = x.is_dynamic();
-      if (x.is_dynamic() || y.is_dynamic()) { *out->mut_is_dynamic() = true; }
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-      FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("x", 0))
-          .Broadcast(user_op::OpArg("y", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      ctx->NewBuilder()
-          .Broadcast(user_op::OpArg("x", 0))
-          .PartialSum(user_op::OpArg("y", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-      CHECK_OR_RETURN(x.data_type() == y.data_type());
-      *out->mut_data_type() = x.data_type();
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> MultiplyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  CHECK_OR_RETURN(x.shape() == y.shape());
+  *out->mut_shape() = x.shape();
+  *out->mut_is_dynamic() = x.is_dynamic();
+  if (x.is_dynamic() || y.is_dynamic()) { *out->mut_is_dynamic() = true; }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> MultiplyOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> MultiplyOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  FOR_RANGE(int64_t, i, 0, x.shape().NumAxes()) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("x", 0))
+      .Broadcast(user_op::OpArg("y", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("x", 0))
+      .PartialSum(user_op::OpArg("y", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> MultiplyOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  CHECK_OR_RETURN(x.data_type() == y.data_type());
+  *out->mut_data_type() = x.data_type();
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("multiply")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

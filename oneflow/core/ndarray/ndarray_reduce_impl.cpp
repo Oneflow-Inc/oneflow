@@ -45,7 +45,7 @@ SPECIALIZE_CPU_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeXZReduce);
   template struct NdarrayXYZCubeXZReduce<DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype), binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                     UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  REDUCE_BINARY_FUNC_SEQ);
 
 template<typename T, int NDIMS, template<typename> class binary_func>
@@ -61,7 +61,7 @@ struct NdarrayReduceCoreWrapper<DeviceType::kCPU, T, NDIMS, binary_func> final {
                                            binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_CORE_WRAPPER,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                     UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, REDUCE_BINARY_FUNC_SEQ);
 
 }  // namespace oneflow

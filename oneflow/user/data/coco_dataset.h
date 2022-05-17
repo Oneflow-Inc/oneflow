@@ -34,14 +34,15 @@ class COCOMeta;
 
 class COCODataset final : public RandomAccessDataset<COCOImage> {
  public:
-  using LoadTargetShdPtr = std::shared_ptr<COCOImage>;
-  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
+  using Base = RandomAccessDataset<COCOImage>;
+  using SampleType = typename Base::SampleType;
+  using BatchType = typename Base::BatchType;
 
   COCODataset(user_op::KernelInitContext* ctx, const std::shared_ptr<const COCOMeta>& meta)
       : meta_(meta), session_id_(ctx->Attr<int64_t>("session_id")) {}
   ~COCODataset() = default;
 
-  LoadTargetShdPtrVec At(int64_t index) const override;
+  BatchType At(int64_t index) const override;
   size_t Size() const override;
 
  private:

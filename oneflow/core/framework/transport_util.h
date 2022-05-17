@@ -19,6 +19,7 @@ limitations under the License.
 #include <atomic>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/framework/transport_token.h"
 
 namespace oneflow {
@@ -26,11 +27,16 @@ namespace oneflow {
 class AsyncTransportCtx {
  public:
   explicit AsyncTransportCtx(const TransportToken& transport_token)
-      : transport_token_(transport_token), flying_cnt_(new std::atomic<int64_t>(0)) {}
+      : transport_token_(transport_token), blocking_counter_(1) {}
   virtual ~AsyncTransportCtx() = default;
 
   const TransportToken& transport_token() const { return transport_token_; }
-  std::shared_ptr<std::atomic<int64_t>> flying_cnt() const { return flying_cnt_; }
+  BlockingCounter* mut_blocking_counter() { return &blocking_counter_; }
+
+  Maybe<void> WaitDone() {
+    mut_blocking_counter()->Decrease();
+    return mut_blocking_counter()->WaitUntilCntEqualZero([]() -> Maybe<bool> { return true; });
+  }
 
   virtual Maybe<void> PrepareSendBufferAndCallback(int64_t rank, void** buffer, std::size_t* size,
                                                    std::function<void()>* Callback) = 0;
@@ -40,7 +46,7 @@ class AsyncTransportCtx {
 
  private:
   TransportToken transport_token_;
-  std::shared_ptr<std::atomic<int64_t>> flying_cnt_;
+  BlockingCounter blocking_counter_;
 };
 
 class NaiveAsyncTransportCtx final : public AsyncTransportCtx {
@@ -107,11 +113,6 @@ class NaiveAsyncTransportCtx final : public AsyncTransportCtx {
 class RankGroup;
 
 struct TransportUtil final {
-  static int64_t TimeoutSeconds() { return 60 * 5; }
-  static int64_t BlockingWarningIntervalSeconds() { return 5; }
-
-  static Maybe<void> WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx, int64_t seconds);
-
   static Maybe<void> SendToNextRankInRing(Symbol<RankGroup> rank_group, const TransportToken& token,
                                           AsyncTransportCtx* ctx);
   static Maybe<void> ReceiveFromPrevRankInRing(Symbol<RankGroup> rank_group,

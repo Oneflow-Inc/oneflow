@@ -86,6 +86,10 @@ template<typename T>
 struct BinaryFuncMul final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return x * y; }
 };
+template<>
+struct BinaryFuncMul<bool> final {
+  static OF_DEVICE_FUNC bool Invoke(const bool x, const bool y) { return x && y; }
+};
 template<typename T>
 struct BinaryFuncProd final {
   static OF_DEVICE_FUNC T Invoke(const T x, const T y) { return BinaryFuncMul<T>::Invoke(x, y); }
@@ -143,12 +147,24 @@ template<typename T>
 struct BinaryFuncPow final {
   static OF_DEVICE_FUNC const T Invoke(const T x, const T y) {
 #if defined(__CUDACC__)
-    return pow(x, y);
+    return powf(x, y);
 #else
     return std::pow(x, y);
 #endif
   }
 };
+
+template<>
+struct BinaryFuncPow<bool> final {
+  static OF_DEVICE_FUNC bool Invoke(const bool x, const bool y) {
+#if defined(__CUDACC__)
+    return static_cast<bool>(powf(static_cast<float>(x), static_cast<float>(y)));
+#else
+    return static_cast<bool>(std::pow(static_cast<float>(x), static_cast<float>(y)));
+#endif
+  }
+};
+
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncPow);
 
 template<>
@@ -167,7 +183,7 @@ struct BinaryFuncPow<double> final {
 template<>
 struct BinaryFuncPow<float> final {
   static __device__ __forceinline__ float Invoke(const float x, const float y) {
-    return __powf(x, y);
+    return powf(x, y);
   }
 };
 
@@ -175,7 +191,7 @@ template<>
 struct BinaryFuncPow<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
-    return __float2half(__powf(__half2float(x), __half2float(y)));
+    return __float2half(powf(__half2float(x), __half2float(y)));
 #else
     NO_HALF_UTIL_FOUND;
 #endif
@@ -208,43 +224,43 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncMin);
 
 template<typename T>
 struct BinaryFuncEQ final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x == y; }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x == y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncEQ);
 
 template<typename T>
 struct BinaryFuncNE final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x != y; }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x != y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncNE);
 
 template<typename T>
 struct BinaryFuncGT final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x > y; }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x > y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncGT);
 
 template<typename T>
 struct BinaryFuncGE final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x >= y; }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x >= y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncGE);
 
 template<typename T>
 struct BinaryFuncLT final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x < y; }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x < y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLT);
 
 template<typename T>
 struct BinaryFuncLE final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x <= y; }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x <= y; }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncLE);
 
 template<typename T>
 struct BinaryFuncAND final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x && y; }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x && y; }
 };
 template<typename T>
 struct BinaryFuncAll final {
@@ -254,7 +270,7 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncAND);
 
 template<typename T>
 struct BinaryFuncOR final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return x || y; }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return x || y; }
 };
 template<typename T>
 struct BinaryFuncAny final {
@@ -264,7 +280,7 @@ SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncOR);
 
 template<typename T>
 struct BinaryFuncXOR final {
-  static OF_DEVICE_FUNC int8_t Invoke(const T x, const T y) { return (!x) != (!y); }
+  static OF_DEVICE_FUNC bool Invoke(const T x, const T y) { return (!x) != (!y); }
 };
 SPECIALIZE_CONST_TYPE_BINARY_FUNC(BinaryFuncXOR);
 

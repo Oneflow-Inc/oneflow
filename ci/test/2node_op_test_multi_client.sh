@@ -5,19 +5,20 @@ set -xeu
 export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-test_dir=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
-test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
-export ONEFLOW_TEST_UTILS_DIR=$src_dir/python/oneflow/test_utils
+ONEFLOW_CI_DEVICE_NUMS=${ONEFLOW_CI_DEVICE_NUMS:-"1 2 4"}
 
-
-rm -rf $test_tmp_dir
-mkdir -p $test_tmp_dir
-cp -r $test_dir $test_tmp_dir
-cd ${test_tmp_dir}/$(basename $test_dir)
-
-for device_num in 1 2 4
+for device_num in ${ONEFLOW_CI_DEVICE_NUMS}
 do
-    ONEFLOW_TEST_NODE_NUM=2 ONEFLOW_TEST_DEVICE_NUM=$device_num python3 -m oneflow.distributed.launch --nproc_per_node $device_num --nnodes=2 --node_rank=$NODE_RANK --master_addr 192.168.1.12 -m unittest discover ${PWD} --failfast --verbose
-    # use a invalid ibverbs lib to test if falling back to epoll works
-    ONEFLOW_TEST_NODE_NUM=2 ONEFLOW_TEST_DEVICE_NUM=$device_num ONEFLOW_LIBIBVERBS_PATH=invalid_lib python3 -m oneflow.distributed.launch --nproc_per_node $device_num --nnodes=2 --node_rank=$NODE_RANK --master_addr 192.168.1.12 -m unittest discover ${PWD} --failfast --verbose
+    export ONEFLOW_TEST_NODE_NUM=2
+    export ONEFLOW_TEST_DEVICE_NUM=$device_num
+    time python3 ${src_dir}/ci/test/multi_launch.py \
+        --files "${ONEFLOW_TEST_DIR}/**/test_*.py" \
+        -n 4 \
+        --group_size $device_num \
+        --device_num 4 \
+        --verbose \
+        --auto_cuda_visible_devices \
+        -m oneflow.distributed.launch \
+        --nproc_per_node $device_num --nnodes=2 --node_rank=$NODE_RANK --master_addr $_MASTER_ADDR \
+        -m pytest --max-worker-restart=0 -x --durations=50 --capture=sys -p no:cacheprovider -p no:randomly --ignore=log
 done

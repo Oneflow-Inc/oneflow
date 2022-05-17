@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import collections
 import math
 from typing import Callable, Dict, Iterator, List, Tuple, Union
 
@@ -110,7 +109,7 @@ class Adam(Optimizer):
 
     def __init__(
         self,
-        parameters: Union[Iterator[Parameter], List[Dict]],
+        params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
@@ -136,22 +135,29 @@ class Adam(Optimizer):
         options["bias_correction1"] = 1.0
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
-        super().__init__(parameters, options)
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
-        self._op = (
-            flow.builtin_op("adam_update")
+        self._op_with_amsgrad = (
+            flow.stateful_op("adam_update")
             .Input("model")
             .Input("model_diff")
             .Input("m")
             .Input("v")
             .Input("max_v")
-            .Attr("l1", 0.0)
-            .Attr("weight_decay", 0.0)
+            .Build()
+        )
+
+        self._op_without_amsgrad = (
+            flow.stateful_op("adam_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("m")
+            .Input("v")
             .Build()
         )
 
@@ -177,9 +183,9 @@ class Adam(Optimizer):
                     )
 
                 kwargs = {
-                    "learning_rate_val": param_group["lr"],
-                    "bias_correction1_val": param_group["bias_correction1"],
-                    "bias_correction2_val": param_group["bias_correction2"],
+                    "learning_rate": param_group["lr"],
+                    "bias_correction1": param_group["bias_correction1"],
+                    "bias_correction2": param_group["bias_correction2"],
                     "l2": param_group["weight_decay"],
                     "beta1": param_group["betas"][0],
                     "beta2": param_group["betas"][1],
@@ -194,14 +200,28 @@ class Adam(Optimizer):
                         self._state[param]["exp_avg"] = flow.zeros_like(param)
                     if "exp_avg_sq" not in self._state[param]:
                         self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
-                    if "max_exp_avg_sq" not in self._state[param]:
-                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
+                    if param_group["amsgrad"]:
+                        if "max_exp_avg_sq" not in self._state[param]:
+                            self._state[param]["max_exp_avg_sq"] = flow.zeros_like(
+                                param
+                            )
+
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
-                    max_v_tensor = self._state[param]["max_exp_avg_sq"]
-                    self._op(
-                        param, param.grad, m_tensor, v_tensor, max_v_tensor, **kwargs,
-                    )
+
+                    if param_group["amsgrad"]:
+                        max_v_tensor = self._state[param]["max_exp_avg_sq"]
+                        flow._C.dispatch_adam_update(
+                            self._op_with_amsgrad,
+                            (param, param.grad, m_tensor, v_tensor, max_v_tensor),
+                            **kwargs,
+                        )
+                    else:
+                        flow._C.dispatch_adam_update(
+                            self._op_without_amsgrad,
+                            (param, param.grad, m_tensor, v_tensor),
+                            **kwargs,
+                        )
 
             self._state["step"] += 1
 
@@ -210,7 +230,7 @@ class Adam(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (
                 param_group["initial_lr"]
@@ -224,22 +244,20 @@ class Adam(Optimizer):
             epsilon = param_group["eps"]
             do_bias_correction = param_group["do_bias_correction"]
             amsgrad = param_group["amsgrad"]
-            optimizer_conf.set_base_learning_rate(lr)
+            optimizer_conf.base_learning_rate = lr
 
-            optimizer_conf.mutable_adam_conf().set_beta1(beta1)
-            optimizer_conf.mutable_adam_conf().set_beta2(beta2)
-            optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
-                do_bias_correction
-            )
-            optimizer_conf.mutable_adam_conf().set_amsgrad(amsgrad)
+            optimizer_conf.adam_conf.beta1 = beta1
+            optimizer_conf.adam_conf.beta2 = beta2
+            optimizer_conf.adam_conf.epsilon = epsilon
+            optimizer_conf.adam_conf.do_bias_correction = do_bias_correction
+            optimizer_conf.adam_conf.amsgrad = amsgrad
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 vars_conf[param].l2 = l2
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

@@ -25,8 +25,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
-    const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
       && out_parallel_desc.parallel_num() != 1 && out_sbp_parallel.has_partial_sum_parallel()) {
     HashMap<int64_t, int64_t> out_id2nearest_in_id;
@@ -62,7 +62,7 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
         zeros_node->Init(out_machine_id, thrd_id, lbi, logical_blob_desc.shape(),
                          logical_blob_desc.data_type(), time_shape);
         nearest_in_node->BuildCtrlRegstDesc(zeros_node);
-        Connect<TaskNode>(nearest_in_node, ctx->task_graph()->NewEdge(), zeros_node);
+        ctx->task_graph()->ConnectWithLbi(nearest_in_node, zeros_node, lbi);
         sorted_out_tasks->emplace_back(zeros_node);
       }
     }

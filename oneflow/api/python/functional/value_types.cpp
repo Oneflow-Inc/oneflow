@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/api/python/functional/value_types.h"
 
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/hash_container.h"
 
 namespace oneflow {
@@ -51,9 +52,10 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kTENSOR_TUPLE_MAYBE, "maybe tensor tuple"},
       {kATTR, "attr"},
       {kATTR_REF, "attr"},
-      {kATTR_MAP, "attr map"},
       {kDTYPE, "data type"},
+      {kDTYPE_LIST, "data type list"},
       {kSHAPE, "shape"},
+      {kSHAPE_LIST, "shape list"},
       {kGENERATOR, "generator"},
       {kGENERATOR_REF, "generator"},
       {kGENERATOR_MAYBE, "maybe generator"},
@@ -62,15 +64,17 @@ HashMap<ValueType, std::string>* GetValueTypeNameMap() {
       {kPARALLEL_DESC, "placement"},
       {kSBP_PARALLEL, "sbp"},
       {kSBP_PARALLEL_LIST, "sbp list"},
+      {kOPEXPR, "opexpr"},
+      {kOPEXPR_REF, "opexpr"},
       {kPY_OBJECT, "python object"},
   };
   return &value_type_name_map;
 }
 
-Maybe<const std::string&> ValueTypeName(ValueType type) {
+const std::string& ValueTypeName(ValueType type) {
   const auto* type_name_map = GetValueTypeNameMap();
   const auto& it = type_name_map->find(type);
-  CHECK_OR_RETURN(it != type_name_map->end()) << "Value type " << type << " has no type name.";
+  CHECK_OR_THROW(it != type_name_map->end()) << "Value type " << type << " has no type name.";
   return it->second;
 }
 

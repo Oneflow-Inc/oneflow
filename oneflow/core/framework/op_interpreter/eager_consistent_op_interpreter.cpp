@@ -32,10 +32,13 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_consistent_id.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/boxing/eager_boxing_logger.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace one {
@@ -65,16 +68,39 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
   return ss.str();
 }
 
-Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
+Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<ConsistentTensorMeta>>& tensor_metas) {
+  if (tensor_metas.empty()) { return false; }
+  for (const auto& tensor_meta : tensor_metas) {
+    if (tensor_meta->shape().elem_cnt() != 0) { return false; }
+  }
+  return true;
+}
+
+constexpr auto* CachedIsAllZeroSizeTensorMeta =
+    DECORATE(&IsAllZeroSizeTensorMeta, ThreadLocalCopiable);
+
+Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> out_parallel_desc,
                                bool current_rank_local_is_valid) {
-  if (!current_rank_local_is_valid) { return input; }
+  const auto& logical_shape = input->shape();
+  // If the input is a tensor of size 0, construct the output directly.
+  if (unlikely(logical_shape->elem_cnt() == 0)) {
+    ConsistentTensorMeta tensor_meta(logical_shape, input->dtype()->data_type(), out_nd_sbp,
+                                     out_parallel_desc);
+    const auto& tensor_impl =
+        JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
+    std::shared_ptr<Tensor> output = std::make_shared<ConsistentTensor>(tensor_impl);
+    return output;
+  }
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
   const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
-  const auto& boxing_interpreter = JUST(
-      mgr->GetEagerBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc));
+  const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
+      in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
+  Global<const EagerBoxingLogger>::Get()->Log(
+      *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
+  if (!current_rank_local_is_valid) { return input; }
   const auto& output = JUST(boxing_interpreter->Interpret(input, in_nd_sbp, out_nd_sbp,
                                                           in_parallel_desc, out_parallel_desc));
   return output;
@@ -88,11 +114,21 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   const auto& parallel_desc = JUST(GetParallelDesc(inputs, ctx));
   std::shared_ptr<const ConsistentTensorInferResult> result;
+  NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
+    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
+    // InferSbp in op is a deterministic algorithm
+    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1, /* force_check */ false));
     const auto& infer_args =
         JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   } else {
+    for (int i = 0; i < outputs->size(); ++i) {
+      if ((*outputs)[i]) {
+        const auto& nd_sbp = JUST((*outputs)[i]->nd_sbp());
+        JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
+      }
+    }
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
   }
@@ -100,12 +136,21 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
-        output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
-    outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    if (!outputs->at(i)) {
+      const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+          output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
+      (*outputs)[i].reset(new ConsistentTensor(tensor_impl));
+    } else {
+      JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
+    }
+  }
+  // Do nothing if output_tensors has 0-size shape. Since the input of some ops is 0-size but the
+  // output is not 0-size, it cannot be judged based on the input, such as flow.cat
+  if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
+    return Maybe<void>::Ok();
   }
   // Run instruction LocalCallOpKernel
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError()
       << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
@@ -137,7 +182,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, result->op_device());
+                                      result, ctx, result->stream());
   }));
   return Maybe<void>::Ok();
 }
@@ -184,8 +229,8 @@ Maybe<void> RawConsistentToConsistent(const ConsistentToConsistentOpExpr& op_exp
   if (out_parallel_id->has_value()) {
     const auto& nd_sbp = JUST(tensor->nd_sbp());
     const auto& parallel_desc = JUST(tensor->parallel_desc());
-    CHECK_OR_RETURN(nd_sbp == out_nd_sbp) << ". nd_sbp: " << *JUST(NdSbpToString(nd_sbp))
-                                          << ", out_nd_sbp" << *JUST(NdSbpToString(out_nd_sbp));
+    CHECK_OR_RETURN(nd_sbp == out_nd_sbp)
+        << ". nd_sbp: " << NdSbpToString(nd_sbp) << ", out_nd_sbp" << NdSbpToString(out_nd_sbp);
     CHECK_OR_RETURN(parallel_desc == out_parallel_desc);
     outputs->at(0) = tensor;
   } else {

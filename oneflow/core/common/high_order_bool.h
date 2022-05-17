@@ -32,7 +32,13 @@ namespace hob {
 
 template<typename Context, typename ValueT>
 struct BaseExpr {
-  virtual ~BaseExpr() = default;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+  // NOTE: Performance will be degraded if the destructor is virtual.
+  //       So please do NOT implement custom destructor in any child classes of BaseExpr,
+  //       and every fields of child classes should be of POD type.
+  ~BaseExpr() = default;
+#pragma GCC diagnostic pop
   ALWAYS_INLINE virtual scalar_or_const_ref_t<ValueT> get(const Context&) const = 0;
   virtual std::string DebugStr(const Context&, bool display_result = true) const = 0;  // NOLINT
   operator bool() = delete;
@@ -40,12 +46,15 @@ struct BaseExpr {
 
 template<typename Context, typename ValueT, typename E>
 struct Expr : public BaseExpr<Context, ValueT> {
-  virtual ~Expr() = default;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+  ~Expr() = default;
+#pragma GCC diagnostic pop
 };
 
 template<typename Context, typename ValueT>
 struct Literal final : public Expr<Context, ValueT, Literal<Context, ValueT>> {
-  Literal(const ValueT& val) : Literal("", val) {}  // NOLINT
+  Literal(const ValueT& val) : Literal(ToString(val), val) {}  // NOLINT
   Literal(const std::string& debug_str, const ValueT& val) : val_(val), debug_str_(debug_str) {}
   ALWAYS_INLINE scalar_or_const_ref_t<ValueT> get(const Context&) const override { return val_; }
   std::string DebugStr(const Context&, bool display_result) const override { return debug_str_; }
@@ -160,7 +169,7 @@ DEFINE_BINARY_FUNCTOR(EqualOrLess, <=)
     std::string l_str = lhs_.DebugStr(ctx, display_result);                                 \
     std::string r_str = rhs_.DebugStr(ctx, display_result);                                 \
     std::ostringstream string_stream;                                                       \
-    string_stream << "(" << l_str << " OF_PP_STRINGIZE(op) " << r_str << ")";               \
+    string_stream << "(" << l_str << " " << OF_PP_STRINGIZE(op) << " " << r_str << ")";     \
     return string_stream.str();                                                             \
   }
 

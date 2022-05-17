@@ -19,18 +19,24 @@ limitations under the License.
 namespace oneflow {
 
 Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr) {
-  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->AlignedByteSizeOfBlobHeader());
+  Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->AlignedByteSizeOfBlobHeader(), 0);
 }
 
 Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
            char* body_ptr) {
-  Init(mem_case, blob_desc, header_ptr, body_ptr);
+  Init(mem_case, blob_desc, header_ptr, body_ptr, 0);
+}
+
+Blob::Blob(const MemoryCase& mem_case,  // NOLINT，Blob::Blob(...) { // NOLINT
+           const BlobDesc* blob_desc, char* header_ptr, char* body_ptr, const int64_t offset) {
+  Init(mem_case, blob_desc, header_ptr, body_ptr, offset);
 }
 
 void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
-                char* body_ptr) {
+                char* body_ptr, const int64_t offset) {
   mem_case_ = mem_case;
   blob_desc_ = blob_desc;
+  storage_offset_ = offset;
   dptr_ = body_ptr;
   header_ptr_ = header_ptr;
   this->blob_access_checker_ = Global<BlobAccessCheckerIf<true, true>>::Get();

@@ -44,9 +44,10 @@ Maybe<BoxingDividor> RawReplaceOutDeviceType(DeviceType device_type) {
 
 }  // namespace
 
-decltype(ReplaceInDeviceType) ReplaceInDeviceType = DECORATE(&RawReplaceInDeviceType, ThreadLocal);
+decltype(ReplaceInDeviceType) ReplaceInDeviceType =
+    DECORATE(&RawReplaceInDeviceType, ThreadLocalCached);
 decltype(ReplaceOutDeviceType) ReplaceOutDeviceType =
-    DECORATE(&RawReplaceOutDeviceType, ThreadLocal);
+    DECORATE(&RawReplaceOutDeviceType, ThreadLocalCached);
 
 namespace {
 
@@ -56,7 +57,7 @@ Maybe<Symbol<PlacedNdSbp>> RawFlattenHierarchy(Symbol<PlacedNdSbp> placed_nd_sbp
   for (const auto& sbp_parallel : placed_nd_sbp->nd_sbp()->sbp_parallel()) {
     CHECK_OR_RETURN(sbp_parallel == first_sbp_parallel);
   }
-  std::vector<Symbol<cfg::SbpParallel>> vec{SymbolOf(first_sbp_parallel)};
+  std::vector<Symbol<SbpParallel>> vec{SymbolOf(first_sbp_parallel)};
   const auto& flattened_nd_sbp = JUST(GetNdSbp(vec));
   ParallelConf flattened_parallel_conf(placed_nd_sbp->placement()->parallel_conf());
   flattened_parallel_conf.clear_hierarchy();
@@ -64,7 +65,7 @@ Maybe<Symbol<PlacedNdSbp>> RawFlattenHierarchy(Symbol<PlacedNdSbp> placed_nd_sbp
   return JUST(PlacedNdSbp::New(flattened_nd_sbp, flattened_placement));
 }
 
-static constexpr auto* FlattenHierarchy = DECORATE(&RawFlattenHierarchy, ThreadLocal);
+static constexpr auto* FlattenHierarchy = DECORATE(&RawFlattenHierarchy, ThreadLocalCached);
 
 Maybe<BoxingDividor> RawFlattenInHierarchy() {
   return std::make_shared<BoxingDividor>(
@@ -74,30 +75,65 @@ Maybe<BoxingDividor> RawFlattenInHierarchy() {
       });
 }
 
+Maybe<Symbol<PlacedNdSbp>> RawUnflattenHierarchy(Symbol<PlacedNdSbp> in_placed_nd_sbp,
+                                                 Symbol<PlacedNdSbp> out_placed_nd_sbp) {
+  CHECK_GE_OR_RETURN(in_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  CHECK_GE_OR_RETURN(out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  const auto& in_sbp_parallel = in_placed_nd_sbp->nd_sbp()->sbp_parallel(0);
+  NdSbp unflattened_nd_sbp;
+  for (int64_t i = 0; i < out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(); ++i) {
+    unflattened_nd_sbp.mutable_sbp_parallel()->Add()->CopyFrom(in_sbp_parallel);
+  }
+  return JUST(PlacedNdSbp::New(SymbolOf(unflattened_nd_sbp), out_placed_nd_sbp->placement()));
+}
+
+static constexpr auto* UnflattenHierarchy = DECORATE(&RawUnflattenHierarchy, ThreadLocalCached);
+
+Maybe<BoxingDividor> RawUnflattenInHierarchy() {
+  return std::make_shared<BoxingDividor>(
+      "UnflattenInHierarchy",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return UnflattenHierarchy(in, out);
+      });
+}
+
+Maybe<BoxingDividor> RawUnflattenOutHierarchy() {
+  return std::make_shared<BoxingDividor>(
+      "UnflattenOutHierarchy",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return UnflattenHierarchy(out, in);
+      });
+}
+
 }  // namespace
 
-decltype(FlattenInHierarchy) FlattenInHierarchy = DECORATE(&RawFlattenInHierarchy, ThreadLocal);
+decltype(FlattenInHierarchy) FlattenInHierarchy =
+    DECORATE(&RawFlattenInHierarchy, ThreadLocalCached);
+decltype(UnflattenInHierarchy) UnflattenInHierarchy =
+    DECORATE(&RawUnflattenInHierarchy, ThreadLocalCached);
+decltype(UnflattenOutHierarchy) UnflattenOutHierarchy =
+    DECORATE(&RawUnflattenOutHierarchy, ThreadLocalCached);
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
-  cfg::NdSbp partial_sum_nd_sbp;
+Maybe<Symbol<NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
+  NdSbp partial_sum_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     partial_sum_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
   }
   return SymbolOf(partial_sum_nd_sbp);
 }
 
-auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocal);
+auto* CachedGetAllPartialSumNdSbp = DECORATE(&GetAllPartialSumNdSbp, ThreadLocalCached);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithPartialSum(Symbol<PlacedNdSbp> placed_nd_sbp) {
-  Symbol<cfg::NdSbp> partial_sum_nd_sbp =
+  Symbol<NdSbp> partial_sum_nd_sbp =
       JUST(CachedGetAllPartialSumNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
   return JUST(PlacedNdSbp::New(partial_sum_nd_sbp, placed_nd_sbp->placement()));
 }
 
 static constexpr auto* ReplaceNdSbpWithPartialSum =
-    DECORATE(&RawReplaceNdSbpWithPartialSum, ThreadLocal);
+    DECORATE(&RawReplaceNdSbpWithPartialSum, ThreadLocalCached);
 
 Maybe<BoxingDividor> RawOutPlacementAndPartialSum() {
   return std::make_shared<BoxingDividor>(
@@ -110,28 +146,28 @@ Maybe<BoxingDividor> RawOutPlacementAndPartialSum() {
 }  // namespace
 
 decltype(OutPlacementAndPartialSum) OutPlacementAndPartialSum =
-    DECORATE(&RawOutPlacementAndPartialSum, ThreadLocal);
+    DECORATE(&RawOutPlacementAndPartialSum, ThreadLocalCached);
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
-  cfg::NdSbp broadcast_nd_sbp;
+Maybe<Symbol<NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
+  NdSbp broadcast_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   }
   return SymbolOf(broadcast_nd_sbp);
 }
 
-auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
+auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocalCached);
 
 Maybe<Symbol<PlacedNdSbp>> RawReplaceNdSbpWithBroadcast(Symbol<PlacedNdSbp> placed_nd_sbp) {
-  Symbol<cfg::NdSbp> broadcast_nd_sbp =
+  Symbol<NdSbp> broadcast_nd_sbp =
       JUST(CachedGetAllBroadcastNdSbp(placed_nd_sbp->nd_sbp()->sbp_parallel_size()));
   return JUST(PlacedNdSbp::New(broadcast_nd_sbp, placed_nd_sbp->placement()));
 }
 
 static constexpr auto* ReplaceNdSbpWithBroadcast =
-    DECORATE(&RawReplaceNdSbpWithBroadcast, ThreadLocal);
+    DECORATE(&RawReplaceNdSbpWithBroadcast, ThreadLocalCached);
 
 Maybe<BoxingDividor> RawInPlacementAndBroadcast() {
   return std::make_shared<BoxingDividor>(
@@ -152,25 +188,25 @@ Maybe<BoxingDividor> RawOutPlacementAndBroadcast() {
 }  // namespace
 
 decltype(InPlacementAndBroadcast) InPlacementAndBroadcast =
-    DECORATE(&RawInPlacementAndBroadcast, ThreadLocal);
+    DECORATE(&RawInPlacementAndBroadcast, ThreadLocalCached);
 decltype(OutPlacementAndBroadcast) OutPlacementAndBroadcast =
-    DECORATE(&RawOutPlacementAndBroadcast, ThreadLocal);
+    DECORATE(&RawOutPlacementAndBroadcast, ThreadLocalCached);
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetSplitNdSbp(int64_t axis) {
-  cfg::NdSbp split_nd_sbp;
+Maybe<Symbol<NdSbp>> GetSplitNdSbp(int64_t axis) {
+  NdSbp split_nd_sbp;
   split_nd_sbp.mutable_sbp_parallel()->Add()->mutable_split_parallel()->set_axis(axis);
   return SymbolOf(split_nd_sbp);
 }
 
-auto* CachedGetSplitNdSbp = DECORATE(&GetSplitNdSbp, ThreadLocal);
+auto* CachedGetSplitNdSbp = DECORATE(&GetSplitNdSbp, ThreadLocalCached);
 
 Maybe<BoxingDividor> RawInPlacementAndSplit(int64_t axis) {
   return std::make_shared<BoxingDividor>(
       "InPlacementAndSplit",
       [=](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
-        Symbol<cfg::NdSbp> split_nd_sbp = JUST(CachedGetSplitNdSbp(axis));
+        Symbol<NdSbp> split_nd_sbp = JUST(CachedGetSplitNdSbp(axis));
         return PlacedNdSbp::New(split_nd_sbp, in->placement());
       });
 }
@@ -179,28 +215,32 @@ Maybe<BoxingDividor> RawOutPlacementAndSplit(int64_t axis) {
   return std::make_shared<BoxingDividor>(
       "OutPlacementAndSplit",
       [=](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
-        Symbol<cfg::NdSbp> split_nd_sbp = JUST(CachedGetSplitNdSbp(axis));
+        Symbol<NdSbp> split_nd_sbp = JUST(CachedGetSplitNdSbp(axis));
         return PlacedNdSbp::New(split_nd_sbp, out->placement());
       });
 }
 
 }  // namespace
 
-decltype(InPlacementAndSplit) InPlacementAndSplit = DECORATE(&RawInPlacementAndSplit, ThreadLocal);
+decltype(InPlacementAndSplit) InPlacementAndSplit =
+    DECORATE(&RawInPlacementAndSplit, ThreadLocalCached);
 decltype(OutPlacementAndSplit) OutPlacementAndSplit =
-    DECORATE(&RawOutPlacementAndSplit, ThreadLocal);
+    DECORATE(&RawOutPlacementAndSplit, ThreadLocalCached);
 
 namespace {
 
 Maybe<Symbol<ParallelDesc>> GetFisrtDeviceOfPlacement(Symbol<ParallelDesc> placement) {
-  std::shared_ptr<cfg::ParallelConf> parallel_conf = std::make_shared<cfg::ParallelConf>();
+  ParallelConf parallel_conf;
   int64_t machine_id = JUST(placement->MachineId4ParallelId(0));
   int64_t device_id = JUST(placement->DeviceId4ParallelId(0));
-  parallel_conf->set_device_tag(placement->device_tag());
-  parallel_conf->add_device_name(std::string("@") + std::to_string(machine_id) + ":"
-                                 + std::to_string(device_id));
+  parallel_conf.set_device_tag(placement->device_tag());
+  parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                + std::to_string(device_id));
+  for (int64_t i = 0; i < placement->hierarchy()->NumAxes(); ++i) {
+    parallel_conf.mutable_hierarchy()->add_dim(1);
+  }
   std::shared_ptr<ParallelDesc> parallel_desc;
-  JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
     parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
     return Maybe<void>::Ok();
   }));
@@ -229,7 +269,35 @@ Maybe<BoxingDividor> RawOutFirstDeviceAndAllBroadcast() {
 }  //  namespace
 
 decltype(InFirstDeviceAndAllBroadcast) InFirstDeviceAndAllBroadcast =
-    DECORATE(&RawInFirstDeviceAndAllBroadcast, ThreadLocal);
+    DECORATE(&RawInFirstDeviceAndAllBroadcast, ThreadLocalCached);
 decltype(OutFirstDeviceAndAllBroadcast) OutFirstDeviceAndAllBroadcast =
-    DECORATE(&RawOutFirstDeviceAndAllBroadcast, ThreadLocal);
+    DECORATE(&RawOutFirstDeviceAndAllBroadcast, ThreadLocalCached);
+
+namespace {
+
+Maybe<Symbol<PlacedNdSbp>> RawPlacementAndRepeatFirstSbp(Symbol<PlacedNdSbp> placed_nd_sbp) {
+  const auto& first_sbp_parallel = placed_nd_sbp->nd_sbp()->sbp_parallel(0);
+  NdSbp out_nd_sbp;
+  for (int64_t i = 0; i < placed_nd_sbp->nd_sbp()->sbp_parallel_size(); ++i) {
+    out_nd_sbp.mutable_sbp_parallel()->Add()->CopyFrom(first_sbp_parallel);
+  }
+  return JUST(PlacedNdSbp::New(SymbolOf(out_nd_sbp), placed_nd_sbp->placement()));
+}
+
+static constexpr auto* PlacementAndRepeatFirstSbp =
+    DECORATE(&RawPlacementAndRepeatFirstSbp, ThreadLocalCached);
+
+Maybe<BoxingDividor> RawInPlacementAndRepeatFirstSbp() {
+  return std::make_shared<BoxingDividor>(
+      "InPlacementAndRepeatFirstSbp",
+      [](Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) -> Maybe<Symbol<PlacedNdSbp>> {
+        return PlacementAndRepeatFirstSbp(in);
+      });
+}
+
+}  // namespace
+
+decltype(InPlacementAndRepeatFirstSbp) InPlacementAndRepeatFirstSbp =
+    DECORATE(&RawInPlacementAndRepeatFirstSbp, ThreadLocalCached);
+
 }  // namespace oneflow

@@ -21,38 +21,38 @@ limitations under the License.
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/interpret_type.h"
-#include "oneflow/core/vm/stream_type_id.h"
 
 namespace oneflow {
 namespace vm {
+
+class StreamType;
 
 class StreamId final {
  public:
   using self_type = StreamId;
   void __Init__() {}
-  void __Init__(const StreamTypeId& stream_type_id, int64_t global_device_id) {
-    stream_type_id_.CopyFrom(stream_type_id);
+  void __Init__(const StreamType* stream_type, int64_t global_device_id) {
+    stream_type_ = stream_type;
     global_device_id_ = global_device_id;
   }
 
-  void CopyFrom(const StreamId& rhs) { __Init__(rhs.stream_type_id_, rhs.global_device_id_); }
+  void CopyFrom(const StreamId& rhs) { __Init__(rhs.stream_type_, rhs.global_device_id_); }
 
-  const StreamTypeId& stream_type_id() const { return stream_type_id_; }
+  const StreamType& stream_type() const { return *stream_type_; }
   int64_t global_device_id() const { return global_device_id_; }
 
   bool operator==(const StreamId& rhs) const {
-    return stream_type_id_ == rhs.stream_type_id_ && global_device_id_ == rhs.global_device_id_;
+    return stream_type_ == rhs.stream_type_ && global_device_id_ == rhs.global_device_id_;
   }
 
   bool operator<(const StreamId& rhs) const {
-    if (!(stream_type_id_ == rhs.stream_type_id_)) { return stream_type_id_ < rhs.stream_type_id_; }
+    if (!(stream_type_ == rhs.stream_type_)) { return stream_type_ < rhs.stream_type_; }
     return global_device_id_ < rhs.global_device_id_;
   }
   bool operator<=(const StreamId& rhs) const { return *this < rhs || *this == rhs; }
 
  private:
-  StreamTypeId stream_type_id_;
+  const StreamType* stream_type_;
   int64_t global_device_id_;
 };
 
@@ -61,15 +61,15 @@ class StreamDesc final : public intrusive::Base {
   // Getters
   int32_t num_streams_per_machine() const { return num_streams_per_machine_; }
   int32_t num_streams_per_thread() const { return num_streams_per_thread_; }
-  const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
+  const StreamType& stream_type() const { return *stream_type_key_.key(); }
   // Setters
   void set_num_streams_per_machine(int32_t val) { num_streams_per_machine_ = val; }
   void set_num_streams_per_thread(int32_t val) { num_streams_per_thread_ = val; }
-  StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
+  void set_stream_type(const StreamType* stream_type) { *stream_type_key_.mut_key() = stream_type; }
 
   // methods
   void __Init__() {}
-  void __Init__(const StreamTypeId& stream_type_id, int32_t num_streams_per_machine,
+  void __Init__(const StreamType* stream_type, int32_t num_streams_per_machine,
                 int32_t num_streams_per_thread);
   int32_t num_threads() const;
   int32_t parallel_num() const { return num_streams_per_machine(); }
@@ -82,7 +82,7 @@ class StreamDesc final : public intrusive::Base {
       : intrusive_ref_(),
         num_streams_per_machine_(),
         num_streams_per_thread_(),
-        stream_type_id_() {}
+        stream_type_key_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   int32_t num_streams_per_machine_;
@@ -90,7 +90,7 @@ class StreamDesc final : public intrusive::Base {
 
  public:
   // skiplist hooks
-  intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7> stream_type_id_;
+  intrusive::SkipListHook<const StreamType*, 7> stream_type_key_;
 };
 
 }  // namespace vm

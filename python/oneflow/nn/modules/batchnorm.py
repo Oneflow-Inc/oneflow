@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import Union
+import os
 
 import oneflow as flow
 from oneflow.nn.module import Module
@@ -43,17 +44,21 @@ class _NormBase(Module):
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
-            self.register_buffer("running_mean", flow.Tensor(num_features))
-            self.register_buffer("running_var", flow.Tensor(num_features))
+            self.register_buffer("running_mean", flow.zeros(num_features))
+            self.register_buffer("running_var", flow.ones(num_features))
+            self.register_buffer("num_batches_tracked", flow.tensor(0, dtype=flow.long))
         else:
-            self.register_parameter("running_mean", None)
-            self.register_parameter("running_var", None)
+            self.register_buffer("running_mean", None)
+            self.register_buffer("running_var", None)
+            self.register_buffer("num_batches_tracked", None)
+
         self.reset_parameters()
 
     def reset_running_stats(self) -> None:
         if self.track_running_stats:
-            self.running_mean.fill_(0)
+            self.running_mean.zero_()
             self.running_var.fill_(1)
+            self.num_batches_tracked.zero_()
 
     def reset_parameters(self) -> None:
         self.reset_running_stats()
@@ -74,6 +79,9 @@ class _NormBase(Module):
         unexpected_keys,
         error_msgs,
     ):
+        if self.track_running_stats:
+            num_batches_tracked_key = prefix + "num_batches_tracked"
+            state_dict[num_batches_tracked_key] = flow.tensor(0, dtype=flow.long)
         super(_NormBase, self)._load_from_state_dict(
             state_dict,
             prefix,
@@ -100,22 +108,25 @@ class _BatchNorm(_NormBase):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
+        self.channel_axis = 1
 
     def forward(self, x):
         self._check_input_dim(x)
+        if self.training and self.track_running_stats:
+            if self.num_batches_tracked is not None:
+                self.num_batches_tracked.add_(1)
         if self.training:
             is_training = True
         else:
             is_training = (self.running_mean is None) and (self.running_var is None)
+        # NOTE(lixiang): If it is training mode, pass running_mean and running_var directly to the functor layer.
         return flow._C.normalization(
             x,
-            self.running_mean
-            if not self.training or self.track_running_stats
-            else None,
-            self.running_var if not self.training or self.track_running_stats else None,
+            self.running_mean,
+            self.running_var,
             self.weight,
             self.bias,
-            axis=1,
+            axis=self.channel_axis,
             epsilon=self.eps,
             momentum=self.momentum,
             is_training=is_training,
@@ -268,6 +279,18 @@ class BatchNorm2d(_BatchNorm):
         >>> y = m(x)
 
     """
+
+    def __init__(
+        self,
+        num_features,
+        eps=1e-05,
+        momentum=0.1,
+        affine=True,
+        track_running_stats=True,
+    ):
+        super().__init__(num_features, eps, momentum, affine, track_running_stats)
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_axis = 3
 
     def _check_input_dim(self, input):
         if input.ndim != 4:

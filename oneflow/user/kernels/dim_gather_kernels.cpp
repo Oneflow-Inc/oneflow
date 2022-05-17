@@ -59,10 +59,9 @@ class DimGatherKernel final : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_vec.data(), ndim);
     shape2dims(index_tensor->shape());
     DimOpIndexNdHelper<IDX_T> index_nd_helper(shape_vec.data(), ndim);
-
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->stream(), input_nd_helper, index_nd_helper,
-                                                 ndim, index_tensor->shape().elem_cnt(), dim, index,
-                                                 input, output);
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(
+        ctx->stream(), input_nd_helper, index_nd_helper, ndim, index_tensor->shape().elem_cnt(),
+        input_tensor->shape().At(dim), dim, index, input, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -75,14 +74,15 @@ class DimGatherKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("input", 0) == OF_PP_PAIR_SECOND(dtype_pair))    \
                        && (user_op::HobDataType("index", 0) == OF_PP_PAIR_SECOND(itype_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCPU),
+    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-    REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCUDA),
-    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DIM_GATHER_KERNEL, (DeviceType::kCUDA),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
 }  // namespace user_op

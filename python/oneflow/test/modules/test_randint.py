@@ -19,9 +19,9 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-
 import oneflow.unittest
-from test_util import GenArgList
+
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_randint(test_case, device, shape, low, high):
@@ -81,14 +81,7 @@ def _test_0rank(test_case, device, shape, low, high):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRandint(flow.unittest.TestCase):
-    def test_consistent_naive(test_case):
-        placement = flow.placement("cpu", {0: [0]})
-        sbp = (flow.sbp.broadcast,)
-        x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp)
-        test_case.assertEqual(x.sbp, sbp)
-        test_case.assertEqual(x.placement, placement)
-
-    def test_consistent_different_types(test_case):
+    def test_global_different_types(test_case):
         for dtype in [
             flow.int8,
             flow.int32,
@@ -96,7 +89,7 @@ class TestRandint(flow.unittest.TestCase):
             flow.float32,
             flow.float64,
         ]:
-            placement = flow.placement("cpu", {0: [0]})
+            placement = flow.placement("cpu", ranks=[0])
             sbp = (flow.sbp.broadcast,)
             x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp, dtype=dtype)
             test_case.assertEqual(x.dtype, dtype)
@@ -146,6 +139,14 @@ class TestRandint(flow.unittest.TestCase):
         arg_dict["high"] = [1000 + np.random.randint(1, 10) for i in range(10)]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestRandintOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.randint(low=1, high=2, size=flow.Size((2, 3)), device="cuda:1")
+        test_case.assertEqual(x.device, flow.device("cuda:1"))
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/user/summary/summary_converter.h"
 
 #include <google/protobuf/text_format.h>
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 
@@ -60,22 +60,16 @@ Maybe<void> GetOpNames(const Job& job, HashSet<std::string>* op_names) {
 }
 
 Maybe<void> EagerRunOps(const Job& job, HashSet<std::string>* op_names,
-                        void (ForeignCallback::*interpret)(
-                            const std::shared_ptr<cfg::OpAttribute>& op_attribute,
-                            const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const) {
+                        void (ForeignCallback::*interpret)(const OpAttribute& op_attribute,
+                                                           const ParallelConf& parallel_conf)
+                            const) {
   const auto& op_graph = JUST(OpGraph::New(job));
   const auto* foreign_callback = JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>());
   JUST(op_graph->ForEachOpNode([&](const OpNode& op_node) -> Maybe<void> {
     if (!op_names->insert(op_node.op().op_name()).second) { return Maybe<void>::Ok(); }
     const auto& op_attribute = op_node.op().GetOpAttributeWithoutOpNameAndLbn();
     const auto& parallel_conf = op_node.parallel_desc().parallel_conf();
-    {
-      const std::shared_ptr<cfg::OpAttribute>& cfg_op_attribute =
-          std::make_shared<cfg::OpAttribute>(*op_attribute);
-      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-          std::make_shared<cfg::ParallelConf>(parallel_conf);
-      (foreign_callback->get()->*interpret)(cfg_op_attribute, cfg_parallel_conf);
-    }
+    (foreign_callback->get()->*interpret)(*op_attribute, parallel_conf);
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
@@ -153,16 +147,13 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
 }
 
 Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
-    const Operator& op, cfg::SbpSignature* sbp_sig_conf,
-    HashMap<std::string, bool>* ibn2disable_boxing) const {
+    const Operator& op, SbpSignature* sbp_sig_conf) const {
   auto op_conf_without_split_hint = std::make_shared<OperatorConf>(op.op_conf());
   for (const std::string& ibn : op.input_bns()) {
     std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.op_conf(), ibn);
-    cfg::SbpParallel sbp_parallel;
+    SbpParallel sbp_parallel;
     bool has_sbp_hint = JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_hint, &sbp_parallel));
-    bool has_disable_boxing_hint =
-        JUST(ParseDisableBoxingFlag(lbn_may_with_hint, &(*ibn2disable_boxing)[ibn]));
-    if (has_sbp_hint || has_disable_boxing_hint) {
+    if (has_sbp_hint) {
       (*(sbp_sig_conf->mutable_bn_in_op2sbp_parallel()))[ibn] = sbp_parallel;
       const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
       std::string lbn = GenLogicalBlobName(lbi);
@@ -173,19 +164,20 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
   return op_conf_without_split_hint;
 }
 
-void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
-    const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
-    const cfg::NdSbpSignature& nd_sbp_signature, bool is_mirrored_parallel_view) const {
+void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& operator_conf,
+                                                            const ParallelDesc& parallel_desc,
+                                                            const NdSbpSignature& nd_sbp_signature,
+                                                            bool is_mirrored_parallel_view) const {
   auto* op_name2sbp_sig =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
   auto* op_name2nd_sbp_sig =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2nd_sbp_signature_conf();
   if (nd_sbp_signature.bn_in_op2nd_sbp().size() > 0) {
-    nd_sbp_signature.ToProto(&(*op_name2nd_sbp_sig)[operator_conf.name()]);
+    (*op_name2nd_sbp_sig)[operator_conf.name()] = nd_sbp_signature;
     if (parallel_desc.hierarchy()->NumAxes() == 1) {
-      cfg::SbpSignature sbp_signature;
+      SbpSignature sbp_signature;
       NdSbpSignatureToSbpSignature(nd_sbp_signature, &sbp_signature);
-      sbp_signature.ToProto(&(*op_name2sbp_sig)[operator_conf.name()]);
+      (*op_name2sbp_sig)[operator_conf.name()] = sbp_signature;
     }
   }
   auto* op_name2is_mirrored_parallel_view =
@@ -227,7 +219,7 @@ Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
 }
 
 Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(Operator* op,
-                                                 const cfg::NdSbpSignature& nd_sbp_sig_conf,
+                                                 const NdSbpSignature& nd_sbp_sig_conf,
                                                  const ParallelDesc& parallel_desc) {
   HashMap<std::string, NdSbpInferHint> ibn2nd_sbp_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
@@ -244,7 +236,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutNdSbp(Operator* op,
         << Error::LogicalBlobNameNotExistError() << "when infer op_name: " << op->op_name()
         << " consumed op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
         << " not infer parallel distribution";
-    const cfg::NdSbp* nd_sbp = &nd_sbp_it->second;
+    const NdSbp* nd_sbp = &nd_sbp_it->second;
     ibn2nd_sbp_infer_hint.emplace(ibn, NdSbpInferHint(pd, logical_blob_desc, nd_sbp));
   }
 
@@ -330,7 +322,7 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
       Shape current_shape = logical_blob_desc.shape();
       for (int64_t i = 0; i < pair.second.sbp_parallel_size(); ++i) {
-        const cfg::SbpParallel& sbp_parallel = pair.second.sbp_parallel(i);
+        const SbpParallel& sbp_parallel = pair.second.sbp_parallel(i);
         if (sbp_parallel.has_split_parallel()) {
           const int64_t axis = sbp_parallel.split_parallel().axis();
           CHECK_GT_OR_RETURN(current_shape.At(axis), 0);
@@ -372,18 +364,24 @@ void JobBuildAndInferCtx::InitIbn2DisableBoxing(const Operator& op,
   }
 }
 
-void JobBuildAndInferCtx::UpdateLbi2DisableBoxing(
-    const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) {
-  bool disable_boxing = false;
-  for (const auto& ibn : op.input_bns()) {
-    if (ibn2disable_boxing.at(ibn)) {
-      disable_boxing = true;
-      break;
+Maybe<NdSbpSignature> JobBuildAndInferCtx::InitConstraitNdSbpSignature(
+    const Operator& op, const HashMap<std::string, bool>& ibn2disable_boxing) const {
+  auto nd_sbp_sig = std::make_shared<NdSbpSignature>();
+  for (const auto& it : ibn2disable_boxing) {
+    if (it.second) {
+      const auto& ibn = it.first;
+      const LogicalBlobId& lbi = op.BnInOp2Lbi(ibn);
+      const auto& nd_sbp_iter = lbi2nd_sbp_from_producer_view_.find(lbi);
+      if (nd_sbp_iter == lbi2nd_sbp_from_producer_view_.end()) {
+        return Error::RuntimeError()
+               << "The nd_sbp of input " << ibn << " (tensor name is " << GenLogicalBlobName(lbi)
+               << ") is not found for operation " << op.op_name()
+               << ". It maybe caused by an invalid inplace operation.";
+      }
+      (*(nd_sbp_sig->mutable_bn_in_op2nd_sbp()))[ibn] = lbi2nd_sbp_from_producer_view_.at(lbi);
     }
   }
-  for (const auto& obn : op.output_bns()) {
-    lbi2disable_boxing_[op.BnInOp2Lbi(obn)] = disable_boxing;
-  }
+  return nd_sbp_sig;
 }
 
 bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
@@ -394,8 +392,7 @@ bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
   return false;
 }
 
-Maybe<const cfg::SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(
-    const LogicalBlobId& lbi) const {
+Maybe<const SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
   const auto& iter = lbi2nd_sbp_from_producer_view_.find(lbi);
   CHECK_OR_RETURN(iter != lbi2nd_sbp_from_producer_view_.end())
       << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
@@ -569,15 +566,14 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   op_name2op_.emplace(op_name, JUST(ConstructOp(op_conf)));
   Operator* op = op_name2op_.at(op_name).get();
 
-  cfg::SbpSignature sbp_sig_conf;
+  SbpSignature sbp_sig_conf;
   HashMap<std::string, bool> ibn2disable_boxing;
   InitIbn2DisableBoxing(*op, &ibn2disable_boxing);
-  auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
+  auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf));
   auto parallel_conf = JUST(InferOpParallelConf(*op, origin_parallel_conf, ibn2disable_boxing));
   ParallelDesc parallel_desc(*parallel_conf);
   JUST(op->FillOpParallelDesc(parallel_desc));
   JUST(AddOpNameParallelConf2Placement(op_name, *parallel_conf));
-  UpdateLbi2DisableBoxing(*op, ibn2disable_boxing);
 
   auto GetBlobDesc4BnInOp = [&](const std::string& bn) -> BlobDesc* {
     const LogicalBlobId& lbi = op->BnInOp2Lbi(bn);
@@ -587,13 +583,17 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     return nullptr;
   };
   JUST(op->FillLogicalInBlobDesc(GetBlobDesc4BnInOp));
+  JUST(op->InferParallelSignatureIf());
 
   // infer mirrored signature
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
 
   // infer nd_sbp signature
-  cfg::NdSbpSignature nd_sbp_sig_conf;
-  SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
+  NdSbpSignature nd_sbp_sig_conf = *JUST(InitConstraitNdSbpSignature(*op, ibn2disable_boxing));
+  // Override constrait nd_sbp if sbp hint is given
+  if (!sbp_sig_conf.bn_in_op2sbp_parallel().empty()) {
+    SbpSignatureToNdSbpSignature(sbp_sig_conf, &nd_sbp_sig_conf);
+  }
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, nd_sbp_sig_conf,
                                     is_mirrored_parallel_view);
   JUST(InferOpOutNdSbp(op, nd_sbp_sig_conf, parallel_desc));
@@ -613,7 +613,6 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
     }
     return &iter->second;
   };
-  JUST(op->InferParallelSignatureIf());
   for (const auto& bn : op->output_bns()) {
     lbi2parallel_desc_from_producer_view_.emplace(op->BnInOp2Lbi(bn),
                                                   *JUST(op->GetParallelDesc4BnInOp(bn)));
@@ -663,12 +662,19 @@ Maybe<bool> JobBuildAndInferCtx::IsDynamic(const std::string& lbn) const {
   return lbi2logical_blob_desc_.at(GenLogicalBlobId(lbn))->is_dynamic();
 }
 
-Maybe<bool> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) const {
+Maybe<bool> JobBuildAndInferCtx::IsDisableBoxing(const std::string& lbn) const {
   JUST(CheckLbnValidAndExist(lbn));
   LogicalBlobId lbi(GenLogicalBlobId(lbn));
   const auto& iter = lbi2disable_boxing_.find(lbi);
   CHECK_OR_RETURN(iter != lbi2disable_boxing_.end());
   return iter->second;
+}
+
+Maybe<void> JobBuildAndInferCtx::DisableBoxing(const std::string& lbn) {
+  JUST(CheckLbnValidAndExist(lbn));
+  LogicalBlobId lbi(GenLogicalBlobId(lbn));
+  lbi2disable_boxing_[lbi] = true;
+  return Maybe<void>::Ok();
 }
 
 Maybe<Operator*> JobBuildAndInferCtx::Op4OpName(const std::string& op_name) const {
@@ -864,7 +870,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
   const std::string& lbn = GenLogicalBlobName(lbi);
   const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
   if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
-  const cfg::SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
+  const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
   LogicalBlobId mirrored_lbi;
   mirrored_lbi.set_op_name(kAutoMirroredBlobNamePrefix + NewUniqueId());
@@ -922,7 +928,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   const std::string& lbn = GenLogicalBlobName(lbi);
   const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
   if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
-  const cfg::SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
+  const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
   CHECK_OR_RETURN(!sbp.has_partial_sum_parallel())
       << "`P' consistant blob is not compatible to mirrored blob";
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
@@ -939,7 +945,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
   cast_to_mirrored_conf->set_in(lbn);
   cast_to_mirrored_conf->set_out("out");
-  sbp.ToProto(cast_to_mirrored_conf->mutable_sbp_parallel());
+  *cast_to_mirrored_conf->mutable_sbp_parallel() = sbp;
   LogicalBlobId mirrored_lbi;
   mirrored_lbi.set_op_name(op_conf.name());
   mirrored_lbi.set_blob_name("out");
@@ -947,14 +953,8 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   (*mut_mirrored_lbi2sub_lbis())[mirrored_lbi].emplace_back(mirrored_lbi);
   const auto& parallel_conf = parallel_desc.parallel_conf();
   const auto& op_attribute = JUST(AddAndInferConsistentOp(op_conf));
-  {
-    const std::shared_ptr<cfg::OpAttribute>& cfg_op_attribute =
-        std::make_shared<cfg::OpAttribute>(*op_attribute);
-    const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-        std::make_shared<cfg::ParallelConf>(parallel_conf);
-    (*JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>()))
-        ->EagerMirroredCast(cfg_op_attribute, cfg_parallel_conf);
-  }
+  (*JUST(GlobalMaybe<std::shared_ptr<ForeignCallback>>()))
+      ->EagerMirroredCast(*op_attribute, parallel_conf);
   return mirrored_lbi;
 }
 
@@ -965,8 +965,38 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   Global<JobDesc>::Delete();
   auto scope = std::make_unique<GlobalJobDescScope>(mut_job()->job_conf(), job_id());
   JobPassCtx job_pass_ctx(GlobalJobDesc());
-  auto DoPass = [&](const std::string& pass_name) -> Maybe<void> {
-    return JobPass4Name(pass_name)(mut_job(), &job_pass_ctx);
+  const auto& job_name = job().job_conf().job_name();
+  auto LogJob = [&](const std::string& name_suffix) -> void {
+    std::string full_log_name =
+        job_name + "-job_id_" + std::to_string(job_id()) + "-" + name_suffix;
+    TeePersistentLogStream::Create(full_log_name)->Write(job());
+    Global<OpGraph>::New(job());
+    Global<OpGraph>::Get()->ToDotWithFilePath(full_log_name + ".dot");
+    Global<OpGraph>::Delete();
+  };
+  std::string debug_pass_name = GetStringFromEnv("ONEFLOW_DEBUG_PASS", "");
+  auto NeedLogJob = [&](const std::string& pass_name) -> bool {
+    if ("ALL" == debug_pass_name) {
+      return true;
+    } else if (pass_name == debug_pass_name) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  int32_t pass_cnt = 0;
+  auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
+    if (unlikely(NeedLogJob(pass_name))) {
+      std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
+      LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-before");
+    }
+    JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
+    if (unlikely(NeedLogJob(pass_name))) {
+      std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
+      LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-after");
+    }
+    ++pass_cnt;
+    return Maybe<void>::Ok();
   };
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
@@ -980,10 +1010,8 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
-    JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
-    JUST(DoPass("GradientAccumulationRewritePass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
     JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
@@ -997,6 +1025,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
@@ -1007,7 +1036,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseAddToOutputPass"));
     // run this pass again to fuse ops created in the first run.
     // TODO(guoran): loop multiple times inside the pass
-    JUST(DoPass("FuseAddToOutputPass"));
+    JUST(DoPass("FuseAddToOutputPass", 1));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
@@ -1138,10 +1167,11 @@ void FormateUserConf(nlohmann::json& json_conf) {
     json_conf.erase(json_conf.find("user_conf"));
     return;
   }
-  std::string nomarl_array[] = {"at_int32",  "at_int64",  "at_bool",  "at_float",
-                                "at_double", "at_string", "at_shape", "at_data_type"};
+  std::string nomarl_array[] = {"at_int32",  "at_int64", "at_bool",   "at_float",    "at_double",
+                                "at_string", "at_shape", "at_stride", "at_data_type"};
   std::string list_array[] = {"at_list_int32",     "at_list_int64", "at_list_float",
-                              "at_list_data_type", "at_list_shape", "at_list_string"};
+                              "at_list_data_type", "at_list_shape", "at_list_stride",
+                              "at_list_string"};
   nlohmann::json attr_json = user_conf["attr"];
   for (int32_t i = 0; i < attr_json.size(); i++) {
     std::string key = attr_json[i]["key"];
@@ -1151,7 +1181,7 @@ void FormateUserConf(nlohmann::json& json_conf) {
       std::string value_key = nomarl_array[j];
       if (value_json.contains(value_key)) {
         is_found_normal = true;
-        if ("at_shape" == value_key) {
+        if ("at_shape" == value_key || "at_stride" == value_key) {
           json_conf[key] = value_json[value_key]["dim"];
         } else {
           json_conf[key] = value_json[value_key];
@@ -1197,8 +1227,8 @@ void FormateVariableConf(nlohmann::json& json_conf) {
 
 std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     const std::string& job_name) const {
-  HashSet<std::string> input_op_names;
-  HashSet<std::string> output_op_names;
+  HashSet<std::string> inputs_op_names;
+  HashSet<std::string> outputs_op_names;
   std::vector<nlohmann::json> layers_vec;
   layers_vec.reserve(op_name2op_.size());
   for (const auto& pair : op_name2op_) {
@@ -1215,10 +1245,10 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
     }
 
     if (op->op_conf().has_input_conf() && op->op_conf().has_return_conf()) {
-      input_op_names.insert(op_name);
+      inputs_op_names.insert(op_name);
     }
     if (op->op_conf().has_output_conf() && op->op_conf().has_return_conf()) {
-      output_op_names.insert(op_name);
+      outputs_op_names.insert(op_name);
     }
     json_layers_pair["name"] = op_name;
 
@@ -1242,8 +1272,8 @@ std::string oneflow::JobBuildAndInferCtx::GetJobStructureGraphJson(
   nlohmann::json json_pair;
   json_pair["name"] = job_name;
   json_pair["layers"] = layers_vec;
-  json_pair["input_layers"] = input_op_names;
-  json_pair["output_layers"] = output_op_names;
+  json_pair["input_layers"] = inputs_op_names;
+  json_pair["output_layers"] = outputs_op_names;
 
   return json_pair.dump();
 }
@@ -1335,7 +1365,7 @@ Maybe<std::string> JobBuildAndInferCtx::NewUniqueOpNameByFunctionalOpConf(
   } else {
     op_type_name = "SystemOp";
   }
-  std::string op_name = op_name_prefix + op_type_name + "_" + std::to_string(unique_op_name_index_);
+  std::string op_name = op_name_prefix + op_type_name + "-" + std::to_string(unique_op_name_index_);
   ++unique_op_name_index_;
 
   return op_name;

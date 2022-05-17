@@ -32,7 +32,7 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
         ParallelDesc(op_attribute.parallel_conf_signature().op_parallel_conf())));
   }
   if (op_attribute.has_sbp_signature()) {
-    sbp_signature_.reset(new cfg::SbpSignature(op_attribute.sbp_signature()));
+    sbp_signature_.reset(new SbpSignature(op_attribute.sbp_signature()));
     CHECK_JUST(op_->FillSbpSignature(*sbp_signature_));
   }
   op_->ForEachBnInOp([&](const std::string& bn_in_op) { bn_in_op2blob_desc_[bn_in_op].reset(); });
@@ -68,6 +68,7 @@ void RuntimeBlobShapeInferHelper::UpdateInputBlobDescs7OpInferCacheKey(
     if (blob == nullptr) { return Symbol<Shape>(); }
     BlobDesc* blob_desc = BlobDesc4BnInOp(ibn, blob->blob_desc());
     blob_desc->mut_shape().LeftOnesExtendedAssign(blob->shape());
+    blob_desc->mut_stride().CheckNumAxesIdenticalAndAssign(blob->stride());
     return SymbolOf(blob_desc->shape());
   };
   const auto& input_bns = op_->input_bns();

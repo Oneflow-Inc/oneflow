@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <iomanip>
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -66,9 +67,9 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
       memcpy(nccl_unique_id.internal, val.data(), NCCL_UNIQUE_ID_BYTES);
     });
   }
-  LOG(INFO) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
-            << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
-            << ", key = {" << key << "}\n";
+  VLOG(2) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
+          << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
+          << ", key = {" << key << "}\n";
   OF_NCCL_CHECK(ncclCommInitRank(comm, device_vec.size(), nccl_unique_id, rank));
 }
 

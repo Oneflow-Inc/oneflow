@@ -41,10 +41,11 @@ args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
 REQUIRED_PACKAGES = [
     f"numpy>={np.__version__}",
-    "protobuf>=3.9.2",
+    "protobuf>=3.9.2, <4.0",
     "tqdm",
     "requests",
     "pillow",
+    "prettytable",
 ]
 # if python version < 3.7.x, than need pip install dataclasses
 if sys.version_info.minor < 7:

@@ -16,6 +16,9 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/multiprocessing/object_ptr.h"
+#include "oneflow/core/ep/cpu/cpu_device_manager.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 #include <csignal>
 
 #include <stdexcept>
@@ -51,7 +54,31 @@ void multiprocessing_init() {
   // Py_RETURN_TRUE;
 }
 
-ONEFLOW_API_PYBIND11_MODULE("", m) { m.def("_multiprocessing_init", &multiprocessing_init); }
+void set_num_threads(int num) {
+  int64_t cpu_logic_core = std::thread::hardware_concurrency();
+  if (num <= 0) {
+    py::print("Warning : ", num, " less than 1 will be set to 1.");
+    num = 1;
+  } else if (num >= cpu_logic_core) {
+    py::print("Warning : ", num,
+              " is greater than the number of logical cores and will be set to the maximum number "
+              "of logical cores ",
+              cpu_logic_core);
+    num = cpu_logic_core;
+  }
+
+  auto cpu_device = std::static_pointer_cast<ep::CpuDevice>(
+      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0));
+  cpu_device->SetNumThreads(num);
+}
+
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::options options;
+  options.disable_function_signatures();
+  m.def("_multiprocessing_init", &multiprocessing_init);
+  m.def("_set_num_threads", &set_num_threads);
+  options.disable_function_signatures();
+}
 
 }  // namespace multiprocessing
 }  // namespace oneflow

@@ -32,7 +32,6 @@ Transport::Transport() {
 Transport::~Transport() {
   msg_channel_.Close();
   msg_poller_.join();
-  CHECK(token2status_.empty());
   comm_net_->DeleteActorReadId(read_id_);
 }
 

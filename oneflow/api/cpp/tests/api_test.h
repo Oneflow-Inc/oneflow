@@ -32,6 +32,8 @@ Shape RandomShape();
 template<typename T>
 std::vector<T> RandomData(size_t size);
 
+std::string GetExeDir();
+
 }  // namespace oneflow_api
 
 #endif  // !ONEFLOW_API_CPP_TESTS_API_TEST_H_

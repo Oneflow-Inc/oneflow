@@ -115,9 +115,9 @@ MegatronGPTIndex::MegatronGPTIndex(const std::string& index_file_path) {
   CHECK_EQ(pos, stream.tellg());
   // log
   std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
-  LOG(INFO) << "Load GPT Dataset index file successed, file_path: " << index_file_path
-            << ", number of documents: " << this->num_docs() << ", elapsed time: " << elapse.count()
-            << " ms";
+  VLOG(2) << "Load GPT Dataset index file successed, file_path: " << index_file_path
+          << ", number of documents: " << this->num_docs() << ", elapsed time: " << elapse.count()
+          << " ms";
 }
 
 MappedBuffer::MappedBuffer(const std::string& filename) : mapped_(nullptr), size_(0) {
@@ -167,14 +167,14 @@ MegatronGPTMMapDataset::MegatronGPTMMapDataset(const std::string& data_file_pref
   InitSampleIndices(total_num_samples);
   InitShuffleIndices(sample_indices_.size());
   std::chrono::duration<double, std::milli> elapse = std::chrono::system_clock::now() - start;
-  LOG(INFO) << "Create GPT Dataset successed, sequence length: " << seq_len_
-            << ", number of samples: " << num_samples_
-            << ", total number of samples: " << shuffle_indices_.size()
-            << ", total number of documents: " << doc_indices_.size()
-            << ", number of epochs: " << num_epochs_
-            << ", number of complete epochs: " << num_complete_epochs_
-            << ", shuffle: " << std::boolalpha << shuffle_ << ", random_seed: " << seed_
-            << ", elapsed time: " << elapse.count() << " ms";
+  VLOG(2) << "Create GPT Dataset successed, sequence length: " << seq_len_
+          << ", number of samples: " << num_samples_
+          << ", total number of samples: " << shuffle_indices_.size()
+          << ", total number of documents: " << doc_indices_.size()
+          << ", number of epochs: " << num_epochs_
+          << ", number of complete epochs: " << num_complete_epochs_
+          << ", shuffle: " << std::boolalpha << shuffle_ << ", random_seed: " << seed_
+          << ", elapsed time: " << elapse.count() << " ms";
 }
 
 size_t MegatronGPTMMapDataset::GetEpochNumTokens(const std::vector<size_t>& doc_indices) const {

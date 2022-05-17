@@ -21,6 +21,7 @@ from google.protobuf import text_format
 import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.env_util as env_util
 
 
 class MultiClientSession(object):
@@ -29,9 +30,14 @@ class MultiClientSession(object):
         INITED = 2
         CLOSED = 3
 
-    def __init__(self, sess_id):
-        self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
-        oneflow._oneflow_internal.CreateMultiClientSessionContext()
+    def __init__(self, env, sess_id):
+        self._id = sess_id
+        self._env = env
+        assert self._env is not None
+        # TODO(strint): Remove old session.
+        self._internal_sess = oneflow._oneflow_internal.RegsiterSession(sess_id)
+        # New a MultiClientSessionContext
+        self._session_ctx = oneflow._oneflow_internal.SessionContext(self._env._env_cxt)
         self.config_proto_ = self._make_config_proto()
         self.function_flag_name2default_val_ = {}
         self._update_function_flag_name2defaultVal()
@@ -39,25 +45,17 @@ class MultiClientSession(object):
         self._update_scope_attr_name2defaultVal()
         self.status_ = self.Status.CREATED
 
-    def __del__(self):
-        self.TryClose()
-
     def TryInit(self):
         self._check_status(self.Status.CREATED, self.Status.INITED)
         if self.status_ == self.Status.CREATED:
             config_proto_str = text_format.MessageToString(self.config_proto)
-            oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
+            self._session_ctx.try_init(config_proto_str)
             self.status_ = self.Status.INITED
 
-    def TryClose(self):
+    def _TryClose(self):
         if self.status_ != self.Status.CLOSED:
-            oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
             oneflow._oneflow_internal.ClearSessionById(self.id)
         self.status_ = self.Status.CLOSED
-
-    def AddCGraph(self, graph):
-        self._check_status(self.Status.INITED)
-        oneflow._oneflow_internal.MultiClientSessionContextAddCGraph(graph)
 
     @property
     def status(self):
@@ -65,7 +63,7 @@ class MultiClientSession(object):
 
     @property
     def id(self):
-        return self.sess_.id
+        return self._id
 
     @property
     def config_proto(self):
@@ -119,3 +117,11 @@ class MultiClientSession(object):
     def _update_scope_attr_name2defaultVal(self):
         items = c_api_util.GetScopeConfigDef().attr_name2attr_def.items()
         self.scope_attr_name2default_val_ = {k: v.default_val for (k, v) in items}
+
+    def update_resource_eagerly(self, resource_config):
+        self._check_status(self.Status.INITED)
+        config_proto_str = text_format.MessageToString(resource_config)
+        self._session_ctx.update_resource(config_proto_str)
+
+    def __del__(self):
+        self._TryClose()

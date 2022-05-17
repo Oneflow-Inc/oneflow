@@ -70,6 +70,7 @@ struct DiagGradFunctor<DeviceType::kCUDA, T> final {
 REGISTER_DIAG_KERNELS(DeviceType::kCUDA, half);
 REGISTER_DIAG_KERNELS(DeviceType::kCUDA, float);
 REGISTER_DIAG_KERNELS(DeviceType::kCUDA, double);
+REGISTER_DIAG_KERNELS(DeviceType::kCUDA, bool);
 REGISTER_DIAG_KERNELS(DeviceType::kCUDA, uint8_t);
 REGISTER_DIAG_KERNELS(DeviceType::kCUDA, int8_t);
 REGISTER_DIAG_KERNELS(DeviceType::kCUDA, int32_t);

@@ -19,10 +19,9 @@ limitations under the License.
 #include <functional>
 #include <memory>
 #include "oneflow/core/vm/phy_instr_operand.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
-
-class LocalDepObject;
 
 namespace one {
 
@@ -37,18 +36,17 @@ class EagerBlobObject;
 class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
   AccessBlobArgCbPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                 LocalDepObject* compute_local_dep_object,
                                  const std::function<void(uint64_t)>& callback,
                                  const std::string& modifier)
       : eager_blob_object_(eager_blob_object),
         callback_(callback),
-        compute_local_dep_object_(compute_local_dep_object),
         modifier_(modifier),
         input_dependences_(),
         output_dependences_() {
     ForEachConstMirroredObject(SetInserter(&input_dependences_));
     ForEachMutMirroredObject(SetInserter(&output_dependences_));
     ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    stream_sequential_dependence_ = nullptr;
   }
   ~AccessBlobArgCbPhyInstrOperand() = default;
 
@@ -69,7 +67,6 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::function<void(uint64_t)> callback_;
-  LocalDepObject* compute_local_dep_object_;
   const std::string modifier_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;

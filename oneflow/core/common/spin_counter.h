@@ -21,11 +21,6 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds,
-                                 const std::function<void()>& HeartbeatCallback,
-                                 int64_t heartbeat_interval_seconds);
-Maybe<void> SpinWaitUntilTimeout(const std::function<bool()>& NeedSpin, int64_t seconds);
-
 class SpinCounter final {
  public:
   SpinCounter() = delete;
@@ -33,29 +28,13 @@ class SpinCounter final {
   SpinCounter(SpinCounter&&) = delete;
   ~SpinCounter() = default;
 
-  explicit SpinCounter(int64_t cnt_val)
-      : cnt_val_(cnt_val), timeout_seconds_(5 * 60), heartbeat_interval_seconds_(3) {}
-  SpinCounter(int64_t cnt_val, int64_t timeout_seconds, int64_t heartbeat_interval_seconds)
-      : cnt_val_(cnt_val),
-        timeout_seconds_(timeout_seconds),
-        heartbeat_interval_seconds_(heartbeat_interval_seconds) {}
-  static Maybe<void> SpinWait(
-      int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback);
-  static Maybe<void> SpinWait(
-      int64_t cnt, const std::function<Maybe<void>(const std::shared_ptr<SpinCounter>&)>& Callback,
-      const std::function<void()>& HeartbeatCallback);
-
-  int64_t TimeoutSeconds() const { return timeout_seconds_; }
-  int64_t HearbeatIntervalSeconds() const { return heartbeat_interval_seconds_; }
+  explicit SpinCounter(int64_t cnt_val) : cnt_val_(cnt_val) {}
 
   int64_t Decrease() { return --cnt_val_; }
   Maybe<void> WaitUntilCntEqualZero() const;
-  Maybe<void> WaitUntilCntEqualZero(const std::function<void()>& HeartbeatCallback) const;
 
  private:
   std::atomic<int64_t> cnt_val_;
-  int64_t timeout_seconds_;
-  int64_t heartbeat_interval_seconds_;
 };
 
 }  // namespace oneflow

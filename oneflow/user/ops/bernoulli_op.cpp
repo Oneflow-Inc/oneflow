@@ -14,32 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("bernoulli")
-    .Input("in")
-    .Output("out")
-    .Attr<int64_t>("seed", -1)
-    .Attr<bool>("has_seed", false)
-    .Attr<DataType>("dtype")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-      *out_tensor->mut_shape() = in_tensor.shape();
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-      *out_tensor->mut_data_type() = ctx->Attr<DataType>("dtype");
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> BernoulliOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+  *out_tensor->mut_shape() = in_tensor.shape();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> BernoulliOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BernoulliOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> BernoulliOp::InferDataType(user_op::InferContext* ctx) {
+  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  *out_tensor->mut_data_type() = ctx->Attr<DataType>("dtype");
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

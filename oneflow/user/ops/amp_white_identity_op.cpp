@@ -14,35 +14,37 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/* static */ Maybe<void> AmpWhiteIdentityOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  *out->mut_shape() = in.shape();
+  *out->mut_is_dynamic() = in.is_dynamic();
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("amp_white_identity")
-    .Input("in")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) {
-      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-      *out->mut_shape() = in.shape();
-      *out->mut_is_dynamic() = in.is_dynamic();
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) {
-      const auto& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      for (int i = 0; i < in.shape().NumAxes(); ++i) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-      }
-      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-      *out->mut_data_type() = in.data_type();
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> AmpWhiteIdentityOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> AmpWhiteIdentityOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> AmpWhiteIdentityOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+  *out->mut_data_type() = in.data_type();
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("amp_white_identity")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
@@ -59,7 +61,5 @@ REGISTER_USER_OP_GRAD("amp_white_identity")
       }
       return Maybe<void>::Ok();
     });
-
-}  // namespace
 
 }  // namespace oneflow

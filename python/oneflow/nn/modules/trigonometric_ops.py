@@ -47,18 +47,6 @@ def sign_op(input):
     return flow._C.sign(input)
 
 
-@register_tensor_op("sign")
-def sign_op_tensor(input):
-    """
-
-    sign() -> Tensor
-
-    See :func:`oneflow.sign`
-
-    """
-    return flow._C.sign(input)
-
-
 def sinh_op(input):
     """Returns a new tensor with the hyperbolic sine of the elements of :attr:`input`.
 
@@ -90,18 +78,6 @@ def sinh_op(input):
     return flow._C.sinh(input)
 
 
-@register_tensor_op("sinh")
-def sinh_op_tensor(input):
-    """
-
-    sinh() -> Tensor
-
-    See :func:`oneflow.sinh`
-
-    """
-    return flow._C.sinh(input)
-
-
 def tan_op(input):
     """Returns  the tan value of the elements of :attr:`input`.
 
@@ -125,44 +101,6 @@ def tan_op(input):
 
     """
     return flow._C.tan(input)
-
-
-@register_tensor_op("tan")
-def tan_op_tensor(input):
-    """
-    tan() -> Tensor
-    See :func:`oneflow.tan`
-
-    """
-    return flow._C.tan(input)
-
-
-@register_tensor_op("acos")
-def acos_op(input):
-    """
-    Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
-
-    .. math::
-        \\text{out}_{i} = \\arccos(\\text{input}_{i})
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-
-        >>> arr = np.array([0.5, 0.6, 0.7])
-        >>> input = flow.tensor(arr, dtype=flow.float32)
-        >>> output = flow.acos(input)
-        >>> output
-        tensor([1.0472, 0.9273, 0.7954], dtype=oneflow.float32)
-
-    """
-    return flow._C.acos(input)
 
 
 def acosh_op(input):
@@ -194,32 +132,8 @@ def acosh_op(input):
     return flow._C.acosh(input)
 
 
-@register_tensor_op("acosh")
-def acosh_op_tensor(input):
-    """
-
-    acosh() -> Tensor
-
-    See :func:`oneflow.acosh`
-
-    """
-    return flow._C.acosh(input)
-
-
 def arccosh_op(input):
     """
-
-    See :func:`oneflow.acosh`
-
-    """
-    return flow._C.acosh(input)
-
-
-@register_tensor_op("arccosh")
-def arccosh_op_tensor(input):
-    """
-
-    arccosh() -> Tensor
 
     See :func:`oneflow.acosh`
 

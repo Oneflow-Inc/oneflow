@@ -27,7 +27,12 @@ from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
-from oneflow.nn.graph.util import add_indent, seq_to_func_return
+from oneflow.nn.graph.util import (
+    add_indent,
+    seq_to_func_return,
+    IONodeType,
+    IONode,
+)
 
 
 def get_block_cls(item):
@@ -105,6 +110,7 @@ class ModuleBlock(Block):
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
+        self._debug_max_py_stack_depth = 2
         self._type = BlockType.MODULE
         self._is_executing_forward = False
         self._modules = OrderedDict()
@@ -139,11 +145,12 @@ class ModuleBlock(Block):
     def debug(
         self,
         v_level: int = 0,
+        *,
         ranks: Optional[Union[int, List[int]]] = None,
-        mode: bool = True,
+        max_py_stack_depth: int = 2,
     ) -> None:
-        assert isinstance(mode, bool)
         assert isinstance(v_level, int)
+        assert isinstance(max_py_stack_depth, int)
 
         if ranks is None:
             rank_list = [0]
@@ -156,54 +163,59 @@ class ModuleBlock(Block):
 
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
-            self._debug = mode
+            self._debug = v_level >= 0
             if self._debug:
                 self._debug_min_s_level = 0
-                self._debug_max_v_level = v_level
+                self._debug_max_v_level = max(0, v_level)
+                self._debug_max_py_stack_depth = max_py_stack_depth
+
             if self._type == BlockType.MODULE:
 
                 def _set_child(d):
                     for (_, n) in d.items():
-                        n.debug(v_level, ranks, mode)
+                        n.debug(
+                            v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth
+                        )
 
                 _set_child(self._modules)
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         assert self._type == BlockType.MODULE
-        self._print(0, 1, self._shallow_repr())
+        self.__print(0, 1, self._shallow_repr())
 
-        for idx, arg in enumerate(args):
-            meta_repr_str = (
-                arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
-            )
-            in_str = (
-                "(INPUT:_"
-                + self.name_prefix
-                + self.name
-                + "-input_"
-                + str(idx)
-                + ":"
-                + meta_repr_str
-                + ")"
-            )
-            if not isinstance(arg, Tensor):
-                in_str = "[WARNING]" + in_str
-            self._args_repr.append(in_str)
+        in_node = IONode(
+            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_input"
+        )
+        for (name, node) in list(in_node.named_nodes()):
+            if node._is_leaf:
+                arg = node._value
+                meta_repr_str = (
+                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                )
+                in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
+                if not isinstance(arg, Tensor):
+                    in_str = "[WARNING]" + in_str
+                self._args_repr.append(in_str)
+                self.__print(0, 1, in_str)
 
-            self._print(0, 1, in_str)
+        def _print_state(d):
+            for (_, n) in d.items():
+                self.__print(0, 1, n._shallow_repr())
 
-            def _print_state(d):
-                for (_, n) in d.items():
-                    self._print(0, 1, n._shallow_repr())
-
-            _print_state(self._parameters)
-            _print_state(self._buffers)
+        _print_state(self._parameters)
+        _print_state(self._buffers)
 
         # NOTE: The original nn.Moudle's __call__ method is ignored, which means
         # that hooks of nn.Modules are ignored. It is not recommended
         # to use hooks of nn.Module in nn.Graph for the moment.
         # result = self._origin.__class__.__call__(self, *args)
-        result = self.__block_forward(*args)
+        with graph_build_util.DebugScopeContext(
+            self._debug_min_s_level,
+            self._debug_max_v_level,
+            self._debug,
+            self._debug_max_py_stack_depth,
+        ):
+            result = self.__block_forward(*args, **kwargs)
 
         outputs = ()
         if not (type(result) is tuple or type(result) is list):
@@ -211,37 +223,36 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        for idx, out in enumerate(outputs):
-            out_repr = out._meta_repr() if isinstance(out, Tensor) else str(type(out))
-            out_str = (
-                "(OUTPUT:_"
-                + self.name_prefix
-                + self.name
-                + "-output_"
-                + str(idx)
-                + ":"
-                + out_repr
-                + ")"
-            )
-            if not isinstance(out, Tensor):
-                out_str = "[WARNING]" + out_str
-
-            self._outs_repr.append(out_str)
-            self._print(0, 1, out_str)
+        out_node = IONode(
+            None, 0, (outputs, {}), "_" + self.name_prefix + self.name + "_output"
+        )
+        for (name, node) in list(out_node.named_nodes()):
+            if node._is_leaf:
+                arg = node._value
+                meta_repr_str = (
+                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                )
+                out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
+                if not isinstance(arg, Tensor):
+                    out_str = "[WARNING]" + out_str
+                self._outs_repr.append(out_str)
+                self.__print(0, 1, out_str)
 
         return result
 
-    def __block_forward(self, *args):
+    def __block_forward(self, *args, **kwargs):
         self._is_executing_forward = True
-        args = self.__pre_forward_mapping_out_scope(*args)
+        args, kwargs = self.__pre_forward_map(*args, **kwargs)
         with self.scope_context():
-            result = self._origin.__class__.forward(self, *args)
-        result = self.__post_forward_mapping_out_scope(result)
-        result = seq_to_func_return(result)
+            result = self._origin.__class__.forward(self, *args, **kwargs)
+            # Always pack outputs to remain type of outputs
+            outputs = (result,)
+        result = self.__post_forward_map(*outputs)
+        result = seq_to_func_return(result, True)
         self._is_executing_forward = False
         return result
 
-    def __pre_forward_mapping_out_scope(self, *args):
+    def __pre_forward_map(self, *args, **kwargs):
         # Insert identity op when doing activation checkpointing or pipeline execution.
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
@@ -254,13 +265,13 @@ class ModuleBlock(Block):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self.__mapping_io(
-                "input", insert_identity, "insert_identity", *args,
+            args, kwargs = self.__map_io(
+                "input", insert_identity, "insert_identity", *args, **kwargs
             )
 
-        return args
+        return args, kwargs
 
-    def __post_forward_mapping_out_scope(self, *args):
+    def __post_forward_map(self, *args):
         # Insert identity op when doing activation checkpointing or pipeline execution.
         if self.config.activation_checkpointing or (
             self.config.stage_id is not None and self.config.stage_id >= 0
@@ -270,7 +281,7 @@ class ModuleBlock(Block):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self.__mapping_io(
+            args, _ = self.__map_io(
                 "output", insert_identity, "insert_identity", *args,
             )
         return args
@@ -300,79 +311,50 @@ class ModuleBlock(Block):
                 for m in module.modules(memo):
                     yield m
 
-    def __mapping_io(self, io_type, func, func_desc, *args):
+    def __map_io(self, io_type, func, func_desc, *args, **kwargs):
         assert isinstance(func_desc, str)
         assert io_type in ("input", "output")
         mapped_args = []
 
-        def mapping_tensor(item):
+        def map_tensor(item):
             assert isinstance(item, Tensor)
             return func(item)
 
-        for idx, arg in enumerate(args):
-            if isinstance(arg, list):
-                seq_args = list()
-                for i in range(len(arg)):
-                    is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
-                        arg[i], io_type, idx, i
-                    )
-                    if is_tensor:
-                        seq_args.append(mapping_tensor(arg[i]))
-                        self._print(
-                            0,
-                            1,
-                            f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
-                        )
-                    else:
-                        self._print(
-                            0,
-                            0,
-                            f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.",
-                        )
-                        seq_args.append(arg[i])
-                mapped_args.append(seq_args)
-            elif isinstance(arg, Tensor):
-                is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
-                    arg, io_type, idx
-                )
-                assert is_tensor
-                mapped_args.append(mapping_tensor(arg))
-                self._print(
+        io_node = IONode(
+            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type
+        )
+
+        def leaf_node_fn(leaf_node):
+            arg = leaf_node._value
+            name = leaf_node._prefix + "_" + leaf_node._name
+            is_tensor, repr_str = self.__io_tensor_check_and_gen(arg, io_type, name)
+            if is_tensor:
+                self.__print(
                     0,
                     1,
                     f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
                 )
+                return map_tensor(arg)
             else:
-                is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
-                    arg, io_type, idx
-                )
-                assert not is_tensor
-                mapped_args.append(arg)
-                self._print(
+                self.__print(
                     0,
                     0,
-                    f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored.",
+                    f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.",
                 )
+                return arg
 
-        return tuple(mapped_args)
+        out = io_node.map_leaf(leaf_node_fn)
+        mapped_args = out[0]
+        mapped_kwargs = out[1]
+        return mapped_args, mapped_kwargs
 
-    def __io_tensor_check_and_gen(self, item, io_type, idx, second_idx=None):
+    def __io_tensor_check_and_gen(self, item, io_type, name):
         assert io_type in ("input", "output")
-        name = (
-            "_"
-            + self.name_prefix
-            + self.name
-            + "-"
-            + io_type
-            + "_"
-            + str(idx)
-            + ("" if second_idx is None else "_" + str(second_idx))
-        )
         if isinstance(item, Tensor):
             repr_str = (
                 "(" + io_type.upper() + ":" + name + ":" + item._meta_repr() + ")"
             )
-            return True, name, repr_str
+            return True, repr_str
         else:
             repr_str = (
                 "[WARNING]("
@@ -383,7 +365,7 @@ class ModuleBlock(Block):
                 + str(type(item))
                 + ")"
             )
-            return False, name, repr_str
+            return False, repr_str
 
     def __members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
@@ -486,18 +468,8 @@ class ModuleBlock(Block):
 
         _s_block = _states[name]
         if graph_build_util.lazy_mode.is_enabled():
-            #  lazy
-            if _s_block._lazy_origin is None:
-                assert _s_block._lazy_origin_builder is not None, (
-                    repr(_s_block) + " has no lazy Tensor creation function."
-                )
-                assert self._is_executing_forward, (
-                    repr(_s_block)
-                    + "'s first get must happened in it's nn.Module.forward() to generate the right scope."
-                )
-                with _s_block.scope_context():
-                    _s_block._lazy_origin = _s_block._lazy_origin_builder()
-            return _s_block._lazy_origin
+            _s_block.try_build()
+            return _s_block.lazy_origin
         elif (
             not graph_build_util.lazy_mode.is_enabled()
         ) and self._is_executing_forward:
@@ -554,7 +526,7 @@ class ModuleBlock(Block):
         )
         return shallow_repr
 
-    def _print(self, s_level=2, v_level=0, msg: str = ""):
+    def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
         """
         assert isinstance(s_level, int)
@@ -562,7 +534,24 @@ class ModuleBlock(Block):
         assert isinstance(msg, str)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg)
+                print(msg, flush=True)
+
+
+class LazyBuilder(object):
+    def __init__(self, name: str = None, method=None):
+        self.name = name
+        self.method = method
+        self.result = None
+        self.finished = False
+
+    def try_build(self, block=None):
+        if not self.finished:
+            assert self.name is not None
+            assert self.method is not None
+            assert self.result is None
+            with block.scope_context():
+                self.result = self.method()
+            self.finished = True
 
 
 class TensorBlock(Block):
@@ -577,8 +566,8 @@ class TensorBlock(Block):
             self._type = BlockType.BUFFER
         else:
             raise NotImplementedError()
-        self._lazy_origin = None
-        self._lazy_origin_builder = None
+        self._lazy_origin_builder = LazyBuilder()
+        self.build_finished = False
         self.set_origin(origin)
 
     @property
@@ -593,7 +582,7 @@ class TensorBlock(Block):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin"
-        return self._lazy_origin
+        return self._lazy_origin_builder.result
 
     def lazy_origin_builder(self):
         assert (
@@ -601,11 +590,16 @@ class TensorBlock(Block):
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
         return self._lazy_origin_builder
 
-    def set_lazy_origin_builder(self, fn=None):
+    def set_lazy_origin_builder(self, builder=None):
         assert (
             self._type == BlockType.PARAMETER or self._type == BlockType.BUFFER
         ), "Only Parameter or Buffer Block has lazy_origin_builder"
-        self._lazy_origin_builder = fn
+        self._lazy_origin_builder = builder
+
+    def try_build(self):
+        if not self.build_finished:
+            self._lazy_origin_builder.try_build(self)
+            self.build_finished = True
 
     def __repr__(self):
         lines = None

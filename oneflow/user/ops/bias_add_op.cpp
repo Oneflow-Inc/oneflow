@@ -14,48 +14,50 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("bias_add")
-    .Input("a")
-    .Input("b")
-    .Output("out")
-    .Attr<int32_t>("axis")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
-      const auto& b_tensor_desc = ctx->InputTensorDesc("b", 0);
-      const auto bias_add_axis = ctx->Attr<int32_t>("axis");
-      CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
-      CHECK_GE_OR_RETURN(bias_add_axis, 0);
-      CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
-      CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
-      *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
-      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const auto axis = ctx->Attr<int32_t>("axis");
-      for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
-           ++i) {
-        if (i == axis) { continue; }
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("a", 0), i)
-            .Broadcast(user_op::OpArg("b", 0))
-            .Split(ctx->outputs(), i)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("b", 0), 0)
-          .Split(user_op::OpArg("a", 0), axis)
-          .Split(ctx->outputs(), axis)
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("a", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> BiasAddOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const auto& a_tensor_desc = ctx->InputTensorDesc("a", 0);
+  const auto& b_tensor_desc = ctx->InputTensorDesc("b", 0);
+  const auto bias_add_axis = ctx->Attr<int32_t>("axis");
+  CHECK_EQ_OR_RETURN(b_tensor_desc.shape().NumAxes(), 1);
+  CHECK_GE_OR_RETURN(bias_add_axis, 0);
+  CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc.shape().NumAxes());
+  CHECK_EQ_OR_RETURN(a_tensor_desc.shape().At(bias_add_axis), b_tensor_desc.shape().At(0));
+  *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> BiasAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BiasAddOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto axis = ctx->Attr<int32_t>("axis");
+  for (int64_t i = 0; i < ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape().NumAxes();
+       ++i) {
+    if (i == axis) { continue; }
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("a", 0), i)
+        .Broadcast(user_op::OpArg("b", 0))
+        .Split(ctx->outputs(), i)
+        .Build();
+  }
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("b", 0), 0)
+      .Split(user_op::OpArg("a", 0), axis)
+      .Split(ctx->outputs(), axis)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> BiasAddOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("a", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("bias_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

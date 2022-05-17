@@ -14,105 +14,126 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("ctc_loss")
-    .Input("log_probs")
-    .Input("targets")
-    .Input("input_lengths")
-    .Input("target_lengths")
-    .Output("loss")
-    .Output("alpha")  // 'alpha' is just for compute log_probs's grad, alpha's grad will be ignored
-    .Attr<int64_t>("max_target_length")
-    .Attr<int32_t>("blank")
-    .Attr<bool>("zero_infinity")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
-      const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
-      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
-      const user_op::TensorDesc& target_lengths = ctx->InputTensorDesc("target_lengths", 0);
-      const int64_t batch_size = log_probs.shape().At(1);
-      const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");
-      if (targets.shape().NumAxes() == 2) {
-        CHECK_EQ_OR_RETURN(targets.shape().At(0), batch_size);
-        CHECK_GE_OR_RETURN(targets.shape().At(1), max_target_length);
-      }
-      CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size);
-      CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size);
-      CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
-      CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
+/* static */ Maybe<void> CtcLossOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+  const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
+  const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+  const user_op::TensorDesc& target_lengths = ctx->InputTensorDesc("target_lengths", 0);
+  const int64_t batch_size = log_probs.shape().At(1);
+  const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");
+  if (targets.shape().NumAxes() == 2) {
+    CHECK_EQ_OR_RETURN(targets.shape().At(0), batch_size);
+    CHECK_GE_OR_RETURN(targets.shape().At(1), max_target_length);
+  }
+  CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size);
+  CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size);
+  CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
+  CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
 
-      *ctx->OutputShape("loss", 0) = Shape({batch_size});
-      *ctx->OutputShape("alpha", 0) =
-          Shape({batch_size, log_probs.shape().At(0), 2 * max_target_length + 1});
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
-          .Split(user_op::OpArg("targets", 0), 0)
-          .Split(user_op::OpArg("input_lengths", 0), 0)
-          .Split(user_op::OpArg("target_lengths", 0), 0)
-          .Split(user_op::OpArg("loss", 0), 0)
-          .Split(user_op::OpArg("alpha", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("loss", 0) = ctx->InputDType("log_probs", 0);
-      *ctx->OutputDType("alpha", 0) = ctx->InputDType("log_probs", 0);
-      return Maybe<void>::Ok();
-    });
+  *ctx->OutputShape("loss", 0) = Shape({batch_size});
+  *ctx->OutputShape("alpha", 0) =
+      Shape({batch_size, log_probs.shape().At(0), 2 * max_target_length + 1});
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("ctc_loss_grad")
-    .Input("grad_out")
-    .Input("log_probs")
-    .Input("targets")
-    .Input("input_lengths")
-    .Input("target_lengths")
-    .Input("loss")
-    .Input("alpha")
-    .Output("grad")
-    .Attr<int64_t>("max_target_length")
-    .Attr<int32_t>("blank")
-    .Attr<bool>("zero_infinity")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
-      const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
-      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
-      const user_op::TensorDesc& target_lengths = ctx->InputTensorDesc("target_lengths", 0);
-      const int64_t batch_size = log_probs.shape().At(1);
-      const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");
-      if (targets.shape().NumAxes() == 2) {
-        CHECK_EQ_OR_RETURN(targets.shape().At(0), batch_size);
-        CHECK_GE_OR_RETURN(targets.shape().At(1), max_target_length);
-      }
-      CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size);
-      CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size);
-      CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
-      CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
+/*static*/ Maybe<void> CtcLossOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-      *ctx->OutputShape("grad", 0) = log_probs.shape();
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("grad_out", 0), 0)
-          .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
-          .Split(user_op::OpArg("targets", 0), 0)
-          .Split(user_op::OpArg("input_lengths", 0), 0)
-          .Split(user_op::OpArg("target_lengths", 0), 0)
-          .Split(user_op::OpArg("loss", 0), 0)
-          .Split(user_op::OpArg("alpha", 0), 0)
-          .Split(user_op::OpArg("grad", 0), 1)
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("grad", 0) = ctx->InputDType("log_probs", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> CtcLossOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
+      .Split(user_op::OpArg("targets", 0), 0)
+      .Split(user_op::OpArg("input_lengths", 0), 0)
+      .Split(user_op::OpArg("target_lengths", 0), 0)
+      .Split(user_op::OpArg("loss", 0), 0)
+      .Split(user_op::OpArg("alpha", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> CtcLossOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("loss", 0) = ctx->InputDType("log_probs", 0);
+  *ctx->OutputDType("alpha", 0) = ctx->InputDType("log_probs", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> CtcLossGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+  const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
+  const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+  const user_op::TensorDesc& target_lengths = ctx->InputTensorDesc("target_lengths", 0);
+  const int64_t batch_size = log_probs.shape().At(1);
+  const int64_t max_target_length = ctx->Attr<int64_t>("max_target_length");
+  if (targets.shape().NumAxes() == 2) {
+    CHECK_EQ_OR_RETURN(targets.shape().At(0), batch_size);
+    CHECK_GE_OR_RETURN(targets.shape().At(1), max_target_length);
+  }
+  CHECK_EQ_OR_RETURN(input_lengths.shape().At(0), batch_size);
+  CHECK_EQ_OR_RETURN(target_lengths.shape().At(0), batch_size);
+  CHECK_GE_OR_RETURN(ctx->Attr<int32_t>("blank"), 0);
+  CHECK_LT_OR_RETURN(ctx->Attr<int32_t>("blank"), log_probs.shape().At(2));
+
+  *ctx->OutputShape("grad", 0) = log_probs.shape();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> CtcLossGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> CtcLossGradOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("grad_out", 0), 0)
+      .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
+      .Split(user_op::OpArg("targets", 0), 0)
+      .Split(user_op::OpArg("input_lengths", 0), 0)
+      .Split(user_op::OpArg("target_lengths", 0), 0)
+      .Split(user_op::OpArg("loss", 0), 0)
+      .Split(user_op::OpArg("alpha", 0), 0)
+      .Split(user_op::OpArg("grad", 0), 1)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> CtcLossGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("grad", 0) = ctx->InputDType("log_probs", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> CtcGreedyDecoderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+  const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
+  const int64_t batch_size = log_probs.shape().At(1);
+  CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+  *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
+  *ctx->OutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> CtcGreedyDecoderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> CtcGreedyDecoderOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
+      .Split(user_op::OpArg("input_lengths", 0), 0)
+      .Split(user_op::OpArg("decoded", 0), 0)
+      .Split(user_op::OpArg("neg_sum_logits", 0), 0)
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> CtcGreedyDecoderOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("decoded", 0) = ctx->InputDType("input_lengths", 0);
+  *ctx->OutputDType("neg_sum_logits", 0) = ctx->InputDType("log_probs", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("ctc_loss")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
@@ -136,36 +157,6 @@ REGISTER_USER_OP_GRAD("ctc_loss")
                                 [&ctx, &ctc_loss_grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(ctc_loss_grad_op_name).output("grad", 0);
                                 });
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP("ctc_greedy_decoder")
-    .Input("log_probs")
-    .Input("input_lengths")
-    .Output("decoded")
-    .Output("neg_sum_logits")
-    .Attr<bool>("merge_repeated")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
-      const user_op::TensorDesc& input_lengths = ctx->InputTensorDesc("input_lengths", 0);
-      const int64_t batch_size = log_probs.shape().At(1);
-      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
-      *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs.shape().At(0)});
-      *ctx->OutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("log_probs", 0), 1)  // `log_probs` batch axis is 1
-          .Split(user_op::OpArg("input_lengths", 0), 0)
-          .Split(user_op::OpArg("decoded", 0), 0)
-          .Split(user_op::OpArg("neg_sum_logits", 0), 0)
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("decoded", 0) = ctx->InputDType("input_lengths", 0);
-      *ctx->OutputDType("neg_sum_logits", 0) = ctx->InputDType("log_probs", 0);
       return Maybe<void>::Ok();
     });
 

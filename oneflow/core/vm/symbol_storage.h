@@ -22,8 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class StringSymbol;
-
 class OperatorConfSymbol;
 class OperatorConf;
 
@@ -52,11 +50,6 @@ struct ConstructArgType4Symbol<OpNodeSignatureDesc> final {
 };
 
 template<>
-struct ConstructArgType4Symbol<StringSymbol> final {
-  using type = std::string;
-};
-
-template<>
 struct ConstructArgType4Symbol<OperatorConfSymbol> final {
   using type = OperatorConf;
 };
@@ -82,10 +75,6 @@ template<typename T>
 Maybe<T> NewSymbol(int64_t symbol_id, const typename ConstructArgType4Symbol<T>::type& data) {
   return std::make_shared<T>(data);
 }
-
-template<>
-Maybe<StringSymbol> NewSymbol<StringSymbol>(
-    int64_t symbol_id, const typename ConstructArgType4Symbol<StringSymbol>::type& data);
 
 template<>
 Maybe<OperatorConfSymbol> NewSymbol<OperatorConfSymbol>(

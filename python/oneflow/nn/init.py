@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+
 import oneflow as flow
 from oneflow.ops.initializer_util import CalcGain
 
@@ -34,7 +36,7 @@ def normal_(tensor, mean=0.0, std=1.0):
 def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
@@ -62,7 +64,7 @@ def xavier_uniform_(tensor, gain=1.0, *, data_format="NCHW"):
 def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Fills the input `Tensor` with values according to the method
     described in `Understanding the difficulty of training deep feedforward
@@ -87,12 +89,35 @@ def xavier_normal_(tensor, gain=1.0, *, data_format="NCHW"):
         return tensor.xavier_normal_(gain, data_format=data_format)
 
 
+def orthogonal_(tensor, gain=1.0):
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+
+    Fills the input `Tensor` with a (semi) orthogonal matrix, as
+    described in `Exact solutions to the nonlinear dynamics of learning in deep
+    linear neural networks` - Saxe, A. et al. (2013). The input tensor must have
+    at least 2 dimensions, and for tensors with more than 2 dimensions the
+    trailing dimensions are flattened.
+
+    Args:
+        tensor: an n-dimensional `torch.Tensor`, where :math:`n \geq 2`
+        gain: optional scaling factor
+
+    Examples:
+        >>> w = flow.empty(3, 5)
+        >>> nn.init.orthogonal_(w)
+    """
+    with flow.no_grad():
+        return tensor.orthogonal_(gain)
+
+
 def kaiming_uniform_(
     tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
 ):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
 
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
@@ -129,7 +154,7 @@ def kaiming_normal_(
 ):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/nn.init.html.
     
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
@@ -157,6 +182,8 @@ def kaiming_normal_(
         >>> w = flow.empty(3, 5)
         >>> nn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')
     """
+    if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+        data_format = "NHWC"
     with flow.no_grad():
         return tensor.kaiming_normal_(a, mode, nonlinearity, data_format=data_format)
 

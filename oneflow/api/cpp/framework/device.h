@@ -32,6 +32,7 @@ namespace oneflow_api {
 
 class Device final {
   friend class Tensor;
+  friend class Graph;
 
  public:
   explicit Device(const std::string& type_or_type_with_device_id);

@@ -26,6 +26,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestGridSample(flow.unittest.TestCase):
     def test_grid_sample_4d(test_case):
         input = flow.tensor(
@@ -50,7 +51,7 @@ class TestGridSample(flow.unittest.TestCase):
         )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(rtol=1e-03, atol=1e-04, check_graph=False)
+    @autotest(rtol=1e-03, atol=1e-04, check_graph=True)
     def test_flow_grid_sample_cudnn_with_random_data(test_case):
         # cudnn only support 4D input, with mode = 'bilinear' && padding_mode = 'zeros' && align_corners
         N = randint(1, 8)
@@ -63,13 +64,11 @@ class TestGridSample(flow.unittest.TestCase):
         mode = "bilinear"
         padding_mode = "zeros"
         align_corners = True
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
         grid = torch.nn.functional.affine_grid(
             theta, (N, C, out_H, out_W), align_corners=align_corners
         ).to(device)
-        input = random_pytorch_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(
-            device
-        )
+        input = random_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(device)
         output = torch.nn.functional.grid_sample(
             input,
             grid,
@@ -80,12 +79,12 @@ class TestGridSample(flow.unittest.TestCase):
         return output
 
     # This test may fail due to using ::floor in backward
-    # floor(1.99999988) = 1 和 floor(2.000000) = 2, then select differente images pixel
+    # floor(1.99999988) = 1 and floor(2.000000) = 2, then select differente images pixel
     @autotest(
         auto_backward=False,
         rtol=1e-03,
         atol=1e-04,
-        check_graph=False,
+        check_graph=True,
         check_allclose=False,
     )
     def test_flow_grid_sample_4d_with_random_data(test_case):
@@ -99,13 +98,11 @@ class TestGridSample(flow.unittest.TestCase):
         mode = choice(["bilinear", "nearest", "bicubic"])
         padding_mode = choice(["zeros", "border", "reflection"])
         align_corners = choice([True, False])
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
         grid = torch.nn.functional.affine_grid(
             theta, (N, C, out_H, out_W), align_corners=align_corners
         ).to(device)
-        input = random_pytorch_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(
-            device
-        )
+        input = random_tensor(ndim=4, dim0=N, dim1=C, dim2=in_H, dim3=in_W).to(device)
         output = torch.nn.functional.grid_sample(
             input,
             grid,
@@ -115,7 +112,7 @@ class TestGridSample(flow.unittest.TestCase):
         )
         return output
 
-    @autotest(auto_backward=False, rtol=1e-03, atol=1e-03, check_graph=False)
+    @autotest(auto_backward=False, rtol=1e-03, atol=1e-03, check_graph=True)
     def test_flow_grid_sample_5d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)
@@ -129,11 +126,11 @@ class TestGridSample(flow.unittest.TestCase):
         mode = choice(["bilinear", "nearest"])
         padding_mode = choice(["zeros", "border", "reflection"])
         align_corners = choice([True, False])
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
         grid = torch.nn.functional.affine_grid(
             theta, (N, C, out_D, out_H, out_W), align_corners=align_corners
         ).to(device)
-        input = random_pytorch_tensor(
+        input = random_tensor(
             ndim=5, dim0=N, dim1=C, dim2=in_D, dim3=in_H, dim4=in_W
         ).to(device)
         output = torch.nn.functional.grid_sample(

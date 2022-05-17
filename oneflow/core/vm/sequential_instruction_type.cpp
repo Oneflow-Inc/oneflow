@@ -17,12 +17,10 @@ limitations under the License.
 #include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/rpc/include/base.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/host_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -36,24 +34,6 @@ class RankFrontSeqCallbackInstructionType : public InstructionType {
   bool IsFrontSequential() const override { return true; }
 
  protected:
-  // clang-format off
-  FLAT_MSG_VIEW_BEGIN(RankFrontSeqCallbackInstrOperand);
-    FLAT_MSG_VIEW_DEFINE_PATTERN(int64_t, process_rank);
-  FLAT_MSG_VIEW_END(RankFrontSeqCallbackInstrOperand);
-  // clang-format on
-
-  void Run(const InstructionMsg& instr_msg) const {
-    FlatMsgView<RankFrontSeqCallbackInstrOperand> args(instr_msg.operand());
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    if (args->process_rank() == GlobalProcessCtx::Rank()) {
-      CHECK(static_cast<bool>(phy_instr_operand));
-      const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
-      CHECK_NOTNULL(ptr);
-      ptr->callback()();
-    } else {
-      CHECK(!static_cast<bool>(phy_instr_operand));
-    }
-  }
 };
 
 class ComputeRankFrontSeqCallbackInstructionType final
@@ -62,10 +42,10 @@ class ComputeRankFrontSeqCallbackInstructionType final
   ComputeRankFrontSeqCallbackInstructionType() = default;
   ~ComputeRankFrontSeqCallbackInstructionType() override = default;
 
-  using stream_type = HostStreamType;
+  using stream_type = ControlStreamType;
 
-  void Infer(Instruction* instruction) const override {}
-  void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
+  void Compute(Instruction* instruction) const override {}
+  void ComputeInFuseMode(InstructionMsg* instr_msg) const override {}
 };
 COMMAND(RegisterInstructionType<ComputeRankFrontSeqCallbackInstructionType>(
     "ComputeRankFrontSeqCallback"));
@@ -78,10 +58,7 @@ class CtrlComputeRankFrontSeqCallbackInstructionType final
 
   using stream_type = ControlStreamType;
 
-  void Infer(VirtualMachineEngine*, InstructionMsg* instr_msg) const override {}
-  void Compute(VirtualMachineEngine*, InstructionMsg* instr_msg) const override { Run(*instr_msg); }
-  void Infer(Instruction* instruction) const override {}
-  void Compute(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction* instruction) const override {}
 };
 COMMAND(RegisterInstructionType<CtrlComputeRankFrontSeqCallbackInstructionType>(
     "CtrlComputeRankFrontSeqCallback"));
@@ -91,7 +68,7 @@ class GlobalFrontSeqBarrierInstructionType : public InstructionType {
   GlobalFrontSeqBarrierInstructionType() = default;
   virtual ~GlobalFrontSeqBarrierInstructionType() override = default;
 
-  using stream_type = HostStreamType;
+  using stream_type = ControlStreamType;
 
   virtual bool IsFrontSequential() const override { return true; }
 };
@@ -102,7 +79,6 @@ class ComputeGlobalFrontSeqBarrierInstructionType final
   ComputeGlobalFrontSeqBarrierInstructionType() = default;
   ~ComputeGlobalFrontSeqBarrierInstructionType() override = default;
 
-  void Infer(Instruction* instruction) const override {}
   void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
 };
 COMMAND(RegisterInstructionType<ComputeGlobalFrontSeqBarrierInstructionType>(

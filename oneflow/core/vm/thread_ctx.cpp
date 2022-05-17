@@ -19,32 +19,16 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void ThreadCtx::LoopRun(const std::function<void(ThreadCtx*)>& Initializer) {
-  Initializer(this);
-  while (ReceiveAndRun() == intrusive::kChannelStatusSuccess) {}
-}
-
-intrusive::ChannelStatus ThreadCtx::ReceiveAndRun() {
+size_t ThreadCtx::TryReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
   intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
-  intrusive::ChannelStatus status = mut_pending_instruction_list()->MoveTo(&tmp_list);
+  mut_pending_instruction_list()->MoveTo(&tmp_list);
+  size_t size = tmp_list.size();
   INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
     tmp_list.Erase(instruction.Mutable());
     stream_type.Run(instruction.Mutable());
   }
-  return status;
-}
-
-intrusive::ChannelStatus ThreadCtx::TryReceiveAndRun() {
-  const StreamType& stream_type = stream_rt_desc().stream_type();
-  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
-  intrusive::ChannelStatus status = mut_pending_instruction_list()->TryMoveTo(&tmp_list);
-  INTRUSIVE_FOR_EACH_PTR(instruction, &tmp_list) {
-    CHECK_GT(instruction->ref_cnt(), 1);
-    tmp_list.Erase(instruction);
-    stream_type.Run(instruction);
-  }
-  return status;
+  return size;
 }
 
 }  // namespace vm

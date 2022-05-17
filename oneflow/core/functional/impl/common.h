@@ -16,7 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 #define ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 
+#include <cstdint>
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 namespace one {
@@ -29,11 +31,13 @@ bool IsStaticZerosTensor(const std::shared_ptr<Tensor>& x);
 bool IsInplaceValid(const std::shared_ptr<Tensor>& x);
 bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
 
-Maybe<void> CheckAxis(std::vector<int32_t>& axis, const Shape& shape);
+Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim);
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
 Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
                                   const std::shared_ptr<Tensor>& x_cast);
 Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
+Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride, const Shape& target_shape);
+Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shape);
 
 }  // namespace functional
 }  // namespace one

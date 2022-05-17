@@ -23,6 +23,7 @@ from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.block import TensorBlock
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
+import oneflow as flow
 
 
 class ParamGroup(object):
@@ -45,9 +46,15 @@ class ParamGroup(object):
                 )
 
         self._options = deepcopy(default_options)
+        # rewrite options in default_options
         for key in self._options:
             if key in parameters:
                 self._options[key] = parameters[key]
+        # add excess keys in dict
+        for key in parameters:
+            if key not in self._options and key != "params":
+                self._options[key] = parameters[key]
+
         self._enable_clip_grad = False
         if "clip_grad_max_norm" in parameters and "clip_grad_norm_type" in parameters:
             self._enable_clip_grad = True
@@ -63,6 +70,10 @@ class ParamGroup(object):
     def __contains__(self, key):
         return self._options.__contains__(key)
 
+    def setdefault(self, key, value):
+        if key not in self._options:
+            self._options[key] = value
+
     def items(self):
         return self.__dict__.items()
 
@@ -75,6 +86,27 @@ class ParamGroup(object):
         return self._parameters
 
 
+class _SourceOpOnlyResourceDependenceMode:
+    def __init__(self):
+        self.guard_ = None
+
+    def __enter__(self):
+        self.guard = (
+            flow._oneflow_internal.eager.SourceOpOnlyResourceDependenceModeGuard()
+        )
+
+    def __exit__(self, *args, **kwargs):
+        del self.guard
+
+
+def _decorate_step(step):
+    def decorated_step(*args, **kwargs):
+        with _SourceOpOnlyResourceDependenceMode():
+            return step(*args, **kwargs)
+
+    return decorated_step
+
+
 class Optimizer(object):
     def __init__(self, parameters, options):
         self.param_groups = list()
@@ -84,6 +116,8 @@ class Optimizer(object):
 
         self._parse_input_parameters(parameters)
 
+        self.step = _decorate_step(self.step)
+
     def add_param_group(self, param_group) -> None:
         raise NotImplementedError()
 
@@ -91,7 +125,7 @@ class Optimizer(object):
         r"""
         Load the state of the optimizer which is created by `state_dict` function.
 
-        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict
+        It almost copied from: https://pytorch.org/docs/1.10/_modules/torch/optim/optimizer.html#Optimizer.load_state_dict.
         """
 
         # Validate the state_dict
@@ -125,9 +159,7 @@ class Optimizer(object):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
-                    value = value.to_consistent(
-                        placement=param.placement, sbp=param.sbp
-                    )
+                    value = value.to_global(placement=param.placement, sbp=param.sbp)
                 return value
             elif isinstance(value, dict):
                 return {k: cast(param, v) for k, v in value.items()}
@@ -167,7 +199,7 @@ class Optimizer(object):
           differs between optimizer classes.
         * param_group - a dict containing all parameter groups.
 
-        It almost copied from: https://pytorch.org/docs/stable/_modules/torch/optim/optimizer.html#Optimizer.state_dict
+        It almost copied from: https://pytorch.org/docs/1.10/_modules/torch/optim/optimizer.html#Optimizer.state_dict.
         """
 
         # Save order indices instead of Tensors
@@ -200,18 +232,26 @@ class Optimizer(object):
         }
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
+        """Performs a single optimization step (parameter update).
+
+        Args:
+            closure (Union[Callable, None], optional): A closure that reevaluates the model and returns the loss. Optional for most optimizers.
+
+        Returns:
+            Union[Tensor, None]: The loss. 
+        """
         raise NotImplementedError()
 
     def clip_grad(self):
         r"""Clips gradient norm of an iterable of parameters. 
         The norm is computed over all gradients together, as if they were concatenated into a single vector.
-        
+
         You can set the max_norm and norm_type. 
 
         For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on). 
 
         You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
-        
+
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -251,7 +291,7 @@ class Optimizer(object):
                     if set_to_none:
                         param.grad = None
                     else:
-                        param.grad.zeros_()
+                        param.grad.zero_()
 
     def _parse_input_parameters(self, parameters):
         """
@@ -282,22 +322,36 @@ class Optimizer(object):
             )
 
     def _generate_grad_clip_conf_for_optim_conf(self, param_group, optimizer_conf):
-        if param_group._enable_clip_grad:
-            if (
-                param_group["clip_grad_max_norm"] == 1.0
-                and param_group["clip_grad_norm_type"] == 2.0
-            ):
-                optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm().set_clip_norm(
-                    param_group["clip_grad_max_norm"]
-                )
-            else:
-                warnings.warn(
-                    "For now, nn.Graph only support clip grad with `clip_grad_max_norm == 1.0` and `clip_grad_norm_type == 2.0`."
-                )
+        if not param_group._enable_clip_grad:
+            return
+
+        assert "clip_grad_max_norm" in param_group
+        assert "clip_grad_norm_type" in param_group
+        max_norm = float(param_group["clip_grad_max_norm"])
+        norm_type = float(param_group["clip_grad_norm_type"])
+        clip_grad_norm = optimizer_conf.clip_conf.clip_by_global_norm
+        clip_grad_norm.max_norm = max_norm
+        clip_grad_norm.norm_type = norm_type
 
     @property
     def support_sparse(self):
+        """Whether the Optimizer support sparse update. 
+
+        """
         return False
+
+    def _check_variables_in_graph(self, vars_conf):
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                if not param.requires_grad:
+                    continue
+
+                if param not in vars_conf:
+                    raise ValueError(
+                        f"Parameter <{param}> is not in the corresponding nn.Graph/nn.Module."
+                        " Please make sure you call the module's to(..)/to_global(...) method first,"
+                        " then add the module's parameters into an optimizer."
+                    )
 
     def _check_variables_optimizer_bound(self, vars_conf):
         for param_group in self.param_groups:
@@ -321,6 +375,6 @@ class Optimizer(object):
                 if not param.requires_grad:
                     continue
 
-                sparse_opt_conf = job_conf.mutable_indexed_slices_optimizer_conf()
-                sparse_variable_op_names = sparse_opt_conf.mutable_include_op_names()
-                sparse_variable_op_names.add_op_name(vars_conf[param].name)
+                sparse_opt_conf = job_conf.indexed_slices_optimizer_conf
+                sparse_variable_op_names = sparse_opt_conf.include_op_names
+                sparse_variable_op_names.op_name.append(vars_conf[param].name)

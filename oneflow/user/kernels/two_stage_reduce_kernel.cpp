@@ -48,7 +48,7 @@ class ReduceDeviceStageKernel final : public OpKernel {
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<T>(in->shape(), reduce_tmp_buf));
     NdarrayUtil<device_type, T>::BroadcastEQ(
-        ctx->stream(), XpuVarNdarray<int8_t>(mask->shape(), mask->mut_dptr<int8_t>()),
+        ctx->stream(), XpuVarNdarray<bool>(mask->shape(), mask->mut_dptr<bool>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(out->shape(), out->dptr<T>()));
 
@@ -56,7 +56,7 @@ class ReduceDeviceStageKernel final : public OpKernel {
         ctx->device_type(), DataType::kInt8, DataType::kInt32);
     CHECK(cast);
 
-    cast->Launch(ctx->stream(), mask->dptr<int8_t>(), mask_tmp_buf, mask->shape().elem_cnt());
+    cast->Launch(ctx->stream(), mask->dptr<bool>(), mask_tmp_buf, mask->shape().elem_cnt());
     NdarrayUtil<device_type, int32_t>::ReduceSum(
         ctx->stream(), XpuVarNdarray<int32_t>(count->shape(), count->mut_dptr<int32_t>()),
         XpuVarNdarray<const int32_t>(mask->shape(), mask_tmp_buf),
@@ -115,8 +115,8 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
         ctx->stream(), XpuVarNdarray<T>(in_diff->shape(), broadcasted_tmp_buf_ptr),
         XpuVarNdarray<const T>(out_diff->shape(), tmp_buf_ptr));
 
-    TwoStageReduceKernelUtil<device_type, T, int8_t>::Mask(
-        ctx->stream(), in_diff->shape().elem_cnt(), broadcasted_tmp_buf_ptr, mask->dptr<int8_t>(),
+    TwoStageReduceKernelUtil<device_type, T, bool>::Mask(
+        ctx->stream(), in_diff->shape().elem_cnt(), broadcasted_tmp_buf_ptr, mask->dptr<bool>(),
         in_diff->mut_dptr<T>());
   }
 
@@ -168,7 +168,7 @@ class ReduceGlobalStageKernel final : public OpKernel {
         XpuVarNdarray<T>(in->shape(), tmp_buffer->mut_dptr<T>()));
 
     NdarrayUtil<device_type, T>::BroadcastEQ(
-        ctx->stream(), XpuVarNdarray<int8_t>(in->shape(), mask->mut_dptr<int8_t>()),
+        ctx->stream(), XpuVarNdarray<bool>(in->shape(), mask->mut_dptr<bool>()),
         XpuVarNdarray<const T>(in->shape(), in->dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, out->dptr<T>()));
   }
@@ -224,9 +224,9 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
         reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + device_count_with_mask_bytes
                              + global_count_bytes + reduce_sum_tmp_bytes + divided_buf_bytes);
 
-    TwoStageReduceKernelUtil<device_type, int32_t, int8_t>::Mask(
+    TwoStageReduceKernelUtil<device_type, int32_t, bool>::Mask(
         ctx->stream(), device_count->shape().elem_cnt(), device_count->dptr<int32_t>(),
-        mask->dptr<int8_t>(), device_count_with_mask);
+        mask->dptr<bool>(), device_count_with_mask);
 
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
     const Shape& reduced_shape =

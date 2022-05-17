@@ -96,13 +96,13 @@ class CudaDeviceManagerFactory : public DeviceManagerFactory {
   CudaDeviceManagerFactory() = default;
   ~CudaDeviceManagerFactory() override = default;
 
-  std::unique_ptr<DeviceManager> NewDeviceManager() override {
-    return std::make_unique<CudaDeviceManager>();
+  std::unique_ptr<DeviceManager> NewDeviceManager(DeviceManagerRegistry* registry) override {
+    return std::make_unique<CudaDeviceManager>(registry);
   }
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
 
-  std::string device_type_name() const override { return "gpu"; }
+  std::string device_type_name() const override { return "cuda"; }
 
   void DumpVersionInfo() const override { CudaDumpVersionInfo(); }
 };

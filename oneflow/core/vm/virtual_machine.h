@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
 #include "oneflow/core/common/notifier.h"
-#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
@@ -33,23 +32,36 @@ class VirtualMachine final {
   VirtualMachine(const Resource& resource, int64_t this_machine_id);
   ~VirtualMachine();
 
+  static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
+
+  bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
+  std::string GetBlockingDebugString();
+
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
 
   const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
+  Maybe<void> CloseVMThreads();
+
  private:
   friend class InstructionsBuilder;
 
-  void Loop(const std::function<void()>& Initializer);
+  void ScheduleLoop(const std::function<void()>& Initializer);
+  void CallbackLoop(const std::function<void()>& Initializer);
 
   vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
 
+  Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
+
+  bool vm_threads_closed_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
-  Notifier notifier_;
+  Notifier pending_notifier_;
+  std::thread callback_thread_;
+  Notifier callback_notifier_;
 };
 
 }  // namespace oneflow

@@ -23,19 +23,18 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsPartialSumSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+bool RawIsPartialSumSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_partial_sum_parallel();
 }
 
-static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocal);
+static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocalCached);
 
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_split_parallel();
-}
+bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
+static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
-Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                              const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
@@ -45,7 +44,7 @@ Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaivePToS = DECORATE(&RawCheckNaivePToS, ThreadLocal);
+static constexpr auto* CheckNaivePToS = DECORATE(&RawCheckNaivePToS, ThreadLocalCachedCopiable);
 
 }  // namespace
 

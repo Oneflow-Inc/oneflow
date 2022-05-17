@@ -15,7 +15,8 @@ limitations under the License.
 """
 import os
 import oneflow as flow
-import oneflow.utils.vision.transforms as transforms
+import flowvision as vision
+import flowvision.transforms as transforms
 
 
 def load_data_cifar10(
@@ -26,14 +27,14 @@ def load_data_cifar10(
     source_url=None,
     num_workers=0,
 ):
-    cifar10_train = flow.utils.vision.datasets.CIFAR10(
+    cifar10_train = vision.datasets.CIFAR10(
         root=data_dir,
         train=True,
         download=download,
         transform=transform,
         source_url=source_url,
     )
-    cifar10_test = flow.utils.vision.datasets.CIFAR10(
+    cifar10_test = vision.datasets.CIFAR10(
         root=data_dir,
         train=False,
         download=download,
@@ -61,22 +62,26 @@ def load_data_mnist(
     transformer += [transforms.ToTensor()]
     transformer = transforms.Compose(transformer)
 
-    mnist_train = flow.utils.vision.datasets.MNIST(
+    mnist_train = vision.datasets.MNIST(
         root=root,
         train=True,
         transform=transformer,
         download=download,
         source_url=source_url,
     )
-    mnist_test = flow.utils.vision.datasets.MNIST(
+    mnist_test = vision.datasets.MNIST(
         root=root,
         train=False,
         transform=transformer,
         download=download,
         source_url=source_url,
     )
-    train_iter = flow.utils.data.DataLoader(mnist_train, batch_size, shuffle=True)
-    test_iter = flow.utils.data.DataLoader(mnist_test, batch_size, shuffle=False)
+    train_iter = flow.utils.data.DataLoader(
+        mnist_train, batch_size, shuffle=True, num_workers=2
+    )
+    test_iter = flow.utils.data.DataLoader(
+        mnist_test, batch_size, shuffle=False, num_workers=2
+    )
     return train_iter, test_iter
 
 
@@ -90,14 +95,14 @@ def get_fashion_mnist_dataset(
     trans.append(transforms.ToTensor())
     transform = transforms.Compose(trans)
 
-    mnist_train = flow.utils.vision.datasets.FashionMNIST(
+    mnist_train = vision.datasets.FashionMNIST(
         root=root,
         train=True,
         transform=transform,
         download=download,
         source_url=source_url,
     )
-    mnist_test = flow.utils.vision.datasets.FashionMNIST(
+    mnist_test = vision.datasets.FashionMNIST(
         root=root,
         train=False,
         transform=transform,
@@ -124,14 +129,14 @@ def load_data_fashion_mnist(
     trans.append(transforms.ToTensor())
     transform = transforms.Compose(trans)
 
-    mnist_train = flow.utils.vision.datasets.FashionMNIST(
+    mnist_train = vision.datasets.FashionMNIST(
         root=root,
         train=True,
         transform=transform,
         download=download,
         source_url=source_url,
     )
-    mnist_test = flow.utils.vision.datasets.FashionMNIST(
+    mnist_test = vision.datasets.FashionMNIST(
         root=root,
         train=False,
         transform=transform,

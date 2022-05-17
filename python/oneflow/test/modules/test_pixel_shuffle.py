@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -93,7 +93,7 @@ class TestPixelShuffleModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=num_channels).to(device)
+        x = random_tensor(ndim=4, dim1=num_channels).to(device)
         y = m(x)
         return y
 

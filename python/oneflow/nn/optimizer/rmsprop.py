@@ -128,7 +128,7 @@ class RMSprop(Optimizer):
 
     def __init__(
         self,
-        parameters: Union[Iterator[Parameter], List[Dict]],
+        params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         alpha: float = 0.99,
         eps: float = 1e-08,
@@ -147,7 +147,7 @@ class RMSprop(Optimizer):
         options["eps"] = eps
         options["weight_decay"] = weight_decay
         options["centered"] = centered
-        super().__init__(parameters, options)
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
@@ -155,24 +155,18 @@ class RMSprop(Optimizer):
                 self._state[param] = dict()
 
         self._centered_rmsprop = (
-            flow.builtin_op("rmsprop_update")
+            flow.stateful_op("rmsprop_update")
             .Input("model")
             .Input("model_diff")
             .Input("mean_square")
             .Input("mean_gradient")
-            .Attr("centered", True)
-            .Attr("l1", 0.0)
-            .Attr("l2", 0.0)
             .Build()
         )
         self._rmsprop = (
-            flow.builtin_op("rmsprop_update")
+            flow.stateful_op("rmsprop_update")
             .Input("model")
             .Input("model_diff")
             .Input("mean_square")
-            .Attr("centered", False)
-            .Attr("l1", 0.0)
-            .Attr("l2", 0.0)
             .Build()
         )
 
@@ -189,7 +183,7 @@ class RMSprop(Optimizer):
                 loss = closure()
             for param_group in self.param_groups:
                 kwargs = {
-                    "learning_rate_val": param_group["lr"],
+                    "learning_rate": param_group["lr"],
                     "epsilon": param_group["eps"],
                     "decay_rate": param_group["alpha"],
                     "l2": param_group["weight_decay"],
@@ -206,18 +200,23 @@ class RMSprop(Optimizer):
                         if "grad_avg" not in self._state[param]:
                             self._state[param]["grad_avg"] = flow.zeros_like(param)
                         mg_tensor = self._state[param]["grad_avg"]
-                        self._centered_rmsprop(
-                            param, param.grad, ms_tensor, mg_tensor, **kwargs
+                        flow._C.dispatch_rmsprop_update(
+                            self._centered_rmsprop,
+                            (param, param.grad, ms_tensor, mg_tensor),
+                            centered=True,
+                            **kwargs,
                         )
                     else:
-                        self._rmsprop(param, param.grad, ms_tensor, **kwargs)
+                        flow._C.dispatch_rmsprop_update(
+                            self._rmsprop, (param, param.grad, ms_tensor), **kwargs
+                        )
             self._state["step"] = self._state["step"] + 1
             return loss
 
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
 
             lr = (
                 param_group["initial_lr"]
@@ -230,11 +229,11 @@ class RMSprop(Optimizer):
 
             epslion = param_group["eps"]
 
-            optimizer_conf.set_base_learning_rate(lr)
+            optimizer_conf.base_learning_rate = lr
 
-            optimizer_conf.mutable_rmsprop_conf().set_decay_rate(decay_rate)
-            optimizer_conf.mutable_rmsprop_conf().set_centered(centered)
-            optimizer_conf.mutable_rmsprop_conf().set_epsilon(epslion)
+            optimizer_conf.rmsprop_conf.decay_rate = decay_rate
+            optimizer_conf.rmsprop_conf.centered = centered
+            optimizer_conf.rmsprop_conf.epsilon = epslion
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
@@ -242,7 +241,7 @@ class RMSprop(Optimizer):
             for param in param_group.parameters:
                 vars_conf[param].l2 = weight_decay
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

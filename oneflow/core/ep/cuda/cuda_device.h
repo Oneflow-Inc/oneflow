@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_H_
 
 #include "oneflow/core/ep/include/device.h"
+#include "oneflow/core/common/data_type.h"
 
 #ifdef WITH_CUDA
 
@@ -29,13 +30,14 @@ namespace ep {
 class CudaDevice : public Device {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDevice);
-  explicit CudaDevice(int device_index);
-  virtual ~CudaDevice();
+  explicit CudaDevice(int device_index, DeviceManager* device_manager);
+  ~CudaDevice() override;
 
   void SetAsActiveDevice() override;
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
   size_t device_index() const override { return device_index_; }
+  DeviceManager* device_manager() const override { return device_manager_; }
 
   Stream* CreateStream() override;
   void DestroyStream(Stream* stream) override;
@@ -50,12 +52,21 @@ class CudaDevice : public Device {
 
   const cudaDeviceProp& properties() const;
 
+  const void* GetConstZeros(DataType data_type, size_t n) const;
+  const void* GetConstOnes(DataType data_type, size_t n) const;
+
  private:
   int device_index_;
   std::mutex events_mutex_;
   std::vector<Event*> events_;
   unsigned int event_flags_;
   cudaDeviceProp properties_;
+  DeviceManager* device_manager_;
+  int64_t const_buf_elem_cnt_;
+  void* const_zeros_buffer_;
+  void* const_ones_buffer_fp32_;
+  void* const_ones_buffer_fp16_;
+  void* const_ones_buffer_bf16_;
 };
 
 }  // namespace ep

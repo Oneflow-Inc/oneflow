@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow as flow
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -123,6 +123,16 @@ def _test_expand_same_int(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 
 
+def _test_expand_flow_size(test_case, device):
+    input_shape = (2, 4, 1, 32)
+    expand_dim = flow.Size([2, 4, 2, 32])
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
+    of_input = flow.tensor(input, dtype=flow.int, device=flow.device(device))
+    of_out = of_input.expand(expand_dim)
+
+    test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
+
+
 def _test_expand_backward_same_dim(test_case, device):
     input = np.array(
         [
@@ -181,10 +191,16 @@ def random_expand(x, ndim, expand_size):
 
 @flow.unittest.skip_unless_1n1d()
 class TestExpand(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_tensor_expand_with_random_data(test_case):
         random_expand_size = random(1, 6).to(int).value()
-        x = random_pytorch_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
+        return random_expand(x, ndim=5, expand_size=random_expand_size)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_tensor_expand_bool_with_random_data(test_case):
+        random_expand_size = random(1, 6).to(int).value()
+        x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1).to(torch.bool)
         return random_expand(x, ndim=5, expand_size=random_expand_size)
 
     def test_expand_compare_with_numpy(test_case):
@@ -194,12 +210,19 @@ class TestExpand(flow.unittest.TestCase):
             _test_expand_same_dim,
             _test_expand_same_dim_negative,
             _test_expand_same_int,
+            _test_expand_flow_size,
             _test_expand_backward,
             _test_expand_backward_same_dim,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=5, auto_backward=False)
+    def test_flow_expand_with_0_size(test_case):
+        device = random_device()
+        x = random_tensor(ndim=2, dim1=1).to(device)
+        return x.expand([0, 3])
 
 
 if __name__ == "__main__":

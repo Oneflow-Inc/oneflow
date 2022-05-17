@@ -66,7 +66,7 @@ def evaluate_accuracy(data_iter, net, device=None):
     return acc_sum / n
 
 
-def test_train_and_eval(test_case):
+def _test_train_and_eval(test_case):
     if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
         device = flow.device("cpu")
     else:
@@ -133,7 +133,7 @@ def test_train_and_eval(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestLenet(flow.unittest.TestCase):
     def test_lenet(test_case):
-        test_train_and_eval(test_case)
+        _test_train_and_eval(test_case)
 
 
 if __name__ == "__main__":

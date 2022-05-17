@@ -27,7 +27,11 @@ ShapeView::ShapeView(const Shape& shape)
 template<typename DimT>
 int64_t ShapeViewBase<DimT>::At(int64_t index) const {
   CHECK_GE(index, 0);
-  CHECK_LT(index, num_axes_);
+  if (!(this->NumAxes() == 0 && this->elem_cnt() == 1)) {
+    CHECK_LT(index, num_axes_);
+  } else {
+    CHECK(index == 0);
+  }
   return ptr_[index];
 }
 

@@ -19,17 +19,24 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow as flow
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestRound(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_round_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
+        y = torch.round(x)
+        return y
+
+    @autotest(check_graph=True)
+    def test_flow_round_with_0dim_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
         y = torch.round(x)
         return y
 

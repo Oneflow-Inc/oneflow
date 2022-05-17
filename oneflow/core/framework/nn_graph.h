@@ -16,9 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 #define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 
+#include <memory>
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
@@ -29,8 +32,10 @@ class Blob;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name)
-      : name_(name), runtime_inited_(false), is_closed_(false) {}
+  explicit NNGraph(const std::string& name,
+                   const std::shared_ptr<MultiClientSessionContext>& sessioin_ctx)
+      : name_(name), session_ctx_(sessioin_ctx), runtime_inited_(false), is_closed_(false) {}
+  OF_DISALLOW_COPY_AND_MOVE(NNGraph);
   ~NNGraph();
 
   const std::string& job_name() const override { return name_; }
@@ -42,33 +47,49 @@ class NNGraph final : public NNGraphIf {
   const std::vector<std::string>& outputs_tensor_meta_str() const;
   int64_t variable_op_size() const;
 
+  Maybe<void> RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
+      const std::vector<std::string>& additional_var_names,
+      const std::vector<std::shared_ptr<one::Tensor>>& additional_var_tensors);
   Maybe<void> RegisterInputOpNamesAndTensors(
-      const std::vector<std::string>& input_op_names,
+      const std::vector<std::string>& inputs_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& input_tensors);
   Maybe<void> RegisterOutputOpNamesAndTensors(
-      const std::vector<std::string>& output_op_names,
+      const std::vector<std::string>& outputs_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& output_tensors);
   Maybe<void> RegisterVariableOpNamesAndTensors(
       const std::vector<std::string>& variable_op_names,
       const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
+  Maybe<std::vector<std::string>> GetAdditionalVarOpNames() const;
+  Maybe<std::vector<std::shared_ptr<one::Tensor>>> GetAdditionalVarOpTensors() const;
   Maybe<void> CompileAndInitRuntime();
   Maybe<void> Close();
 
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
-  Maybe<void> CreateAndRegisterNewVariableOpInJobPass();
+  Maybe<void> RegisterNewVariableOpInJobPass();
+  Maybe<void> DeleteOutdatedVariableInVariableTensorMgr();
+  Maybe<void> GetVariableRealBlobAfterSyncPlan();
 
   void NewRuntimeBuffers();
   void CloseRuntimeBuffers();
 
   std::string name_;
-  std::vector<std::string> input_op_names_;
-  std::vector<std::string> output_op_names_;
+  std::shared_ptr<MultiClientSessionContext> session_ctx_;
+  std::vector<std::string> inputs_op_names_;
+  std::vector<std::string> outputs_op_names_;
   std::vector<bool> input_tensors_valid_;
   std::vector<bool> output_tensors_valid_;
   std::vector<std::string> inputs_tensor_meta_str_;
   std::vector<std::string> outputs_tensor_meta_str_;
-  HashMap<std::string, Blob*> variable_op_name2eager_blob_;
+  HashMap<std::string, std::shared_ptr<one::Tensor>> variable_op_name2tensor_;
+  // Additional variables are variable other than model states, such as states in
+  // optimizers/lr schedulers or free eager tensors.
+  HashSet<std::string> additional_variable_op_name_;
+  // Additional states tensor loaded from state dict,
+  // they will be load into job after plan is generated.
+  HashMap<std::string, std::shared_ptr<one::Tensor>>
+      additional_variable_op_tobe_loaded_name2tensor_;
+  HashMap<std::string, vm::EagerBlobObject*> variable_op_name2eager_blob_object_;
   HashSet<std::string> variable_op_names_;
   Job job_;
   Plan plan_;

@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import torch as torch_original
 from oneflow.test_utils.automated_test_util import *
@@ -71,7 +71,7 @@ def _test_weightnorm(test_case, device, dim):
                 1e-05,
             )
         )
-    elif device == "gpu":
+    elif device == "cuda":
         test_case.assertTrue(
             np.allclose(
                 m_flow.weight_g.detach().cpu().numpy(),
@@ -83,7 +83,7 @@ def _test_weightnorm(test_case, device, dim):
         test_case.assertTrue(
             np.allclose(
                 m_flow.weight_v.detach().numpy(),
-                m_torch.weight_v.detach().numpy(),
+                m_torch.weight_v.detach().cpu().numpy(),
                 1e-05,
                 1e-05,
             )
@@ -143,7 +143,10 @@ class TestWeightNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=10, auto_backward=True, check_graph=False)
+    # Not check graph because of one reason:
+    # Reason 1, Graph's build input nn.modules.linear.Linear type is not supported.
+    # Please refer to issue: https://github.com/Oneflow-Inc/oneflow/issues/7466
+    @autotest(n=10, auto_backward=True, check_graph="ValidatedFlase")
     def test_weight_norm_with_random_data(test_case):
         device = random_device()
 

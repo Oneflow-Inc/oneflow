@@ -21,20 +21,20 @@ limitations under the License.
 namespace oneflow {
 namespace data {
 
-COCODataset::LoadTargetShdPtrVec COCODataset::At(int64_t index) const {
-  LoadTargetShdPtrVec ret;
-  LoadTargetShdPtr sample(new COCOImage());
-  sample->index = index;
-  sample->id = meta_->GetImageId(index);
-  sample->height = meta_->GetImageHeight(index);
-  sample->width = meta_->GetImageWidth(index);
+COCODataset::BatchType COCODataset::At(int64_t index) const {
+  BatchType batch;
+  batch.push_back(COCOImage());
+  auto& sample = batch.back();
+  sample.index = index;
+  sample.id = meta_->GetImageId(index);
+  sample.height = meta_->GetImageHeight(index);
+  sample.width = meta_->GetImageWidth(index);
   const std::string& image_file_path = meta_->GetImageFilePath(index);
   PersistentInStream in_stream(session_id_, DataFS(), image_file_path);
   int64_t file_size = DataFS()->GetFileSize(image_file_path);
-  sample->data.Resize(Shape({file_size}), DataType::kChar);
-  CHECK_EQ(in_stream.ReadFully(sample->data.mut_data<char>(), sample->data.nbytes()), 0);
-  ret.emplace_back(std::move(sample));
-  return ret;
+  sample.data.Resize(Shape({file_size}), DataType::kChar);
+  CHECK_EQ(in_stream.ReadFully(sample.data.mut_data<char>(), sample.data.nbytes()), 0);
+  return batch;
 }
 
 size_t COCODataset::Size() const { return meta_->Size(); }

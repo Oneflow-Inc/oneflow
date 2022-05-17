@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -31,13 +32,20 @@ Maybe<void> InferNmsDataType(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("nms")
-    .Input("in")
-    .Output("out")
-    .Attr<float>("iou_threshold")
-    .Attr<int32_t>("keep_n")
-    .SetTensorDescInferFn(InferNmsTensorDesc)
-    .SetDataTypeInferFn(InferNmsDataType)
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+/* static */ Maybe<void> NmsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferNmsTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> NmsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> NmsOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+
+/* static */ Maybe<void> NmsOp::InferDataType(user_op::InferContext* ctx) {
+  return InferNmsDataType(ctx);
+}
 
 }  // namespace oneflow

@@ -24,7 +24,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                  const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
@@ -32,7 +33,8 @@ Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveOneToOne = DECORATE(&RawCheckNaiveOneToOne, ThreadLocal);
+static constexpr auto* CheckNaiveOneToOne =
+    DECORATE(&RawCheckNaiveOneToOne, ThreadLocalCachedCopiable);
 
 }  // namespace
 
@@ -47,12 +49,14 @@ Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Sym
   int64_t src = JUST(tensor_placement->MachineId4ParallelId(0));
   int64_t dst = JUST(out->placement()->MachineId4ParallelId(0));
 
-  if (GlobalProcessCtx::Rank() == src) {
-    JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
-  }
-  if (GlobalProcessCtx::Rank() == dst) {
-    local_tensor = JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
-                                              JUST(local_tensor->device()), NullOpt));
+  if (src != dst) {
+    if (GlobalProcessCtx::Rank() == src) {
+      JUST(one::functional::Send(local_tensor, dst, /* send_meta */ false));
+    }
+    if (GlobalProcessCtx::Rank() == dst) {
+      local_tensor = JUST(one::functional::Recv(src, *tensor->shape(), tensor->dtype(),
+                                                JUST(local_tensor->device()), NullOpt));
+    }
   }
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
                                                  *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
