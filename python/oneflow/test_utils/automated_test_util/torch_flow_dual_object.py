@@ -39,7 +39,13 @@ except ImportError:
 
 from .util import broadcast
 from .global_scope import *
-from .generators import Nothing, generator, random_pytorch_tensor, choice_pytorch_tensor
+from .generators import (
+    Nothing,
+    generator,
+    random_pytorch_tensor,
+    choice_pytorch_tensor,
+    rng,
+)
 
 postulate = [".rand", ".Tensor"]
 
@@ -1006,6 +1012,7 @@ def autotest(
     check_graph=True,
     check_allclose=True,
     check_dtype=False,
+    check_grad_use_random_data=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1058,7 +1065,37 @@ def autotest(
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
-                                x.sum().backward()
+                                if check_grad_use_random_data:
+                                    np_arr = rng.uniform(
+                                        low=0, high=1, size=list(x.oneflow.shape)
+                                    )
+                                    if is_global():
+                                        np_arr = broadcast(np_arr)
+                                        flow_tensor = flow.tensor(
+                                            np_arr,
+                                            dtype=x.oneflow.dtype,
+                                            placement=x.oneflow.placement,
+                                            sbp=len(x.oneflow.sbp)
+                                            * [flow.sbp.broadcast],
+                                        )
+                                    else:
+                                        flow_tensor = flow.tensor(
+                                            np_arr,
+                                            dtype=x.oneflow.dtype,
+                                            device=x.oneflow.device,
+                                        )
+                                    # TODO(): Inferred shape of some op is different between oneflow and torch
+                                    pytorch_tensor = torch_original.tensor(
+                                        np_arr.reshape(list(x.pytorch.shape)),
+                                        dtype=x.pytorch.dtype,
+                                        device=x.pytorch.device,
+                                    )
+                                    diff_output = GetDualObject(
+                                        "unused", pytorch_tensor, flow_tensor
+                                    )
+                                    x.backward(diff_output)
+                                else:
+                                    x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
                     for key in x.pytorch.state_dict().keys():
