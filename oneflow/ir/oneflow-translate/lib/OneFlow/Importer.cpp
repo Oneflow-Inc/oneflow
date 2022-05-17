@@ -167,9 +167,20 @@ ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
       shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
 }
 
+ArrayAttr Importer::GetAttrFromStride(const ::oneflow::Int64ListProto& stride) {
+  return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
+      stride.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
+}
+
 void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
   for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
     shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
+  }
+}
+
+void WriteAttrToStride(mlir::Attribute& attr, ::oneflow::Int64ListProto* stride) {
+  for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    stride->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
   }
 }
 
@@ -205,6 +216,9 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
 #undef DEFINE_ONE_ELIF
     else if (value.has_at_shape()) {
       attr_vec.emplace_back(GetBuilder().getNamedAttr(name, GetAttrFromShape(value.at_shape())));
+    }
+    else if (value.has_at_stride()) {
+      attr_vec.emplace_back(GetBuilder().getNamedAttr(name, GetAttrFromStride(value.at_stride())));
     }
 #define DEFINE_ONE_ELIF(at_key, get_attr, field)                                         \
   else if (value.has_##at_key()) {                                                       \
@@ -246,6 +260,15 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
       auto dense_attr_list =
           llvm::map_range(value.at_list_shape().val(),
                           [&](const ::oneflow::ShapeProto& s) { return GetAttrFromShape(s); });
+      std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
+                                                     dense_attr_list.end()};
+      attr_vec.emplace_back(
+          GetBuilder().getNamedAttr(name, GetBuilder().getArrayAttr(dense_attr_vector)));
+    }
+    else if (value.has_at_list_stride()) {
+      auto dense_attr_list =
+          llvm::map_range(value.at_list_stride().val(),
+                          [&](const ::oneflow::Int64ListProto& s) { return GetAttrFromStride(s); });
       std::vector<mlir::Attribute> dense_attr_vector{dense_attr_list.begin(),
                                                      dense_attr_list.end()};
       attr_vec.emplace_back(
@@ -795,6 +818,8 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
         user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
       } else if (attr_type == ::oneflow::kAtShape) {
         WriteAttrToShape(attr, user_attr.mutable_at_shape());
+      } else if (attr_type == ::oneflow::kAtStride) {
+        WriteAttrToStride(attr, user_attr.mutable_at_stride());
       } else if (attr_type == ::oneflow::kAtDataType) {
         ::oneflow::DataType dt = ::oneflow::kInvalidDataType;
         if (succeeded(ConvertDTFromAttr(attr, dt))) {
@@ -836,6 +861,11 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::Operat
         for (auto shape_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
           ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
           WriteAttrToShape(shape_attr, shape_ptr);
+        }
+      } else if (attr_type == ::oneflow::kAtListStride) {
+        for (auto stride_attr : attr.dyn_cast<ArrayAttr>().getValue()) {
+          ::oneflow::Int64ListProto* stride_ptr = user_attr.mutable_at_list_stride()->add_val();
+          WriteAttrToStride(stride_attr, stride_ptr);
         }
       } else if (attr_type == ::oneflow::kAtListString) {
         // attr like nd_sbp requires the existence of list even it is empty
