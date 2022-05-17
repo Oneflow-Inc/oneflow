@@ -187,21 +187,6 @@ void ConcatFeaturesGrad(user_op::KernelComputeContext* ctx, const int64_t batch_
   }
 }
 
-constexpr int kWarpSize = 32;
-
-template<typename T>
-struct SumOp {
-  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return a + b; }
-};
-
-template<template<typename> class ReductionOp, typename T>
-__inline__ __device__ T WarpReduce(T val) {
-  for (int mask = kWarpSize / 2; mask > 0; mask /= 2) {
-    val = ReductionOp<T>()(val, __shfl_down_sync(0xffffffff, val, mask));
-  }
-  return val;
-}
-
 template<typename T, int32_t N>
 struct Param {
   const T* in[N];
@@ -272,6 +257,22 @@ __global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t embedding_
   }
 }
 
+void GetBlockDims(const int64_t vector_size, int* block_dim_x, int* block_dim_y) {
+  const int block_size = 256;
+  if (vector_size < block_size) {
+    *block_dim_x = vector_size;
+    *block_dim_y = (block_size + vector_size - 1) / vector_size;
+  } else {
+    *block_dim_x = block_size;
+    *block_dim_y = 1;
+  }
+}
+
+int GetNumBlocks(const int64_t num_instances, const int64_t instance_per_block) {
+  int max_blocks = (num_instances + instance_per_block - 1) / instance_per_block;
+  return std::min(max_blocks, kCudaMaxBlocksNum);
+}
+
 }  // namespace
 
 template<typename T>
@@ -287,12 +288,12 @@ class FusedDotFeatureInteractionPoolingSumKernel final : public user_op::OpKerne
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t batch_size = out->shape().At(0);
     const int64_t vector_size = out->shape().At(1);
-    int block_size = 256;
-    int block_dim_x = vector_size;
-    int block_dim_y = block_size / block_dim_x;
-    int num_blocks = batch_size / block_dim_y;
+    int block_dim_x;
+    int block_dim_y;
+    GetBlockDims(vector_size, &block_dim_x, &block_dim_y);
+    const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
     dim3 block_dims = dim3(block_dim_x, block_dim_y);
-    int input_size = ctx->input_size("features");
+    const int input_size = ctx->input_size("features");
     cudaStream_t stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     if (input_size == 1) {
       Param<T, 1> param;
@@ -533,12 +534,12 @@ class FusedDotFeatureInteractionPoolingSumGradKernel final : public user_op::OpK
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const int64_t batch_size = dy->shape().At(0);
     const int64_t vector_size = dy->shape().At(1);
-    int block_size = 256;
-    int block_dim_x = vector_size;
-    int block_dim_y = block_size / block_dim_x;
-    int num_blocks = batch_size / block_dim_y;
+    int block_dim_x;
+    int block_dim_y;
+    GetBlockDims(vector_size, &block_dim_x, &block_dim_y);
+    const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
     dim3 block_dims = dim3(block_dim_x, block_dim_y);
-    int input_size = ctx->input_size("features_grad_like");
+    const int input_size = ctx->input_size("features_grad_like");
     cudaStream_t stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     if (input_size == 1) {
       GradParam<T, 1> param;
