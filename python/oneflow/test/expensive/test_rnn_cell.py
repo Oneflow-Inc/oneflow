@@ -92,6 +92,25 @@ class TestRNN(flow.unittest.TestCase):
             cx = res[1]
         return res[0]
 
+    @autotest(n=10, check_graph=True)
+    def test_gru_cell(test_case):
+        device = random_device()
+        batch_size = random(1, 6)
+        time_steps = random(1, 6)
+        input_size = random(1, 6) * 2
+        hidden_size = random(1, 6) * 2
+        has_bias = random().to(bool)
+        m = torch.nn.GRUCell(
+            input_size=input_size, hidden_size=hidden_size, bias=has_bias
+        ).to(device)
+        input = random_tensor(
+            ndim=3, dim0=time_steps, dim1=batch_size, dim2=input_size
+        ).to(device)
+        hx = random_tensor(ndim=2, dim0=batch_size, dim1=hidden_size).to(device)
+        for i in range(time_steps.to(int).value()):
+            hx = m(input[i], hx)
+        return hx
+
 
 if __name__ == "__main__":
     unittest.main()

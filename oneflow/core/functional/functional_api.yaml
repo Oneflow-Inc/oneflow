@@ -2203,6 +2203,18 @@
   signature: "TensorTuple (Tensor input, TensorTuple hx, Tensor w_ih, Tensor w_hh, Tensor b_ih=None, Tensor b_hh=None) => LstmCell"
   bind_python: True
 
+- name: "gru_cell"
+  signature: "Tensor (Tensor input, Tensor hx, Tensor w_ih, Tensor w_hh, Tensor b_ih=None, Tensor b_hh=None) => GruCell"
+  bind_python: True
+
+- name: "_fused_gru_cell"
+  signature: "TensorTuple (Tensor igates, Tensor hgates, Tensor hx, Tensor b_ih=None, Tensor b_hh=None) => FusedGruCell"
+  bind_python: False
+
+- name: "_fused_gru_cell_grad"
+  signature: "TensorTuple (Tensor grad_hy, Tensor workspace, Bool has_bias) => FusedGruCellGrad"
+  bind_python: False
+
 - name: "_fused_lstm_cell"
   signature: "TensorTuple (Tensor igates, Tensor hgates, Tensor cx, Tensor b_ih=None, Tensor b_hh=None) => FusedLstmCell"
   bind_python: False

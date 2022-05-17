@@ -89,19 +89,6 @@ namespace oneflow {
   return InferLogicalTensorDesc(ctx);
 }
 
-// let input = (ins
-//   OneFlow_Tensor:$grad_hy,
-//   OneFlow_Tensor:$grad_cy,
-//   OneFlow_Tensor:$cx,
-//   OneFlow_Tensor:$cy,
-//   OneFlow_Tensor:$workspace
-// );
-// let output = (outs
-//   OneFlow_Tensor:$grad_gates,
-//   Optional<OneFlow_Tensor>:$grad_cx,
-//   Optional<OneFlow_Tensor>:$grad_bias
-// );
-
 /* static */ Maybe<void> FusedLstmCellGradOp::GetSbp(user_op::SbpContext* ctx) {
   // grad_hy shape:       [batch_size, hidden_size]
   // grad_cy shape:       [batch_size, hidden_size]

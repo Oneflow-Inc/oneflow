@@ -3121,6 +3121,57 @@ struct SimpleCell {
 };
 
 template<typename cell_params>
+struct GRUCell {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& hidden, const cell_params& params,
+                           bool pre_compute_input = false) const {
+    DeviceType input_device{};
+    if (input->is_consistent()) {
+      input_device = JUST(input->parallel_desc())->device_type();
+    } else {
+      input_device = JUST(input->device())->enum_type();
+    }
+
+    if (input_device == DeviceType::kCUDA) {
+      CHECK_OR_RETURN(!pre_compute_input);
+
+      std::shared_ptr<one::Tensor> igates = JUST(params.matmul_ih(input));
+      std::shared_ptr<one::Tensor> hgates = JUST(params.matmul_hh(hidden));
+
+      std::shared_ptr<TensorTuple> result =
+          JUST(functional::FusedGruCell(igates, hgates, hidden, params.b_ih(), params.b_hh()));
+
+      return result->at(0);
+    }
+
+    std::shared_ptr<one::TensorTuple> chunked_igates;
+    if (pre_compute_input) {
+      chunked_igates = JUST(functional::Chunk(input, 3, 1));
+    } else {
+      std::shared_ptr<one::Tensor> gates_ih = JUST(params.linear_ih(input));
+      chunked_igates = JUST(functional::Chunk(gates_ih, 3, 1));
+    }
+
+    std::shared_ptr<one::Tensor> tmp = JUST(params.linear_hh(hidden));
+    std::shared_ptr<one::TensorTuple> chunked_hgates = JUST(functional::Chunk(tmp, 3, 1));
+    std::shared_ptr<one::Tensor> reset_gate =
+        JUST(functional::Add(chunked_hgates->at(0), chunked_igates->at(0), 1.0, false));
+    reset_gate = JUST(functional::Sigmoid(reset_gate));
+    std::shared_ptr<one::Tensor> input_gate =
+        JUST(functional::Add(chunked_hgates->at(1), chunked_igates->at(1), 1.0, false));
+    input_gate = JUST(functional::Sigmoid(input_gate));
+    std::shared_ptr<one::Tensor> new_gate =
+        JUST(functional::Mul(chunked_hgates->at(2), reset_gate));
+    new_gate = JUST(functional::Add(chunked_igates->at(2), new_gate, 1.0, false));
+    new_gate = JUST(functional::Tanh(new_gate));
+    std::shared_ptr<one::Tensor> output = JUST(functional::Sub(hidden, new_gate, 1.0, false));
+    output = JUST(functional::Mul(output, input_gate));
+    output = JUST(functional::Add(output, new_gate, 1.0, false));
+    return output;
+  }
+};
+
+template<typename cell_params>
 struct LSTMCell {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& input,
                                 const one::TensorTuple& hidden, const cell_params& params,
@@ -3220,6 +3271,28 @@ class RnnReluCellFunctor {
   }
 };
 
+class GruCellFunctor {
+ public:
+  GruCellFunctor() {}
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& hx,
+                           const std::shared_ptr<one::Tensor>& w_ih,
+                           const std::shared_ptr<one::Tensor>& w_hh,
+                           const Optional<one::Tensor>& b_ih,
+                           const Optional<one::Tensor>& b_hh) const {
+    JUST(check_rnn_cell_forward_input(input, w_ih->shape()->At(1)));
+    JUST(check_rnn_cell_forward_hidden(input, hx, w_hh->shape()->At(1), 0));
+    std::shared_ptr<one::Tensor> bias_ih = nullptr;
+    std::shared_ptr<one::Tensor> bias_hh = nullptr;
+    if (b_ih.has_value() && b_hh.has_value()) {
+      bias_ih = JUST(b_ih);
+      bias_hh = JUST(b_hh);
+    }
+    return GRUCell<CellParams>{}(input, hx, CellParams{w_ih, w_hh, bias_ih, bias_hh, nullptr});
+  }
+};
+
 class LstmCellFunctor {
  public:
   LstmCellFunctor() {}
@@ -3243,6 +3316,88 @@ class LstmCellFunctor {
     }
     return LSTMCell<CellParams>{}(input, hx, CellParams{w_ih, w_hh, bias_ih, bias_hh, nullptr});
   }
+};
+
+class FusedGruCellFunctor {
+ public:
+  FusedGruCellFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_gru_cell")
+                                   .Input("input_gates")
+                                   .Input("hidden_gates")
+                                   .Input("hx")
+                                   .Input("input_bias")
+                                   .Input("hidden_bias")
+                                   .Output("hy")
+                                   .Output("workspace")
+                                   .Build());
+    op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_gru_cell")
+                                      .Input("input_gates")
+                                      .Input("hidden_gates")
+                                      .Input("hx")
+                                      .Output("hy")
+                                      .Output("workspace")
+                                      .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& igates,
+                                const std::shared_ptr<one::Tensor>& hgates,
+                                const std::shared_ptr<one::Tensor>& hx,
+                                const Optional<one::Tensor>& b_ih,
+                                const Optional<one::Tensor>& b_hh) const {
+    std::shared_ptr<TensorTuple> kernel_result;
+    if (b_ih.has_value() && b_hh.has_value()) {
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_with_bias_, {igates, hgates, hx, JUST(b_ih), JUST(b_hh)}));
+    } else {
+      kernel_result =
+          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_without_bias_, {igates, hgates, hx}));
+    }
+    return kernel_result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_with_bias_;
+  std::shared_ptr<OpExpr> op_without_bias_;
+};
+
+class FusedGruCellGradFunctor {
+ public:
+  FusedGruCellGradFunctor() {
+    op_with_bias_ = CHECK_JUST(one::OpBuilder("fused_gru_cell_grad")
+                                   .Input("grad_hy")
+                                   .Input("workspace")
+                                   .Output("grad_input_gates")
+                                   .Output("grad_hidden_gates")
+                                   .Output("grad_hx")
+                                   .Output("grad_input_bias")
+                                   .Output("grad_hidden_bias")
+                                   .Build());
+    op_without_bias_ = CHECK_JUST(one::OpBuilder("fused_gru_cell_grad")
+                                      .Input("grad_hy")
+                                      .Input("workspace")
+                                      .Output("grad_input_gates")
+                                      .Output("grad_hidden_gates")
+                                      .Output("grad_hx")
+                                      .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& grad_hy,
+                                const std::shared_ptr<one::Tensor>& workspace,
+                                bool has_bias) const {
+    std::shared_ptr<TensorTuple> kernel_result;
+    if (has_bias) {
+      kernel_result =
+          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_with_bias_, {grad_hy, workspace}));
+    } else {
+      kernel_result =
+          JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_without_bias_, {grad_hy, workspace}));
+    }
+    return kernel_result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_with_bias_;
+  std::shared_ptr<OpExpr> op_without_bias_;
 };
 
 class FusedLstmCellFunctor {
@@ -4182,8 +4337,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RnnTanhCellFunctor>("RnnTanhCell");
   m.add_functor<impl::RnnReluCellFunctor>("RnnReluCell");
   m.add_functor<impl::LstmCellFunctor>("LstmCell");
+  m.add_functor<impl::GruCellFunctor>("GruCell");
   m.add_functor<impl::FusedLstmCellFunctor>("FusedLstmCell");
   m.add_functor<impl::FusedLstmCellGradFunctor>("FusedLstmCellGrad");
+  m.add_functor<impl::FusedGruCellFunctor>("FusedGruCell");
+  m.add_functor<impl::FusedGruCellGradFunctor>("FusedGruCellGrad");
   m.add_functor<impl::RnnTanhInputFunctor>("RnnTanhInput");
   m.add_functor<impl::RnnTanhDataFunctor>("RnnTanhData");
   m.add_functor<impl::RnnReluInputFunctor>("RnnReluInput");

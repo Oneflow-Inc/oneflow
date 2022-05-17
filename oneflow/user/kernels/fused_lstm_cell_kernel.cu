@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/ep/cuda/cuda_device.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
+#include "oneflow/user/kernels/fused_rnn_cell_kernel_util.h"
 
 // NOTE(Liang Depeng): The implementation of fused_lstm_cell is modified from
 //                     https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/RNN.cu
@@ -56,11 +57,14 @@ __device__ __forceinline__ T sigmoid(T in) {
 }
 
 template<typename T, typename ACC_T, typename IDX_TYPE>
-__global__ void lstm_cell_forward(const IDX_TYPE numel, const IDX_TYPE hidden_size,
-                                  const T* input_gates_ptr, const T* hidden_gates_ptr,
-                                  const T* cx_ptr, const T* input_bias_ptr,
-                                  const T* hidden_bias_ptr, T* hy_ptr, T* cy_ptr,
-                                  T* workspace_ptr) {
+#if __CUDA_ARCH__ >= 350
+OF_LAUNCH_BOUNDS_2(512, 4)
+#endif
+__global__
+    void lstm_cell_forward(const IDX_TYPE numel, const IDX_TYPE hidden_size,
+                           const T* input_gates_ptr, const T* hidden_gates_ptr, const T* cx_ptr,
+                           const T* input_bias_ptr, const T* hidden_bias_ptr, T* hy_ptr, T* cy_ptr,
+                           T* workspace_ptr) {
   bool has_bias = input_bias_ptr != nullptr;
   for (IDX_TYPE linearIndex = blockIdx.x * blockDim.x + threadIdx.x; linearIndex < numel;
        linearIndex += gridDim.x * blockDim.x) {
@@ -134,10 +138,13 @@ __global__ void lstm_cell_forward(const IDX_TYPE numel, const IDX_TYPE hidden_si
 }
 
 template<typename T, typename ACC_T, typename IDX_TYPE>
-__global__ void lstm_cell_backward(const IDX_TYPE numel, const IDX_TYPE hidden_size,
-                                   const T* grad_hy_ptr, const T* grad_cy_ptr, const T* cx_ptr,
-                                   const T* cy_ptr, const T* workspace_ptr, T* grad_gates_ptr,
-                                   T* grad_cx_ptr) {
+#if __CUDA_ARCH__ >= 350
+OF_LAUNCH_BOUNDS_2(512, 4)
+#endif
+__global__
+    void lstm_cell_backward(const IDX_TYPE numel, const IDX_TYPE hidden_size, const T* grad_hy_ptr,
+                            const T* grad_cy_ptr, const T* cx_ptr, const T* cy_ptr,
+                            const T* workspace_ptr, T* grad_gates_ptr, T* grad_cx_ptr) {
   for (IDX_TYPE linearIndex = blockIdx.x * blockDim.x + threadIdx.x; linearIndex < numel;
        linearIndex += gridDim.x * blockDim.x) {
     IDX_TYPE offset = (linearIndex / hidden_size) * 4 * hidden_size + linearIndex % hidden_size;
