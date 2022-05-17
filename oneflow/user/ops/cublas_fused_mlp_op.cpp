@@ -189,6 +189,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Input("dy", cublas_dy)
                 .Input("weight", op.input("weights", hidden_layer_idx))
                 .Input("aux", op.output("cublas_aux", hidden_layer_idx - 1))
+                .Attr<double>("alpha", 1.0)
                 .Output("d_grad")
                 .Output("d_bias")
                 .Build();

@@ -54,7 +54,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
 
-    const double alpha = 1.0;
+    const double alpha = ctx->Attr<double>("alpha");
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const double beta = 0.0;
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
