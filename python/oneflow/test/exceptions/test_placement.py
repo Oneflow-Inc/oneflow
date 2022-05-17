@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import re
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -25,8 +26,11 @@ class TestPlacement(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as exp:
             flow.placement(type="xpu", ranks=[0])
         test_case.assertTrue(
-            "Expected one of cpu, cuda device type at start of device string: xpu"
-            in str(exp.exception)
+            re.match(
+                "Expected one of (.*) device type at start of device string: xpu",
+                str(exp.exception),
+            )
+            is not None
         )
 
     def test_placement_rank(test_case):
@@ -37,10 +41,10 @@ class TestPlacement(flow.unittest.TestCase):
         )
 
         with test_case.assertRaises(RuntimeError) as exp:
-            placement = flow.placement(type="cuda", ranks=[1000])
+            placement = flow.placement(type="cpu", ranks=[1000])
             flow.Tensor(2, 3, placement=placement, sbp=flow.sbp.broadcast)
         test_case.assertTrue(
-            "Placment is invalid because rank must be less than world size!"
+            "Placement is invalid because rank must be less than world size!"
             in str(exp.exception)
         )
 
