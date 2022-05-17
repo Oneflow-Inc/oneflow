@@ -114,11 +114,11 @@ Maybe<void> FusedDotFeatureInteraction::Apply(const FusedDotFeatureInteractionCa
   }
   for (int32_t i = 0; i < num_features; ++i) {
     if (JUST(oneflow::VectorAt(ctx->features_requires_grad, i))) {
-      *JUST(oneflow::VectorAt(in_grads, i)) = JUST(oneflow::VectorAt(*grads, i));
+      JUST(oneflow::VectorAt(*in_grads, i)) = JUST(oneflow::VectorAt(*grads, i));
     }
   }
   if (ctx->has_output_concat_grad) {
-    *JUST(oneflow::VectorAt(in_grads, num_features)) =
+    JUST(oneflow::VectorAt(*in_grads, num_features)) =
         JUST(oneflow::VectorAt(*grads, num_features));
   }
   return Maybe<void>::Ok();

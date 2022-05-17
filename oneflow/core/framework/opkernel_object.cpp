@@ -22,24 +22,21 @@ namespace compatible_py {
 
 namespace {
 
-std::shared_ptr<Scope> GetScopeSymbol(const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+std::shared_ptr<Scope> GetScopeSymbol(const std::shared_ptr<OperatorConf>& op_conf) {
   CHECK(op_conf->has_scope_symbol_id());
-  return CHECK_JUST(GetSymbol<cfg::ScopeProto, Scope>(op_conf->scope_symbol_id()));
+  return CHECK_JUST(GetSymbol<Scope>(op_conf->scope_symbol_id()));
 }
 
-std::shared_ptr<ParallelDesc> GetOpParallelSymbol(
-    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+std::shared_ptr<ParallelDesc> GetOpParallelSymbol(const std::shared_ptr<OperatorConf>& op_conf) {
   CHECK(op_conf->has_scope_symbol_id());
   const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(op_conf->scope_symbol_id());
-  OperatorConf pb_op_conf;
-  op_conf->ToProto(&pb_op_conf);
-  int64_t parallel_desc_symbol_id = CHECK_JUST(scope.GetParallelDescSymbolId(pb_op_conf));
-  return CHECK_JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_symbol_id));
+  int64_t parallel_desc_symbol_id = CHECK_JUST(scope.GetParallelDescSymbolId(*op_conf));
+  return CHECK_JUST(GetSymbol<ParallelDesc>(parallel_desc_symbol_id));
 }
 
 }  // namespace
 
-OpKernelObject::OpKernelObject(int64_t object_id, const std::shared_ptr<cfg::OperatorConf>& op_conf,
+OpKernelObject::OpKernelObject(int64_t object_id, const std::shared_ptr<OperatorConf>& op_conf,
                                const std::function<void(Object*)>& release)
     : Object(object_id, GetOpParallelSymbol(op_conf)),
       op_conf_(op_conf),
