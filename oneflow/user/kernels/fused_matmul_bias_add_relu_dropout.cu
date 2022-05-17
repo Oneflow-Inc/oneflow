@@ -115,6 +115,25 @@ __device__ Pack2Type<nv_bfloat16> Make2<nv_bfloat16>(float v) {
 }
 #endif
 
+constexpr int32_t kWarpSize = 32; 
+
+template<int32_t unroll>
+__device__ void SetBitMask(const int64_t index, const int64_t mask_element_count,
+                           int32_t thread_bitmask,
+                           int32_t* mask){
+    int32_t mask_index = index / kWarpSize; 
+    int32_t mask_offset = index - mask_index * kWarpSize; 
+    int32_t bit_mask = thread_bitmask << mask_offset; 
+    
+    for (int stride = kWarpSize / (unroll * 2); stride > 0; stride /= 2) {
+        bitmask |= __shfl_down_sync(bitmask, stride);
+    }
+
+    if (mask_offset == 0) {
+        mask[mask_index] = bitmask;
+    }
+}
+
 #if CUDA_VERSION >= 11000
 #define RETURN_VOID_IF_HALF                                                                        \
   typename std::enable_if_t<(std::is_same<T, half>::value || std::is_same<T, nv_bfloat16>::value), \
@@ -130,8 +149,8 @@ __global__ RETURN_VOID_IF_FLOAT FusedReluDropoutGpu(uint64_t seed,
                                                     one::CUDAGeneratorState* cuda_gen_state,
                                                     uint64_t inc_offset, const int64_t elem_cnt,
                                                     float rate, float scale, int64_t n_tail,
-                                                    const T* x, bool* mask, T* y, const T* tail_x,
-                                                    bool* tail_mask, T* tail_y) {
+                                                    const T* x, int32_t* mask, T* y, const T* tail_x,
+                                                    int32_t* tail_mask, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
@@ -146,6 +165,7 @@ __global__ RETURN_VOID_IF_FLOAT FusedReluDropoutGpu(uint64_t seed,
   for (int64_t linear_index = global_thread_id * pack_size,
                step = gridDim.x * blockDim.x * pack_size;
        linear_index < elem_cnt; linear_index += step) {
+    int32_t thread_bitmask = 0; 
     rand_uniform_pack4.storage = curand_uniform4(&state);
 
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
@@ -159,25 +179,28 @@ __global__ RETURN_VOID_IF_FLOAT FusedReluDropoutGpu(uint64_t seed,
       // Relu
       y_vec.elem[i] = x_vec.elem[i] > zero_val ? x_vec.elem[i] : zero_val;
       // Dropout
-      mask_vec.elem[i] = rand_uniform_pack4.elem[i] > rate;
-      T tmp_float_mask = static_cast<float>(mask_vec.elem[i]);
+      bool mask_val = rand_uniform_pack4.elem[i] > rate;
+      thread_bitmask |= mask_val << i; 
+      T tmp_float_mask = static_cast<float>(mask_val);
       y_vec.elem[i] = y_vec.elem[i] * tmp_float_mask * t_scale;
     }
     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
-    *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
+    SetBitmask<4>(linear_index, thread_bitmask,
+                  reinterpret_cast<uint32_t*>(mask_data));
   }
-  if (tail && global_thread_id < n_tail) {
-    // relu
-    T tail_x_val = tail_x[global_thread_id];
-    T tail_out = tail_x_val > zero_val ? tail_x_val : zero_val;
-    // dropout
-    const float rand_uniform = curand_uniform(&state);
-    const bool mask_val = rand_uniform > rate;
-    tail_mask[global_thread_id] = mask_val;
-    T float_mask = static_cast<float>(mask_val);
-    tail_out = tail_out * float_mask * t_scale;
-    tail_y[global_thread_id] = tail_out;
-  }
+  // TODO: think how to due with tail
+//   if (tail && global_thread_id < n_tail) {
+//     // relu
+//     T tail_x_val = tail_x[global_thread_id];
+//     T tail_out = tail_x_val > zero_val ? tail_x_val : zero_val;
+//     // dropout
+//     const float rand_uniform = curand_uniform(&state);
+//     const bool mask_val = rand_uniform > rate;
+//     tail_mask[global_thread_id] = mask_val;
+//     T float_mask = static_cast<float>(mask_val);
+//     tail_out = tail_out * float_mask * t_scale;
+//     tail_y[global_thread_id] = tail_out;
+//   }
 
   __syncthreads();
 
@@ -190,161 +213,161 @@ __global__ RETURN_VOID_IF_FLOAT FusedReluDropoutGpu(uint64_t seed,
   }
 }
 
-template<typename T, int pack_size, bool tail>
-__global__ RETURN_VOID_IF_HALF FusedReluDropoutGpu(uint64_t seed,
-                                                   one::CUDAGeneratorState* cuda_gen_state,
-                                                   uint64_t inc_offset, const int64_t elem_cnt,
-                                                   float rate, float scale, int64_t n_tail,
-                                                   const T* x, bool* mask, T* y, const T* tail_x,
-                                                   bool* tail_mask, T* tail_y) {
-  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-  using LoadType = cuda::elementwise::PackType<T, pack_size>;
-  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-  using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
-  using StorePack = cuda::elementwise::Pack<Pack2Type<T>, pack_size / 2>;
-  using MaskType = cuda::elementwise::PackType<bool, pack_size>;
-  using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
+// template<typename T, int pack_size, bool tail>
+// __global__ RETURN_VOID_IF_HALF FusedReluDropoutGpu(uint64_t seed,
+//                                                    one::CUDAGeneratorState* cuda_gen_state,
+//                                                    uint64_t inc_offset, const int64_t elem_cnt,
+//                                                    float rate, float scale, int64_t n_tail,
+//                                                    const T* x, int32_t* mask, T* y, const T* tail_x,
+//                                                    int32_t* tail_mask, T* tail_y) {
+//   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+//   curandStatePhilox4_32_10_t state;
+//   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+//   using LoadType = cuda::elementwise::PackType<T, pack_size>;
+//   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+//   using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
+//   using StorePack = cuda::elementwise::Pack<Pack2Type<T>, pack_size / 2>;
+//   using MaskType = cuda::elementwise::PackType<bool, pack_size>;
+//   using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
 
-  RandPack4 rand_uniform_pack4;
-  Pack2Type<T> h2_scale = Make2<T>(scale);
-  T zero_val = static_cast<T>(0.0);
+//   RandPack4 rand_uniform_pack4;
+//   Pack2Type<T> h2_scale = Make2<T>(scale);
+//   T zero_val = static_cast<T>(0.0);
 
-  for (int64_t linear_index = global_thread_id * pack_size,
-               step = gridDim.x * blockDim.x * pack_size;
-       linear_index < elem_cnt; linear_index += step) {
-    rand_uniform_pack4.storage = curand_uniform4(&state);
-    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-    H2Pack<T> x_vec{};
-    x_vec.pack_storage.storage = *x_load;
+//   for (int64_t linear_index = global_thread_id * pack_size,
+//                step = gridDim.x * blockDim.x * pack_size;
+//        linear_index < elem_cnt; linear_index += step) {
+//     rand_uniform_pack4.storage = curand_uniform4(&state);
+//     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+//     H2Pack<T> x_vec{};
+//     x_vec.pack_storage.storage = *x_load;
 
-    MaskPack mask_vec;
-    StorePack y_vec;
-    StorePack one_or_zero_h2;
+//     MaskPack mask_vec;
+//     StorePack y_vec;
+//     StorePack one_or_zero_h2;
 
-    mask_vec.elem[0] = rand_uniform_pack4.elem[0] > rate;
-    float tmp_float_mask = static_cast<float>(mask_vec.elem[0]);
-    one_or_zero_h2.elem[0].x = tmp_float_mask;
-    mask_vec.elem[1] = rand_uniform_pack4.elem[1] > rate;
-    tmp_float_mask = static_cast<float>(mask_vec.elem[1]);
-    one_or_zero_h2.elem[0].y = tmp_float_mask;
+//     mask_vec.elem[0] = rand_uniform_pack4.elem[0] > rate;
+//     float tmp_float_mask = static_cast<float>(mask_vec.elem[0]);
+//     one_or_zero_h2.elem[0].x = tmp_float_mask;
+//     mask_vec.elem[1] = rand_uniform_pack4.elem[1] > rate;
+//     tmp_float_mask = static_cast<float>(mask_vec.elem[1]);
+//     one_or_zero_h2.elem[0].y = tmp_float_mask;
 
-    // relu
-    x_vec.h2[0].x = x_vec.h2[0].x > zero_val ? x_vec.h2[0].x : x_vec.h2[0].x;
-    x_vec.h2[0].y = x_vec.h2[0].y > zero_val ? x_vec.h2[0].y : x_vec.h2[0].y;
-    // dropout
-    y_vec.elem[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2.elem[0]), h2_scale);
+//     // relu
+//     x_vec.h2[0].x = x_vec.h2[0].x > zero_val ? x_vec.h2[0].x : x_vec.h2[0].x;
+//     x_vec.h2[0].y = x_vec.h2[0].y > zero_val ? x_vec.h2[0].y : x_vec.h2[0].y;
+//     // dropout
+//     y_vec.elem[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2.elem[0]), h2_scale);
 
-    mask_vec.elem[2] = rand_uniform_pack4.elem[2] > rate;
-    tmp_float_mask = static_cast<float>(mask_vec.elem[2]);
-    one_or_zero_h2.elem[1].x = tmp_float_mask;
-    mask_vec.elem[3] = rand_uniform_pack4.elem[3] > rate;
-    tmp_float_mask = static_cast<float>(mask_vec.elem[3]);
-    one_or_zero_h2.elem[1].y = tmp_float_mask;
+//     mask_vec.elem[2] = rand_uniform_pack4.elem[2] > rate;
+//     tmp_float_mask = static_cast<float>(mask_vec.elem[2]);
+//     one_or_zero_h2.elem[1].x = tmp_float_mask;
+//     mask_vec.elem[3] = rand_uniform_pack4.elem[3] > rate;
+//     tmp_float_mask = static_cast<float>(mask_vec.elem[3]);
+//     one_or_zero_h2.elem[1].y = tmp_float_mask;
 
-    // relu
-    x_vec.h2[1].x = x_vec.h2[1].x > zero_val ? x_vec.h2[1].x : x_vec.h2[1].x;
-    x_vec.h2[1].y = x_vec.h2[1].y > zero_val ? x_vec.h2[1].y : x_vec.h2[1].y;
-    // dropout
-    y_vec.elem[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2.elem[1]), h2_scale);
+//     // relu
+//     x_vec.h2[1].x = x_vec.h2[1].x > zero_val ? x_vec.h2[1].x : x_vec.h2[1].x;
+//     x_vec.h2[1].y = x_vec.h2[1].y > zero_val ? x_vec.h2[1].y : x_vec.h2[1].y;
+//     // dropout
+//     y_vec.elem[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2.elem[1]), h2_scale);
 
-    *(reinterpret_cast<StoreType*>(y + linear_index)) = y_vec.storage;
-    *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
-  }
+//     *(reinterpret_cast<StoreType*>(y + linear_index)) = y_vec.storage;
+//     *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
+//   }
 
-  if (tail && global_thread_id < n_tail) {
-    // relu
-    T tail_x_val = tail_x[global_thread_id];
-    T tail_out = tail_x_val > zero_val ? tail_x_val : zero_val;
-    // dropout
-    const float rand_uniform = curand_uniform(&state);
-    const bool mask_val = rand_uniform > rate;
-    tail_mask[global_thread_id] = mask_val;
-    float tmp_half_mask = static_cast<float>(mask_val);
-    tail_out = tail_out * static_cast<T>(tmp_half_mask) * h2_scale.x;
-    tail_y[global_thread_id] = tail_out;
-  }
+//   if (tail && global_thread_id < n_tail) {
+//     // relu
+//     T tail_x_val = tail_x[global_thread_id];
+//     T tail_out = tail_x_val > zero_val ? tail_x_val : zero_val;
+//     // dropout
+//     const float rand_uniform = curand_uniform(&state);
+//     const bool mask_val = rand_uniform > rate;
+//     tail_mask[global_thread_id] = mask_val;
+//     float tmp_half_mask = static_cast<float>(mask_val);
+//     tail_out = tail_out * static_cast<T>(tmp_half_mask) * h2_scale.x;
+//     tail_y[global_thread_id] = tail_out;
+//   }
 
-  __syncthreads();
-  if (threadIdx.x == 0) {
-    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-    if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;           // reset counter to zero
-      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-    }
-  }
-}
+//   __syncthreads();
+//   if (threadIdx.x == 0) {
+//     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
+//     if (new_counter == gridDim.x) {
+//       cuda_gen_state->dev_counter = 0;           // reset counter to zero
+//       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
+//     }
+//   }
+// }
 
-template<typename T, int pack_size, bool tail>
-__global__ RETURN_VOID_IF_DOUBLE FusedReluDropoutGpu(uint64_t seed,
-                                                     one::CUDAGeneratorState* cuda_gen_state,
-                                                     uint64_t inc_offset, const int64_t elem_cnt,
-                                                     float rate, float scale, int64_t n_tail,
-                                                     const T* x, bool* mask, T* y, const T* tail_x,
-                                                     bool* tail_mask, T* tail_y) {
-  int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-  using LoadType = cuda::elementwise::PackType<T, pack_size>;
-  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-  using MaskType = cuda::elementwise::PackType<bool, pack_size>;
-  using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
+// template<typename T, int pack_size, bool tail>
+// __global__ RETURN_VOID_IF_DOUBLE FusedReluDropoutGpu(uint64_t seed,
+//                                                      one::CUDAGeneratorState* cuda_gen_state,
+//                                                      uint64_t inc_offset, const int64_t elem_cnt,
+//                                                      float rate, float scale, int64_t n_tail,
+//                                                      const T* x, int32_t* mask, T* y, const T* tail_x,
+//                                                      int32_t* tail_mask, T* tail_y) {
+//   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
+//   curandStatePhilox4_32_10_t state;
+//   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+//   using LoadType = cuda::elementwise::PackType<T, pack_size>;
+//   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+//   using MaskType = cuda::elementwise::PackType<bool, pack_size>;
+//   using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
 
-  RandPack4 rand_uniform_pack4;
-  bool grid_loop_rand_state = 0;
-  T zero_val = static_cast<T>(0.0);
+//   RandPack4 rand_uniform_pack4;
+//   bool grid_loop_rand_state = 0;
+//   T zero_val = static_cast<T>(0.0);
 
-  for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
-       linear_index += gridDim.x * blockDim.x * pack_size) {
-    if (grid_loop_rand_state == 0) {
-      rand_uniform_pack4.storage = curand_uniform4(&state);
-      grid_loop_rand_state ^= 1;
-    } else {
-      // Use the last two random numbers we generated in previous iteration.
-      rand_uniform_pack4.elem[0] = rand_uniform_pack4.elem[2];
-      rand_uniform_pack4.elem[1] = rand_uniform_pack4.elem[3];
-      grid_loop_rand_state ^= 1;
-    }
-    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-    LoadPack x_vec;
-    x_vec.storage = *x_load;
+//   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
+//        linear_index += gridDim.x * blockDim.x * pack_size) {
+//     if (grid_loop_rand_state == 0) {
+//       rand_uniform_pack4.storage = curand_uniform4(&state);
+//       grid_loop_rand_state ^= 1;
+//     } else {
+//       // Use the last two random numbers we generated in previous iteration.
+//       rand_uniform_pack4.elem[0] = rand_uniform_pack4.elem[2];
+//       rand_uniform_pack4.elem[1] = rand_uniform_pack4.elem[3];
+//       grid_loop_rand_state ^= 1;
+//     }
+//     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+//     LoadPack x_vec;
+//     x_vec.storage = *x_load;
 
-    MaskPack mask_vec;
-    LoadPack y_vec;
-#pragma unroll
-    for (int i = 0; i < pack_size; i++) {
-      // Relu
-      y_vec.elem[i] = x_vec.elem[i] > zero_val ? x_vec.elem[i] : zero_val;
-      // Dropout
-      mask_vec.elem[i] = rand_uniform_pack4.elem[i] > rate;
-      y_vec.elem[i] = y_vec.elem[i] * mask_vec.elem[i] * scale;
-    }
-    *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
-    *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
-  }
+//     MaskPack mask_vec;
+//     LoadPack y_vec;
+// #pragma unroll
+//     for (int i = 0; i < pack_size; i++) {
+//       // Relu
+//       y_vec.elem[i] = x_vec.elem[i] > zero_val ? x_vec.elem[i] : zero_val;
+//       // Dropout
+//       mask_vec.elem[i] = rand_uniform_pack4.elem[i] > rate;
+//       y_vec.elem[i] = y_vec.elem[i] * mask_vec.elem[i] * scale;
+//     }
+//     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
+//     *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
+//   }
 
-  if (tail && global_thread_id < n_tail) {
-    // relu
-    T tail_x_val = tail_x[global_thread_id];
-    T tail_out = tail_x_val > zero_val ? tail_x_val : zero_val;
-    // dropout
-    const float rand_uniform = curand_uniform(&state);
-    const bool mask_val = rand_uniform > rate;
-    tail_mask[global_thread_id] = mask_val;
-    tail_out = tail_out * mask_val * scale;
-    tail_y[global_thread_id] = tail_out;
-  }
+//   if (tail && global_thread_id < n_tail) {
+//     // relu
+//     T tail_x_val = tail_x[global_thread_id];
+//     T tail_out = tail_x_val > zero_val ? tail_x_val : zero_val;
+//     // dropout
+//     const float rand_uniform = curand_uniform(&state);
+//     const bool mask_val = rand_uniform > rate;
+//     tail_mask[global_thread_id] = mask_val;
+//     tail_out = tail_out * mask_val * scale;
+//     tail_y[global_thread_id] = tail_out;
+//   }
 
-  __syncthreads();
-  if (threadIdx.x == 0) {
-    int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-    if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;           // reset counter to zero
-      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-    }
-  }
-}
+//   __syncthreads();
+//   if (threadIdx.x == 0) {
+//     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
+//     if (new_counter == gridDim.x) {
+//       cuda_gen_state->dev_counter = 0;           // reset counter to zero
+//       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
+//     }
+//   }
+// }
 
 template<int pack_size>
 unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
@@ -361,7 +384,7 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
 template<typename T>
 void LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
                                   one::CUDAGeneratorState* cuda_gen_state, const int64_t elem_cnt,
-                                  float rate, float scale, const T* x, bool* mask, T* y) {
+                                  float rate, float scale, const T* x, int32_t* mask, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(stream, kBlockSize, elem_cnt);
   constexpr int pack_size = GetDropoutPackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
@@ -540,10 +563,10 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
         return tmp_size;                                                                \
       });
 
-REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(double, DataType::kDouble)
+// REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(double, DataType::kDouble)
 REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(float, DataType::kFloat)
-REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(half, DataType::kFloat16)
-REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16)
+// REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(half, DataType::kFloat16)
+// REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16)
 
 }  // namespace
 
