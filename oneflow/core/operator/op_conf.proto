@@ -479,6 +479,7 @@ message BoxingZerosOpConf {
 
 message NcclSendRecvBoxingOpConf {
   required LogicalBlobId lbi = 1;
+  // TODO(strint): as reduced?
   required NdSbp src_nd_sbp = 2;
   required NdSbp dst_nd_sbp = 3;
   required ParallelConf parallel_conf = 4;
