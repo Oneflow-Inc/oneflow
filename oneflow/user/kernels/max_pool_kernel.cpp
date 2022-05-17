@@ -543,19 +543,17 @@ class OneDnnMaxPool1dKernel final : public user_op::OpKernel {
     const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
     const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
 
-    // const int64_t elem_num = y->shape().elem_cnt();
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
-    printf(" max pool ---->\n");
     dnnl::memory::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
     dnnl::memory::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
     dnnl::memory::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
     dnnl::memory::dims strides_dims = {1, params_3d.stride_3d()[2]};
     dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
     dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
-    dnnl::memory::dims dilation = {0, 0};
+    dnnl::memory::dims dilation = {0, params_3d.dilation_3d()[2] - 1};
 
     OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
         ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
@@ -590,7 +588,6 @@ class OneDnnMaxPool1dGradKernel final : public user_op::OpKernel {
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
 
-    printf("max 1d pool gard ---->\n");
     dnnl::memory::dims diff_dst_dims = {1, 1, dy->shape().At(0) * dy->shape().At(1),
                                         dy->shape().At(2)};
     dnnl::memory::dims diff_src_dims = {1, 1, dx->shape().At(0) * dx->shape().At(1),
@@ -599,7 +596,7 @@ class OneDnnMaxPool1dGradKernel final : public user_op::OpKernel {
     dnnl::memory::dims strides_dims = {1, params_3d.stride_3d()[2]};
     dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
     dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
-    dnnl::memory::dims dilation = {0, 0};
+    dnnl::memory::dims dilation = {0, params_3d.dilation_3d()[2] - 1};
 
     OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
         ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
@@ -636,16 +633,15 @@ class OneDnnMaxPool2dKernel final : public user_op::OpKernel {
 
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
-                                        x->shape().At(3)};
+                                   x->shape().At(3)};
     dnnl::memory::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2),
-                                        y->shape().At(3)};
+                                   y->shape().At(3)};
     dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
     dnnl::memory::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
     dnnl::memory::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
     dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
-    dnnl::memory::dims dilation = {0, 0};
+    dnnl::memory::dims dilation = {params_3d.dilation_3d()[1] - 1, params_3d.dilation_3d()[2] - 1};
     if (data_format == "channels_first") {
-
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
           padding_dims_r, dilation, dnnl::memory::format_tag::nchw, (void*)src, (void*)dest,
@@ -696,8 +692,7 @@ class OneDnnMaxPool2dGradKernel final : public user_op::OpKernel {
     dnnl::memory::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
     dnnl::memory::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
     dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
-    dnnl::memory::dims dilation = {0, 0};
-    printf("max pool 2d gard ---->\n");
+    dnnl::memory::dims dilation = {params_3d.dilation_3d()[1] - 1, params_3d.dilation_3d()[2] - 1};
 
     if (data_format == "channels_first") {
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
@@ -741,19 +736,72 @@ class OneDnnMaxPool3dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
-    printf(" max pool 3d---->\n");
-    dnnl::memory::dims src_dims = {x->shape().At(0),x->shape().At(1), x->shape().At(2),x->shape().At(3),x->shape().At(4)};
-    dnnl::memory::dims dst_dims = {y->shape().At(0),y->shape().At(1), y->shape().At(2),y->shape().At(3),y->shape().At(4)};
-    dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
-    dnnl::memory::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
-    dnnl::memory::dims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1], params_3d.padding()[2]};
-    dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1], params_3d.padding()[2]};
-    dnnl::memory::dims dilation = {0, 0, 0};
+    dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
+                                   x->shape().At(3), x->shape().At(4)};
+    dnnl::memory::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2),
+                                   y->shape().At(3), y->shape().At(4)};
+    dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
+                                      params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+                                       params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1],
+                                         params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
+                                         params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {params_3d.dilation_3d()[0] - 1, params_3d.dilation_3d()[1] - 1,
+                                   params_3d.dilation_3d()[2] - 1};
 
     OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
         ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
         padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, (void*)src, (void*)dest,
         indice_ptr);
+  };
+};
+
+template<DeviceType device_type, typename T>
+class OneDnnMaxPool3dGradKernel final : public user_op::OpKernel {
+ public:
+  OneDnnMaxPool3dGradKernel() = default;
+  ~OneDnnMaxPool3dGradKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreatePoolOpKernelCache(ctx, 3);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    const auto* pool_cache = dynamic_cast<const PoolOpKernelCache*>(cache);
+    const MaxPoolParams3D& params_3d = pool_cache->GetParams3D();
+
+    const T* src = dy->dptr<T>();
+    const int64_t* indice_ptr = indice->dptr<int64_t>();
+    T* dest = dx->mut_dptr<T>();
+
+    dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
+                                        dy->shape().At(3), dy->shape().At(4)};
+    dnnl::memory::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
+                                        dx->shape().At(3), dx->shape().At(4)};
+    dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
+                                      params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+                                       params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1],
+                                         params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
+                                         params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {0, 0, 0};
+
+    OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
+        ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+        padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, (void*)src, (void*)dest,
+        (void*)indice_ptr);
   };
 };
 
@@ -767,19 +815,19 @@ class OneDnnMaxPool3dKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_pool_2d")                                                   \
-      .SetCreateFn<OneDnnMaxPool2dKernel<device, dtype>>()                                    \
+      .SetCreateFn<OneDnnMaxPool2dKernel<device, dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_pool_2d_grad")                                              \
-      .SetCreateFn<OneDnnMaxPool2dGradKernel<device, dtype>>()                                \
+      .SetCreateFn<OneDnnMaxPool2dGradKernel<device, dtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_pool_3d")                                                   \
-      .SetCreateFn<MaxPool3dKernel<device, dtype>>()                                    \
+      .SetCreateFn<OneDnnMaxPool3dKernel<device, dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
   REGISTER_USER_KERNEL("max_pool_3d_grad")                                              \
-      .SetCreateFn<MaxPool3dGradKernel<device, dtype>>()                                \
+      .SetCreateFn<OneDnnMaxPool3dGradKernel<device, dtype>>()                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
