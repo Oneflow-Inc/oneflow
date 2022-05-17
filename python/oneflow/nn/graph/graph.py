@@ -892,7 +892,7 @@ class Graph(object):
             assert lbn in self._full_job_proto.helper.lbn2logical_blob_desc
             blob_conf = self._full_job_proto.helper.lbn2logical_blob_desc[lbn]
 
-            shape = tuple(blob_conf.shape.dim)
+            shape = tuple(blob_conf.shape.elem)
             dtype = fake_eager_out.dtype
 
             with oneflow._oneflow_internal.lazy_mode.guard(False):
