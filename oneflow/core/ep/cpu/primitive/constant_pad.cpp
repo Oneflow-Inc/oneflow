@@ -34,7 +34,6 @@ void ConstantPadKernel(ConstantPadParams<num_dims, IndexType> params, StorageTyp
   for (IndexType linear_index = 0; linear_index < params.elem_cnt; ++linear_index) {
     params.dst_index_helper.OffsetToNdIndex(linear_index, dst_index);
     bool if_pad = false;
-#pragma unroll
     for (int i = 0; i < num_dims; i++) {
       if (dst_index[i] >= params.valid_start[i] && dst_index[i] < params.valid_end[i]) {
         src_index[i] = dst_index[i] - params.valid_start[i];

@@ -50,7 +50,9 @@ template<typename T, size_t pack_size>
 union Pack {
   static_assert(sizeof(PackType<T, pack_size>) == sizeof(T) * pack_size, "");
   explicit OF_DEVICE_FUNC Pack(T value) {
+#ifdef __CUDA_ARCH__
 #pragma unroll
+#endif
     for (int i = 0; i < pack_size; i++) { elem[i] = value; }
   }
   T elem[pack_size];
