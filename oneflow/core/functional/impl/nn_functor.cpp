@@ -371,7 +371,6 @@ class FusedMLPFunctor {
 #endif
 };
 
-
 class FusedMatmulBiasAddReluDropoutFunctor {
  public:
   FusedMatmulBiasAddReluDropoutFunctor() {
@@ -390,9 +389,10 @@ class FusedMatmulBiasAddReluDropoutFunctor {
 #endif
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
-                           const TensorTuple& biases, bool skip_final_activation, float rate, 
+                           const TensorTuple& biases, bool skip_final_activation, float rate,
                            const Optional<one::Generator>& generator) const {
-    CHECK_GE_OR_RETURN(rate, static_cast<float>(0.0)) << Error::RuntimeError() << "Dropout rate should be >= 0.0"; 
+    CHECK_GE_OR_RETURN(rate, static_cast<float>(0.0))
+        << Error::RuntimeError() << "Dropout rate should be >= 0.0";
     const int64_t weight_size = weights.size();
     const int64_t bias_size = biases.size();
     CHECK_GE_OR_RETURN(weight_size, 1) << "The number of weights should be greater equal than 1. ";
@@ -439,9 +439,9 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
-      JUST(attrs.SetAttr<bool>("rate", rate));
-      return OpInterpUtil::Dispatch(*fused_op_[weight_size], input, 
-                                    OpExprInterpContext(attrs, dropout_state));
+      JUST(attrs.SetAttr<float>("rate", rate));
+      return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input,
+                                            OpExprInterpContext(attrs, dropout_state));
     }
 #endif  // CUDA_VERSION >= 11060
 
@@ -451,10 +451,10 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       out = JUST(
           functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
                               biases[layer_idx], 1));
-      if ((layer_idx != weight_size - 1)){
+      if ((layer_idx != weight_size - 1)) {
         out = JUST(functional::Relu(out, false));
-        out = JUST(functional::Dropout(out, rate, /*training=*/true, /*inplace=*/false, 
-                                       /*generator=*/gen, /*addend=*/NullOpt)); 
+        out = JUST(functional::Dropout(out, rate, /*training=*/true, /*inplace=*/false,
+                                       /*generator=*/gen, /*addend=*/NullOpt));
       }
       if ((layer_idx == weight_size - 1) && (!skip_final_activation)) {
         /*

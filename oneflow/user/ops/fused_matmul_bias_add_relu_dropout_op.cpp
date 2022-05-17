@@ -102,11 +102,13 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 
 }  // namespace
 
-/* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmul(ctx);
 }
 
-/*static*/ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
@@ -130,7 +132,8 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferDataType(
+    user_op::InferContext* ctx) {
   return InferDataType4Matmul(ctx);
 }
 
@@ -172,18 +175,21 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 //       AddOp(cublas_matmul_bias_add_grad_op);
 
 //       if (op.NeedGenGradTensor4OpInput("biases", weight_num - 1)) {
-//         op.BindGradTensorWithOpInput(cublas_matmul_bias_add_grad_op.output("b_grad", 0), "biases",
+//         op.BindGradTensorWithOpInput(cublas_matmul_bias_add_grad_op.output("b_grad", 0),
+//         "biases",
 //                                      weight_num - 1);
 //       }
 //       if (op.NeedGenGradTensor4OpInput("weights", weight_num - 1)) {
-//         op.BindGradTensorWithOpInput(cublas_matmul_bias_add_grad_op.output("w_grad", 0), "weights",
+//         op.BindGradTensorWithOpInput(cublas_matmul_bias_add_grad_op.output("w_grad", 0),
+//         "weights",
 //                                      weight_num - 1);
 //       }
 
 //       std::string cublas_dy = last_bias_grad;
 //       for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
 //         user_op::UserOpConfWrapperBuilder cublas_bias_add_relu_matmul_grad_builder(
-//             op.op_name() + "_cublas_bias_add_relu_matmul_grad_" + std::to_string(hidden_layer_idx));
+//             op.op_name() + "_cublas_bias_add_relu_matmul_grad_" +
+//             std::to_string(hidden_layer_idx));
 //         user_op::UserOpConfWrapper cublas_bias_add_relu_matmul_grad_op =
 //             cublas_bias_add_relu_matmul_grad_builder.Op("cublas_bias_add_relu_matmul_grad")
 //                 .Input("dy", cublas_dy)
@@ -199,7 +205,8 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 //                                        hidden_layer_idx - 1);  // previous layers bias grad
 //         }
 
-//         // dw, need to skip final layer, cause final layer's wgrad has used CublasMatmulBiasAddGrad
+//         // dw, need to skip final layer, cause final layer's wgrad has used
+//         CublasMatmulBiasAddGrad
 //         // to calculate.
 //         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)
 //             && hidden_layer_idx != (weight_num - 1)) {
@@ -244,8 +251,10 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 //       if (op.NeedGenGradTensor4OpInput("weights", 0) && weight_num >= 2) {
 //         // dw:
 //         user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()
-//                                                                      + "_matmul_input_weight_grad");
-//         user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
+//                                                                      +
+//                                                                      "_matmul_input_weight_grad");
+//         user_op::UserOpConfWrapper matmul_weight_grad_op =
+//         matmul_weight_grad_builder.Op("matmul")
 //                                                                .Input("a", last_dy)
 //                                                                .Input("b", op.input("x", 0))
 //                                                                .Output("out")

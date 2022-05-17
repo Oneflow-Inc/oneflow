@@ -136,7 +136,7 @@ REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(float)
 REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(double)
 REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(half)
 
-}  // namespace 
+}  // namespace
 
 }  // namespace oneflow
 
