@@ -94,9 +94,9 @@ def _test_lenet(test_case, on_cuda: bool, record_shapes: bool):
 
 
 class TestProfileLenet(flow.unittest.TestCase):
-    # def test_lenet_cpu(test_case):
-    #     _test_lenet(test_case, on_cuda=False, record_shapes=True)
-    #     _test_lenet(test_case, on_cuda=False, record_shapes=False)
+    def test_lenet_cpu(test_case):
+        _test_lenet(test_case, on_cuda=False, record_shapes=True)
+        _test_lenet(test_case, on_cuda=False, record_shapes=False)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_lenet_cuda(test_case):
