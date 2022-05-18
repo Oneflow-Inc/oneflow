@@ -172,7 +172,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
   if (pmgr) {
     if ((pmgr->use_cpu_ && (!cuda_stream)) || (pmgr->use_cuda_ && cuda_stream)) {
       auto event = KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr);
-      if (pmgr->use_cuda_) { event->InitCudaEventPair(cuda_stream); }
+      if (pmgr->use_cuda_ && cuda_stream) { event->InitCudaEventPair(cuda_stream); }
       return std::make_shared<EventRecorder>(event);
     }
   }
