@@ -298,6 +298,8 @@ def get_module_graph_test(graph_train_oneflow, oneflow, *args):
             res = self.test_module(*args)
             forward_res = res
             if global_backward and graph_train_parameters_len:
+                if isinstance(res, (list, tuple)):
+                    res = res[0]
                 res = res.sum()
                 res.backward()
             return forward_res
