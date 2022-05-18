@@ -21,7 +21,7 @@ namespace oneflow {
 namespace test {
 
 TEST(AttrMap, basic) {
-  MutableCfgAttrMap mut_attr_map{};
+  MutableAttrMap mut_attr_map{};
   CHECK_JUST(mut_attr_map.SetAttr<int32_t>("zero", 0));
   CHECK_JUST(mut_attr_map.SetAttr<int64_t>("one", 1));
   CHECK_JUST(mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0}));
@@ -55,7 +55,7 @@ TEST(AttrMap, basic) {
 
 TEST(AttrMap, hash_value) {
   HashMap<AttrMap, int32_t> attr_map2int_value;
-  MutableCfgAttrMap mut_attr_map{};
+  MutableAttrMap mut_attr_map{};
   CHECK_JUST(mut_attr_map.SetAttr<int32_t>("zero", 0));
   CHECK_JUST(mut_attr_map.SetAttr<int64_t>("one", 1));
   CHECK_JUST(mut_attr_map.SetAttr<std::vector<int32_t>>("zeros", std::vector<int32_t>{0}));
@@ -66,7 +66,7 @@ TEST(AttrMap, hash_value) {
 
 TEST(AttrMap, hash_map) {
   HashMap<AttrMap, int32_t> attr_map2int_value;
-  MutableCfgAttrMap mut_attr_map{};
+  MutableAttrMap mut_attr_map{};
   attr_map2int_value[AttrMap(mut_attr_map)] = 0;
   ASSERT_EQ(attr_map2int_value.at(AttrMap(mut_attr_map)), 0);
   CHECK_JUST(mut_attr_map.SetAttr<int32_t>("zero", 0));
