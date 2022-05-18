@@ -204,7 +204,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   int64_t ndims = shape.NumAxes();
   int64_t specified_ndims = CountSpecifiedDims(index);
   CHECK_LE_OR_RETURN(specified_ndims, ndims)
-      << Error::RuntimeError() << "Too many indices for tensor of dimension " << ndims;
+      << Error::IndexError() << "Too many indices for tensor of dimension " << ndims;
   bool has_false_index = JUST(HasFalseIndex(index));
   bool has_expand_boolean_dim = false;
   int dim = 0;
