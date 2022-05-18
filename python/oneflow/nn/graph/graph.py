@@ -182,7 +182,9 @@ class Graph(object):
             * ``None``
 
         """
-        raise NotImplementedError("nn.Graph.build() func must be implemented when construct nn.Graph object.")
+        raise NotImplementedError(
+            "nn.Graph.build() func must be implemented when subclassing the nn.Graph."
+        )
 
     def __call__(self, *args, **kwargs):
         r"""Call nn.Graph subclass instance to run your customized graph.
