@@ -15,12 +15,33 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "absl/strings/str_cat.h"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11060
 
 namespace oneflow {
 
 namespace {
+
+void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, size_t data_size,
+    const void* ptr) {
+  void* host_ptr;
+  OF_CUDA_CHECK(cudaMallocHost(&host_ptr, data_size));
+  std::unique_ptr<ep::primitive::Memcpy> copyd2h_primitive =
+  ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(DeviceType::kCUDA,
+                                                      ep::primitive::MemcpyKind::kDtoH);
+  CHECK(copyd2h_primitive);
+  copyd2h_primitive->Launch(stream, host_ptr, ptr, data_size);
+  CHECK_JUST(stream->Sync());
+  std::ofstream dx_os;
+  // dx_os.open(StrCat("test/" + filename + "_", parallel_id));
+  dx_os.open(absl::StrCat("/home/zhengzekang/cublas_test/" + filename));
+
+  dx_os.write(reinterpret_cast<char*>(host_ptr), data_size);
+  dx_os.close();
+  OF_CUDA_CHECK(cudaFreeHost(host_ptr));
+}
 
 template<typename T>
 class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
@@ -41,6 +62,10 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
+    printf("Aux shape [0] is: %ld \n", aux->shape().At(0)); 
+    printf("Aux shape [1] is: %ld \n", aux->shape().At(1)); 
+    DumpToFile(ctx->stream(), "aux_ld", 0, 2*4 * sizeof(int32_t), aux->dptr());
+    
     user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", 0);
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
 

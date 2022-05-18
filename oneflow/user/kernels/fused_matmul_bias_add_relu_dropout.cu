@@ -117,20 +117,40 @@ __device__ Pack2Type<nv_bfloat16> Make2<nv_bfloat16>(float v) {
 
 constexpr int32_t kWarpSize = 32; 
 
+// constexpr int32_t kAuxReluLdAlignRequirement = 128;
+
+int32_t AlignReluAuxLd(int32_t aux_ld) {
+  /*
+  ReLu bit-mask matrix leading dimension in elements.
+  Must be divisible by 128 and be no less than the number of rows in the output matrix.
+  */
+  int32_t old_aux_ld = aux_ld;
+  return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
+         * kAuxReluLdAlignRequirement;
+}
+
 template<int32_t unroll>
-__device__ void SetBitMask(const int64_t index, const int64_t mask_element_count,
+__device__ void SetBitMask(const int64_t index,
+                           const int32_t aux_ld, 
+                           const int64_t out_feature, 
                            int32_t thread_bitmask,
                            int32_t* mask){
     int32_t mask_index = index / kWarpSize; 
     int32_t mask_offset = index - mask_index * kWarpSize; 
-    int32_t bit_mask = thread_bitmask << mask_offset; 
-    
-    for (int stride = kWarpSize / (unroll * 2); stride > 0; stride /= 2) {
-        bitmask |= __shfl_down_sync(bitmask, stride);
-    }
+    int32_t bitmask = thread_bitmask << mask_offset; 
+    printf("Mask index is: %d \n", mask_index);
+    printf("Mask offset is: %d \n", mask_offset);
 
+    for (int stride = kWarpSize / (unroll * 2); stride > 0; stride /= 2) {
+      bitmask |= __shfl_down_sync(__activemask(), bitmask, stride, kWarpSize);
+    }
+    int32_t load_index = index / out_feature; 
+    printf("load_index is: %d \n", load_index); 
+
+    int32_t aux_ld_load_index = ((aux_ld * load_index) + (index - load_index * out_feature)) / 32; // cause we use int32
+    printf("Aux ld load index is: %d \n", aux_ld_load_index); 
     if (mask_offset == 0) {
-        mask[mask_index] = bitmask;
+      mask[aux_ld_load_index] = bitmask;
     }
 }
 
@@ -148,6 +168,7 @@ template<typename T, int pack_size, bool tail>
 __global__ RETURN_VOID_IF_FLOAT FusedReluDropoutGpu(uint64_t seed,
                                                     one::CUDAGeneratorState* cuda_gen_state,
                                                     uint64_t inc_offset, const int64_t elem_cnt,
+                                                    const int32_t aux_ld, const int64_t out_feature, 
                                                     float rate, float scale, int64_t n_tail,
                                                     const T* x, int32_t* mask, T* y, const T* tail_x,
                                                     int32_t* tail_mask, T* tail_y) {
@@ -176,17 +197,24 @@ __global__ RETURN_VOID_IF_FLOAT FusedReluDropoutGpu(uint64_t seed,
     LoadPack y_vec;
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
+      // // Relu
+      // y_vec.elem[i] = x_vec.elem[i] > zero_val ? x_vec.elem[i] : zero_val;
+      // // Dropout
+      // bool mask_val = rand_uniform_pack4.elem[i] > rate;
+      // thread_bitmask |= (mask_val << i); 
+      // T tmp_float_mask = static_cast<float>(mask_val);
+      // y_vec.elem[i] = y_vec.elem[i] * tmp_float_mask * t_scale;
+    
       // Relu
-      y_vec.elem[i] = x_vec.elem[i] > zero_val ? x_vec.elem[i] : zero_val;
-      // Dropout
+      bool relu_mask = x_vec.elem[i] > zero_val; 
       bool mask_val = rand_uniform_pack4.elem[i] > rate;
-      thread_bitmask |= mask_val << i; 
-      T tmp_float_mask = static_cast<float>(mask_val);
-      y_vec.elem[i] = y_vec.elem[i] * tmp_float_mask * t_scale;
+      bool final_mask = relu_mask && mask_val; 
+      T float_mask = static_cast<float>(final_mask);
+      thread_bitmask |= (final_mask << i); 
+      y_vec.elem[i] = x_vec.elem[i] * float_mask * t_scale;
     }
     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
-    SetBitmask<4>(linear_index, thread_bitmask,
-                  reinterpret_cast<uint32_t*>(mask_data));
+    SetBitMask<4>(linear_index, aux_ld, out_feature, thread_bitmask, mask);
   }
   // TODO: think how to due with tail
 //   if (tail && global_thread_id < n_tail) {
@@ -202,7 +230,7 @@ __global__ RETURN_VOID_IF_FLOAT FusedReluDropoutGpu(uint64_t seed,
 //     tail_y[global_thread_id] = tail_out;
 //   }
 
-  __syncthreads();
+  // __syncthreads();
 
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
@@ -384,6 +412,7 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
 template<typename T>
 void LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
                                   one::CUDAGeneratorState* cuda_gen_state, const int64_t elem_cnt,
+                                  const int32_t aux_ld, const int64_t out_feature, 
                                   float rate, float scale, const T* x, int32_t* mask, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(stream, kBlockSize, elem_cnt);
   constexpr int pack_size = GetDropoutPackSize<T>();
@@ -397,13 +426,13 @@ void LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
     // If tail, we need generate randnum one more time, so here we add another `1`.
     inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize + 1;
     FusedReluDropoutGpu<T, pack_size, true><<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(
-        seed, cuda_gen_state, inc_offset, elem_cnt, rate, scale, n_tail, x, mask, y,
+        seed, cuda_gen_state, inc_offset, elem_cnt, aux_ld, out_feature, rate, scale, n_tail, x, mask, y,
         (x + tail_offset), (mask + tail_offset), (y + tail_offset));
   } else {
     inc_offset = ((elem_cnt - 1) / (kBlockSize * grid_size * kVecSize) + 1) * kVecSize;
     FusedReluDropoutGpu<T, pack_size, false><<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(
-        seed, cuda_gen_state, inc_offset, elem_cnt, rate, scale, n_tail, x, mask, y, nullptr,
-        nullptr, nullptr);
+        seed, cuda_gen_state, inc_offset, elem_cnt, aux_ld, out_feature, rate, scale, n_tail, x, mask, y, 
+        nullptr, nullptr, nullptr);
   }
 }
 
@@ -476,7 +505,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
       user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
 
-      int64_t out_feature = weight->shape().At(0);
+      const int64_t out_feature = weight->shape().At(0);
       weight->shape().ToDimVector(&weight_shape);
       size_t matmul_out_elem_cnt = in_shape.at(0) * out_feature;
       size_t matmul_out_size = GetCudaAlignedSize(matmul_out_elem_cnt * sizeof(T));
@@ -491,8 +520,9 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       void* matmul_out_ptr = (void*)(reinterpret_cast<char*>(tmp_buffer->mut_dptr()) + offset);
       offset += matmul_out_size;
       if (idx == weight_size - 1) {
-        relu_dropout_out_buf =
-            reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr());
+        // relu_dropout_out_buf =
+        //     reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr());
+        matmul_out_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr(); 
       } else {
         relu_dropout_out_buf =
             reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr());
@@ -510,36 +540,25 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
           nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
           cuda_stream->cuda_stream()));
 
-      //   if (idx == weight_size - 1) {
-      //     if (skip_final_activation) {
-      //       break;
-      //     } else {
-      //       // No Dropout
-      //       LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state,
-      //       matmul_out_elem_cnt,
-      //                                       rate, 0.0, reinterpret_cast<T*>(matmul_out_ptr),
-      //                                       reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
-      //                                       tmp_relu_dropout_out_buf);
-      //     }
-      //   } else {
-      //     LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt,
-      //                                     rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-      //                                     reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
-      //                                     tmp_relu_dropout_out_buf);
-      //   }
       printf("Matmul out elemcnt is: %ld \n", matmul_out_elem_cnt);
-      float rate = dropout_rate_list.at(idx);
-      float scale = 0.0;
-      if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
-      LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, rate,
-                                      scale, reinterpret_cast<T*>(matmul_out_ptr),
-                                      reinterpret_cast<bool*>(cublas_aux->mut_dptr()),
-                                      relu_dropout_out_buf);
+      if (idx != weight_size - 1) {
+        float rate = dropout_rate_list.at(idx);
+        float scale = 0.0;
+        const int32_t aux_ld = AlignReluAuxLd(out_feature); 
+        printf("Aux ld is: %d \n", aux_ld); 
+        printf("out feature is: %d \n", out_feature); 
 
-      // Set relu_droput_out ptr as next layer's input.
-      in_buf_ptr = relu_dropout_out_buf;
-      // Set hidden_layer shape as next layer's input shape.
-      in_shape.at(1) = out_feature;
+        if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+        LaunchFusedReluDropoutKernel<T>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, 
+                                        aux_ld, out_feature, rate,
+                                        scale, reinterpret_cast<T*>(matmul_out_ptr),
+                                        reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()),
+                                        relu_dropout_out_buf);
+        // Set relu_droput_out ptr as next layer's input.
+        in_buf_ptr = relu_dropout_out_buf;
+        // Set hidden_layer shape as next layer's input shape.
+        in_shape.at(1) = out_feature;
+      }
     }
   }
 
