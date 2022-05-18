@@ -178,11 +178,11 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     if iter >= ALL_ITERS:
         break
 
+    flow.comm.barrier()
+
     if args.dtr:
         for x in model.parameters():
             x.grad = flow.zeros_like(x).to(cuda0)
-
-    flow.comm.barrier()
 
     train_data = train_data.to(cuda0)
     train_label = train_label.to(cuda0)
