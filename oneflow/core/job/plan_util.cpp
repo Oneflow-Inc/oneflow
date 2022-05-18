@@ -436,8 +436,8 @@ void PlanUtil::ClearCtrlAcrossVariableInplaceBuffer(Plan* plan) {
         if (pair.second.regst_desc_id_size() == 1) {
           if (pair.second.regst_desc_id(0) == regst_desc_id) {
             consumer->mutable_consumed_regst_desc_id()->erase(pair.first);
-            LOG(WARNING) << " Remove in ctrl consumed regst: " << regst_desc_id
-                         << " in task: " << consumer_task_id;
+            LOG(INFO) << " Remove in ctrl consumed regst: " << regst_desc_id
+                      << " in task: " << consumer_task_id;
             removed = true;
             break;
           }
@@ -453,14 +453,14 @@ void PlanUtil::ClearCtrlAcrossVariableInplaceBuffer(Plan* plan) {
           }
           if (find_in) {
             auto& regst_ids = consumer->mutable_consumed_regst_desc_id()->at(pair.first);
-            LOG(WARNING) << " Remove in ctrl consumed regst: " << regst_desc_id
-                         << " in task: " << consumer_task_id
-                         << " with regst_id_set before: " << regst_ids.DebugString();
+            LOG(INFO) << " Remove in ctrl consumed regst: " << regst_desc_id
+                      << " in task: " << consumer_task_id
+                      << " with regst_id_set before: " << regst_ids.DebugString();
             regst_ids.clear_regst_desc_id();
             for (int64_t consumed_regst_desc_id : consumed_regst_desc_ids) {
               regst_ids.add_regst_desc_id(consumed_regst_desc_id);
             }
-            LOG(WARNING) << " after: " << regst_ids.DebugString();
+            LOG(INFO) << " after: " << regst_ids.DebugString();
             removed = true;
             break;
           }
@@ -468,8 +468,8 @@ void PlanUtil::ClearCtrlAcrossVariableInplaceBuffer(Plan* plan) {
       }
       CHECK(removed) << " task proto: " << consumer->DebugString()
                      << " cannot find consumer regst desc id : " << regst_desc_id;
-      LOG(WARNING) << " task_proto: " << consumer->DebugString()
-                   << " Removed consumed ctrl regst desc id : " << regst_desc_id;
+      LOG(INFO) << " task_proto: " << consumer->DebugString()
+                << " Removed consumed ctrl regst desc id : " << regst_desc_id;
     }
   };
 
@@ -479,8 +479,8 @@ void PlanUtil::ClearCtrlAcrossVariableInplaceBuffer(Plan* plan) {
       if (task->consumed_regst_desc_id().size() == 1 && task->produced_regst_desc().size() == 1) {
         continue;
       }
-      LOG(WARNING) << " VariableInplaceBufferActor : " << task->DebugString()
-                   << " has ctrl regst but will be removed.";
+      LOG(INFO) << " VariableInplaceBufferActor : " << task->DebugString()
+                << " has ctrl regst but will be removed.";
       if (task->consumed_regst_desc_id().size() > 1) {
         CHECK(task->consumed_regst_desc_id().find("in_ctrl")
               != task->consumed_regst_desc_id().end());
@@ -497,15 +497,15 @@ void PlanUtil::ClearCtrlAcrossVariableInplaceBuffer(Plan* plan) {
             for (; in_ctrl_task_ctrl_regst_it != in_ctrl_task_produced_regsts->end();
                  ++in_ctrl_task_ctrl_regst_it) {
               if (in_ctrl_task_ctrl_regst_it->second.regst_desc_id() == regst_desc_id) {
-                LOG(WARNING) << " Remove ctrl regst : "
-                             << in_ctrl_task_ctrl_regst_it->second.DebugString();
+                LOG(INFO) << " Remove ctrl regst : "
+                          << in_ctrl_task_ctrl_regst_it->second.DebugString();
                 in_ctrl_task_produced_regsts->erase(in_ctrl_task_ctrl_regst_it);
                 break;
               }
             }
           } else {
-            LOG(WARNING) << " Remove consumer_task_id: " << task->task_id()
-                         << " in regst: " << in_ctrl->DebugString();
+            LOG(INFO) << " Remove consumer_task_id: " << task->task_id()
+                      << " in regst: " << in_ctrl->DebugString();
             std::vector<int64_t> consumer_task_ids;
             for (int64_t consumer_task_id : in_ctrl->consumer_task_id()) {
               if (consumer_task_id != task->task_id()) {
@@ -534,11 +534,11 @@ void PlanUtil::ClearCtrlAcrossVariableInplaceBuffer(Plan* plan) {
         for (const std::string& ctrl_regst_name : ctrl_names) {
           RemoveCtrlInConsumer(task->produced_regst_desc().at(ctrl_regst_name).regst_desc_id());
           task->mutable_produced_regst_desc()->erase(ctrl_regst_name);
-          LOG(WARNING) << " Remove ctrl regst : " << ctrl_regst_name;
+          LOG(INFO) << " Remove ctrl regst : " << ctrl_regst_name;
         }
       }
-      LOG(WARNING) << " After Clear, VariableInplaceBufferActor proto now is : "
-                   << task->DebugString();
+      LOG(INFO) << " After Clear, VariableInplaceBufferActor proto now is : "
+                << task->DebugString();
     }
   }
 }

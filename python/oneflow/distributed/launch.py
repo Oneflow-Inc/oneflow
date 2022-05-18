@@ -135,6 +135,12 @@ def main():
         with_python = not args.no_python
         cmd = []
         if with_python:
+            # cmd =  ["/home/chengcheng/nsight-systems-2021.4.1/bin/nsys", "profile",
+            #        "--stats=true", "-o", ("rank_"+str(local_rank)+"_loss_v2.qdrep"), sys.executable, "-u"]
+            # if local_rank == 0:
+            #     # cmd = [sys.executable, "-u"]
+            # else:
+            #    cmd = [sys.executable, "-u"]
             cmd = [sys.executable, "-u"]
             if args.module:
                 cmd.append("-m")

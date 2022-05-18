@@ -44,6 +44,10 @@ __global__ RETURN_VOID_IF_NOT_HALF ComputeNllOutNone(const int64_t num_instances
     }
     assert(label >= 0);
     assert(label < num_classes);
+    if (label < 0 || label >= num_classes) {
+      printf("cc runtime error, bad label.\n");
+      continue;
+    }
     const T cur_weight = weight == nullptr ? one_val : weight[label];
     cuda::atomic::Add(total_weight, cur_weight);
     out[i] = -input[i * num_classes + label] * cur_weight;
@@ -66,6 +70,10 @@ __global__ RETURN_VOID_IF_HALF ComputeNllOutNone(const int64_t num_instances, co
     }
     assert(label >= 0);
     assert(label < num_classes);
+    if (label < 0 || label >= num_classes) {
+      printf("cc runtime error, bad label.\n");
+      continue;
+    }
     const half cur_weight = weight == nullptr ? one_val : weight[label];
     cuda::atomic::Add(total_weight, cur_weight);
     out[i] = __float2half(-__half2float(input[i * num_classes + label] * cur_weight));
@@ -86,6 +94,10 @@ __global__ RETURN_VOID_IF_NOT_HALF ComputeNllGradOut(const int64_t num_instances
     if (label == ignore_index) { continue; }
     assert(label >= 0);
     assert(label < num_classes);
+    if (label < 0 || label >= num_classes) {
+      printf("cc runtime error, bad label.\n");
+      continue;
+    }
     const T cur_weight = weight == nullptr ? -GetOneVal<T>() : -weight[label];
     dx[i * num_classes + label] = dy[i] * cur_weight;
   }
@@ -101,6 +113,10 @@ __global__ RETURN_VOID_IF_HALF ComputeNllGradOut(const int64_t num_instances, co
     if (label == ignore_index) { continue; }
     assert(label >= 0);
     assert(label < num_classes);
+    if (label < 0 || label >= num_classes) {
+      printf("cc runtime error, bad label.\n");
+      continue;
+    }
     const half cur_weight = weight == nullptr ? __float2half(-1.0) : __hneg(weight[label]);
     dx[i * num_classes + label] = __hmul(dy[i], cur_weight);
   }
