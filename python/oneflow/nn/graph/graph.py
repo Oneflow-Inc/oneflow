@@ -183,7 +183,7 @@ class Graph(object):
 
         """
         raise NotImplementedError(
-            "nn.Graph.build() func must be implemented when subclassing the nn.Graph."
+            "nn.Graph.build() method must be overridden when subclassing the nn.Graph."
         )
 
     def __call__(self, *args, **kwargs):
