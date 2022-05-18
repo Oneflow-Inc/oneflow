@@ -167,10 +167,9 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
       GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
                                 GetBuilder().getStrArrayAttr(device_vec)));
   if (pc.has_hierarchy()) {
-    attr_vec.push_back(
-        GetBuilder().getNamedAttr(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-                                  GetBuilder().getI64ArrayAttr({pc.hierarchy().dim().begin(),
-                                                                pc.hierarchy().dim().end()})));
+    attr_vec.push_back(GetBuilder().getNamedAttr(
+        OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
+        GetBuilder().getI64ArrayAttr({pc.hierarchy().dim().begin(), pc.hierarchy().dim().end()})));
   }
   return success();
 }
