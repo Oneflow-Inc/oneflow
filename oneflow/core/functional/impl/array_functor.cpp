@@ -1950,9 +1950,7 @@ class TensorGetItemFunctor {
     }
 
     // TODO(): Returns a view of tensor `x`.
-    if (result == x) { 
-      result = JUST(Identity(x)); 
-    }
+    if (result == x) { result = JUST(Identity(x)); }
     return result;
   }
 };
