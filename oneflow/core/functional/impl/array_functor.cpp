@@ -1194,7 +1194,8 @@ class SliceBaseFunctor {
   SliceBaseFunctor() = default;
   virtual ~SliceBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
-                           const std::vector<int64_t>& stop, const std::vector<int64_t>& step) const {
+                           const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
     // TODO:(zhaoluyang) use view::Slice
     // if (view::IsViewApplicable(x)) { return view::Slice(x, start, stop, step); }
 
@@ -2551,15 +2552,12 @@ class IndexSelectFunctor {
     } else {
       index_new = JUST(Unsqueeze(index, 0));
     }
-    auto index_gather = JUST(functional::Expand(
-        JUST(functional::Slice(index_new, {0}, {1}, {1})),
-        expand_shape));
+    auto index_gather =
+        JUST(functional::Expand(JUST(functional::Slice(index_new, {0}, {1}, {1})), expand_shape));
     for (int i = 1; i < index->dim(0); i++) {
       index_gather = JUST(functional::Concat(
-          {index_gather,
-           JUST(functional::Expand(
-               JUST(functional::Slice(index_new, {i}, {i + 1}, {1})),
-               expand_shape))},
+          {index_gather, JUST(functional::Expand(
+                             JUST(functional::Slice(index_new, {i}, {i + 1}, {1})), expand_shape))},
           new_dim));
     }
     return JUST(functional::DimGather(input, new_dim, index_gather, false));
