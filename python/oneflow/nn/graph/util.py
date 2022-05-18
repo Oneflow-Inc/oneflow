@@ -86,7 +86,17 @@ class IOMapper(object):
 
         self._mapped_io_items = execute_mapping(self._io_items)
         return self._mapped_io_items
+
+    def get_flattened(self):
+        flattened = []
+        def flatten_hook(item):
+            if isinstance(item, Tensor):
+                flattened.append(item)
         
+        self.register_post_hook(flatten_hook)
+        self._mapped_io_items = None 
+        self.get()
+        return flattened
 
 class IONodeType:
     TENSOR = "TENSOR"
