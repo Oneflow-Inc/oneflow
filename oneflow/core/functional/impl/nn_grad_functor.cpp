@@ -140,7 +140,8 @@ class MaxPoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name << " in MaxPoolNdGradFunctor.";
+        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
+        << " in MaxPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, indice, dy}, attrs);
   }
@@ -182,7 +183,8 @@ class TFPoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(mode, ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name << " in TFPoolNdGradFunctor.";
+        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
+        << " in TFPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, attrs);
   }
@@ -211,7 +213,8 @@ class AdaptivePoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(mode, ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name << " in AdaptivePoolNdGradFunctor.";
+        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
+        << " in AdaptivePoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy});
   }
@@ -665,7 +668,8 @@ class AvgPoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name << " in AvgPoolNdGradFunctor.";
+        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
+        << " in AvgPoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy}, attrs);
   }
@@ -987,7 +991,8 @@ class FusedDotFeatureInteractionGradFunctor {
     JUST(attrs.SetAttr<int32_t>("output_concat_grad_dim", output_concat_grad_dim));
     const int64_t n_features_grad = features_grad_like.size();
     CHECK_LE_OR_RETURN(n_features_grad, kMaxInputCount)
-      << Error::RuntimeError() << "The number of tensors in features_grad_like should be less than 128.";
+        << Error::RuntimeError()
+        << "The number of tensors in features_grad_like should be less than 128.";
     TensorTuple inputs(n_features_grad + 2);
     inputs[0] = dy;
     inputs[1] = padded_concated_features;
