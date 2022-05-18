@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from cProfile import run
 import oneflow as flow
 from oneflow.nn.modules.batchnorm import _NormBase
 
@@ -27,31 +28,49 @@ class _InstanceNorm(_NormBase):
         track_running_stats: bool = False,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-
-    def _forward(self, x):
-        axis = 1
-        params_shape = [x.shape[axis]]
-        weight = self.weight
-        bias = self.bias
-        nd_params_shape = [1] * len(x.shape)
-        nd_params_shape[axis] = params_shape[0]
-        mean = x.mean(2, keepdim=True)
-        variance = x.var(2, unbiased=False, keepdim=True)
-        normalized = (x - mean) / flow.sqrt(variance + self.eps)
-        if self.weight is not None and params_shape[0] == self.weight.nelement():
-            weight = flow.reshape(self.weight, shape=nd_params_shape)
-        if self.bias is not None and params_shape[0] == self.bias.nelement():
-            bias = flow.reshape(self.bias, shape=nd_params_shape)
-        if self.weight is not None:
-            normalized = normalized * weight
-        if self.bias is not None:
-            normalized = normalized + bias
-        return normalized
+        self.channel_axis = 1
 
     def forward(self, x):
         self._check_input_dim(x)
-        reshape_to_1d = flow.reshape(x, [x.shape[0], x.shape[1], -1])
-        normalized_1d_out = self._forward(reshape_to_1d)
+        # if self.training and self.track_running_stats:
+        #     if self.num_batches_tracked is not None:
+        #         self.num_batches_tracked.add_(1)
+        if self.training:
+            is_training = True
+        else:
+            is_training = (self.running_mean is None) and (self.running_var is None)
+        shape = list(x.shape)
+        b = shape[0]
+        c = shape[1]
+        shape[1] = b * c
+        shape[0] = 1
+        weight = self.weight
+        bias = self.bias
+        if self.weight is not None:
+            weight = self.weight.repeat(b)
+        if self.bias is not None:
+            bias = self.bias.repeat(b)
+        if self.running_mean is not None:
+            self.running_mean = self.running_mean.repeat(b)
+        if self.running_var is not None:
+            self.running_var = self.running_var.repeat(b)
+        reshape_to_1d = flow.reshape(x, shape)
+        normalized_1d_out = flow._C.normalization(
+            reshape_to_1d,
+            self.running_mean if not self.training or self.track_running_stats else None,
+            self.running_var if not self.training or self.track_running_stats else None,
+            weight,
+            bias,
+            axis=self.channel_axis,
+            epsilon=self.eps,
+            momentum=self.momentum,
+            is_training=is_training,
+        )
+        if self.running_mean is not None:
+            self.running_mean = flow.reshape(self.running_mean, [b, c]).mean(0)
+        if self.running_var is not None:
+            self.running_var = flow.reshape(self.running_var, [b, c]).mean(0)
+
         reshape_back_to_nd = flow.reshape(normalized_1d_out, list(x.shape))
         return reshape_back_to_nd
 
