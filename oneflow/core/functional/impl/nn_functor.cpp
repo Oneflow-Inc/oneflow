@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -1507,6 +1508,54 @@ class ConsistentNormalFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InstanceNormalizationFunctor {
+ public:
+  InstanceNormalizationFunctor() {
+    instance_norm_op_ = CHECK_JUST(one::OpBuilder("instanceNorm")
+                                       .Input("x")
+                                       .Input("moving_mean")
+                                       .Input("moving_variance")
+                                       .Input("gamma")
+                                       .Input("beta")
+                                       .Output("y")
+                                       .Output("mean")
+                                       .Output("inv_variance")
+                                       .Attr("training", true)
+                                       .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<one::Tensor>& moving_mean,
+                           const Optional<one::Tensor>& moving_variance,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const int32_t& axis, const float& epsilon, const float& momentum,
+                           const bool& training) const {
+    auto x_shape = x->shape()->dim_vec();
+    const int64_t b = x_shape[0];
+    const int64_t c = x_shape[1];
+    x_shape[0] = 1;
+    x_shape[1] = b * c;
+    std::shared_ptr<one::Tensor> gamma_ = JUST(gamma);
+    if (gamma.has_value()) { gamma_ = JUST(Repeat(JUST(gamma), Shape({b}))); }
+    std::shared_ptr<one::Tensor> beta_ = JUST(beta);
+    if (beta.has_value()) { beta_ = JUST(Repeat(JUST(beta), Shape({b}))); }
+    std::shared_ptr<one::Tensor> moving_mean_ = JUST(moving_mean);
+    if (moving_mean.has_value()) { moving_mean_ = JUST(Repeat(JUST(moving_mean), Shape({b}))); }
+    std::shared_ptr<one::Tensor> moving_variance_ = JUST(moving_variance);
+    if (moving_variance.has_value()) {
+      moving_variance_ = JUST(Repeat(JUST(moving_variance), Shape({b})));
+    }
+
+    auto x_rehsaped = JUST(Reshape(x, Shape(x_shape)));
+    auto out = JUST(Normalization(x, moving_mean_, moving_variance_, gamma_, beta_, axis, epsilon,
+                                  momentum, training));
+    auto out_reshape = JUST(Reshape(out, Shape(x->shape()->dim_vec())));
+    return out_reshape;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> instance_norm_op_;
+};
+
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -2988,6 +3037,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CtcLossFunctor>("CtcLoss");
   m.add_functor<impl::AffineGridFunctor>("AffineGrid");
   m.add_functor<impl::GridSampleFunctor>("GridSample");
+  m.add_functor<impl::InstanceNormalizationFunctor>("InstanceNorm");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
   m.add_functor<impl::NormalizationAddReluFunctor>("NormalizationAddRelu");
   m.add_functor<impl::PadFunctor>("Pad");
