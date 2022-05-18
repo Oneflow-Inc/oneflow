@@ -2310,7 +2310,7 @@ class UnbindFunctor {
     TensorTuple unbinds(dim_size);
     std::vector<int32_t> dims = {axis};
     for (int i = 0; i < dim_size; ++i) {
-      unbinds[i] = JUST(functional::Squeeze(chunk_res->at(i), dims));
+      unbinds[i] = JUST(functional::Squeeze((*chunk_res)[i], dims));
     }
     return unbinds;
   }

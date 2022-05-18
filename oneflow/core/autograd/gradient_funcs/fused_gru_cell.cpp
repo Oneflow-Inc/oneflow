@@ -22,15 +22,15 @@ namespace oneflow {
 namespace one {
 
 struct FusedGruCellGradCaptureState : public AutoGradCaptureState {
-  bool has_bias;
-  bool hx_needs_grad;
+  bool has_bias = true;
+  bool hx_needs_grad = true;
 };
 
 class FusedGruCellGrad : public OpExprGradFunction<FusedGruCellGradCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "FusedGruCellGrad::Init forward op expr is null.";
     return Maybe<void>::Ok();
   }
 
@@ -39,18 +39,22 @@ class FusedGruCellGrad : public OpExprGradFunction<FusedGruCellGradCaptureState>
     if (inputs.size() == 3) {
       ctx->has_bias = false;
     } else {
-      CHECK_EQ_OR_RETURN(inputs.size(), 5);
+      CHECK_EQ_OR_RETURN(inputs.size(), 5) << "FusedGruCellGrad::Capture input size should be 5.";
       ctx->has_bias = true;
     }
-    if (inputs.at(2)->requires_grad()) { ctx->hx_needs_grad = true; }
-    ctx->SaveTensorForBackward(outputs.at(1));  // workspace
+    if (inputs[2]->requires_grad()) {
+      ctx->hx_needs_grad = true;
+    } else {
+      ctx->hx_needs_grad = false;
+    }
+    ctx->SaveTensorForBackward(outputs[1]);  // workspace
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const FusedGruCellGradCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& workspace = ctx->SavedTensors().at(0);  // workspace
-    const auto& grad_hy = out_grads.at(0);
+    const auto& workspace = ctx->SavedTensors()[0];  // workspace
+    const auto& grad_hy = out_grads[0];
     const auto& results =
         JUST(functional::FusedGruCellGrad(grad_hy, workspace, ctx->has_bias, ctx->hx_needs_grad));
 
@@ -59,18 +63,18 @@ class FusedGruCellGrad : public OpExprGradFunction<FusedGruCellGradCaptureState>
     } else {
       in_grads->resize(3);
     }
-    in_grads->at(0) = results->at(0);
-    in_grads->at(1) = results->at(1);
+    (*in_grads)[0] = (*results)[0];
+    (*in_grads)[1] = (*results)[1];
 
-    if (ctx->hx_needs_grad) { in_grads->at(2) = results->at(2); }
+    if (ctx->hx_needs_grad) { (*in_grads)[2] = (*results)[2]; }
 
     if (ctx->has_bias) {
       if (ctx->hx_needs_grad) {
-        in_grads->at(3) = results->at(3);
-        in_grads->at(4) = results->at(4);
+        (*in_grads)[3] = (*results)[3];
+        (*in_grads)[4] = (*results)[4];
       } else {
-        in_grads->at(3) = results->at(2);
-        in_grads->at(4) = results->at(3);
+        (*in_grads)[3] = (*results)[2];
+        (*in_grads)[4] = (*results)[3];
       }
     }
     return Maybe<void>::Ok();

@@ -64,7 +64,7 @@ class TestRNN(flow.unittest.TestCase):
             hx = m(input[i], hx)
         return hx
 
-    @autotest(n=10, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_lstm_cell(test_case):
         device = random_device()
         batch_size = random(1, 6)
@@ -92,7 +92,7 @@ class TestRNN(flow.unittest.TestCase):
             cx = res[1]
         return res[0]
 
-    @autotest(n=10, check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_gru_cell(test_case):
         device = random_device()
         batch_size = random(1, 6)

@@ -3014,8 +3014,8 @@ Maybe<void> check_attributes(const std::shared_ptr<one::Tensor>& input, const Te
     return Maybe<void>::Ok();
   };
 
-  for (auto h : hiddens) JUST(check_tensors("hidden", h));
-  for (auto p : params) JUST(check_tensors("parameter", p));
+  for (const auto& h : hiddens) JUST(check_tensors("hidden", h));
+  for (const auto& p : params) JUST(check_tensors("parameter", p));
 
   return Maybe<void>::Ok();
 }
@@ -3035,16 +3035,18 @@ Maybe<Tensor> linear(const std::shared_ptr<one::Tensor>& input,
 }
 
 struct CellParams {
-  CellParams(const std::shared_ptr<one::Tensor> _w_ih, const std::shared_ptr<one::Tensor> _w_hh,
-             const std::shared_ptr<one::Tensor> _b_ih, const std::shared_ptr<one::Tensor> _b_hh,
-             const std::shared_ptr<one::Tensor> _w_hr)
+  CellParams(const std::shared_ptr<one::Tensor> _w_ih,  // NOLINT
+             const std::shared_ptr<one::Tensor> _w_hh,  // NOLINT
+             const std::shared_ptr<one::Tensor> _b_ih,  // NOLINT
+             const std::shared_ptr<one::Tensor> _b_hh,  // NOLINT
+             const std::shared_ptr<one::Tensor> _w_hr)  // NOLINT
       : w_ih(_w_ih), w_hh(_w_hh), b_ih_(_b_ih), b_hh_(_b_hh), w_hr(_w_hr){};
 
   const std::shared_ptr<one::Tensor> w_ih;
   const std::shared_ptr<one::Tensor> w_hh;
-  const std::shared_ptr<one::Tensor> b_ih_; /* optional */
-  const std::shared_ptr<one::Tensor> b_hh_; /* optional */
-  const std::shared_ptr<one::Tensor> w_hr;  /* only defined for LSTMs with projections */
+  const std::shared_ptr<one::Tensor> b_ih_;
+  const std::shared_ptr<one::Tensor> b_hh_;
+  const std::shared_ptr<one::Tensor> w_hr;  // only defined for LSTMs with projections
 
   Maybe<Tensor> matmul_ih(const std::shared_ptr<one::Tensor>& input) const {
     return functional::MatMul(input, w_ih, false, true, 1.0);
@@ -3141,7 +3143,7 @@ struct GRUCell {
       std::shared_ptr<TensorTuple> result =
           JUST(functional::FusedGruCell(igates, hgates, hidden, params.b_ih(), params.b_hh()));
 
-      return result->at(0);
+      return (*result)[0];
     }
 
     std::shared_ptr<one::TensorTuple> chunked_igates;
@@ -3155,14 +3157,13 @@ struct GRUCell {
     std::shared_ptr<one::Tensor> tmp = JUST(params.linear_hh(hidden));
     std::shared_ptr<one::TensorTuple> chunked_hgates = JUST(functional::Chunk(tmp, 3, 1));
     std::shared_ptr<one::Tensor> reset_gate =
-        JUST(functional::Add(chunked_hgates->at(0), chunked_igates->at(0), 1.0, false));
+        JUST(functional::Add((*chunked_hgates)[0], (*chunked_igates)[0], 1.0, false));
     reset_gate = JUST(functional::Sigmoid(reset_gate));
     std::shared_ptr<one::Tensor> input_gate =
-        JUST(functional::Add(chunked_hgates->at(1), chunked_igates->at(1), 1.0, false));
+        JUST(functional::Add((*chunked_hgates)[1], (*chunked_igates)[1], 1.0, false));
     input_gate = JUST(functional::Sigmoid(input_gate));
-    std::shared_ptr<one::Tensor> new_gate =
-        JUST(functional::Mul(chunked_hgates->at(2), reset_gate));
-    new_gate = JUST(functional::Add(chunked_igates->at(2), new_gate, 1.0, false));
+    std::shared_ptr<one::Tensor> new_gate = JUST(functional::Mul((*chunked_hgates)[2], reset_gate));
+    new_gate = JUST(functional::Add((*chunked_igates)[2], new_gate, 1.0, false));
     new_gate = JUST(functional::Tanh(new_gate));
     std::shared_ptr<one::Tensor> output = JUST(functional::Sub(hidden, new_gate, 1.0, false));
     output = JUST(functional::Mul(output, input_gate));
@@ -3196,8 +3197,8 @@ struct LSTMCell {
           JUST(functional::FusedLstmCell(igates, hgates, cx, params.b_ih(), params.b_hh()));
 
       auto outputs = std::make_shared<TensorTuple>(2);
-      (*outputs)[0] = JUST(params.matmul_hr(result->at(0)));
-      (*outputs)[1] = result->at(1);
+      (*outputs)[0] = JUST(params.matmul_hr((*result)[0]));
+      (*outputs)[1] = (*result)[1];
       return outputs;
     }
 
@@ -3553,7 +3554,7 @@ Maybe<TensorTuple> _rnn_impl(const std::shared_ptr<one::Tensor>& input,
                              const bool& batch_first) {
   TensorTuple hiddens;
   hiddens.emplace_back(hx);
-  check_attributes(input, params, hiddens);
+  JUST(check_attributes(input, params, hiddens));
 
   std::shared_ptr<one::Tensor> rnn_input = input;
   if (batch_first) {
@@ -3571,28 +3572,28 @@ Maybe<TensorTuple> _rnn_impl(const std::shared_ptr<one::Tensor>& input,
     for (int32_t l = 0; l < num_layers; ++l) {
       // forward direction
       std::shared_ptr<TensorTuple> fw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
-      std::shared_ptr<one::Tensor> fw_hidden = rnn_hiddens->at(l * 2);
-      auto& fw_cell_param = rnn_params->at(l * 2);
+      std::shared_ptr<one::Tensor> fw_hidden = (*rnn_hiddens)[l * 2];
+      auto& fw_cell_param = (*rnn_params)[l * 2];
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
-        fw_hidden = JUST(cell_type{}(rnn_inputs->at(i), fw_hidden, fw_cell_param));
+        fw_hidden = JUST(cell_type{}((*rnn_inputs)[i], fw_hidden, fw_cell_param));
         (*fw_outputs)[i] = fw_hidden;
       }
       final_hiddens.emplace_back(fw_hidden);
 
       // reverse direction
       std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
-      std::shared_ptr<one::Tensor> bw_hidden = rnn_hiddens->at(l * 2 + 1);
-      auto& bw_cell_param = rnn_params->at(l * 2 + 1);
+      std::shared_ptr<one::Tensor> bw_hidden = (*rnn_hiddens)[l * 2 + 1];
+      auto& bw_cell_param = (*rnn_params)[l * 2 + 1];
       for (int32_t i = rnn_inputs->size() - 1; i >= 0; i--) {
-        bw_hidden = JUST(cell_type{}(rnn_inputs->at(i), bw_hidden, bw_cell_param));
+        bw_hidden = JUST(cell_type{}((*rnn_inputs)[i], bw_hidden, bw_cell_param));
         (*bw_outputs)[i] = bw_hidden;
       }
       final_hiddens.emplace_back(bw_hidden);
 
       // concat fw_outputs and bw_outputs
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
-        rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
-                                                    bw_hidden->shape()->NumAxes() - 1));
+        (*rnn_inputs)[i] = JUST(functional::Concat({(*fw_outputs)[i], (*bw_outputs)[i]},
+                                                   bw_hidden->shape()->NumAxes() - 1));
       }
 
       if (dropout != 0 && train && l < num_layers - 1) {
@@ -3604,11 +3605,11 @@ Maybe<TensorTuple> _rnn_impl(const std::shared_ptr<one::Tensor>& input,
     }
   } else {
     for (int32_t l = 0; l < num_layers; ++l) {
-      std::shared_ptr<one::Tensor> hidden = rnn_hiddens->at(l);
-      auto& cell_param = rnn_params->at(l);
+      std::shared_ptr<one::Tensor> hidden = (*rnn_hiddens)[l];
+      auto& cell_param = (*rnn_params)[l];
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
-        hidden = JUST(cell_type{}(rnn_inputs->at(i), hidden, cell_param));
-        rnn_inputs->at(i) = hidden;
+        hidden = JUST(cell_type{}((*rnn_inputs)[i], hidden, cell_param));
+        (*rnn_inputs)[i] = hidden;
       }
       final_hiddens.emplace_back(hidden);
       if (dropout != 0 && train && l < num_layers - 1) {
@@ -3694,8 +3695,8 @@ Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& i
       // forward direction
       std::shared_ptr<TensorTuple> fw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
       int64_t last_batch_size = batch_sizes_vec[0];
-      std::shared_ptr<one::Tensor> fw_hidden = rnn_hiddens->at(l * 2);
-      auto& fw_cell_param = rnn_params->at(l * 2);
+      std::shared_ptr<one::Tensor> fw_hidden = (*rnn_hiddens)[l * 2];
+      auto& fw_cell_param = (*rnn_params)[l * 2];
 
       TensorTuple fw_final_hiddens_for_single_layer;
       for (int32_t i = 0; i < num_steps; ++i) {
@@ -3707,7 +3708,7 @@ Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& i
           fw_hidden = JUST(functional::Narrow(fw_hidden, 0, 0, last_batch_size - dec));
         }
         last_batch_size = batch_size;
-        fw_hidden = JUST(cell_type{}(rnn_inputs->at(i), fw_hidden, fw_cell_param));
+        fw_hidden = JUST(cell_type{}((*rnn_inputs)[i], fw_hidden, fw_cell_param));
         (*fw_outputs)[i] = fw_hidden;
       }
       fw_final_hiddens_for_single_layer.emplace_back(fw_hidden);
@@ -3719,8 +3720,8 @@ Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& i
       std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
       last_batch_size = batch_sizes_vec[num_steps - 1];
       std::shared_ptr<one::Tensor> bw_hidden =
-          JUST(functional::Narrow(rnn_hiddens->at(l * 2 + 1), 0, 0, last_batch_size));
-      auto& bw_cell_param = rnn_params->at(l * 2 + 1);
+          JUST(functional::Narrow((*rnn_hiddens)[l * 2 + 1], 0, 0, last_batch_size));
+      auto& bw_cell_param = (*rnn_params)[l * 2 + 1];
       // Here the situation is similar to that above, except we start out with
       // the smallest batch size (and a small set of hidden states we actually use),
       // and progressively expand the hidden states, as we move backwards over the
@@ -3730,14 +3731,14 @@ Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& i
         const int64_t inc = batch_size - last_batch_size;
         if (inc > 0) {
           std::shared_ptr<one::Tensor> hidden_slice = JUST(functional::Narrow(
-              rnn_hiddens->at(l * 2 + 1), 0, last_batch_size, batch_size - last_batch_size));
+              (*rnn_hiddens)[l * 2 + 1], 0, last_batch_size, batch_size - last_batch_size));
           std::shared_ptr<TensorTuple> tmp = std::make_shared<TensorTuple>(2);
           (*tmp)[0] = bw_hidden;
           (*tmp)[1] = hidden_slice;
           bw_hidden = JUST(functional::Concat(*tmp, 0));
         }
         last_batch_size = batch_size;
-        bw_hidden = JUST(cell_type{}(rnn_inputs->at(i), bw_hidden, bw_cell_param));
+        bw_hidden = JUST(cell_type{}((*rnn_inputs)[i], bw_hidden, bw_cell_param));
         (*bw_outputs)[i] = bw_hidden;
       }
 
@@ -3745,8 +3746,8 @@ Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& i
 
       // concat fw_outputs and bw_outputs
       for (int32_t i = 0; i < num_steps; ++i) {
-        rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
-                                                    bw_hidden->shape()->NumAxes() - 1));
+        (*rnn_inputs)[i] = JUST(functional::Concat({(*fw_outputs)[i], (*bw_outputs)[i]},
+                                                   bw_hidden->shape()->NumAxes() - 1));
       }
 
       if (dropout != 0 && train && l < num_layers - 1) {
@@ -3770,8 +3771,8 @@ Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& i
     // to return a tensor of final hidden state.
     for (int32_t l = 0; l < num_layers; ++l) {
       int64_t last_batch_size = batch_sizes_vec[0];
-      std::shared_ptr<one::Tensor> hidden = rnn_hiddens->at(l);
-      auto& cell_param = rnn_params->at(l);
+      std::shared_ptr<one::Tensor> hidden = (*rnn_hiddens)[l];
+      auto& cell_param = (*rnn_params)[l];
       TensorTuple final_hiddens_for_single_layer;
       for (int32_t i = 0; i < num_steps; ++i) {
         const int64_t batch_size = batch_sizes_vec[i];
@@ -3782,8 +3783,8 @@ Maybe<TensorTuple> _rnn_pack_sequence_impl(const std::shared_ptr<one::Tensor>& i
           hidden = JUST(functional::Narrow(hidden, 0, 0, last_batch_size - dec));
         }
         last_batch_size = batch_size;
-        hidden = JUST(cell_type{}(rnn_inputs->at(i), hidden, cell_param));
-        rnn_inputs->at(i) = hidden;
+        hidden = JUST(cell_type{}((*rnn_inputs)[i], hidden, cell_param));
+        (*rnn_inputs)[i] = hidden;
       }
       final_hiddens_for_single_layer.emplace_back(hidden);
       std::reverse(final_hiddens_for_single_layer.begin(), final_hiddens_for_single_layer.end());
@@ -3846,7 +3847,7 @@ Maybe<TensorTuple> _lstm_impl(const std::shared_ptr<one::Tensor>& input, const o
   CHECK_OR_RETURN(hx.size() == 2) << "lstm expects two hidden states";
   // if cells are of different size, that means projections are used
   bool has_projections = (hx[0]->shape()->At(2) != hx[1]->shape()->At(2));
-  check_attributes(input, params, hx);
+  JUST(check_attributes(input, params, hx));
   std::shared_ptr<one::Tensor> rnn_input = input;
   if (batch_first) {
     std::vector<int32_t> dims = {1, 0, 2};
@@ -3868,35 +3869,35 @@ Maybe<TensorTuple> _lstm_impl(const std::shared_ptr<one::Tensor>& input, const o
       // forward direction
       std::shared_ptr<TensorTuple> fw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
       std::shared_ptr<TensorTuple> lstm_cell_out = std::make_shared<TensorTuple>(2);
-      (*lstm_cell_out)[0] = layer_hxs->at(l * 2);
-      (*lstm_cell_out)[1] = layer_cxs->at(l * 2);
-      auto& fw_cell_param = rnn_params->at(l * 2);
+      (*lstm_cell_out)[0] = (*layer_hxs)[l * 2];
+      (*lstm_cell_out)[1] = (*layer_cxs)[l * 2];
+      auto& fw_cell_param = (*rnn_params)[l * 2];
 
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
         lstm_cell_out =
-            JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, fw_cell_param));
-        (*fw_outputs)[i] = lstm_cell_out->at(0);
+            JUST(LSTMCell<CellParams>{}((*rnn_inputs)[i], *lstm_cell_out, fw_cell_param));
+        (*fw_outputs)[i] = (*lstm_cell_out)[0];
       }
-      final_hy.emplace_back(lstm_cell_out->at(0));
-      final_cy.emplace_back(lstm_cell_out->at(1));
+      final_hy.emplace_back((*lstm_cell_out)[0]);
+      final_cy.emplace_back((*lstm_cell_out)[1]);
 
       // reverse direction
       std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
-      (*lstm_cell_out)[0] = layer_hxs->at(l * 2 + 1);
-      (*lstm_cell_out)[1] = layer_cxs->at(l * 2 + 1);
-      auto& bw_cell_param = rnn_params->at(l * 2 + 1);
+      (*lstm_cell_out)[0] = (*layer_hxs)[l * 2 + 1];
+      (*lstm_cell_out)[1] = (*layer_cxs)[l * 2 + 1];
+      auto& bw_cell_param = (*rnn_params)[l * 2 + 1];
       for (int32_t i = rnn_inputs->size() - 1; i >= 0; i--) {
         lstm_cell_out =
-            JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, bw_cell_param));
-        (*bw_outputs)[i] = lstm_cell_out->at(0);
+            JUST(LSTMCell<CellParams>{}((*rnn_inputs)[i], *lstm_cell_out, bw_cell_param));
+        (*bw_outputs)[i] = (*lstm_cell_out)[0];
       }
-      final_hy.emplace_back(lstm_cell_out->at(0));
-      final_cy.emplace_back(lstm_cell_out->at(1));
+      final_hy.emplace_back((*lstm_cell_out)[0]);
+      final_cy.emplace_back((*lstm_cell_out)[1]);
 
       // concat fw_outputs and bw_outputs
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
-        rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
-                                                    bw_outputs->at(0)->shape()->NumAxes() - 1));
+        (*rnn_inputs)[i] = JUST(functional::Concat({(*fw_outputs)[i], (*bw_outputs)[i]},
+                                                   (*bw_outputs)[0]->shape()->NumAxes() - 1));
       }
 
       if (dropout != 0 && train && l < num_layers - 1) {
@@ -3911,15 +3912,15 @@ Maybe<TensorTuple> _lstm_impl(const std::shared_ptr<one::Tensor>& input, const o
     std::shared_ptr<TensorTuple> lstm_cell_out = std::make_shared<TensorTuple>(2);
 
     for (int32_t l = 0; l < num_layers; ++l) {
-      auto& cell_param = rnn_params->at(l);
-      (*lstm_cell_out)[0] = layer_hxs->at(l);
-      (*lstm_cell_out)[1] = layer_cxs->at(l);
+      auto& cell_param = (*rnn_params)[l];
+      (*lstm_cell_out)[0] = (*layer_hxs)[l];
+      (*lstm_cell_out)[1] = (*layer_cxs)[l];
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
-        lstm_cell_out = JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, cell_param));
-        rnn_inputs->at(i) = lstm_cell_out->at(0);
+        lstm_cell_out = JUST(LSTMCell<CellParams>{}((*rnn_inputs)[i], *lstm_cell_out, cell_param));
+        (*rnn_inputs)[i] = (*lstm_cell_out)[0];
       }
-      final_hy.emplace_back(lstm_cell_out->at(0));
-      final_cy.emplace_back(lstm_cell_out->at(1));
+      final_hy.emplace_back((*lstm_cell_out)[0]);
+      final_cy.emplace_back((*lstm_cell_out)[1]);
 
       if (dropout != 0 && train && l < num_layers - 1) {
         std::shared_ptr<one::Tensor> stack_res = JUST(functional::Stack(*rnn_inputs, 0));
@@ -3998,9 +3999,9 @@ Maybe<TensorTuple> _lstm_pack_sequence_impl(const std::shared_ptr<one::Tensor>& 
       // forward direction
       std::shared_ptr<TensorTuple> fw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
       std::shared_ptr<TensorTuple> lstm_cell_out = std::make_shared<TensorTuple>(2);
-      (*lstm_cell_out)[0] = layer_hxs->at(l * 2);
-      (*lstm_cell_out)[1] = layer_cxs->at(l * 2);
-      auto& fw_cell_param = rnn_params->at(l * 2);
+      (*lstm_cell_out)[0] = (*layer_hxs)[l * 2];
+      (*lstm_cell_out)[1] = (*layer_cxs)[l * 2];
+      auto& fw_cell_param = (*rnn_params)[l * 2];
 
       TensorTuple final_hy_for_single_layer;
       TensorTuple final_cy_for_single_layer;
@@ -4009,22 +4010,22 @@ Maybe<TensorTuple> _lstm_pack_sequence_impl(const std::shared_ptr<one::Tensor>& 
         const int64_t dec = last_batch_size - batch_size;
         if (dec > 0) {
           final_hy_for_single_layer.emplace_back(
-              JUST(functional::Narrow(lstm_cell_out->at(0), 0, last_batch_size - dec, dec)));
+              JUST(functional::Narrow((*lstm_cell_out)[0], 0, last_batch_size - dec, dec)));
           (*lstm_cell_out)[0] =
-              JUST(functional::Narrow(lstm_cell_out->at(0), 0, 0, last_batch_size - dec));
+              JUST(functional::Narrow((*lstm_cell_out)[0], 0, 0, last_batch_size - dec));
 
           final_cy_for_single_layer.emplace_back(
-              JUST(functional::Narrow(lstm_cell_out->at(1), 0, last_batch_size - dec, dec)));
+              JUST(functional::Narrow((*lstm_cell_out)[1], 0, last_batch_size - dec, dec)));
           (*lstm_cell_out)[1] =
-              JUST(functional::Narrow(lstm_cell_out->at(1), 0, 0, last_batch_size - dec));
+              JUST(functional::Narrow((*lstm_cell_out)[1], 0, 0, last_batch_size - dec));
         }
         last_batch_size = batch_size;
         lstm_cell_out =
-            JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, fw_cell_param));
-        (*fw_outputs)[i] = lstm_cell_out->at(0);
+            JUST(LSTMCell<CellParams>{}((*rnn_inputs)[i], *lstm_cell_out, fw_cell_param));
+        (*fw_outputs)[i] = (*lstm_cell_out)[0];
       }
-      final_hy_for_single_layer.emplace_back(lstm_cell_out->at(0));
-      final_cy_for_single_layer.emplace_back(lstm_cell_out->at(1));
+      final_hy_for_single_layer.emplace_back((*lstm_cell_out)[0]);
+      final_cy_for_single_layer.emplace_back((*lstm_cell_out)[1]);
       std::reverse(final_hy_for_single_layer.begin(), final_hy_for_single_layer.end());
       std::reverse(final_cy_for_single_layer.begin(), final_cy_for_single_layer.end());
       final_hy.emplace_back(JUST(functional::Concat(final_hy_for_single_layer, 0)));
@@ -4034,41 +4035,41 @@ Maybe<TensorTuple> _lstm_pack_sequence_impl(const std::shared_ptr<one::Tensor>& 
       last_batch_size = batch_sizes_vec[num_steps - 1];
       std::shared_ptr<TensorTuple> bw_outputs = std::make_shared<TensorTuple>(rnn_inputs->size());
       (*lstm_cell_out)[0] =
-          JUST(functional::Narrow(layer_hxs->at(l * 2 + 1), 0, 0, last_batch_size));
+          JUST(functional::Narrow((*layer_hxs)[l * 2 + 1], 0, 0, last_batch_size));
       (*lstm_cell_out)[1] =
-          JUST(functional::Narrow(layer_cxs->at(l * 2 + 1), 0, 0, last_batch_size));
+          JUST(functional::Narrow((*layer_cxs)[l * 2 + 1], 0, 0, last_batch_size));
 
-      auto& bw_cell_param = rnn_params->at(l * 2 + 1);
+      auto& bw_cell_param = (*rnn_params)[l * 2 + 1];
 
       for (int64_t i = num_steps - 1; i >= 0; --i) {
         const int64_t batch_size = batch_sizes_vec[i];
         const int64_t inc = batch_size - last_batch_size;
         if (inc > 0) {
           std::shared_ptr<one::Tensor> hxs_slice = JUST(functional::Narrow(
-              layer_hxs->at(l * 2 + 1), 0, last_batch_size, batch_size - last_batch_size));
+              (*layer_hxs)[l * 2 + 1], 0, last_batch_size, batch_size - last_batch_size));
           std::shared_ptr<TensorTuple> tmp = std::make_shared<TensorTuple>(2);
-          (*tmp)[0] = lstm_cell_out->at(0);
+          (*tmp)[0] = (*lstm_cell_out)[0];
           (*tmp)[1] = hxs_slice;
           (*lstm_cell_out)[0] = JUST(functional::Concat(*tmp, 0));
 
           std::shared_ptr<one::Tensor> cxs_slice = JUST(functional::Narrow(
-              layer_cxs->at(l * 2 + 1), 0, last_batch_size, batch_size - last_batch_size));
-          (*tmp)[0] = lstm_cell_out->at(1);
+              (*layer_cxs)[l * 2 + 1], 0, last_batch_size, batch_size - last_batch_size));
+          (*tmp)[0] = (*lstm_cell_out)[1];
           (*tmp)[1] = cxs_slice;
           (*lstm_cell_out)[1] = JUST(functional::Concat(*tmp, 0));
         }
         last_batch_size = batch_size;
         lstm_cell_out =
-            JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, bw_cell_param));
-        (*bw_outputs)[i] = lstm_cell_out->at(0);
+            JUST(LSTMCell<CellParams>{}((*rnn_inputs)[i], *lstm_cell_out, bw_cell_param));
+        (*bw_outputs)[i] = (*lstm_cell_out)[0];
       }
-      final_hy.emplace_back(lstm_cell_out->at(0));
-      final_cy.emplace_back(lstm_cell_out->at(1));
+      final_hy.emplace_back((*lstm_cell_out)[0]);
+      final_cy.emplace_back((*lstm_cell_out)[1]);
 
       // concat fw_outputs and bw_outputs
       for (int32_t i = 0; i < rnn_inputs->size(); ++i) {
-        rnn_inputs->at(i) = JUST(functional::Concat({fw_outputs->at(i), bw_outputs->at(i)},
-                                                    bw_outputs->at(0)->shape()->NumAxes() - 1));
+        (*rnn_inputs)[i] = JUST(functional::Concat({(*fw_outputs)[i], (*bw_outputs)[i]},
+                                                   (*bw_outputs)[0]->shape()->NumAxes() - 1));
       }
 
       if (dropout != 0 && train && l < num_layers - 1) {
@@ -4087,9 +4088,9 @@ Maybe<TensorTuple> _lstm_pack_sequence_impl(const std::shared_ptr<one::Tensor>& 
     std::shared_ptr<TensorTuple> lstm_cell_out = std::make_shared<TensorTuple>(2);
     for (int32_t l = 0; l < num_layers; ++l) {
       int64_t last_batch_size = batch_sizes_vec[0];
-      (*lstm_cell_out)[0] = layer_hxs->at(l);
-      (*lstm_cell_out)[1] = layer_cxs->at(l);
-      auto& cell_param = rnn_params->at(l);
+      (*lstm_cell_out)[0] = (*layer_hxs)[l];
+      (*lstm_cell_out)[1] = (*layer_cxs)[l];
+      auto& cell_param = (*rnn_params)[l];
       TensorTuple final_hy_for_single_layer;
       TensorTuple final_cy_for_single_layer;
       for (int32_t i = 0; i < num_steps; ++i) {
@@ -4097,22 +4098,21 @@ Maybe<TensorTuple> _lstm_pack_sequence_impl(const std::shared_ptr<one::Tensor>& 
         const int64_t dec = last_batch_size - batch_size;
         if (dec > 0) {
           final_hy_for_single_layer.emplace_back(
-              JUST(functional::Narrow(lstm_cell_out->at(0), 0, last_batch_size - dec, dec)));
+              JUST(functional::Narrow((*lstm_cell_out)[0], 0, last_batch_size - dec, dec)));
           (*lstm_cell_out)[0] =
-              JUST(functional::Narrow(lstm_cell_out->at(0), 0, 0, last_batch_size - dec));
+              JUST(functional::Narrow((*lstm_cell_out)[0], 0, 0, last_batch_size - dec));
 
           final_cy_for_single_layer.emplace_back(
-              JUST(functional::Narrow(lstm_cell_out->at(1), 0, last_batch_size - dec, dec)));
+              JUST(functional::Narrow((*lstm_cell_out)[1], 0, last_batch_size - dec, dec)));
           (*lstm_cell_out)[1] =
-              JUST(functional::Narrow(lstm_cell_out->at(1), 0, 0, last_batch_size - dec));
+              JUST(functional::Narrow((*lstm_cell_out)[1], 0, 0, last_batch_size - dec));
         }
         last_batch_size = batch_size;
-        lstm_cell_out = JUST(LSTMCell<CellParams>{}(rnn_inputs->at(i), *lstm_cell_out, cell_param));
-        rnn_inputs->at(i) = lstm_cell_out->at(0);
-        ;
+        lstm_cell_out = JUST(LSTMCell<CellParams>{}((*rnn_inputs)[i], *lstm_cell_out, cell_param));
+        (*rnn_inputs)[i] = (*lstm_cell_out)[0];
       }
-      final_hy_for_single_layer.emplace_back(lstm_cell_out->at(0));
-      final_cy_for_single_layer.emplace_back(lstm_cell_out->at(1));
+      final_hy_for_single_layer.emplace_back((*lstm_cell_out)[0]);
+      final_cy_for_single_layer.emplace_back((*lstm_cell_out)[1]);
       std::reverse(final_hy_for_single_layer.begin(), final_hy_for_single_layer.end());
       std::reverse(final_cy_for_single_layer.begin(), final_cy_for_single_layer.end());
       final_hy.emplace_back(JUST(functional::Concat(final_hy_for_single_layer, 0)));
@@ -4186,7 +4186,7 @@ class GruDataFunctor {
 
 Maybe<void> checkLongTensor(const std::shared_ptr<one::Tensor>& tensor) {
   auto& device = JUST(tensor->device())->type();
-  CHECK_OR_RETURN(tensor->ndim() == 1 && device == "cpu" && tensor->dtype() != DType::Int64())
+  CHECK_OR_RETURN(tensor->ndim() == 1 && device == "cpu" && tensor->dtype() == DType::Int64())
       << "'lengths' argument should be a 1D CPU int64 tensor, but got " << tensor->ndim() << "D "
       << device << " " << tensor->dtype()->name() << " tensor";
   return Maybe<void>::Ok();
@@ -4206,7 +4206,7 @@ class PackPaddedSequenceFunctor {
       std::vector<int32_t> dims = {1, 0, 2};
       new_input = JUST(functional::Permute(input, dims));
     }
-    checkLongTensor(lengths);
+    JUST(checkLongTensor(lengths));
 
     int64_t batch_size = input->shape()->At(1);
     std::vector<int64_t> lengths_vec;
@@ -4282,7 +4282,8 @@ class PackPaddedSequenceFunctor {
         for (int64_t j = 0; j < (l - prev_l); ++j) { (*batch_sizes_ptr++) = current_batch_size; }
         prev_l = l;
       }
-      CHECK_OR_RETURN(l >= prev_l);
+      CHECK_OR_RETURN(l >= prev_l)
+          << "PackPaddedSequenceFunctor: `lengths` array must be sorted in decreasing order.";
     }
 
     DimVector lsv(1);

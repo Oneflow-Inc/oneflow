@@ -34,8 +34,6 @@ def _test_rnn(test_case, device):
     num_layers = random.randint(1, 6)
     nonlinearity = l[0 if num_layers <= 3 else 1]
     grad_tol = 1e-4
-    if nonlinearity == "relu":
-        grad_tol = 100
 
     bias = random.randint(-10, 10) <= 0
     batch_first = random.randint(-10, 10) <= 0
@@ -112,15 +110,16 @@ def _test_rnn(test_case, device):
         for l in ls:
             flow_params.append(l)
 
-    for i in range(len(flow_params)):
-        torch_np = torch_params[i].grad.cpu().numpy()
-        flow_np = flow_params[i].grad.cpu().numpy()
-        test_case.assertTrue(np.allclose(torch_np, flow_np, atol=grad_tol))
-    test_case.assertTrue(
-        np.allclose(
-            x_torch.grad.cpu().numpy(), x_flow.grad.cpu().numpy(), atol=grad_tol
+    if nonlinearity == "tanh":
+        for i in range(len(flow_params)):
+            torch_np = torch_params[i].grad.cpu().numpy()
+            flow_np = flow_params[i].grad.cpu().numpy()
+            test_case.assertTrue(np.allclose(torch_np, flow_np, atol=grad_tol))
+        test_case.assertTrue(
+            np.allclose(
+                x_torch.grad.cpu().numpy(), x_flow.grad.cpu().numpy(), atol=grad_tol
+            )
         )
-    )
 
 
 def _test_rnn_pack_sequence(test_case, device):
@@ -626,7 +625,7 @@ class TestRNNModules(flow.unittest.TestCase):
             _test_gru_pack_sequence,
         ]
         arg_dict["device"] = ["cuda", "cpu"]
-        for i in range(10):
+        for i in range(5):
             for arg in GenArgList(arg_dict):
                 arg[0](test_case, *arg[1:])
 
