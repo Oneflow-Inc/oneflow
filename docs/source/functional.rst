@@ -41,7 +41,6 @@ Functional operations for neural networks
 .. autofunction:: one_hot
 .. autofunction:: triplet_margin_loss
 .. autofunction:: dropout 
-.. autofunction:: upsample
 .. autofunction:: affine_grid
 .. autofunction:: grid_sample
 .. autofunction:: interpolate
