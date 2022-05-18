@@ -37,6 +37,8 @@ limitations under the License.
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
+#include <limits>
+
 namespace mlir {
 
 namespace oneflow {
@@ -72,6 +74,51 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
   }
 };
 
+struct JobLowering final : public OpConversionPattern<Job> {
+ public:
+  using OpConversionPattern<Job>::OpConversionPattern;
+  LogicalResult matchAndRewrite(Job op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto func = rewriter.create<mlir::func::FuncOp>(op.getLoc(), op.getName(),
+                                                    op.getFunctionType());
+    rewriter.inlineRegionBefore(op.getRegion(), func.getBody(), func.end());
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct ReturnOpLowering final : public OpConversionPattern<ReturnOp> {
+ public:
+  using OpConversionPattern<ReturnOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(ReturnOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(op,
+                                                      /* operands */ op.operands());
+    return success();
+  }
+};
+
+struct InputOpLowering final : public OpConversionPattern<InputOp> {
+ public:
+  using OpConversionPattern<InputOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(InputOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+
+    rewriter.replaceOpWithNewOp<tosa::CastOp>(op, op.input().getType(), op.input());
+    return success();
+  }
+};
+
+struct OutputOpLowering final : public OpConversionPattern<OutputOp> {
+ public:
+  using OpConversionPattern<OutputOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(OutputOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<tosa::CastOp>(op, op.input().getType(), op.input());
+    return success();
+  }
+};
+
 struct CastOpLowering final : public OpConversionPattern<CastOp> {
  public:
   using OpConversionPattern<CastOp>::OpConversionPattern;
@@ -83,6 +130,22 @@ struct CastOpLowering final : public OpConversionPattern<CastOp> {
     return success();
   }
 };
+
+struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
+ public:
+  using OpConversionPattern<ReluOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(ReluOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto floatMax = std::numeric_limits<float>::max();
+    auto intMax = std::numeric_limits<long long>::max();
+    rewriter.replaceOpWithNewOp<tosa::ReluNOp>(op,
+                                               /* output */ op.y().getType(),
+                                               /* input */ op.x(), static_cast<uint64_t>(intMax),
+                                               static_cast<::llvm::APFloat>(floatMax));
+    return success();
+  }
+};
+
 
 namespace {
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
@@ -100,6 +163,9 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
+  patterns.insert<ReluOpLowering>(&getContext());
+  patterns.insert<JobLowering, ReturnOpLowering>(&getContext());
+  patterns.insert<InputOpLowering, OutputOpLowering>(&getContext());
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();

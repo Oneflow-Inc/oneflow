@@ -60,6 +60,13 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
   m.def("AddTensorAsGraphLoss", &AddTensorAsGraphLoss);
+  m.def("ConvertJobToTosaIR",
+        [](const std::string& serialized_job) -> Maybe<std::string> {
+          Job job;
+          CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job));
+          return ConvertJobToTosaIR(&job);
+          ;
+        });
   m.def("SaveJobToIR",
         [](const std::string& serialized_job, const std::string& path) -> Maybe<void> {
           Job job;
