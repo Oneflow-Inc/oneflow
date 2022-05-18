@@ -221,11 +221,7 @@ class Graph(object):
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
-        self,
-        optim: Optimizer,
-        *,
-        lr_sch: LRScheduler = None,
-        is_sparse: bool = False,
+        self, optim: Optimizer, *, lr_sch: LRScheduler = None, is_sparse: bool = False,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -348,9 +344,7 @@ class Graph(object):
             module = block.origin
             if module is not None:
                 module.state_dict(
-                    sub_destination,
-                    "",
-                    keep_vars=False,
+                    sub_destination, "", keep_vars=False,
                 )
             destination[name] = sub_destination
         # Get additional states.
@@ -695,12 +689,7 @@ class Graph(object):
             return func(*args, **kwargs)
 
         graph_cls_name = type(
-            graph_cls_name,
-            (Graph,),
-            {
-                "__init__": init,
-                "build": build,
-            },
+            graph_cls_name, (Graph,), {"__init__": init, "build": build,},
         )
 
         a_graph = graph_cls_name()
@@ -740,9 +729,7 @@ class Graph(object):
         # Complie graph to execution plan and init Runtime
         try:
             self.__print(
-                0,
-                0,
-                self._shallow_repr() + " start building plan.",
+                0, 0, self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
@@ -1148,10 +1135,7 @@ class Graph(object):
                 return mapping_tensor_or_none(arg)
             else:
                 self.__io_item_check(
-                    arg,
-                    None,
-                    io_type,
-                    leaf_node._prefix + "_" + leaf_node._name,
+                    arg, None, io_type, leaf_node._prefix + "_" + leaf_node._name,
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
@@ -1192,10 +1176,7 @@ class Graph(object):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 if t.is_global:
                     eager_out = oneflow.empty(
-                        shape,
-                        dtype=dtype,
-                        placement=t.placement,
-                        sbp=t.sbp,
+                        shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
                     )
                 else:
                     eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)
