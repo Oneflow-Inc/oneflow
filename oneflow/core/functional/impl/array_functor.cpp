@@ -2104,14 +2104,16 @@ class TensorSetItemFunctor {
       if (slice_shape != *(value_tensor->shape())) {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
+      bool requires_grad =
+          (x->requires_grad() || value_tensor->requires_grad()) && autograd::GradMode::is_enabled();
       if (x->is_local()) {
-        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+        if (requires_grad) {
           JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
         } else {
           JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
         }
       } else {
-        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+        if (requires_grad) {
           return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
                                           "please use oneflow.no_grad() to disable autograd "
                                           "currently. We will fix this problem soon.";
