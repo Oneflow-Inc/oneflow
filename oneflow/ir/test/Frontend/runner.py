@@ -1,7 +1,7 @@
 import oneflow as flow
 print(flow.__file__)
 
-from oneflow.nn.graph.compiler.vmfunction import VmFunction
+from oneflow.nn.graph.compiler import Runner
 
 
 class RELU(flow.nn.Module):
@@ -23,7 +23,7 @@ class Graph(flow.nn.Graph):
 
 graph_to_run = Graph()
 
-func = VmFunction(graph_to_run)
+func = Runner(graph_to_run)
 
 input = flow.Tensor([-1, 1.])
 output = func(input)

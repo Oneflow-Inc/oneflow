@@ -7,7 +7,7 @@ from iree.compiler import compile_str
 class BackBend():
     IREE = 'iree'
 
-class VmFunction(object):
+class Runner(object):
     def __init__(self, graph: Graph, backend: BackBend=BackBend.IREE):
         self.graph = graph
         self.backend = backend

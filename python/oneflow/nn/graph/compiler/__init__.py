@@ -1,1 +1,1 @@
-from .vmfunction import VmFunction
+from .runner import Runner
