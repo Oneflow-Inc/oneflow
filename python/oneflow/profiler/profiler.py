@@ -41,6 +41,10 @@ class profile:
         assert (
             len(self.activities) > 0
         ), "At least one ProfilerActivity must be specified."
+        for item in self.activities:
+            assert (
+                item in supported_activities()
+            ), f"Unsupported ProfilerActivity {item}"
         self.record_shapes = record_shapes
         self.profile_events: Optional[Events] = None
 

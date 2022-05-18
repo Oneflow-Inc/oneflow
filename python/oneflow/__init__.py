@@ -413,6 +413,7 @@ import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
 import oneflow.one_embedding
+import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

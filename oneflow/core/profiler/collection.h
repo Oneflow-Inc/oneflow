@@ -90,6 +90,8 @@ class CUDAEventPair {
 
   double ElapsedTime() const {
     float elapsed_time_ms = 0;
+    OF_CUDA_CHECK(cudaEventSynchronize(cuda_event_start_));
+    OF_CUDA_CHECK(cudaEventSynchronize(cuda_event_finish_));
     OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_time_ms, cuda_event_start_, cuda_event_finish_));
     return elapsed_time_ms * 1000.0;  // convert to us
   }
