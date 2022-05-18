@@ -1181,7 +1181,7 @@ jobs:
             -DBUILD_TESTING=OFF \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj of_op_schema
+          cmake --build . -j$(nproc) --target oneflow_deps of_protoobj of_functional_obj of_functional_tensor_obj of_op_schema
       - name: Fetch upstream
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
         run: |
