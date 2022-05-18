@@ -412,7 +412,10 @@ class RNN(RNNBase):
             # Each batch of the hidden state should match the input sequence that
             # the user believes he/she is passing in.
             hx = self.permute_hidden(hx, sorted_indices)
-
+        self._flat_weights = [
+            (lambda wn: getattr(self, wn) if hasattr(self, wn) else None)(wn)
+            for wn in self._flat_weights_names
+        ]
         assert hx is not None
         self.check_forward_args(input, hx, batch_sizes)
         assert self.mode == "RNN_TANH" or self.mode == "RNN_RELU"
@@ -741,6 +744,10 @@ class LSTM(RNNBase):
             hx = self.permute_hidden(hx, sorted_indices)
 
         self.check_forward_args(input, hx, batch_sizes)
+        self._flat_weights = [
+            (lambda wn: getattr(self, wn) if hasattr(self, wn) else None)(wn)
+            for wn in self._flat_weights_names
+        ]
         if batch_sizes is None:
             result = flow._C.lstm(
                 input,
@@ -947,6 +954,10 @@ class GRU(RNNBase):
             hx = self.permute_hidden(hx, sorted_indices)
 
         self.check_forward_args(input, hx, batch_sizes)
+        self._flat_weights = [
+            (lambda wn: getattr(self, wn) if hasattr(self, wn) else None)(wn)
+            for wn in self._flat_weights_names
+        ]
         if batch_sizes is None:
             result = flow._C.gru(
                 input,
