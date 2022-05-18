@@ -187,33 +187,44 @@ void ConcatFeaturesGrad(user_op::KernelComputeContext* ctx, const int64_t batch_
   }
 }
 
+template<typename T>
+struct DefaultComputeType {
+  using type = T;
+};
+
+template<>
+struct DefaultComputeType<half> {
+  using type = float;
+};
+
 template<typename T, int32_t N>
 struct Param {
   const T* in[N];
-  int64_t in_feature_dim[N];
+  int32_t in_feature_dim[N];
   T* out;
-  int64_t num_in;
+  int32_t num_in;
 };
 
 template<typename T, int32_t N>
 __global__ void FeatureInteractionSum(int64_t batch_size, int64_t embedding_size,
                                       Param<T, N> param) {
+  using ComputeType = typename DefaultComputeType<T>::type;
   for (int batch_idx = blockIdx.x * blockDim.y + threadIdx.y; batch_idx < batch_size;
        batch_idx += gridDim.x * blockDim.y) {
     T* batch_out = param.out + batch_idx * embedding_size;
     for (int col_id = threadIdx.x; col_id < embedding_size; col_id += blockDim.x) {
-      T sum = 0;
-      T square_sum = 0;
+      ComputeType sum = 0;
+      ComputeType square_sum = 0;
       for (int i = 0; i < N; ++i) {
         if (i >= param.num_in) { break; }
         const T* batch_in = param.in[i] + batch_idx * param.in_feature_dim[i] * embedding_size;
         for (int j = 0; j < param.in_feature_dim[i]; ++j) {
-          T val = batch_in[j * embedding_size + col_id];
+          ComputeType val = static_cast<ComputeType>(batch_in[j * embedding_size + col_id]);
           sum += val;
           square_sum += val * val;
         }
       }
-      batch_out[col_id] = (sum * sum - square_sum) * static_cast<T>(0.5);
+      batch_out[col_id] = static_cast<T>((sum * sum - square_sum) * static_cast<ComputeType>(0.5));
     }
   }
 }
@@ -222,25 +233,25 @@ template<typename T, int32_t N>
 struct GradParam {
   const T* dy;
   const T* in[N];
-  int64_t in_feature_dim[N];
+  int32_t in_feature_dim[N];
   T* in_grad[N];
-  int64_t num_in;
+  int32_t num_in;
 };
 
 template<typename T, int32_t N>
 __global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t embedding_size,
                                           GradParam<T, N> param) {
+  using ComputeType = typename DefaultComputeType<T>::type;
   for (int batch_idx = blockIdx.x * blockDim.y + threadIdx.y; batch_idx < batch_size;
        batch_idx += gridDim.x * blockDim.y) {
     const T* batch_dy = param.dy + batch_idx * embedding_size;
     for (int col_id = threadIdx.x; col_id < embedding_size; col_id += blockDim.x) {
-      T sum = 0;
+      ComputeType sum = 0;
       for (int i = 0; i < N; ++i) {
         if (i >= param.num_in) { break; }
         const T* batch_in = param.in[i] + batch_idx * param.in_feature_dim[i] * embedding_size;
         for (int j = 0; j < param.in_feature_dim[i]; ++j) {
-          T val = batch_in[j * embedding_size + col_id];
-          sum += val;
+          sum += static_cast<ComputeType>(batch_in[j * embedding_size + col_id]);
         }
       }
       for (int i = 0; i < N; ++i) {
@@ -250,7 +261,9 @@ __global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t embedding_
         T* batch_in_grad = param.in_grad[i] + in_batch_offset;
         for (int j = 0; j < param.in_feature_dim[i]; ++j) {
           const int64_t offset = j * embedding_size + col_id;
-          batch_in_grad[offset] = batch_dy[col_id] * (sum - batch_in[offset]);
+          batch_in_grad[offset] =
+              static_cast<T>(static_cast<ComputeType>(batch_dy[col_id])
+                             * (sum - static_cast<ComputeType>(batch_in[offset])));
         }
       }
     }
@@ -313,8 +326,7 @@ class FusedDotFeatureInteractionPoolingSumKernel final : public user_op::OpKerne
       }
       FeatureInteractionSum<T, 2>
           <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
-    } else {
-      CHECK_LE(input_size, 8);
+    } else if (input_size <= 8) {
       Param<T, 8> param;
       param.num_in = input_size;
       param.out = out->mut_dptr<T>();
@@ -323,6 +335,17 @@ class FusedDotFeatureInteractionPoolingSumKernel final : public user_op::OpKerne
         param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
       }
       FeatureInteractionSum<T, 8>
+          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+    } else {
+      CHECK_LE(input_size, 128);
+      Param<T, 128> param;
+      param.num_in = input_size;
+      param.out = out->mut_dptr<T>();
+      for (int i = 0; i < input_size; ++i) {
+        param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
+        param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
+      }
+      FeatureInteractionSum<T, 128>
           <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
     }
   }
@@ -562,8 +585,7 @@ class FusedDotFeatureInteractionPoolingSumGradKernel final : public user_op::OpK
       }
       FeatureInteractionSumGrad<T, 2>
           <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
-    } else {
-      CHECK_LE(input_size, 8);
+    } else if (input_size <= 8) {
       GradParam<T, 8> param;
       param.num_in = input_size;
       param.dy = dy->dptr<T>();
@@ -574,6 +596,19 @@ class FusedDotFeatureInteractionPoolingSumGradKernel final : public user_op::OpK
             ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
       }
       FeatureInteractionSumGrad<T, 8>
+          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+    } else {
+      CHECK_LE(input_size, 128);
+      GradParam<T, 128> param;
+      param.num_in = input_size;
+      param.dy = dy->dptr<T>();
+      for (int i = 0; i < input_size; ++i) {
+        param.in[i] = ctx->Tensor4ArgNameAndIndex("features_grad_like", i)->dptr<T>();
+        param.in_grad[i] = ctx->Tensor4ArgNameAndIndex("features_grad", i)->mut_dptr<T>();
+        param.in_feature_dim[i] =
+            ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
+      }
+      FeatureInteractionSumGrad<T, 128>
           <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
     }
   }

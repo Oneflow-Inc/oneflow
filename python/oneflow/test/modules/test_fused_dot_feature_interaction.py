@@ -129,7 +129,9 @@ def _test_fused_dot_feature_interaction_pooling_sum(
     feature_tensor_list = []
     fused_feature_tensor_list = []
     for dim in feature_dims:
-        feature_np = np.random.rand(batch_size, dim, embedding_size).astype(np_dtype)
+        feature_np = np.random.uniform(-1, 1, (batch_size, dim, embedding_size)).astype(
+            np_dtype
+        )
         feature_tensor = flow.tensor(feature_np, device="cuda", requires_grad=True)
         feature_tensor_list.append(feature_tensor)
         fused_feature_tensor = flow.tensor(
@@ -138,9 +140,13 @@ def _test_fused_dot_feature_interaction_pooling_sum(
         fused_feature_tensor_list.append(fused_feature_tensor)
 
     concat = flow.cat(feature_tensor_list, dim=1,)
+    if dtype == flow.float16:
+        concat = flow.cast(concat, flow.float)
     sum_then_square = flow.sum(concat, dim=1) ** 2
     square_then_sum = flow.sum(concat ** 2, dim=1)
     bi_interaction = (sum_then_square - square_then_sum) * 0.5
+    if dtype == flow.float16:
+        bi_interaction = flow.cast(bi_interaction, flow.float16)
     loss = bi_interaction.sum()
     loss.backward()
 
@@ -155,7 +161,7 @@ def _test_fused_dot_feature_interaction_pooling_sum(
                 feature_tensor_list[i].grad.numpy(),
                 fused_feature_tensor_list[i].grad.numpy(),
                 rtol=1e-3,
-                atol=1e-4,
+                atol=1e-3,
             )
         )
     test_case.assertTrue(
@@ -177,9 +183,9 @@ class FusedDotFeatureInteractionTestCase(flow.unittest.TestCase):
 
     def test_fused_dot_feature_interaction_pooling_sum(test_case):
         arg_dict = OrderedDict()
-        arg_dict["dtype"] = [flow.float32]
+        arg_dict["dtype"] = [flow.float32, flow.float16]
         arg_dict["feature_dims"] = [[39], [13, 26], [1, 10, 3]]
-        arg_dict["embedding_size"] = [127, 128, 16]
+        arg_dict["embedding_size"] = [127, 128, 16, 11, 12, 110]
 
         for kwargs in GenArgDict(arg_dict):
             _test_fused_dot_feature_interaction_pooling_sum(test_case, **kwargs)
