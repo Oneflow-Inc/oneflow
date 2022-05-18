@@ -82,7 +82,7 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
       stop.emplace_back(range.end());
     }
     local_tensor =
-        JUST(one::functional::Slice(local_tensor, start, stop, step, /*enable_view_slice=*/false));
+        JUST(one::functional::Slice(local_tensor, start, stop, step));
   }
 
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
