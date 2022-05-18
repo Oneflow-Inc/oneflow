@@ -37,7 +37,7 @@ Maybe<void> TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
     acc_tensor_ =
-        JUST(functional::Add(partial_tensor, acc_tensor_, /*alpha=*/1, /*inplace=*/false));
+        JUST(functional::Add(partial_tensor, acc_tensor_, /*alpha=*/1.0, /*inplace=*/false));
   }
   return Maybe<void>::Ok();
 }

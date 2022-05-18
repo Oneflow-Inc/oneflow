@@ -45,7 +45,7 @@ class FunctionNode {
 
   Maybe<bool> Apply(bool create_graph);
   Maybe<void> AccGrad4LeafTensor(bool create_graph);
-  Maybe<void> AccGrad4RetainGradTensor();
+  Maybe<void> AccGrad4RetainGradTensor(bool create_graph);
   void ReleaseOutTensorArgs();
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
