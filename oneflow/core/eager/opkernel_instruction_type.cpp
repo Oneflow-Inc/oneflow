@@ -137,6 +137,18 @@ struct LocalCallOpKernelUtil final {
           compute_ctx->device_type() == DeviceType::kCUDA
               ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
               : nullptr,
+          [compute_ctx]() -> int64_t {
+            int64_t memory_size = 0;
+            for (auto& pair : compute_ctx->inputs()) {
+              auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+              memory_size += tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+            }
+            for (auto& pair : compute_ctx->outputs()) {
+              auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+              memory_size += tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+            }
+            return memory_size;
+          },
 #endif
           [compute_ctx]() -> std::vector<Shape> {
             std::vector<Shape> shapes;
