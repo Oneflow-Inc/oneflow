@@ -30,10 +30,10 @@ int64_t GetParallelHierarchyNumAxes(
   CHECK(it != op_name2parallel_conf.end());
   if (!it->second->has_hierarchy()) {
     return 1;
-  } else if (it->second->hierarchy().elem_size() == 0) {
+  } else if (it->second->hierarchy().dim_size() == 0) {
     return 1;
   } else {
-    return it->second->hierarchy().elem_size();
+    return it->second->hierarchy().dim_size();
   }
 }
 
@@ -101,7 +101,7 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
   FOR_RANGE(int32_t, i, 0, job->placement().placement_group_size()) {
     auto* placemnt_group = job->mutable_placement()->mutable_placement_group(i);
     if (placemnt_group->parallel_conf().has_hierarchy()
-        && placemnt_group->parallel_conf().hierarchy().elem_size() > 1) {
+        && placemnt_group->parallel_conf().hierarchy().dim_size() > 1) {
       all_ops_1d_hierarchy = false;
     }
   }

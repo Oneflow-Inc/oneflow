@@ -447,7 +447,7 @@ std::string AddParallelCast(JobBuilder* job_builder, const std::string& in_lbn,
                             const std::string& sbp_str, const ParallelConf& parallel_conf,
                             const std::string& op_name_prefix) {
   ParallelConf flat_parallel_conf = parallel_conf;
-  flat_parallel_conf.mutable_hierarchy()->clear_elem();
+  flat_parallel_conf.mutable_hierarchy()->clear_dim();
   const int64_t scope_symbol_id =
       MakeScopeSymbolId(job_builder->job().job_conf(), flat_parallel_conf);
   std::vector<std::string> sbp = {sbp_str};
@@ -562,7 +562,7 @@ std::string GlobalAbsMaxMin(const OpGraph& op_graph, JobBuilder* job_builder,
 
   *out_parallel_conf = all_same_parallel_desc ? any_parallel_desc.parallel_conf()
                                               : GenParallelConfOfCpuZeroOnMaster();
-  out_parallel_conf->mutable_hierarchy()->clear_elem();
+  out_parallel_conf->mutable_hierarchy()->clear_dim();
   if (group_reduce_lbns.size() == 1) {
     return group_reduce_lbns[0];
   } else {
@@ -680,7 +680,7 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
       }
       sum_group_lbns.push_back(std::move(lbn));
     }
-    out_parallel_conf->mutable_hierarchy()->clear_elem();
+    out_parallel_conf->mutable_hierarchy()->clear_dim();
   }
   auto global_reduce_sum_lbn = AddLbns(job_builder, sum_group_lbns, *out_parallel_conf,
                                        scope_symbol_id, "System-ClipGradient-GlobalNorm-Add-");
@@ -1259,7 +1259,7 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
           job_builder, JUST(VectorAt(partial_count_not_finite_lbns, i)), "P",
           JUST(VectorAt(param_group_parallel_confs, i)), "System-DynamicLossScale-ParallelCast-"));
     }
-    count_all_parallel_conf.mutable_hierarchy()->clear_elem();
+    count_all_parallel_conf.mutable_hierarchy()->clear_dim();
   } else {
     count_not_finite_lbns_for_add = std::move(partial_count_not_finite_lbns);
   }

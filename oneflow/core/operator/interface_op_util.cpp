@@ -34,7 +34,7 @@ Maybe<void> GetSbpSignature(const InterfaceBlobConf& blob_conf, const PbRpf<std:
   CHECK_EQ_OR_RETURN(blob_conf.nd_sbp().sbp_parallel_size(), 1);
   const auto& sbp_parallel = blob_conf.nd_sbp().sbp_parallel(0);
   if (sbp_parallel.has_split_parallel()) {
-    int64_t num_axes = blob_conf.shape().elem_size();
+    int64_t num_axes = blob_conf.shape().dim_size();
     int64_t split_axis = sbp_parallel.split_parallel().axis();
     CHECK_GE_OR_RETURN(split_axis, 0);
     CHECK_LT_OR_RETURN(split_axis, num_axes);

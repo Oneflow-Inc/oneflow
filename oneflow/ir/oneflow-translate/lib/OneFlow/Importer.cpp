@@ -164,23 +164,23 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
 
 ArrayAttr Importer::GetAttrFromShape(const ::oneflow::ShapeProto& shape) {
   return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
-      shape.elem(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
+      shape.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
 }
 
 ArrayAttr Importer::GetAttrFromStride(const ::oneflow::Int64ListProto& stride) {
   return GetBuilder().getArrayAttr(llvm::to_vector<8>(llvm::map_range(
-      stride.elem(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
+      stride.dim(), [this](int64_t v) -> Attribute { return getSI64IntegerAttr(v); })));
 }
 
 void WriteAttrToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
   for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    shape->add_elem(v.dyn_cast<IntegerAttr>().getSInt());
+    shape->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
   }
 }
 
 void WriteAttrToStride(mlir::Attribute& attr, ::oneflow::Int64ListProto* stride) {
   for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
-    stride->add_elem(v.dyn_cast<IntegerAttr>().getSInt());
+    stride->add_dim(v.dyn_cast<IntegerAttr>().getSInt());
   }
 }
 

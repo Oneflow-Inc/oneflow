@@ -61,7 +61,7 @@ class FileBackendVariableBlob:
             self.has_meta_info_ = False
         if self.has_meta_info_:
             assert dtype is None and shape is None
-            self.shape_ = tuple(meta_info.shape.elem)
+            self.shape_ = tuple(meta_info.shape.dim)
             self.dtype_ = dtype_util.convert_proto_dtype_to_oneflow_dtype(
                 meta_info.data_type
             )
@@ -107,7 +107,7 @@ class FileBackendVariableBlob:
 def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -> None:
     os.makedirs(dir_name, exist_ok=True)
     meta_info = variable_meta_info_pb.VariableMetaInfo()
-    meta_info.shape.elem[:] = tensor.shape
+    meta_info.shape.dim[:] = tensor.shape
     meta_info.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
         tensor.dtype
     )

@@ -58,8 +58,8 @@ std::shared_ptr<OpArgBlobAttribute> OpArgBlobAttribute::GetPhysicalOpArgBlobAttr
   blob_desc->CopyFrom(*blob_desc_);
   int64_t physical_len =
       BalancedSplitter(shape_->At(split_axis), parallel_num).At(parallel_id).size();
-  blob_desc->mutable_shape()->set_elem(split_axis, physical_len);
-  blob_desc->mutable_stride()->set_elem(split_axis, physical_len);
+  blob_desc->mutable_shape()->set_dim(split_axis, physical_len);
+  blob_desc->mutable_stride()->set_dim(split_axis, physical_len);
   return std::make_shared<OpArgBlobAttribute>(blob_desc, logical_blob_name_);
 }
 
