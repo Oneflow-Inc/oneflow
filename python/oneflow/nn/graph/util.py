@@ -17,7 +17,7 @@ import sys
 from collections import OrderedDict
 
 from oneflow.framework.tensor import Tensor
-
+from typing import Callable, Dict, Union, List, Tuple
 
 def add_indent(in_s, num_spaces):
     s = in_s.split("\n")
@@ -45,6 +45,48 @@ def seq_to_func_return(seq, need_unpack=False):
         return seq[0]
     return seq
 
+class IOMapper(object):
+    def __init__(self, io_items: Union[Tuple, List, Dict], map_function:Callable) -> None:
+        assert io_items != None
+        assert map_function != None
+
+        self._io_items = io_items
+        self._mapped_io_items = None
+        self._map_function = map_function
+        self._pre_hooks = []
+        self._post_hooks = []
+
+    def register_pre_hook(self, hook:Callable):
+        assert hook != None 
+        self._pre_hooks.append(hook)
+
+    def register_post_hook(self, hook:Callable):
+        assert hook != None 
+        self._post_hooks.append(hook)
+
+    def get(self):
+        if self._mapped_io_items != None:
+            return self._mapped_io_items
+
+        def execute_mapping(item):
+            for pre_hook in self._pre_hooks:
+                pre_hook(item)
+
+            if isinstance(item, tuple) or isinstance(item, list):
+                mapped_item = item.__class__(map(lambda item: execute_mapping(item), item))
+            elif isinstance(item, dict):
+                mapped_item = dict(map(lambda item: (item[0], execute_mapping(item[1])), item.items()))
+            else:
+                mapped_item = self._map_function(item)
+
+            for post_hook in self._post_hooks:
+                post_hook(mapped_item)
+
+            return mapped_item
+
+        self._mapped_io_items = execute_mapping(self._io_items)
+        return self._mapped_io_items
+        
 
 class IONodeType:
     TENSOR = "TENSOR"

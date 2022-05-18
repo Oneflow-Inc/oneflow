@@ -41,6 +41,7 @@ from oneflow.nn.graph.util import (
     sys_exc_error_msg,
     IONodeType,
     IONode,
+    IOMapper
 )
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
@@ -1270,17 +1271,16 @@ class Graph(object):
         oneflow._oneflow_internal.eager.Sync()
 
     def __make_input_tensors_contiguous(self, *args, **kwargs):
-        def make_tensors_contiguous(value):
-            if isinstance(value, tuple) or isinstance(value, list):
-                return value.__class__(map(lambda item: make_tensors_contiguous(item), value))
-            elif isinstance(value, dict):
-                return dict(map(lambda item: (item[0], make_tensors_contiguous(item[1])), value.items()))
-            elif isinstance(value, Tensor) and not value.is_contiguous():
-                return value.contiguous()
+        
+        def to_contiguous(item):
+            if not item is None and isinstance(item, Tensor) and not item.is_contiguous():
+                return item.contiguous()
             else:
-                return value
+                return item
 
-        return make_tensors_contiguous(args), make_tensors_contiguous(kwargs)
+        mapper = IOMapper((args,kwargs), to_contiguous)
+        mapped_result = mapper.get()
+        return mapped_result[0], mapped_result[1]
 
 if __name__ == "__main__":
     import doctest
