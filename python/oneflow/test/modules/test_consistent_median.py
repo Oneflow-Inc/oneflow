@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import math
+import torch
+from functools import reduce
+import operator
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
@@ -32,7 +34,11 @@ def _test_median_with_indices(test_case, placement, sbp, ndim):
     dim = random(1, ndim).to(int).value()
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = choice_tensor(
-        math.prod(dim_list), dim_list, replace=False, dtype=float, requires_grad=True
+        reduce(operator.mul, dim_list, 1),
+        dim_list,
+        replace=False,
+        dtype=float,
+        requires_grad=True,
     ).to_global(placement, sbp)
     return torch.median(x, dim)
 
