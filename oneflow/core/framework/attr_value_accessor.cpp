@@ -148,12 +148,12 @@ void AttrValueAccessor<std::vector<std::string>>::Attr(const std::vector<std::st
 }
 
 template<typename ProtoT>
-Maybe<AttrVal> MakeCppAttrValueFromProtoOrCfgAttrValue(const ProtoT& cfg_attr_value) {
-  switch (static_cast<int>(cfg_attr_value.value_case())) {
+Maybe<AttrVal> MakeCppAttrValueFromProtoAttrValue(const ProtoT& attr_value) {
+  switch (static_cast<int>(attr_value.value_case())) {
 #define MAKE_ENTRY(field, T, attr_type)       \
   case static_cast<int>(attr_type):           \
     return std::static_pointer_cast<AttrVal>( \
-        std::make_shared<TypedAttrVal<T>>(AttrValueAccessor<T>::Attr(cfg_attr_value)));
+        std::make_shared<TypedAttrVal<T>>(AttrValueAccessor<T>::Attr(attr_value)));
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ATTR_SEQ);
 #undef MAKE_ENTRY
     default: OF_UNIMPLEMENTED();
@@ -161,7 +161,7 @@ Maybe<AttrVal> MakeCppAttrValueFromProtoOrCfgAttrValue(const ProtoT& cfg_attr_va
 }
 
 /* static */ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const AttrValue& proto_attr_value) {
-  return MakeCppAttrValueFromProtoOrCfgAttrValue(proto_attr_value);
+  return MakeCppAttrValueFromProtoAttrValue(proto_attr_value);
 }
 
 /* static */ Maybe<void> AttrValueUtil::ToProtoAttrValue(const AttrVal& cpp_attr_value,
