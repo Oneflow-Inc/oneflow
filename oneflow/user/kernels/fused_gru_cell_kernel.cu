@@ -364,4 +364,106 @@ REGISTER_USER_KERNEL("fused_gru_cell_grad")
       return tmp_bytes;
     });
 
+class GpuFusedGruCellGradHalfKernel final : public user_op::OpKernel {
+ public:
+  GpuFusedGruCellGradHalfKernel() = default;
+  ~GpuFusedGruCellGradHalfKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* grad_hy = ctx->Tensor4ArgNameAndIndex("grad_hy", 0);
+    const user_op::Tensor* workspace = ctx->Tensor4ArgNameAndIndex("workspace", 0);
+    user_op::Tensor* grad_input_gates = ctx->Tensor4ArgNameAndIndex("grad_input_gates", 0);
+    user_op::Tensor* grad_hidden_gates = ctx->Tensor4ArgNameAndIndex("grad_hidden_gates", 0);
+
+    const float16* grad_hy_ptr = grad_hy->dptr<float16>();
+    const float16* workspace_ptr = workspace->dptr<float16>();
+
+    float16* grad_input_gates_ptr = grad_input_gates->mut_dptr<float16>();
+    float16* grad_hidden_gates_ptr = grad_hidden_gates->mut_dptr<float16>();
+
+    float16* grad_hx_ptr = nullptr;
+    if (ctx->has_output("grad_hx", 0)) {
+      user_op::Tensor* grad_hx = ctx->Tensor4ArgNameAndIndex("grad_hx", 0);
+      grad_hx_ptr = grad_hx->mut_dptr<float16>();
+    }
+
+    const int64_t hx_numel = grad_hy->shape().elem_cnt();
+    const int64_t workspace_numel = workspace->shape().elem_cnt();
+    const int64_t hidden_size = grad_hy->shape().At(grad_hy->shape().NumAxes() - 1);
+    FusedGruCellGradFunctor<float16>()(ctx->stream(), hx_numel, workspace_numel, hidden_size,
+                                       grad_hy_ptr, workspace_ptr, grad_input_gates_ptr,
+                                       grad_hidden_gates_ptr, grad_hx_ptr);
+
+    if (ctx->has_output("grad_input_bias", 0) && ctx->has_output("grad_hidden_bias", 0)) {
+      std::vector<int32_t> axis;
+      axis.push_back(0);
+      user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+      const ShapeView& in_shape = grad_input_gates->shape();
+      const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
+      float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
+      const size_t in_tmp_buffer_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
+      float* out_tmp_buffer =
+          reinterpret_cast<float*>(tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes);
+      const size_t out_tmp_buffer_bytes =
+          GetCudaAlignedSize(reduced_shape.elem_cnt() * sizeof(float));
+      float* reduce_tmp_buffer = reinterpret_cast<float*>(
+          tmp_buffer->mut_dptr<char>() + in_tmp_buffer_bytes + out_tmp_buffer_bytes);
+      const size_t reduce_tmp_buffer_bytes =
+          GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
+      CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
+               tmp_buffer->shape().elem_cnt());
+      auto h2f = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+          ctx->device_type(), DataType::kFloat16, DataType::kFloat);
+      CHECK(h2f);
+      auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
+          ctx->device_type(), DataType::kFloat, DataType::kFloat16);
+      CHECK(f2h);
+      h2f->Launch(ctx->stream(), grad_input_gates->dptr<float16>(), in_tmp_buffer,
+                  in_shape.elem_cnt());
+
+      NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
+          ctx->stream(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
+          XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
+          XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
+
+      user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("grad_input_bias", 0);
+      f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
+                  output_tensor->shape().elem_cnt());
+
+      h2f->Launch(ctx->stream(), grad_hidden_gates->dptr<float16>(), in_tmp_buffer,
+                  in_shape.elem_cnt());
+      NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
+          ctx->stream(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
+          XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
+          XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
+
+      output_tensor = ctx->Tensor4ArgNameAndIndex("grad_hidden_bias", 0);
+      f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
+                  output_tensor->shape().elem_cnt());
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("fused_gru_cell_grad")
+    .SetCreateFn<GpuFusedGruCellGradHalfKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobDataType("grad_hy", 0) == GetDataType<float16>::value)
+                     && (user_op::HobDataType("workspace", 0) == GetDataType<float16>::value))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
+      size_t tmp_bytes = 0;
+      if (ctx->has_output("grad_input_bias", 0) && ctx->has_output("grad_hidden_bias", 0)) {
+        const Shape& in_shape = ctx->InputTensorDesc("grad_hy", 0).shape();
+        const Shape& out_shape = ctx->OutputTensorDesc("grad_input_bias", 0)->shape();
+        tmp_bytes = (2 * GetCudaAlignedSize(in_shape.elem_cnt() * 3 * sizeof(float))
+                     + GetCudaAlignedSize(out_shape.elem_cnt() * sizeof(float)));
+      } else {
+        tmp_bytes = 0;
+      }
+      return tmp_bytes;
+    });
+
 }  // namespace oneflow
