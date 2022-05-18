@@ -123,6 +123,28 @@ class TestAvgPoolingFunctional(flow.unittest.TestCase):
         )
         return y
 
+    @profile(torch.nn.functional.avg_pool2d)
+    def profile_avgpool2d(test_case):
+        torch.nn.functional.avg_pool2d(
+            torch.ones(1, 32, 64, 64), kernel_size=3, padding=1
+        )
+        torch.nn.functional.avg_pool2d(
+            torch.ones(1, 32, 64, 64), kernel_size=3, stride=2, padding=1
+        )
+        torch.nn.functional.avg_pool2d(
+            torch.ones(16, 32, 64, 64), kernel_size=3, padding=1
+        )
+        torch.nn.functional.avg_pool2d(
+            torch.ones(16, 32, 64, 64), kernel_size=3, stride=2, padding=1
+        )
+        torch.nn.functional.avg_pool2d(
+            torch.ones(16, 32, 64, 64),
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            ceil_mode=True,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
