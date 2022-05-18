@@ -1270,17 +1270,17 @@ class Graph(object):
         oneflow._oneflow_internal.eager.Sync()
 
     def __make_input_tensors_contiguous(self, *args, **kwargs):
-        def make_tensor_contiguous(value):
+        def make_tensors_contiguous(value):
             if isinstance(value, tuple) or isinstance(value, list):
-                return value.__class__(map(lambda item: make_tensor_contiguous(item), value))
+                return value.__class__(map(lambda item: make_tensors_contiguous(item), value))
             elif isinstance(value, dict):
-                return dict(map(lambda item: (item[0], make_tensor_contiguous(item[1])), value.items()))
+                return dict(map(lambda item: (item[0], make_tensors_contiguous(item[1])), value.items()))
             elif isinstance(value, Tensor) and not value.is_contiguous():
                 return value.contiguous()
             else:
                 return value
 
-        return make_tensor_contiguous(args), make_tensor_contiguous(kwargs)
+        return make_tensors_contiguous(args), make_tensors_contiguous(kwargs)
 
 if __name__ == "__main__":
     import doctest
