@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -59,7 +59,9 @@ Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>&
 
 class MutMirroredTensorMeta : public TensorMeta {
  public:
-  MutMirroredTensorMeta() : TensorMeta(std::make_shared<const Shape>(), kInvalidDataType) {}
+  MutMirroredTensorMeta()
+      : TensorMeta(std::make_shared<const Shape>(), std::make_shared<const Stride>(),
+                   kInvalidDataType) {}
   MutMirroredTensorMeta(const MutMirroredTensorMeta&) = default;
   MutMirroredTensorMeta(MutMirroredTensorMeta&&) = default;
   ~MutMirroredTensorMeta() override = default;
@@ -131,10 +133,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer shapes and dtypes
   const auto& device_tag = stream->device()->type();
-  JUST(user_op_expr.InferPhysicalShapeAndDType(
+  JUST(user_op_expr.InferPhysicalTensorDesc(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
+        return CHECK_JUST(TensorImpl4Tensor(inputs[i]))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
         // using thread_local TensorMeta pointer if inplace.
@@ -154,6 +156,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       // output i is inplaced.
       // check thread_local TensorMeta and tensor_impl TensorMeta.
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas->at(i)->shape());
+      // TODO:(thread_local TensorMeta set stride then check)
+      // CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() ==
+      // output_tensor_metas->at(i)->stride());
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }

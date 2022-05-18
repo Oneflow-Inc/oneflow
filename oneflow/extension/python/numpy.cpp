@@ -82,7 +82,7 @@ std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec) {
 }
 
 // NumPy strides use bytes. OneFlow strides use element counts.
-std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type) {
+std::vector<size_t> OFStrideToNumpyStride(const DimVector& fixed_vec, const DataType data_type) {
   size_t ndim = fixed_vec.size();
   auto result = std::vector<size_t>(ndim);
   int byte_per_elem = GetSizeOfDataType(data_type);
