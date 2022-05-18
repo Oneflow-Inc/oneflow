@@ -595,8 +595,6 @@ void TaskGraph::StraightenNodes() {
       std::cout << "Execution order: " << order_in_graph << ": " << task_node->VisualStr()
                 << ": task type: " << task_node->GetTaskType() << ", "
                 << (task_node->parallel_ctx() == 0) << std::endl;
-      task_node->ForEachNodeOnInDataEdge(
-          [](TaskNode* in) { std::cout << "Pre task node: " << in->VisualStr() << std::endl; });
       if (task_type_map.find(task_node->GetTaskType()) == task_type_map.end()) {
         task_type_map[task_node->GetTaskType()] = 0;
       }
@@ -739,6 +737,8 @@ void TaskGraph::StraightenNodes() {
     }
   };
 
+  int32_t max_overlap_computation_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 40);
+
   // straightening
   while (true) {
     if (run_asap.empty()) {
@@ -759,7 +759,9 @@ void TaskGraph::StraightenNodes() {
         waiting_transfer.erase(waiting_transfer.begin());
         SetOrderInGraph(node);
         // Overlap transfer with computation
-        execute(waiting_computation, waiting_computation.size() / (waiting_transfer.size() + 1));
+        execute(waiting_computation,
+                std::min(int32_t(waiting_computation.size() / (waiting_transfer.size() + 1)),
+                         max_overlap_computation_num));
         // Release the transfer
         finish_execution(node);
       }
