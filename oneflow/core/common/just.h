@@ -30,16 +30,17 @@ class Maybe;
 template<typename T>
 class Optional;
 
-Maybe<std::string> FormatErrorStr(const std::shared_ptr<cfg::ErrorProto>&);
+Maybe<std::string> FormatErrorStr(const std::shared_ptr<ErrorProto>&);
 namespace {
-std::string GetFormatedSerializedError(const std::shared_ptr<cfg::ErrorProto>&);
+std::string GetFormatedSerializedError(const std::shared_ptr<ErrorProto>&);
 }
 
 namespace private_details {
 
-inline std::shared_ptr<cfg::ErrorProto>&& JustErrorAddStackFrame(
-    std::shared_ptr<cfg::ErrorProto>&& err, const std::string& file, int64_t line,
-    const std::string& func, const std::string& message) {
+inline std::shared_ptr<ErrorProto>&& JustErrorAddStackFrame(std::shared_ptr<ErrorProto>&& err,
+                                                            const std::string& file, int64_t line,
+                                                            const std::string& func,
+                                                            const std::string& message) {
   auto* stack_frame = err->add_stack_frame();
   stack_frame->set_file(file);
   stack_frame->set_line(line);
@@ -66,12 +67,12 @@ bool JustIsOk(const Optional<T>& val) {
 }
 
 template<typename T>
-std::shared_ptr<cfg::ErrorProto> JustGetError(const Maybe<T>& val) {
+std::shared_ptr<ErrorProto> JustGetError(const Maybe<T>& val) {
   return val.error();
 }
 
 template<typename T>
-std::shared_ptr<cfg::ErrorProto> JustGetError(const Optional<T>&) {
+std::shared_ptr<ErrorProto> JustGetError(const Optional<T>&) {
   return Error::ValueNotFoundError().error_proto();
 }
 

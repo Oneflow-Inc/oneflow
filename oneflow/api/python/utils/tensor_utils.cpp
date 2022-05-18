@@ -144,14 +144,28 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
                                       const Optional<Symbol<Device>>& device,
                                       const bool requires_grad, const bool pin_memory) {
   PyObject* array = NULL;
-  if (PyArray_Check(data)) {
-    // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
-    array = PyArray_NewCopy((PyArrayObject*)data, NPY_CORDER);
-  } else {
-    // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
-    // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
-    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr);
-    if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
+  PyArray_Descr* np_dtype =
+      dtype.has_value()
+          ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
+          : nullptr;
+  // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
+  // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
+  // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
+  // NPY_ARRAY_FORCECAST is needed otherwise there will a segfault.
+  array = PyArray_FromAny(data, np_dtype, 0, 0,
+                          NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY | NPY_ARRAY_FORCECAST, nullptr);
+  if (!array) {
+    return Error::RuntimeError() << "Can not convert input data to a new numpy array.";
+  }
+  // flow.tensor([1., 2.]).dtype should be flow.float32 rather than flow.float64
+  if (!PyArray_Check(data)) {
+    int np_array_type = PyArray_TYPE(reinterpret_cast<PyArrayObject*>(array));
+    // Cast to float if data is double sequence, rather than numpy array.
+    if (np_array_type == NPY_DOUBLE && np_dtype == nullptr) {
+      PyObject* fp32_array = PyArray_Cast(reinterpret_cast<PyArrayObject*>(array), NPY_FLOAT);
+      Py_DECREF(array);
+      array = fp32_array;
+    }
   }
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
@@ -169,14 +183,6 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
   Py_DECREF(array);
-  // Cast to float if data is double sequence, rather than numpy array.
-  Symbol<DType> dtype_;
-  if (dtype) {
-    dtype_ = JUST(dtype);
-  } else if (!dtype && data_type == DataType::kDouble && !PyArray_Check(data)) {
-    dtype_ = DType::Float();
-  }
-  if (dtype_) { tensor = JUST(functional::Cast(tensor, dtype_, pin_memory)); }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
 }
@@ -222,13 +228,7 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
     JUST(DataConsistencyCheck(buf_ptr, byte_size, placement));
   }
 
-  const std::string& device_tag = placement->device_tag();
-  Symbol<Device> device;
-  if (device_tag == "cpu") {
-    device = JUST(Device::New("cpu"));
-  } else {
-    device = JUST(Device::New("cuda"));
-  }
+  Symbol<Device> device = JUST(Device::New(placement->device_tag()));
   std::shared_ptr<Tensor> local_tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(data_type)), device, /*pin_memory=*/false));
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), local_tensor, array));
