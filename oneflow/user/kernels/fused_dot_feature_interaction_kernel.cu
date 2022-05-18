@@ -388,9 +388,7 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
     const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
     const int64_t valid_out_dim = out_dim - output_padding;
     const bool self_interaction = ctx->Attr<bool>("self_interaction");
-    const std::string& pooling = ctx->Attr<std::string>("pooling");
 
-    ConcatFeatures<T>(ctx);
     T* matmul_out = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>());
     size_t matmul_out_size =
         GetCudaAlignedSize(batch_size * concated_padded_dim * concated_padded_dim * sizeof(T));
@@ -400,6 +398,7 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
     int32_t* gather_indices_ptr =
         reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>() + matmul_out_size);
 
+    ConcatFeatures<T>(ctx);
     auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
         ctx->device_type(), padded_concated_features->data_type(),
         ep::primitive::BlasTransposeType::N, ep::primitive::BlasTransposeType::T);
