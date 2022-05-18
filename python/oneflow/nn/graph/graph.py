@@ -139,6 +139,9 @@ class Graph(object):
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
             self._name, self._session._session_ctx
         )
+        self.env_enable_mlir_inference_opt = os.getenv(
+            "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+        )
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -218,7 +221,11 @@ class Graph(object):
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LRScheduler = None, is_sparse: bool = False,
+        self,
+        optim: Optimizer,
+        *,
+        lr_sch: LRScheduler = None,
+        is_sparse: bool = False,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -239,9 +246,9 @@ class Graph(object):
         to make the loss tensor a scalar tensor.
 
         Note:
-            If you want to output the learning rate information for each step, 
+            If you want to output the learning rate information for each step,
             set the ``verbose`` parameter of the ``lr_scheduler`` to ``True``, and you will see the result at rank 0.
-            
+
             This feature is the same as eager mode.
 
         For example:
@@ -341,7 +348,9 @@ class Graph(object):
             module = block.origin
             if module is not None:
                 module.state_dict(
-                    sub_destination, "", keep_vars=False,
+                    sub_destination,
+                    "",
+                    keep_vars=False,
                 )
             destination[name] = sub_destination
         # Get additional states.
@@ -429,7 +438,7 @@ class Graph(object):
 
         Each nn.Module inside a nn.Graph also has a debug() method to enable debug mode.
 
-        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3. 
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3.
         ``v_level`` -1 will disable the debug mode of the graph (i.e. no info will be printed).
         ``v_level`` 0 will print warning and graph building stages. ``v_level`` 1 will additionally
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
@@ -438,7 +447,7 @@ class Graph(object):
 
         Use ``ranks`` to choose which rank to print the debug information.
 
-        Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information. 
+        Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
 
         For example:
 
@@ -647,7 +656,7 @@ class Graph(object):
 
     @staticmethod
     def to_graph(func):
-        """ Make a function to do static graph run with nn.Graph.
+        """Make a function to do static graph run with nn.Graph.
 
         After decorating a function with ``to_graph``, the function is turned into a naive `nn.Graph`.
 
@@ -686,7 +695,12 @@ class Graph(object):
             return func(*args, **kwargs)
 
         graph_cls_name = type(
-            graph_cls_name, (Graph,), {"__init__": init, "build": build,}
+            graph_cls_name,
+            (Graph,),
+            {
+                "__init__": init,
+                "build": build,
+            },
         )
 
         a_graph = graph_cls_name()
@@ -726,7 +740,9 @@ class Graph(object):
         # Complie graph to execution plan and init Runtime
         try:
             self.__print(
-                0, 0, self._shallow_repr() + " start building plan.",
+                0,
+                0,
+                self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
@@ -818,18 +834,36 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
-            enable_mlir_inference_opt = os.getenv(
-                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
-            )
+            # enable_mlir_inference_opt = os.getenv(
+            #     "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            # )
             enable_mlir_inference_opt = (
                 False
-                if enable_mlir_inference_opt is None
-                else bool(enable_mlir_inference_opt)
+                if self.env_enable_mlir_inference_opt is None
+                else bool(self.env_enable_mlir_inference_opt)
             )
-            if (self.training or self._is_global_view) and enable_mlir_inference_opt:
-                logging.warning(
-                    "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode. "
-                )
+            modules_has_training = False
+            for item in self._blocks.values():
+                if item._origin.training:
+                    modules_has_training = True
+                    break
+            if (
+                modules_has_training or self.training or self._is_global_view
+            ) and enable_mlir_inference_opt:
+                if self.training:
+                    logging.warning(
+                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode."
+                    )
+
+                if modules_has_training and not self.training:
+                    logging.warning(
+                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored when not all modules in graph are in eval mode. "
+                    )
+
+                if self._is_global_view:
+                    logging.warning(
+                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in global mode. "
+                    )
                 enable_mlir_inference_opt = False
                 del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
             if enable_mlir_inference_opt:
@@ -1114,7 +1148,10 @@ class Graph(object):
                 return mapping_tensor_or_none(arg)
             else:
                 self.__io_item_check(
-                    arg, None, io_type, leaf_node._prefix + "_" + leaf_node._name,
+                    arg,
+                    None,
+                    io_type,
+                    leaf_node._prefix + "_" + leaf_node._name,
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
@@ -1155,7 +1192,10 @@ class Graph(object):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 if t.is_global:
                     eager_out = oneflow.empty(
-                        shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
+                        shape,
+                        dtype=dtype,
+                        placement=t.placement,
+                        sbp=t.sbp,
                     )
                 else:
                     eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)
@@ -1255,6 +1295,15 @@ class Graph(object):
         )
 
     def __del__(self):
+        current_env_enable_mlir_inference_opt = os.getenv(
+            "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+        )
+        if (self.env_enable_mlir_inference_opt is not None) and (
+            current_env_enable_mlir_inference_opt is None
+        ):
+            os.environ[
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            ] = self.env_enable_mlir_inference_opt
         # Ensure vm has finished running this graph.
         if self._session._env.is_shutting_down():
             # After python shutting down, it's not safe to call oneflow._oneflow_internal.eager.
