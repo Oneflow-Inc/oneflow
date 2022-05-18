@@ -44,7 +44,10 @@ def invert_permutation(permutation: Optional[Tensor]) -> Optional[Tensor]:
 
 
 class PackedSequence(object):
-    """Holds the data and list of :attr:`batch_sizes` of a packed sequence.
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.PackedSequence.html.
+    
+    Holds the data and list of :attr:`batch_sizes` of a packed sequence.
 
     All RNN modules accept packed sequences as inputs.
 
@@ -99,23 +102,15 @@ class PackedSequence(object):
                     "Instances of PackedSequence should never be created manually. "
                     "They should be instantiated by functions like pack_sequence "
                     "and pack_padded_sequences in nn.rnn_utils "
-                    "https://pytorch.org/docs/stable/nn.html#torch.nn.utils.rnn.pack_sequence"
                 )
             self.data = data
             self.batch_sizes = batch_sizes
-        # support being called as `PackedSequence((data, batch_sizes), *, sorted_indices)`
         else:
             assert isinstance(data, (list, tuple)) and len(data) == 2
             self.data = data[0]
             self.batch_sizes = data[1]
 
-    # NOTE [ device and dtype of a PackedSequence ]
-    #
-    # See the note above in doc string (starting with ":attr:`data` can be on
-    # arbitrary device...").
     def pin_memory(self):
-        # Why not convert `batch_sizes`?
-        # See NOTE [ device and dtype of a PackedSequence ]
         return PackedSequence(
             self.data.pin_memory(),
             self.batch_sizes,
@@ -124,7 +119,6 @@ class PackedSequence(object):
         )
 
     def cuda(self, *args, **kwargs):
-        # Tests to see if 'cuda' should be added to kwargs
         ex = flow.tensor((), dtype=self.data.dtype, device=self.data.device).to(
             *args, **kwargs
         )
@@ -178,14 +172,10 @@ class PackedSequence(object):
             and :class:`torch.device`, then ``self`` is returned.
             Otherwise, returns a copy with the desired configuration.
         """
-
-        # Why not convert `batch_sizes`?
-        # See NOTE [ device and dtype of a PackedSequence ]
         data = self.data.to(*args, **kwargs)
         if data is self.data:
             return self
         else:
-            # Does not forward device or dtype arg/kwargs, device is set from data.device
             kwargs = {
                 k: v
                 for k, v in filter(
@@ -218,7 +208,10 @@ def pack_padded_sequence(
     batch_first: bool = False,
     enforce_sorted: bool = True,
 ) -> PackedSequence:
-    """Packs a Tensor containing padded sequences of variable length.
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pack_padded_sequence.html.
+    
+    Packs a Tensor containing padded sequences of variable length.
 
     :attr:`input` can be of size ``T x B x *`` where `T` is the length of the
     longest sequence (equal to ``lengths[0]``), ``B`` is the batch size, and
@@ -270,29 +263,16 @@ def pad_packed_sequence(
     padding_value: float = 0.0,
     total_length: Optional[int] = None,
 ) -> Tuple[Tensor, Tensor]:
-    """Pads a packed batch of variable length sequences.
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pad_packed_sequence.html.
+    
+    Pads a packed batch of variable length sequences.
 
     It is an inverse operation to :func:`pack_padded_sequence`.
 
     The returned Tensor's data will be of size ``T x B x *``, where `T` is the length
     of the longest sequence and `B` is the batch size. If ``batch_first`` is True,
     the data will be transposed into ``B x T x *`` format.
-
-    Example:
-        >>> from oneflow.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-        >>> seq = torch.tensor([[1,2,0], [3,0,0], [4,5,6]])
-        >>> lens = [2, 1, 3]
-        >>> packed = pack_padded_sequence(seq, lens, batch_first=True, enforce_sorted=False)
-        >>> packed
-        PackedSequence(data=tensor([4, 1, 3, 5, 2, 6]), batch_sizes=tensor([3, 2, 1]),
-                       sorted_indices=tensor([2, 0, 1]), unsorted_indices=tensor([1, 2, 0]))
-        >>> seq_unpacked, lens_unpacked = pad_packed_sequence(packed, batch_first=True)
-        >>> seq_unpacked
-        tensor([[1, 2, 0],
-                [3, 0, 0],
-                [4, 5, 6]])
-        >>> lens_unpacked
-        tensor([2, 1, 3])
 
     .. note::
         :attr:`total_length` is useful to implement the
@@ -317,7 +297,27 @@ def pad_packed_sequence(
         Batch elements will be re-ordered as they were ordered originally when
         the batch was passed to ``pack_padded_sequence`` or ``pack_sequence``.
 
+    For example:
 
+    .. code-block:: python
+
+        >>> from oneflow.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+        >>> import oneflow as flow
+
+        >>> seq = flow.tensor([[4,5,6], [1,2,0], [3,0,0]])
+        >>> lens = [3, 2, 1]
+        >>> packed = pack_padded_sequence(seq, lens, batch_first=True, enforce_sorted=True)
+        >>> packed.data
+        tensor([4, 5, 6, 1, 2, 3], dtype=oneflow.int64)
+        >>> packed.batch_sizes
+        tensor([3, 2, 1], dtype=oneflow.int64)
+        >>> seq_unpacked, lens_unpacked = pad_packed_sequence(packed, batch_first=True)
+        >>> seq_unpacked
+        tensor([[4, 1, 3],
+                [5, 2, 0],
+                [6, 0, 0]], dtype=oneflow.int64)
+        >>> lens_unpacked
+        tensor([3., 2., 1.], dtype=oneflow.float32)
 
 
     """
@@ -390,7 +390,10 @@ def pad_packed_sequence(
         prev_batch_size = batch_size
 
     if batch_first:
-        padded_output = padded_output.permute((1, 0, 2))
+        permute_dims = (1, 0)
+        for i in range(2, padded_output.ndim):
+            permute_dims.append(i)
+        padded_output = padded_output.permute(permute_dims)
 
     unsorted_indices = sequence.unsorted_indices
     if unsorted_indices is not None:
@@ -407,7 +410,10 @@ def pad_sequence(
     batch_first: bool = False,
     padding_value: float = 0.0,
 ) -> Tensor:
-    """Pad a list of variable length Tensors with ``padding_value``
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.utils.rnn.pad_sequence.html.
+    
+    Pad a list of variable length Tensors with ``padding_value``
 
     ``pad_sequence`` stacks a list of Tensors along a new dimension,
     and pads them to equal length. For example, if the input is list of
@@ -418,14 +424,6 @@ def pad_sequence(
     `T` is length of the longest sequence.
     `L` is length of the sequence.
     `*` is any number of trailing dimensions, including none.
-
-    Example:
-        >>> from torch.nn.utils.rnn import pad_sequence
-        >>> a = torch.ones(25, 300)
-        >>> b = torch.ones(22, 300)
-        >>> c = torch.ones(15, 300)
-        >>> pad_sequence([a, b, c]).size()
-        torch.Size([25, 3, 300])
 
     Note:
         This function returns a Tensor of size ``T x B x *`` or ``B x T x *``
@@ -441,6 +439,21 @@ def pad_sequence(
     Returns:
         Tensor of size ``T x B x *`` if :attr:`batch_first` is ``False``.
         Tensor of size ``B x T x *`` otherwise
+
+    For example:
+
+    .. code-block:: python
+    
+        >>> from oneflow.nn.utils.rnn import pad_sequence
+        >>> import oneflow as flow
+
+        >>> a = flow.ones(25, 300)
+        >>> b = flow.ones(22, 300)
+        >>> c = flow.ones(15, 300)
+        >>> out = pad_sequence([a, b, c])
+        >>> out.size()
+        oneflow.Size([25, 3, 300])
+
     """
     if isinstance(sequences, Tensor):
         sequences = sequences.unbind(0)
@@ -477,25 +490,10 @@ def pad_sequence(
 def unpad_sequence(
     padded_sequences: Tensor, lengths: Tensor, batch_first: bool = False,
 ) -> List[Tensor]:
-    """Unpad padded Tensor into a list of variable length Tensors
+    """
+    Unpad padded Tensor into a list of variable length Tensors
 
     ``unpad_sequence`` unstacks padded Tensor into a list of variable length Tensors.
-
-    Example:
-        >>> from oneflow.nn.utils.rnn import pad_sequence, unpad_sequence
-        >>> a = flow.ones(25, 300)
-        >>> b = flow.ones(22, 300)
-        >>> c = flow.ones(15, 300)
-        >>> sequences = [a, b, c]
-        >>> padded_sequences = pad_sequence(sequences)
-        >>> lengths = flow.as_tensor([v.size(0) for v in sequences])
-        >>> unpadded_sequences = unpad_sequence(padded_sequences, lengths)
-        >>> torch.allclose(sequences[0], unpadded_sequences[0])
-        True
-        >>> torch.allclose(sequences[1], unpadded_sequences[1])
-        True
-        >>> torch.allclose(sequences[2], unpadded_sequences[2])
-        True
 
     Args:
         padded_sequences (Tensor): padded sequences.
@@ -504,8 +502,29 @@ def unpad_sequence(
 
     Returns:
         a list of :class:`Tensor` objects
-    """
 
+    For example:
+
+    .. code-block:: python
+
+        >>> from oneflow.nn.utils.rnn import pad_sequence, unpad_sequence
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> a = flow.ones(25, 300)
+        >>> b = flow.ones(22, 300)
+        >>> c = flow.ones(15, 300)
+        >>> sequences = [a, b, c]
+        >>> padded_sequences = pad_sequence(sequences)
+        >>> lengths = flow.as_tensor([v.size(0) for v in sequences])
+        >>> unpadded_sequences = unpad_sequence(padded_sequences, lengths)
+        >>> np.allclose(sequences[0].numpy(), unpadded_sequences[0].numpy())
+        True
+        >>> np.allclose(sequences[1].numpy(), unpadded_sequences[1].numpy())
+        True
+        >>> np.allclose(sequences[2].numpy(), unpadded_sequences[2].numpy())
+        True
+    """
     unpadded_sequences = []
 
     if not batch_first:
@@ -537,16 +556,6 @@ def pack_sequence(
     is ``True``, the sequences should be sorted in the order of decreasing length.
     ``enforce_sorted = True`` is only necessary for ONNX export.
 
-
-    Example:
-        >>> from torch.nn.utils.rnn import pack_sequence
-        >>> a = torch.tensor([1,2,3])
-        >>> b = torch.tensor([4,5])
-        >>> c = torch.tensor([6])
-        >>> pack_sequence([a, b, c])
-        PackedSequence(data=tensor([ 1,  4,  6,  2,  5,  3]), batch_sizes=tensor([ 3,  2,  1]))
-
-
     Args:
         sequences (list[Tensor]): A list of sequences of decreasing length.
         enforce_sorted (bool, optional): if ``True``, checks that the input
@@ -555,6 +564,23 @@ def pack_sequence(
 
     Returns:
         a :class:`PackedSequence` object
+
+    For example:
+
+    .. code-block:: python
+    
+        >>> from oneflow.nn.utils.rnn import pack_sequence
+        >>> import oneflow as flow
+
+        >>> a = flow.tensor([1,2,3])
+        >>> b = flow.tensor([4,5])
+        >>> c = flow.tensor([6])
+        >>> packed = pack_sequence([a, b, c])
+        >>> packed.data
+        tensor([1, 4, 6, 2, 5, 3], dtype=oneflow.int64)
+        >>> packed.batch_sizes
+        tensor([3, 2, 1], dtype=oneflow.int64)
+
     """
     lengths = flow.as_tensor([v.size(0) for v in sequences])
     return pack_padded_sequence(
@@ -567,25 +593,32 @@ def unpack_sequence(packed_sequences: PackedSequence) -> List[Tensor]:
 
     ``packed_sequences`` should be a PackedSequence object.
 
-
-    Example:
-        >>> from torch.nn.utils.rnn import pack_sequence, unpack_sequence
-        >>> a = torch.tensor([1,2,3])
-        >>> b = torch.tensor([4,5])
-        >>> c = torch.tensor([6])
-        >>> sequences = [a, b, c]
-        [tensor([ 1,  2,  3]), tensor([ 4,  5]), tensor([ 6])]
-        >>> packed_sequences = pack_sequence(sequences)
-        PackedSequence(data=tensor([ 1,  4,  6,  2,  5,  3]), batch_sizes=tensor([ 3,  2,  1]))
-        >>> unpacked_sequences = unpack_sequence(packed_sequences)
-        [tensor([ 1,  2,  3]), tensor([ 4,  5]), tensor([ 6])]
-
-
     Args:
         packed_sequences (PackedSequence): A PackedSequence object.
 
     Returns:
         a list of :class:`Tensor` objects
+
+    For example:
+
+    .. code-block:: python
+
+        >>> from oneflow.nn.utils.rnn import pack_sequence, unpack_sequence
+        >>> import oneflow as flow
+
+        >>> a = flow.tensor([1,2,3])
+        >>> b = flow.tensor([4,5])
+        >>> c = flow.tensor([6])
+        >>> sequences = [a, b, c]
+        >>> packed_sequences = pack_sequence(sequences)
+        >>> packed_sequences.data
+        tensor([1, 4, 6, 2, 5, 3], dtype=oneflow.int64)
+        >>> packed_sequences.batch_sizes
+        tensor([3, 2, 1], dtype=oneflow.int64)
+        >>> unpacked_sequences = unpack_sequence(packed_sequences)
+        >>> unpacked_sequences
+        [tensor([1, 2, 3], dtype=oneflow.int64), tensor([4, 5], dtype=oneflow.int64), tensor([6], dtype=oneflow.int64)]
+
     """
 
     padded_sequences, lengths = pad_packed_sequence(packed_sequences, batch_first=True)

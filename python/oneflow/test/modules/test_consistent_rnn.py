@@ -108,7 +108,7 @@ def _test_rnn_impl(
         dropout=dropout,
         bidirectional=bidirectional,
     )
-    rnn_flow = flow.nn.RNNV2(
+    rnn_flow = flow.nn.RNN(
         input_size=input_size,
         hidden_size=hidden_size,
         num_layers=num_layers,
@@ -147,7 +147,7 @@ def _test_lstm_impl(
         bidirectional=bidirectional,
         proj_size=proj_size,
     )
-    lstm_flow = flow.nn.LSTMV2(
+    lstm_flow = flow.nn.LSTM(
         input_size=input_size,
         hidden_size=hidden_size,
         num_layers=num_layers,
@@ -184,7 +184,7 @@ def _test_gru_impl(
         dropout=dropout,
         bidirectional=bidirectional,
     )
-    gru_flow = flow.nn.GRUV2(
+    gru_flow = flow.nn.GRU(
         input_size=input_size,
         hidden_size=hidden_size,
         num_layers=num_layers,
