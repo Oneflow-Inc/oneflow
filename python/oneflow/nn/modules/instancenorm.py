@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from cProfile import run
 import oneflow as flow
 from oneflow.nn.modules.batchnorm import _NormBase
 
@@ -46,19 +45,21 @@ class _InstanceNorm(_NormBase):
         shape[0] = 1
         weight = self.weight
         bias = self.bias
+        running_mean = self.running_mean
+        running_var = self.running_var
         if self.weight is not None:
             weight = self.weight.repeat(b)
         if self.bias is not None:
             bias = self.bias.repeat(b)
         if self.running_mean is not None:
-            self.running_mean = self.running_mean.repeat(b)
+            running_mean = self.running_mean.repeat(b)
         if self.running_var is not None:
-            self.running_var = self.running_var.repeat(b)
+            running_var = self.running_var.repeat(b)
         reshape_to_1d = flow.reshape(x, shape)
         normalized_1d_out = flow._C.normalization(
             reshape_to_1d,
-            self.running_mean if not self.training or self.track_running_stats else None,
-            self.running_var if not self.training or self.track_running_stats else None,
+            self.running_mean,
+            self.running_var,
             weight,
             bias,
             axis=self.channel_axis,
@@ -66,11 +67,10 @@ class _InstanceNorm(_NormBase):
             momentum=self.momentum,
             is_training=is_training,
         )
-        if self.running_mean is not None:
-            self.running_mean = flow.reshape(self.running_mean, [b, c]).mean(0)
-        if self.running_var is not None:
-            self.running_var = flow.reshape(self.running_var, [b, c]).mean(0)
-
+        if self.track_running_stats:
+            self.running_mean = flow.reshape(running_mean, [b, c]).mean(0, False)
+        if self.track_running_stats:
+            self.running_var = flow.reshape(running_var, [b, c]).mean(0, False)
         reshape_back_to_nd = flow.reshape(normalized_1d_out, list(x.shape))
         return reshape_back_to_nd
 
