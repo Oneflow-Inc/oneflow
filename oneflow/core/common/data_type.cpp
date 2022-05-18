@@ -168,4 +168,16 @@ COMMAND(CheckDataType());
 
 }  // namespace
 
+#ifdef WITH_ONEDNN
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<int32_t>() {
+  return dnnl::memory::data_type::s32;
+}
+
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<float>() {
+  return dnnl::memory::data_type::f32;
+}
+#endif  // WITH_ONEDNN
+
 }  // namespace oneflow

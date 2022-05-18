@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/avg_pool_kernel_util.h"
+#include "oneflow/user/kernels/onednn_pool_kernel_util.h"
 
 namespace oneflow {
 
@@ -392,7 +393,323 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
   REGISTER_AVG_POOL_KERNELS(device, float)    \
   REGISTER_AVG_POOL_KERNELS(device, double)
 
+#ifdef WITH_ONEDNN
+
+template<DeviceType device_type, typename T>
+class OneDnnAvgPool1dKernel final : public user_op::OpKernel {
+ public:
+  OneDnnAvgPool1dKernel() = default;
+  ~OneDnnAvgPool1dKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 1);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+
+    const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
+    const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(x->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(y->mut_dptr<T>()));
+
+    dnnl::memory::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
+    dnnl::memory::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
+    dnnl::memory::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {1, params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {0, 0};
+
+    if (params_3d.count_include_pad()) {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+          OneDnnPoolForwardCompute(ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims,
+                                   padding_dims_l, padding_dims_r, dilation,
+                                   dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    } else {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnPoolForwardCompute(
+          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    }
+  };
+};
+
+template<DeviceType device_type, typename T>
+class OneDnnAvgPool1dGradKernel final : public user_op::OpKernel {
+ public:
+  OneDnnAvgPool1dGradKernel() = default;
+  ~OneDnnAvgPool1dGradKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 1);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
+    const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
+
+    void* src = reinterpret_cast<void*>(const_cast<T*>(dy->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(dx->mut_dptr<T>()));
+
+    dnnl::memory::dims diff_dst_dims = {1, 1, dy->shape().At(0) * dy->shape().At(1),
+                                        dy->shape().At(2)};
+    dnnl::memory::dims diff_src_dims = {1, 1, dx->shape().At(0) * dx->shape().At(1),
+                                        dx->shape().At(2)};
+    dnnl::memory::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {1, params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {0, 0};
+
+    if (params_3d.count_include_pad()) {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+          OneDnnpoolBackwardCompute(ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims,
+                                    strides_dims, padding_dims_l, padding_dims_r, dilation,
+                                    dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    } else {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnpoolBackwardCompute(
+          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    }
+  };
+};
+
+template<DeviceType device_type, typename T>
+class OneDnnAvgPool2dKernel final : public user_op::OpKernel {
+ public:
+  OneDnnAvgPool2dKernel() = default;
+  ~OneDnnAvgPool2dKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 2);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+
+    const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
+    const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(x->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(y->mut_dptr<T>()));
+
+    dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
+                                   x->shape().At(3)};
+    dnnl::memory::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2),
+                                   y->shape().At(3)};
+    dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {0, 0};
+
+    if (params_3d.count_include_pad()) {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+          OneDnnPoolForwardCompute(ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims,
+                                   padding_dims_l, padding_dims_r, dilation,
+                                   dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    } else {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnPoolForwardCompute(
+          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    }
+  };
+};
+
+template<DeviceType device_type, typename T>
+class OneDnnAvgPool2dGradKernel final : public user_op::OpKernel {
+ public:
+  OneDnnAvgPool2dGradKernel() = default;
+  ~OneDnnAvgPool2dGradKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 2);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
+    const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(dy->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(dx->mut_dptr<T>()));
+
+    dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
+                                        dy->shape().At(3)};
+    dnnl::memory::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
+                                        dx->shape().At(3)};
+    dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {0, 0};
+
+    if (params_3d.count_include_pad()) {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+          OneDnnpoolBackwardCompute(ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims,
+                                    strides_dims, padding_dims_l, padding_dims_r, dilation,
+                                    dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    } else {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnpoolBackwardCompute(
+          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    }
+  };
+};
+
+template<DeviceType device_type, typename T>
+class OneDnnAvgPool3dKernel final : public user_op::OpKernel {
+ public:
+  OneDnnAvgPool3dKernel() = default;
+  ~OneDnnAvgPool3dKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 3);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+
+    const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
+    const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(x->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(y->mut_dptr<T>()));
+
+    dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
+                                   x->shape().At(3), x->shape().At(4)};
+    dnnl::memory::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2),
+                                   y->shape().At(3), y->shape().At(4)};
+    dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
+                                      params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+                                       params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1],
+                                         params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
+                                         params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {0, 0, 0};
+
+    if (params_3d.count_include_pad()) {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+          OneDnnPoolForwardCompute(ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims,
+                                   padding_dims_l, padding_dims_r, dilation,
+                                   dnnl::memory::format_tag::ncdhw, src, dest, nullptr);
+    } else {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnPoolForwardCompute(
+          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, src, dest, nullptr);
+    }
+  };
+};
+
+template<DeviceType device_type, typename T>
+class OneDnnAvgPool3dGradKernel final : public user_op::OpKernel {
+ public:
+  OneDnnAvgPool3dGradKernel() = default;
+  ~OneDnnAvgPool3dGradKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateAvgOpKernelCache(ctx, 3);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+
+    const auto* pool_cache = dynamic_cast<const AvgPoolOpKernelCache*>(cache);
+    const AvgPoolParams3D& params_3d = pool_cache->GetParams3D();
+    void* src = reinterpret_cast<void*>(const_cast<T*>(dy->dptr<T>()));
+    void* dest = reinterpret_cast<void*>(const_cast<T*>(dx->mut_dptr<T>()));
+
+    dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
+                                        dy->shape().At(3), dy->shape().At(4)};
+    dnnl::memory::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
+                                        dx->shape().At(3), dx->shape().At(4)};
+    dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
+                                      params_3d.pool_size_3d()[2]};
+    dnnl::memory::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+                                       params_3d.stride_3d()[2]};
+    dnnl::memory::dims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1],
+                                         params_3d.padding()[2]};
+    dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
+                                         params_3d.padding()[2]};
+    dnnl::memory::dims dilation = {0, 0, 0};
+
+    if (params_3d.count_include_pad()) {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+          OneDnnpoolBackwardCompute(ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims,
+                                    strides_dims, padding_dims_l, padding_dims_r, dilation,
+                                    dnnl::memory::format_tag::ncdhw, src, dest, nullptr);
+    } else {
+      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnpoolBackwardCompute(
+          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, src, dest, nullptr);
+    }
+  };
+};
+
+#define REGISTER_ONEDNN_AVG_POOL_KERNELS(device, dtype)                                 \
+  REGISTER_USER_KERNEL("avg_pool_1d")                                                   \
+      .SetCreateFn<OneDnnAvgPool1dKernel<device, dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_1d_grad")                                              \
+      .SetCreateFn<OneDnnAvgPool1dGradKernel<device, dtype>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_2d")                                                   \
+      .SetCreateFn<OneDnnAvgPool2dKernel<device, dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_2d_grad")                                              \
+      .SetCreateFn<OneDnnAvgPool2dGradKernel<device, dtype>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_3d")                                                   \
+      .SetCreateFn<OneDnnAvgPool3dKernel<device, dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("avg_pool_3d_grad")                                              \
+      .SetCreateFn<OneDnnAvgPool3dGradKernel<device, dtype>>()                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+
+REGISTER_ONEDNN_AVG_POOL_KERNELS(DeviceType::kCPU, float)
+REGISTER_AVG_POOL_KERNELS(DeviceType::kCPU, double)
+
+#else
 REGISTER_AVG_POOL_WITH_DEVICE(DeviceType::kCPU)
+#endif  // WITH_ONEDNN
 
 #ifdef WITH_CUDA
 REGISTER_AVG_POOL_WITH_DEVICE(DeviceType::kCUDA)

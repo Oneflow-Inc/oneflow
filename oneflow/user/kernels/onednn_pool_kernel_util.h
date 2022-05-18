@@ -19,10 +19,11 @@ limitations under the License.
 
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
-#include "oneflow/user/kernels/max_pool_kernel_util.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
-template<typename T>
+
+template<typename T, dnnl::algorithm algorithm>
 struct OneDnnPoolKernelUtil {
   static void OneDnnPoolForwardCompute(
       ep::Stream* stream, const dnnl::memory::dims src_dims, const dnnl::memory::dims dst_dims,
@@ -42,9 +43,9 @@ struct OneDnnPoolKernelUtil {
     auto src_mem = dnnl::memory(src_md, *onednn_engine, (void*)src);
     auto dst_mem = dnnl::memory(dst_md, *onednn_engine, (void*)dest);
 
-    auto pooling_desc = dnnl::pooling_v2_forward::desc(
-        dnnl::prop_kind::forward_training, dnnl::algorithm::pooling_max, src_md, dst_md,
-        strides_dims, kernel_dims, dilation, padding_dims_l, padding_dims_r);
+    auto pooling_desc = dnnl::pooling_v2_forward::desc(dnnl::prop_kind::forward_training, algorithm,
+                                                       src_md, dst_md, strides_dims, kernel_dims,
+                                                       dilation, padding_dims_l, padding_dims_r);
     auto pooling_primitive_desc =
         dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
     auto pooling_primitive = dnnl::pooling_v2_forward(pooling_primitive_desc);
@@ -75,13 +76,13 @@ struct OneDnnPoolKernelUtil {
     auto diff_dst_mem = dnnl::memory(diff_dst_md, *onednn_engine, diff_dst);
     auto diff_src_mem = dnnl::memory(diff_src_md, *onednn_engine, diff_src);
 
-    auto pooling_back_desc = dnnl::pooling_v2_backward::desc(
-        dnnl::algorithm::pooling_max, diff_src_md, diff_dst_md, strides_dims, kernel_dims, dilation,
-        padding_dims_l, padding_dims_r);
+    auto pooling_back_desc =
+        dnnl::pooling_v2_backward::desc(algorithm, diff_src_md, diff_dst_md, strides_dims,
+                                        kernel_dims, dilation, padding_dims_l, padding_dims_r);
     // forward
     auto pooling_desc = dnnl::pooling_v2_forward::desc(
-        dnnl::prop_kind::forward_training, dnnl::algorithm::pooling_max, diff_src_md, diff_dst_md,
-        strides_dims, kernel_dims, dilation, padding_dims_l, padding_dims_r);
+        dnnl::prop_kind::forward_training, algorithm, diff_src_md, diff_dst_md, strides_dims,
+        kernel_dims, dilation, padding_dims_l, padding_dims_r);
     auto pooling_primitive_desc =
         dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
     auto workspace_mem =
