@@ -91,7 +91,6 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
-
 // NOTE: if this op not support stride, then need to tensor->contiguous()
 #define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
   TensorTuple tmp_inputs;                                                                   \

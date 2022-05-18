@@ -16,9 +16,10 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
-
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
+#include "oneflow/core/framework/user_op_attr.pb.h"
 
 namespace py = pybind11;
 
@@ -29,7 +30,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init<>())
       .def("__setitem__",
            [](MutableCfgAttrMap* m, const std::string& attr_name,
-              const std::shared_ptr<cfg::AttrValue>& attr_value) {
+              const std::string& attr_value_str) {
+             std::shared_ptr<AttrValue> attr_value = std::make_shared<AttrValue>();
+             if (!TxtString2PbMessage(attr_value_str, attr_value.get())) {
+               THROW(RuntimeError) << "attr value parse failed.\n" << attr_value_str;
+             }
              return m->SetAttr(attr_name, attr_value);
            })
       .def("__getitem__",

@@ -385,9 +385,9 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->output_arg_tuple_ = output_arg_tuple;
   opkernel->need_check_mem_case_ = true;
 
-  opkernel->tmp_blob_object_.reset(
-      new vm::EagerBlobObject(opkernel->mem_case(), std::make_shared<Shape>(), DataType::kChar,
-                              std::make_shared<vm::TensorStorage>()));
+  opkernel->tmp_blob_object_.reset(new vm::EagerBlobObject(
+      opkernel->mem_case(), std::make_shared<Shape>(), std::make_shared<Stride>(), DataType::kChar,
+      std::make_shared<vm::TensorStorage>()));
 
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();

@@ -762,7 +762,9 @@ class ReduceProdWholeFunctor {
                            const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
     std::shared_ptr<one::Tensor> tensor = x;
-    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(tensor, JUST(dtype), /*pin_memory=*/false));
+    }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (DType::priority_order[tensor->dtype()->data_type()]
@@ -856,7 +858,9 @@ class ReduceProdFunctor {
                            const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
     std::shared_ptr<one::Tensor> tensor = x;
-    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(tensor, JUST(dtype), /*pin_memory=*/false));
+    }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (DType::priority_order[tensor->dtype()->data_type()]
@@ -1108,13 +1112,18 @@ class ConsistentArange2Functor {
 class CastFunctor {
  public:
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Symbol<DType>& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
+                           const bool pin_memory) const {
     if (x->dtype() == dtype) { return x; }
-
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    if (x->is_local()) {
+      bool cast_pin_memory = JUST(x->device())->type() == "cuda" ? false : pin_memory;
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/cast_pin_memory));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:
@@ -1290,7 +1299,7 @@ class VectorNormFunctor {
             JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),
                            Scalar(1.0) / ord, false));
       }
-      res = JUST(Cast(res, dtype_val));
+      res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
       return res;
     } else {
       UNIMPLEMENTED_THEN_RETURN()
@@ -1393,7 +1402,7 @@ class ScalarMatrixNormFunctor {
     } else if (ord_tmp == -INFINITY || ord_tmp == -1) {
       res = JUST(ReduceMin(res, dim_tmp1_vec, keepdim));
     }
-    res = JUST(Cast(res, dtype_val));
+    res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
     return res;
   }
 };
@@ -1440,7 +1449,7 @@ class MatrixNormFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): could not convert string to float:"
                                   << ord;
     }
-    res = JUST(Cast(res, dtype_val));
+    res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
     return res;
   }
 };
@@ -1993,7 +2002,8 @@ class StandardDeviationFunctor {
       //  If input tensor's dtype is float32, than cast it to double dtype,
       //  because float dtype has accuracy problem in float dtype, see:
       //  https://github.com/Oneflow-Inc/oneflow/issues/6526
-      const auto& double_input = JUST(functional::Cast(input, DType::Double()));
+      const auto& double_input =
+          JUST(functional::Cast(input, DType::Double(), /*pin_memory=*/false));
       const auto& sum = JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(JUST(functional::Square(double_input)), axis, keepdims)),
           Scalar((double)reduce_count)));
@@ -2005,9 +2015,9 @@ class StandardDeviationFunctor {
         return functional::Cast(
             JUST(functional::Sqrt(JUST(functional::ScalarMul(
                 sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)))),
-            input->dtype());
+            input->dtype(), /*pin_memory=*/false);
       }
-      return functional::Cast(JUST(functional::Sqrt(sub)), input->dtype());
+      return functional::Cast(JUST(functional::Sqrt(sub)), input->dtype(), /*pin_memory=*/false);
     }
   }
 };
@@ -2158,11 +2168,11 @@ class TensorSplitVecFunctor {
     for (int32_t i = 0; i < num_indices; i++) {
       int32_t end_idx = indices_or_sections[i];
       stop[pos_dim] = end_idx;
-      output[i] = JUST(Slice(input, start, stop, step));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
       start[pos_dim] = end_idx;
     }
     stop[pos_dim] = input->shape()->At(ndim - 1);
-    output[num_indices] = JUST(Slice(input, start, stop, step));
+    output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
 
     return output;
   }
@@ -2195,7 +2205,7 @@ class TensorSplitIntFunctor {
     for (int32_t i = 0; i < indices_or_sections; i++) {
       int64_t split_size = (i < num_splits_one_extra) ? (min_split_size + 1) : min_split_size;
       stop[pos_dim] += split_size;
-      output[i] = JUST(Slice(input, start, stop, step));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
       start[pos_dim] += split_size;
     }
 
@@ -2337,19 +2347,6 @@ class CumProdFunctor : public CumBaseFunctor {
 class CumGradBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> op_;
-};
-
-class CumsumGradFunctor : public CumGradBaseFunctor {
- public:
-  CumsumGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    // No need to check dim validation here, while CumsumFunctor handled already
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-  }
 };
 
 class CumProdGradFunctor : public CumGradBaseFunctor {
@@ -3038,7 +3035,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvFunctor>("Erfinv");
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
-  m.add_functor<CumsumGradFunctor>("CumsumGrad");
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
