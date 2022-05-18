@@ -56,7 +56,7 @@ class BlobDesc final {
   Shape& mut_shape() { return *CHECK_NOTNULL(mut_shape_ptr().get()); }
   Stride& mut_stride() { return *CHECK_NOTNULL(mut_stride_ptr().get()); }
   void set_shape(const Shape& shape) { *CHECK_NOTNULL(mut_shape_ptr().get()) = shape; }
-  void set_stride(const Stride& stride) { stride_ = std::make_shared<Stride>(stride); }
+  void set_stride(const Stride& stride) { std::shared_ptr<Stride> stride_(new Stride(stride)); }
 
   DataType data_type() const { return data_type_; }
   DataType* mut_data_type() { return &data_type_; }
