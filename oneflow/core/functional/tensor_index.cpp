@@ -332,7 +332,7 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   int index_ndim = valid_indices.at(0)->ndim();
   auto packed_indices = JUST(Stack(valid_indices, 0));
   int packed_ndim = packed_indices->ndim();
-  CHECK_GT_OR_RETURN(packed_ndim, 0) << "Index array dimension should be greater than 0.";
+  CHECK_GT_OR_RETURN(packed_ndim, 0) << Error::RuntimeError() << "Index array dimension should be greater than 0.";
   std::vector<int> permute(packed_ndim);
   permute[packed_ndim - 1] = 0;
   std::iota(permute.begin(), permute.end() - 1, 1);
@@ -357,8 +357,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
 
   int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
   CHECK_EQ_OR_RETURN(result->ndim(), required_ndim)
-      << "The indexing result dimension is " << result->ndim() << ", but shoule be "
-      << required_ndim;
+      << Error::RuntimeError() << "The indexing result dimension is " << result->ndim()
+      << ", but shoule be " << required_ndim;
   if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
   return result;
 }
