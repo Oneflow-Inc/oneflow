@@ -15,12 +15,13 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/functional.h"
@@ -119,15 +120,17 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
+  const auto& mut_stride = std::const_pointer_cast<Stride>(tensor_meta()->stride_ptr());
 
   if (tensor_storage_) {
     auto tensor_storage = tensor_storage_->storage();
-    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, dtype(),
-                                                               tensor_storage, dep_object);
+    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride,
+                                                               dtype(), tensor_storage, dep_object);
     eager_blob_object_->set_pin_memory(pin_memory);
   } else {
-    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
+    const auto& eager_blob_object =
+        std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
+                                              std::make_shared<vm::TensorStorage>(), dep_object);
     eager_blob_object->set_pin_memory(pin_memory);
     JUST(set_eager_blob_object(eager_blob_object));
   }
@@ -158,6 +161,12 @@ std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
     eager_blob_object_->set_is_shape_synced(true);
   }
   return eager_blob_object_->shape_ptr();
+}
+
+std::shared_ptr<const Stride> EagerMirroredTensorImpl::stride() const {
+  if (!eager_blob_object_) { return tensor_meta()->stride_ptr(); }
+  return eager_blob_object_->stride_ptr();
+  ;
 }
 
 Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
@@ -203,15 +212,17 @@ Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
+  const auto& mut_stride = std::const_pointer_cast<Stride>(tensor_meta()->stride_ptr());
 
   if (tensor_storage_) {
     auto tensor_storage = tensor_storage_->storage();
-    eager_blob_object_ = std::make_shared<vm::DTREagerBlobObject>(mem_case, mut_shape, dtype(),
-                                                               tensor_storage, dep_object);
+    eager_blob_object_ = std::make_shared<vm::DTREagerBlobObject>(
+        mem_case, mut_shape, mut_stride, dtype(), tensor_storage, dep_object);
     eager_blob_object_->set_pin_memory(pin_memory);
   } else {
-    const auto& eager_blob_object = std::make_shared<vm::DTREagerBlobObject>(
-        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
+    const auto& eager_blob_object =
+        std::make_shared<vm::DTREagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
+                                                 std::make_shared<vm::TensorStorage>(), dep_object);
     eager_blob_object->set_pin_memory(pin_memory);
     JUST(set_eager_blob_object(eager_blob_object));
   }
@@ -313,6 +324,12 @@ Maybe<ConsistentTensorImpl> EagerConsistentTensorImpl::detach() const {
   detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
   detached_impl->transport_token_ = transport_token_;
   return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
+}
+
+std::shared_ptr<const Stride> EagerConsistentTensorImpl::stride() const {
+  if (!cur_rank_phy_tensor_) { return tensor_meta()->stride_ptr(); }
+  const auto& stride_ptr = cur_rank_phy_tensor_->tensor_meta().stride_ptr();
+  return stride_ptr;
 }
 
 }  // namespace one

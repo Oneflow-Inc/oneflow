@@ -87,11 +87,13 @@ class EagerBlobObject {
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_storage,
+                  const std::shared_ptr<Stride>& stride, DataType data_type,
+                  const std::shared_ptr<TensorStorage>& tensor_storage)
+      : EagerBlobObject(mem_case, shape, stride, data_type, tensor_storage,
                         intrusive::shared_ptr<LocalDepObject>()) {}
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+                  const std::shared_ptr<Stride>& stride, DataType data_type,
+                  const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
   virtual ~EagerBlobObject() {
@@ -152,6 +154,9 @@ class EagerBlobObject {
   std::shared_ptr<const Shape> shape_ptr() const { return shape_; }
   const Shape& shape() const { return *shape_; }
   Shape& mut_shape() { return *shape_; }
+  std::shared_ptr<const Stride> stride_ptr() const { return stride_; }
+  const Stride& stride() const { return *stride_; }
+  Stride& mut_stride() { return *stride_; }
 
   size_t ByteSizeOfBlobBody() const { return shape_->elem_cnt() * GetSizeOfDataType(data_type_); }
   size_t AlignedByteSizeOfBlobBody() const {
@@ -189,7 +194,7 @@ class EagerBlobObject {
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
   std::shared_ptr<Shape> shape_;
-
+  std::shared_ptr<Stride> stride_;
   int64_t storage_offset_;
  protected:
   std::shared_ptr<TensorStorage> tensor_storage_;

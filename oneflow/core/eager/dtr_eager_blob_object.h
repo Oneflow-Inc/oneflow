@@ -47,12 +47,12 @@ class DTREagerBlobObject final : public EagerBlobObject {
   DTREagerBlobObject(const DTREagerBlobObject&) = delete;
   DTREagerBlobObject(DTREagerBlobObject&&) = delete;
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                     const std::shared_ptr<Shape>& shape, DataType data_type,
-                     const std::shared_ptr<TensorStorage>& tensor_storage)
-      : DTREagerBlobObject(mem_case, shape, data_type, tensor_storage, nullptr) {}
+                     const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
+                     DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
+      : DTREagerBlobObject(mem_case, shape, stride, data_type, tensor_storage, nullptr) {}
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                     const std::shared_ptr<Shape>& shape, DataType data_type,
-                     const std::shared_ptr<TensorStorage>& tensor_storage,
+                     const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
+                     DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
                      const intrusive::shared_ptr<LocalDepObject>& dep_object);
   ~DTREagerBlobObject() override;
 

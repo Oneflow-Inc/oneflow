@@ -140,8 +140,9 @@ class MaxPoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in MaxPoolNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);
+        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
+        << " in MaxPoolNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, indice, dy}, attrs);
   }
 
@@ -182,8 +183,9 @@ class TFPoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(mode, ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in TFPoolNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);
+        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
+        << " in TFPoolNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, attrs);
   }
 
@@ -211,8 +213,9 @@ class AdaptivePoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(mode, ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in AdaptivePoolNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);
+        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
+        << " in AdaptivePoolNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy});
   }
 
@@ -586,7 +589,6 @@ class CtcLossGradFunctor {
 class PadGradFunctor {
  public:
   PadGradFunctor() {
-    pad_grad_ = CHECK_JUST(one::OpBuilder("pad_grad").Input("dy").Output("dx").Build());
     reflect_pad_grad_ =
         CHECK_JUST(one::OpBuilder("reflection_pad2d_grad").Input("dy").Output("dx").Build());
     replicate_pad_grad_ =
@@ -597,30 +599,10 @@ class PadGradFunctor {
     const int64_t ndim = dy->shape()->NumAxes();
     size_t padding_size = 2 * ndim;
     CHECK_LE_OR_RETURN(pad.size(), padding_size)
-        << "Pad size should less than or equal to input axes * 2.";
+        << Error::RuntimeError() << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
-    if (mode == "constant") {
-      std::vector<int64_t> pad_before(ndim, 0);
-      std::vector<int64_t> pad_after(ndim, 0);
-      const int64_t pad_pair = pad.size() / 2;
-      for (int64_t i = 0; i < pad_pair; ++i) {
-        pad_before[ndim - i - 1] = pad[2 * i];
-        pad_after[ndim - i - 1] = pad[2 * i + 1];
-      }
-      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
-      JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
-
-      if (IsFloatingDataType(dy->dtype()->data_type())
-          || dy->dtype()->data_type() == DataType::kFloat16) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
-      } else if (IsIntegralDataType(dy->dtype()->data_type())) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", JUST(value.As<int64_t>())));
-      }
-      return OpInterpUtil::Dispatch<Tensor>(*pad_grad_, {dy}, attrs);
-    } else if (mode == "reflect") {
+    if (mode == "reflect") {
       return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_grad_, {dy}, attrs);
     } else if (mode == "replicate") {
       return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_grad_, {dy}, attrs);
@@ -631,7 +613,6 @@ class PadGradFunctor {
   }
 
  private:
-  std::shared_ptr<OpExpr> pad_grad_;
   std::shared_ptr<OpExpr> reflect_pad_grad_;
   std::shared_ptr<OpExpr> replicate_pad_grad_;
 };
@@ -665,8 +646,9 @@ class AvgPoolNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in AvgPoolNdGradFunctor.";
-    CHECK_NOTNULL_OR_RETURN(it->second);
+        << Error::RuntimeError() << "Encounter unsupported op " << op_type_name
+        << " in AvgPoolNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);  // NOLINT(maybe-need-error-msg)
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy}, attrs);
   }
 
@@ -1005,7 +987,9 @@ class FusedDotFeatureInteractionGradFunctor {
     JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
     JUST(attrs.SetAttr<int32_t>("output_concat_grad_dim", output_concat_grad_dim));
     const int64_t n_features_grad = features_grad_like.size();
-    CHECK_LE_OR_RETURN(n_features_grad, kMaxInputCount);
+    CHECK_LE_OR_RETURN(n_features_grad, kMaxInputCount)
+        << Error::RuntimeError()
+        << "The number of tensors in features_grad_like should be less than 128.";
     TensorTuple inputs(n_features_grad + 2);
     inputs[0] = dy;
     inputs[1] = padded_concated_features;

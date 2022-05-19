@@ -23,6 +23,7 @@ import gc
 
 import numpy as np
 import oneflow as flow
+import oneflow.test_utils.automated_test_util.profiler as auto_profiler
 
 flow.backends.cudnn.deterministic = True
 
@@ -39,7 +40,13 @@ except ImportError:
 
 from .util import broadcast
 from .global_scope import *
-from .generators import Nothing, generator, random_pytorch_tensor, choice_pytorch_tensor
+from .generators import (
+    Nothing,
+    generator,
+    random_pytorch_tensor,
+    choice_pytorch_tensor,
+    rng,
+)
 
 postulate = [".rand", ".Tensor"]
 
@@ -210,6 +217,20 @@ def get_args(callable, *args, **kwargs):
     note_pytorch_kwargs.append(new_pytorch_kwargs)
 
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
+
+
+def to_string(*args, **kwargs) -> str:
+    def _to_string(x):
+        if isinstance(x, DualObject):
+            return x.name
+        return str(x)
+
+    strs = []
+    if len(args) > 0:
+        strs.append(", ".join([_to_string(arg) for arg in args]))
+    if len(kwargs) > 0:
+        strs.append(", ".join([f"{k}={_to_string(v)}" for k, v in kwargs.items()]))
+    return ", ".join(strs)
 
 
 counter = 0
@@ -601,6 +622,9 @@ def get_pytorch_oneflow_tensor_res(
     return pytorch_res, oneflow_res
 
 
+profiled_method_name = []
+
+
 def GetDualObject(name, pytorch, oneflow):
     global counter
     counter += 1
@@ -631,7 +655,17 @@ def GetDualObject(name, pytorch, oneflow):
             def get_dual_method(method_name):
                 if method_name == "__call__":
 
+                    if name in profiled_method_name:
+
+                        def method(self, *args, **kwargs):
+                            return auto_profiler.profile_dual_object(self)(
+                                *args, **kwargs
+                            )
+
+                        return method
+
                     def dual_method(self, *args, **kwargs):
+                        param_str = to_string(*args, **kwargs)
                         (
                             pytorch_args,
                             pytorch_kwargs,
@@ -651,7 +685,9 @@ def GetDualObject(name, pytorch, oneflow):
                             testing_graph,
                             *args,
                         )
-                        return GetDualObject("unused", pytorch_res, oneflow_res)
+                        return GetDualObject(
+                            f"{name}({param_str})", pytorch_res, oneflow_res
+                        )
 
                 else:
 
@@ -785,15 +821,7 @@ def clear_note_fake_program():
     flow.set_printoptions(profile="full")
 
 
-gc_interval = int(os.getenv("ONEFLOW_TEST_GC_INTERVAL", 10))
-gc_counter = 0
-
-
-def manual_gc_collect():
-    global gc_counter
-    gc_counter += 1
-    if gc_counter % gc_interval == 0:
-        gc.collect()
+tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 32))
 
 
 class DualObject:
@@ -828,6 +856,10 @@ class DualObject:
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
+            tensor_size_mb = pytorch.nelement() * pytorch.element_size() / 1024 / 1024
+            assert (
+                tensor_size_mb < tensor_size_limit_mb
+            ), f"Tensor memory in autotest cannot be larger than {tensor_size_limit_mb}MB, but got {tensor_size_mb}MB"
             if testing:
                 dual_objects_to_test.append(self)
         self.pytorch = pytorch
@@ -878,14 +910,6 @@ class DualObject:
             return self.pytorch == other.pytorch and self.oneflow == other.oneflow
         else:
             return self.pytorch == other
-
-    def __del__(self):
-        # force running gc to avoid the periodic gc related to metaclass
-        # 'gc' will be None if Python is shutting down
-        try:
-            manual_gc_collect()
-        except Exception:
-            pass
 
 
 dual_modules_to_test = []
@@ -1013,6 +1037,7 @@ def autotest(
     check_graph=True,
     check_allclose=True,
     check_dtype=False,
+    check_grad_use_random_data=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1065,7 +1090,37 @@ def autotest(
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
-                                x.sum().backward()
+                                if check_grad_use_random_data:
+                                    np_arr = rng.uniform(
+                                        low=0, high=1, size=list(x.oneflow.shape)
+                                    )
+                                    if is_global():
+                                        np_arr = broadcast(np_arr)
+                                        flow_tensor = flow.tensor(
+                                            np_arr,
+                                            dtype=x.oneflow.dtype,
+                                            placement=x.oneflow.placement,
+                                            sbp=len(x.oneflow.sbp)
+                                            * [flow.sbp.broadcast],
+                                        )
+                                    else:
+                                        flow_tensor = flow.tensor(
+                                            np_arr,
+                                            dtype=x.oneflow.dtype,
+                                            device=x.oneflow.device,
+                                        )
+                                    # TODO(): Inferred shape of some op is different between oneflow and torch
+                                    pytorch_tensor = torch_original.tensor(
+                                        np_arr.reshape(list(x.pytorch.shape)),
+                                        dtype=x.pytorch.dtype,
+                                        device=x.pytorch.device,
+                                    )
+                                    diff_output = GetDualObject(
+                                        "unused", pytorch_tensor, flow_tensor
+                                    )
+                                    x.backward(diff_output)
+                                else:
+                                    x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
                     for key in x.pytorch.state_dict().keys():
@@ -1141,11 +1196,14 @@ def random_tensor(
     high=1,
     dtype=float,
     requires_grad=True,
+    pin_memory=False,
 ):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
     pytorch_tensor = (
-        random_pytorch_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype)
+        random_pytorch_tensor(
+            ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype, pin_memory
+        )
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
@@ -1160,6 +1218,7 @@ def random_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
+            pin_memory=pin_memory,
         )
 
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
@@ -1195,5 +1254,5 @@ def choice_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
-torch = GetDualObject("", torch_original, flow)
+torch = GetDualObject("torch", torch_original, flow)
 __all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]

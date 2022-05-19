@@ -56,7 +56,8 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
             }
           }
         } else {
-          OF_RUNTIME_ERROR() << "not dtr allocator, " << typeid(*b_allocator->backend_allocator()).name();
+          OF_RUNTIME_ERROR() << "not dtr allocator, "
+                             << typeid(*b_allocator->backend_allocator()).name();
         }
       }
     }
@@ -70,10 +71,11 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
 }
 
 DTREagerBlobObject::DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                                       const std::shared_ptr<Shape>& shape, DataType data_type,
+                                       const std::shared_ptr<Shape>& shape,
+                                       const std::shared_ptr<Stride>& stride, DataType data_type,
                                        const std::shared_ptr<TensorStorage>& tensor_storage,
                                        const intrusive::shared_ptr<LocalDepObject>& dep_object)
-    : EagerBlobObject(mem_case, shape, data_type, tensor_storage, dep_object),
+    : EagerBlobObject(mem_case, shape, stride, data_type, tensor_storage, dep_object),
       could_evict_(true),
       is_bp_required_(false),
       compute_time_(0),
