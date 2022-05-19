@@ -9,7 +9,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void ReluDropoutBackwardKernel(const T* dy, const int32_t* mask, T* dx, const int64_t elem_cnt, 
+__global__ void ReluDropoutBitmaskBackwardKernel(const T* dy, const int32_t* mask, T* dx, const int64_t elem_cnt, 
                                             const int64_t cols, const int64_t aux_ld, float scale){
     CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt){
         const int64_t row = i / cols; 
@@ -43,7 +43,7 @@ class FusedReluDropoutGradKernel final : public user_op::OpKernel,
 
     const int64_t aux_ld = mask->shape().At(1); 
     const int64_t elem_cnt = dy->shape().elem_cnt(); 
-    ReluDropoutBackwardKernel<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+    ReluDropoutBitmaskBackwardKernel<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                                         reinterpret_cast<const T*>(dy->dptr()), mask->dptr<int32_t>(), 
                                         reinterpret_cast<T*>(dx->mut_dptr()), elem_cnt, 
