@@ -90,6 +90,7 @@ class FunctionLibrary {
     using func_type = typename function_traits<Func>::func_type;
     auto* functors = PackedFuncCreatorMap<typename PackedFunctorMaker<func_type>::FType>::Get();
     CHECK_EQ(functors->count(func_name), 0)
+        << Error::RuntimeError()
         << "The functor with name " << func_name << " has been registered more than once.";
     functors->emplace(func_name, creator);
   }
