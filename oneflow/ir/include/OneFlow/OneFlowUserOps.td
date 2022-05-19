@@ -9460,6 +9460,9 @@ def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEf
     Optional<OneFlow_Tensor>:$grad_input_bias,
     Optional<OneFlow_Tensor>:$grad_hidden_bias
   );
+  let trait_attrs = (ins
+    "DenseElementsAttr":$result_segment_sizes
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
