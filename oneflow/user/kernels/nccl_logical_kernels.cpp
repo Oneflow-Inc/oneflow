@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
@@ -32,10 +33,9 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
  public:
   explicit NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
-        stream_name_("NONE"),
+        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
         parallel_desc_(ctx->parallel_desc()) {
-    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+    if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
   ~NcclLogicalKernelCommState() override = default;
 
@@ -48,7 +48,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
         device_set.emplace(std::make_pair(machine_id, device_id));
       }
       EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-      if (has_independent_stream_) {
+      if (LazyMode::is_enabled()) {
         comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
       } else {
         comm_ = comm_mgr->GetCommForDevice(device_set);
@@ -62,7 +62,6 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
 
  private:
   bool is_init_;
-  bool has_independent_stream_;
   std::string stream_name_;
   ParallelDesc parallel_desc_;
   ncclComm_t comm_{};
@@ -446,6 +445,12 @@ REGISTER_S2S_KERNEL(int64_t)
 REGISTER_S2S_KERNEL(float)
 REGISTER_S2S_KERNEL(double)
 REGISTER_S2S_KERNEL(float16)
+
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_all_reduce");
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_reduce_scatter");
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_all_gather");
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_all_gather_noncontinuous");
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_s2s");
 
 }  // namespace oneflow
 

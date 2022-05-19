@@ -19,10 +19,12 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -61,6 +63,7 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 Runtime::Runtime(
     const Plan& plan,
     const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
+  LazyMode::Guard guard{true};
   DumpThreadIdsFromPlan(plan);
   {
     // NOTE(chengcheng): All runtime Global objects AddPlan
@@ -69,6 +72,7 @@ Runtime::Runtime(
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
         Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
+    Global<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());

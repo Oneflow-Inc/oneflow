@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
@@ -245,11 +246,10 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
  public:
   explicit DataShuffleKernelState(user_op::KernelInitContext* ctx)
       : device_index_(-1),
-        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
-        stream_name_(""),
+        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
         parallel_desc_(ctx->parallel_desc()) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+    if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
     OF_CUDA_CHECK(cudaMallocHost(
         &host_num_unique_matrix_,
         parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
@@ -283,7 +283,7 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     ncclComm_t comm;
-    if (has_independent_stream_) {
+    if (LazyMode::is_enabled()) {
       comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
     } else {
       comm = comm_mgr->GetCommForDevice(device_set);
@@ -1517,4 +1517,9 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_UNIQUE_KEY_VALUE_PAIR_KERNEL, ID_DATA_TYPE_SEQ,
                                  ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+
+REGISTER_NCCL_COMM_KERNEL("id_shuffle");
+REGISTER_NCCL_COMM_KERNEL("embedding_shuffle");
+REGISTER_NCCL_COMM_KERNEL("embedding_gradient_shuffle");
+
 }  // namespace oneflow

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
@@ -32,11 +33,10 @@ class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
  public:
   explicit NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
-        stream_name_("NONE"),
+        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
-    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+    if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
   ~NcclLogical2DSameDim0KernelCommState() override = default;
 
@@ -71,7 +71,7 @@ class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-    if (has_independent_stream_) {
+    if (LazyMode::is_enabled()) {
       comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
     } else {
       comm_ = comm_mgr->GetCommForDevice(device_set);
@@ -81,7 +81,6 @@ class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
   }
 
   bool is_init_;
-  bool has_independent_stream_;
   std::string stream_name_;
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
@@ -399,11 +398,10 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
  public:
   explicit NcclLogical2DSameDim1KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
-        stream_name_("NONE"),
+        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
-    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+    if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
   ~NcclLogical2DSameDim1KernelCommState() = default;
 
@@ -425,8 +423,7 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
         device_set.emplace(std::make_pair(machine_id, device_id));
       }
       EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-      CHECK_NOTNULL(comm_mgr);
-      if (has_independent_stream_) {
+      if (LazyMode::is_enabled()) {
         comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
       } else {
         comm_ = comm_mgr->GetCommForDevice(device_set);
@@ -440,7 +437,6 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
 
  private:
   bool is_init_;
-  bool has_independent_stream_;
   std::string stream_name_;
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
@@ -520,6 +516,12 @@ REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(float16)
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim1_all_reduce")
     .SetCreateFn<NcclLogical2DSameDim1AllReduce>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_2D_same_dim0_all_reduce");
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_2D_same_dim0_all_gather");
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_2D_same_dim0_all_gather_noncontinuous");
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_2D_same_dim0_all2all");
+REGISTER_NCCL_COMM_KERNEL("_nccl_logical_2D_same_dim1_all_reduce");
 
 }  // namespace oneflow
 
