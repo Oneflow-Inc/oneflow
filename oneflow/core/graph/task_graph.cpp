@@ -669,25 +669,28 @@ void TaskGraph::StraightenNodes() {
   };
 
   // Classify sets for the task nodes
-  std::set<TopoStruct*, comp> waiting_transfer;
-  std::set<TopoStruct*, comp> waiting_computation;
-  std::set<TopoStruct*, comp> run_asap;  // run as soon as possible
-  std::set<TopoStruct*, comp> run_alap;  // run as late as possible
+  // std::set<TopoStruct*, comp> waiting_transfer; // 0
+  // std::set<TopoStruct*, comp> waiting_computation; // 1
+  // std::set<TopoStruct*, comp> run_asap;  // 2, run as soon as possible
+  // std::set<TopoStruct*, comp> run_alap;  // 3, run as late as possible
+  std::vector<std::set<TopoStruct*, comp>> waiting_lists(4);
+
+  std::vector<int32_t> remain_task_nums(4, 0);
 
   // Classifier for the set according to the task type
   auto set_classifier = [&](TaskNode* node) {
     // Check task.pb.h for detail
     int32_t task_type = node->GetTaskType();
-    if (task_type == 1) { return &waiting_computation; }
-    if (task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64)) {
-      return &waiting_transfer;
-    }
-    if (task_type == 47) { return &run_alap; }
-    return &run_asap;
+    if (task_type == 1) { return 1; }
+    if (task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64)) { return 0; }
+    if (task_type == 47) { return 2; }
+    return 3;
   };
 
   // wait in the list
-  auto wait = [&](TaskNode* node) { set_classifier(node)->insert(&task_node2topo_struct[node]); };
+  auto wait = [&](TaskNode* node) {
+    waiting_lists[set_classifier(node)].insert(&task_node2topo_struct[node]);
+  };
 
   // initialization
   HashMap<TaskNode*, int32_t> counter_in;
@@ -695,6 +698,7 @@ void TaskGraph::StraightenNodes() {
     int32_t count = node->in_edges().size();
     counter_in[node] = count;
     if (count == 0) { wait(node); }
+    remain_task_nums[set_classifier(node)]++;
   });
 
   // Finish execution
@@ -710,9 +714,11 @@ void TaskGraph::StraightenNodes() {
   };
 
   // Execute the first n nodes in the waiting list
-  auto execute = [&](std::set<TopoStruct*, comp>& waiting_list, int32_t n) {
+  auto execute = [&](int32_t list_classifier, int32_t n, bool if_reverse = false) {
     // n>=1
     if (n <= 0) { return; }
+    auto& waiting_list = waiting_lists[list_classifier];
+    remain_task_nums[list_classifier] -= n;
     std::vector<TaskNode*> execution_list;
     std::set<TopoStruct*, comp>::iterator it_curr = waiting_list.begin();
     TopoStruct* last_topo_struct = nullptr;
@@ -737,36 +743,35 @@ void TaskGraph::StraightenNodes() {
     }
   };
 
-  int32_t max_overlap_computation_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 40);
+  // int32_t max_overlap_computation_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 40);
 
   // straightening
   while (true) {
-    if (run_asap.empty()) {
-      if (waiting_transfer.empty()) {
-        if (waiting_computation.empty()) {
-          if (run_alap.empty()) {
+    if (waiting_lists[2].empty()) {
+      if (waiting_lists[0].empty()) {
+        if (waiting_lists[1].empty()) {
+          if (waiting_lists[3].empty()) {
             if (GlobalProcessCtx::Rank() == 0) { std::cout << "Execution done" << std::endl; }
             break;
           } else {
-            execute(run_alap, run_alap.size());
+            execute(3, waiting_lists[3].size());
           }
         } else {
-          execute(waiting_computation, 1);
+          execute(1, 1);
         }
       } else {
         // Holding the transfer
-        auto* node = (*waiting_transfer.begin())->node;
-        waiting_transfer.erase(waiting_transfer.begin());
+        auto* node = (*waiting_lists[0].begin())->node;
+        waiting_lists[0].erase(waiting_lists[0].begin());
         SetOrderInGraph(node);
         // Overlap transfer with computation
-        execute(waiting_computation,
-                std::min(int32_t(waiting_computation.size() / (waiting_transfer.size() + 1)),
-                         max_overlap_computation_num));
+        execute(1, std::min(int32_t(waiting_lists[1].size() / (waiting_lists[0].size() + 1)),
+                            remain_task_nums[1] / remain_task_nums[0]));
         // Release the transfer
         finish_execution(node);
       }
     } else {
-      execute(run_asap, run_asap.size());
+      execute(2, waiting_lists[2].size());
     }
   }
 
