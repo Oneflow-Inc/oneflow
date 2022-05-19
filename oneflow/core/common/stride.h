@@ -22,29 +22,36 @@ limitations under the License.
 
 namespace oneflow {
 
+class StrideView;
+
 class Stride final {
  public:
   Stride() = default;
   explicit Stride(const Shape& shape);
-  explicit Stride(const StrideVector& stride_vec) : stride_vec_(stride_vec) {}
-  explicit Stride(StrideVector&& stride_vec) : stride_vec_(stride_vec) {}
-  Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
+  explicit Stride(const std::shared_ptr<Shape>& shape);
+  explicit Stride(DimVector&& stride_vec);
+  explicit Stride(const DimVector& stride_vec);
+  explicit Stride(const Int64ListProto& stride_proto);
+  Stride(const std::initializer_list<int64_t>& stride_vec);
   Stride& operator=(const Stride& stride);
+  Stride& assign(const DimVector& stride_vec);
+  Stride& CheckNumAxesIdenticalAndAssign(const Stride& stride);
   ~Stride() = default;
 
   bool operator==(const Stride& rhs) const;
   bool operator!=(const Stride& rhs) const { return !(*this == rhs); }
 
   std::string ToString() const;
+  void ToProto(Int64ListProto*) const;
 
   // Getters and Setters
-  const StrideVector& StrideVec() const { return stride_vec_; }
+  const DimVector& StrideVec() const { return stride_vec_; }
   int64_t NumAxes() const { return stride_vec_.size(); }
   int64_t At(int64_t index) const { return stride_vec_.at(index); }
   void Set(int64_t index, int64_t val) { stride_vec_.at(index) = val; }
 
  private:
-  StrideVector stride_vec_;
+  DimVector stride_vec_;
 };
 
 }  // namespace oneflow
