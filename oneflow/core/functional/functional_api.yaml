@@ -962,6 +962,11 @@
     "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, FloatList dropout_rate_list, Generator generator=None) => FusedMatmulBiasAddReluDropout"
   bind_python: True
 
+- name: "fused_relu_dropout_grad"
+  signature:
+    "Tensor (Tensor dy, Tensor mask, Float scale) => FusedReluDropoutGrad"
+  bind_python: False
+
 - name: "broadcast_matmul_grad_b"
   signature: "Tensor (Tensor a, Tensor b, Double alpha=1.0) => BroadcastMatmulGradB"
   bind_python: False

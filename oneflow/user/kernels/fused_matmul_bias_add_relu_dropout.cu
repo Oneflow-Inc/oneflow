@@ -579,9 +579,9 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       void* matmul_out_ptr = (void*)(reinterpret_cast<char*>(tmp_buffer->mut_dptr()) + offset);
       offset += matmul_out_size;
       if (idx == weight_size - 1) {
-        // relu_dropout_out_buf =
-        //     reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr());
-        matmul_out_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr(); 
+        relu_dropout_out_buf =
+            reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr());
+        // matmul_out_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr(); 
       } else {
         relu_dropout_out_buf =
             reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr());
@@ -600,14 +600,15 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
           cuda_stream->cuda_stream()));
 
       printf("Matmul out elemcnt is: %ld \n", matmul_out_elem_cnt);
-      if (idx != weight_size - 1) {
-        float rate = dropout_rate_list.at(idx);
-        float scale = 0.0;
-        const int32_t aux_ld = AlignReluAuxLd(out_feature); 
-        printf("Aux ld is: %d \n", aux_ld); 
-        printf("out feature is: %d \n", out_feature); 
+      float rate = dropout_rate_list.at(idx);
+      float scale = 0.0;
+      const int32_t aux_ld = AlignReluAuxLd(out_feature); 
+      printf("Aux ld is: %d \n", aux_ld); 
+      printf("out feature is: %d \n", out_feature); 
+      if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
 
-        if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+      if (idx != weight_size - 1 || !skip_final_activation) {
+        
         LaunchFusedReluDropoutKernel<T, true>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, 
                                               aux_ld, batchsize, out_feature, rate,
                                               scale, reinterpret_cast<T*>(matmul_out_ptr),
@@ -617,6 +618,13 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
         in_buf_ptr = relu_dropout_out_buf;
         // Set hidden_layer shape as next layer's input shape.
         in_shape.at(1) = out_feature;
+      } else {
+        // Final layer and skip_final_activation is true. 
+        LaunchFusedReluDropoutKernel<T, false>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, 
+          aux_ld, batchsize, out_feature, rate,
+          scale, reinterpret_cast<T*>(matmul_out_ptr),
+          reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()),
+          relu_dropout_out_buf);
       }
     }
   }

@@ -35,14 +35,16 @@ class FusedReluDropoutGradKernel final : public user_op::OpKernel,
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const float rate = ctx->Attr<float>("rate");
-    float scale = 0.0;
-    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+    const float scale = ctx->Attr<float>("scale");
 
     const int64_t cols = dy->shape().At(1); 
-
-    const int64_t aux_ld = mask->shape().At(1); 
+    printf("Relu dropout grad cols is: %ld \n", cols); 
+    const int64_t aux_ld = mask->shape().At(1) * 32; 
     const int64_t elem_cnt = dy->shape().elem_cnt(); 
+    printf("elem_cnt is: %ld \n", elem_cnt); 
+    printf("aux_ld shape 0 is: %ld \n", mask->shape().At(0));
+    printf("Aux ld is: %ld \n", aux_ld); 
+
     ReluDropoutBitmaskBackwardKernel<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                                         reinterpret_cast<const T*>(dy->dptr()), mask->dptr<int32_t>(), 
@@ -60,7 +62,6 @@ class FusedReluDropoutGradKernel final : public user_op::OpKernel,
                         && (user_op::HobDataType("dx", 0) == data_type));
 
 REGISTER_FUSED_RELU_DROPOUT_GRAD_KERNEL_GPU(float, DataType::kFloat)
-    
 
 
 } // namespace 

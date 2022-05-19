@@ -121,14 +121,15 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(const FusedMatmulBiasAddReluDro
   float scale = 0.0f; 
   if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
   
-//   /*
-//   step1: use dy and mask to get last layer's dropout + relu grad.
-//   Because curand_uniform distribution is (0.0, 1.0], so the value after relu will be write into mask too. 
-//   And DropoutGrad use this mask to generate grad, it will generate dropout and relu grad simultaneously. 
-//   */
-//   std::shared_ptr<one::Tensor> last_bias_dy = JUST(functional::DropoutGrad(JUST(VectorAt(out_grads, 0)), cublas_auxs[weight_num-1], scale));
-  
+  /*
+  step1: use dy and mask to get last layer's dropout + relu grad.
+  Because curand_uniform distribution is (0.0, 1.0], so the value after relu will be write into mask too. 
+  And DropoutGrad use this mask to generate grad, it will generate dropout and relu grad simultaneously. 
+  */
   std::shared_ptr<one::Tensor> last_bias_dy = JUST(VectorAt(out_grads, 0));
+  if(!ctx->skip_final_activation || rate != 0.0f){
+    last_bias_dy = JUST(functional::FusedReluDropoutGrad(JUST(VectorAt(out_grads, 0)), cublas_auxs[weight_num-1], scale));
+  }
 
   const bool last_layer_weight_requires_grad =
       JUST(VectorAt(ctx->weights_requires_grad, weight_num - 1));
