@@ -386,7 +386,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   std::shared_ptr<Shape> dst_reduced_hierarchy = dst_reduced_parallel_desc->hierarchy();
 
   if ((*src_reduced_hierarchy) == (*dst_reduced_hierarchy)
-      && src_reduced_nd_sbp == dst_reduced_nd_sbp) {
+      && (*src_reduced_nd_sbp) == (*dst_reduced_nd_sbp)) {
     // one to one
     return false;
   }
@@ -482,12 +482,12 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
-                  << "](order=" << src_order
-                  << ", nd_sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << ")->[" << dst_op_name
-                  << "](order=" << node2subgraph_order.at(dst_node)
-                  << ", nd_sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << ") and before: ["
-                  << next_op_name << "](order=" << src_order + 1 << ")\n";
+          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
+                  << ", order=" << src_order
+                  << ", sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << "] to [" << dst_op_name
+                  << ", order=" << node2subgraph_order.at(dst_node)
+                  << ", sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << "] and before ["
+                  << next_op_name << ", order=" << src_order + 1 << "]\n";
         }
         nccl_op_confs->emplace_back(nccl_op);
         nccl_op_parallel_confs->emplace_back(src_reduced_parallel_desc.parallel_conf());
@@ -549,9 +549,9 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name << "]("
-                  << node2subgraph_order.at(src_node) << ")->[" << dst_op_name << "](" << dst_order
-                  << ") and after: [" << pre_op_name << "](" << dst_order - 1 << ")\n";
+          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name << ", order="
+                  << node2subgraph_order.at(src_node) << "] to [" << dst_op_name << ", order=" << dst_order
+                  << "] and after [" << pre_op_name << ", order=" << dst_order - 1 << "]\n";
         }
         nccl_op_confs->emplace_back(nccl_op);
         // NOTE(chengcheng, guoran): set nccl op as src_node parallel_conf (hierarchy) may check
@@ -639,10 +639,10 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         nccl_op_info.nccl_parallel_conf = src_reduced_parallel_desc.parallel_conf();
         nccl_op_info.order = op_node2global_order.at(src_node);
         nccl_op_info.debug_str =
-            (" After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name + "]("
-             + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + ")->[" + dst_op_name + "]("
+            (" After ACC insert nccl op: " + nccl_op.name() + " from [" + src_op_name + ", sbp="
+             + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + "] to [" + dst_op_name + ", sbp="
              + NdSbpToString(dst_node->NdSbp4Lbi(lbi))
-             + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
+             + ", src_order=" + std::to_string(nccl_op_info.order) + "]\n");
         nccl_op_infos.emplace_back(nccl_op_info);
       }
 
