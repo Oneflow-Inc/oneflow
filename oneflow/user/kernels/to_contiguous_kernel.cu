@@ -77,7 +77,7 @@ __global__ void ToContiguousForwardGpuParallel(IndexType count, const StridePara
 template<typename T, typename IndexType>
 void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t ndim,
                               IndexType block_size, const std::vector<int64_t>& in_stride,
-                              const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
+                              const DimVector& out_stride, const char* in_dptr, char* out_dptr) {
   const int32_t num_blocks = get_num_blocks(count);
   constexpr int32_t num_threads = get_min_threads_num();
   constexpr int32_t block_work_size = get_block_work_size();
