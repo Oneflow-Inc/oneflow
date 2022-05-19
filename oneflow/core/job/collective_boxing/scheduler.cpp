@@ -120,7 +120,10 @@ void ExecutorImpl::Init(std::shared_ptr<RequestStore> request_store) {
   request_store_ = request_store;
   backends_.resize(Backend_ARRAYSIZE);
 #ifdef WITH_CUDA
-  if (GetCudaDeviceCount() > 0) {
+  int cuda_dev_count = 0;
+  cudaError_t err = cudaGetDeviceCount(&cuda_dev_count);
+  if (err != cudaErrorNoDevice) { OF_CUDA_CHECK(err); }
+  if (cuda_dev_count > 0) {
     std::unique_ptr<ExecutorBackend> nccl_backend = std::make_unique<NcclExecutorBackend>();
     nccl_backend->Init(request_store_);
     backends_.at(Backend::kBackendNCCL) = std::move(nccl_backend);
