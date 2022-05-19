@@ -127,49 +127,21 @@ int32_t AlignReluAuxLd(int32_t aux_ld) {
          * kAuxReluLdAlignRequirement;
 }
 
-// template<int32_t unroll>
-// __device__ void SetBitMask(const int64_t index,
-//                            const int32_t aux_ld, 
-//                            const int64_t out_feature, 
-//                            int32_t thread_bitmask,
-//                            int32_t* mask){
-//     int32_t mask_index = index / kWarpSize; 
-//     int32_t mask_offset = index - mask_index * kWarpSize; 
-//     int32_t bitmask = thread_bitmask << mask_offset; 
-//     // printf("Mask index is: %d \n", mask_index);
-//     // printf("Mask offset is: %d \n", mask_offset);
-
-//     for (int stride = kWarpSize / (unroll * 2); stride > 0; stride /= 2) {
-//       bitmask |= __shfl_down_sync(__activemask(), bitmask, stride, kWarpSize);
-//     }
-//     int32_t load_index = index / out_feature; 
-//     // printf("load_index is: %d \n", load_index); 
-
-//     int32_t aux_ld_load_index = ((aux_ld * load_index) + (index - load_index * out_feature)) / 32; //   cause we use int32 to store aux_ld
-//     // printf("Aux ld load index is: %d \n", aux_ld_load_index); 
-//     if (mask_offset == 0) {
-//       mask[aux_ld_load_index] = bitmask;
-//     }
-// }
-
 template<int32_t unroll>
-__device__ void SetBitMask(const int64_t index,
-                           const int32_t aux_ld,
+__device__ void SetCublasBitMask(const int32_t aux_ld,
                            const int64_t row,  
                            const int64_t col, 
                            int32_t thread_bitmask,
                            int32_t* mask){
-    int32_t mask_index = index / kWarpSize; 
-    int32_t mask_offset = index - mask_index * kWarpSize; 
+    int32_t linear_index = row * aux_ld + col; 
+    int32_t mask_index = linear_index / kWarpSize; 
+    int32_t mask_offset = linear_index - mask_index * kWarpSize; 
     int32_t bitmask = thread_bitmask << mask_offset; 
     for (int stride = kWarpSize / (unroll * 2); stride > 0; stride /= 2) {
       bitmask |= __shfl_down_sync(__activemask(), bitmask, stride, kWarpSize);
-      // bitmask |= __shfl_down_sync(0xffffffff, bitmask, stride, kWarpSize);
     }
     if (mask_offset == 0) {
-      printf("Index is: %d \n", index); 
-      printf("Bit mask is: %d \n", bitmask); 
-      int32_t aux_ld_load_index = ((aux_ld * row) + col) / 32; //   cause we use int32 to store aux_ld
+      int32_t aux_ld_load_index = linear_index / 32; // cause we use int32 to store aux_ld
       mask[aux_ld_load_index] = bitmask;
     }
 }
@@ -183,88 +155,6 @@ __device__ void SetBitMask(const int64_t index,
 #endif
 #define RETURN_VOID_IF_FLOAT typename std::enable_if_t<std::is_same<T, float>::value, void>
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
-
-// template<typename T, int pack_size, bool tail>
-// __global__ RETURN_VOID_IF_FLOAT FusedVectorizedReluDropoutKernel(uint64_t seed,
-//                                                     one::CUDAGeneratorState* cuda_gen_state,
-//                                                     uint64_t inc_offset, const int64_t elem_cnt,
-//                                                     const int32_t aux_ld, const int64_t out_feature, 
-//                                                     float rate, float scale, int64_t n_tail,
-//                                                     const T* x, int32_t* mask, T* y, const T* tail_x,
-//                                                     int32_t* tail_mask, T* tail_y) {
-//   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-//   curandStatePhilox4_32_10_t state;
-//   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-//   using LoadType = cuda::elementwise::PackType<T, pack_size>;
-//   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-//   using MaskType = cuda::elementwise::PackType<bool, pack_size>;
-//   using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
-
-//   T t_scale = static_cast<T>(scale);
-//   RandPack4 rand_uniform_pack4;
-//   T zero_val = static_cast<T>(0.0);
-//   for (int64_t linear_index = global_thread_id * pack_size,
-//                step = gridDim.x * blockDim.x * pack_size;
-//        linear_index < elem_cnt; linear_index += step) {
-//     int32_t thread_bitmask = 0; 
-//     rand_uniform_pack4.storage = curand_uniform4(&state);
-
-//     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-//     LoadPack x_vec;
-//     x_vec.storage = *x_load;
-
-//     MaskPack mask_vec;
-//     LoadPack y_vec;
-// #pragma unroll
-//     for (int i = 0; i < pack_size; i++) {
-//       // Relu
-//       bool relu_mask = x_vec.elem[i] > zero_val; 
-//       // dropout
-//       bool mask_val = rand_uniform_pack4.elem[i] > rate;
-//       // Combined relu_mask, dropout_mask together. 
-//       bool combined_mask = relu_mask && mask_val; 
-//       T float_combined_mask = static_cast<float>(combined_mask);
-//       thread_bitmask |= (combined_mask << i); 
-//       y_vec.elem[i] = x_vec.elem[i] * float_combined_mask * t_scale;
-//     }
-//     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
-//     SetBitMask<4>(linear_index, aux_ld, out_feature, thread_bitmask, mask);
-//   }
-//   // TODO: think how to due with tail
-//   if (tail && global_thread_id == 0) {
-//     int32_t thread_bitmask = 0; 
-//     for(int i = 0; i < n_tail; i++){
-//       T tail_x_val = tail_x[global_thread_id];
-//       // Relu
-//       bool relu_mask = tail_x_val > zero_val; 
-//       // dropout
-//       bool mask_val = curand_uniform(&state) > rate;
-//       // Combined relu_mask, dropout_mask together. 
-//       bool combined_mask = relu_mask && mask_val;
-//       thread_bitmask |= (combined_mask << i); 
-//       T float_combined_mask = static_cast<float>(combined_mask);
-//       tail_y[i] = tail_x_val * float_combined_mask * t_scale;
-//     }
-//     // set mask. 
-//     const int64_t pack_num = elem_cnt / pack_size;
-//     const int64_t tail_offset = pack_num * pack_size;
-//     int32_t load_index = tail_offset / out_feature; 
-//     int32_t aux_ld_load_index = ((aux_ld * load_index) + (tail_offset - load_index * out_feature)) / 32; //   cause we use int32 to store aux_ld
-//     printf("Tail aux ld load index is: %d \n", aux_ld_load_index); 
-//     mask[aux_ld_load_index] |= thread_bitmask;
-//   }
-
-//   __syncthreads();
-
-//   if (threadIdx.x == 0) {
-//     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-//     if (new_counter == gridDim.x) {
-//       cuda_gen_state->dev_counter = 0;           // reset counter to zero
-//       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-//     }
-//   }
-// }
-
 
 template<typename T, int pack_size, bool relu>
 __global__ RETURN_VOID_IF_FLOAT FusedVectorizedReluDropoutKernel(uint64_t seed,
@@ -315,8 +205,7 @@ __global__ RETURN_VOID_IF_FLOAT FusedVectorizedReluDropoutKernel(uint64_t seed,
       y_vec.elem[i] = x_vec.elem[i] * float_combined_mask * t_scale;
     }
     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
-    SetBitMask<4>(linear_index, aux_ld, row, col, thread_bitmask, mask);
-    // linear_index change to row*aux_ld + col
+    SetCublasBitMask<4>(aux_ld, row, col, thread_bitmask, mask);
   }
 
   if (threadIdx.x == 0) {
@@ -328,64 +217,6 @@ __global__ RETURN_VOID_IF_FLOAT FusedVectorizedReluDropoutKernel(uint64_t seed,
   }
 }
 
-// template<typename T, bool relu>
-// __global__ void FusedReluDropoutKernel(uint64_t seed,
-//                                        one::CUDAGeneratorState* cuda_gen_state,
-//                                        uint64_t inc_offset, const int64_t elem_cnt,
-//                                        const int32_t aux_ld, 
-//                                        const int64_t cols,  
-//                                        float rate, float scale, 
-//                                        const T* x, int32_t* mask, T* y) {
-//   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-//   curandStatePhilox4_32_10_t state;
-//   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-
-//   T t_scale = static_cast<T>(scale);
-//   RandPack4 rand_uniform_pack4;
-//   T zero_val = static_cast<T>(0.0);
-//   // 一个warp处理一行
-//   for(int64_t linear_index = global_thread_id, step = gridDim.x * blockDim.x; 
-//       linear_index < elem_cnt; linear_index += step){
-//     const int64_t row = linear_index / cols; 
-//     const int64_t col = linear_index - row * cols; 
-//     const int32_t lane_id = linear_index % kWarpSize; 
-//     int32_t thread_bitmask = 0; 
-
-//     float rand_uniform_val = curand_uniform(&state);
-//     T x_val = x[linear_index]; 
-
-//     bool relu_mask = true; 
-//     if(relu){
-//       // Relu
-//       relu_mask = x_val > zero_val; 
-//     }
-//     // dropout
-//     bool mask_val = rand_uniform_val > rate;
-//     // Combined relu_mask, dropout_mask together. 
-//     bool combined_mask = relu_mask && mask_val; 
-//     printf("Combined mask is: %d \n", int(combined_mask)); 
-//     T float_combined_mask = static_cast<float>(combined_mask);
-//     T y_val = y[linear_index]; 
-//     y_val = x_val * float_combined_mask * t_scale;
-//     y[linear_index] = y_val; 
-//     // int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(combined_mask));
-//     // printf("Warp mask is: %d \n", warp_mask); 
-//     int32_t aux_ld_load_index = ((aux_ld * row) + col) / 32; //   cause we use int32 to store aux_ld
-//     mask[aux_ld_load_index] |= (combined_mask << lane_id);
-//     // mask[aux_ld_load_index] = warp_mask;
-//   }
-//   // i >= columns 就放0
-//   if (threadIdx.x == 0) {
-//     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-//     if (new_counter == gridDim.x) {
-//       cuda_gen_state->dev_counter = 0;           // reset counter to zero
-//       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-//     }
-//   }
-// }
-
-
-// （32, 4)
 template<typename T, bool relu>
 __global__ void FusedReluDropoutKernel(uint64_t seed,
                                        one::CUDAGeneratorState* cuda_gen_state,
@@ -406,68 +237,29 @@ __global__ void FusedReluDropoutKernel(uint64_t seed,
   T zero_val = static_cast<T>(0.0);
 
   for(int32_t row = global_warp_id; row < rows; row += step){
-    // for(int32_t col = lane_id; col < cols; col += kWarpSize){
-    //   int32_t thread_bitmask; 
-    //   const int64_t linear_index = row * cols + col; 
-    //   T x_val = x[linear_index]; 
-    //   float rand_uniform_val = curand_uniform(&state);
-    //   bool relu_mask = true; 
-    //   if(relu){
-    //     // Relu
-    //     relu_mask = x_val > zero_val; 
-    //   }
-    //   // dropout
-    //   bool mask_val = rand_uniform_val > rate;
-    //   // Combined relu_mask, dropout_mask together. 
-    //   bool combined_mask = relu_mask && mask_val;
-    //   thread_bitmask = (combined_mask << lane_id); 
-    //   printf("Here row is: %d, col is %d \n", row, col); 
-    //   printf("lane_id is %d \n", lane_id); 
-    //   printf("thread bitmask is: %d \n", thread_bitmask); 
-
-    //   T y_val = y[linear_index]; 
-    //   T t_combined_mask = static_cast<T>(combined_mask);
-    //   y_val = x_val * t_combined_mask * t_scale;
-    //   y[linear_index] = y_val; 
-    //   SetBitMask<1>(linear_index, aux_ld, row, col, thread_bitmask, mask);
-    // }
-
-    // for(int32_t i = 0; i < ((cols + kWarpSize - 1) / kWarpSize); i++){
     for(int32_t col = lane_id; col < cols; col += kWarpSize){
-      // int32_t col = lane_id + i * kWarpSize; 
       int32_t thread_bitmask = 0; 
       const int64_t linear_index = row * cols + col; 
-      const int64_t aux_linear_index = row * aux_ld + col; 
 
-      // printf("Here row is: %d, col is %d \n", row, col); 
-      // printf("lane_id is %d \n", lane_id); 
+      T x_val = x[linear_index]; 
+      float rand_uniform_val = curand_uniform(&state);
+      bool relu_mask = true; 
+      if(relu){
+        // relu
+        relu_mask = x_val > zero_val; 
+      }
+      // dropout
+      bool mask_val = rand_uniform_val > rate;
+      // Combined relu_mask, dropout_mask together. 
+      bool combined_mask = relu_mask && mask_val;
+      thread_bitmask = combined_mask; 
 
-      if(col < cols){
-        T x_val = x[linear_index]; 
-        float rand_uniform_val = curand_uniform(&state);
-        bool relu_mask = true; 
-        if(relu){
-          // Relu
-          relu_mask = x_val > zero_val; 
-        }
-        // dropout
-        bool mask_val = rand_uniform_val > rate;
-        // Combined relu_mask, dropout_mask together. 
-        bool combined_mask = relu_mask && mask_val;
-        thread_bitmask = combined_mask; 
-
-        T y_val = y[linear_index]; 
-        T t_combined_mask = static_cast<T>(combined_mask);
-        y_val = x_val * t_combined_mask * t_scale;
-        y[linear_index] = y_val; 
-      } 
-      // else {
-        // thread_bitmask = 0; // maybe set 0
-      // }
-      // printf("thread bitmask is: %d \n", thread_bitmask); 
-      SetBitMask<1>(aux_linear_index, aux_ld, row, col, thread_bitmask, mask);
+      T y_val = y[linear_index]; 
+      T t_combined_mask = static_cast<T>(combined_mask);
+      y_val = x_val * t_combined_mask * t_scale;
+      y[linear_index] = y_val; 
+      SetCublasBitMask<1>(aux_ld, row, col, thread_bitmask, mask);
     }
-
   }
 
   if (threadIdx.x == 0) {
