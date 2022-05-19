@@ -62,6 +62,7 @@ void LaunchSliceBackward(ep::Stream* stream, const SliceParams& params, const T*
   int64_t elem_cnt = params.elem_cnt();
   SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
+  if (elem_cnt == 0) { return; }
   SliceBackwardGpu<T, NDIM><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                               stream->As<ep::CudaStream>()->cuda_stream()>>>(
       elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
