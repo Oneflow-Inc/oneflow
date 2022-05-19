@@ -130,9 +130,7 @@ class NamedIOMapper(IOMapper):
             self._end_idx = start_idx
             self._cur_level_idx = -1
             self._child_io_nodes = OrderedDict()
-
-            self._io_node_type = None 
-            self._value = None 
+            self._value = value 
 
         def size(self):
             return self._end_idx - self._start_idx + 1 
@@ -140,13 +138,7 @@ class NamedIOMapper(IOMapper):
         def add_child_io_node(self, node):
             self._child_io_nodes[self._cur_level_idx + 1] = node 
             self._end_idx += node.size()
-            self._cur_level_idx += 1
-
-        def set_type(self, type: IONodeType):
-            self._io_node_type = type 
-        
-        def set_value(self, value):
-            self._value = value 
+            self._cur_level_idx += 1 
 
         def named_nodes(self, memo=None):
             if memo is None:
