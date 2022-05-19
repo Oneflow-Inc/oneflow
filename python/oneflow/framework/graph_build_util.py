@@ -15,7 +15,6 @@ limitations under the License.
 """
 from contextlib import contextmanager
 import os
-from types import new_class
 
 from google.protobuf import text_format
 import oneflow
