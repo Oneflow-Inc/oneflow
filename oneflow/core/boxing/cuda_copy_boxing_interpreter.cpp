@@ -66,7 +66,8 @@ Maybe<one::Tensor> CudaCopy(const std::shared_ptr<one::Tensor>& tensor, Symbol<P
   }
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
-                                                 *tensor->shape(), tensor->dtype()));
+                                                 *tensor->shape(), tensor->dtype(),
+                                                 /* check_data */ false));
 }
 
 COMMAND(RegisterBoxingFunction("cuda-copy-h2d", &CheckCudaCopyH2D, &CudaCopy));

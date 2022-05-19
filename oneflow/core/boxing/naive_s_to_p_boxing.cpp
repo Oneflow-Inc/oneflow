@@ -66,7 +66,8 @@ Maybe<one::Tensor> NaiveSToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
 
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
-                                                 *tensor->shape(), tensor->dtype()));
+                                                 *tensor->shape(), tensor->dtype(),
+                                                 /* check_data */ false));
 }
 
 COMMAND(RegisterBoxingFunction("naive-s-to-p", CheckNaiveSToP, &NaiveSToP));
