@@ -145,11 +145,11 @@ def make_new_block_scope(prev_scope, block):
         # append name prefix
         scope_proto.ClearField("scope_op_name_prefixes")
         scope_proto.scope_op_name_prefixes.append(block.name_prefix + block.name)
-        return str(text_format.MessageToString(scope_proto))
-
         # set module name
         if isinstance(block, ModuleBlock):
-            scope_proto.set_module_name(block.name_prefix + block.name)
+            scope_proto.module_name = block.name_prefix + block.name
+            
+        return str(text_format.MessageToString(scope_proto))
 
     new_scope = None
 

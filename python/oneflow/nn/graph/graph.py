@@ -546,7 +546,7 @@ class Graph(object):
         """
         if self._is_compiled:
             conf = self._graph_proto.module_name2module_conf[
-                self._config_proto.job_name()
+                self._config_proto.job_name
             ]
             return operators_repr(conf.ops)
         return []
