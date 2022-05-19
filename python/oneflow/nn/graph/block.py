@@ -686,10 +686,10 @@ class ModuleListBlock(get_list(ModuleBlock)):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         # MoudleList is a container without forward() method,
         # so it will not be executed or has an execution config.
-        self._belonged_graph = belonged_graph
         self.config = None
 
 
@@ -704,8 +704,8 @@ class ModuleDictBlock(get_dict(ModuleBlock)):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
-        self.set_origin(origin)
         self._belonged_graph = belonged_graph
+        self.set_origin(origin)
 
 
 class ParameterListBlock(get_para_list(ModuleBlock)):
@@ -719,9 +719,9 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         self._is_executing_forward = True
-        self._belonged_graph = belonged_graph
 
     def __getitem__(self, idx):
         assert isinstance(idx, int)
@@ -745,9 +745,9 @@ class ParameterDictBlock(get_para_dict(ModuleBlock)):
         super().__init__()
         self._name_prefix = prefix
         self._name = name
+        self._belonged_graph = belonged_graph
         self.set_origin(origin)
         self._is_executing_forward = True
-        self._belonged_graph = belonged_graph
 
     def __getitem__(self, key: str):
         p_state = self._get_from_states(key, "_parameters")
