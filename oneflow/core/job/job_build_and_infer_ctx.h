@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job.pb.h"

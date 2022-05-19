@@ -27,7 +27,6 @@ device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
-locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
 locals()["float32"] = oneflow._oneflow_internal.float32
@@ -215,7 +214,6 @@ import atexit
 
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
-import oneflow.framework.register_python_callback
 
 
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
@@ -232,13 +230,12 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback, register_python_callback
+from oneflow.framework import python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
     python_callback.global_python_callback
 )
 del python_callback
-del register_python_callback
 
 
 class ExitHook:
@@ -415,6 +412,7 @@ import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
 import oneflow.one_embedding
+import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
