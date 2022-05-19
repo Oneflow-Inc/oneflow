@@ -171,7 +171,8 @@ else:
 total_time = 0
 # train_bar = tqdm(train_data_loader, dynamic_ncols=True)
 
-flow.nn.ContiguousGrad(model)
+if args.dtr:
+    flow.nn.ContiguousGrad(model)
 for iter, (train_data, train_label) in enumerate(train_data_loader):
 # for iter in range(10000):
     # train_data = data
