@@ -182,8 +182,10 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
 #if defined(WITH_CUDA)
     if ((pmgr->use_cpu_ && (!cuda_stream)) || (pmgr->use_cuda_ && cuda_stream)) {
       auto event = KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr);
-      if (pmgr->use_cuda_ && cuda_stream) { event->InitCudaEventPair(cuda_stream); }
-      if (pmgr->record_bandwidth_) { event->SetMemorySize(memory_size_getter()); }
+      if (pmgr->use_cuda_ && cuda_stream) {
+        event->InitCudaEventPair(cuda_stream);
+        if (pmgr->record_bandwidth_) { event->SetMemorySize(memory_size_getter()); }
+      }
       return std::make_shared<EventRecorder>(event);
     }
 #else   // WITH_CUDA

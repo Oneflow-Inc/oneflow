@@ -138,16 +138,17 @@ struct LocalCallOpKernelUtil final {
               ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
               : nullptr,
           [compute_ctx]() -> int64_t {
-            int64_t memory_size = 0;
-            for (auto& pair : compute_ctx->inputs()) {
-              auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
-              memory_size += tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
-            }
-            for (auto& pair : compute_ctx->outputs()) {
-              auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
-              memory_size += tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
-            }
-            return memory_size;
+            const auto cal_memory_size = [compute_ctx](const one::ArgVec& args) -> int64_t {
+              return std::accumulate(
+                  args.begin(), args.end(), static_cast<int64_t>(0),
+                  [compute_ctx](int64_t memory_size, const auto& pair) {
+                    const auto tensor =
+                        compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+                    return memory_size
+                           + tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+                  });
+            };
+            return cal_memory_size(compute_ctx->inputs()) + cal_memory_size(compute_ctx->outputs());
           },
 #endif
           [compute_ctx]() -> std::vector<Shape> {
