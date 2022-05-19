@@ -325,7 +325,6 @@ def get_functional_graph_res(
     print(oneflow_args)
     print(oneflow_kwargs)
     print('='*100)
-    print(oneflow_res.nelement())
     print_note_fake_program()
 
     if (
@@ -461,7 +460,6 @@ def get_tensor_graph_res(
     print(oneflow_args)
     print(oneflow_kwargs)
     print('='*100)
-    print(oneflow_res.nelement())
     print_note_fake_program()
 
     if (
