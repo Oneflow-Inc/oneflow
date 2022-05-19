@@ -27,7 +27,6 @@ device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
-locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
 locals()["float32"] = oneflow._oneflow_internal.float32
@@ -413,6 +412,7 @@ import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
 import oneflow.one_embedding
+import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

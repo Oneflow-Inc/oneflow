@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/opkernel_object.h"
 
@@ -48,8 +49,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("ForceReleaseAll", &BlobObject::ForceReleaseAll);
 
   py::class_<OpKernelObject, Object, std::shared_ptr<OpKernelObject>>(m, "OpKernelObject")
-      .def(py::init([](int64_t object_id, const std::shared_ptr<cfg::OperatorConf>& op_conf,
+      .def(py::init([](int64_t object_id, const std::string& op_conf_str,
                        const std::function<void(Object*)>& release) {
+        std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
+        if (!TxtString2PbMessage(op_conf_str, op_conf.get())) {
+          THROW(RuntimeError) << "op conf parse failed.\n" << op_conf_str;
+        }
         return std::make_shared<OpKernelObject>(object_id, op_conf, release);
       }))
       .def_property_readonly("object_id", &OpKernelObject::object_id)
