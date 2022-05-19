@@ -147,8 +147,9 @@ class EagerSToBFunctor {
           << Error::RuntimeError() << "input tensors `.is_local` should be true";
       CHECK_OR_RETURN(x->is_eager())
           << Error::RuntimeError() << "input tensors `.is_eager` should be true";
-      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1) && IsSplitSbp(in_nd_sbp->sbp_parallel(0))) 
-          << Error::RuntimeError() << "The input tensor's sbp should be (split, )"; 
+      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(in_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The input tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToBOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
@@ -190,10 +191,12 @@ class EagerNaiveSToSFunctor {
           << Error::RuntimeError() << "input tensors `.is_local` should be true";
       CHECK_OR_RETURN(x->is_eager())
           << Error::RuntimeError() << "input tensors `.is_eager` should be true";
-      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1) && IsSplitSbp(in_nd_sbp->sbp_parallel(0))) 
-          << Error::RuntimeError() << "The input tensor's sbp should be (split, )"; 
-      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1) && IsSplitSbp(out_nd_sbp->sbp_parallel(0))) 
-          << Error::RuntimeError() << "The output tensor's sbp should be (split, )"; 
+      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(in_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The input tensor's sbp should be (split, )";
+      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(out_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The output tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNaiveSToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)),
@@ -216,8 +219,9 @@ class EagerBToSFunctor {
           << Error::RuntimeError() << "input tensors `.is_local` should be true";
       CHECK_OR_RETURN(x->is_eager())
           << Error::RuntimeError() << "input tensors `.is_eager` should be true";
-      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1) && IsSplitSbp(out_nd_sbp->sbp_parallel(0))) 
-          << Error::RuntimeError() << "The output tensor's sbp should be (split, )"; 
+      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(out_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The output tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerBToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
@@ -239,8 +243,9 @@ class EagerPToSFunctor {
           << Error::RuntimeError() << "input tensors `.is_local` should be true";
       CHECK_OR_RETURN(x->is_eager())
           << Error::RuntimeError() << "input tensors `.is_eager` should be true";
-      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1) && IsSplitSbp(out_nd_sbp->sbp_parallel(0))) 
-          << Error::RuntimeError() << "The output tensor's sbp should be (split, )"; 
+      CHECK_OR_RETURN((out_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(out_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The output tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerPToSOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(out_nd_sbp->sbp_parallel(0)), shape));
@@ -262,8 +267,9 @@ class EagerSToPFunctor {
           << Error::RuntimeError() << "input tensors `.is_local` should be true";
       CHECK_OR_RETURN(x->is_eager())
           << Error::RuntimeError() << "input tensors `.is_eager` should be true";
-      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1) && IsSplitSbp(in_nd_sbp->sbp_parallel(0))) 
-          << Error::RuntimeError() << "The input tensor's sbp should be (split, )"; 
+      CHECK_OR_RETURN((in_nd_sbp->sbp_parallel_size() == 1)
+                      && IsSplitSbp(in_nd_sbp->sbp_parallel(0)))
+          << Error::RuntimeError() << "The input tensor's sbp should be (split, )";
     }
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerSToPOpExpr(
         in_parallel_desc, out_parallel_desc, SymbolOf(in_nd_sbp->sbp_parallel(0)), shape));
