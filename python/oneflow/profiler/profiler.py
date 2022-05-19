@@ -47,6 +47,10 @@ class profile:
                 item in supported_activities()
             ), f"Unsupported ProfilerActivity {item}"
         self.record_shapes = record_shapes
+        if not (ProfilerActivity.CUDA in self.activities):
+            assert (
+                record_bandwidth_for_cuda == False
+            ), "record_bandwidth_for_cuda = True can only work with cuda."
         self.record_bandwidth_for_cuda = record_bandwidth_for_cuda
         self.profile_events: Optional[Events] = None
 

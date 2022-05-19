@@ -84,7 +84,7 @@ class Event:
             d["name"],
             d["time"],
             d["on_gpu"],
-            d["bandwidth"] if d["on_gpu"] else -1,
+            d["bandwidth"] if "bandwidth" in d else -1,
             1,
             d["input_shapes"],
             d["type"],
