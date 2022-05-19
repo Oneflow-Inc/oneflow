@@ -145,7 +145,8 @@ def _test_fused_dot_feature_interaction_pooling_sum(
     bi_interaction = (sum_then_square - square_then_sum) * 0.5
     if dtype == flow.float16:
         bi_interaction = flow.cast(bi_interaction, flow.float16)
-    loss = bi_interaction.sum()
+    R = flow.sum(bi_interaction, dim=-1, keepdim=True)
+    loss = R.sum()
     loss.backward()
 
     fused_R = flow._C.fused_dot_feature_interaction(
@@ -162,9 +163,7 @@ def _test_fused_dot_feature_interaction_pooling_sum(
                 atol=1e-3,
             )
         )
-    test_case.assertTrue(
-        np.allclose(fused_R.numpy(), bi_interaction.numpy(), rtol=1e-3, atol=1e-3)
-    )
+    test_case.assertTrue(np.allclose(fused_R.numpy(), R.numpy(), rtol=1e-3, atol=1e-3))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

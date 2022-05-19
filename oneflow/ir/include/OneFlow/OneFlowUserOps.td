@@ -2547,7 +2547,7 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$features,
     Optional<OneFlow_Tensor>:$output_concat
@@ -2568,7 +2568,7 @@ def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_int
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
     Optional<OneFlow_Tensor>:$padded_concated_features,
