@@ -762,14 +762,14 @@ class Ftrl(Optimizer):
     .. code-block:: python 
 
         # Assume net is a custom model. 
-        adam = flow.one_embedding.FTRL(net.parameters(), lr=1e-3)
+        ftrl = flow.one_embedding.FTRL(net.parameters(), lr=1e-3)
 
         for epoch in range(epochs):
             # Read data, Compute the loss and so on. 
             # ...
             loss.backward()
-            adam.step()
-            adam.zero_grad()
+            ftrl.step()
+            ftrl.zero_grad()
 
     Args:
         params (iterable): iterable of parameters to optimize or dicts defining
