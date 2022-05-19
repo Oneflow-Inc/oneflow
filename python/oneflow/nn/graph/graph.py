@@ -182,7 +182,9 @@ class Graph(object):
             * ``None``
 
         """
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "nn.Graph.build() method must be overridden when subclassing the nn.Graph."
+        )
 
     def __call__(self, *args, **kwargs):
         r"""Call nn.Graph subclass instance to run your customized graph.
@@ -607,13 +609,11 @@ class Graph(object):
         return state_op_names
 
     def _generate_config_proto(self):
-        self.config.proto.set_job_name(self._name)
+        self.config.proto.job_name = self._name
         self._outputs_buffer_size = self.config._outputs_buffer_size
 
         if self._grad_scaler is not None:
-            self._grad_scaler._generate_conf_for_graph(
-                self.config.proto.mutable_train_conf()
-            )
+            self._grad_scaler._generate_conf_for_graph(self.config.proto.train_conf)
 
         for opt in self._opts:
             opt_dict = OptDict(opt)

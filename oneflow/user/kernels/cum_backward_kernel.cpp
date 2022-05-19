@@ -18,24 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace {
-template<typename T>
-void CumSumBackward(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
-                    int64_t cs_down_space, int64_t elem_cnt) {
-  auto* tmp_in_ptr_base = in_ptr;
-  auto* tmp_out_ptr_base = out_ptr;
-  auto step = cs_space * cs_down_space;
-  for (auto i = 0; i < cs_up_space; i++) {
-    for (auto j = 0; j < cs_space; j++) {
-      auto* tmp_in_ptr = tmp_in_ptr_base + j * cs_down_space;
-      auto* tmp_out_ptr = tmp_out_ptr_base + j * cs_down_space;
-      std::fill_n(tmp_out_ptr, cs_down_space, cs_space - j);
-      for (auto k = 0; k < cs_down_space; k++) { tmp_out_ptr[k] *= tmp_in_ptr[k]; }
-    }
-    tmp_in_ptr_base += step;
-    tmp_out_ptr_base += step;
-  }
-}
-
 // O(n) cumprod backward, formula: cumsum(flip(dY * Y)) / X.
 // Need to take care when there is at least a zero in the input.
 template<typename T>
@@ -122,52 +104,8 @@ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr, const T* i
 }
 }  // namespace
 
-class CpuCumGradKernel : public user_op::OpKernel {
- public:
-  CpuCumGradKernel() = default;
-  ~CpuCumGradKernel() = default;
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
 template<typename T>
-class CpuCumsumGradKernel final : public CpuCumGradKernel {
- public:
-  CpuCumsumGradKernel() = default;
-  ~CpuCumsumGradKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const auto* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    auto elem_cnt = dy->shape().elem_cnt();
-    auto dim = ctx->Attr<int64_t>("dim");
-    const auto* dy_ptr = dy->dptr<T>();
-    auto* dx_ptr = dx->mut_dptr<T>();
-
-    // take cumsum's abbreviation as `cs`
-    // data partition: cs_up_space|cs_space|cs_down_space
-    auto cs_up_space = elem_cnt / dx->shape().Count(dim);
-    auto cs_space = dx->shape().At(dim);
-    auto cs_down_space = dx->shape().Count(dim + 1);
-
-    CumSumBackward(dy_ptr, dx_ptr, cs_up_space, cs_space, cs_down_space, elem_cnt);
-  }
-};
-
-#define REGISTER_CPU_CUMSUM_GRAD_KERNEL(dtype)                        \
-  REGISTER_USER_KERNEL("cumsum_grad")                                 \
-      .SetCreateFn<CpuCumsumGradKernel<dtype>>()                      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-REGISTER_CPU_CUMSUM_GRAD_KERNEL(float)
-REGISTER_CPU_CUMSUM_GRAD_KERNEL(double)
-#undef REGISTER_CPU_CUMSUM_GRAD_KERNEL
-
-template<typename T>
-class CpuCumProdGradKernel final : public CpuCumGradKernel {
+class CpuCumProdGradKernel final : public user_op::OpKernel {
  public:
   CpuCumProdGradKernel() = default;
   ~CpuCumProdGradKernel() = default;
@@ -197,6 +135,7 @@ class CpuCumProdGradKernel final : public CpuCumGradKernel {
     }
     CumProdBackward(dy_ptr, dx_ptr, output_ptr, input_ptr, up_space, space, down_space, elem_cnt);
   }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CPU_CUMPROD_GRAD_KERNEL(dtype)                       \

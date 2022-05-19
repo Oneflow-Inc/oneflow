@@ -187,7 +187,7 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
       output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
     } else {
       const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
-      *JUST(oneflow::VectorAt(&output_grads, i)) =
+      JUST(oneflow::VectorAt(output_grads, i)) =
           JUST(JUST(oneflow::VectorAt(output_meta_data_, i))->current_grad()->GetAccTensor(hooks));
     }
   }
@@ -276,7 +276,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
 // according to input tensors
 Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs) {
   struct NodeFrame {
-    NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
+    explicit NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
     FunctionNode* node_;
     size_t next_function_idx_;
 
