@@ -57,11 +57,24 @@ class CosGradGradFunctor {
   }
 };
 
+class TanhGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dydx) const {
+    auto a = functional::Tanh(x);
+    auto a2 = functional::Mul(JUST(a), JUST(a));
+    auto a3 = functional::Mul(JUST(a2), JUST(a));
+    auto res = functional::Sub(JUST(a3), JUST(a), false);
+    return functional::ScalarMul(2.0, JUST(res));
+  }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SinGradGradFunctor>("SinGradGrad");
   m.add_functor<impl::CosGradGradFunctor>("CosGradGrad");
+  m.add_functor<impl::TanhGradGradFunctor>("TanhGradGrad");
 }
 
 }  // namespace functional

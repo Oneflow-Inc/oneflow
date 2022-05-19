@@ -550,6 +550,10 @@
   signature: "Tensor (Tensor x, Tensor dy) => TanhGrad"
   bind_python: True
 
+- name: "tanh_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx) => TanhGradGrad"
+  bind_python: False
+
 - name: "threshold"
   signature: "Tensor (Tensor x, *, Double threshold, Double value) => Threshold"
   bind_python: True

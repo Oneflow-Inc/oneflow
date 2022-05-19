@@ -58,6 +58,12 @@ class TestConsistentMathOpHigherDerivative(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=2):
                 _consistent_math_op_grad_grad_impl(test_case, "cos", placement, sbp)
 
+    @globaltest
+    def test_consistent_tanh_grad_grad(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _consistent_math_op_grad_grad_impl(test_case, "tanh", placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()
