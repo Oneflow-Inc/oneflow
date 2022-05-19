@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
@@ -45,7 +46,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 namespace functional {
-
+namespace {
+static Maybe<one::Tensor> repeat_if_defined(const std::shared_ptr<one::Tensor>& t, int64_t repeat) {
+  if (t) { return JUST(Repeat(t, Shape({repeat}))); }
+  return t;
+}
+static Maybe<one::Tensor> value_or_else(const Optional<one::Tensor>& t) {
+  if (t.has_value()) { return JUST(t); }
+  return std::shared_ptr<one::Tensor>();
+}
+}  // namespace
 namespace impl {
 
 class BiasAddFunctor {
@@ -1516,22 +1526,31 @@ class InstanceNormalizationFunctor {
                            const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
                            const int32_t& axis, const float& epsilon, const float& momentum,
                            const bool& training) const {
-    std::shared_ptr<one::Tensor> gamma_;
-    std::shared_ptr<one::Tensor> beta_;
-    std::shared_ptr<one::Tensor> moving_mean_;
-    std::shared_ptr<one::Tensor> moving_variance_;
-
-    auto x_shape_ = x->shape()->dim_vec();
+    auto x_shape_(x->shape()->dim_vec());
     const int64_t batch = x_shape_[0];
     x_shape_[0] = 1;
     x_shape_[1] = batch * x_shape_[1];
+    const std::shared_ptr<one::Tensor> _gamma = JUST(value_or_else(gamma));
+    const std::shared_ptr<one::Tensor> _moving_mean = JUST(value_or_else(moving_mean));
+    const std::shared_ptr<one::Tensor> _moving_variance = JUST(value_or_else(moving_variance));
+    const std::shared_ptr<one::Tensor> _beta = JUST(value_or_else(beta));
+    std::shared_ptr<one::Tensor> gamma_ = JUST(repeat_if_defined(_gamma, batch));
+    std::shared_ptr<one::Tensor> beta_ = JUST(repeat_if_defined(_beta, batch));
+    std::shared_ptr<one::Tensor> moving_mean_ = JUST(repeat_if_defined(_moving_mean, batch));
+    std::shared_ptr<one::Tensor> moving_variance_ =
+        JUST(repeat_if_defined(_moving_variance, batch));
 
-    if (gamma.has_value()) { gamma_ = JUST(Repeat(JUST(gamma), Shape({batch}))); }
-    if (beta.has_value()) { beta_ = JUST(Repeat(JUST(beta), Shape({batch}))); }
-    if (moving_mean.has_value()) { moving_mean_ = JUST(Repeat(JUST(moving_mean), Shape({batch}))); }
-    if (moving_variance.has_value()) {
-      moving_variance_ = JUST(Repeat(JUST(moving_variance), Shape({batch})));
-    }
+    // std::shared_ptr<one::Tensor> gamma_;
+    // std::shared_ptr<one::Tensor> beta_;
+    // std::shared_ptr<one::Tensor> moving_mean_;
+    // std::shared_ptr<one::Tensor> moving_variance_;
+    // if (gamma.has_value()) { gamma_ = JUST(Repeat(JUST(gamma), Shape({batch}))); }
+    // if (beta.has_value()) { beta_ = JUST(Repeat(JUST(beta), Shape({batch}))); }
+    // if (moving_mean.has_value()) { moving_mean_ = JUST(Repeat(JUST(moving_mean),
+    // Shape({batch}))); } if (moving_variance.has_value()) {
+    //   moving_variance_ = JUST(Repeat(JUST(moving_variance), Shape({batch})));
+    // }
+
     const auto x_rehsaped = JUST(Reshape(x, Shape(x_shape_)));
     const auto out = JUST(Normalization(x_rehsaped, moving_mean_, moving_variance_, gamma_, beta_,
                                         axis, epsilon, momentum, training));
