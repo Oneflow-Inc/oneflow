@@ -317,8 +317,7 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices) {
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
-      << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim()
-      << " but you gived " << indices.size()->ToString();
+      << Error::RuntimeError() << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
   bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 
