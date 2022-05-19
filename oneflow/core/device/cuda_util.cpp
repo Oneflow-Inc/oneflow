@@ -163,9 +163,20 @@ void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
 int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetCudaDeviceCount() {
-  /* static */ int cuda_device_count = 0;
-  CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
-  OF_CUDA_CHECK(cudaGetDeviceCount(&cuda_device_count));
+  int saved_dev = 0;
+  int query_dev = GetCudaDeviceIndex();
+  {
+    cudaError_t err = cudaGetDevice(&saved_dev);
+    if (err == cudaErrorNoDevice) { return 0; }
+    OF_CUDA_CHECK(err);
+  }
+  if (query_dev != saved_dev) { OF_CUDA_CHECK(cudaSetDevice(query_dev)); }
+  int cuda_device_count = 0;
+  {
+    cudaError_t err = cudaGetDeviceCount(&cuda_device_count);
+    OF_CUDA_CHECK(err);
+  }
+  if (query_dev != saved_dev) { OF_CUDA_CHECK(cudaSetDevice(saved_dev)); }
   return cuda_device_count;
 }
 
