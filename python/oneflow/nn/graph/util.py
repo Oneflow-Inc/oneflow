@@ -82,19 +82,19 @@ class IOMapper(object):
         if self.is_mapped():
             return self._mapped_io_values
 
-        def execute_mapping(value):
+        def execute_mapping(value, key_or_index=None):
             for pre_hook in self._pre_hooks:
-                pre_hook(value)
+                pre_hook(value, key_or_index)
 
             if isinstance(value, tuple) or isinstance(value, list):
-                mapped_value = value.__class__(map(lambda x: execute_mapping(x), value))
+                mapped_value = value.__class__(map(lambda x: execute_mapping(x[1], x[0]), enumerate(value)))
             elif isinstance(value, dict):
-                mapped_value = dict(map(lambda x: (x[0], execute_mapping(x[1])), value.items()))
+                mapped_value = dict(map(lambda x: (x[0], execute_mapping(x[1], x[0])), value.items()))
             else:
                 mapped_value = self._map_function(value)
 
             for post_hook in self._post_hooks:
-                post_hook(mapped_value)
+                post_hook(mapped_value, key_or_index)
 
             return mapped_value
 
@@ -113,15 +113,7 @@ class IOMapper(object):
         self.remove_last_post_hook()
         return flattened
 
-class NamedIOMapper(IOMapper):
-    class IONodeType:
-        TENSOR = "TENSOR"
-        NONE = "NONE"
-        LIST = "LIST"
-        TUPLE = "TUPLE"
-        DICT = "DICT"
-        OPAQUE = "OPAQUE"
-
+class StructedNamedIOMapper(IOMapper):
     class IONode(object):
         def __init__(self, name = None, start_idx = 0, value = None, prefix = "") -> None:
             self._name = name if name is not None else str(start_idx)
@@ -134,6 +126,15 @@ class NamedIOMapper(IOMapper):
 
         def size(self):
             return self._end_idx - self._start_idx + 1 
+
+        def prefix(self):
+            return self._prefix
+
+        def name(self):
+            return self._name
+
+        def cur_level_idx(self):
+            return self._cur_level_idx
 
         def add_child_io_node(self, node):
             self._child_io_nodes[self._cur_level_idx + 1] = node 
@@ -156,8 +157,23 @@ class NamedIOMapper(IOMapper):
             repr_str = ""
             repr_str += "(name: " + self._name
             repr_str += ", idx: " + str(self._start_idx)
-            repr_str += ", type: " + self._type
-            if self._type == IONodeType.TENSOR:
+            repr_str += ", type: "
+            type_str = ""
+            if isinstance(self._value, tuple):
+                type_str = "TUPLE"
+            elif isinstance(self._value, list):
+                type_str = "LIST"
+            elif isinstance(self._value, dict):
+                type_str = "DICT"
+            elif isinstance(self._value, Tensor):
+                type_str = "TENSOR"
+            elif self._value is None:
+                type_str = "NONE"
+            else:
+                type_str = "OPAQUE"
+            repr_str += type_str
+
+            if isinstance(self._value, Tensor):
                 repr_str += ", value: " + self._value._meta_repr() + ")"
             else:
                 repr_str += ", value: " + repr(self._value) + ")"
@@ -171,18 +187,18 @@ class NamedIOMapper(IOMapper):
 
     def get_pre_mapping_named_io_values(self):
         # we build an IONode tree first
+        stack = [None]
 
-        current_io_node = None 
-        last_io_node = None 
         def pre_hook(value):
             if self._root_io_node == None:
                 self._root_io_node = self.IONode(self._root_name, 0, value, self._root_prefix) 
-                current_io_node = self._root_io_node 
+                stack.append(self._root_io_node)
             else:
-                last_io_node = current_io_node 
+                parent_node = stack[-1]
                 child_node_name = None 
-                child_node_prefix = 
-                if is
+                child_node_prefix = parent_node.prefix() + ("." if parent_node.prefix() else "") + str(parent_node.cur_level_idx() + 1)
+                if isinstance(value, dict):
+
                 current_io_node.add_child_io_node(self.IONode())
         
         def post_hook(value):
