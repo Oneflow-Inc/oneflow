@@ -95,11 +95,11 @@ namespace oneflow {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   if (ctx->has_input("padded_concated_features", 0)) {
     const Shape& padded_concated_features_shape = ctx->InputShape("padded_concated_features", 0);
-    CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(padded_concated_features_shape.NumAxes(), 3);
+    CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 2) << dy_shape.NumAxes();
+    CHECK_EQ_OR_RETURN(padded_concated_features_shape.NumAxes(), 3)
+        << padded_concated_features_shape.NumAxes();
   }
   const int64_t batch_size = dy_shape.At(0);
-  CHECK_EQ_OR_RETURN(dy_shape.At(0), batch_size);
   CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features_grad_like"));
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
     *ctx->OutputShape("features_grad", i) = ctx->InputShape("features_grad_like", i);
