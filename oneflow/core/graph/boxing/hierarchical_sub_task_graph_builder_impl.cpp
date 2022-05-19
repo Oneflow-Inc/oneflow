@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/chain_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/collective_boxing_sub_task_graph_builder.h"
+#include "oneflow/core/graph/boxing/of_collective_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/slice_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/fallback_to_cpu_slice_boxing_sub_task_graph_builder.h"
 #include "oneflow/core/graph/boxing/naive_b2b_sub_task_graph_builder.h"
@@ -107,6 +108,9 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
+  if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
+    builders.emplace_back(new OfCollectiveBoxingSubTskGphBuilder());
+  }
   if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
     builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
   }
