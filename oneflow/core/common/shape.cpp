@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -60,34 +59,28 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
-Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
-Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
-Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) { UpdateElemCnt(); }
-Shape::Shape(const ShapeProto& shape_proto) {
+Shape::Shape(const std::initializer_list<int64_t>& dim_vec)
+    : dim_vec_(dim_vec), is_initialized_(true) {}
+Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec), is_initialized_(true) {}
+Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)), is_initialized_(true) {}
+Shape::Shape(const ShapeProto& shape_proto) : is_initialized_(true) {
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
-  UpdateElemCnt();
-}
-Shape::Shape(const cfg::ShapeProto& shape_proto) {
-  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
-  UpdateElemCnt();
 }
 
 Shape& Shape::operator=(const Shape& shape) {
   dim_vec_ = shape.dim_vec_;
-  UpdateElemCnt();
+  is_initialized_ = shape.is_initialized_;
   return *this;
 }
 
 Shape& Shape::assign(const DimVector& dim_vec) {
   dim_vec_ = dim_vec;
-  UpdateElemCnt();
   return *this;
 }
 
 Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
   std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), dim_vec_.data());
-  UpdateElemCnt();
   return *this;
 }
 
@@ -97,7 +90,6 @@ Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
   FOR_RANGE(int, i, 0, left_ones_size) { dim_vec_.at(i) = 1LL; }
   std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(),
             dim_vec_.data() + left_ones_size);
-  UpdateElemCnt();
   return *this;
 }
 
@@ -133,7 +125,6 @@ void Shape::Set(int64_t index, int64_t val) {
   CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
                                    << " > num_axes: " << this->NumAxes();
   dim_vec_.at(index) = val;
-  UpdateElemCnt();
 }
 
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
@@ -145,12 +136,6 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
 }
 
 int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
-
-void Shape::UpdateElemCnt() {
-  int64_t elem_cnt = 1;
-  for (int64_t s : dim_vec_) { elem_cnt *= s; }
-  elem_cnt_ = elem_cnt;
-}
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
   out << shape.DebugStr();
@@ -203,6 +188,14 @@ bool Shape::Containing(const Shape& small_shape) const {
   if (this->NumAxes() < small_shape.NumAxes()) { return false; }
   FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
     if (this->At(i) != small_shape.At(i)) { return false; }
+  }
+  return true;
+}
+
+bool Shape::MatchBeforeLastDim(const Shape& next_shape) const {
+  if (this->NumAxes() != next_shape.NumAxes()) { return false; }
+  for (int64_t i = 0; i < this->NumAxes() - 1; ++i) {
+    if (next_shape.At(i) != this->At(i)) { return false; }
   }
   return true;
 }

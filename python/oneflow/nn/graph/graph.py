@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import logging
 import os
 import time
+import inspect
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
@@ -180,7 +182,9 @@ class Graph(object):
             * ``None``
 
         """
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "nn.Graph.build() method must be overridden when subclassing the nn.Graph."
+        )
 
     def __call__(self, *args, **kwargs):
         r"""Call nn.Graph subclass instance to run your customized graph.
@@ -305,8 +309,7 @@ class Graph(object):
             self.config._train(True)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
-        r"""Set the GradScaler for gradient and loss scaling.
-        """
+        r"""Set the GradScaler for gradient and loss scaling."""
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
@@ -406,14 +409,12 @@ class Graph(object):
 
     @property
     def name(self):
-        r"""Name auto-generated for this graph.
-        """
+        r"""Name auto-generated for this graph."""
         return self._name
 
     @property
     def training(self):
-        r"""In traninig mode if the graph has an optimizer.
-        """
+        r"""In traninig mode if the graph has an optimizer."""
         return self.config.training
 
     def debug(
@@ -530,8 +531,7 @@ class Graph(object):
         return shallow_repr
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
-        r"""Do print according to info level.
-        """
+        r"""Do print according to info level."""
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
@@ -609,13 +609,11 @@ class Graph(object):
         return state_op_names
 
     def _generate_config_proto(self):
-        self.config.proto.set_job_name(self._name)
+        self.config.proto.job_name = self._name
         self._outputs_buffer_size = self.config._outputs_buffer_size
 
         if self._grad_scaler is not None:
-            self._grad_scaler._generate_conf_for_graph(
-                self.config.proto.mutable_train_conf()
-            )
+            self._grad_scaler._generate_conf_for_graph(self.config.proto.train_conf)
 
         for opt in self._opts:
             opt_dict = OptDict(opt)
@@ -648,6 +646,54 @@ class Graph(object):
                     state_config,
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
+
+    @staticmethod
+    def to_graph(func):
+        """ Make a function to do static graph run with nn.Graph.
+
+        After decorating a function with ``to_graph``, the function is turned into a naive `nn.Graph`.
+
+        Note:
+            This is just a quick way to run a simple function with nn.Graph.
+            If you want to do training or model save/load, customize a nn.Graph class instead, donot use ``to_graph``.
+
+        For example:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> @flow.nn.Graph.to_graph
+            ... def test_func(x):
+            ...     return x * 2
+            >>> input = flow.tensor((1, 2), dtype=flow.float32)
+            >>> out = test_func(input)
+            >>> out
+            tensor([2., 4.], dtype=oneflow.float32)
+
+        ..
+            Feature Stage of Feature [to_graph].
+            - Maintainer List [@strint]
+            - Current Stage [Pre-alpha, note that this is an experimental feature and maybe removed without notice.]
+
+        """
+        assert inspect.isfunction(
+            func
+        ), f"nn.Graph.to_graph only support function currently, so {func} must be a function."
+        graph_cls_name = func.__name__ + "_graph"
+
+        def init(self):
+            super(graph_cls_name, self).__init__()
+
+        def build(self, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        graph_cls_name = type(
+            graph_cls_name, (Graph,), {"__init__": init, "build": build,}
+        )
+
+        a_graph = graph_cls_name()
+
+        return a_graph
 
     def _compile(self, *args, **kwargs):
         # Build graph
@@ -774,6 +820,24 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
+            enable_mlir_inference_opt = os.getenv(
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            )
+            enable_mlir_inference_opt = (
+                False
+                if enable_mlir_inference_opt is None
+                else bool(enable_mlir_inference_opt)
+            )
+            if self.training and enable_mlir_inference_opt:
+                logging.warn(
+                    "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode. "
+                )
+                enable_mlir_inference_opt - False
+                del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
+            if enable_mlir_inference_opt:
+                oneflow._oneflow_internal.FillVariableTensorMgr(
+                    state_op_names, self._state_tensor_tuple
+                )
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
@@ -805,6 +869,13 @@ class Graph(object):
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
             )
+            if enable_mlir_inference_opt:
+                (
+                    state_op_names,
+                    state_tensors,
+                ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
+                self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
             )

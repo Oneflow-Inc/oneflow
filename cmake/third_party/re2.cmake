@@ -7,7 +7,7 @@ set(RE2_INSTALL_DIR ${THIRD_PARTY_DIR}/re2)
 set(RE2_INCLUDE_DIR ${RE2_INSTALL_DIR}/include CACHE PATH "" FORCE)
 set(RE2_LIBRARY_DIR ${RE2_INSTALL_DIR}/lib CACHE PATH "" FORCE)
 set(RE2_LIBRARIES ${RE2_LIBRARY_DIR}/libre2.a)
-set(RE2_URL https://github.com/Oneflow-Inc/re2/archive/e17af7789.tar.gz)
+set(RE2_URL https://github.com/Oneflow-Inc/re2/archive/refs/tags/e17af7789.tar.gz)
 use_mirror(VARIABLE RE2_URL URL ${RE2_URL})
 
 if(THIRD_PARTY)
