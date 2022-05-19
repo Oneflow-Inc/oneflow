@@ -37,10 +37,11 @@ from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
+    construct_io_node,
     seq_to_func_return,
     sys_exc_error_msg,
-    IONodeType,
     IONode,
+    IONodeType,
     IOMapper,
 )
 from oneflow.nn.module import Module
@@ -1271,6 +1272,7 @@ class Graph(object):
         oneflow._oneflow_internal.eager.Sync()
 
     def __make_input_tensors_contiguous(self, *args, **kwargs):
+
         def to_contiguous(item):
             if isinstance(item, Tensor) and not item.is_contiguous():
                 return item.contiguous()
@@ -1278,7 +1280,7 @@ class Graph(object):
                 return item
 
         mapper = IOMapper((args, kwargs), to_contiguous)
-        mapped_result = mapper.get()
+        mapped_result = mapper.get_mapping_result()
         return mapped_result[0], mapped_result[1]
 
 

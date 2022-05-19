@@ -19,6 +19,7 @@ from collections import OrderedDict
 from oneflow.framework.tensor import Tensor
 from typing import Callable, Dict, Union, List, Tuple
 
+
 def add_indent(in_s, num_spaces):
     s = in_s.split("\n")
     if len(s) == 1:
@@ -45,8 +46,132 @@ def seq_to_func_return(seq, need_unpack=False):
         return seq[0]
     return seq
 
+
+class IONode1(object):
+    def __init__(self, value=None, prefix="", name=None, start_idx=0) -> None:
+        assert not isinstance(value, IONode1), "IONode cannot accept value of type IONode"
+        self._name = name if name is not None else str(start_idx)
+        self._prefix = prefix
+        self._start_idx = start_idx
+        self._end_idx = start_idx
+        self._cur_level_idx = -1
+        self._child_io_nodes = OrderedDict()
+        self._value = value
+
+    def size(self):
+        return self._end_idx - self._start_idx + 1
+
+    def prefix(self):
+        return self._prefix
+
+    def name(self):
+        return self._name
+
+    def cur_level_idx(self):
+        return self._cur_level_idx
+
+    def end_index(self):
+        return self._end_idx
+
+    def value(self):
+        return self._value
+
+    def is_leaf(self):
+        return len(self._child_io_nodes) == 0
+
+    def set_value(self, value):
+        assert not isinstance(value, IONode1), "IONode cannot accept value of type IONode"
+        self._value = value
+
+    def add_child_io_node(self, node):
+        self._child_io_nodes[self._cur_level_idx + 1] = node
+        self._end_idx += node.size()
+        self._cur_level_idx += 1
+
+    def child_io_nodes(self):
+        return self._child_io_nodes
+
+    def named_nodes(self, memo=None):
+        if memo is None:
+            memo = set()
+        if self not in memo:
+            memo.add(self)
+            yield (self._prefix + "_" + str(self._name), self)
+            for (level_idx, node) in self._child_io_nodes.items():
+                if node is None:
+                    continue
+                for n in node.named_nodes(memo):
+                    yield n
+
+    def __repr__(self):
+        repr_str = ""
+        repr_str += "(name: " + self._name
+        repr_str += ", idx: " + str(self._start_idx)
+        repr_str += ", type: "
+        type_str = ""
+        if isinstance(self._value, tuple):
+            type_str = "TUPLE"
+        elif isinstance(self._value, list):
+            type_str = "LIST"
+        elif isinstance(self._value, dict):
+            type_str = "DICT"
+        elif isinstance(self._value, Tensor):
+            type_str = "TENSOR"
+        elif self._value is None:
+            type_str = "NONE"
+        else:
+            type_str = "OPAQUE"
+        repr_str += type_str
+        repr_str += ", value: "
+        if isinstance(self._value, Tensor):
+            repr_str += self._value._meta_repr()
+        elif (
+            isinstance(self._value, dict)
+            or isinstance(self._value, list)
+            or isinstance(self._value, tuple)
+        ):
+            repr_str += "None"
+        else:
+            repr_str += repr(self._value)
+        repr_str += ")"
+        return repr_str
+
+
+def construct_io_node(
+    value, prefix: str, name: str, start_index:int = 0
+) -> IONode1:
+    node = IONode1(value, prefix, name, start_index)
+    if isinstance(value, list) or isinstance(value, tuple):
+        for v in value:
+            node.add_child_io_node(
+                construct_io_node(
+                    v,
+                    node.prefix()
+                    + ("." if node.prefix() else "")
+                    + str(node.cur_level_idx() + 1),
+                    None,
+                    node.end_index() + 1
+                )
+            )
+    elif isinstance(value, dict):
+        for key, v in value.items():
+            node.add_child_io_node(
+                construct_io_node(
+                    v,
+                    node.prefix()
+                    + ("." if node.prefix() else "")
+                    + str(node.cur_level_idx() + 1),
+                    key,
+                    node.end_index() + 1
+                )
+            )
+    return node
+
+
 class IOMapper(object):
-    def __init__(self, io_values: Union[Tuple, List, Dict], map_function:Callable) -> None:
+    def __init__(
+        self, io_values, map_function: Callable
+    ) -> None:
         assert io_values != None
         assert map_function != None
 
@@ -57,13 +182,13 @@ class IOMapper(object):
         self._post_hooks = []
 
     def clear_mapping_result(self):
-        self._mapped_io_values = None 
-    
-    def is_mapped(self):
-        self._mapped_io_values != None 
+        self._mapped_io_values = None
 
-    def register_pre_hook(self, hook:Callable):
-        assert hook != None 
+    def is_mapped(self):
+        self._mapped_io_values != None
+
+    def register_pre_hook(self, hook: Callable):
+        assert hook != None
         self._pre_hooks.append(hook)
 
     def remove_last_pre_hook(self):
@@ -74,8 +199,8 @@ class IOMapper(object):
         assert len(self._post_hooks) > 0
         self._post_hooks.pop()
 
-    def register_post_hook(self, hook:Callable):
-        assert hook != None 
+    def register_post_hook(self, hook: Callable):
+        assert hook != None
         self._post_hooks.append(hook)
 
     def get_mapping_result(self):
@@ -87,9 +212,22 @@ class IOMapper(object):
                 pre_hook(value, key_or_index)
 
             if isinstance(value, tuple) or isinstance(value, list):
-                mapped_value = value.__class__(map(lambda x: execute_mapping(x[1], x[0]), enumerate(value)))
+                mapped_value = value.__class__(
+                    map(lambda x: execute_mapping(x[1], x[0]), enumerate(value))
+                )
             elif isinstance(value, dict):
-                mapped_value = dict(map(lambda x: (x[0], execute_mapping(x[1], x[0])), value.items()))
+                mapped_value = dict(
+                    map(lambda x: (x[0], execute_mapping(x[1], x[0])), value.items())
+                )
+            elif isinstance(value, IONode1):
+                if value.is_leaf():
+                    mapped_value = self._map_function(value.value())
+                elif isinstance(value.value(), tuple) or isinstance(value.value(), list):
+                    
+                elif isinstance(value.value(), dict):
+                    for _, child in value.child_io_nodes():
+                        if 
+                    mapped_value = execute_mapping(value.child_io_nodes())
             else:
                 mapped_value = self._map_function(value)
 
@@ -103,233 +241,134 @@ class IOMapper(object):
 
     def get_flattened(self):
         flattened = []
+
         def flatten_hook(value):
             if isinstance(value, Tensor):
                 flattened.append(value)
-        
+
         self.register_post_hook(flatten_hook)
         self.clear_mapping_result()
         self.get_mapping_result()
         self.remove_last_post_hook()
         return flattened
 
-class StructedNamedIOMapper(IOMapper):
-    class IONode(object):
-        def __init__(self, name = None, start_idx = 0, value = None, prefix = "") -> None:
-            self._name = name if name is not None else str(start_idx)
-            self._prefix = prefix
-            self._start_idx = start_idx
-            self._end_idx = start_idx
-            self._cur_level_idx = -1
-            self._child_io_nodes = OrderedDict()
-            self._value = value 
 
-        def size(self):
-            return self._end_idx - self._start_idx + 1 
-
-        def prefix(self):
-            return self._prefix
-
-        def name(self):
-            return self._name
-
-        def cur_level_idx(self):
-            return self._cur_level_idx
-
-        def add_child_io_node(self, node):
-            self._child_io_nodes[self._cur_level_idx + 1] = node 
-            self._end_idx += node.size()
-            self._cur_level_idx += 1 
-
-        def named_nodes(self, memo=None):
-            if memo is None:
-                momo = set()
-            if self not in memo:
-                memo.add(self)
-                yield (self._prefix + "_" + str(self._name), self)
-                for (level_idx, node) in self._child_io_nodes.items():
-                    if node is None: 
-                        continue
-                    for n in node.named_nodes(memo):
-                        yield n 
-
-        def __repr__(self):
-            repr_str = ""
-            repr_str += "(name: " + self._name
-            repr_str += ", idx: " + str(self._start_idx)
-            repr_str += ", type: "
-            type_str = ""
-            if isinstance(self._value, tuple):
-                type_str = "TUPLE"
-            elif isinstance(self._value, list):
-                type_str = "LIST"
-            elif isinstance(self._value, dict):
-                type_str = "DICT"
-            elif isinstance(self._value, Tensor):
-                type_str = "TENSOR"
-            elif self._value is None:
-                type_str = "NONE"
-            else:
-                type_str = "OPAQUE"
-            repr_str += type_str
-
-            if isinstance(self._value, Tensor):
-                repr_str += ", value: " + self._value._meta_repr() + ")"
-            else:
-                repr_str += ", value: " + repr(self._value) + ")"
-            return repr_str
-
-    def __init__(self, root_prefix:str, root_name:str, io_values: Union[Tuple, List, Dict], map_function: Callable) -> None:
-        super().__init__(io_values, map_function)
-        self._root_prefix = root_prefix 
-        self._root_name = root_name 
-        self._root_io_node = None 
-
-    def get_pre_mapping_named_io_values(self):
-        # we build an IONode tree first
-        stack = [None]
-
-        def pre_hook(value):
-            if self._root_io_node == None:
-                self._root_io_node = self.IONode(self._root_name, 0, value, self._root_prefix) 
-                stack.append(self._root_io_node)
-            else:
-                parent_node = stack[-1]
-                child_node_name = None 
-                child_node_prefix = parent_node.prefix() + ("." if parent_node.prefix() else "") + str(parent_node.cur_level_idx() + 1)
-                if isinstance(value, dict):
-
-                current_io_node.add_child_io_node(self.IONode())
-        
-        def post_hook(value):
-            pass 
-
-        self.clear_mapping_result()
-        self.register_pre_hook(pre_hook)
-        self.get_mapping_result() 
-        self.remove_last_pre_hook()
-
-        return self._root_io_node.named_nodes()
-
-    def get_post_mapping_named_io_values(self):
-        pass
-
-# class IONodeType:
-#     TENSOR = "TENSOR"
-#     NONE = "NONE"
-#     LIST = "LIST"
-#     TUPLE = "TUPLE"
-#     DICT = "DICT"
-#     OPAQUE = "OPAQUE"
+class IONodeType:
+    TENSOR = "TENSOR"
+    NONE = "NONE"
+    LIST = "LIST"
+    TUPLE = "TUPLE"
+    DICT = "DICT"
+    OPAQUE = "OPAQUE"
 
 
-# class IONode(object):
-#     def __init__(self, name=None, start_idx=0, value=None, prefix=""):
-#         # Node indexs
-#         self._name = name if name is not None else str(start_idx)
-#         self._prefix = prefix
-#         self._start_idx = start_idx
-#         self._end_idx = start_idx
-#         self._cur_level_idx = -1
-#         self._sub_nodes = OrderedDict()
-#         self.attrs = dict()
-#         self._is_leaf = False
+class IONode(object):
+    def __init__(self, name=None, start_idx=0, value=None, prefix=""):
+        # Node indexs
+        self._name = name if name is not None else str(start_idx)
+        self._prefix = prefix
+        self._start_idx = start_idx
+        self._end_idx = start_idx
+        self._cur_level_idx = -1
+        self._sub_nodes = OrderedDict()
+        self.attrs = dict()
+        self._is_leaf = False
 
-#         if isinstance(value, tuple):
-#             self._type = IONodeType.TUPLE
-#             self._value = None
-#             for idx, item in enumerate(value):
-#                 subnode_prefix = (
-#                     self._prefix
-#                     + ("." if self._prefix else "")
-#                     + str(self._cur_level_idx + 1)
-#                 )
-#                 self.__add_sub_node(
-#                     IONode(None, self._end_idx + 1, item, subnode_prefix)
-#                 )
-#         elif isinstance(value, list):
-#             self._type = IONodeType.LIST
-#             self._value = None
-#             for idx, item in enumerate(value):
-#                 subnode_prefix = (
-#                     self._prefix
-#                     + ("." if self._prefix else "")
-#                     + str(self._cur_level_idx + 1)
-#                 )
-#                 self.__add_sub_node(
-#                     IONode(None, self._end_idx + 1, item, subnode_prefix)
-#                 )
-#         elif isinstance(value, dict):
-#             self._type = IONodeType.DICT
-#             self._value = None
-#             for idx, (key, item) in enumerate(value.items()):
-#                 subnode_prefix = (
-#                     self._prefix
-#                     + ("." if self._prefix else "")
-#                     + str(self._cur_level_idx + 1)
-#                 )
-#                 self.__add_sub_node(
-#                     IONode(key, self._end_idx + 1, item, subnode_prefix)
-#                 )
-#         elif isinstance(value, Tensor):
-#             self._type = IONodeType.TENSOR
-#             self._value = value
-#             self._is_leaf = True
-#         elif value is None:
-#             self._type = IONodeType.NONE
-#             self._value = value
-#             self._is_leaf = True
-#         else:
-#             self._type = IONodeType.OPAQUE
-#             self._value = value
-#             self._is_leaf = True
+        if isinstance(value, tuple):
+            self._type = IONodeType.TUPLE
+            self._value = None
+            for idx, item in enumerate(value):
+                subnode_prefix = (
+                    self._prefix
+                    + ("." if self._prefix else "")
+                    + str(self._cur_level_idx + 1)
+                )
+                self.__add_sub_node(
+                    IONode(None, self._end_idx + 1, item, subnode_prefix)
+                )
+        elif isinstance(value, list):
+            self._type = IONodeType.LIST
+            self._value = None
+            for idx, item in enumerate(value):
+                subnode_prefix = (
+                    self._prefix
+                    + ("." if self._prefix else "")
+                    + str(self._cur_level_idx + 1)
+                )
+                self.__add_sub_node(
+                    IONode(None, self._end_idx + 1, item, subnode_prefix)
+                )
+        elif isinstance(value, dict):
+            self._type = IONodeType.DICT
+            self._value = None
+            for idx, (key, item) in enumerate(value.items()):
+                subnode_prefix = (
+                    self._prefix
+                    + ("." if self._prefix else "")
+                    + str(self._cur_level_idx + 1)
+                )
+                self.__add_sub_node(
+                    IONode(key, self._end_idx + 1, item, subnode_prefix)
+                )
+        elif isinstance(value, Tensor):
+            self._type = IONodeType.TENSOR
+            self._value = value
+            self._is_leaf = True
+        elif value is None:
+            self._type = IONodeType.NONE
+            self._value = value
+            self._is_leaf = True
+        else:
+            self._type = IONodeType.OPAQUE
+            self._value = value
+            self._is_leaf = True
 
-#     def size(self):
-#         return self._end_idx - self._start_idx + 1
+    def size(self):
+        return self._end_idx - self._start_idx + 1
 
-#     def __add_sub_node(self, node):
-#         self._sub_nodes[self._cur_level_idx + 1] = node
-#         self._end_idx += node.size()
-#         self._cur_level_idx += 1
+    def __add_sub_node(self, node):
+        self._sub_nodes[self._cur_level_idx + 1] = node
+        self._end_idx += node.size()
+        self._cur_level_idx += 1
 
-#     def named_nodes(self, memo=None):
-#         if memo is None:
-#             memo = set()
-#         if self not in memo:
-#             memo.add(self)
-#             yield (self._prefix + "_" + str(self._name), self)
-#             for (level_idx, node) in self._sub_nodes.items():
-#                 if node is None:
-#                     continue
-#                 for n in node.named_nodes(memo):
-#                     yield n
+    def named_nodes(self, memo=None):
+        if memo is None:
+            memo = set()
+        if self not in memo:
+            memo.add(self)
+            yield (self._prefix + "_" + str(self._name), self)
+            for (level_idx, node) in self._sub_nodes.items():
+                if node is None:
+                    continue
+                for n in node.named_nodes(memo):
+                    yield n
 
-#     def __repr__(self):
-#         repr_str = ""
-#         repr_str += "(name: " + self._name
-#         repr_str += ", idx: " + str(self._start_idx)
-#         repr_str += ", type: " + self._type
-#         if self._type == IONodeType.TENSOR:
-#             repr_str += ", value: " + self._value._meta_repr() + ")"
-#         else:
-#             repr_str += ", value: " + repr(self._value) + ")"
-#         return repr_str
+    def __repr__(self):
+        repr_str = ""
+        repr_str += "(name: " + self._name
+        repr_str += ", idx: " + str(self._start_idx)
+        repr_str += ", type: " + self._type
+        if self._type == IONodeType.TENSOR:
+            repr_str += ", value: " + self._value._meta_repr() + ")"
+        else:
+            repr_str += ", value: " + repr(self._value) + ")"
+        return repr_str
 
-#     def map_leaf(self, leaf_node_fn):
-#         if self._type == IONodeType.TUPLE:
-#             l_value = list()
-#             for (name, node) in self._sub_nodes.items():
-#                 l_value.append(node.map_leaf(leaf_node_fn))
-#             mapped_value = tuple(l_value)
-#         elif self._type == IONodeType.LIST:
-#             mapped_value = list()
-#             for (name, node) in self._sub_nodes.items():
-#                 mapped_value.append(node.map_leaf(leaf_node_fn))
-#         elif self._type == IONodeType.DICT:
-#             mapped_value = dict()
-#             for (name, node) in self._sub_nodes.items():
-#                 mapped_value[node._name] = node.map_leaf(leaf_node_fn)
-#         else:
-#             # Leaf node: TENSOR/NONE/OPAQUE
-#             mapped_value = leaf_node_fn(self)
-#         return mapped_value
+    def map_leaf(self, leaf_node_fn):
+        if self._type == IONodeType.TUPLE:
+            l_value = list()
+            for (name, node) in self._sub_nodes.items():
+                l_value.append(node.map_leaf(leaf_node_fn))
+            mapped_value = tuple(l_value)
+        elif self._type == IONodeType.LIST:
+            mapped_value = list()
+            for (name, node) in self._sub_nodes.items():
+                mapped_value.append(node.map_leaf(leaf_node_fn))
+        elif self._type == IONodeType.DICT:
+            mapped_value = dict()
+            for (name, node) in self._sub_nodes.items():
+                mapped_value[node._name] = node.map_leaf(leaf_node_fn)
+        else:
+            # Leaf node: TENSOR/NONE/OPAQUE
+            mapped_value = leaf_node_fn(self)
+        return mapped_value

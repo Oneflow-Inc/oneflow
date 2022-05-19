@@ -30,7 +30,6 @@ from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
     seq_to_func_return,
-    IONodeType,
     IONode,
 )
 
