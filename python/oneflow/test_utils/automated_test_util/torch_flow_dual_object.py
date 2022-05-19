@@ -307,7 +307,7 @@ def get_functional_graph_res(
                 whole_fp_tensor_flag = False
                 break
     else:
-       if flow.is_tensor(origin_tensor) and not (origin_tensor.dtype == flow.float32):
+        if flow.is_tensor(origin_tensor) and not (origin_tensor.dtype == flow.float32):
             whole_fp_tensor_flag = False
 
     for arg in oneflow_args:
@@ -318,13 +318,13 @@ def get_functional_graph_res(
         if flow.is_tensor(kwarg) and not (kwarg.dtype == flow.float32):
             whole_fp_tensor_flag = False
             break
-    print('='*100)
-    print('enter function')
+    print("=" * 100)
+    print("enter function")
     print(origin_tensor)
     print(whole_fp_tensor_flag)
     print(oneflow_args)
     print(oneflow_kwargs)
-    print('='*100)
+    print("=" * 100)
     print(oneflow_res.nelement())
     print_note_fake_program()
 
@@ -443,7 +443,7 @@ def get_tensor_graph_res(
                 whole_fp_tensor_flag = False
                 break
     else:
-       if flow.is_tensor(origin_tensor) and not (origin_tensor.dtype == flow.float32):
+        if flow.is_tensor(origin_tensor) and not (origin_tensor.dtype == flow.float32):
             whole_fp_tensor_flag = False
 
     for arg in oneflow_args:
@@ -454,13 +454,13 @@ def get_tensor_graph_res(
         if flow.is_tensor(kwarg) and not (kwarg.dtype == flow.float32):
             whole_fp_tensor_flag = False
             break
-    print('='*100)
-    print('enter function')
+    print("=" * 100)
+    print("enter function")
     print(origin_tensor)
     print(whole_fp_tensor_flag)
     print(oneflow_args)
     print(oneflow_kwargs)
-    print('='*100)
+    print("=" * 100)
     print(oneflow_res.nelement())
     print_note_fake_program()
 
