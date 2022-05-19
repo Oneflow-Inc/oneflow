@@ -139,9 +139,7 @@ class Graph(object):
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
             self._name, self._session._session_ctx
         )
-        self.env_enable_mlir_inference_opt = os.getenv(
-            "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
-        )
+        self.env_enable_mlir_inference_opt = None
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -821,9 +819,9 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
-            # enable_mlir_inference_opt = os.getenv(
-            #     "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
-            # )
+            self.env_enable_mlir_inference_opt = os.getenv(
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            )
             enable_mlir_inference_opt = (
                 False
                 if self.env_enable_mlir_inference_opt is None
