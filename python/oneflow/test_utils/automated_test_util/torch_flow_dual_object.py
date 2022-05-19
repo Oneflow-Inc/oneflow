@@ -298,12 +298,43 @@ def get_functional_graph_res(
 ):
     test_g_res = []
 
+    whole_fp_tensor_flag = True
+
+    origin_tensor = oneflow.__self__
+    if isinstance(origin_tensor, (tuple, list)):
+        for x in origin_tensor:
+            if flow.is_tensor(arg) and not (arg.dtype == flow.float32):
+                whole_fp_tensor_flag = False
+                break
+    else:
+       if flow.is_tensor(origin_tensor) and not (origin_tensor.dtype == flow.float32):
+            whole_fp_tensor_flag = False
+
+    for arg in oneflow_args:
+        if flow.is_tensor(arg) and not (arg.dtype == flow.float32):
+            whole_fp_tensor_flag = False
+            break
+    for kwarg in oneflow_kwargs:
+        if flow.is_tensor(kwarg) and not (kwarg.dtype == flow.float32):
+            whole_fp_tensor_flag = False
+            break
+    print('='*100)
+    print('enter function')
+    print(origin_tensor)
+    print(whole_fp_tensor_flag)
+    print(oneflow_args)
+    print(oneflow_kwargs)
+    print('='*100)
+    print(oneflow_res.nelement())
+    print_note_fake_program()
+
     if (
         global_backward
         and flow.is_tensor(oneflow_res)
-        and flow.is_floating_point(oneflow_res)
+        and oneflow_res.dtype == flow.float32
         and oneflow_res.ndim > 1
         and oneflow_res.nelement() > 0
+        and whole_fp_tensor_flag
     ):
         # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
         graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
@@ -320,9 +351,10 @@ def get_functional_graph_res(
             if (
                 global_backward
                 and flow.is_tensor(oneflow_res)
-                and flow.is_floating_point(oneflow_res)
+                and oneflow_res.dtype == flow.float32
                 and oneflow_res.ndim > 1
                 and oneflow_res.nelement() > 0
+                and whole_fp_tensor_flag
             ):
                 self.m = graph_functional_layernorm
                 self.add_optimizer(of_sgd)
@@ -333,9 +365,10 @@ def get_functional_graph_res(
             if (
                 global_backward
                 and flow.is_tensor(oneflow_res)
-                and flow.is_floating_point(oneflow_res)
+                and oneflow_res.dtype == flow.float32
                 and oneflow_res.ndim > 1
                 and oneflow_res.nelement() > 0
+                and whole_fp_tensor_flag
             ):
                 res = self.m(res)
                 res = res.sum()
@@ -393,18 +426,51 @@ def get_tensor_graph_res(
     graph_tensor_oneflow,
     oneflow,
     oneflow_res,
+    oneflow_args,
+    oneflow_kwargs,
     verbose,
     *tensor_graph_args,
     **tensor_graph_kwargs,
 ):
     test_g_res = []
 
+    whole_fp_tensor_flag = True
+
+    origin_tensor = oneflow.__self__
+    if isinstance(origin_tensor, (tuple, list)):
+        for x in origin_tensor:
+            if flow.is_tensor(arg) and not (arg.dtype == flow.float32):
+                whole_fp_tensor_flag = False
+                break
+    else:
+       if flow.is_tensor(origin_tensor) and not (origin_tensor.dtype == flow.float32):
+            whole_fp_tensor_flag = False
+
+    for arg in oneflow_args:
+        if flow.is_tensor(arg) and not (arg.dtype == flow.float32):
+            whole_fp_tensor_flag = False
+            break
+    for kwarg in oneflow_kwargs:
+        if flow.is_tensor(kwarg) and not (kwarg.dtype == flow.float32):
+            whole_fp_tensor_flag = False
+            break
+    print('='*100)
+    print('enter function')
+    print(origin_tensor)
+    print(whole_fp_tensor_flag)
+    print(oneflow_args)
+    print(oneflow_kwargs)
+    print('='*100)
+    print(oneflow_res.nelement())
+    print_note_fake_program()
+
     if (
         global_backward
         and flow.is_tensor(oneflow_res)
-        and flow.is_floating_point(oneflow_res)
+        and oneflow_res.dtype == flow.float32
         and oneflow_res.ndim > 1
         and oneflow_res.nelement() > 0
+        and whole_fp_tensor_flag
     ):
         # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
         graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
@@ -421,9 +487,10 @@ def get_tensor_graph_res(
             if (
                 global_backward
                 and flow.is_tensor(oneflow_res)
-                and flow.is_floating_point(oneflow_res)
+                and oneflow_res.dtype == flow.float32
                 and oneflow_res.ndim > 1
                 and oneflow_res.nelement() > 0
+                and whole_fp_tensor_flag
             ):
                 self.m = graph_functional_layernorm
                 self.add_optimizer(of_sgd)
@@ -434,9 +501,10 @@ def get_tensor_graph_res(
             if (
                 global_backward
                 and flow.is_tensor(oneflow_res)
-                and flow.is_floating_point(oneflow_res)
+                and oneflow_res.dtype == flow.float32
                 and oneflow_res.ndim > 1
                 and oneflow_res.nelement() > 0
+                and whole_fp_tensor_flag
             ):
                 res = self.m(res)
                 res = res.sum()
@@ -584,6 +652,8 @@ def oneflow_tensor_eager_run_with_graph_check(
             graph_tensor_oneflow,
             oneflow,
             oneflow_res,
+            oneflow_args,
+            oneflow_kwargs,
             verbose,
             *tensor_graph_args,
             **tensor_graph_kwargs,
