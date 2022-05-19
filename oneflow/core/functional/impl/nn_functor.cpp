@@ -323,9 +323,11 @@ class TensorDotFunctor {
     std::vector<int32_t> dot_dims_a(dims_a.begin(), dims_a.end());
     std::vector<int32_t> dot_dims_b(dims_b.begin(), dims_b.end());
     for (int64_t i = 0; i < dot_dims_a.size(); i++) {
-      CHECK_OR_RETURN(dot_dims_a[i] >= -a->ndim() && dot_dims_a[i] < a->ndim()) << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+      CHECK_OR_RETURN(dot_dims_a[i] >= -a->ndim() && dot_dims_a[i] < a->ndim())
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
           << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dot_dims_a[i] << ")";
-      CHECK_OR_RETURN(dot_dims_b[i] >= -b->ndim() && dot_dims_b[i] < b->ndim()) << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+      CHECK_OR_RETURN(dot_dims_b[i] >= -b->ndim() && dot_dims_b[i] < b->ndim())
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
           << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dot_dims_b[i] << ")";
       dot_dims_a[i] = dot_dims_a[i] < 0 ? dot_dims_a[i] + a->ndim() : dot_dims_a[i];
       dot_dims_b[i] = dot_dims_b[i] < 0 ? dot_dims_b[i] + b->ndim() : dot_dims_b[i];
