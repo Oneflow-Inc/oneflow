@@ -608,7 +608,6 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
 
       if (idx != weight_size - 1 || !skip_final_activation) {
-        
         LaunchFusedReluDropoutKernel<T, true>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, 
                                               aux_ld, batchsize, out_feature, rate,
                                               scale, reinterpret_cast<T*>(matmul_out_ptr),
@@ -642,7 +641,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
         const int64_t batchsize = x.shape().At(0);                                      \
         const int32_t weight_size = ctx->input_size("weights");                         \
         size_t tmp_size = 0;                                                            \
-        for (int i = 0; i < weight_size - 1; i++) {                                     \
+        for (int i = 0; i < weight_size; i++) {                                     \
           const int64_t out_feature = ctx->InputTensorDesc("weights", i).shape().At(0); \
           tmp_size += GetCudaAlignedSize(batchsize * out_feature * sizeof(cpp_type));   \
         }                                                                               \
