@@ -220,14 +220,7 @@ class IOMapper(object):
                     map(lambda x: (x[0], execute_mapping(x[1], x[0])), value.items())
                 )
             elif isinstance(value, IONode1):
-                if value.is_leaf():
-                    mapped_value = self._map_function(value.value())
-                elif isinstance(value.value(), tuple) or isinstance(value.value(), list):
-                    
-                elif isinstance(value.value(), dict):
-                    for _, child in value.child_io_nodes():
-                        if 
-                    mapped_value = execute_mapping(value.child_io_nodes())
+                pass 
             else:
                 mapped_value = self._map_function(value)
 
