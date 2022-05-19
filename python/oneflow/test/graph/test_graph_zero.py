@@ -94,7 +94,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).
         # But their consumer will consum them as flow.sbp.broadcast.
-        # one_eval_iter()
+        one_eval_iter()
 
     iter_num = 1
     graph_check_list = train_with_graph(iter_num)
