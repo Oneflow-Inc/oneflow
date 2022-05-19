@@ -145,8 +145,6 @@ void TestElementwiseBroadcastBinary(DeviceManagerRegistry* registry,
   int64_t c_size = c.size() * sizeof(Dst);
 
   for (const auto& device_type : device_types) {
-    LOG(ERROR) << "device " << device_type << " dtype " << src_data_type << " binary " << binary_op
-               << " test " << test_type;
     auto device = registry->GetDevice(device_type, 0);
     ep::test::PinnedMemoryGuard input_a(device.get(), a_size);
     ep::test::PinnedMemoryGuard input_b(device.get(), b_size);
