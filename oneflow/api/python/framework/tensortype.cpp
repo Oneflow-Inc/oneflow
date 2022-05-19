@@ -45,9 +45,11 @@ static PyTypeObject PyTensorTypeTemplate{
 static std::vector<PyTensorType*> tensor_types;
 
 static std::vector<std::pair<const Symbol<DType>&, std::string>> all_data_types = {
-    {DType::Float(), "FloatTensor"},  {DType::Double(), "DoubleTensor"},     {DType::Int8(), "CharTensor"},
-    {DType::Int32(), "IntTensor"},    {DType::Int64(), "LongTensor"},        {DType::UInt8(), "ByteTensor"},
-    {DType::Float16(), "HalfTensor"}, {DType::BFloat16(), "BFloat16Tensor"}, {DType::Bool(), "BoolTensor"},
+    {DType::Float(), "FloatTensor"},  {DType::Double(), "DoubleTensor"},
+    {DType::Int8(), "CharTensor"},    {DType::Int32(), "IntTensor"},
+    {DType::Int64(), "LongTensor"},   {DType::UInt8(), "ByteTensor"},
+    {DType::Float16(), "HalfTensor"}, {DType::BFloat16(), "BFloat16Tensor"},
+    {DType::Bool(), "BoolTensor"},
 };
 
 static std::vector<std::pair<DeviceType, std::string>> all_device_types = {
@@ -161,7 +163,8 @@ ONEFLOW_API_PYBIND11_MODULE("_C", m) {
     std::string type_name = name.substr(idx + 1);
 
     name = name.substr(0, idx);
-    std::string module_name = name.size() > oneflow_prefix.size() ? name.substr(oneflow_prefix.size()) : "";
+    std::string module_name =
+        name.size() > oneflow_prefix.size() ? name.substr(oneflow_prefix.size()) : "";
     auto module = m;
     if (!module_name.empty()) { module = m.def_submodule(module_name.data()); }
     if (tensortype
