@@ -610,7 +610,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     strategy:
       fail-fast: ${{ !contains(github.event.pull_request.labels.*.name, 'need-all-tests-even-fail') }}
-      max-parallel: 5
+      max-parallel: 10
       matrix: ${{ fromJson(needs.find-test-cache.outputs.matrix) }}
     env:
       ONEFLOW_SRC: .
