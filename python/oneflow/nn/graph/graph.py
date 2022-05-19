@@ -1273,7 +1273,7 @@ class Graph(object):
     def __make_input_tensors_contiguous(self, *args, **kwargs):
         
         def to_contiguous(item):
-            if not item is None and isinstance(item, Tensor) and not item.is_contiguous():
+            if isinstance(item, Tensor) and not item.is_contiguous():
                 return item.contiguous()
             else:
                 return item
