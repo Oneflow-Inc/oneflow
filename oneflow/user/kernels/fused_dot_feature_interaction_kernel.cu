@@ -197,6 +197,11 @@ struct DefaultComputeType<half> {
   using type = float;
 };
 
+template<typename T, size_t pack_size>
+struct alignas(sizeof(T) * pack_size) Pack {
+  T elem[pack_size];
+};
+
 template<typename T, int32_t N>
 struct Param {
   const T* in[N];
@@ -205,26 +210,45 @@ struct Param {
   int32_t num_in;
 };
 
-template<typename T, int32_t N>
-__global__ void FeatureInteractionSum(int64_t batch_size, int64_t embedding_size,
+template<typename T, int32_t N, int32_t pack_size>
+__global__ void FeatureInteractionSum(int64_t batch_size, int64_t vector_num_pack,
                                       Param<T, N> param) {
   using ComputeType = typename DefaultComputeType<T>::type;
+  Pack<T, pack_size>* dst_pack = reinterpret_cast<Pack<T, pack_size>*>(param.out);
   for (int batch_idx = blockIdx.x * blockDim.y + threadIdx.y; batch_idx < batch_size;
        batch_idx += gridDim.x * blockDim.y) {
-    T* batch_out = param.out + batch_idx * embedding_size;
-    for (int col_id = threadIdx.x; col_id < embedding_size; col_id += blockDim.x) {
-      ComputeType sum = 0;
-      ComputeType square_sum = 0;
+    Pack<T, pack_size>* batch_out = dst_pack + batch_idx * vector_num_pack;
+    for (int col_id = threadIdx.x; col_id < vector_num_pack; col_id += blockDim.x) {
+      Pack<ComputeType, pack_size> sum;
+      Pack<ComputeType, pack_size> square_sum;
+#pragma unroll
+      for (int k = 0; k < pack_size; ++k) {
+        sum.elem[k] = static_cast<ComputeType>(0);
+        square_sum.elem[k] = static_cast<ComputeType>(0);
+      }
       for (int i = 0; i < N; ++i) {
         if (i >= param.num_in) { break; }
-        const T* batch_in = param.in[i] + batch_idx * param.in_feature_dim[i] * embedding_size;
+        const Pack<T, pack_size>* batch_in =
+            reinterpret_cast<const Pack<T, pack_size>*>(param.in[i])
+            + batch_idx * param.in_feature_dim[i] * vector_num_pack;
+#pragma unroll
         for (int j = 0; j < param.in_feature_dim[i]; ++j) {
-          ComputeType val = static_cast<ComputeType>(batch_in[j * embedding_size + col_id]);
-          sum += val;
-          square_sum += val * val;
+          Pack<T, pack_size> val = batch_in[j * vector_num_pack + col_id];
+#pragma unroll
+          for (int k = 0; k < pack_size; ++k) {
+            const ComputeType compute_val = static_cast<ComputeType>(val.elem[k]);
+            sum.elem[k] += compute_val;
+            square_sum.elem[k] += compute_val * compute_val;
+          }
         }
       }
-      batch_out[col_id] = static_cast<T>((sum * sum - square_sum) * static_cast<ComputeType>(0.5));
+      Pack<T, pack_size> out;
+#pragma unroll
+      for (int k = 0; k < pack_size; ++k) {
+        out.elem[k] = static_cast<T>((sum.elem[k] * sum.elem[k] - square_sum.elem[k])
+                                     * static_cast<ComputeType>(0.5));
+      }
+      batch_out[col_id] = out;
     }
   }
 }
@@ -239,28 +263,28 @@ struct GradParam {
 };
 
 template<typename T, int32_t N>
-__global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t embedding_size,
+__global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t vector_size,
                                           GradParam<T, N> param) {
   using ComputeType = typename DefaultComputeType<T>::type;
   for (int batch_idx = blockIdx.x * blockDim.y + threadIdx.y; batch_idx < batch_size;
        batch_idx += gridDim.x * blockDim.y) {
-    const T* batch_dy = param.dy + batch_idx * embedding_size;
-    for (int col_id = threadIdx.x; col_id < embedding_size; col_id += blockDim.x) {
+    const T* batch_dy = param.dy + batch_idx * vector_size;
+    for (int col_id = threadIdx.x; col_id < vector_size; col_id += blockDim.x) {
       ComputeType sum = 0;
       for (int i = 0; i < N; ++i) {
         if (i >= param.num_in) { break; }
-        const T* batch_in = param.in[i] + batch_idx * param.in_feature_dim[i] * embedding_size;
+        const T* batch_in = param.in[i] + batch_idx * param.in_feature_dim[i] * vector_size;
         for (int j = 0; j < param.in_feature_dim[i]; ++j) {
-          sum += static_cast<ComputeType>(batch_in[j * embedding_size + col_id]);
+          sum += static_cast<ComputeType>(batch_in[j * vector_size + col_id]);
         }
       }
       for (int i = 0; i < N; ++i) {
         if (i >= param.num_in) { break; }
-        const int64_t in_batch_offset = batch_idx * param.in_feature_dim[i] * embedding_size;
+        const int64_t in_batch_offset = batch_idx * param.in_feature_dim[i] * vector_size;
         const T* batch_in = param.in[i] + in_batch_offset;
         T* batch_in_grad = param.in_grad[i] + in_batch_offset;
         for (int j = 0; j < param.in_feature_dim[i]; ++j) {
-          const int64_t offset = j * embedding_size + col_id;
+          const int64_t offset = j * vector_size + col_id;
           batch_in_grad[offset] =
               static_cast<T>(static_cast<ComputeType>(batch_dy[col_id])
                              * (sum - static_cast<ComputeType>(batch_in[offset])));
@@ -273,8 +297,8 @@ __global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t embedding_
 void GetBlockDims(const int64_t vector_size, int* block_dim_x, int* block_dim_y) {
   const int block_size = 256;
   if (vector_size < block_size) {
-    *block_dim_x = vector_size;
-    *block_dim_y = (block_size + vector_size - 1) / vector_size;
+    *block_dim_x = std::ceil(static_cast<float>(vector_size) / 8) * 8;
+    *block_dim_y = (block_size + *block_dim_x - 1) / *block_dim_x;
   } else {
     *block_dim_x = block_size;
     *block_dim_y = 1;
@@ -284,6 +308,68 @@ void GetBlockDims(const int64_t vector_size, int* block_dim_x, int* block_dim_y)
 int GetNumBlocks(const int64_t num_instances, const int64_t instance_per_block) {
   int max_blocks = (num_instances + instance_per_block - 1) / instance_per_block;
   return std::min(max_blocks, kCudaMaxBlocksNum);
+}
+
+template<typename T, int32_t N>
+void DispatchFeatureInteractionSumPackSize(ep::Stream* stream, const int64_t batch_size,
+                                           const int64_t vector_size, const Param<T, N>& param) {
+  int block_dim_x;
+  int block_dim_y;
+  const int pack_size = (vector_size % 2 == 0) ? 2 : 1;
+  const int64_t vector_num_pack = vector_size / pack_size;
+  GetBlockDims(vector_num_pack, &block_dim_x, &block_dim_y);
+  const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
+  dim3 block_dims = dim3(block_dim_x, block_dim_y);
+  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  if (pack_size == 2) {
+    FeatureInteractionSum<T, N, 2>
+        <<<num_blocks, block_dims, 0, cuda_stream>>>(batch_size, vector_num_pack, param);
+  } else {
+    FeatureInteractionSum<T, N, 1>
+        <<<num_blocks, block_dims, 0, cuda_stream>>>(batch_size, vector_num_pack, param);
+  }
+}
+
+template<typename T, int N>
+void DispatchFeatureInteractionSumInputSize(user_op::KernelComputeContext* ctx,
+                                            const int32_t input_size) {
+  CHECK_LE(input_size, N) << input_size;
+  user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  const int64_t batch_size = out->shape().At(0);
+  const int64_t vector_size = out->shape().At(1);
+  Param<T, N> param;
+  param.num_in = input_size;
+  param.out = out->mut_dptr<T>();
+  for (int i = 0; i < input_size; ++i) {
+    param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
+    param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
+  }
+  DispatchFeatureInteractionSumPackSize<T, N>(ctx->stream(), batch_size, vector_size, param);
+}
+
+template<typename T, int N>
+void DispatchFeatureInteractionSumGradInputSize(user_op::KernelComputeContext* ctx,
+                                                const int32_t input_size) {
+  CHECK_LE(input_size, N) << input_size;
+  const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+  const int64_t batch_size = dy->shape().At(0);
+  const int64_t vector_size = dy->shape().At(1);
+  int block_dim_x;
+  int block_dim_y;
+  GetBlockDims(vector_size, &block_dim_x, &block_dim_y);
+  const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
+  dim3 block_dims = dim3(block_dim_x, block_dim_y);
+  GradParam<T, N> param;
+  param.num_in = input_size;
+  param.dy = dy->dptr<T>();
+  for (int i = 0; i < input_size; ++i) {
+    param.in[i] = ctx->Tensor4ArgNameAndIndex("features_grad_like", i)->dptr<T>();
+    param.in_grad[i] = ctx->Tensor4ArgNameAndIndex("features_grad", i)->mut_dptr<T>();
+    param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
+  }
+  FeatureInteractionSumGrad<T, N>
+      <<<num_blocks, block_dims, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          batch_size, vector_size, param);
 }
 
 }  // namespace
@@ -298,55 +384,16 @@ class FusedDotFeatureInteractionPoolingSumKernel final : public user_op::OpKerne
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t batch_size = out->shape().At(0);
-    const int64_t vector_size = out->shape().At(1);
-    int block_dim_x;
-    int block_dim_y;
-    GetBlockDims(vector_size, &block_dim_x, &block_dim_y);
-    const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
-    dim3 block_dims = dim3(block_dim_x, block_dim_y);
     const int input_size = ctx->input_size("features");
-    cudaStream_t stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     if (input_size == 1) {
-      Param<T, 1> param;
-      param.in[0] = ctx->Tensor4ArgNameAndIndex("features", 0)->dptr<T>();
-      param.in_feature_dim[0] = ctx->TensorDesc4ArgNameAndIndex("features", 0)->shape().At(1);
-      param.num_in = 1;
-      param.out = out->mut_dptr<T>();
-      FeatureInteractionSum<T, 1>
-          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+      DispatchFeatureInteractionSumInputSize<T, 1>(ctx, input_size);
     } else if (input_size == 2) {
-      Param<T, 2> param;
-      param.num_in = 2;
-      param.out = out->mut_dptr<T>();
-      for (int i = 0; i < input_size; ++i) {
-        param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
-        param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
-      }
-      FeatureInteractionSum<T, 2>
-          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+      DispatchFeatureInteractionSumInputSize<T, 2>(ctx, input_size);
     } else if (input_size <= 8) {
-      Param<T, 8> param;
-      param.num_in = input_size;
-      param.out = out->mut_dptr<T>();
-      for (int i = 0; i < input_size; ++i) {
-        param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
-        param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
-      }
-      FeatureInteractionSum<T, 8>
-          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+      DispatchFeatureInteractionSumInputSize<T, 8>(ctx, input_size);
     } else {
       CHECK_LE(input_size, 128);
-      Param<T, 128> param;
-      param.num_in = input_size;
-      param.out = out->mut_dptr<T>();
-      for (int i = 0; i < input_size; ++i) {
-        param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
-        param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
-      }
-      FeatureInteractionSum<T, 128>
-          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+      DispatchFeatureInteractionSumInputSize<T, 128>(ctx, input_size);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -553,62 +600,16 @@ class FusedDotFeatureInteractionPoolingSumGradKernel final : public user_op::OpK
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const int64_t batch_size = dy->shape().At(0);
-    const int64_t vector_size = dy->shape().At(1);
-    int block_dim_x;
-    int block_dim_y;
-    GetBlockDims(vector_size, &block_dim_x, &block_dim_y);
-    const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
-    dim3 block_dims = dim3(block_dim_x, block_dim_y);
     const int input_size = ctx->input_size("features_grad_like");
-    cudaStream_t stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     if (input_size == 1) {
-      GradParam<T, 1> param;
-      param.in[0] = ctx->Tensor4ArgNameAndIndex("features_grad_like", 0)->dptr<T>();
-      param.in_grad[0] = ctx->Tensor4ArgNameAndIndex("features_grad", 0)->mut_dptr<T>();
-      param.in_feature_dim[0] = ctx->TensorDesc4ArgNameAndIndex("features_grad", 0)->shape().At(1);
-      param.num_in = 1;
-      param.dy = dy->dptr<T>();
-      FeatureInteractionSumGrad<T, 1>
-          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+      DispatchFeatureInteractionSumGradInputSize<T, 1>(ctx, input_size);
     } else if (input_size == 2) {
-      GradParam<T, 2> param;
-      param.num_in = 2;
-      param.dy = dy->dptr<T>();
-      for (int i = 0; i < input_size; ++i) {
-        param.in[i] = ctx->Tensor4ArgNameAndIndex("features_grad_like", i)->dptr<T>();
-        param.in_grad[i] = ctx->Tensor4ArgNameAndIndex("features_grad", i)->mut_dptr<T>();
-        param.in_feature_dim[i] =
-            ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
-      }
-      FeatureInteractionSumGrad<T, 2>
-          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+      DispatchFeatureInteractionSumGradInputSize<T, 2>(ctx, input_size);
     } else if (input_size <= 8) {
-      GradParam<T, 8> param;
-      param.num_in = input_size;
-      param.dy = dy->dptr<T>();
-      for (int i = 0; i < input_size; ++i) {
-        param.in[i] = ctx->Tensor4ArgNameAndIndex("features_grad_like", i)->dptr<T>();
-        param.in_grad[i] = ctx->Tensor4ArgNameAndIndex("features_grad", i)->mut_dptr<T>();
-        param.in_feature_dim[i] =
-            ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
-      }
-      FeatureInteractionSumGrad<T, 8>
-          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+      DispatchFeatureInteractionSumGradInputSize<T, 8>(ctx, input_size);
     } else {
       CHECK_LE(input_size, 128);
-      GradParam<T, 128> param;
-      param.num_in = input_size;
-      param.dy = dy->dptr<T>();
-      for (int i = 0; i < input_size; ++i) {
-        param.in[i] = ctx->Tensor4ArgNameAndIndex("features_grad_like", i)->dptr<T>();
-        param.in_grad[i] = ctx->Tensor4ArgNameAndIndex("features_grad", i)->mut_dptr<T>();
-        param.in_feature_dim[i] =
-            ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
-      }
-      FeatureInteractionSumGrad<T, 128>
-          <<<num_blocks, block_dims, 0, stream>>>(batch_size, vector_size, param);
+      DispatchFeatureInteractionSumGradInputSize<T, 128>(ctx, input_size);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

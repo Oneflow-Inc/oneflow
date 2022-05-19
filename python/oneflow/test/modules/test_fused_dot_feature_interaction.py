@@ -20,9 +20,7 @@ from oneflow.test_utils.test_util import GenArgDict
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
-
-from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import GenArgList
+import os
 
 
 def _test_fused_dot_feature_interaction(

@@ -2557,11 +2557,12 @@ class FusedDotFeatureInteractionFunctor {
     } else {
       inputs = features;
     }
-    CHECK_OR_RETURN(pooling == "sum" || pooling == "none");
+    CHECK_OR_RETURN(pooling == "sum" || pooling == "none")
+        << Error::RuntimeError() << "pooling should be sum or none, but get " << pooling;
 
     if (pooling == "sum") {
-      CHECK_EQ_OR_RETURN(output_padding, 0) << output_padding;
-      CHECK_OR_RETURN(!output_concat);
+      CHECK_EQ_OR_RETURN(output_padding, 0) << Error::RuntimeError() << output_padding;
+      CHECK_OR_RETURN(!output_concat) << Error::RuntimeError() << "output_concat should not exist";
       JUST(attrs.SetAttr<bool>("has_output_concat", false));
       return OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_no_padded_concated_features_, n_features - 1)), inputs,
