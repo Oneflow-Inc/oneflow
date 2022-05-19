@@ -47,19 +47,14 @@ def seq_to_func_return(seq, need_unpack=False):
     return seq
 
 
-class IONode1(object):
-    def __init__(self, value=None, prefix="", name=None, start_idx=0) -> None:
-        assert not isinstance(value, IONode1), "IONode cannot accept value of type IONode"
-        self._name = name if name is not None else str(start_idx)
+class NamedIONode(object):
+    def __init__(self, prefix="", name=None, global_index=0, local_index=0) -> None:
+        self._name = name if name is not None else str(global_index)
         self._prefix = prefix
-        self._start_idx = start_idx
-        self._end_idx = start_idx
-        self._cur_level_idx = -1
-        self._child_io_nodes = OrderedDict()
-        self._value = value
-
-    def size(self):
-        return self._end_idx - self._start_idx + 1
+        self._global_index = global_index
+        self._local_index = local_index
+        self._is_value_set = False
+        self._value = None
 
     def prefix(self):
         return self._prefix
@@ -67,42 +62,45 @@ class IONode1(object):
     def name(self):
         return self._name
 
-    def cur_level_idx(self):
-        return self._cur_level_idx
+    def local_index(self):
+        return self._local_index
 
-    def end_index(self):
-        return self._end_idx
+    def global_index(self):
+        return self._global_index
 
     def value(self):
+        assert self._is_value_set, "self._value is not set yet"
         return self._value
 
     def is_leaf(self):
-        return len(self._child_io_nodes) == 0
+        assert self._is_value_set, "self._value is not set yet"
+        return not (isinstance(self._value, dict) or isinstance(self._value, tuple) or isinstance(self._value, list))
 
     def set_value(self, value):
-        assert not isinstance(value, IONode1), "IONode cannot accept value of type IONode"
+        assert not isinstance(
+            value, NamedIONode
+        ), "IONode cannot accept value of type NamedIONode"
         self._value = value
-
-    def add_child_io_node(self, node):
-        self._child_io_nodes[self._cur_level_idx + 1] = node
-        self._end_idx += node.size()
-        self._cur_level_idx += 1
-
-    def child_io_nodes(self):
-        return self._child_io_nodes
-
+        self._is_value_set = True
+        
     def named_nodes(self, memo=None):
-        if memo is None:
-            memo = set()
-        if self not in memo:
-            memo.add(self)
-            yield (self._prefix + "_" + str(self._name), self)
-            for (level_idx, node) in self._child_io_nodes.items():
-                if node is None:
-                    continue
-                for n in node.named_nodes(memo):
-                    yield n
+        assert self._is_value_set, "self._value is not set yet"
+        queue = [self._value]
 
+        while len(queue) > 0:
+            curr = queue.pop(0)
+            node = None 
+            if isinstance(curr, tuple) or isinstance(curr, list):
+                for v in curr:
+                    queue.append(v)
+                    node = v
+            elif isinstance(curr, dict):
+                for v in curr.values():
+                    queue.append(v)
+                    node = v 
+
+            yield (node.prefix() + "_" + node.name(), node)
+    
     def __repr__(self):
         repr_str = ""
         repr_str += "(name: " + self._name
@@ -122,56 +120,52 @@ class IONode1(object):
         else:
             type_str = "OPAQUE"
         repr_str += type_str
-        repr_str += ", value: "
+
         if isinstance(self._value, Tensor):
-            repr_str += self._value._meta_repr()
+            repr_str += ", value: " + self._value._meta_repr()
         elif (
             isinstance(self._value, dict)
             or isinstance(self._value, list)
             or isinstance(self._value, tuple)
         ):
-            repr_str += "None"
+            pass
         else:
-            repr_str += repr(self._value)
+            repr_str += ", value: " + repr(self._value)
         repr_str += ")"
         return repr_str
 
 
-def construct_io_node(
-    value, prefix: str, name: str, start_index:int = 0
-) -> IONode1:
-    node = IONode1(value, prefix, name, start_index)
-    if isinstance(value, list) or isinstance(value, tuple):
-        for v in value:
-            node.add_child_io_node(
-                construct_io_node(
-                    v,
-                    node.prefix()
-                    + ("." if node.prefix() else "")
-                    + str(node.cur_level_idx() + 1),
-                    None,
-                    node.end_index() + 1
-                )
-            )
-    elif isinstance(value, dict):
-        for key, v in value.items():
-            node.add_child_io_node(
-                construct_io_node(
-                    v,
-                    node.prefix()
-                    + ("." if node.prefix() else "")
-                    + str(node.cur_level_idx() + 1),
-                    key,
-                    node.end_index() + 1
-                )
-            )
-    return node
+def construct_io_node(value, root_prefix: str, root_name: str) -> NamedIONode:
+    global_index = 0
+    
+    def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
+        nonlocal global_index
+        node = NamedIONode(prefix, name, global_index, local_index)
+        if isinstance(value, list) or isinstance(value, tuple):
+            def func(enum):
+                (i,v) = enum
+                next_prefix = prefix + ("." if prefix else "") + str(i)
+                new_node = construct(v, next_prefix, None, i)
+                return new_node
+            node.set_value(value.__class__(map(func, enumerate(value))))
+
+        elif isinstance(value, dict):
+            def func(enum):
+                i, (key, v) = enum
+                next_prefix = prefix + ("." if prefix else "") + str(i)
+                new_node = construct(v, next_prefix, key, i)
+                return key, new_node 
+            node.set_value(dict(map(func, enumerate(value.items()))))
+        else:
+            node.set_value(value)
+        return node 
+
+    root_node = construct(value, root_prefix, root_name, 0)
+    return root_node
 
 
 class IOMapper(object):
-    def __init__(
-        self, io_values, map_function: Callable
-    ) -> None:
+    def __init__(self, io_values, map_function: Callable) -> None:
         assert io_values != None
         assert map_function != None
 
@@ -219,8 +213,8 @@ class IOMapper(object):
                 mapped_value = dict(
                     map(lambda x: (x[0], execute_mapping(x[1], x[0])), value.items())
                 )
-            elif isinstance(value, IONode1):
-                pass 
+            elif isinstance(value, NamedIONode):
+                assert False 
             else:
                 mapped_value = self._map_function(value)
 

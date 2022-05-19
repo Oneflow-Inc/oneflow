@@ -1272,7 +1272,6 @@ class Graph(object):
         oneflow._oneflow_internal.eager.Sync()
 
     def __make_input_tensors_contiguous(self, *args, **kwargs):
-
         def to_contiguous(item):
             if isinstance(item, Tensor) and not item.is_contiguous():
                 return item.contiguous()
