@@ -22,7 +22,9 @@ import google.protobuf as protobuf
 from typing import List
 
 
-def operators_repr(ops: protobuf.pyext._message.RepeatedCompositeContainer) -> List[str]:
+def operators_repr(
+    ops: protobuf.pyext._message.RepeatedCompositeContainer,
+) -> List[str]:
     r"""Generate operators' string representation
     """
 
