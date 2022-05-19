@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SHAPE_H_
 
 #include "oneflow/core/common/shape.pb.h"
-#include "oneflow/core/common/sequential.pb.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
@@ -28,11 +27,9 @@ namespace oneflow {
 
 class ShapeView;
 class ShapeProto;
-class Int64ListProto;
 
 namespace cfg {
 class ShapeProto;
-class Int64ListProto;
 }  // namespace cfg
 
 class Shape final {
