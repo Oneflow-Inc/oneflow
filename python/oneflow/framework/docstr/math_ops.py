@@ -1707,7 +1707,7 @@ add_docstr(
         >>> output[1].size()
         oneflow.Size([2, 4, 5, 6])
         >>> output[2].size()
-        oneflow.Size([0, 4, 5, 6])
+        oneflow.Size([1, 4, 5, 6])
     """,
 )
 
