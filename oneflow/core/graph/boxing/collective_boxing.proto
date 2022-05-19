@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow.boxing.collective;
 
-import "oneflow/core/common/sequential.proto";
+import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device_type.proto";
 
@@ -41,7 +41,7 @@ message OpDesc {
     optional ReduceMethod reduce_method = 3;
     optional int64 root = 4;
     required DataType data_type = 5;
-    required Int64ListProto shape = 6;
+    required ShapeProto shape = 6;
     required int64 num_ranks = 7;
     required Backend backend = 8;
 }

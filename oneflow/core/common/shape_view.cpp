@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/sequential.pb.h"
+#include "oneflow/core/common/shape.pb.h"
 #include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {

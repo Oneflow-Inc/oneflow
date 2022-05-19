@@ -1,6 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
+import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/sequential.proto";
 import "oneflow/core/common/data_type.proto";
 
@@ -37,7 +38,7 @@ message AttrValue {
     repeated DataType val = 1;
   }
   message ListShape {
-    repeated Int64ListProto val = 1;
+    repeated ShapeProto val = 1;
   }
   message ListStride {
     repeated Int64ListProto val = 1;
@@ -53,7 +54,7 @@ message AttrValue {
     float at_float = 4;
     double at_double = 5;
     string at_string = 6;
-    Int64ListProto at_shape = 7;
+    ShapeProto at_shape = 7;
     DataType at_data_type = 8;
     ListInt32 at_list_int32 = 9;
     ListInt64 at_list_int64 = 10;

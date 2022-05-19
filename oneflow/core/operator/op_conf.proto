@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/sequential.proto";
+import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device_type.proto";
 import "oneflow/core/record/record.proto";
@@ -95,7 +95,7 @@ message BoxingOpConf {
 message DynamicReshapeOpConf {
   required string in = 1;
   required string out = 2;
-  required Int64ListProto shape = 3;
+  required ShapeProto shape = 3;
 }
 
 message DynamicReshapeLikeOpConf {
@@ -160,7 +160,7 @@ message ForeignWatchOpConf {
 message VariableOpConf {
   optional string tick = 1;
   required string out = 2;
-  required Int64ListProto shape = 3;
+  required ShapeProto shape = 3;
   optional DataType data_type = 4;
   oneof initialize {
     InitializerConf initializer = 5;
@@ -193,7 +193,7 @@ message CriticalSectionCallbackTickOpConf {
 message DeviceTickOpConf {
   repeated string tick = 1;
   required string out = 2;
-  optional Int64ListProto time_shape = 3;
+  optional ShapeProto time_shape = 3;
 }
 
 message WaitAndSendIdsOpConf {
@@ -319,7 +319,7 @@ message SliceBoxingConf {
   required LogicalBlobId lbi = 1;
   repeated TensorSliceViewProto in_slice = 2;
   required TensorSliceViewProto out_slice = 3;
-  optional Int64ListProto out_shape = 4;
+  optional ShapeProto out_shape = 4;
 }
 
 message SliceBoxingCopyOpConf {
@@ -394,7 +394,7 @@ message CollectiveBoxingPackOpConf {
   required SbpParallel src_sbp_parallel = 2;
   required SbpParallel dst_sbp_parallel = 3;
   required int64 num_ranks = 4;
-  required Int64ListProto logical_shape = 5;
+  required ShapeProto logical_shape = 5;
 }
 
 message CollectiveBoxingUnpackOpConf {
@@ -402,7 +402,7 @@ message CollectiveBoxingUnpackOpConf {
   required SbpParallel src_sbp_parallel = 2;
   required SbpParallel dst_sbp_parallel = 3;
   required int64 num_ranks = 4;
-  required Int64ListProto logical_shape = 5;
+  required ShapeProto logical_shape = 5;
 }
 
 message ImageDecoderRandomCropResizeOpConf {
@@ -423,7 +423,7 @@ message ImageDecoderRandomCropResizeOpConf {
 
 message BoxingZerosOpConf {
   required LogicalBlobId lbi = 1;
-  required Int64ListProto shape = 2;
+  required ShapeProto shape = 2;
   required DataType data_type = 3;
 }
 

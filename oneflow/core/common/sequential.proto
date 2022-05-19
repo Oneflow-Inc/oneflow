@@ -1,8 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-// NOTE: it should be call elem or extend rather than dim
-// for compatibility reasons, it will not be modified here.
 message Int64ListProto {
   repeated int64 dim = 1;
 }

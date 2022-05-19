@@ -1,0 +1,10 @@
+syntax = "proto2";
+package oneflow;
+
+// NOTE: shape.proto can be replaced with sequential.proto
+// for compatibility reasons, it will not be modified here.
+message ShapeProto {
+  repeated int64 dim = 1;
+}
+
+

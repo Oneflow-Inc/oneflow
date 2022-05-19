@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class Int64ListProto;
+class ShapeProto;
 class Shape;
 
 template<typename DimT>
@@ -58,7 +58,7 @@ class ShapeView final : public ShapeViewBase<const int64_t> {
  public:
   ShapeView() : ShapeViewBase<const int64_t>(nullptr, 0) {}
   ShapeView(const int64_t* ptr, int64_t num_axes) : ShapeViewBase<const int64_t>(ptr, num_axes) {}
-  ShapeView(const Int64ListProto& shape_proto);
+  ShapeView(const ShapeProto& shape_proto);
   ShapeView(const Shape& shape);
   ShapeView(const ShapeView& rhs) = default;
   ~ShapeView() = default;
