@@ -37,7 +37,7 @@ class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpSta
 
   Maybe<void> Capture(FusedSelfAttentionInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1) << "fused_self_attention must have two inputs";
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
     if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -50,7 +50,8 @@ class FusedSelfAttention : public OpExprGradFunction<FusedSelfAttentionInterpSta
                     TensorTuple* in_grads) const override {
     if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
 
-    CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 2)
+        << "it requires exactly two tensors as output grad of fused_self_attention";
     in_grads->resize(1);
     const auto& hidden_states = ctx->SavedTensors().at(0);
     const std::shared_ptr<oneflow::one::Tensor>& fused_self_attention_grad =

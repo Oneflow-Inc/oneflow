@@ -53,7 +53,8 @@ Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(FusedScaleTrilSoftmaxMaskSca
                                                     const TensorTuple& inputs,
                                                     const TensorTuple& outputs,
                                                     const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);
+  CHECK_EQ_OR_RETURN(inputs.size(), 2)
+      << "fused_scale_tril_softmax_mask_scale must have two inputs";
   ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
 
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
@@ -69,7 +70,10 @@ Maybe<void> FusedScaleTrilSoftmaxMaskScale::Capture(FusedScaleTrilSoftmaxMaskSca
 Maybe<void> FusedScaleTrilSoftmaxMaskScale::Apply(
     const FusedScaleTrilSoftmaxMaskScaleInterpState* ctx, const TensorTuple& out_grads,
     TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // Cause output has y and softmax_y
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2) << "it requires exactly two tensors as output grad of "
+                                             "fused_scale_tril_softmax_mask_scale";  // Cause output
+                                                                                     // has y and
+                                                                                     // softmax_y
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
 
   // mask have no grad(reqiures_grad=False), but still take a place in in_grads
