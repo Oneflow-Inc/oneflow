@@ -63,7 +63,7 @@ class RangeGuard final {
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
 #endif
 
-void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes);
+void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth);
 
 // DisableProfilerAndReturnResult will return a json of profile results.
 Maybe<std::string> DisableProfilerAndReturnResult();
