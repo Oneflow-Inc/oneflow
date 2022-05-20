@@ -34,24 +34,13 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   ElementwiseUnaryImpl() = default;
   ~ElementwiseUnaryImpl() override = default;
 
-  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
-    CpuStream* cpu_stream = stream->As<CpuStream>();
-
-    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
-    const Src* src = reinterpret_cast<const Src*>(src_ptr);
-    auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>();
-    cpu_stream->ParallelFor(0, count, [functor, src, dst](int64_t begin, int64_t end) {
-      for (int64_t i = begin; i < end; i++) { dst[i] = functor(src[i]); }
-    });
-  }
-
-  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, Scalar param,
+  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, Scalar attr0, Scalar attr1,
               size_t count) override {
     CpuStream* cpu_stream = stream->As<CpuStream>();
 
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src = reinterpret_cast<const Src*>(src_ptr);
-    auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>(param);
+    auto functor = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>(attr0, attr1);
     cpu_stream->ParallelFor(0, count, [functor, src, dst](int64_t begin, int64_t end) {
       for (int64_t i = begin; i < end; i++) { dst[i] = functor(src[i]); }
     });

@@ -62,7 +62,7 @@ void EigenElementwise(FunctorT functor, Src* src, Dst* dst, const size_t elem_cn
 template<typename Src, typename Dst, DataType SrcType, DataType DstType,
          ep::primitive::UnaryOp unary_op, template<typename A, typename B> class FunctorClass>
 void TestElementwise(DeviceManagerRegistry* registry, const std::set<DeviceType>& device_types,
-                     const size_t elem_cnt) {
+                     const size_t elem_cnt, Scalar attr0 = Scalar(), Scalar attr1 = Scalar()) {
   for (const auto& device_type : device_types) {
     auto device = registry->GetDevice(device_type, 0);
     using EigenSrcVec = Eigen::Matrix<Src, 1, Eigen::Dynamic>;
@@ -92,7 +92,7 @@ void TestElementwise(DeviceManagerRegistry* registry, const std::set<DeviceType>
     std::memcpy(host_src.ptr(), eigen_src_data, src_data_size);
     h2d->Launch(stream.stream(), device_src.ptr<Src>(), host_src.ptr<Src>(), src_data_size);
     elementwise_primitive->Launch(stream.stream(), device_src.ptr<Dst>(), device_dst.ptr<Dst>(),
-                                  elem_cnt);
+                                  attr0, attr1, elem_cnt);
     d2h->Launch(stream.stream(), host_dst.ptr<Dst>(), device_dst.ptr<Dst>(), dst_data_size);
     CHECK_JUST(stream.stream()->Sync());
 

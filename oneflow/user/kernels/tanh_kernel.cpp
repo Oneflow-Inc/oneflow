@@ -44,7 +44,7 @@ class TanhKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     const int64_t elem_cnt = x->shape().elem_cnt();
 
     if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
+      primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), Scalar(), Scalar(), elem_cnt);
     } else {
       // For 0-d Tensor
       return;

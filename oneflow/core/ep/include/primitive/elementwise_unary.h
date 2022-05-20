@@ -31,8 +31,8 @@ class ElementwiseUnary : public Primitive {
   ElementwiseUnary() = default;
   ~ElementwiseUnary() override = default;
 
-  virtual void Launch(Stream* stream, const void* src, void* dst, size_t count) = 0;
-  virtual void Launch(Stream* stream, const void* src, void* dst, Scalar param, size_t count) = 0;
+  virtual void Launch(Stream* stream, const void* src, void* dst, Scalar attr0, Scalar attr1,
+                      size_t count) = 0;
 };
 
 class ElementwiseUnaryFactory : public Factory<ElementwiseUnary> {

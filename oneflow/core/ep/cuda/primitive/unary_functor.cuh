@@ -24,7 +24,7 @@ namespace primitive {
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
-  explicit UnaryFunctor(Scalar param = 0) {}
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Src>(0.5) * src
@@ -34,7 +34,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, Dst, Src> {
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, half, half> {
-  explicit UnaryFunctor(Scalar param = 0) {}
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
 
   UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, float, float> float_functor;
   OF_DEVICE_FUNC half operator()(half src) const {
@@ -45,7 +45,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, half, half> {
 #if CUDA_VERSION >= 11000
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, nv_bfloat16, nv_bfloat16> {
-  explicit UnaryFunctor(Scalar param = 0) {}
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
 
   UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, float, float> float_functor;
   OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src) const {
@@ -56,21 +56,21 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, nv_bfloat16, nv_bfloat16>
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, float, float> {
-  explicit UnaryFunctor(Scalar param = 0) {}
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float operator()(float src) const { return tanhf(src); }
 };
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, double, double> {
-  explicit UnaryFunctor(Scalar param = 0) {}
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC double operator()(double src) const { return tanh(src); }
 };
 
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, half, half> {
-  explicit UnaryFunctor(Scalar param = 0) {}
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC half operator()(half src) const { return __float2half(tanhf(__half2float(src))); }
 };
@@ -78,7 +78,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, half, half> {
 #if CUDA_VERSION >= 11000
 template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, nv_bfloat16, nv_bfloat16> {
-  explicit UnaryFunctor(Scalar param = 0) {}
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}
 
   UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, float, float> float_functor;
   OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src) const {
