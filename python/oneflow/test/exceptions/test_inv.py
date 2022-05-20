@@ -31,7 +31,7 @@ class TestInv(flow.unittest.TestCase):
             in str(ctx.exception)
         )
 
-    def test_inv_not_square_matrix(test_case):
+    def test_inv_exception_not_square_matrix(test_case):
         x = flow.randn(2, 3, 2)
         with test_case.assertRaises(RuntimeError) as ctx:
             y = flow.linalg.inv(x)

@@ -35,12 +35,17 @@ class TestLinalgInv(flow.unittest.TestCase):
         x = random_tensor(ndim=3, dim0=random(), dim1=3, dim2=3, low=-1).to(device)
         return torch.linalg.inv(x)
 
-    @autotest(n=5)
+    @autotest(n=5, rtol=1e-3, atol=1e-3)
     def test_inv_random_square_with_random_data(test_case):
         device = random_device()
         square_dim = random()
         x = random_tensor(ndim=4, dim2=square_dim, dim3=square_dim, low=-1).to(device)
         return torch.linalg.inv(x)
+
+    @profile(torch.linalg.inv)
+    def profile_linalg_inv(test_case):
+        torch.linalg.inv(torch.randn(1, 32, 4, 4))
+        torch.linalg.inv(torch.randn(16, 32, 4, 4))
 
 
 if __name__ == "__main__":

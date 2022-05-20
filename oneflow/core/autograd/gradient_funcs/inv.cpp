@@ -38,7 +38,7 @@ class Inv : public OpExprGradFunction<InvCaptureState> {
     if (ctx->requires_grad) {
       const auto& output = JUST(VectorAt(ctx->SavedTensors(), 0));
       const auto& dy = JUST(VectorAt(out_grads, 0));
-      *JUST(VectorAt(in_grads, 0)) = JUST(functional::Negative(JUST(functional::MatMul(
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::Negative(JUST(functional::MatMul(
           output, JUST(functional::MatMul(dy, output, false, true, 1.0)), true, false, 1.0))));
     }
     return Maybe<void>::Ok();
