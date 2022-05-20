@@ -74,7 +74,11 @@ class NamedIONode(object):
 
     def is_leaf(self):
         assert self._is_value_set, "self._value is not set yet"
-        return not (isinstance(self._value, dict) or isinstance(self._value, tuple) or isinstance(self._value, list))
+        return not (
+            isinstance(self._value, dict)
+            or isinstance(self._value, tuple)
+            or isinstance(self._value, list)
+        )
 
     def set_value(self, value):
         assert not isinstance(
@@ -82,45 +86,40 @@ class NamedIONode(object):
         ), "IONode cannot accept value of type NamedIONode"
         self._value = value
         self._is_value_set = True
-        
+
     def named_nodes(self, memo=None):
         assert self._is_value_set, "self._value is not set yet"
-        queue = [self._value]
+        queue = [self]
 
         while len(queue) > 0:
             curr = queue.pop(0)
-            node = None 
-            if isinstance(curr, tuple) or isinstance(curr, list):
+            if isinstance(curr, NamedIONode):
+                queue.append(curr.value())
+                yield (curr.prefix() + "_" + curr.name(), curr)
+            elif isinstance(curr, tuple) or isinstance(curr, list):
                 for v in curr:
                     queue.append(v)
-                    node = v
             elif isinstance(curr, dict):
                 for v in curr.values():
                     queue.append(v)
-                    node = v 
 
-            yield (node.prefix() + "_" + node.name(), node)
-    
     def __repr__(self):
         repr_str = ""
         repr_str += "(name: " + self._name
-        repr_str += ", idx: " + str(self._start_idx)
+        repr_str += ", idx: " + str(self._global_index)
         repr_str += ", type: "
-        type_str = ""
         if isinstance(self._value, tuple):
-            type_str = "TUPLE"
+            repr_str += "TUPLE"
         elif isinstance(self._value, list):
-            type_str = "LIST"
+            repr_str += "LIST"
         elif isinstance(self._value, dict):
-            type_str = "DICT"
+            repr_str += "DICT"
         elif isinstance(self._value, Tensor):
-            type_str = "TENSOR"
+            repr_str += "TENSOR"
         elif self._value is None:
-            type_str = "NONE"
+            repr_str += "NONE"
         else:
-            type_str = "OPAQUE"
-        repr_str += type_str
-
+            repr_str += "OPAQUE"
         if isinstance(self._value, Tensor):
             repr_str += ", value: " + self._value._meta_repr()
         elif (
@@ -137,32 +136,64 @@ class NamedIONode(object):
 
 def construct_io_node(value, root_prefix: str, root_name: str) -> NamedIONode:
     global_index = 0
-    
+
     def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
         nonlocal global_index
         node = NamedIONode(prefix, name, global_index, local_index)
+        global_index += 1
         if isinstance(value, list) or isinstance(value, tuple):
-            def func(enum):
-                (i,v) = enum
+
+            def construct_func(enum):
+                (i, v) = enum
                 next_prefix = prefix + ("." if prefix else "") + str(i)
                 new_node = construct(v, next_prefix, None, i)
                 return new_node
-            node.set_value(value.__class__(map(func, enumerate(value))))
+
+            node.set_value(value.__class__(map(construct_func, enumerate(value))))
 
         elif isinstance(value, dict):
-            def func(enum):
+
+            def construct_func(enum):
                 i, (key, v) = enum
                 next_prefix = prefix + ("." if prefix else "") + str(i)
                 new_node = construct(v, next_prefix, key, i)
-                return key, new_node 
-            node.set_value(dict(map(func, enumerate(value.items()))))
+                return key, new_node
+
+            node.set_value(dict(map(construct_func, enumerate(value.items()))))
         else:
             node.set_value(value)
-        return node 
+        return node
 
     root_node = construct(value, root_prefix, root_name, 0)
     return root_node
 
+
+def map_io(io_values, map_function: Callable):
+    assert (
+        isinstance(io_values, dict)
+        or isinstance(io_values, tuple)
+        or isinstance(io_values, list)
+        or isinstance(io_values, NamedIONode)
+    ), "must be one of those types"
+
+    assert map_function != None, "map function cannot be None"
+
+    def execute_mapping(value):
+        if isinstance(value, tuple) or isinstance(value, list):
+            mapped_value = value.__class__(
+                map(lambda x: execute_mapping(x), value)
+            )
+        elif isinstance(value, dict):
+            mapped_value = dict(
+                map(lambda x: (x[0], execute_mapping(x[1])), value.items())
+            )
+        elif isinstance(value, NamedIONode):
+            assert False
+        else:
+            mapped_value = map_function(value)
+
+        return mapped_value
+    return execute_mapping(io_values)
 
 class IOMapper(object):
     def __init__(self, io_values, map_function: Callable) -> None:
@@ -172,38 +203,12 @@ class IOMapper(object):
         self._io_values = io_values
         self._mapped_io_values = None
         self._map_function = map_function
-        self._pre_hooks = []
-        self._post_hooks = []
-
-    def clear_mapping_result(self):
-        self._mapped_io_values = None
-
-    def is_mapped(self):
-        self._mapped_io_values != None
-
-    def register_pre_hook(self, hook: Callable):
-        assert hook != None
-        self._pre_hooks.append(hook)
-
-    def remove_last_pre_hook(self):
-        assert len(self._pre_hooks) > 0
-        self._pre_hooks.pop()
-
-    def remove_last_post_hook(self):
-        assert len(self._post_hooks) > 0
-        self._post_hooks.pop()
-
-    def register_post_hook(self, hook: Callable):
-        assert hook != None
-        self._post_hooks.append(hook)
 
     def get_mapping_result(self):
         if self.is_mapped():
             return self._mapped_io_values
 
         def execute_mapping(value, key_or_index=None):
-            for pre_hook in self._pre_hooks:
-                pre_hook(value, key_or_index)
 
             if isinstance(value, tuple) or isinstance(value, list):
                 mapped_value = value.__class__(
@@ -214,30 +219,14 @@ class IOMapper(object):
                     map(lambda x: (x[0], execute_mapping(x[1], x[0])), value.items())
                 )
             elif isinstance(value, NamedIONode):
-                assert False 
+                assert False
             else:
                 mapped_value = self._map_function(value)
-
-            for post_hook in self._post_hooks:
-                post_hook(mapped_value, key_or_index)
 
             return mapped_value
 
         self._mapped_io_values = execute_mapping(self._io_values)
         return self._mapped_io_values
-
-    def get_flattened(self):
-        flattened = []
-
-        def flatten_hook(value):
-            if isinstance(value, Tensor):
-                flattened.append(value)
-
-        self.register_post_hook(flatten_hook)
-        self.clear_mapping_result()
-        self.get_mapping_result()
-        self.remove_last_post_hook()
-        return flattened
 
 
 class IONodeType:

@@ -47,14 +47,16 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         t4 = flow.tensor(t4, dtype=flow.float32)
 
         def fn(*args, **kwargs):
-            print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+            print(
+                "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            )
             inp = (args, kwargs)
             print("origin: ", inp)
 
             io_node = construct_io_node(inp, "Graph_0", None)
 
-            # for (name, node) in list(io_node.named_nodes()):
-            #     print(name, repr(node))
+            for (name, node) in io_node.named_nodes():
+                print(name, repr(node))
 
             # def map_fn(value):
             #     if isinstance(value, str):
@@ -65,7 +67,9 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             # io_mapper = IOMapper(io_node, map_fn)
             # m_v = io_mapper.get_mapping_result()
             # print("mapped:", m_v)
-            print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+            print(
+                "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+            )
             return None
 
         ret = fn(None, 1, "test_str", x, lt0, {"t": t4, "l": lt0}, kw=t4)
