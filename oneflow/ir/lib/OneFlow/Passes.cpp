@@ -482,7 +482,9 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
   ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
                                         ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::VariableOp>(op0);
+    if (!op) return failure();
     NamedAttrList attrs;
+    if (op.op_name().str().find("FreeEagerTensor") != std::string::npos) { return failure(); }
     attrs.set(StringAttr::get(getContext(), "value"),
               support::TensorToDenseElementsAttr(
                   ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
@@ -506,6 +508,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
   ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
                                         ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::FrozenVariableOp>(op0);
+    if (!op) return failure();
     NamedAttrList attrs;
     const auto tensor_attr = op.value();
     attrs.set(StringAttr::get(getContext(), "shape"),
@@ -528,11 +531,13 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
-
+    const std::string tensor_name = op.op_nameAttr().str();
     ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Set(
-        op.op_nameAttr().str(),
+        tensor_name,  // tensor_name can't be replaced by op.op_nameAttr().str() directly when
+                      // compiling with gcc and I has no idea why.
+                      // But it works when compiling with clang.
+                      // Maybe temporary objects would be released earlier when using gcc.
         support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()));
-
     return ::mlir::success();
   }
 };
@@ -621,6 +626,16 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
 
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
+    if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+      if (op->getOperands()[0].getType().cast<mlir::RankedTensorType>().getShape().size() != 4) {
+        return failure();
+      }
+      const auto device_name = OpTrait::IsOpConfCompatible<void>::getDeviceTag(op)
+                                   .cast<mlir::StringAttr>()
+                                   .getValue()
+                                   .str();
+      if (device_name == "cpu") { return failure(); }
+    }
     llvm::SmallVector<int32_t> perm = getChannelLastTransposePerm();
     llvm::SmallVector<int32_t> result_perm = getChannelFirstTransposePerm();
 
@@ -671,17 +686,23 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   }
 };
 
-bool IsRedundantTransposeMatch(ArrayAttr pre, ArrayAttr afe) {
-  const auto prePerm = pre.getValue();
-  const auto afePerm = afe.getValue();
+bool IsRedundantTransposeMatch(ArrayAttr pre, ArrayAttr afe, mlir::PatternRewriter& rewriter) {
+  const auto prePerm = pre.getValue().vec();
+  const auto afePerm = afe.getValue().vec();
   if (prePerm.size() == 4 && afePerm.size() == 4) {
     // handle nchw->nhwc->nchw: (0, 2, 3, 1) -> (0, 3, 1, 2)
     if (prePerm[0] == afePerm[0] && prePerm[1] == afePerm[3] && prePerm[2] == afePerm[1]
-        && prePerm[3] == afePerm[2])
+        && prePerm[3] == afePerm[2] && prePerm[0] == rewriter.getSI32IntegerAttr(0)
+        && prePerm[1] == rewriter.getSI32IntegerAttr(2)
+        && prePerm[2] == rewriter.getSI32IntegerAttr(3)
+        && prePerm[3] == rewriter.getSI32IntegerAttr(1))
       return true;
     // handle nhwc->nchw->nhwc: (0, 3, 1, 2) -> (0, 2, 3, 1)
     if (prePerm[0] == afePerm[0] && prePerm[1] == afePerm[2] && prePerm[2] == afePerm[3]
-        && prePerm[3] == afePerm[1])
+        && prePerm[3] == afePerm[1] && prePerm[0] == rewriter.getSI32IntegerAttr(0)
+        && prePerm[1] == rewriter.getSI32IntegerAttr(3)
+        && prePerm[2] == rewriter.getSI32IntegerAttr(1)
+        && prePerm[3] == rewriter.getSI32IntegerAttr(2))
       return true;
   }
   return false;
@@ -696,7 +717,7 @@ struct AutoNhwcEliminateRedundantTransposePattern : public mlir::OpRewritePatter
     TransposeOp transposeInputOp = transposeInput.getDefiningOp<TransposeOp>();
 
     if (!transposeInputOp
-        || !IsRedundantTransposeMatch(op.permAttr(), transposeInputOp.permAttr())) {
+        || !IsRedundantTransposeMatch(op.permAttr(), transposeInputOp.permAttr(), rewriter)) {
       return failure();
     }
     rewriter.replaceOp(op, {transposeInputOp.getOperand()});
