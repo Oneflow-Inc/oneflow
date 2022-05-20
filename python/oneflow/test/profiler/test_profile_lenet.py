@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+from tkinter import TRUE
 import unittest
 import oneflow.unittest
 import oneflow as flow
@@ -50,7 +51,12 @@ def get_event(events, name: str, input_shapes: str = "-"):
     return None
 
 
-def _test_lenet(test_case, on_cuda: bool, record_shapes: bool):
+def _test_lenet(
+    test_case,
+    on_cuda: bool,
+    record_shapes: bool,
+    record_bandwidth_for_cuda: bool = False,
+):
     x = flow.randn(2, 3, 32, 32)
     lenet = LeNet()
     if on_cuda:
@@ -60,7 +66,9 @@ def _test_lenet(test_case, on_cuda: bool, record_shapes: bool):
     if on_cuda:
         activities.append(oneflow.profiler.ProfilerActivity.CUDA)
     with oneflow.profiler.profile(
-        activities=activities, record_shapes=record_shapes
+        activities=activities,
+        record_shapes=record_shapes,
+        record_bandwidth_for_cuda=record_bandwidth_for_cuda,
     ) as prof:
         with oneflow.profiler.record_function("lenet_forward_total_time") as f:
             for _ in range(2):
@@ -77,6 +85,8 @@ def _test_lenet(test_case, on_cuda: bool, record_shapes: bool):
     test_case.assertGreater(conv_event.time_total, 0.0)
     test_case.assertEqual(conv_event.on_gpu, True if on_cuda else False)
     test_case.assertEqual(conv_event.count, 2 if record_shapes else 4)
+    if record_bandwidth_for_cuda and on_cuda:
+        test_case.assertNotEqual(conv_event.bandwidth, -1)
 
     relu_grad_event = get_event(
         events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]" if record_shapes else "-"
@@ -86,6 +96,8 @@ def _test_lenet(test_case, on_cuda: bool, record_shapes: bool):
     test_case.assertGreater(relu_grad_event.time_total, 0.0)
     test_case.assertEqual(conv_event.on_gpu, True if on_cuda else False)
     test_case.assertEqual(relu_grad_event.count, 1 if record_shapes else 4)
+    if record_bandwidth_for_cuda and on_cuda:
+        test_case.assertNotEqual(relu_grad_event.bandwidth, -1)
 
     test_case.assertIsNotNone(get_event(events, "lenet_forward_total_time"))
     test_case.assertIsNotNone(get_event(events, "lenet_backward_total_time"))
@@ -98,8 +110,21 @@ class TestProfileLenet(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_lenet_cuda(test_case):
-        _test_lenet(test_case, on_cuda=True, record_shapes=True)
-        _test_lenet(test_case, on_cuda=True, record_shapes=False)
+        _test_lenet(
+            test_case, on_cuda=True, record_shapes=True, record_bandwidth_for_cuda=False
+        )
+        _test_lenet(
+            test_case,
+            on_cuda=True,
+            record_shapes=False,
+            record_bandwidth_for_cuda=False,
+        )
+        _test_lenet(
+            test_case, on_cuda=True, record_shapes=True, record_bandwidth_for_cuda=True
+        )
+        _test_lenet(
+            test_case, on_cuda=True, record_shapes=False, record_bandwidth_for_cuda=True
+        )
 
 
 if __name__ == "__main__":
