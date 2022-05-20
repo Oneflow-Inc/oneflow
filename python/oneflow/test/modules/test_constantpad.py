@@ -28,7 +28,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad1d(flow.unittest.TestCase):
-    @autotest(rtol=0.001, atol=0.001)
+    @autotest(n=10, rtol=0.001, atol=0.001)
     def test_constantpad1d_with_random_data(test_case):
         m = torch.nn.ConstantPad1d(
             padding=random(1, 6).to(_size_2_t), value=random().to(float)
@@ -43,7 +43,7 @@ class TestConstantPad1d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad2d(flow.unittest.TestCase):
-    @autotest(rtol=0.001, atol=0.001)
+    @autotest(n=10, rtol=0.001, atol=0.001)
     def test_constantpad2d_with_random_data(test_case):
         m = torch.nn.ConstantPad2d(
             padding=random(1, 6).to(_size_4_t), value=random().to(float)
@@ -60,7 +60,7 @@ class TestConstantPad2d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantPad3d(flow.unittest.TestCase):
-    @autotest(rtol=0.001, atol=0.001)
+    @autotest(n=10, rtol=0.001, atol=0.001)
     def test_constantpad3d_with_random_data(test_case):
         m = torch.nn.ConstantPad3d(
             padding=random(1, 6).to(_size_6_t), value=random().to(float)
@@ -81,7 +81,7 @@ class TestConstantPad3d(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFunctionalConstantPad2d(flow.unittest.TestCase):
-    @autotest(n=20, rtol=0.001, atol=0.001, check_graph=True)
+    @autotest(n=10, rtol=0.001, atol=0.001, check_graph=True)
     def test_functional_constantpad2d(test_case):
         device = random_device()
         padding = random(-1, 6).to(_size_4_t)
