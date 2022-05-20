@@ -87,21 +87,21 @@ class NamedIONode(object):
         self._value = value
         self._is_value_set = True
 
-    def named_nodes(self, memo=None):
+    def named_nodes(self):
         assert self._is_value_set, "self._value is not set yet"
-        queue = [self]
+        stack = [self]
 
-        while len(queue) > 0:
-            curr = queue.pop(0)
+        while len(stack) > 0:
+            curr = stack.pop()
             if isinstance(curr, NamedIONode):
-                queue.append(curr.value())
+                stack.append(curr.value())
                 yield (curr.prefix() + "_" + curr.name(), curr)
             elif isinstance(curr, tuple) or isinstance(curr, list):
-                for v in curr:
-                    queue.append(v)
+                for v in reversed(curr):
+                    stack.append(v)
             elif isinstance(curr, dict):
-                for v in curr.values():
-                    queue.append(v)
+                for v in reversed(curr.values()):
+                    stack.append(v)
 
     def __repr__(self):
         repr_str = ""
@@ -158,8 +158,8 @@ def construct_io_node(value, root_prefix: str, root_name: str) -> NamedIONode:
                 next_prefix = prefix + ("." if prefix else "") + str(i)
                 new_node = construct(v, next_prefix, key, i)
                 return key, new_node
-
-            node.set_value(dict(map(construct_func, enumerate(value.items()))))
+            m = map(construct_func, enumerate(value.items()))
+            node.set_value(OrderedDict(m))
         else:
             node.set_value(value)
         return node
@@ -173,60 +173,27 @@ def map_io(io_values, map_function: Callable):
         isinstance(io_values, dict)
         or isinstance(io_values, tuple)
         or isinstance(io_values, list)
-        or isinstance(io_values, NamedIONode)
+        or (isinstance(io_values, NamedIONode) and not io_values.is_leaf())
     ), "must be one of those types"
 
     assert map_function != None, "map function cannot be None"
 
     def execute_mapping(value):
         if isinstance(value, tuple) or isinstance(value, list):
-            mapped_value = value.__class__(
-                map(lambda x: execute_mapping(x), value)
-            )
+            mapped_value = value.__class__(map(lambda x: execute_mapping(x), value))
         elif isinstance(value, dict):
-            mapped_value = dict(
+            mapped_value = value.__class__(
                 map(lambda x: (x[0], execute_mapping(x[1])), value.items())
             )
         elif isinstance(value, NamedIONode):
-            assert False
+            mapped_value = execute_mapping(value.value())
         else:
             mapped_value = map_function(value)
 
         return mapped_value
+
     return execute_mapping(io_values)
 
-class IOMapper(object):
-    def __init__(self, io_values, map_function: Callable) -> None:
-        assert io_values != None
-        assert map_function != None
-
-        self._io_values = io_values
-        self._mapped_io_values = None
-        self._map_function = map_function
-
-    def get_mapping_result(self):
-        if self.is_mapped():
-            return self._mapped_io_values
-
-        def execute_mapping(value, key_or_index=None):
-
-            if isinstance(value, tuple) or isinstance(value, list):
-                mapped_value = value.__class__(
-                    map(lambda x: execute_mapping(x[1], x[0]), enumerate(value))
-                )
-            elif isinstance(value, dict):
-                mapped_value = dict(
-                    map(lambda x: (x[0], execute_mapping(x[1], x[0])), value.items())
-                )
-            elif isinstance(value, NamedIONode):
-                assert False
-            else:
-                mapped_value = self._map_function(value)
-
-            return mapped_value
-
-        self._mapped_io_values = execute_mapping(self._io_values)
-        return self._mapped_io_values
 
 
 class IONodeType:
