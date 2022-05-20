@@ -19,9 +19,9 @@ limitations under the License.
 #include <mutex>
 #include <functional>
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/job/job_conf.cfg.h"
-#include "oneflow/core/job/placement.cfg.h"
-#include "oneflow/core/job/scope.cfg.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -70,7 +70,7 @@ class IdCache final {
 
  private:
   mutable std::mutex mutex_;
-  std::map<T, int64_t> symbol_data2id_;
+  HashMap<T, int64_t> symbol_data2id_;
 };
 
 }  // namespace symbol

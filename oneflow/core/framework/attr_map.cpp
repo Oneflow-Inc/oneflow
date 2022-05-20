@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
@@ -77,23 +76,12 @@ AttrName2AttrValWrapper MakeAttrName2AttrValWrapper(const MutableAttrMap& other)
   return AttrName2AttrValWrapper(attrs);
 }
 
-AttrName2AttrValWrapper MakeAttrName2AttrValWrapper(const MutableCfgAttrMap& other) {
-  const auto& attrs = std::make_shared<AttrName2AttrVal>();
-  for (const auto& pair : other) {
-    const auto& attr_value = CHECK_JUST(user_op::AttrValueUtil::ToCppAttrValue(*pair.second));
-    attrs->emplace(pair.first, attr_value);
-  }
-  return AttrName2AttrValWrapper(attrs);
-}
-
 }  // namespace
 
 AttrMap::AttrMap(std::initializer_list<AttrMap::value_type> init)
     : attrs_(MakeAttrName2AttrValWrapper(init)) {}
 
 AttrMap::AttrMap(const MutableAttrMap& other) : attrs_(MakeAttrName2AttrValWrapper(other)) {}
-
-AttrMap::AttrMap(const MutableCfgAttrMap& other) : attrs_(MakeAttrName2AttrValWrapper(other)) {}
 
 AttrMap& AttrMap::operator=(const AttrMap& other) {
   attrs_ = other.attrs_;
@@ -171,26 +159,8 @@ Maybe<void> MutableAttrMap::SetAttr(const std::string& attr_name, const T& attr_
   return Maybe<void>::Ok();
 }
 
-template<>
-Maybe<void> MutableCfgAttrMap::SetAttr(const std::string& attr_name,
-                                       const std::shared_ptr<cfg::AttrValue>& attr_val) {
-  (*this)[attr_name] = attr_val;
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<void> MutableCfgAttrMap::SetAttr(const std::string& attr_name, const T& attr_val) {
-  AttrValue proto_attr_val;
-  user_op::AttrValueAccessor<T>::Attr(attr_val, &proto_attr_val);
-  (*this)[attr_name] = std::make_shared<cfg::AttrValue>(proto_attr_val);
-  return Maybe<void>::Ok();
-}
-
-#define DEFINE_ATTR_VALUE_MAP_SET_ATTR(field, T, attr_type)                        \
-  template Maybe<void> MutableAttrMap::SetAttr<T>(const std::string& attr_name,    \
-                                                  const T& attr_val);              \
-  template Maybe<void> MutableCfgAttrMap::SetAttr<T>(const std::string& attr_name, \
-                                                     const T& attr_val);
+#define DEFINE_ATTR_VALUE_MAP_SET_ATTR(field, T, attr_type) \
+  template Maybe<void> MutableAttrMap::SetAttr<T>(const std::string& attr_name, const T& attr_val);
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_ATTR_VALUE_MAP_SET_ATTR, ATTR_SEQ);
 #undef DEFINE_ATTR_VALUE_MAP_SET_ATTR
