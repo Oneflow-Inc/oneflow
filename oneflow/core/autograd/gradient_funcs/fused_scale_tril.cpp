@@ -63,7 +63,8 @@ Maybe<void> FusedScaleTril::Capture(FusedScaleTrilState* ctx, const TensorTuple&
 Maybe<void> FusedScaleTril::Apply(const FusedScaleTrilState* ctx, const TensorTuple& out_grads,
                                   TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+      << "it requires exactly one tensor as output grad of fused-scale-tril";
   in_grads->resize(1);
   Scalar scale;
   if (ctx->is_floating_scale_value) {
