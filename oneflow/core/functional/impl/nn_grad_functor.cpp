@@ -979,7 +979,7 @@ class FusedDotFeatureInteractionGradFunctor {
     JUST(attrs.SetAttr<int32_t>("output_concat_grad_dim", output_concat_grad_dim));
     JUST(attrs.SetAttr<std::string>("pooling", pooling));
     CHECK_OR_RETURN(pooling == "sum" || pooling == "none")
-        << Error::RuntimeError() << "pooling should be sum or none, but get " << pooling;
+        << Error::RuntimeError() << "pooling should be sum or none, but get " << pooling << ". ";
     const int64_t n_features_grad = features_grad_like.size();
     CHECK_LE_OR_RETURN(n_features_grad, kMaxInputCount)
         << Error::RuntimeError()

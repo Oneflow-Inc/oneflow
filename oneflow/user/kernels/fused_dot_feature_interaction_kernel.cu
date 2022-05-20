@@ -392,7 +392,7 @@ class FusedDotFeatureInteractionPoolingSumKernel final : public user_op::OpKerne
     } else if (input_size <= 8) {
       DispatchFeatureInteractionSumInputSize<T, 8>(ctx, input_size);
     } else {
-      CHECK_LE(input_size, 128);
+      CHECK_LE(input_size, 128) << "input_size must not greater than 128. ";
       DispatchFeatureInteractionSumInputSize<T, 128>(ctx, input_size);
     }
   }
@@ -608,7 +608,7 @@ class FusedDotFeatureInteractionPoolingSumGradKernel final : public user_op::OpK
     } else if (input_size <= 8) {
       DispatchFeatureInteractionSumGradInputSize<T, 8>(ctx, input_size);
     } else {
-      CHECK_LE(input_size, 128);
+      CHECK_LE(input_size, 128) << "input_size must not greater than 128. ";
       DispatchFeatureInteractionSumGradInputSize<T, 128>(ctx, input_size);
     }
   }
