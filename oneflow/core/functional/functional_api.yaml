@@ -37,9 +37,9 @@
 - name: "sub"
   signature:
     [
-      "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Sub",
-      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarSub",
-      "Tensor (Scalar input, Tensor other) =>  ScalarSub",
+      "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=False) => Sub",
+      "Tensor (Tensor input, Scalar other, *, Scalar alpha=1, Bool inplace=False) => ScalarSub",
+      "Tensor (Scalar input, Tensor other, *, Scalar alpha=1) =>  ScalarSub",
     ]
   bind_python: true
 
@@ -728,11 +728,11 @@
   bind_python: True
 
 - name: "broadcast_like"
-  signature: "Tensor (Tensor x, Tensor like, Int32List broadcast_axes) => BroadcastLike"
+  signature: "Tensor (Tensor x, Tensor like, Int32List broadcast_axes=[]) => BroadcastLike"
   bind_python: True
 
 - name: "cast"
-  signature: "Tensor (Tensor x, DataType dtype) => Cast"
+  signature: "Tensor (Tensor x, DataType dtype, Bool pin_memory=False) => Cast"
   bind_python: True
 
 - name: "constant"
@@ -1255,7 +1255,7 @@
   bind_python: True
 
 - name: "slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => Slice"
+  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => Slice"
   bind_python: True
 
 - name: "slice_grad"
@@ -1275,7 +1275,7 @@
   bind_python: True
 
 - name: "logical_slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => LogicalSlice"
+  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => LogicalSlice"
   bind_python: True
 
 - name: "logical_slice_assign"
@@ -1283,7 +1283,7 @@
   bind_python: True
 
 - name: "copy"
-  signature: "Tensor (Tensor x, String device_type, Int64 device_id) => Copy"
+  signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
   bind_python: True
 
 - name: "to"
@@ -1299,10 +1299,6 @@
 - name: "flip"
   signature: "Tensor (Tensor x, Int32List dims) => Flip"
   bind_python: True
-
-- name: "flip_grad"
-  signature: "Tensor (Tensor dy, Int32List dims) => FlipGrad"
-  bind_python: False
 
 - name: "upsample"
   signature:
@@ -1712,7 +1708,7 @@
 
 - name: "tensor_getitem"
   signature: "Tensor (Tensor x, TensorIndex index) => TensorGetItem"
-  bind_python: True
+  bind_python: False
 
 - name: "scatter"
   signature:
@@ -2046,10 +2042,6 @@
   signature: "Tensor (Tensor in, Tensor indices) => BatchGather"
   bind_python: True
 
-- name: "batch_gather"
-  signature: "Tensor (Tensor in, Tensor indices) => BatchGather"
-  bind_python: True
-
 - name: "unsorted_batch_segment_sum"
   signature: "Tensor (Tensor data, Tensor segment_ids, Int64 num_segments) => UnsortedBatchSegmentSum"
   bind_python: False
@@ -2126,10 +2118,6 @@
 - name: "cumsum"
   signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumsum"
   bind_python: True
-
-- name: "cumsum_grad"
-  signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
-  bind_python: False 
 
 - name: "cumprod"
   signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumprod"
