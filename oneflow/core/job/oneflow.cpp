@@ -194,7 +194,12 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
       TeePersistentLogStream::Create(StrCat("subplan_job_", job_desc.job_id()))->Write(*plan);
     }
   }
-  PlanUtil::GenCollectiveBoxingPlan(job, plan);
+  if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
+    PlanUtil::GenOfCollectiveBoxingPlan(job, plan);
+  } else {
+    PlanUtil::GenCollectiveBoxingPlan(job, plan);
+  }
+  
   PlanUtil::GenRegisterHint(plan);
   return Maybe<void>::Ok();
 }
