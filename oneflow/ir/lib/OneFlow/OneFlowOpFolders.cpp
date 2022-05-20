@@ -108,7 +108,7 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, [this](const auto& tensor) {
     std::vector<int64_t> shape_vec;
     for (auto& x : shape().getValue()) {
-      shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getInt());
+      shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getValue().getSExtValue());
     }
     return functional::Reshape(
         tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())));
