@@ -141,7 +141,7 @@ PyObject* PyTensorType_FromDTypeAndDeviceType(Symbol<DType> dtype, DeviceType de
       });
   if (it == tensor_types.end())
     return PyErr_Format(PyExc_ValueError, "unsupported data type (%s) or device (%s)",
-                        dtype->name(), ASSERT(DeviceTag4DeviceType(device)));
+                        dtype->name().c_str(), ASSERT(DeviceTag4DeviceType(device)).c_str());
   return (PyObject*)(*it);
 };
 
