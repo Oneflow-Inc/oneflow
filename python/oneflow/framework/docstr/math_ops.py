@@ -903,7 +903,7 @@ add_docstr(
 add_docstr(
     oneflow.fmod,
     r"""
-    fmod(input, other, *, out=None) -> Tensor
+    fmod(input, other, *) -> Tensor
 
     Computes the element-wise remainder of division.
 
