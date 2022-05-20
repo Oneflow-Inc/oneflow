@@ -124,7 +124,7 @@ class Graph(object):
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
         self._full_job_proto = None
-        self._job_id = -1
+        self._job_id = None
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
@@ -350,7 +350,7 @@ class Graph(object):
                     additional_tensor = additional_tensor.to_local()
                 destination[additional_var_names[i]] = additional_tensor
         else:
-            # Get form loaded dict.
+            # Get from loaded dict.
             for name, item in self._additional_variable_tobe_loaded.items():
                 destination[name] = item
         return destination
@@ -378,8 +378,6 @@ class Graph(object):
             not self._is_compiled
         ), "nn.Graph's state dict can only be loaded before the first call of a graph."
         # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
-        additional_var_names = list()
-        additional_var_tensors = list()
         for name, item in state_dict.items():
             if name in self._blocks:
                 # 1 load parameter/buffer to Modules
@@ -387,16 +385,7 @@ class Graph(object):
             else:
                 # 2 store other state to CNNGraph, CNNGraph load them after job pass
                 assert isinstance(item, Tensor)
-                additional_var_names.append(name)
-                additional_var_tensors.append(item)
                 self._additional_variable_tobe_loaded[name] = item
-
-        if len(additional_var_names) > 0:
-            self._c_nn_graph.register_additional_variable_names_and_tensors(
-                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
-            )
-        # Sync to make sure states has been loaded.
-        oneflow._oneflow_internal.eager.Sync()
 
     @property
     def name(self):
@@ -560,10 +549,13 @@ class Graph(object):
             )
         return self._full_job_proto
 
-    def restore_full_job(self, full_job):
-        self._full_job_proto = full_job
-        if self._c_nn_graph is not None:
-            self._c_nn_graph.job = full_job.SerializeToString()
+    @_full_graph_proto.setter
+    def _full_graph_proto(self, full_job_proto):
+        assert (
+            not self._is_compiled
+        ), "nn.Graph's full graph proto can only be set before the first compilation."
+        self._full_job_proto = full_job_proto
+        self._c_nn_graph.job = full_job_proto.SerializeToString()
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -734,6 +726,18 @@ class Graph(object):
             raise
 
     def finish_complie_and_init_runtime(self):
+        additional_var_names = list()
+        additional_var_tensors = list()
+        for name, tensor in self._additional_variable_tobe_loaded.items():
+            additional_var_names.append(name)
+            additional_var_tensors.append(tensor)
+        if len(additional_var_names) > 0:
+            self._c_nn_graph.register_additional_variable_names_and_tensors(
+                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
+            )
+        # Sync to make sure states has been loaded.
+        oneflow._oneflow_internal.eager.Sync()
+
         # Complie graph to execution plan and init Runtime
         try:
             self.__print(
