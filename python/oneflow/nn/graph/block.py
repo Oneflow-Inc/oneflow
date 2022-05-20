@@ -29,8 +29,9 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
+    construct_io_node,
+    map_io,
     seq_to_func_return,
-    IONode,
 )
 
 
@@ -182,12 +183,10 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        in_node = IONode(
-            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_input"
-        )
-        for (name, node) in list(in_node.named_nodes()):
-            if node._is_leaf:
-                arg = node._value
+        _, named_nodes = construct_io_node((args, kwargs), "_" + self.name_prefix + self.name + "_input", None)
+        for (name, node) in named_nodes:
+            if node.is_leaf():
+                arg = node.value()
                 meta_repr_str = (
                     arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
                 )
@@ -222,12 +221,11 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        out_node = IONode(
-            None, 0, (outputs, {}), "_" + self.name_prefix + self.name + "_output"
-        )
-        for (name, node) in list(out_node.named_nodes()):
-            if node._is_leaf:
-                arg = node._value
+        _, named_nodes = construct_io_node((outputs, {}), "_" + self.name_prefix + self.name + "_output", None)
+
+        for (name, node) in named_nodes:
+            if node.is_leaf():
+                arg = node.value()
                 meta_repr_str = (
                     arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
                 )
@@ -319,13 +317,11 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_node = IONode(
-            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type
-        )
+        io_node, _ = construct_io_node((args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type, None)
 
         def leaf_node_fn(leaf_node):
-            arg = leaf_node._value
-            name = leaf_node._prefix + "_" + leaf_node._name
+            arg = leaf_node.value()
+            name = leaf_node.prefix() + "_" + leaf_node.name()
             is_tensor, repr_str = self.__io_tensor_check_and_gen(arg, io_type, name)
             if is_tensor:
                 self.__print(
@@ -342,7 +338,7 @@ class ModuleBlock(Block):
                 )
                 return arg
 
-        out = io_node.map_leaf(leaf_node_fn)
+        out = map_io(io_node, leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs

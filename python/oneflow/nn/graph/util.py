@@ -136,11 +136,17 @@ class NamedIONode(object):
 
 def construct_io_node(value, root_prefix: str, root_name: str) -> NamedIONode:
     global_index = 0
-
+    named_nodes = []
     def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
         nonlocal global_index
+        nonlocal named_nodes
         node = NamedIONode(prefix, name, global_index, local_index)
+
+        if not named_nodes is None:
+            named_nodes.append((node.prefix() + "_" + node.name(), node))
+
         global_index += 1
+
         if isinstance(value, list) or isinstance(value, tuple):
 
             def construct_func(enum):
@@ -165,7 +171,7 @@ def construct_io_node(value, root_prefix: str, root_name: str) -> NamedIONode:
         return node
 
     root_node = construct(value, root_prefix, root_name, 0)
-    return root_node
+    return root_node, named_nodes
 
 
 def map_io(io_values, map_function: Callable):
@@ -186,7 +192,10 @@ def map_io(io_values, map_function: Callable):
                 map(lambda x: (x[0], execute_mapping(x[1])), value.items())
             )
         elif isinstance(value, NamedIONode):
-            mapped_value = execute_mapping(value.value())
+            if value.is_leaf(): # only map the leaf node
+                mapped_value = map_function(value)
+            else:
+                mapped_value = execute_mapping(value.value())
         else:
             mapped_value = map_function(value)
 

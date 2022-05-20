@@ -38,10 +38,9 @@ from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
     construct_io_node,
+    map_io,
     seq_to_func_return,
     sys_exc_error_msg,
-    IONode,
-    IONodeType,
 )
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
@@ -1035,30 +1034,27 @@ class Graph(object):
             self.__print(0, 1, repr_str)
             return build_arg
 
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
+        io_node, _ = construct_io_node((args, kwargs), "_" + self.name + "_" + io_type, None)
 
         def leaf_node_fn(node):
-            name = node._prefix + "_" + node._name
-            if node._type == IONodeType.TENSOR:
+            name = node.prefix() + "_" + node.name()
+            if isinstance(node.value(), Tensor):
                 arg_repr = self.__io_item_check_and_gen_repr(
-                    node._value, Tensor, io_type, name
+                    node.value(), Tensor, io_type, name
                 )
-                build_arg = build_tensor_or_none(node._value, name, arg_repr)
+                build_arg = build_tensor_or_none(node.value(), name, arg_repr)
                 return build_arg
-            elif node._type == IONodeType.NONE:
+            elif node.value() is None:
                 arg_repr = self.__io_item_check_and_gen_repr(
-                    node._value, None, io_type, name
+                    node.value(), None, io_type, name
                 )
-                build_arg = build_tensor_or_none(node._value, name, arg_repr)
-
-                return build_arg
-            elif node._type == IONodeType.OPAQUE:
+                build_arg = build_tensor_or_none(node.value(), name, arg_repr)
+            else: # Opaque
                 # Error
                 arg_repr = self.__io_item_check_and_gen_repr(
-                    node._value, None, io_type, name
+                    node.value(), None, io_type, name
                 )
-
-        out = io_node.map_leaf(leaf_node_fn)
+        out = map_io(io_node, leaf_node_fn)
         build_args = out[0]
         build_kwargs = out[1]
 
@@ -1113,27 +1109,27 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
-
+        io_node, _ = construct_io_node((args, kwargs), "_" + self.name + "_" + io_type, None)
+      
         def leaf_node_fn(leaf_node):
-            arg = leaf_node._value
+            arg = leaf_node.value()
             if isinstance(arg, Tensor) or arg is None:
                 return mapping_tensor_or_none(arg)
             else:
                 self.__io_item_check(
-                    arg, None, io_type, leaf_node._prefix + "_" + leaf_node._name,
+                    arg, None, io_type, leaf_node.prefix() + "_" + leaf_node.name(),
                 )
 
-        out = io_node.map_leaf(leaf_node_fn)
+        out = map_io(io_node, leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
 
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
-        for (name, node) in list(io_node.named_nodes()):
-            if node._type == IONodeType.TENSOR:
+        _, named_nodes = construct_io_node((args, kwargs), "_" + self.name + "_" + io_type, None)
+        for (name, node) in named_nodes:
+            if isinstance(node.value(), Tensor):
                 flattened_args.append(node._value)
             else:
                 continue

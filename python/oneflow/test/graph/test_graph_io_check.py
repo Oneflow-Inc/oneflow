@@ -50,17 +50,17 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             inp = (args, kwargs)
             print("origin: ", inp)
 
-            io_node = construct_io_node(inp, "Graph_0", None)
+            io_node, named_nodes = construct_io_node(inp, "Graph_0", None)
 
-            for (name, node) in io_node.named_nodes():
+            for (name, node) in named_nodes:
                 print(name, repr(node))
 
-            def map_fn(value):
-                if isinstance(value, str):
+            def leaf_fn(node):
+                if isinstance(node.value(), str):
                     return "mapped_str"
-                return value
+                return node.value()
 
-            m_v = map_io(io_node, map_fn)
+            m_v = map_io(io_node, leaf_fn)
             print("mapped:", m_v)
             return m_v[0], m_v[1]
 
