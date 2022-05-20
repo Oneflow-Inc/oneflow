@@ -50,7 +50,8 @@ Maybe<void> FusedScaleMaskSoftmax::Init(const OpExpr& op) {
 Maybe<void> FusedScaleMaskSoftmax::Capture(FusedScaleMaskSoftmaxInterState* ctx,
                                            const TensorTuple& inputs, const TensorTuple& outputs,
                                            const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 2);  // input, mask
+  CHECK_EQ_OR_RETURN(inputs.size(), 2)
+      << "fused-scale-mask-softmax must have two inputs";  // input, mask
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
 
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
@@ -67,8 +68,9 @@ Maybe<void> FusedScaleMaskSoftmax::Apply(const FusedScaleMaskSoftmaxInterState* 
                                          TensorTuple* in_grads) const {
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
 
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // dy
-  in_grads->resize(2);                      // input, mask
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+      << "it requires exactly one tensor as output grad of fused-scale-mask-softmax";  // dy
+  in_grads->resize(2);  // input, mask
 
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(1);
