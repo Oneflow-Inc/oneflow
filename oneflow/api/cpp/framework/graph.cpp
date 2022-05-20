@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/api/common/ofblob.h"
+#include "oneflow/api/common/variable_tensor_mgr.h"
 #include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/dtype.h"
@@ -274,7 +275,6 @@ std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs)
 
 of::Maybe<void> Graph::GraphImpl::Compile(const std::vector<Tensor>& inputs) {
   JUST(BuildGraph());
-  JUST(LoadCheckpoint());
   JUST(RegisterTensors(inputs));
   JUST(graph_->CompileAndInitRuntime());
   return of::Maybe<void>::Ok();
@@ -327,6 +327,7 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
       return of::Maybe<void>::Ok();
     });
   }
+  JUST(LoadCheckpoint());
   JUST(of::CurJobBuildAndInferCtx_Complete());
   {
     const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
@@ -373,7 +374,8 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
     };
     JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
   }
-
+  const auto& pair = Unzip(variable_op_name_to_tensor_);
+  JUST(of::FillVariableTensorMgr(pair.first, pair.second));
   return of::Maybe<void>::Ok();
 }
 
@@ -396,9 +398,9 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
     output_tensor_tuple_ = ConvertToTensorTuple(output_tensors);
   }
   {
-    const auto& pair = Unzip(variable_op_name_to_tensor_);
-    const std::vector<std::string>& variable_op_names = pair.first;
-    const std::vector<std::shared_ptr<of::one::Tensor>>& variable_tensors = pair.second;
+    const auto& t = of::DumpVariableTensorMgr();
+    const std::vector<std::string>& variable_op_names = std::get<0>(t);
+    const std::vector<std::shared_ptr<of::one::Tensor>>& variable_tensors = std::get<1>(t);
     JUST(graph_->RegisterVariableOpNamesAndTensors(variable_op_names, variable_tensors));
     parameter_tensor_tuple_ = ConvertToTensorTuple(variable_tensors);
   }
