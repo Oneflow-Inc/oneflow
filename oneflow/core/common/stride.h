@@ -22,7 +22,17 @@ limitations under the License.
 
 namespace oneflow {
 
-class StrideView;
+struct StrideParam {
+  int64_t stride[SHAPE_MAX_AXIS_SIZE];
+  size_t n_dim;
+  StrideParam(const int64_t* stride_vec, const size_t ndim) {
+    n_dim = ndim;
+    for (size_t i = 0; i < n_dim; ++i) { stride[i] = stride_vec[i]; }
+  }
+};
+
+int64_t compute_index(int64_t out_offset, const StrideParam& in_stride,
+                      const StrideParam& out_stride);
 
 class Stride final {
  public:

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/common/primitive/elementwise_unary.h"
 
 namespace oneflow {
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
@@ -26,11 +27,28 @@ struct UnaryElemwiseXpuLauncher final {
                   FunctorT functor);
 };
 
+template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
+struct UnaryElemwiseXpuWithStride final {
+  void operator()(ep::Stream* stream, int64_t elem_cnt, StrideParam& in_stride,
+                  StrideParam& out_stride, OutputT* out, const InputA* input_a, FunctorT functor);
+};
+
 template<typename FunctorT, typename OutputT, typename InputA>
 struct UnaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA> final {
   void operator()(ep::Stream* stream, int64_t elem_cnt, OutputT* out, const InputA* input_a,
                   FunctorT functor) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = functor(input_a[i]); }
+  }
+};
+
+template<typename FunctorT, typename OutputT, typename InputA>
+struct UnaryElemwiseXpuWithStride<DeviceType::kCPU, FunctorT, OutputT, InputA> final {
+  void operator()(ep::Stream* stream, int64_t elem_cnt, StrideParam& in_stride,
+                  StrideParam& out_stride, OutputT* out, const InputA* input_a, FunctorT functor) {
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      int64_t src_idx = compute_index(i, in_stride, out_stride);
+      out[i] = functor(input_a[src_idx]);
+    }
   }
 };
 
@@ -76,9 +94,24 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::C
     const InputA* input_a_ptr = input_a_tensor->dptr<InputA>();
     OutputT* out_ptr = out_tensor->mut_dptr<OutputT>();
     const int64_t elem_cnt = input_a_shape.elem_cnt();
+    const int32_t ndim = input_a_shape.NumAxes();
 
-    UnaryElemwiseXpuLauncher<device_type, FunctorT, OutputT, InputA>()(
-        ctx->stream(), elem_cnt, out_ptr, input_a_ptr, FunctorCreateFn(ctx));
+    // compute is_contiguous and construct input/output stride params
+    const DimVector& in_stride_vec = input_a_tensor->stride().StrideVec();
+    const DimVector& out_stride_vec = out_tensor->stride().StrideVec();
+    DimVector in_shape_vec;
+    input_a_shape.ToDimVector(&in_shape_vec);
+    bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
+    StrideParam param_in_stride(in_stride_vec.data(), ndim),
+        param_out_stride(out_stride_vec.data(), ndim);
+    if (is_contiguous) {
+      UnaryElemwiseXpuLauncher<device_type, FunctorT, OutputT, InputA>()(
+          ctx->stream(), elem_cnt, out_ptr, input_a_ptr, FunctorCreateFn(ctx));
+    } else {
+      UnaryElemwiseXpuWithStride<device_type, FunctorT, OutputT, InputA>()(
+          ctx->stream(), elem_cnt, param_in_stride, param_out_stride, out_ptr, input_a_ptr,
+          FunctorCreateFn(ctx));
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 

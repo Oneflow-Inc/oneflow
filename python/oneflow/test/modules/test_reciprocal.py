@@ -24,6 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
 import oneflow.unittest
+from random import shuffle
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -35,6 +36,18 @@ class TestReciprocalModule(flow.unittest.TestCase):
             ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
         ).to(device)
         y = torch.reciprocal(x)
+        return y
+
+    @autotest(check_graph=True)
+    def test_flow_reciprocal_list_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(
+            ndim=4, dim1=random().to(int), dim2=random().to(int), dim3=random().to(int)
+        ).to(device)
+        permute_list = list(range(4))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.reciprocal(x2)
         return y
 
     @autotest(check_graph=True)

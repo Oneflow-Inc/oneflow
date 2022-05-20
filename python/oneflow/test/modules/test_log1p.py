@@ -23,6 +23,7 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
+from random import shuffle
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -32,6 +33,15 @@ class TestLog1pModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         return torch.log1p(x)
+
+    @autotest(check_graph=True)
+    def test_log1p_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        return torch.log1p(x2)
 
     @autotest(check_graph=True)
     def test_log1p_with_0dim_data(test_case):

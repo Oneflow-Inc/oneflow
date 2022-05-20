@@ -20,6 +20,18 @@ limitations under the License.
 
 namespace oneflow {
 
+int64_t compute_index(int64_t out_offset, const StrideParam& in_stride,
+                      const StrideParam& out_stride) {
+  int64_t in_offset = 0;
+  int64_t remaining = out_offset;
+  for (size_t i = 0; i < in_stride.n_dim; ++i) {
+    const int64_t idx = remaining / out_stride.stride[i];
+    remaining -= idx * out_stride.stride[i];
+    in_offset += idx * in_stride.stride[i];
+  }
+  return in_offset;
+}
+
 Stride::Stride(const Shape& shape) {
   if (shape.is_initialized()) {
     const int64_t ndim = shape.NumAxes();

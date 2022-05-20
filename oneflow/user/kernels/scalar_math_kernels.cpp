@@ -25,6 +25,14 @@ struct ScalarMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
 };
 
 template<template<typename> class BIN_OP, typename T>
+struct ScalarMathWithStrideFunctor<DeviceType::kCPU, BIN_OP, T> final {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
+                  const StrideParam& out_stride, const T scalar, const T* in, T* out) {
+    DoScalarMathWithStride<BIN_OP, T>(elem_cnt, in_stride, out_stride, scalar, in, out);
+  }
+};
+
+template<template<typename> class BIN_OP, typename T>
 struct ScalarReverseMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
     DoScalarReverseMath<BIN_OP, T>(elem_cnt, scalar, in, out);
@@ -51,13 +59,26 @@ class ScalarMathKernel final : public user_op::OpKernel {
     }
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
+    const int64_t elem_cnt = out->shape().elem_cnt();
+    const int32_t ndim = in->shape().NumAxes();
+    // compute is_contiguous and construct input/output stride params
+    const DimVector& in_stride_vec = in->stride().StrideVec();
+    const DimVector& out_stride_vec = out->stride().StrideVec();
+    DimVector in_shape_vec;
+    in->shape().ToDimVector(&in_shape_vec);
+    bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
+    StrideParam in_stride(in_stride_vec.data(), ndim), out_stride(out_stride_vec.data(), ndim);
 
-    int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
-                                                  out_ptr);
+      if (is_contiguous) {
+        ScalarMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
+                                                    out_ptr);
+      } else {
+        ScalarMathWithStrideFunctor<device_type, BIN_OP, T>()(
+            ctx->stream(), elem_cnt, in_stride, out_stride, scalar_operand, in_ptr, out_ptr);
+      }
     } else {
-      // For 0-d Tensor
+      // For 0 shape Tensor
       return;
     }
   }

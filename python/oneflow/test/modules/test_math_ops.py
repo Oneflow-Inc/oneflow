@@ -21,6 +21,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
+from random import shuffle
 
 from oneflow.test_utils.test_util import (
     GenArgList,
@@ -38,6 +39,16 @@ class TestSinh(flow.unittest.TestCase):
         y = torch.sinh(x)
         return y
 
+    @autotest(n=5)
+    def test_flow_sinh_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.sinh(x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSin(flow.unittest.TestCase):
@@ -46,6 +57,16 @@ class TestSin(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = x.sin()
+        return y
+
+    @autotest(n=5)
+    def test_flow_sin_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = x2.sin()
         return y
 
 
@@ -102,6 +123,15 @@ class TestLogModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         return torch.log(x)
 
+    @autotest(n=5)
+    def test_log_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        return torch.log(x2)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSqrt(flow.unittest.TestCase):
@@ -110,6 +140,16 @@ class TestSqrt(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         z = torch.sqrt(x)
+        return z
+
+    @autotest(n=5)
+    def test_sqrt_flow_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        z = torch.sqrt(x2)
         return z
 
     @autotest()
@@ -129,6 +169,16 @@ class TestExp(flow.unittest.TestCase):
         y = torch.exp(x)
         return y
 
+    @autotest(n=5)
+    def test_flow_exp_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.exp(x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestRsqrt(flow.unittest.TestCase):
@@ -139,6 +189,16 @@ class TestRsqrt(flow.unittest.TestCase):
         z = torch.rsqrt(x)
         return z
 
+    @autotest(n=5)
+    def test_rsqrt_flow_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        z = torch.rsqrt(x2)
+        return z
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSquare(flow.unittest.TestCase):
@@ -147,6 +207,16 @@ class TestSquare(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         z = torch.square(x)
+        return z
+
+    @autotest(n=5)
+    def test_square_flow_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        z = torch.square(x2)
         return z
 
     @autotest()
@@ -193,6 +263,17 @@ class TestPow(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim1=2).to(device)
         return torch.pow(x, y)
 
+    @autotest(n=5)
+    def test_pow_elementwise_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=2, dim1=2).to(device)
+        y = random_tensor(ndim=2, dim1=2).to(device)
+        permute_list = list(range(2))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y2 = y.permute(permute_list)
+        return torch.pow(x2, y2)
+
     @autotest()
     def test_pow_broadcast_with_random_data(test_case):
         device = random_device()
@@ -217,6 +298,16 @@ class TestAsin(flow.unittest.TestCase):
         y = torch.asin(x)
         return y
 
+    @autotest(n=5)
+    def test_flow_asin_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-0.5, high=0.5).to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.asin(x2)
+        return y
+
     @autotest()
     def test_flow_arcsin_with_random_data(test_case):
         device = random_device()
@@ -232,6 +323,16 @@ class TestAsinh(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.asinh(x)
+        return y
+
+    @autotest(n=5)
+    def test_flow_asinh_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.asinh(x2)
         return y
 
     @autotest()
@@ -251,6 +352,16 @@ class TestTan(flow.unittest.TestCase):
         y = torch.tan(x)
         return y
 
+    @autotest(n=5)
+    def test_flow_tan_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.tan(x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAtan(flow.unittest.TestCase):
@@ -259,6 +370,16 @@ class TestAtan(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.atan(x)
+        return y
+
+    @autotest(n=5)
+    def test_flow_atan_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.atan(x2)
         return y
 
     @autotest()
@@ -276,11 +397,33 @@ class TestAtan(flow.unittest.TestCase):
         z = torch.atan2(x, y)
         return z
 
+    @autotest(n=5)
+    def test_flow_atan2_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=2, dim1=3).to(device)
+        y = random_tensor(ndim=2, dim1=3).to(device)
+        permute_list = list(range(2))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y2 = y.permute(permute_list)
+        z = torch.atan2(x2, y2)
+        return z
+
     @autotest()
     def test_flow_atanh_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=-0.5, high=0.5).to(device)
         y = torch.atanh(x)
+        return y
+
+    @autotest(n=5)
+    def test_flow_atanh_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=-0.5, high=0.5).to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.atanh(x2)
         return y
 
     @autotest()
@@ -341,6 +484,16 @@ class TestArccos(flow.unittest.TestCase):
         y = torch.arccos(x)
         return y
 
+    @autotest(n=5)
+    def test_arccos_flow_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=2, high=3).to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.arccos(x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAcos(flow.unittest.TestCase):
@@ -349,6 +502,16 @@ class TestAcos(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(low=-1, high=1).to(device)
         y = torch.acos(x)
+        return y
+
+    @autotest(n=5)
+    def test_acos_flow_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=2, high=3).to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.acos(x2)
         return y
 
 
@@ -361,6 +524,16 @@ class TestArccosh(flow.unittest.TestCase):
         y = torch.arccosh(x)
         return y
 
+    @autotest(n=5)
+    def test_arccosh_flow_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=2, high=3).to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.arccosh(x2)
+        return y
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAcosh(flow.unittest.TestCase):
@@ -369,6 +542,16 @@ class TestAcosh(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(low=2, high=3).to(device)
         y = torch.acosh(x)
+        return y
+
+    @autotest(n=5)
+    def test_acosh_flow_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=2, high=3).to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.acosh(x2)
         return y
 
 
@@ -432,6 +615,17 @@ class TestFloorDiv(flow.unittest.TestCase):
         y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
 
         return torch.floor_divide(x, y)
+
+    @autotest(n=5, auto_backward=False)
+    def test_elementwise_floordiv_stride_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        y = random_tensor(ndim=4, dim0=2, dim1=4, dim2=8, dim3=3).to(device)
+        permute_list = list(range(4))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y2 = y.permute(permute_list)
+        return torch.floor_divide(x2, y2)
 
     @autotest(auto_backward=False)
     def test_tensor_floordiv_scalar_random_data(test_case):

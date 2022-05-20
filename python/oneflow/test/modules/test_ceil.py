@@ -21,6 +21,7 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
+from random import shuffle
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -30,6 +31,16 @@ class TestCeilModule(flow.unittest.TestCase):
         device = random_device()
         input = random_tensor().to(device)
         y = torch.ceil(input)
+        return y
+
+    @autotest(check_graph=True)
+    def test_ceil_flow_stride_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        input2 = input.permute(permute_list)
+        y = torch.ceil(input2)
         return y
 
     @autotest(check_graph=True)

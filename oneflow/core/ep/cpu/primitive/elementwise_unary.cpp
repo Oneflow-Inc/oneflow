@@ -23,7 +23,6 @@ namespace oneflow {
 
 namespace ep {
 namespace primitive {
-
 namespace {
 
 template<UnaryOp unary_op, typename Src, typename Dst>
@@ -43,6 +42,21 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
         dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[i]);
       }
     });
+  }
+
+  void LaunchWithStride(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count,
+                        const StrideParam& in_stride, const StrideParam& out_stride) override {
+    CpuStream* cpu_stream = stream->As<CpuStream>();
+
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src = reinterpret_cast<const Src*>(src_ptr);
+    cpu_stream->ParallelFor(
+        0, count, [src, dst, in_stride, out_stride](int64_t begin, int64_t end) {
+          for (int64_t i = begin; i < end; i++) {
+            int64_t src_idx = compute_index(i, in_stride, out_stride);
+            dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[src_idx]);
+          }
+        });
   }
 };
 

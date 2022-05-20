@@ -79,5 +79,40 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
   return contig_if_nonempty;
 }
 
+bool IsContiguous(const DimVector& shape_vec, const DimVector& stride_vec) {
+  const size_t ndim = shape_vec.size();
+  const size_t stride_ndim = stride_vec.size();
+  if (ndim < 1 || stride_ndim < 1) { return true; }
+  int64_t elem_cnt = 1;
+  for (int64_t s : shape_vec) { elem_cnt *= s; }
+  if (elem_cnt <= 1) { return true; }
+
+  int64_t expected_stride = 1;
+  bool contig_if_nonempty = true;
+  for (int64_t i = ndim - 1; i >= 0; --i) {
+    if (shape_vec.at(i) == 0) { return true; }
+    if (contig_if_nonempty && shape_vec.at(i) != 1) {
+      if (stride_vec.at(i) != expected_stride) { contig_if_nonempty = false; }
+      expected_stride *= shape_vec.at(i);
+    }
+  }
+  return contig_if_nonempty;
+}
+
+bool IsContiguous(const user_op::Tensor* tensor) {
+  const DimVector& stride_vec = tensor->stride().StrideVec();
+  DimVector shape_vec;
+  tensor->shape().ToDimVector(&shape_vec);
+  return IsContiguous(shape_vec, stride_vec);
+}
+
+StrideParam GetStrideParam(const user_op::Tensor* tensor) {
+  const int32_t ndim = tensor->shape().NumAxes();
+  const DimVector& stride_vec = tensor->stride().StrideVec();
+  DimVector shape_vec;
+  tensor->shape().ToDimVector(&shape_vec);
+  return StrideParam(stride_vec.data(), ndim);
+}
+
 }  // namespace one
 }  // namespace oneflow

@@ -21,14 +21,21 @@ limitations under the License.
 
 namespace oneflow {
 
-#define INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(device_type, binary_op)      \
-  template struct ScalarLogicalFunctor<device_type, binary_op, bool>;    \
-  template struct ScalarLogicalFunctor<device_type, binary_op, uint8_t>; \
-  template struct ScalarLogicalFunctor<device_type, binary_op, int8_t>;  \
-  template struct ScalarLogicalFunctor<device_type, binary_op, int32_t>; \
-  template struct ScalarLogicalFunctor<device_type, binary_op, int64_t>; \
-  template struct ScalarLogicalFunctor<device_type, binary_op, float>;   \
-  template struct ScalarLogicalFunctor<device_type, binary_op, double>;
+#define INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(device_type, binary_op)                \
+  template struct ScalarLogicalFunctor<device_type, binary_op, bool>;              \
+  template struct ScalarLogicalFunctor<device_type, binary_op, uint8_t>;           \
+  template struct ScalarLogicalFunctor<device_type, binary_op, int8_t>;            \
+  template struct ScalarLogicalFunctor<device_type, binary_op, int32_t>;           \
+  template struct ScalarLogicalFunctor<device_type, binary_op, int64_t>;           \
+  template struct ScalarLogicalFunctor<device_type, binary_op, float>;             \
+  template struct ScalarLogicalFunctor<device_type, binary_op, double>;            \
+  template struct ScalarLogicalWithStrideFunctor<device_type, binary_op, bool>;    \
+  template struct ScalarLogicalWithStrideFunctor<device_type, binary_op, uint8_t>; \
+  template struct ScalarLogicalWithStrideFunctor<device_type, binary_op, int8_t>;  \
+  template struct ScalarLogicalWithStrideFunctor<device_type, binary_op, int32_t>; \
+  template struct ScalarLogicalWithStrideFunctor<device_type, binary_op, int64_t>; \
+  template struct ScalarLogicalWithStrideFunctor<device_type, binary_op, float>;   \
+  template struct ScalarLogicalWithStrideFunctor<device_type, binary_op, double>;
 
 template<DeviceType device_type, template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor final {
@@ -41,6 +48,12 @@ OF_DEVICE_FUNC void DoScalarLogical(const int64_t elem_cnt, const T scalar, cons
                                     bool* out) {
   XPU_1D_KERNEL_LOOP(idx, elem_cnt) { out[idx] = UnaryFunctor<T>::Invoke(in[idx], scalar); }
 }
+
+template<DeviceType device_type, template<typename T> class BIN_OP, typename T>
+struct ScalarLogicalWithStrideFunctor final {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
+                  const StrideParam& out_stride, const T scalar, const T* in, bool* out);
+};
 
 }  // namespace oneflow
 

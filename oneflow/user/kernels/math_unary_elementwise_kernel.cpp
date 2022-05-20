@@ -32,7 +32,18 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
     T* y = tensor_y->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
+    // compute is_contiguous and construct input/output stride params
+    bool is_contiguous = oneflow::one::IsContiguous(tensor_x);
+    if (is_contiguous) {
+      for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
+    } else {
+      for (int32_t i = 0; i < n; ++i) {
+        StrideParam param_in_stride = oneflow::one::GetStrideParam(tensor_x);
+        StrideParam param_out_stride = oneflow::one::GetStrideParam(tensor_y);
+        int32_t src_idx = compute_index(i, param_in_stride, param_out_stride);
+        y[i] = UnaryFunctor<T>::Forward(x[src_idx]);
+      }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -54,7 +65,35 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
+
+    bool x_contiguous = oneflow::one::IsContiguous(tensor_x);
+    bool dy_contiguous = oneflow::one::IsContiguous(tensor_dy);
+    if (x_contiguous && dy_contiguous) {
+      for (int32_t i = 0; i < n; ++i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
+    } else if (x_contiguous) {
+      const StrideParam param_dy_stride = oneflow::one::GetStrideParam(tensor_dy);
+      const StrideParam param_dx_stride = oneflow::one::GetStrideParam(tensor_dx);
+      for (int32_t i = 0; i < n; ++i) {
+        const int32_t dy_idx = compute_index(i, param_dy_stride, param_dx_stride);
+        dx[i] = UnaryFunctor<T>::Backward(x[i], dy[dy_idx]);
+      }
+    } else if (dy_contiguous) {
+      const StrideParam param_x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam param_dx_stride = oneflow::one::GetStrideParam(tensor_dx);
+      for (int32_t i = 0; i < n; ++i) {
+        int32_t x_idx = compute_index(i, param_x_stride, param_dx_stride);
+        dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[i]);
+      }
+    } else {
+      const StrideParam param_x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam param_dy_stride = oneflow::one::GetStrideParam(tensor_dy);
+      const StrideParam param_dx_stride = oneflow::one::GetStrideParam(tensor_dx);
+      for (int32_t i = 0; i < n; ++i) {
+        const int32_t x_idx = compute_index(i, param_x_stride, param_dx_stride);
+        const int32_t dy_idx = compute_index(i, param_dy_stride, param_dx_stride);
+        dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[dy_idx]);
+      }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

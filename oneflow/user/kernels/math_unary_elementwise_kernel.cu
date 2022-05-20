@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/stride.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
@@ -29,8 +31,50 @@ __global__ void MathUnaryElementwiseForwardGpu(const int n, const T* x, T* y) {
 }
 
 template<template<typename> class UnaryFunctor, typename T>
+__global__ void MathUnaryElementwiseWithStrideForwardGpu(const int n, const StrideParam in_stride,
+                                                         const StrideParam out_stride, const T* x,
+                                                         T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const int32_t idx = oneflow::cuda::elementwise::offset_to_index(i, in_stride, out_stride);
+    y[i] = UnaryFunctor<T>::Forward(x[idx]);
+  }
+}
+
+template<template<typename> class UnaryFunctor, typename T>
 __global__ void MathUnaryElementwiseBackwardGpu(const int n, const T* x, const T* dy, T* dx) {
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
+}
+
+template<template<typename> class UnaryFunctor, typename T>
+__global__ void MathUnaryElementwiseWithDyStrideDYBackwardGpu(const int n, const T* x, const T* dy,
+                                                              T* dx, const StrideParam dy_stride,
+                                                              const StrideParam dx_stride) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const int32_t dy_idx = oneflow::cuda::elementwise::offset_to_index(i, dy_stride, dx_stride);
+    dx[i] = UnaryFunctor<T>::Backward(x[i], dy[dy_idx]);
+  }
+}
+
+template<template<typename> class UnaryFunctor, typename T>
+__global__ void MathUnaryElementwiseWithXStrideBackwardGpu(const int n, const T* x, const T* dy,
+                                                           T* dx, const StrideParam x_stride,
+                                                           const StrideParam dx_stride) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const int32_t x_idx = oneflow::cuda::elementwise::offset_to_index(i, x_stride, dx_stride);
+    dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[i]);
+  }
+}
+
+template<template<typename> class UnaryFunctor, typename T>
+__global__ void MathUnaryElementwiseWithStrideBackwardGpu(const int n, const T* x, const T* dy,
+                                                          T* dx, const StrideParam x_stride,
+                                                          const StrideParam dy_stride,
+                                                          const StrideParam dx_stride) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    const int32_t x_idx = oneflow::cuda::elementwise::offset_to_index(i, x_stride, dx_stride);
+    const int32_t dy_idx = oneflow::cuda::elementwise::offset_to_index(i, dy_stride, dx_stride);
+    dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[dy_idx]);
+  }
 }
 
 }  // namespace
@@ -52,9 +96,19 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
-    MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
+    // compute is_contiguous and construct input/output stride params
+    bool is_contiguous = oneflow::one::IsContiguous(tensor_x);
+    if (is_contiguous) {
+      MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
+    } else {
+      StrideParam in_stride = oneflow::one::GetStrideParam(tensor_x);
+      StrideParam out_stride = oneflow::one::GetStrideParam(tensor_y);
+      MathUnaryElementwiseWithStrideForwardGpu<UnaryFunctor, T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, in_stride, out_stride, x, y);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -79,9 +133,36 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel,
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
-    MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx);
+
+    bool x_contiguous = oneflow::one::IsContiguous(tensor_x);
+    bool dy_contiguous = oneflow::one::IsContiguous(tensor_dy);
+    if (x_contiguous && dy_contiguous) {
+      MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx);
+    } else if (x_contiguous) {
+      StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
+      StrideParam dy_stride = oneflow::one::GetStrideParam(tensor_dy);
+      MathUnaryElementwiseWithDyStrideDYBackwardGpu<UnaryFunctor, T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx, dy_stride,
+                                                                   dx_stride);
+    } else if (x_contiguous) {
+      StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
+      MathUnaryElementwiseWithXStrideBackwardGpu<UnaryFunctor, T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx, x_stride,
+                                                                   dx_stride);
+    } else {
+      StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
+      StrideParam dy_stride = oneflow::one::GetStrideParam(tensor_dy);
+      MathUnaryElementwiseWithStrideBackwardGpu<UnaryFunctor, T>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx, x_stride,
+                                                                   dy_stride, dx_stride);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

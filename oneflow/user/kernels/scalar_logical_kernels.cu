@@ -33,6 +33,35 @@ struct ScalarLogicalFunctor<DeviceType::kCUDA, BIN_OP, T> final {
   }
 };
 
+template<template<typename> class UnaryFunctor, typename T>
+__device__ __forceinline__ void DoScalarLogicalWithStrideCUDA(const int64_t elem_cnt,
+                                                              const StrideParam in_stride,
+                                                              const StrideParam out_stride,
+                                                              const T scalar, const T* in,
+                                                              bool* out) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    const int64_t in_idx = oneflow::cuda::elementwise::offset_to_index(i, in_stride, out_stride);
+    out[i] = UnaryFunctor<T>::Invoke(in[in_idx], scalar);
+  }
+}
+
+template<template<typename T> class BIN_OP, typename T>
+__global__ void DoCUDAScalarLogicalWithStride(const int64_t elem_cnt, const StrideParam in_stride,
+                                              const StrideParam out_stride, const T scalar,
+                                              const T* in, bool* out) {
+  DoScalarLogicalWithStrideCUDA<BIN_OP, T>(elem_cnt, in_stride, out_stride, scalar, in, out);
+}
+
+template<template<typename T> class BIN_OP, typename T>
+struct ScalarLogicalWithStrideFunctor<DeviceType::kCUDA, BIN_OP, T> final {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
+                  const StrideParam& out_stride, const T scalar, const T* in, bool* out) {
+    RUN_CUDA_KERNEL((DoCUDAScalarLogicalWithStride<BIN_OP, T>), stream,
+                    BlocksNum4ThreadsNum(elem_cnt), elem_cnt, in_stride, out_stride, scalar, in,
+                    out);
+  }
+};
+
 INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncEQ);
 INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncNE);
 INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(DeviceType::kCUDA, BinaryFuncGT);

@@ -43,10 +43,24 @@ class TanhKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
 
+    // compute is_contiguous and construct input/output stride params
+    const int32_t ndim = x->shape().NumAxes();
+    const DimVector& in_stride_vec = x->stride().StrideVec();
+    const DimVector& out_stride_vec = y->stride().StrideVec();
+    DimVector in_shape_vec;
+    x->shape().ToDimVector(&in_shape_vec);
+    bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
+    StrideParam in_stride(in_stride_vec.data(), ndim), out_stride(out_stride_vec.data(), ndim);
+
     if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
+      if (is_contiguous) {
+        primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
+      } else {
+        primitive->LaunchWithStride(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt, in_stride,
+                                    out_stride);
+      }
     } else {
-      // For 0-d Tensor
+      // For 0 shape Tensor
       return;
     }
   }

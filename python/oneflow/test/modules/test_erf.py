@@ -25,6 +25,7 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
+from random import shuffle
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -34,6 +35,16 @@ class TestErfModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.erf(x)
+        return y
+
+    @autotest(check_graph=True)
+    def test_flow_erf_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.erf(x2)
         return y
 
     @autotest(check_graph=True)

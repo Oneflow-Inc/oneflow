@@ -83,20 +83,20 @@ class FloatUnaryFunctor {
 
 class InplaceFloatUnaryFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x}, DType::Float()).Apply());
+    JUST(tensor_processor.AddInputs({input}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-    JUST(CheckInplaceCastValid(x, input_tuple.at(0)));
-    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(input, input_tuple.at(0)));
+    JUST(CheckInplaceValid(input));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-    outputs->at(0) = x;
-    if (x->requires_grad()) {
+    outputs->at(0) = input;
+    if (input->requires_grad()) {
       // It should copy input tensor in autograd_mode because these operators can't calculate
       // in_grad with output.
-      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(x))}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {JUST(functional::Identity(input))}, outputs.get()));
     } else {
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get()));
     }
     return outputs->at(0);
   }

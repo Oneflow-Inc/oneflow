@@ -22,6 +22,7 @@ import oneflow as flow
 from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
+from random import shuffle
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -31,6 +32,16 @@ class TestRound(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.round(x)
+        return y
+
+    @autotest(check_graph=True)
+    def test_flow_round_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.round(x2)
         return y
 
     @autotest(check_graph=True)

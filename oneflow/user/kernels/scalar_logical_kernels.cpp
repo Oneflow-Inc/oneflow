@@ -25,6 +25,24 @@ struct ScalarLogicalFunctor<DeviceType::kCPU, BIN_OP, T> final {
   }
 };
 
+template<template<typename> class UnaryFunctor, typename T>
+void DoScalarLogicalWithStride(const int64_t elem_cnt, const StrideParam& in_stride,
+                               const StrideParam& out_stride, const T scalar, const T* in,
+                               bool* out) {
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    const int64_t in_idx = compute_index(i, in_stride, out_stride);
+    out[i] = UnaryFunctor<T>::Invoke(in[in_idx], scalar);
+  }
+}
+
+template<template<typename T> class BIN_OP, typename T>
+struct ScalarLogicalWithStrideFunctor<DeviceType::kCPU, BIN_OP, T> final {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
+                  const StrideParam& out_stride, const T scalar, const T* in, bool* out) {
+    DoScalarLogicalWithStride<BIN_OP, T>(elem_cnt, in_stride, out_stride, scalar, in, out);
+  }
+};
+
 template<DeviceType device_type, template<typename> class BIN_OP, typename T>
 class ScalarLogicalKernel final : public user_op::OpKernel {
  public:
@@ -46,10 +64,24 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     bool* out_ptr = out->mut_dptr<bool>();
 
+    // compute is_contiguous and construct input/output stride params
+    const size_t ndim = in->stride().NumAxes();
+    const DimVector& in_stride_vec = in->stride().StrideVec();
+    const DimVector& out_stride_vec = out->stride().StrideVec();
+    DimVector in_shape_vec;
+    in->shape().ToDimVector(&in_shape_vec);
+    bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
+    StrideParam in_stride(in_stride_vec.data(), ndim), out_stride(out_stride_vec.data(), ndim);
+
     int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
-                                                     in_ptr, out_ptr);
+      if (is_contiguous) {
+        ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
+                                                       in_ptr, out_ptr);
+      } else {
+        ScalarLogicalWithStrideFunctor<device_type, BIN_OP, T>()(
+            ctx->stream(), elem_cnt, in_stride, out_stride, scalar_operand, in_ptr, out_ptr);
+      }
     } else {
       // For 0-d Tensor
       return;

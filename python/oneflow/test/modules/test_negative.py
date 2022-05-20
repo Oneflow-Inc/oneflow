@@ -20,6 +20,7 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
+from random import shuffle
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -37,6 +38,15 @@ class TestNegativeModule(flow.unittest.TestCase):
     def test_tensor_negative_with_random_data(test_case):
         x = random_tensor().to(random_device())
         return x.negative()
+
+    @autotest()
+    def test_tensor_negative_with_random_data(test_case):
+        x = random_tensor().to(random_device())
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = x2.negative()
+        return y
 
     @autotest()
     def test_negative_with_random_data(test_case):

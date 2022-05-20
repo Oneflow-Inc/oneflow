@@ -19,6 +19,7 @@ import unittest
 import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
+from random import shuffle
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -28,6 +29,16 @@ class TestAbsModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.abs(x)
+        return y
+
+    @autotest(n=5, check_graph=True)
+    def test_abs_stride_with_0_size_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.abs(x2)
         return y
 
     @autotest(check_graph=True)
