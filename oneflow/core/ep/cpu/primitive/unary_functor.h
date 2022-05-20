@@ -23,6 +23,8 @@ namespace primitive {
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
+  explicit UnaryFunctor(Scalar param = 0) {}
+
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Src>(0.5) * src * (static_cast<Src>(1.0) + std::erf(inv_sqrt2 * src));
   }
@@ -31,6 +33,8 @@ struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kGelu, Dst, Src> {
 
 template<typename Dst, typename Src>
 struct UnaryFunctor<DeviceType::kCPU, UnaryOp::kTanh, Dst, Src> {
+  explicit UnaryFunctor(Scalar param = 0) {}
+
   OF_DEVICE_FUNC Dst operator()(Src src) const { return std::tanh(src); }
 };
 

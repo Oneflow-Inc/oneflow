@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_PRIMITIVE_ELEMENTWISE_UNARY_H_
 #define ONEFLOW_CORE_EP_PRIMITIVE_ELEMENTWISE_UNARY_H_
 
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/ep/include/primitive/primitive.h"
 #include "oneflow/core/ep/include/primitive/unary_op.h"
 
@@ -31,6 +32,7 @@ class ElementwiseUnary : public Primitive {
   ~ElementwiseUnary() override = default;
 
   virtual void Launch(Stream* stream, const void* src, void* dst, size_t count) = 0;
+  virtual void Launch(Stream* stream, const void* src, void* dst, Scalar param, size_t count) = 0;
 };
 
 class ElementwiseUnaryFactory : public Factory<ElementwiseUnary> {

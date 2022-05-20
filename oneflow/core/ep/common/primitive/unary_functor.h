@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/scalar.h"
 
 namespace oneflow {
 
@@ -29,6 +30,8 @@ struct UnaryFunctor;
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
+  explicit UnaryFunctor(Scalar param = 0) {}
+
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     const Src zero_val = static_cast<Src>(0.0);
     if (src > zero_val) {
@@ -41,6 +44,8 @@ struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kLogicalNot, Dst, Src> {
+  explicit UnaryFunctor(Scalar param = 0) {}
+
   OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(!src); }
 };
 

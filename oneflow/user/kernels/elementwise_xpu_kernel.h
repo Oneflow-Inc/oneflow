@@ -15,9 +15,11 @@ limitations under the License.
 */
 #ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
 #define _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
+#include "oneflow/core/ep/include/primitive/unary_op.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/primitive/elementwise_unary.h"
 
 namespace oneflow {
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
@@ -84,6 +86,57 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::C
 
   std::string output_name;
   std::string input_a_name;
+};
+
+template<DeviceType device_type, typename OutputT, typename InputA>
+class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(UnaryPrimitiveKernel);
+  UnaryPrimitiveKernel() = default;
+  ~UnaryPrimitiveKernel() = default;
+
+  UnaryPrimitiveKernel(ep::primitive::UnaryOp op, const std::string& output_name,
+                       const std::string& input_a_name)
+      : op(op), output_name(output_name), input_a_name(input_a_name) {}
+
+  UnaryPrimitiveKernel(ep::primitive::UnaryOp op, const std::string& output_name,
+                       const std::string& input_a_name, const std::string& attr_name)
+      : op(op), output_name(output_name), input_a_name(input_a_name), attr_name(attr_name) {}
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex(input_a_name, 0);
+    const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex(output_name, 0);
+    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+        ctx->device_type(), op, src->data_type(), dst->data_type());
+    CHECK(primitive);
+
+    const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
+
+    const ShapeView input_a_shape = input_a_tensor->shape();
+    const ShapeView out_shape = out_tensor->shape();
+    CHECK_EQ(input_a_shape, out_shape);
+    const int64_t elem_cnt = input_a_shape.elem_cnt();
+
+    const InputA* input_a_ptr = input_a_tensor->dptr<InputA>();
+    OutputT* out_ptr = out_tensor->mut_dptr<OutputT>();
+
+    if (attr_name != "") {
+      // 如何处理attr typename?
+      auto attr = ctx->Attr<double>(attr_name);
+      primitive->Launch(ctx->stream(), input_a_ptr, out_ptr, attr, elem_cnt);
+    } else {
+      primitive->Launch(ctx->stream(), input_a_ptr, out_ptr, elem_cnt);
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  std::string output_name;
+  std::string input_a_name;
+  std::string attr_name;
+  ep::primitive::UnaryOp op = ep::primitive::UnaryOp::kRelu;
 };
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,

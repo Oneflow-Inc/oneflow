@@ -32,11 +32,18 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
 
   void Launch(Stream* stream, const void* src, void* dst, size_t count) override {
     auto* cuda_stream = stream->As<CudaStream>();
-    OF_CUDA_CHECK(
-        (cuda::elementwise::Unary<UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>, Dst, Src>(
-            UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(), count,
-            reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
-            cuda_stream->cuda_stream())));
+    auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>();
+    OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
+        functor, count, reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
+        cuda_stream->cuda_stream())));
+  }
+
+  void Launch(Stream* stream, const void* src, void* dst, Scalar param, size_t count) override {
+    auto* cuda_stream = stream->As<CudaStream>();
+    auto functor = UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(param);
+    OF_CUDA_CHECK((cuda::elementwise::Unary<decltype(functor), Dst, Src>(
+        functor, count, reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
+        cuda_stream->cuda_stream())));
   }
 };
 
