@@ -23,11 +23,11 @@ namespace oneflow {
   const int input_dims = x_desc.shape().NumAxes();
   const std::vector<int32_t> dims = ctx->Attr<std::vector<int32_t>>("dims");
   CHECK_OR_RETURN(dims.size() <= input_dims)
-      << Error::RuntimeError() << "Dimension out of range (expected to be in range of ["
+      << Error::RuntimeError() << "flip: Dimension out of range (expected to be in range of ["
       << -input_dims << ", " << input_dims - 1 << "], but got " << dims.size() << ")";
   for (auto x : dims) {
     CHECK_OR_RETURN(x < input_dims)
-        << Error::RuntimeError() << "expected to be less than input dims " << input_dims
+        << Error::RuntimeError() << "flip: dim must be less than input dimension " << input_dims
         << ", but got " << x;
   }
   user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);

@@ -42,7 +42,8 @@ namespace oneflow {
                                               const user_op::UserOpConfWrapper& conf) {
   float rate = conf.attr<float>("rate");
   CHECK_GE_OR_RETURN(rate, 0.0) << Error::RuntimeError()
-                                << "rate has to be greater than or equal to 0, but got " << rate;
+                                << "dropout: rate must be greater than or equal to 0, but got "
+                                << rate;
   return Maybe<void>::Ok();
 }
 
@@ -58,8 +59,8 @@ namespace oneflow {
   *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
   const Shape& mask_shape = ctx->InputShape("mask", 0);
   CHECK_EQ_OR_RETURN(mask_shape, dy_shape)
-      << Error::RuntimeError() << "inconsistent shape, " << dy_shape.ToString() << " and "
-      << mask_shape.ToString();
+      << Error::RuntimeError() << "dropout grad: inconsistent shape between output_grad and mask, "
+      << dy_shape.ToString() << " and " << mask_shape.ToString();
   return Maybe<void>::Ok();
 }
 
@@ -83,7 +84,7 @@ namespace oneflow {
                                                   const user_op::UserOpConfWrapper& conf) {
   float scale = conf.attr<float>("scale");
   CHECK_GT_OR_RETURN(scale, 1) << Error::RuntimeError()
-                               << "dropout grad scale has to be greater than 1, but got " << scale;
+                               << "dropout grad: scale must be greater than 1, but got " << scale;
   return Maybe<void>::Ok();
 }
 
@@ -91,7 +92,7 @@ namespace oneflow {
   *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
   const auto& mask_datatype = ctx->InputDType("mask", 0);
   CHECK_EQ_OR_RETURN(mask_datatype, DataType::kBool)
-      << Error::RuntimeError() << " mask date type expected to be kBool data type, but got "
+      << Error::RuntimeError() << "dropout grad: mask date type must be kBool data type, but got "
       << DataType_Name(mask_datatype);
   return Maybe<void>::Ok();
 }
@@ -120,7 +121,7 @@ namespace oneflow {
                                                      const user_op::UserOpConfWrapper& conf) {
   float rate = conf.attr<float>("rate");
   CHECK_OR_RETURN(rate >= 0 && rate < 1)
-      << Error::RuntimeError() << "random_mask_like rate has to be in range of [0, 1), but got "
+      << Error::RuntimeError() << "random_mask_like: rate must be in range of [0, 1), but got "
       << rate;
   return Maybe<void>::Ok();
 }
