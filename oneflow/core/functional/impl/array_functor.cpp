@@ -1196,7 +1196,7 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop, const std::vector<int64_t>& step,
                            const Optional<bool>& enable_view_slice) const {
-    if (view::IsViewApplicable(x) && enable_view_slice.value_or(true)) {
+    if (view::IsViewApplicable(x) && enable_view_slice.value_or(false)) {
       return view::Slice(x, start, stop, step);
     }
 
@@ -1455,25 +1455,6 @@ class UnfoldTensorGradFunctor {
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class UpsampleFunctor {
- public:
-  UpsampleFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample").Input("x").Output("y").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
-                           const float& width_scale, const bool& align_corners,
-                           const std::string& interpolation, const std::string& data_format) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("height_scale", height_scale));
-    JUST(attrs.SetAttr<float>("width_scale", width_scale));
-    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
-    JUST(attrs.SetAttr<std::string>("interpolation", interpolation));
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1958,7 +1939,7 @@ class TensorGetItemFunctor {
     if (is_identity) {
       result = expand_input;
     } else {
-      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/false));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
@@ -2061,14 +2042,16 @@ class TensorSetItemFunctor {
       if (slice_shape != *(value_tensor->shape())) {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
+      bool requires_grad =
+          (x->requires_grad() || value_tensor->requires_grad()) && autograd::GradMode::is_enabled();
       if (x->is_local()) {
-        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+        if (requires_grad) {
           JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
         } else {
           JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
         }
       } else {
-        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+        if (requires_grad) {
           return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
                                           "please use oneflow.no_grad() to disable autograd "
                                           "currently. We will fix this problem soon.";
@@ -2581,13 +2564,13 @@ class IndexSelectFunctor {
       index_new = JUST(Unsqueeze(index, 0));
     }
     auto index_gather = JUST(functional::Expand(
-        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/true)),
+        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/false)),
         expand_shape));
     for (int i = 1; i < index->dim(0); i++) {
       index_gather = JUST(functional::Concat(
           {index_gather,
            JUST(functional::Expand(
-               JUST(functional::Slice(index_new, {i}, {i + 1}, {1}, /*enable_view_slice=*/true)),
+               JUST(functional::Slice(index_new, {i}, {i + 1}, {1}, /*enable_view_slice=*/false)),
                expand_shape))},
           new_dim));
     }
@@ -3028,7 +3011,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
   m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
-  m.add_functor<impl::UpsampleFunctor>("Upsample");
   m.add_functor<impl::UpsampleGradFunctor>("UpsampleGrad");
   m.add_functor<impl::UpsampleNearest2DFunctor>("UpsampleNearest2D");
   m.add_functor<impl::UpsampleNearest2DGradFunctor>("UpsampleNearest2DGrad");

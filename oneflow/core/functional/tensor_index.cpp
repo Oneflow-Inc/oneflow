@@ -76,7 +76,7 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
 
   for (int i = 0; i < index->ndim(); ++i) {
     auto item = JUST(
-        functional::Slice((*res)[0], {0, i}, {size, i + 1}, {1, 1}, /*enable_view_slice=*/true));
+        functional::Slice((*res)[0], {0, i}, {size, i + 1}, {1, 1}, /*enable_view_slice=*/false));
     item = JUST(functional::Reshape(item, {size}));
     indices->emplace_back(item);
   }
@@ -238,10 +238,12 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim += unspecified_ndims;
       continue;
     }
-    CHECK_LT_OR_RETURN(dim, ndims) << Error::IndexError() << "Invalid index for tensor of dimension " << ndims;
+    CHECK_LT_OR_RETURN(dim, ndims)
+        << Error::IndexError() << "Invalid index for tensor of dimension " << ndims;
     if (index_item.IsSlice()) {
       const auto& slice = index_item.slice();
-      CHECK_GT_OR_RETURN(slice.step(), 0) << Error::RuntimeError() << "Step must be greater than zero.";
+      CHECK_GT_OR_RETURN(slice.step(), 0)
+          << Error::RuntimeError() << "Step must be greater than zero.";
       int64_t step = std::min(slice.step(), shape.At(dim));
       int64_t end = std::min(slice.end(), shape.At(dim));
       int64_t start = std::min(slice.start(), shape.At(dim));
@@ -330,7 +332,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   int index_ndim = valid_indices.at(0)->ndim();
   auto packed_indices = JUST(Stack(valid_indices, 0));
   int packed_ndim = packed_indices->ndim();
-  CHECK_GT_OR_RETURN(packed_ndim, 0) << Error::RuntimeError() << "Index array dimension should be greater than 0.";
+  CHECK_GT_OR_RETURN(packed_ndim, 0)
+      << Error::RuntimeError() << "Index array dimension should be greater than 0.";
   std::vector<int> permute(packed_ndim);
   permute[packed_ndim - 1] = 0;
   std::iota(permute.begin(), permute.end() - 1, 1);
@@ -355,8 +358,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
 
   int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
   CHECK_EQ_OR_RETURN(result->ndim(), required_ndim)
-      << Error::RuntimeError()
-      << "The indexing result dimension is " << result->ndim() << ", but shoule be " << required_ndim;
+      << Error::RuntimeError() << "The indexing result dimension is " << result->ndim()
+      << ", but shoule be " << required_ndim;
   if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
   return result;
 }

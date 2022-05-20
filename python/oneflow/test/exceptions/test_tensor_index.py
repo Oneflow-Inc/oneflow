@@ -17,6 +17,7 @@ import unittest
 import oneflow.unittest
 import oneflow as flow
 
+
 class TestTensorIndexError(flow.unittest.TestCase):
     def test_tensor_setitem_indices_amount_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
@@ -28,12 +29,11 @@ class TestTensorIndexError(flow.unittest.TestCase):
 
     def test_tensor_setitem_slice_step_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
-            x = flow.tensor([0 ,1 ,2 ,3] ,dtype=flow.int32)
+            x = flow.tensor([0, 1, 2, 3], dtype=flow.int32)
             s = slice(0, 2, -1)
             y = x[s]
-        test_case.assertTrue(
-            "Step must be greater than zero" in str(context.exception)
-        )
+        test_case.assertTrue("Step must be greater than zero" in str(context.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
