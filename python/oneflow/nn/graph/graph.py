@@ -973,9 +973,6 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
-        # ensure the input tensors are all contiguous tenors
-        (args, kwargs) = self.__make_input_tensors_contiguous(*args, **kwargs)
-
         try:
             flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
