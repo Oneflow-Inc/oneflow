@@ -308,14 +308,14 @@ def pad_packed_sequence(
         >>> lens = [3, 2, 1]
         >>> packed = pack_padded_sequence(seq, lens, batch_first=True, enforce_sorted=True)
         >>> packed.data
-        tensor([4, 5, 6, 1, 2, 3], dtype=oneflow.int64)
+        tensor([4, 1, 3, 5, 2, 6], dtype=oneflow.int64)
         >>> packed.batch_sizes
         tensor([3, 2, 1], dtype=oneflow.int64)
         >>> seq_unpacked, lens_unpacked = pad_packed_sequence(packed, batch_first=True)
         >>> seq_unpacked
-        tensor([[4, 1, 3],
-                [5, 2, 0],
-                [6, 0, 0]], dtype=oneflow.int64)
+        tensor([[4, 5, 6],
+                [1, 2, 0],
+                [3, 0, 0]], dtype=oneflow.int64)
         >>> lens_unpacked
         tensor([3., 2., 1.], dtype=oneflow.float32)
 
