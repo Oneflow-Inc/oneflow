@@ -249,14 +249,7 @@ def check_eager_graph_tensor(eager_res, graph_res):
             atol=global_atol,
             equal_nan=True,
         )
-        if equality_res == False:
-            print_note_fake_program()
-            print("===================Wrong nn.Graph Tensor Shape=================")
-            print(eager_res.shape)
-            print(graph_res.shape)
-        assert (
-            equality_res
-        ), f"Check graph failed: graph result {graph_res.numpy()} not equals to eager result {eager_res.numpy()}."
+        return equality_res
 
 
 # NOTE(lixiang): Deepcopy the input parameters in order to correctly test the inplace version of the op.
@@ -277,6 +270,21 @@ def get_args_copy(args, kwargs):
     return copy_args, copy_kwargs
 
 
+def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
+    print(f"\033[1;33m============= {mode} ================\033[1;33m")
+    print(f"\033[1;33mEnter {func} function\033[1;33m")
+    if "__self__" in dir(oneflow) and flow.is_tensor(oneflow.__self__):
+        print(f"\033[1;33m{oneflow.__self__}\033[1;33m")
+    if args is not None:
+        print(f"\033[1;33m{args}\033[1;33m")
+    if kwargs is not None:
+        print(f"\033[1;33m{kwargs}\033[1;33m")
+    print_note_fake_program()
+    print(f"\033[1;33mLeave {func} function\033[1;33m")
+    print(f"\033[1;37m\033[1;37m")
+    print("\n\n")
+
+
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
 #   graph_train_oneflow: is a deepcopy of oneflow.
 def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *args):
@@ -287,12 +295,10 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
             graph_train_parameters_len += 1
 
     if verbose:
-        print(f"\033[1;33mEnter get_module_graph_test function\033[1;33m")
-        print(oneflow_args)
-        print_note_fake_program()
-        print(f"\033[1;33mLeave get_module_graph_test function\033[1;33m")
-        print(f"\033[1;37m\033[1;37m")
-        print('\n\n\n\n\n')
+        get_fake_program_more_detail(
+            oneflow, "nn.Graph", "get_module_graph_test", oneflow_args
+        )
+
     class TestGraphOfModule(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -310,7 +316,15 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
                 res.backward()
             return forward_res
 
-    return TestGraphOfModule()
+    try:
+        test_g_res = TestGraphOfModule()
+    except Exception as e:
+        if not verbose:
+            get_fake_program_more_detail(
+                oneflow, "nn.Graph", "get_module_graph_test", oneflow_args
+            )
+        raise OneFlowGraphBuildOrRunError(e)
+    return test_g_res
 
 
 # NOTE(lixiang): When oneflow is of functional type, build the following Graph for testing, and return the test results in Graph mode.
@@ -328,15 +342,14 @@ def get_functional_graph_res(
     test_g_res = []
 
     if verbose:
-        print(f"\033[1;33mEnter get_functional_graph_res function\033[1;33m")
-        if "__self__" in dir(graph_functional_oneflow) and flow.is_tensor(oneflow.__self__):
-            print(oneflow.__self__)
-        print(oneflow_args)
-        print(oneflow_kwargs)
-        print_note_fake_program()
-        print(f"\033[1;33mLeave get_functional_graph_res function\033[1;33m")
-        print(f"\033[1;37m\033[1;37m")
-        print('\n\n\n\n\n')
+        get_fake_program_more_detail(
+            oneflow,
+            "nn.Graph",
+            "get_functional_graph_res",
+            oneflow_args,
+            oneflow_kwargs,
+        )
+
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -355,35 +368,21 @@ def get_functional_graph_res(
                     test_g_res = oneflow_res
             else:
                 pass
-            if verbose:
-                print(
-                    "Run graph of function: ",
-                    repr(oneflow),
-                    ", graph check is intentionally skiped.",
-                )
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
-            if verbose:
-                print(
-                    "Run graph of function: ",
-                    repr(oneflow),
-                    ", graph check is intentionally skiped.",
-                )
         else:
             test_g = TestGraphOfFunctional()
-            if verbose:
-                print(
-                    "Run graph of function: ", repr(oneflow),
-                )
-                test_g.debug(2)
             test_g_res = test_g()
-            if verbose:
-                print(
-                    "The result after running graph functional: ", test_g_res,
-                )
     except Exception as e:
-        print_note_fake_program()
+        if not verbose:
+            get_fake_program_more_detail(
+                oneflow,
+                "nn.Graph",
+                "get_functional_graph_res",
+                oneflow_args,
+                oneflow_kwargs,
+            )
         raise OneFlowGraphBuildOrRunError(e)
     return test_g_res
 
@@ -396,15 +395,9 @@ def get_tensor_graph_res(
     test_g_res = []
 
     if verbose:
-        print(f"\033[1;33mEnter get_tensor_graph_res function\033[1;33m")
-        if "__self__" in dir(graph_tensor_oneflow) and flow.is_tensor(oneflow.__self__):
-            print(oneflow.__self__)
-        print(oneflow_args)
-        print(oneflow_kwargs)
-        print_note_fake_program()
-        print(f"\033[1;33mLeave get_tensor_graph_res function\033[1;33m")
-        print(f"\033[1;37m\033[1;37m")
-        print('\n\n\n\n\n')
+        get_fake_program_more_detail(
+            oneflow, "nn.Graph", "get_tensor_graph_res", oneflow_args, oneflow_kwargs
+        )
 
     class TestGraphOfTensorMethod(flow.nn.Graph):
         def __init__(self):
@@ -415,16 +408,16 @@ def get_tensor_graph_res(
 
     try:
         test_g = TestGraphOfTensorMethod()
-        if verbose:
-            print("Run graph of method: ", repr(oneflow))
-            test_g.debug(2)
         test_g_res = test_g()
-        if verbose:
-            print(
-                "The result after running graph tensor method: ", test_g_res,
-            )
     except Exception as e:
-        print_note_fake_program()
+        if not verbose:
+            get_fake_program_more_detail(
+                oneflow,
+                "nn.Graph",
+                "get_tensor_graph_res",
+                oneflow_args,
+                oneflow_kwargs,
+            )
         raise OneFlowGraphBuildOrRunError(e)
     return test_g_res
 
@@ -432,27 +425,14 @@ def get_tensor_graph_res(
 def get_oneflow_eager_res(
     oneflow, oneflow_args, oneflow_kwargs, verbose, is_tesnor_method=False
 ):
+    if verbose:
+        get_fake_program_more_detail(
+            oneflow, "Eager", "get_oneflow_eager_res", oneflow_args, oneflow_kwargs
+        )
     if not is_tesnor_method:
-        if verbose:
-            print(
-                "Before running eager module or functional: ", repr(oneflow),
-            )
-
         oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
-        if verbose:
-            print(
-                "The result after running eager module or functional: ", oneflow_res,
-            )
     else:
-        if verbose:
-            print(
-                "Before running eager tensor method: ", repr(oneflow),
-            )
         oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
-        if verbose:
-            print(
-                "The result after running eager tensor method: ", oneflow_res,
-            )
     return oneflow_res
 
 
@@ -477,24 +457,15 @@ def oneflow_eager_run_with_graph_check(
 
     oneflow_res = get_oneflow_eager_res(oneflow, oneflow_args, oneflow_kwargs, verbose)
     if testing_graph:
-        if verbose:
-            print(
-                "After running eager module or functional: ", repr(oneflow),
-            )
         find_check_module_func = True
         ignore_apis_list = ["tensor", "train"]
         test_g_res = []
         if isinstance(oneflow, flow.nn.Module):
-            test_g = get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *args)
-            if verbose:
-                print("Run graph of module: ", repr(oneflow))
-                test_g.debug(2)
+            test_g = get_module_graph_test(
+                graph_train_oneflow, oneflow, verbose, oneflow_args, *args
+            )
             # When testing module methods, kwargs are not considered.
             test_g_res = test_g(*graph_args)
-            if verbose:
-                print(
-                    "The result after running graph module: ", test_g_res,
-                )
         elif oneflow.__name__ in ignore_apis_list:
             find_check_module_func = False
         # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
@@ -524,9 +495,23 @@ def oneflow_eager_run_with_graph_check(
         if find_check_module_func:
             if isinstance(test_g_res, tuple):
                 for _, g_res in enumerate(test_g_res):
-                    check_eager_graph_tensor(oneflow_res, g_res)
+                    if not check_eager_graph_tensor(oneflow_res, g_res):
+                        get_fake_program_more_detail(
+                            oneflow,
+                            "Eager + nn.Graph",
+                            "oneflow_eager_run_with_graph_check",
+                            oneflow_args,
+                            oneflow_kwargs,
+                        )
             else:
-                check_eager_graph_tensor(oneflow_res, test_g_res)
+                if not check_eager_graph_tensor(oneflow_res, test_g_res):
+                    get_fake_program_more_detail(
+                        oneflow,
+                        "Eager + nn.Graph",
+                        "oneflow_eager_run_with_graph_check",
+                        oneflow_args,
+                        oneflow_kwargs,
+                    )
     return oneflow_res
 
 
@@ -545,10 +530,6 @@ def oneflow_tensor_eager_run_with_graph_check(
     )
 
     if testing_graph:
-        if verbose:
-            print(
-                "After running eager tensor method: ", repr(oneflow_method),
-            )
 
         test_g_res = get_tensor_graph_res(
             graph_tensor_oneflow,
@@ -560,9 +541,23 @@ def oneflow_tensor_eager_run_with_graph_check(
 
         if isinstance(test_g_res, tuple):
             for _, g_res in enumerate(test_g_res):
-                check_eager_graph_tensor(oneflow_res, g_res)
+                if not check_eager_graph_tensor(oneflow_res, g_res):
+                    get_fake_program_more_detail(
+                        oneflow,
+                        "nn.Graph",
+                        "oneflow_tensor_eager_run_with_graph_check",
+                        oneflow_args,
+                        oneflow_kwargs,
+                    )
         else:
-            check_eager_graph_tensor(oneflow_res, test_g_res)
+            if not check_eager_graph_tensor(oneflow_res, test_g_res):
+                get_fake_program_more_detail(
+                    oneflow,
+                    "nn.Graph",
+                    "oneflow_tensor_eager_run_with_graph_check",
+                    oneflow_args,
+                    oneflow_kwargs,
+                )
     return oneflow_res
 
 
@@ -608,6 +603,13 @@ def get_pytorch_oneflow_res(
                 raise BothDoNotSupportError(e, ee) from None
             print(
                 "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+            )
+            get_fake_program_more_detail(
+                oneflow,
+                "Eager",
+                "get_pytorch_oneflow_res",
+                oneflow_args,
+                oneflow_kwargs,
             )
         raise PyTorchDoesNotSupportError(e)
 
