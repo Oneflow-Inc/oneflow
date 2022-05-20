@@ -49,6 +49,14 @@ struct UnaryFunctor<device, UnaryOp::kLogicalNot, Dst, Src> {
   OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(!src); }
 };
 
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kLeakyRelu, Dst, Src> {
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<Src>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return (src > 0) ? src : alpha * src; }
+  const Src alpha;
+};
+
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow

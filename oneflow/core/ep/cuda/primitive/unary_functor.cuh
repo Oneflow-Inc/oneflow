@@ -55,6 +55,17 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, nv_bfloat16, nv_bfloat16>
 #endif
 
 template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLeakyRelu, half, half> {
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(__float2half(attr0.Value<float>())) {}
+
+  __device__ half operator()(half src) const {
+    half zero = __float2half(0);
+    return (src > zero) ? src : alpha * src;
+  }
+  const half alpha;
+};
+
+template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, float, float> {
   explicit UnaryFunctor(Scalar attr0, Scalar attr1) {}
 

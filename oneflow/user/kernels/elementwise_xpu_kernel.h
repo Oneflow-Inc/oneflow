@@ -97,9 +97,17 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
   ~UnaryPrimitiveKernel() = default;
 
   UnaryPrimitiveKernel(ep::primitive::UnaryOp op, const std::string& output_name,
-                       const std::string& input_name, Scalar attr0 = Scalar(),
-                       Scalar attr1 = Scalar())
-      : op(op), output_name(output_name), input_name(input_name), attr0(attr0), attr1(attr1) {}
+                       const std::string& input_name)
+      : op(op), output_name(output_name), input_name(input_name) {}
+
+  using ConstructAttrFuncType =
+      std::function<void(user_op::KernelComputeContext*, Scalar&, Scalar&)>;
+  UnaryPrimitiveKernel(ep::primitive::UnaryOp op, const std::string& output_name,
+                       const std::string& input_name, ConstructAttrFuncType fn)
+      : op(op),
+        output_name(output_name),
+        input_name(input_name),
+        ConstructAttrFunc(std::move(fn)) {}
 
  private:
   using user_op::OpKernel::Compute;
@@ -120,6 +128,8 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
 
     const InputA* input_a_ptr = input_tensor->dptr<InputA>();
     OutputT* output_ptr = output_tensor->mut_dptr<OutputT>();
+    Scalar attr0, attr1;
+    if (ConstructAttrFunc) ConstructAttrFunc(ctx, attr0, attr1);
 
     primitive->Launch(ctx->stream(), input_a_ptr, output_ptr, attr0, attr1, elem_cnt);
   }
@@ -128,7 +138,7 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
   ep::primitive::UnaryOp op;
   std::string output_name;
   std::string input_name;
-  Scalar attr0, attr1;
+  ConstructAttrFuncType ConstructAttrFunc;
 };
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
