@@ -329,7 +329,9 @@ def get_functional_graph_res(
                     whole_fp_tensor_flag = False
                     break
         else:
-            if flow.is_tensor(origin_tensor) and not (origin_tensor.dtype == flow.float32):
+            if flow.is_tensor(origin_tensor) and not (
+                origin_tensor.dtype == flow.float32
+            ):
                 whole_fp_tensor_flag = False
         print(origin_tensor)
 
@@ -465,7 +467,9 @@ def get_tensor_graph_res(
                     whole_fp_tensor_flag = False
                     break
         else:
-            if flow.is_tensor(origin_tensor) and not (origin_tensor.dtype == flow.float32):
+            if flow.is_tensor(origin_tensor) and not (
+                origin_tensor.dtype == flow.float32
+            ):
                 whole_fp_tensor_flag = False
         print(origin_tensor)
 
