@@ -179,6 +179,169 @@ size_t GetCudnnDataTypeByteSize(cudnnDataType_t data_type) {
 
 #endif  // WITH_CUDA
 
+#ifdef WITH_ROCM
+
+hipdnnDataType_t GetCudnnDataType(DataType val) {
+#define MAKE_ENTRY(type_cpp, type_cudnn) \
+  if (val == GetDataType<type_cpp>::value) { return type_cudnn; }
+  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDNN_DATA_TYPE_SEQ);
+#undef MAKE_ENTRY
+// #if HIPDNN_VERSION >= 8100
+//   if (val == kBFloat16) { return CUDNN_DATA_BFLOAT16; }
+// #endif
+  UNIMPLEMENTED();
+}
+
+CudnnTensorDesc::CudnnTensorDesc() { OF_CUDNN_CHECK(hipdnnCreateTensorDescriptor(&val_)); }
+CudnnTensorDesc::~CudnnTensorDesc() { OF_CUDNN_CHECK(hipdnnDestroyTensorDescriptor(val_)); }
+CudnnTensorDesc::CudnnTensorDesc(hipdnnTensorFormat_t format, DataType data_type, int n, int c,
+                                 int h, int w) {
+  OF_CUDNN_CHECK(hipdnnCreateTensorDescriptor(&val_));
+  OF_CUDNN_CHECK(hipdnnSetTensor4dDescriptor(val_, format, GetCudnnDataType(data_type), n, c, h, w));
+}
+CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int dims, const int* dim, const int* stride) {
+  OF_CUDNN_CHECK(hipdnnCreateTensorDescriptor(&val_));
+  OF_CUDNN_CHECK(hipdnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type), dims, dim, stride));
+}
+CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const ShapeView& shape,
+                                 const std::string& data_format) {
+  OF_CUDNN_CHECK(hipdnnCreateTensorDescriptor(&val_));
+  hipdnnTensorFormat_t cudnn_data_format;
+  if (data_format == "channels_first") {
+    cudnn_data_format = HIPDNN_TENSOR_NCHW;
+  } else if (data_format == "channels_last") {
+    cudnn_data_format = HIPDNN_TENSOR_NHWC;
+  } else {
+    UNIMPLEMENTED();
+  }
+
+  if (shape.NumAxes() == 3) {
+    int data_num = static_cast<int>(shape.At(0));
+    int channels = data_format == "channels_first" ? static_cast<int>(shape.At(1))
+                                                   : static_cast<int>(shape.At(2));
+    int kernel_h = data_format == "channels_first" ? static_cast<int>(shape.At(2))
+                                                   : static_cast<int>(shape.At(1));
+    int kernel_w = 1;
+    OF_CUDNN_CHECK(hipdnnSetTensor4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
+                                              data_num, channels, kernel_h, kernel_w));
+  } else if (shape.NumAxes() == 4) {
+    int data_num = static_cast<int>(shape.At(0));
+    int channels = data_format == "channels_first" ? static_cast<int>(shape.At(1))
+                                                   : static_cast<int>(shape.At(3));
+    int kernel_h = data_format == "channels_first" ? static_cast<int>(shape.At(2))
+                                                   : static_cast<int>(shape.At(1));
+    int kernel_w = data_format == "channels_first" ? static_cast<int>(shape.At(3))
+                                                   : static_cast<int>(shape.At(2));
+    OF_CUDNN_CHECK(hipdnnSetTensor4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
+                                              data_num, channels, kernel_h, kernel_w));
+  } else {
+    std::vector<int> tensor_dim({shape.ptr(), shape.ptr() + shape.NumAxes()});
+    std::vector<int> stride_of_tensor(shape.NumAxes(), 1);
+    for (int32_t i = shape.NumAxes() - 2; i >= 0; --i) {
+      stride_of_tensor[i] = stride_of_tensor[i + 1] * shape.At(i + 1);
+    }
+
+    OF_CUDNN_CHECK(hipdnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type), shape.NumAxes(),
+                                              tensor_dim.data(), stride_of_tensor.data()));
+  }
+}
+
+CudnnFilterDesc::~CudnnFilterDesc() { OF_CUDNN_CHECK(hipdnnDestroyFilterDescriptor(val_)); }
+
+CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const ShapeView& shape,
+                                 const std::string& data_format) {
+  OF_CUDNN_CHECK(hipdnnCreateFilterDescriptor(&val_));
+  hipdnnTensorFormat_t cudnn_data_format;
+  if (data_format == "channels_first") {
+    cudnn_data_format = HIPDNN_TENSOR_NCHW;
+  } else if (data_format == "channels_last") {
+    cudnn_data_format = HIPDNN_TENSOR_NHWC;
+  } else {
+    UNIMPLEMENTED();
+  }
+
+  if (shape.NumAxes() == 3) {
+    int filters = static_cast<int>(shape.At(0));
+    int c = data_format == "channels_first" ? static_cast<int>(shape.At(1))
+                                            : static_cast<int>(shape.At(2));
+    int kernel_h = data_format == "channels_first" ? static_cast<int>(shape.At(2))
+                                                   : static_cast<int>(shape.At(1));
+    int kernel_w = 1;
+    OF_CUDNN_CHECK(hipdnnSetFilter4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
+                                              filters, c, kernel_h, kernel_w));
+  } else if (shape.NumAxes() == 4) {
+    int filters = static_cast<int>(shape.At(0));
+    int kernel_h = data_format == "channels_first" ? static_cast<int>(shape.At(2))
+                                                   : static_cast<int>(shape.At(1));
+    int kernel_w = data_format == "channels_first" ? static_cast<int>(shape.At(3))
+                                                   : static_cast<int>(shape.At(2));
+    int c = data_format == "channels_first" ? static_cast<int>(shape.At(1))
+                                            : static_cast<int>(shape.At(3));
+    OF_CUDNN_CHECK(hipdnnSetFilter4dDescriptor(val_, cudnn_data_format, GetCudnnDataType(data_type),
+                                              filters, c, kernel_h, kernel_w));
+  } else {
+    std::vector<int> dims({shape.ptr(), shape.ptr() + shape.NumAxes()});
+    OF_CUDNN_CHECK(hipdnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type), cudnn_data_format,
+                                              dims.size(), dims.data()));
+  }
+}
+
+CudnnActivationDesc::CudnnActivationDesc(hipdnnActivationMode_t mode,
+                                         hipdnnNanPropagation_t relu_nan_opt, double coef) {
+  OF_CUDNN_CHECK(hipdnnCreateActivationDescriptor(&val_));
+  OF_CUDNN_CHECK(hipdnnSetActivationDescriptor(val_, mode, relu_nan_opt, coef, 0.0, 0.0));
+}
+
+CudnnActivationDesc::~CudnnActivationDesc() {
+  OF_CUDNN_CHECK(hipdnnDestroyActivationDescriptor(val_));
+}
+
+size_t GetCudnnDataTypeByteSize(hipdnnDataType_t data_type) {
+  size_t byte_size = 0;
+  switch (data_type) {
+    case HIPDNN_DATA_FLOAT:
+    case HIPDNN_DATA_INT32:
+    case HIPDNN_DATA_INT8x4:
+    // case CUDNN_DATA_UINT8x4: 
+    {
+      byte_size = 4;
+      break;
+    }
+    case HIPDNN_DATA_DOUBLE: {
+      byte_size = 8;
+      break;
+    }
+    case HIPDNN_DATA_HALF: {
+      byte_size = 2;
+      break;
+    }
+    case HIPDNN_DATA_INT8:
+    // case CUDNN_DATA_UINT8: 
+    {
+      byte_size = 1;
+      break;
+    }
+// #if HIPDNN_VERSION > 7200
+//     case CUDNN_DATA_INT8x32: {
+//       byte_size = 32;
+//       break;
+//     }
+// #endif
+// #if HIPDNN_VERSION >= 8100
+//     case CUDNN_DATA_BFLOAT16: {
+//       byte_size = 2;
+//       break;
+//     }
+// #endif
+    default: {
+      UNIMPLEMENTED();
+    }
+  }
+  return byte_size;
+}
+
+#endif  // WITH_ROCM
+
 template<typename T>
 const void* CudnnSPOnePtr() {
   static const float fval = 1.0f;

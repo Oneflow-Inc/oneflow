@@ -23,13 +23,21 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/device/device_context.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #ifdef WITH_CUDA
 
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda.h>
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+#include "oneflow/core/ep/hip/cuda_stream.h"
+#include <hip/hip_runtime.h>
+
+#endif  // WITH_ROCM
+
 
 namespace oneflow {
 
@@ -216,5 +224,190 @@ cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active) {
 }
 
 #endif  // WITH_CUDA
+
+#ifdef WITH_ROCM
+
+const char* CublasGetErrorString(hipblasStatus_t error) {
+  switch (error) {
+    case HIPBLAS_STATUS_SUCCESS: return "HIPBLAS_STATUS_SUCCESS";
+    case HIPBLAS_STATUS_NOT_INITIALIZED: return "HIPBLAS_STATUS_NOT_INITIALIZED";
+    case HIPBLAS_STATUS_ALLOC_FAILED: return "HIPBLAS_STATUS_ALLOC_FAILED";
+    case HIPBLAS_STATUS_INVALID_VALUE: return "HIPBLAS_STATUS_INVALID_VALUE";
+    case HIPBLAS_STATUS_ARCH_MISMATCH: return "HIPBLAS_STATUS_ARCH_MISMATCH";
+    case HIPBLAS_STATUS_MAPPING_ERROR: return "HIPBLAS_STATUS_MAPPING_ERROR";
+    case HIPBLAS_STATUS_EXECUTION_FAILED: return "HIPBLAS_STATUS_EXECUTION_FAILED";
+    case HIPBLAS_STATUS_INTERNAL_ERROR: return "HIPBLAS_STATUS_INTERNAL_ERROR";
+#if CUDA_VERSION >= 6000
+    case HIPBLAS_STATUS_NOT_SUPPORTED: return "HIPBLAS_STATUS_NOT_SUPPORTED";
+#endif
+#if CUDA_VERSION >= 6050
+    case CUBLAS_STATUS_LICENSE_ERROR: return "CUBLAS_STATUS_LICENSE_ERROR";
+#endif
+  }
+  return "Unknown cublas status";
+}
+
+const char* CurandGetErrorString(hiprandStatus_t error) {
+  switch (error) {
+    case HIPRAND_STATUS_SUCCESS: return "HIPRAND_STATUS_SUCCESS";
+    case HIPRAND_STATUS_VERSION_MISMATCH: return "HIPRAND_STATUS_VERSION_MISMATCH";
+    case HIPRAND_STATUS_NOT_INITIALIZED: return "HIPRAND_STATUS_NOT_INITIALIZED";
+    case HIPRAND_STATUS_ALLOCATION_FAILED: return "HIPRAND_STATUS_ALLOCATION_FAILED";
+    case HIPRAND_STATUS_TYPE_ERROR: return "HIPRAND_STATUS_TYPE_ERROR";
+    case HIPRAND_STATUS_OUT_OF_RANGE: return "HIPRAND_STATUS_OUT_OF_RANGE";
+    case HIPRAND_STATUS_LENGTH_NOT_MULTIPLE: return "HIPRAND_STATUS_LENGTH_NOT_MULTIPLE";
+    case HIPRAND_STATUS_DOUBLE_PRECISION_REQUIRED: return "HIPRAND_STATUS_DOUBLE_PRECISION_REQUIRED";
+    case HIPRAND_STATUS_LAUNCH_FAILURE: return "HIPRAND_STATUS_LAUNCH_FAILURE";
+    case HIPRAND_STATUS_PREEXISTING_FAILURE: return "HIPRAND_STATUS_PREEXISTING_FAILURE";
+    case HIPRAND_STATUS_INITIALIZATION_FAILED: return "HIPRAND_STATUS_INITIALIZATION_FAILED";
+    case HIPRAND_STATUS_ARCH_MISMATCH: return "HIPRAND_STATUS_ARCH_MISMATCH";
+    case HIPRAND_STATUS_INTERNAL_ERROR: return "HIPRAND_STATUS_INTERNAL_ERROR";
+  }
+  return "Unknown hiprand status";
+}
+
+// #if CUDA_VERSION >= 10020
+
+// const char* NvjpegGetErrorString(nvjpegStatus_t error) {
+//   switch (error) {
+//     case NVJPEG_STATUS_SUCCESS: return "NVJPEG_STATUS_SUCCESS";
+//     case NVJPEG_STATUS_NOT_INITIALIZED: return "NVJPEG_STATUS_NOT_INITIALIZED";
+//     case NVJPEG_STATUS_INVALID_PARAMETER: return "NVJPEG_STATUS_INVALID_PARAMETER";
+//     case NVJPEG_STATUS_BAD_JPEG: return "NVJPEG_STATUS_BAD_JPEG";
+//     case NVJPEG_STATUS_JPEG_NOT_SUPPORTED: return "NVJPEG_STATUS_JPEG_NOT_SUPPORTED";
+//     case NVJPEG_STATUS_ALLOCATOR_FAILURE: return "NVJPEG_STATUS_ALLOCATOR_FAILURE";
+//     case NVJPEG_STATUS_EXECUTION_FAILED: return "NVJPEG_STATUS_EXECUTION_FAILED";
+//     case NVJPEG_STATUS_ARCH_MISMATCH: return "NVJPEG_STATUS_ARCH_MISMATCH";
+//     case NVJPEG_STATUS_INTERNAL_ERROR: return "NVJPEG_STATUS_INTERNAL_ERROR";
+//     case NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED:
+//       return "NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED";
+//   }
+//   return "Unknown nvjpeg status";
+// }
+
+// #endif
+
+size_t GetAvailableGpuMemSize(int dev_id) {
+  hipDeviceProp_t prop{};
+  hipGetDeviceProperties(&prop, dev_id);
+  return prop.totalGlobalMem;
+}
+
+namespace {
+
+std::function<hipError_t(void**, size_t)> GetCudaMallocHostFn(int32_t dev) {
+  auto default_fn = [](void** ptr, size_t size) { return hipMallocHost(ptr, size); };
+  auto manager = Global<hardware::NodeDeviceDescriptorManager>::Get();
+  if (manager == nullptr) { return default_fn; }
+  auto node_desc = manager->GetLocalNodeDeviceDescriptor();
+  auto cuda_device = std::dynamic_pointer_cast<const hardware::CudaDeviceDescriptor>(
+      node_desc->GetDevice(hardware::kCudaDeviceDescriptorClassName, dev));
+  if (!cuda_device) { return default_fn; }
+  auto saved_affinity = node_desc->Topology()->GetMemoryAffinity();
+  if (!saved_affinity) { return default_fn; }
+  auto device_affinity =
+      node_desc->Topology()->GetMemoryAffinityByPCIBusID(cuda_device->PCIBusID());
+  if (!device_affinity) { return default_fn; }
+  return [device_affinity, saved_affinity, node_desc, default_fn](void** ptr, size_t size) {
+    node_desc->Topology()->SetMemoryAffinity(device_affinity);
+    hipError_t err = default_fn(ptr, size);
+    node_desc->Topology()->SetMemoryAffinity(saved_affinity);
+    return err;
+  };
+}
+
+}  // namespace
+
+hipError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size) {
+  auto fn = GetCudaMallocHostFn(dev);
+  return fn(ptr, size);
+}
+
+CudaCurrentDeviceGuard::CudaCurrentDeviceGuard(int32_t dev_id) {
+  CHECK(!pthread_fork::IsForkedSubProcess()) << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+  OF_CUDA_CHECK(hipGetDevice(&saved_dev_id_));
+  OF_CUDA_CHECK(hipSetDevice(dev_id));
+}
+
+CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { OF_CUDA_CHECK(hipGetDevice(&saved_dev_id_)); }
+
+CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(hipSetDevice(saved_dev_id_)); }
+
+// CublasMathModeGuard::CublasMathModeGuard(hipblasHandle_t handle, cublasMath_t new_mode)
+//     : CublasMathModeGuard(handle) {
+//   SetMathMode(new_mode);
+// }
+
+// CublasMathModeGuard::CublasMathModeGuard(hipblasHandle_t handle) : handle_(handle) {
+//   OF_CUBLAS_CHECK(cublasGetMathMode(handle_, &saved_mode_));
+//   new_mode_ = saved_mode_;
+// }
+
+// CublasMathModeGuard::~CublasMathModeGuard() {
+//   if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+// }
+
+// void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
+//   new_mode_ = new_mode;
+//   if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, new_mode_)); }
+// }
+
+int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
+
+int GetCudaDeviceCount() {
+  /* static */ int cuda_device_count = 0;
+  CudaCurrentDeviceGuard dev_guard(GetCudaDeviceIndex());
+  OF_CUDA_CHECK(hipGetDeviceCount(&cuda_device_count));
+  return cuda_device_count;
+}
+
+void InitCudaContextOnce(int device_id) {
+  static int device_count = GetCudaDeviceCount();
+  static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
+  if (LazyMode::is_enabled()) { return; }
+  if (device_id == -1) { device_id = GetCudaDeviceIndex(); }
+  std::call_once(init_flags[device_id], [&]() {
+    OF_CUDA_CHECK(hipSetDevice(device_id));
+    OF_CUDA_CHECK(hipDeviceSynchronize());
+  });
+}
+
+// hipError_t CudaDriverGetPrimaryCtxActive(int dev, int* active) {
+// #if CUDA_VERSION >= 11030
+//   hipDevice_t cu_device{};
+//   {
+//     hipError_t (*fnCuDeviceGet)(hipDevice_t*, int) = nullptr;
+//     hipError_t err =
+//         cudaGetDriverEntryPoint("hipDeviceGet", (void**)&fnCuDeviceGet, cudaEnableDefault);
+//     if (err != hipSuccess) { return err; }
+//     hipError_t result = fnCuDeviceGet(&cu_device, dev);
+//     if (result == hipSuccess) {
+//       // do nothing
+//     } else if (result == hipError_t::hipErrorInvalidDevice) {
+//       return hipErrorInvalidDevice;
+//     } else {
+//       return hipErrorUnknown;
+//     }
+//   }
+//   {
+//     hipError_t (*fnCuDevicePrimaryCtxGetState)(hipDevice_t, unsigned int*, int*) = nullptr;
+//     hipError_t err = cudaGetDriverEntryPoint(
+//         "hipDevicePrimaryCtxGetState", (void**)&fnCuDevicePrimaryCtxGetState, cudaEnableDefault);
+//     if (err != hipSuccess) { return err; }
+//     unsigned int flags{};
+//     hipError_t result = fnCuDevicePrimaryCtxGetState(cu_device, &flags, active);
+//     if (result == hipSuccess) {
+//       return hipSuccess;
+//     } else {
+//       return hipErrorUnknown;
+//     }
+//   }
+// #else
+//   return hipErrorNotSupported;
+// #endif  // CUDA_VERSION < 11030
+// }
+
+#endif  // WITH_ROCM
+
 
 }  // namespace oneflow
