@@ -61,7 +61,7 @@ void EvictDTRTensorInstructionType::Compute(vm::Instruction* instruction) const 
     } else if (ebo->is_pinned()) {
       if (dtr::debug_level() >= 2) { LOG(INFO) << "but skip because pinned" << std::endl; }
     } else {
-      CHECK_JUST(ebo->evict());
+      CHECK_JUST(ebo->evict(true));
     }
   }
 }

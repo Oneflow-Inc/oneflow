@@ -29,7 +29,8 @@ namespace dtr {
 TensorPool::TensorPool()
     : duration_(0),
       total_memory_bytes_(0),
-      num_eviction_(0),
+      num_eager_eviction_(0),
+      num_forced_eviction_(0),
       num_recomputation_(0),
       num_destruction_(0) {
   start_time_ = std::chrono::steady_clock::now();
@@ -55,7 +56,13 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
 }
 }  // namespace
 
-void TensorPool::inc_num_eviction() { num_eviction_++; }
+void TensorPool::inc_num_eviction(bool eager_evict) { 
+  if (eager_evict) {
+    num_eager_eviction_++; 
+  } else {
+    num_forced_eviction_++; 
+  }
+}
 
 Maybe<vm::DTREagerBlobObject*> TensorPool::find_best_tensor() {
   double min_cost = -1;
@@ -112,7 +119,6 @@ Maybe<vm::DTREagerBlobObject*> TensorPool::find_best_tensor() {
       // LOG(INFO) << "depth is " << pd << "+" << cd << "=" << (pd + cd);
     }
   }
-  num_eviction_++;
   // if (min_cost > 10) {
   // JUST(display2());
   // exit(1);
@@ -123,7 +129,7 @@ Maybe<vm::DTREagerBlobObject*> TensorPool::find_best_tensor() {
 Maybe<bool> TensorPool::find_best_tensor_and_evict() {
   auto* best = JUST(find_best_tensor());
   if (best == nullptr) { return false; }
-  JUST(best->evict());
+  JUST(best->evict(false));
   JUST(update_after_evict(best));
   return true;
 }

@@ -86,7 +86,8 @@ parser.add_argument("--no-dataloader", action='store_true')
 
 args = parser.parse_args()
 
-print(os.environ)
+if args.debug_level > 0:
+    print(os.environ)
 
 import oneflow as flow
 import oneflow.nn as nn
@@ -119,7 +120,7 @@ setup_seed(seed)
 
 writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
-model = models.resnet50(fuse_bn_relu=True)
+model = models.resnet50(fuse_bn_relu=True, fuse_bn_add_relu=True)
 
 # weights = flow.load("/tmp/abcdef")
 # model.load_state_dict(weights, strict=False)

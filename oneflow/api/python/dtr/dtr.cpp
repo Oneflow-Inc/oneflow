@@ -66,7 +66,7 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
         std::dynamic_pointer_cast<one::DTRMirroredTensor>(JUST(t->AsMirroredTensor()));
     CHECK_NOTNULL_OR_RETURN(dtr_tensor);
     JUST(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(dtr_tensor->eager_blob_object()))
-             ->evict());
+             ->evict(false));
     return Maybe<void>::Ok();
   });
   m.def("is_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<bool> {

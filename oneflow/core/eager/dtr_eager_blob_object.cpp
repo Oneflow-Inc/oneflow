@@ -86,6 +86,8 @@ DTREagerBlobObject::DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_ca
   node = std::make_shared<DisjNode>(0);
   auto pesudo_node = std::make_shared<DisjNode>(0);
   node->set_pesudo_node(pesudo_node);  // might induce some problems
+  static int ebo_id = 0;
+  id_ = ebo_id++;
 }
 
 DTREagerBlobObject::~DTREagerBlobObject() { clear_invalid_object(); }
@@ -105,7 +107,7 @@ void DTREagerBlobObject::unpin() {
   }
 }
 
-Maybe<void> DTREagerBlobObject::evict() {
+Maybe<void> DTREagerBlobObject::evict(bool eager_evict) {
   if (dtr::is_enabled_and_debug()) {
     static size_t c = 0;
     LOG(INFO) << "evict (No." << c++ << ")" << std::endl;
@@ -127,7 +129,7 @@ Maybe<void> DTREagerBlobObject::evict() {
   }
   if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_OR_RETURN(!is_in_memory());
-  Global<dtr::TensorPool>::Get()->inc_num_eviction();
+  Global<dtr::TensorPool>::Get()->inc_num_eviction(eager_evict);
   return Maybe<void>::Ok();
 }
 
@@ -374,12 +376,12 @@ void DTREagerBlobObject::set_compute_time(double val) {
     compute_time_ = tensor_storage_->blob_bytes();
   }
   if (ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true)) {
-    if (compute_op_type_name() == "add_n") { compute_time_ *= 5; }
+    if (compute_op_type_name() == "add_n") { compute_time_ *= 3; }
   }
   if (ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true)) {
-    if (compute_op_type_name() == "conv2d") { compute_time_ *= 5; }
-    if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= 5; }
-    if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= 5; }
+    if (compute_op_type_name() == "conv2d") { compute_time_ *= 3; }
+    if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= 3; }
+    if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= 3; }
   }
   if (dtr::debug_level() >= 2) {
     LOG(INFO) << "Compute time of " << this << ": " << compute_time_ << ", compute op "

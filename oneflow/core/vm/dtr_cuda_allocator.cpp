@@ -384,7 +384,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
     // NOTE: evict will trigger the merge and deallocation of neighbour free pieces,
     // currently deallocation only set tensor to nullptr, not real free,
     // so no bug occurs. It is tricky and fragile.
-    if (piece->tensor != nullptr) { CHECK_JUST(piece->tensor->evict()); }
+    if (piece->tensor != nullptr) { CHECK_JUST(piece->tensor->evict(false)); }
   }
   if (dtr::debug_level() >= 2) { LOG(INFO) << "evict size: " << size2; }
 

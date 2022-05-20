@@ -460,7 +460,7 @@ Maybe<void> _RecursivelyCompute(
                   << ", is in memory: " << input->is_in_memory() << std::endl;
       }
       Global<dtr::TensorPool>::Get()->need_eager_eviction_ebos_.erase(input.get());
-      JUST(input->evict());
+      JUST(input->evict(true));
     }
   }
 

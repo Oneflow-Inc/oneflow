@@ -34,7 +34,8 @@ struct TensorPool {
   ~TensorPool() {
     std::cout << "=======================" << std::endl;
     std::cout << "Destruct TensorPool." << std::endl;
-    std::cout << "Times of eviction: " << num_eviction_ << std::endl;
+    std::cout << "Times of forced eviction: " << num_forced_eviction_ << std::endl;
+    std::cout << "Times of eager eviction: " << num_eager_eviction_ << std::endl;
     std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
     std::cout << "Times of destruction: " << num_destruction_ << std::endl;
     std::cout << "duration_: " << duration_ << std::endl;
@@ -64,7 +65,7 @@ struct TensorPool {
   void merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y);
   void pesudo_merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y);
   std::shared_ptr<vm::DisjNode> find_father(std::shared_ptr<vm::DisjNode>& x);
-  void inc_num_eviction();
+  void inc_num_eviction(bool eager_evict);
   void update_after_compute(vm::DTREagerBlobObject* dtr_blob_object);
   Maybe<void> update_after_evict(vm::DTREagerBlobObject* dtr_blob_object);
   int update_after_pesudo_compute(vm::DTREagerBlobObject* dtr_blob_object);
@@ -82,7 +83,8 @@ struct TensorPool {
   std::vector<std::weak_ptr<vm::DTREagerBlobObject>> candidates_;
   std::chrono::steady_clock::time_point start_time_;
   size_t total_memory_bytes_;   // same in cuda_allocator.h
-  int num_eviction_;
+  int num_eager_eviction_;
+  int num_forced_eviction_;
   int num_recomputation_;
   int num_destruction_;
 };

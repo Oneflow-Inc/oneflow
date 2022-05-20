@@ -98,7 +98,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   void unpin();
   void update_access_time();
   void AppendUserOp(LocalCallOpKernelPhyInstrOperand* operand);
-  Maybe<void> evict();
+  Maybe<void> evict(bool eager_evict);
   Maybe<double> parent_cost(bool is_bp_required = false) const;
   Maybe<double> child_cost(bool is_bp_required = false) const;
   Maybe<double> neighbor_cost() const;
@@ -124,7 +124,12 @@ class DTREagerBlobObject final : public EagerBlobObject {
     return cnt;
   }
 
+  int id() const {
+    return id_;
+  }
+
  private:
+  int id_;
   bool evict_flag_ = false;
   bool could_evict_;
   bool is_bp_required_;
