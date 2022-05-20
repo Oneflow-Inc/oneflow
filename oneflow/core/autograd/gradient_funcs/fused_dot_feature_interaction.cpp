@@ -48,7 +48,7 @@ class FusedDotFeatureInteraction
 
 Maybe<void> FusedDotFeatureInteraction::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "it requires a expression of a user op to do the autograd";
   return Maybe<void>::Ok();
 }
 

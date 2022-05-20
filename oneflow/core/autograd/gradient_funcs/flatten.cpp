@@ -38,7 +38,7 @@ class Flatten : public OpExprGradFunction<FlattenCaptureState> {
 
 Maybe<void> Flatten::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "it requires a expression of a user op to do the autograd";
   return Maybe<void>::Ok();
 }
 
@@ -53,7 +53,8 @@ Maybe<void> Flatten::Capture(FlattenCaptureState* ctx, const TensorTuple& inputs
 Maybe<void> Flatten::Apply(const FlattenCaptureState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+      << "it requires exactly one tensor as output grad of flatten";
   const auto& like = ctx->SavedTensors().at(0);
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::ReshapeLike(out_grads.at(0), like));

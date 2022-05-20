@@ -29,14 +29,15 @@ class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> 
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr)
+        << "it requires a expression of a user op to do the autograd";
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(FusedBiasAddGeluInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "fused-bias-add-gelu must have two inputs";
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
     ctx->bias_requires_grad = inputs.at(1)->requires_grad();
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -52,7 +53,8 @@ class FusedBiasAddGelu : public OpExprGradFunction<FusedBiasAddGeluInterpState> 
                     TensorTuple* in_grads) const override {
     if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
 
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+        << "it requires exactly one tensor as output grad of fused-bias-add-gelu";
     const int64_t num_axes = out_grads.at(0)->shape()->NumAxes();
     in_grads->resize(2);
     const auto& a = ctx->SavedTensors().at(0);

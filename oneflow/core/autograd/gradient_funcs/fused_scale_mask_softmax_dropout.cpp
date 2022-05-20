@@ -44,7 +44,7 @@ class FusedScaleMaskSoftmaxDropout
 
 Maybe<void> FusedScaleMaskSoftmaxDropout::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "it requires a expression of a user op to do the autograd";
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }

@@ -28,14 +28,15 @@ class FakeQuantization : public OpExprGradFunction<FakeQuantizationCaptureState>
 
   Maybe<void> Capture(FakeQuantizationCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 3);
+    CHECK_EQ_OR_RETURN(inputs.size(), 3) << "fake quant must have two inputs";
     ctx->requires_grad = inputs.at(0)->requires_grad();
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const FakeQuantizationCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+        << "it requires exactly one tensor as output grad of fake quant";
     in_grads->resize(3);
     if (ctx->requires_grad) { in_grads->at(0) = out_grads.at(0); }
     return Maybe<void>::Ok();

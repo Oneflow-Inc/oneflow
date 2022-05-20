@@ -41,7 +41,7 @@ class FusedBiasAddDropout : public OpExprGradFunction<FusedBiasAddDropoutInterpS
 
 Maybe<void> FusedBiasAddDropout::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "it requires a expression of a user op to do the autograd";
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -49,7 +49,7 @@ Maybe<void> FusedBiasAddDropout::Init(const OpExpr& op) {
 Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* ctx,
                                          const TensorTuple& inputs, const TensorTuple& outputs,
                                          const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 3);
+  CHECK_EQ_OR_RETURN(inputs.size(), 3) << "fused-bias-add-drop-out must have three inputs";
   ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
   ctx->bias_requires_grad = inputs.at(1)->requires_grad();   // bias
 
@@ -65,7 +65,8 @@ Maybe<void> FusedBiasAddDropout::Capture(FusedBiasAddDropoutInterpState* ctx,
 
 Maybe<void> FusedBiasAddDropout::Apply(const FusedBiasAddDropoutInterpState* ctx,
                                        const TensorTuple& out_grads, TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+      << "it requires exactly one tensor as output grad of fused-bias-add-drop-out";
   if (!ctx->input_requires_grad && !ctx->bias_requires_grad) { return Maybe<void>::Ok(); }
 
   // mask have no grad(reqiures_grad=False), but still take a place in in_grads

@@ -39,7 +39,7 @@ class Flip : public OpExprGradFunction<FlipCaptureState> {
 
 Maybe<void> Flip::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "it requires a expression of a user op to do the autograd";
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -55,7 +55,8 @@ Maybe<void> Flip::Capture(FlipCaptureState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Flip::Apply(const FlipCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+      << "it requires exactly one tensor as output grad of flip";
   in_grads->resize(1);
   if (ctx->requires_grad) { (*in_grads)[0] = JUST(functional::Flip(out_grads[0], ctx->dims)); }
   return Maybe<void>::Ok();
