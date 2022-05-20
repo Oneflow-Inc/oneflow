@@ -22,7 +22,7 @@ from oneflow.profiler.events import Event, Events
 
 class TestEventAndEvents(flow.unittest.TestCase):
     def test_event(test_case):
-        event = Event("test", 1234, False, 1, "-", 0)
+        event = Event("test", 1234, False, -1, 1, "-", 0)
         event_json = {
             "name": "test",
             "time": 1234,
@@ -32,7 +32,7 @@ class TestEventAndEvents(flow.unittest.TestCase):
         }
         test_case.assertEqual(event, Event.from_dict(event_json))
 
-        event1 = Event("test", 3346, False, 1, "-", 0)
+        event1 = Event("test", 3346, False, -1, 1, "-", 0)
         event.update(event1)
         test_case.assertEqual(event.count, 2)
         test_case.assertEqual(event.time, 2290)
@@ -59,10 +59,10 @@ class TestEventAndEvents(flow.unittest.TestCase):
             ]
         )
         events = [
-            Event("test", 1234, False, 1, "-", 0),
-            Event("test", 3346, False, 1, "-", 0),
+            Event("test", 1234, False, -1, 1, "-", 0),
+            Event("test", 3346, False, -1, 1, "-", 0),
         ]
-        events_avg = [Event("test", 2290, False, 2, "-", 0)]
+        events_avg = [Event("test", 2290, False, -1, 2, "-", 0)]
         test_case.assertEqual(Events(events_json), events)
         test_case.assertEqual(Events(events_json).key_averages(), events_avg)
 
