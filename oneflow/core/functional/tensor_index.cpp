@@ -203,8 +203,9 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<int64_t>* target_dims) {
   int64_t ndims = shape.NumAxes();
   int64_t specified_ndims = CountSpecifiedDims(index);
-  CHECK_NE_OR_RETURN(ndims,0)
-      << Error::IndexError() << "invalid index of a 0-dim tensor. Use `tensor.item()` to convert a 0-dim tensor to a number";
+  CHECK_NE_OR_RETURN(ndims, 0) << Error::IndexError()
+                               << "invalid index of a 0-dim tensor. Use `tensor.item()` to convert "
+                                  "a 0-dim tensor to a number";
   CHECK_LE_OR_RETURN(specified_ndims, ndims)
       << Error::IndexError() << "Too many indices for tensor of dimension " << ndims;
   bool has_false_index = JUST(HasFalseIndex(index));
