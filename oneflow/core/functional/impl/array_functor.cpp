@@ -1196,7 +1196,7 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop, const std::vector<int64_t>& step,
                            const Optional<bool>& enable_view_slice) const {
-    if (view::IsViewApplicable(x) && enable_view_slice.value_or(true)) {
+    if (view::IsViewApplicable(x) && enable_view_slice.value_or(false)) {
       return view::Slice(x, start, stop, step);
     }
 
@@ -1939,7 +1939,7 @@ class TensorGetItemFunctor {
     if (is_identity) {
       result = expand_input;
     } else {
-      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
+      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/false));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
@@ -2042,14 +2042,16 @@ class TensorSetItemFunctor {
       if (slice_shape != *(value_tensor->shape())) {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
+      bool requires_grad =
+          (x->requires_grad() || value_tensor->requires_grad()) && autograd::GradMode::is_enabled();
       if (x->is_local()) {
-        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+        if (requires_grad) {
           JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
         } else {
           JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
         }
       } else {
-        if (x->requires_grad() && autograd::GradMode::is_enabled()) {
+        if (requires_grad) {
           return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
                                           "please use oneflow.no_grad() to disable autograd "
                                           "currently. We will fix this problem soon.";
@@ -2562,13 +2564,13 @@ class IndexSelectFunctor {
       index_new = JUST(Unsqueeze(index, 0));
     }
     auto index_gather = JUST(functional::Expand(
-        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/true)),
+        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/false)),
         expand_shape));
     for (int i = 1; i < index->dim(0); i++) {
       index_gather = JUST(functional::Concat(
           {index_gather,
            JUST(functional::Expand(
-               JUST(functional::Slice(index_new, {i}, {i + 1}, {1}, /*enable_view_slice=*/true)),
+               JUST(functional::Slice(index_new, {i}, {i + 1}, {1}, /*enable_view_slice=*/false)),
                expand_shape))},
           new_dim));
     }
