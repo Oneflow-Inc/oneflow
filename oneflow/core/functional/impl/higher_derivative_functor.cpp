@@ -64,7 +64,7 @@ class TanhGradGradFunctor {
     auto a = functional::Tanh(x);
     auto a2 = functional::Mul(JUST(a), JUST(a));
     auto a3 = functional::Mul(JUST(a2), JUST(a));
-    auto res = functional::Sub(JUST(a3), JUST(a), false);
+    auto res = functional::Sub(JUST(a3), JUST(a), 1.0, false);
     return functional::ScalarMul(2.0, JUST(res));
   }
 };
