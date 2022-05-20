@@ -24,7 +24,7 @@ namespace oneflow {
   const ShapeView& in_shape = in.shape();
   const int32_t in_dim = in_shape.NumAxes();
   CHECK_OR_RETURN(in_dim >= 1 && in_dim <= 2)
-      << Error::RuntimeError() << "expected to be in range of [1, 2], but got " << in_dim;
+      << Error::RuntimeError() << "matrix or a vector expected";
 
   DimVector out_dim_vec = {0};
   if (in_dim == 1) {
