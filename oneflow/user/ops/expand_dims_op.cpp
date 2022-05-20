@@ -23,8 +23,8 @@ namespace {
 Maybe<int32_t> TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
   axis = axis < 0 ? axis + num_axes + 1 : axis;
   CHECK_OR_RETURN(axis >= 0 && axis <= num_axes)
-      << " Dimension out of range, expected to be in range of [" << -(num_axes + 1) << ", "
-      << num_axes << "], but got: " << axis;
+      << Error::IndexError() << " Dimension out of range, expected to be in range of ["
+      << -(num_axes + 1) << ", " << num_axes << "], but got: " << axis;
   return axis;
 }
 
