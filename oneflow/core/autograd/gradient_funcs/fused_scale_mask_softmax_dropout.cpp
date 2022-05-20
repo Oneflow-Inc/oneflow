@@ -53,7 +53,8 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutIn
                                                   const TensorTuple& inputs,
                                                   const TensorTuple& outputs,
                                                   const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 3);  // input, mask, dropout_mask
+  CHECK_EQ_OR_RETURN(inputs.size(), 3)
+      << "fused-scale-mask-softmax-dropout must have three inputs";  // input, mask, dropout_mask
   ctx->input_requires_grad = inputs.at(0)->requires_grad();
 
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
@@ -70,7 +71,8 @@ Maybe<void> FusedScaleMaskSoftmaxDropout::Capture(FusedScaleMaskSoftmaxDropoutIn
 Maybe<void> FusedScaleMaskSoftmaxDropout::Apply(const FusedScaleMaskSoftmaxDropoutInterState* ctx,
                                                 const TensorTuple& out_grads,
                                                 TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // dy, d_softmax_y
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2) << "it requires exactly two tensors as output grad of "
+                                             "fused-scale-mask-softmax-dropout";  // dy, d_softmax_y
   if (!ctx->input_requires_grad) { return Maybe<void>::Ok(); }
   in_grads->resize(3);  // input, mask, dropout_mask
 
