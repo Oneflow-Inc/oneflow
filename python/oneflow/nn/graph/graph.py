@@ -38,7 +38,7 @@ from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
     construct_io_node,
-    map_io,
+    map_structed_values,
     seq_to_func_return,
     sys_exc_error_msg,
 )
@@ -206,9 +206,6 @@ class Graph(object):
 
             Donot override this function.
         """
-
-        # ensure the input tensors are all contiguous tenors
-        # (args, kwargs) = self.__make_input_tensors_contiguous(*args, **kwargs)
 
         if not self._is_compiled:
             with graph_build_util.DebugScopeContext(
@@ -700,6 +697,9 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        # ensure the input tensors are all contiguous tenors
+        (args, kwargs) = self.__make_input_tensors_contiguous(*args, **kwargs)
+
         # Build graph
         try:
             self.__print(0, 0, self._shallow_repr() + " start building graph.")
@@ -973,6 +973,9 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
+        # ensure the input tensors are all contiguous tenors
+        (args, kwargs) = self.__make_input_tensors_contiguous(*args, **kwargs)
+
         try:
             flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
@@ -1054,7 +1057,7 @@ class Graph(object):
                 arg_repr = self.__io_item_check_and_gen_repr(
                     node.value(), None, io_type, name
                 )
-        out = map_io(io_node, leaf_node_fn)
+        out = map_structed_values(io_node, leaf_node_fn)
         build_args = out[0]
         build_kwargs = out[1]
 
@@ -1120,7 +1123,7 @@ class Graph(object):
                     arg, None, io_type, leaf_node.prefix() + "_" + leaf_node.name(),
                 )
 
-        out = map_io(io_node, leaf_node_fn)
+        out = map_structed_values(io_node, leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
@@ -1128,9 +1131,9 @@ class Graph(object):
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
         _, named_nodes = construct_io_node((args, kwargs), "_" + self.name + "_" + io_type, None)
-        for (name, node) in named_nodes:
+        for (_, node) in named_nodes:
             if isinstance(node.value(), Tensor):
-                flattened_args.append(node._value)
+                flattened_args.append(node.value())
             else:
                 continue
         return flattened_args
@@ -1266,16 +1269,15 @@ class Graph(object):
             return
         oneflow._oneflow_internal.eager.Sync()
 
-    # def __make_input_tensors_contiguous(self, *args, **kwargs):
-    #     def to_contiguous(item):
-    #         if isinstance(item, Tensor) and not item.is_contiguous():
-    #             return item.contiguous()
-    #         else:
-    #             return item
+    def __make_input_tensors_contiguous(self, *args, **kwargs):
+        def to_contiguous(item):
+            if isinstance(item, Tensor) and not item.is_contiguous():
+                return item.contiguous()
+            else:
+                return item
 
-    #     mapper = IOMapper((args, kwargs), to_contiguous)
-    #     mapped_result = mapper.get_mapping_result()
-    #     return mapped_result[0], mapped_result[1]
+        mapped_result = map_structed_values((args, kwargs), to_contiguous)
+        return mapped_result[0], mapped_result[1]
 
 
 if __name__ == "__main__":
