@@ -35,6 +35,7 @@ class Event:
         name: str,
         time: float,
         on_gpu: bool,
+        bandwidth: int,
         count: int,
         input_shapes: str,
         event_type: int,
@@ -42,6 +43,8 @@ class Event:
         self.name = name
         self.time = time
         self.time_total = time * count
+        self.bandwidth = bandwidth
+        self.bandwidth_total = bandwidth * count
         self.on_gpu = on_gpu
         self.count = count
         self.input_shapes = input_shapes
@@ -54,8 +57,10 @@ class Event:
         assert self.on_gpu == event.on_gpu
 
         self.time_total += event.time
+        self.bandwidth_total += event.bandwidth
         self.count += 1
         self.time = self.time_total / self.count
+        self.bandwidth = self.bandwidth_total / self.count
 
     def __eq__(self, other):
         if not isinstance(other, type(self)):
@@ -65,6 +70,8 @@ class Event:
             self.name == other.name
             and self.time == other.time
             and self.time_total == other.time_total
+            and self.bandwidth == other.bandwidth
+            and self.bandwidth_total == other.bandwidth_total
             and self.on_gpu == other.on_gpu
             and self.count == other.count
             and self.input_shapes == other.input_shapes
@@ -73,7 +80,15 @@ class Event:
 
     @classmethod
     def from_dict(cls, d: dict):
-        return cls(d["name"], d["time"], d["on_gpu"], 1, d["input_shapes"], d["type"],)
+        return cls(
+            d["name"],
+            d["time"],
+            d["on_gpu"],
+            d["bandwidth"] if "bandwidth" in d else -1,
+            1,
+            d["input_shapes"],
+            d["type"],
+        )
 
 
 class Events(list):
@@ -114,6 +129,7 @@ class Events(list):
             "CPU time",
             "GPU time total",
             "GPU time",
+            "Bandwidth",
             "Number of calls",
             "Event type",
             "Shapes of inputs",
@@ -126,6 +142,7 @@ class Events(list):
                     format_time(item.time) if not item.on_gpu else "-",
                     format_time(item.time_total) if item.on_gpu else "-",
                     format_time(item.time) if item.on_gpu else "-",
+                    f"{item.bandwidth:.3f}GB/s" if item.on_gpu else "-",
                     item.count,
                     format_event_type(item.event_type, item.on_gpu),
                     item.input_shapes,
