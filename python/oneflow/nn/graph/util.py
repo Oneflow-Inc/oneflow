@@ -48,6 +48,47 @@ def seq_to_func_return(seq, need_unpack=False):
 
 
 class NamedIONode(object):
+
+    @staticmethod
+    def construct(value, root_prefix: str, root_name: str):
+        global_index = 0
+        named_nodes = []
+        def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
+            nonlocal global_index
+            nonlocal named_nodes
+            node = NamedIONode(prefix, name, global_index, local_index)
+
+            if not named_nodes is None:
+                named_nodes.append((node.prefix() + "_" + node.name(), node))
+
+            global_index += 1
+
+            if isinstance(value, list) or isinstance(value, tuple):
+
+                def construct_func(enum):
+                    (i, v) = enum
+                    next_prefix = prefix + ("." if prefix else "") + str(i)
+                    new_node = construct(v, next_prefix, None, i)
+                    return new_node
+
+                node.set_value(value.__class__(map(construct_func, enumerate(value))))
+
+            elif isinstance(value, dict):
+
+                def construct_func(enum):
+                    i, (key, v) = enum
+                    next_prefix = prefix + ("." if prefix else "") + str(i)
+                    new_node = construct(v, next_prefix, key, i)
+                    return key, new_node
+                m = map(construct_func, enumerate(value.items()))
+                node.set_value(OrderedDict(m))
+            else:
+                node.set_value(value)
+            return node
+
+        root_node = construct(value, root_prefix, root_name, 0)
+        return root_node, named_nodes
+
     def __init__(self, prefix="", name=None, global_index=0, local_index=0) -> None:
         self._name = name if name is not None else str(global_index)
         self._prefix = prefix
@@ -116,47 +157,6 @@ class NamedIONode(object):
             repr_str += ", value: " + repr(self._value)
         repr_str += ")"
         return repr_str
-
-
-def construct_io_node(value, root_prefix: str, root_name: str) -> NamedIONode:
-    global_index = 0
-    named_nodes = []
-    def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
-        nonlocal global_index
-        nonlocal named_nodes
-        node = NamedIONode(prefix, name, global_index, local_index)
-
-        if not named_nodes is None:
-            named_nodes.append((node.prefix() + "_" + node.name(), node))
-
-        global_index += 1
-
-        if isinstance(value, list) or isinstance(value, tuple):
-
-            def construct_func(enum):
-                (i, v) = enum
-                next_prefix = prefix + ("." if prefix else "") + str(i)
-                new_node = construct(v, next_prefix, None, i)
-                return new_node
-
-            node.set_value(value.__class__(map(construct_func, enumerate(value))))
-
-        elif isinstance(value, dict):
-
-            def construct_func(enum):
-                i, (key, v) = enum
-                next_prefix = prefix + ("." if prefix else "") + str(i)
-                new_node = construct(v, next_prefix, key, i)
-                return key, new_node
-            m = map(construct_func, enumerate(value.items()))
-            node.set_value(OrderedDict(m))
-        else:
-            node.set_value(value)
-        return node
-
-    root_node = construct(value, root_prefix, root_name, 0)
-    return root_node, named_nodes
-
 
 def map_structed_values(values, map_function: Callable):
     assert (

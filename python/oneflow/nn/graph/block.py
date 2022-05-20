@@ -29,7 +29,7 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
-    construct_io_node,
+    NamedIONode,
     map_structed_values,
     seq_to_func_return,
 )
@@ -183,7 +183,7 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        _, named_nodes = construct_io_node((args, kwargs), "_" + self.name_prefix + self.name + "_input", None)
+        _, named_nodes = NamedIONode.construct((args, kwargs), "_" + self.name_prefix + self.name + "_input", None)
         for (name, node) in named_nodes:
             if node.is_leaf():
                 arg = node.value()
@@ -221,7 +221,7 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        _, named_nodes = construct_io_node((outputs, {}), "_" + self.name_prefix + self.name + "_output", None)
+        _, named_nodes = NamedIONode.construct((outputs, {}), "_" + self.name_prefix + self.name + "_output", None)
 
         for (name, node) in named_nodes:
             if node.is_leaf():
@@ -317,7 +317,7 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_node, _ = construct_io_node((args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type, None)
+        io_node, _ = NamedIONode.construct((args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type, None)
 
         def leaf_node_fn(leaf_node):
             arg = leaf_node.value()

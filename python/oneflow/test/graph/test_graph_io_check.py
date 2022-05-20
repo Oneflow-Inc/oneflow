@@ -22,7 +22,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.nn.graph.util import construct_io_node, map_structed_values
+from oneflow.nn.graph.util import NamedIONode, map_structed_values
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -50,7 +50,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             inp = (args, kwargs)
             print("origin: ", inp)
 
-            io_node, named_nodes = construct_io_node(inp, "Graph_0", None)
+            io_node, named_nodes = NamedIONode.construct(inp, "Graph_0", None)
 
             for (name, node) in named_nodes:
                 print(name, repr(node))

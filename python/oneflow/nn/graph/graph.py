@@ -37,7 +37,7 @@ from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
-    construct_io_node,
+    NamedIONode,
     map_structed_values,
     seq_to_func_return,
     sys_exc_error_msg,
@@ -697,9 +697,6 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
-        # ensure the input tensors are all contiguous tenors
-        (args, kwargs) = self.__make_input_tensors_contiguous(*args, **kwargs)
-
         # Build graph
         try:
             self.__print(0, 0, self._shallow_repr() + " start building graph.")
@@ -1034,7 +1031,7 @@ class Graph(object):
             self.__print(0, 1, repr_str)
             return build_arg
 
-        io_node, _ = construct_io_node((args, kwargs), "_" + self.name + "_" + io_type, None)
+        io_node, _ = NamedIONode.construct((args, kwargs), "_" + self.name + "_" + io_type, None)
 
         def leaf_node_fn(node):
             name = node.prefix() + "_" + node.name()
@@ -1109,7 +1106,7 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        io_node, _ = construct_io_node((args, kwargs), "_" + self.name + "_" + io_type, None)
+        io_node, _ = NamedIONode.construct((args, kwargs), "_" + self.name + "_" + io_type, None)
       
         def leaf_node_fn(leaf_node):
             arg = leaf_node.value()
@@ -1127,7 +1124,7 @@ class Graph(object):
 
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
-        _, named_nodes = construct_io_node((args, kwargs), "_" + self.name + "_" + io_type, None)
+        _, named_nodes = NamedIONode.construct((args, kwargs), "_" + self.name + "_" + io_type, None)
         for (_, node) in named_nodes:
             if isinstance(node.value(), Tensor):
                 flattened_args.append(node.value())
@@ -1265,16 +1262,6 @@ class Graph(object):
             # So it's safe to skip sync here.
             return
         oneflow._oneflow_internal.eager.Sync()
-
-    def __make_input_tensors_contiguous(self, *args, **kwargs):
-        def to_contiguous(item):
-            if isinstance(item, Tensor):
-                return item.contiguous()
-            else:
-                return item
-
-        mapped_result = map_structed_values((args, kwargs), to_contiguous)
-        return mapped_result[0], mapped_result[1]
 
 
 if __name__ == "__main__":
