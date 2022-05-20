@@ -65,7 +65,6 @@ def torch_tensor_to_flow(x):
 note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
-vis_tensor = []
 vis_parameters = {}
 call_tensor_id = []
 extra_input_tensor = set()
@@ -280,13 +279,20 @@ def get_args_copy(args, kwargs):
 
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
 #   graph_train_oneflow: is a deepcopy of oneflow.
-def get_module_graph_test(graph_train_oneflow, oneflow, *args):
+def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *args):
     of_sgd = flow.optim.SGD(graph_train_oneflow.parameters(), lr=0.001, momentum=0.9,)
     graph_train_parameters_len = 0
     for param in oneflow._parameters.values():
         if param is not None:
             graph_train_parameters_len += 1
 
+    if verbose:
+        print(f"\033[1;33mEnter get_module_graph_test function\033[1;33m")
+        print(oneflow_args)
+        print_note_fake_program()
+        print(f"\033[1;33mLeave get_module_graph_test function\033[1;33m")
+        print(f"\033[1;37m\033[1;37m")
+        print('\n\n\n\n\n')
     class TestGraphOfModule(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -321,6 +327,16 @@ def get_functional_graph_res(
 ):
     test_g_res = []
 
+    if verbose:
+        print(f"\033[1;33mEnter get_functional_graph_res function\033[1;33m")
+        if "__self__" in dir(graph_functional_oneflow) and flow.is_tensor(oneflow.__self__):
+            print(oneflow.__self__)
+        print(oneflow_args)
+        print(oneflow_kwargs)
+        print_note_fake_program()
+        print(f"\033[1;33mLeave get_functional_graph_res function\033[1;33m")
+        print(f"\033[1;37m\033[1;37m")
+        print('\n\n\n\n\n')
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -378,6 +394,17 @@ def get_tensor_graph_res(
     graph_tensor_oneflow, oneflow, verbose, *tensor_graph_args, **tensor_graph_kwargs
 ):
     test_g_res = []
+
+    if verbose:
+        print(f"\033[1;33mEnter get_tensor_graph_res function\033[1;33m")
+        if "__self__" in dir(graph_tensor_oneflow) and flow.is_tensor(oneflow.__self__):
+            print(oneflow.__self__)
+        print(oneflow_args)
+        print(oneflow_kwargs)
+        print_note_fake_program()
+        print(f"\033[1;33mLeave get_tensor_graph_res function\033[1;33m")
+        print(f"\033[1;37m\033[1;37m")
+        print('\n\n\n\n\n')
 
     class TestGraphOfTensorMethod(flow.nn.Graph):
         def __init__(self):
@@ -458,7 +485,7 @@ def oneflow_eager_run_with_graph_check(
         ignore_apis_list = ["tensor", "train"]
         test_g_res = []
         if isinstance(oneflow, flow.nn.Module):
-            test_g = get_module_graph_test(graph_train_oneflow, oneflow, *args)
+            test_g = get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *args)
             if verbose:
                 print("Run graph of module: ", repr(oneflow))
                 test_g.debug(2)
@@ -772,52 +799,12 @@ def print_note_fake_program():
                 )
         print(f"\033[32m)\033[0m")
 
-    print(f"\033[32m-----------------------------------------------------------\033[0m")
-    unique_vis_tensor = []
-    flag_vis_tensor = [False for _ in range(len(vis_tensor))]
-    for i in range(len(vis_tensor)):
-        if flag_vis_tensor[i] == True:
-            continue
-        unique_vis_tensor.append(vis_tensor[i])
-        flag_vis_tensor[i] = True
-        for j in range(i + 1, len(vis_tensor)):
-            if id(vis_tensor[i]) == id(vis_tensor[j]) and flag_vis_tensor[j] == False:
-                flag_vis_tensor[j] = True
-
-    if len(unique_vis_tensor) == 0:
-        print(
-            f"\033[32mThis program has {len(extra_input_tensor)} input tensor: \033[0m"
-        )
-        for input_tensor in iter(extra_input_tensor):
-            print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
-            print(f"\033[32m{input_tensor}\033[0m")
-            print(
-                f"\033[32m-----------------------------------------------------------\033[0m"
-            )
-    else:
-        print(
-            f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m"
-        )
-        for input_tensor in unique_vis_tensor:
-            print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
-            print(f"\033[32m{input_tensor}\033[0m")
-            print(
-                f"\033[32m-----------------------------------------------------------\033[0m"
-            )
-        if vis_parameters:
-            print(
-                f"\033[32m-------------------nn.Module Parameters---------------------\033[0m"
-            )
-            for name, param in vis_parameters.items():
-                print(f"\033[32m{name}: {param}\033[0m")
-
 
 def clear_note_fake_program():
     note_pytorch_method_names.clear()
     note_pytorch_args.clear()
     note_pytorch_kwargs.clear()
     call_tensor_id.clear()
-    vis_tensor.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
     flow.set_printoptions(profile="full")
@@ -1147,13 +1134,6 @@ def autotest(
                             )
                         )
                         call_tensor_id.append(id(getattr(x.pytorch, key).grad))
-
-                for x in dual_objects_to_test:
-                    if (
-                        isinstance(x.pytorch, torch_original.Tensor)
-                        and id(x.pytorch) not in call_tensor_id
-                    ):
-                        vis_tensor.append(x.pytorch)
 
                 # check eager
                 for x in dual_objects_to_test:
