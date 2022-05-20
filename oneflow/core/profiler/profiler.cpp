@@ -90,10 +90,10 @@ void ProfilerStop() {
 #endif  // OF_ENABLE_PROFILER
 }
 
-void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes) {
+void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth) {
   CHECK_JUST(vm::ClusterSync());
   if (Global<ProfileMgr>::Get() == nullptr) {
-    Global<ProfileMgr>::New(use_cpu, use_cuda, record_shapes);
+    Global<ProfileMgr>::New(use_cpu, use_cuda, record_shapes, record_bandwidth);
   }
 }
 

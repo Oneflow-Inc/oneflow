@@ -17,6 +17,7 @@ env:
   LIBAI_SRC: libai
   LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:afaf913e02a4ba02db92260daee22f99121cef62
+  MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
 jobs:
   check-priority-pr:
@@ -542,7 +543,7 @@ jobs:
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
-            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
+            ${{ env.MLIR_DOCKER_ARGS }} \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
@@ -748,7 +749,7 @@ jobs:
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
-            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
+            ${{ env.MLIR_DOCKER_ARGS }} \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \

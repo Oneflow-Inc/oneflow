@@ -57,8 +57,13 @@ nlohmann::json KernelEvent::ToJson() {
   j["input_shapes"] = FormatShapes();
 #if defined(WITH_CUDA)
   if (cuda_event_pair_) {
-    j["time"] = cuda_event_pair_->ElapsedTime();
+    double time_in_us = cuda_event_pair_->ElapsedTime();
+    j["time"] = time_in_us;
     j["on_gpu"] = true;
+    if (memory_size_ != -1) {
+      j["bandwidth"] =
+          memory_size_ / (1024.0 * 1024.0 * 1024.0) / (time_in_us / (1000 * 1000));  // GB/s
+    }
   }
 #endif
   return j;
@@ -165,36 +170,35 @@ std::string ProfileMgr::GetNextEventRecorderKey(const std::string& name) {
 std::shared_ptr<EventRecorder> EventRecorder::CreateCustomEventRecorder(const std::string& name) {
   return std::make_shared<EventRecorder>(CustomEvent::Create(name));
 }
-#if defined(WITH_CUDA)
+
 Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
-    const std::string& name, cudaStream_t cuda_stream, const ShapeGetterFuncType& shape_getter) {
+    const std::string& name,
+#if defined(WITH_CUDA)
+    cudaStream_t cuda_stream, const std::function<int64_t()>& memory_size_getter,
+#endif
+    const ShapeGetterFuncType& shape_getter) {
   auto pmgr = Global<ProfileMgr>::Get();
   if (pmgr) {
+#if defined(WITH_CUDA)
     if ((pmgr->use_cpu_ && (!cuda_stream)) || (pmgr->use_cuda_ && cuda_stream)) {
       auto event = KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr);
-      if (pmgr->use_cuda_ && cuda_stream) { event->InitCudaEventPair(cuda_stream); }
+      if (pmgr->use_cuda_ && cuda_stream) {
+        event->InitCudaEventPair(cuda_stream);
+        if (pmgr->record_bandwidth_) { event->SetMemorySize(memory_size_getter()); }
+      }
       return std::make_shared<EventRecorder>(event);
     }
-  }
-
-  std::shared_ptr<EventRecorder> null_recorder;
-  return null_recorder;
-}
 #else  // WITH_CUDA
-Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
-    const std::string& name, const ShapeGetterFuncType& shape_getter) {
-  auto pmgr = Global<ProfileMgr>::Get();
-  if (pmgr) {
     if (pmgr->use_cpu_) {
       return std::make_shared<EventRecorder>(
           KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr));
     }
+#endif  // WITH_CUDA
   }
 
   std::shared_ptr<EventRecorder> null_recorder;
   return null_recorder;
 }
-#endif  // WITH_CUDA
 
 }  // namespace profiler
 }  // namespace oneflow
