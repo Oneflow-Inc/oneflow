@@ -643,7 +643,7 @@ class Graph(object):
                 state_block.lazy_origin_builder().method = partial(
                     graph_build_util.build_graph_state,
                     op_name,
-                    state_tensor,
+                    state_tensor.contiguous(),
                     state_config,
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
@@ -1268,7 +1268,7 @@ class Graph(object):
 
     def __make_input_tensors_contiguous(self, *args, **kwargs):
         def to_contiguous(item):
-            if isinstance(item, Tensor) and not item.is_contiguous():
+            if isinstance(item, Tensor):
                 return item.contiguous()
             else:
                 return item
