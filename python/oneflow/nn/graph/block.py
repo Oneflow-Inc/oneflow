@@ -30,7 +30,7 @@ from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
     NamedIONode,
-    map_structed_value,
+    map_structed_value_leaf,
     seq_to_func_return,
 )
 
@@ -338,7 +338,7 @@ class ModuleBlock(Block):
                 )
                 return arg
 
-        out = map_structed_value(io_node, leaf_node_fn)
+        out = map_structed_value_leaf(io_node, leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs

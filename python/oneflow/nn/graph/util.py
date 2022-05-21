@@ -174,7 +174,7 @@ class NamedIONode(object):
         repr_str += ")"
         return repr_str
 
-def map_structed_value(structed_value, map_function: Callable):
+def map_structed_value_leaf(structed_value, map_function: Callable):
     r"""
     Map the leaf of the recursively structured value into map_function(leaf).
     The supported structure for composing those value are dict, tuple, list and NamedIONode

@@ -22,7 +22,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.nn.graph.util import NamedIONode, map_structed_value
+from oneflow.nn.graph.util import NamedIONode, map_structed_value_leaf
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -60,7 +60,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                     return "mapped_str"
                 return node.value()
 
-            m_v = map_structed_value(io_node, leaf_fn)
+            m_v = map_structed_value_leaf(io_node, leaf_fn)
             print("mapped:", m_v)
             return m_v[0], m_v[1]
 
