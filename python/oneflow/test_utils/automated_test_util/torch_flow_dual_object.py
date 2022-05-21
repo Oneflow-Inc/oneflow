@@ -298,7 +298,7 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
         if param is not None:
             graph_train_parameters_len += 1
 
-    if verbose:
+    if True:
         get_fake_program_more_detail(
             oneflow, "nn.Graph", "get_module_graph_test", oneflow_args
         )
@@ -369,7 +369,7 @@ def get_functional_graph_res(
             whole_fp_tensor_flag = False
             break
 
-    if verbose:
+    if True:
         get_fake_program_more_detail(
             oneflow,
             "nn.Graph",
@@ -491,7 +491,7 @@ def get_tensor_graph_res(
             whole_fp_tensor_flag = False
             break
 
-    if verbose:
+    if True:
         get_fake_program_more_detail(
             oneflow,
             "nn.Graph",
@@ -566,7 +566,7 @@ def get_tensor_graph_res(
 def get_oneflow_eager_res(
     oneflow, oneflow_args, oneflow_kwargs, verbose, is_tesnor_method=False
 ):
-    if verbose:
+    if True:
         get_fake_program_more_detail(
             oneflow, "Eager", "get_oneflow_eager_res", oneflow_args, oneflow_kwargs
         )
@@ -1212,7 +1212,7 @@ def autotest(
                     testing = False
                     testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
-                    if verbose:
+                    if True:
                         print(f"{f.__name__}")
                         print(e)
                     current_run += 1
@@ -1291,7 +1291,7 @@ def autotest(
                             x,
                         )
 
-                if verbose:
+                if True:
                     print(f"{f.__name__} test eager passed.")
 
                 if verbose and check_graph:
