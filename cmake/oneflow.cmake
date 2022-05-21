@@ -76,8 +76,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     endif()
   endif()
 
-  if("${oneflow_single_file}" MATCHES
-     "^${PROJECT_SOURCE_DIR}/oneflow/(core|user)/.*\\.(cuh|cu)$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user)/.*\\.(cuh|cu)$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
@@ -104,8 +103,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     endif()
   endif(BUILD_PYTHON)
 
-  if("${oneflow_single_file}" MATCHES
-     "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES
        "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*_test\\.cpp$")
       # test file
