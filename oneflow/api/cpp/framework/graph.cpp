@@ -230,9 +230,6 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) { LOG(ERROR) << job_.DebugString(); }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
-  CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
-  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(),
-                                         of::Global<OneFlowEnv>::Get()->GetSessionCtx());
 }
 
 InputOutputInfos Graph::GraphImpl::GetInputInfos() { return input_infos_; }
@@ -329,8 +326,12 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
   }
   JUST(LoadCheckpoint());
   JUST(of::CurJobBuildAndInferCtx_Complete());
+  const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
+  int64_t job_id = JUST(of::JobBuildAndInferCtx_GetCurrentJobId());
+  CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
+  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(), *complete_job, job_id,
+                                         of::Global<OneFlowEnv>::Get()->GetSessionCtx());
   {
-    const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
     const of::OpGraph complete_graph(*complete_job);
     complete_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
       const of::LazyMode::Guard lazy_mode_disabled_guard{false};
