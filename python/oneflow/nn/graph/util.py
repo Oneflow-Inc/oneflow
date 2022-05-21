@@ -72,11 +72,9 @@ class NamedIONode(object):
         def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
             nonlocal global_index
             nonlocal named_nodes
+            
             node = NamedIONode(prefix, name, global_index, local_index)
-
-            if not named_nodes is None:
-                named_nodes.append((node.prefix() + "_" + node.name(), node))
-
+            named_nodes.append((node.prefix() + "_" + node.name(), node))
             global_index += 1
 
             if isinstance(value, list) or isinstance(value, tuple):
