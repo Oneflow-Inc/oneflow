@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -38,6 +39,7 @@ class DataParallelNodeSequence final {
     const OpNode* var_node = nodes_.front();
     CHECK(var_node->op().op_conf().has_variable_conf());
     model_size_ = GetSoleOutBlobSize(var_node);
+    len_ = nodes_.size();
   }
   ~DataParallelNodeSequence() = default;
 
@@ -53,10 +55,13 @@ class DataParallelNodeSequence final {
 
   int64_t model_size() const { return model_size_; }
 
+  int64_t len() const { return len_; }
+
  private:
   std::vector<const OpNode*> nodes_;
   int64_t order_;
   int64_t model_size_;
+  int64_t len_;
 };
 
 using SequencePtr = std::shared_ptr<const DataParallelNodeSequence>;
@@ -155,12 +160,27 @@ void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const 
       builder->job().job_conf().optimizer_placement_optimization_comsumer_limit_level();
   // If limit_consumer_mode == 0, no limit on consumer
   if (limit_consumer_mode == 1) {
-    // Soft limt consumer to consume weight as Broadcast.
+    // input lbn for parallel cast op
+    std::string parallel_cast_input_lbn = GenLogicalBlobName(lbi);
+    // Add indentity to enable mem reuse of boxing op when there is no op between var op and boxing.
+    if (sequence->len() == 1) {
+      LOG(ERROR) << "ZeRO find a data-parallel sequence only has one variable " << sequence->GetVariableNode()->op().op_name();
+      const auto var_identity_op = user_op::UserOpConfWrapperBuilder("System-ZeRO-Identity-" + node->op().op_name() + "-"
+                                          + NewUniqueId())
+            .Op("identity")
+            .Input("in", GenLogicalBlobName(lbi))
+            .Output("out")
+            .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
+            .Build();
+      builder->AddOps(node->parallel_desc().parallel_conf(), {var_identity_op.op_conf()});
+      parallel_cast_input_lbn = var_identity_op.output("out", 0);
+    }
+    // Add parallel cast op to make soft limt on consumer to consume weight with Broadcast SBP.
     const auto parallel_cast_op =
         user_op::UserOpConfWrapperBuilder("System-ZeRO-ParallelCast-" + node->op().op_name() + "-"
                                           + NewUniqueId())
             .Op("hierarchical_parallel_cast")
-            .Input("in", GenLogicalBlobName(lbi))
+            .Input("in", parallel_cast_input_lbn)
             .Output("out")
             .Attr<std::vector<std::string>>("nd_sbp", NdSbpToStringList(nd_sbp))
             .Attr<std::string>("grad_mode", "identity")  // don't do ndsbp cast at backward
@@ -168,6 +188,8 @@ void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const 
             .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
             .Build();
     builder->AddOps(node->parallel_desc().parallel_conf(), {parallel_cast_op.op_conf()});
+
+    // Make consumers to consume parallel cast op
     auto out_lbn = parallel_cast_op.output("out", 0);
     node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
       for (const std::string& ibn : out_node->op().input_bns()) {
