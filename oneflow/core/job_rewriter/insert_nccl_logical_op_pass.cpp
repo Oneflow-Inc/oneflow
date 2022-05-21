@@ -393,7 +393,12 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
 
   // NOTE(chengcheng): nccl donot support dynamic shape.
   if (logical_blob_desc.is_dynamic()) { return false; }
-  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
+  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0)
+      << dst_node->op().op_name() << " consume " << GenLogicalBlobName(lbi) << ", "
+      << *CHECK_JUST(PlacementToString(*src_reduced_parallel_desc)) << " "
+      << NdSbpToString(*src_reduced_nd_sbp) << " -> "
+      << *CHECK_JUST(PlacementToString(*dst_reduced_parallel_desc)) << " "
+      << NdSbpToString(*dst_reduced_nd_sbp);
 
   int64_t scope_symbol_id = CHECK_JUST(BuildScopeWithReducedParallelDesc(
       src_node->op().op_conf().scope_symbol_id(), *src_reduced_parallel_desc));
@@ -417,12 +422,14 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                                                  logical_blob_desc);
       }
     }
-    if (!got_nccl) {
+    if (!got_nccl && ParseBooleanFromEnv("LOGICAL_SR", false)) {
       got_nccl = TryBuildNcclBy2DHierarchyOthers(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
                                                src_reduced_hierarchy, lbn, scope_symbol_id,
                                                logical_blob_desc);
     }
     return got_nccl;
+  } else {
+    LOG(ERROR) << "problem src nd sbp " << NdSbpToString(*src_reduced_nd_sbp) << "; dst nd sbp " << NdSbpToString(*dst_reduced_nd_sbp);
   }
   return false;
 }
@@ -455,6 +462,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
                                        &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
                                        &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
+          LOG(ERROR) << "NCCL logical not dealed lbi " << lbi.op_name() << "/" << lbi.blob_name() << ", src nd sbp " << NdSbpToString(src_reduced_nd_sbp) << "; dst nd sbp " << NdSbpToString(dst_reduced_nd_sbp);
           continue;
         }
         mut_op_names->insert(dst_op_name);
