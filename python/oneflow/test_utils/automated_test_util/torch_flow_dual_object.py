@@ -1173,7 +1173,8 @@ def autotest(
     check_dtype=False,
     check_grad_use_random_data=True,
 ):
-    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+    # verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+    verbose = True
 
     if check_graph == "ValidatedFlase":
         # check graph is intentionally closed and threre is a validated reason.
