@@ -63,7 +63,7 @@ class NamedIONode(object):
     def construct(value, root_prefix: str, root_name: str):
         r"""
         Construct the NamedIONode structure given the input/output argument. 
-        The input/output argument should have a recursive structure modeled by containers list, tuple or dict. 
+        The input/output argument should have a recursive structure modeled by list, tuple or dict. 
 
         This static function returns the constructed root NamedIONode and a flattened list which contains a tuple sequence (name, NamedIONode)
         """
