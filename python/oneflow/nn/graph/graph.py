@@ -1031,7 +1031,9 @@ class Graph(object):
             self.__print(0, 1, repr_str)
             return build_arg
 
-        io_node, _ = NamedIONode.construct((args, kwargs), "_" + self.name + "_" + io_type, None)
+        io_node, _ = NamedIONode.construct(
+            (args, kwargs), "_" + self.name + "_" + io_type, None
+        )
 
         def leaf_node_fn(node):
             name = node.prefix() + "_" + node.name()
@@ -1046,11 +1048,12 @@ class Graph(object):
                     node.value(), None, io_type, name
                 )
                 build_arg = build_tensor_or_none(node.value(), name, arg_repr)
-            else: # Opaque
+            else:  # Opaque
                 # Error
                 arg_repr = self.__io_item_check_and_gen_repr(
                     node.value(), None, io_type, name
                 )
+
         out = map_structed_value_leaf(io_node, leaf_node_fn)
         build_args = out[0]
         build_kwargs = out[1]
@@ -1106,8 +1109,10 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        io_node, _ = NamedIONode.construct((args, kwargs), "_" + self.name + "_" + io_type, None)
-      
+        io_node, _ = NamedIONode.construct(
+            (args, kwargs), "_" + self.name + "_" + io_type, None
+        )
+
         def leaf_node_fn(leaf_node):
             arg = leaf_node.value()
             if isinstance(arg, Tensor) or arg is None:
@@ -1124,7 +1129,9 @@ class Graph(object):
 
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
-        _, named_nodes = NamedIONode.construct((args, kwargs), "_" + self.name + "_" + io_type, None)
+        _, named_nodes = NamedIONode.construct(
+            (args, kwargs), "_" + self.name + "_" + io_type, None
+        )
         for (_, node) in named_nodes:
             if isinstance(node.value(), Tensor):
                 flattened_args.append(node.value())

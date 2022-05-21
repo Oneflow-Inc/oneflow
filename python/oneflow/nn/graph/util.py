@@ -69,6 +69,7 @@ class NamedIONode(object):
         """
         global_index = 0
         named_nodes = []
+
         def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
             nonlocal global_index
             nonlocal named_nodes
@@ -95,7 +96,9 @@ class NamedIONode(object):
                     new_node = construct(v, next_prefix, key, i)
                     return key, new_node
 
-                node.set_value(value.__class__(map(construct_func, enumerate(value.items()))))
+                node.set_value(
+                    value.__class__(map(construct_func, enumerate(value.items())))
+                )
             else:
                 node.set_value(value)
             return node
@@ -172,6 +175,7 @@ class NamedIONode(object):
         repr_str += ")"
         return repr_str
 
+
 def map_structed_value_leaf(structed_value, map_function: Callable):
     r"""
     Map the leaf of the recursively structured value into map_function(leaf).
@@ -194,7 +198,7 @@ def map_structed_value_leaf(structed_value, map_function: Callable):
                 map(lambda x: (x[0], execute_mapping(x[1])), value.items())
             )
         elif isinstance(value, NamedIONode):
-            if value.is_leaf(): # only map the leaf node: TENSOR/NONE/OPAQUE
+            if value.is_leaf():  # only map the leaf node: TENSOR/NONE/OPAQUE
                 mapped_value = map_function(value)
             else:
                 mapped_value = execute_mapping(value.value())
