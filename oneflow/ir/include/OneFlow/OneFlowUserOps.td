@@ -8790,9 +8790,10 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8810,9 +8811,10 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8829,9 +8831,10 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSid
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8849,9 +8852,10 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8868,8 +8872,9 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEff
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8887,8 +8892,9 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8905,7 +8911,8 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8923,7 +8930,8 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8940,8 +8948,9 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8959,8 +8968,9 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8977,9 +8987,10 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size, 
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8997,9 +9008,10 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9016,10 +9028,11 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoS
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9037,10 +9050,11 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
