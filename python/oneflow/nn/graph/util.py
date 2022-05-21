@@ -97,7 +97,7 @@ class NamedIONode(object):
                     new_node = construct(v, next_prefix, key, i)
                     return key, new_node
                 m = map(construct_func, enumerate(value.items()))
-                node.set_value(OrderedDict(m))
+                node.set_value(dict(m))
             else:
                 node.set_value(value)
             return node
