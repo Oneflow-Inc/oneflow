@@ -388,6 +388,7 @@ class TestUpsample2d(flow.unittest.TestCase):
     # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
     # So here we only test cuda device forward result.
     @autotest(n=10, auto_backward=False, atol=1e-8)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample2d_bilinear(test_case):
         x = random_tensor(ndim=4).to("cuda")
         x = x.permute(1, 3, 0, 2)
@@ -400,6 +401,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @autotest(atol=1e-5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample2d_bicubic(test_case):
         x = random_tensor(ndim=4, dim0=16, dim1=8).to("cuda")
         m = torch.nn.Upsample(
@@ -411,6 +413,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @autotest(n=5, atol=1e-5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample1d_nearest_output_size(test_case):
         x = random_tensor(ndim=3, dim0=1, dim1=2, dim2=12).to("cuda")
         m = torch.nn.Upsample(size=(13), mode="nearest")
@@ -418,6 +421,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @autotest(n=5, atol=1e-5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample2d_nearest_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=1, dim2=1, dim3=937).to("cuda")
         m = torch.nn.Upsample(size=(1, 30), mode="nearest")
@@ -425,6 +429,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @autotest(n=5, atol=1e-5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample3d_nearest_output_size(test_case):
         x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=6, dim3=12, dim4=6).to("cuda")
         m = torch.nn.Upsample(size=(8, 10, 7), mode="nearest")
@@ -432,6 +437,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @autotest(n=5, atol=1e-5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample1d_linear_output_size(test_case):
         device = random_device()
         x = random_tensor(ndim=3, dim0=1, dim1=2, dim2=12).to(device)
@@ -440,6 +446,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @autotest(n=5, atol=1e-5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample2d_bilinear_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=1, dim2=12, dim3=21).to("cuda")
         m = torch.nn.Upsample(size=(14, 19), mode="bilinear")
@@ -447,6 +454,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @autotest(n=5, atol=1e-5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample2d_bicubic_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=21).to("cuda")
         m = torch.nn.Upsample(size=(14, 19), mode="bicubic")
@@ -454,6 +462,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         return y
 
     @autotest(n=5, atol=1e-5)
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample3d_trilinear_output_size(test_case):
         x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=1, dim3=12, dim4=17).to("cuda")
         m = torch.nn.Upsample(size=(1, 14, 23), mode="trilinear")
