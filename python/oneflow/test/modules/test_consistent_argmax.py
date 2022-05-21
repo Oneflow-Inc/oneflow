@@ -29,6 +29,7 @@ def _test_argmax_with_random_data(test_case, ndim, placement, sbp):
     return y
 
 
+@unittest.skip("TODO: sometimes global TestArgmax fails on 2-GPU runs")
 class TestArgmax(flow.unittest.TestCase):
     @globaltest
     def test_argmax(test_case):

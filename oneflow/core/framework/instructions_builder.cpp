@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
-#include "oneflow/core/framework/object_storage.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/id_util.h"
