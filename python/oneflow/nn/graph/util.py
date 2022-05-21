@@ -96,8 +96,8 @@ class NamedIONode(object):
                     next_prefix = prefix + ("." if prefix else "") + str(i)
                     new_node = construct(v, next_prefix, key, i)
                     return key, new_node
-                m = map(construct_func, enumerate(value.items()))
-                node.set_value(dict(m))
+
+                node.set_value(dict(map(construct_func, enumerate(value.items()))))
             else:
                 node.set_value(value)
             return node
