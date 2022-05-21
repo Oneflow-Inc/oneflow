@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
+#include "oneflow/core/job/collective_boxing/collective_manager.h"
 
 namespace oneflow {
 
@@ -45,6 +46,7 @@ class Runtime final {
   HashSet<int64_t> independent_thread_ids_;
 
   boxing::collective::SchedulerPlanToken* collective_boxing_scheduler_plan_token_;
+  boxing::collective::CollectiveMgrPlanToken* collective_boxing_collective_manager_plan_token_;
 };
 
 }  // namespace oneflow

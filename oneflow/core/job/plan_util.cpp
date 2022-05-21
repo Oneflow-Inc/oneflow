@@ -836,7 +836,8 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
 void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
   using namespace boxing::collective;
 
-  // reuse this.
+  // reuse plan.collective_boxing_plan().
+  // TODO: (Panlichen) define OfCollectiveBoxingPlan in plan.proto to get rid of order and dependency info if necessary.
   RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
                                    ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
   const int64_t cb_task_count = std::count_if(
