@@ -21,6 +21,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> EmptyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+  *ctx->OutputStride("out", 0) = Stride(Shape(ctx->Attr<Shape>("shape").dim_vec()));
   return Maybe<void>::Ok();
 }
 
@@ -33,6 +34,7 @@ namespace oneflow {
       GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
 
   *ctx->OutputShape("out", 0) = physical_shape;
+  *ctx->OutputStride("out", 0) = Stride(physical_shape);
   return Maybe<void>::Ok();
 }
 

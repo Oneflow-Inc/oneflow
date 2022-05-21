@@ -18,9 +18,9 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
@@ -62,6 +62,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_contiguous() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
+  virtual std::shared_ptr<Tensor> pin_memory() const = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -157,6 +158,9 @@ class StaticZerosTensor final : public Tensor {
     return *(TensorMeta*)nullptr;
   }
   Maybe<Tensor> data() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  std::shared_ptr<Tensor> pin_memory() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
   Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
@@ -309,6 +313,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return tensor_->consistent_tensor_meta();
   }
   virtual Maybe<Tensor> data() override { return tensor_->detach(); }
+  virtual std::shared_ptr<Tensor> pin_memory() const override { return tensor_->pin_memory(); }
 
   // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
   // and it will be wrong when use Tensor.data() in operators.
@@ -416,6 +421,7 @@ class Parameter final : public ProxyTensor<Parameter> {
   }
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
+  std::shared_ptr<Tensor> pin_memory() const override;
 
  private:
   Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
@@ -461,6 +467,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override { return this->detach(); }
+  std::shared_ptr<Tensor> pin_memory() const override;
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -508,9 +515,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
-  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                                          const Symbol<Device>& device, bool is_lazy,
-                                          bool requires_grad, bool is_leaf);
+  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                          const std::shared_ptr<const Stride>& stride,
+                                          DataType dtype, const Symbol<Device>& device,
+                                          bool is_lazy, bool requires_grad, bool is_leaf);
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return impl_->mut_eager_mirrored_tensor_impl();
@@ -571,6 +579,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_cuda() const override;
   std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
+  Maybe<const Stride> stride() const override { return impl_->stride(); }
+  std::shared_ptr<Tensor> pin_memory() const override;
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {

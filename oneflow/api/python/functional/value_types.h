@@ -34,10 +34,6 @@ class Symbol;
 
 class Device;
 class ParallelDesc;
-
-namespace cfg {
-class AttrValue;
-}  // namespace cfg
 class SbpParallel;
 
 namespace one {
@@ -153,8 +149,6 @@ VALUE_TYPE_OF_IMPL(Maybe<one::Tensor>, kTENSOR_MAYBE);
 VALUE_TYPE_OF_IMPL(one::TensorTuple, kTENSOR_TUPLE);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::TensorTuple>, kTENSOR_TUPLE_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
-VALUE_TYPE_OF_IMPL(cfg::AttrValue, kATTR);
-VALUE_TYPE_OF_IMPL(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
 VALUE_TYPE_OF_IMPL(Symbol<DType>, kDTYPE);
 VALUE_TYPE_OF_IMPL(std::vector<Symbol<DType>>, kDTYPE_LIST);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
