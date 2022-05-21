@@ -48,9 +48,25 @@ def seq_to_func_return(seq, need_unpack=False):
 
 
 class NamedIONode(object):
+    r"""
+    The class for wrapping over the input/output argument and associating each input/output argument with a prefix and name.
+    The recursive structure of the input/output arguments are kept, for example:
+
+    iuput = [1, {key: "value" }] will be constructed into: 
+        input_node = NamedIONode([NamedIONode(1), NamedIONode({key: NamedIONode("value")})])
+        by calling the NamedIONode.construct() method.
+
+    The input/output argument can be viewed as a tree. NamedIONode basically wraps over each tree node on this tree.
+    """
 
     @staticmethod
     def construct(value, root_prefix: str, root_name: str):
+        r"""
+        Construct the NamedIONode structure given the input/output argument. 
+        The input/output argument should have a recursive structure modeled by containers list, tuple or dict. 
+
+        This static function returns the constructed root NamedIONode and a flattened list which contains a tuple sequence (name, NamedIONode)
+        """
         global_index = 0
         named_nodes = []
         def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
@@ -158,12 +174,16 @@ class NamedIONode(object):
         repr_str += ")"
         return repr_str
 
-def map_structed_values(values, map_function: Callable):
+def map_structed_value(structed_value, map_function: Callable):
+    r"""
+    Map the leaf of the recursively structured value into map_function(leaf).
+    The supported structure for composing those value are dict, tuple, list and NamedIONode
+    """
     assert (
-        isinstance(values, dict)
-        or isinstance(values, tuple)
-        or isinstance(values, list)
-        or (isinstance(values, NamedIONode) and not values.is_leaf())
+        isinstance(structed_value, dict)
+        or isinstance(structed_value, tuple)
+        or isinstance(structed_value, list)
+        or isinstance(structed_value, NamedIONode)
     ), "must be one of those types"
 
     assert map_function != None, "map function cannot be None"
@@ -185,4 +205,4 @@ def map_structed_values(values, map_function: Callable):
 
         return mapped_value
 
-    return execute_mapping(values)
+    return execute_mapping(structed_value)

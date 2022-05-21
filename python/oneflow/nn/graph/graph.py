@@ -38,7 +38,7 @@ from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
     NamedIONode,
-    map_structed_values,
+    map_structed_value,
     seq_to_func_return,
     sys_exc_error_msg,
 )
@@ -1051,7 +1051,7 @@ class Graph(object):
                 arg_repr = self.__io_item_check_and_gen_repr(
                     node.value(), None, io_type, name
                 )
-        out = map_structed_values(io_node, leaf_node_fn)
+        out = map_structed_value(io_node, leaf_node_fn)
         build_args = out[0]
         build_kwargs = out[1]
 
@@ -1117,7 +1117,7 @@ class Graph(object):
                     arg, None, io_type, leaf_node.prefix() + "_" + leaf_node.name(),
                 )
 
-        out = map_structed_values(io_node, leaf_node_fn)
+        out = map_structed_value(io_node, leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
