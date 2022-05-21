@@ -419,15 +419,15 @@ class TestUpsample2d(flow.unittest.TestCase):
 
     @autotest(n=5, atol=1e-5)
     def test_upsample2d_nearest_output_size(test_case):
-        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
-        m = torch.nn.Upsample(size=(38, 30), mode="nearest")
+        x = random_tensor(ndim=4, dim0=1, dim1=1, dim2=1, dim3=937).to("cuda")
+        m = torch.nn.Upsample(size=(1, 30), mode="nearest")
         y = m(x)
         return y
 
     @autotest(n=5, atol=1e-5)
     def test_upsample3d_nearest_output_size(test_case):
-        x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=12, dim3=32, dim4=32).to("cuda")
-        m = torch.nn.Upsample(size=(38, 30, 30), mode="nearest")
+        x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=6, dim3=12, dim4=6).to("cuda")
+        m = torch.nn.Upsample(size=(8, 10, 7), mode="nearest")
         y = m(x)
         return y
 
@@ -441,22 +441,22 @@ class TestUpsample2d(flow.unittest.TestCase):
 
     @autotest(n=5, atol=1e-5)
     def test_upsample2d_bilinear_output_size(test_case):
-        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
-        m = torch.nn.Upsample(size=(38, 30), mode="bilinear")
+        x = random_tensor(ndim=4, dim0=1, dim1=1, dim2=12, dim3=21).to("cuda")
+        m = torch.nn.Upsample(size=(14, 19), mode="bilinear")
         y = m(x)
         return y
 
     @autotest(n=5, atol=1e-5)
     def test_upsample2d_bicubic_output_size(test_case):
-        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=937).to("cuda")
-        m = torch.nn.Upsample(size=(38, 30), mode="bicubic")
+        x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=21).to("cuda")
+        m = torch.nn.Upsample(size=(14, 19), mode="bicubic")
         y = m(x)
         return y
 
     @autotest(n=5, atol=1e-5)
     def test_upsample3d_trilinear_output_size(test_case):
-        x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=12, dim3=937, dim4=32).to("cuda")
-        m = torch.nn.Upsample(size=(38, 30, 30), mode="trilinear")
+        x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=1, dim3=12, dim4=17).to("cuda")
+        m = torch.nn.Upsample(size=(1, 14, 23), mode="trilinear")
         y = m(x)
         return y
 
