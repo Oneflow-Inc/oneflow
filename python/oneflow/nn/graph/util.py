@@ -50,13 +50,13 @@ def seq_to_func_return(seq, need_unpack=False):
 class NamedIONode(object):
     r"""
     The class for wrapping over the input/output argument and associating each input/output argument with a prefix and name.
+    The input/output argument can be viewed as a tree. NamedIONode basically wraps over each tree node on this tree.
     The recursive structure of the input/output arguments are kept, for example:
 
     iuput = [1, {key: "value" }] will be constructed into: 
         input_node = NamedIONode([NamedIONode(1), NamedIONode({key: NamedIONode("value")})])
         by calling the NamedIONode.construct() method.
 
-    The input/output argument can be viewed as a tree. NamedIONode basically wraps over each tree node on this tree.
     """
 
     @staticmethod
