@@ -72,7 +72,7 @@ class NamedIONode(object):
         def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
             nonlocal global_index
             nonlocal named_nodes
-            
+
             node = NamedIONode(prefix, name, global_index, local_index)
             named_nodes.append((node.prefix() + "_" + node.name(), node))
             global_index += 1
@@ -95,7 +95,7 @@ class NamedIONode(object):
                     new_node = construct(v, next_prefix, key, i)
                     return key, new_node
 
-                node.set_value(dict(map(construct_func, enumerate(value.items()))))
+                node.set_value(value.__class__(map(construct_func, enumerate(value.items()))))
             else:
                 node.set_value(value)
             return node
