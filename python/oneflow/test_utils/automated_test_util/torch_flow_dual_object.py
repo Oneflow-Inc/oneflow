@@ -817,7 +817,8 @@ def GetDualObject(name, pytorch, oneflow):
         "__str__",
         "__repr__",
     ]
-    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+    # verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+    verbose = True
     pytorch_methods = dir(pytorch)
     if hasattr(pytorch, "__call__") and "__call__" not in pytorch_methods:
         pytorch_methods.append("__call__")
