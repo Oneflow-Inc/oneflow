@@ -46,27 +46,6 @@ file(
   "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/maybe/*.*"
   "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
-if(WITH_XLA OR WITH_TENSORRT OR WITH_OPENVINO)
-  file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
-  if(NOT WITH_XLA)
-    file(GLOB_RECURSE xla_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/xla/*.*")
-  endif()
-  if(NOT WITH_TENSORRT)
-    file(GLOB_RECURSE trt_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/tensorrt/*.*")
-  endif()
-  if(NOT WITH_OPENVINO)
-    file(GLOB_RECURSE openvino_removing_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/openvino/*.*")
-  endif()
-
-  list(APPEND xrt_removing_srcs ${xla_removing_src})
-  list(APPEND xrt_removing_srcs ${trt_removing_src})
-  list(APPEND xrt_removing_srcs ${openvino_removing_src})
-  # message(STATUS "removing_srcs: ${xrt_removing_srcs}")
-  foreach(removing_file ${xrt_removing_srcs})
-    list(REMOVE_ITEM oneflow_xrt_src ${removing_file})
-  endforeach()
-  list(APPEND oneflow_all_src ${oneflow_xrt_src})
-endif()
 
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
@@ -84,7 +63,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES
-     "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|maybe)/.*\\.(h|hpp)$")
+     "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*\\.(h|hpp)$")
     if((NOT RPC_BACKEND MATCHES "GRPC") AND "${oneflow_single_file}" MATCHES
                                             "^${PROJECT_SOURCE_DIR}/oneflow/core/control/.*")
       # skip if GRPC not enabled
@@ -98,14 +77,14 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES
-     "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.(cuh|cu)$")
+     "^${PROJECT_SOURCE_DIR}/oneflow/(core|user)/.*\\.(cuh|cu)$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.proto$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user)/.*\\.proto$")
     list(APPEND of_all_proto ${oneflow_single_file})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
@@ -126,9 +105,9 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif(BUILD_PYTHON)
 
   if("${oneflow_single_file}" MATCHES
-     "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|maybe)/.*\\.cpp$")
+     "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES
-       "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt|maybe)/.*_test\\.cpp$")
+       "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|maybe)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif(APPLE AND "${oneflow_single_file}" MATCHES
@@ -379,9 +358,6 @@ if(BUILD_PYTHON)
   if(BUILD_CUDA)
     list(APPEND gen_pip_args --cuda=${CUDA_VERSION})
   endif()
-  if(WITH_XLA)
-    list(APPEND gen_pip_args --xla)
-  endif()
 
   add_custom_target(
     of_pyscript_copy ALL
@@ -494,7 +470,6 @@ if(BUILD_PYTHON)
     PATTERN "oneflow/core/graph/stream_id.h"
     PATTERN "oneflow/core/vm/vm_sync.h"
     PATTERN "oneflow/api" EXCLUDE
-    PATTERN "oneflow/xrt" EXCLUDE
     PATTERN "oneflow/user" EXCLUDE
     PATTERN "oneflow/extension" EXCLUDE
     PATTERN "oneflow/maybe" EXCLUDE
