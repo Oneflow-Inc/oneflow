@@ -279,6 +279,10 @@ def _floor_divide(self, other):
     return flow.floor_divide(self, other)
 
 
+def _floor_divide_inplace(self, other):
+    return flow.floor_divide(self, other, inplace=True)
+
+
 def _floor(self):
     return flow._C.floor(self)
 
@@ -1159,10 +1163,6 @@ def _cumprod(self, dim, dtype=None):
 
 
 def RegisterMethods():
-    Tensor.__mul__ = lambda self, other: self.mul(other)
-    Tensor.__rmul__ = lambda self, other: self.mul(other)
-    Tensor.__add__ = lambda self, other: self.add(other)
-    Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.__matmul__ = lambda self, other: self.matmul(other)
     Tensor.byte = _byte
     Tensor.ndim = property(_ndim)
@@ -1188,20 +1188,24 @@ def RegisterMethods():
     Tensor.__or__ = _or
     Tensor.__xor__ = _xor
     Tensor.__mul__ = _mul
+    Tensor.__imul__ = lambda self, other: self.mul_(other)
     Tensor.__rmul__ = _rmul
     Tensor.__add__ = _add
     Tensor.__iadd__ = _iadd
     Tensor.__radd__ = _radd
     Tensor.addmm = _addmm
     Tensor.__sub__ = _sub
+    Tensor.__isub__ = lambda self, other: self.sub_(other)
     Tensor.__rsub__ = _rsub
     Tensor.__truediv__ = _truediv
+    Tensor.__itruediv__ = lambda self, other: self.div_(other)
     Tensor.__rtruediv__ = _rtruediv
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
     Tensor.__rpow__ = _rpow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
+    Tensor.__ifloordiv__ = _floor_divide_inplace
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
     Tensor.__invert__ = _invert

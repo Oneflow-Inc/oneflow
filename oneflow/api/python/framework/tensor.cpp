@@ -244,6 +244,14 @@ static PyObject* PyTensorObject__register_post_grad_accumulation_hook(PyObject* 
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_data_ptr(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  uint64_t dptr = reinterpret_cast<uint64_t>(
+      ASSERT_PTR(PyTensor_Unpack(self)->tensor_storage())->storage()->blob_dptr());
+  return functional::CastToPyObject(dptr);
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_global_id(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   uint64_t global_id = static_cast<uint64_t>(ASSERT(PyTensor_Unpack(self)->transport_token()));
@@ -335,6 +343,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"register_hook", PyTensorObject_register_hook, METH_O, NULL},
     {"_register_post_grad_accumulation_hook", PyTensorObject__register_post_grad_accumulation_hook,
      METH_O, NULL},
+    {"data_ptr", PyTensorObject_data_ptr, METH_NOARGS, NULL},
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
