@@ -2547,20 +2547,20 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
   let has_data_type_infer_fn = 1;
 }
 
-
-def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$features,
     Optional<OneFlow_Tensor>:$output_concat
   );
   let output = (outs
     OneFlow_Tensor:$out,
-    OneFlow_Tensor:$padded_concated_features
+    Optional<OneFlow_Tensor>:$padded_concated_features
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$self_interaction,
     DefaultValuedAttr<BoolAttr, "false">:$has_output_concat,
-    DefaultValuedAttr<SI32Attr, "0">:$output_padding
+    DefaultValuedAttr<SI32Attr, "0">:$output_padding,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$pooling
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2568,10 +2568,10 @@ def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_int
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    OneFlow_Tensor:$padded_concated_features,
+    Optional<OneFlow_Tensor>:$padded_concated_features,
     Variadic<OneFlow_Tensor>:$features_grad_like
   );
   let output = (outs
@@ -2580,7 +2580,8 @@ def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$self_interaction,
-    DefaultValuedAttr<SI32Attr, "0">:$output_concat_grad_dim
+    DefaultValuedAttr<SI32Attr, "0">:$output_concat_grad_dim,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$pooling
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
