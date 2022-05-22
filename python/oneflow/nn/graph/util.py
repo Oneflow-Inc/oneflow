@@ -70,11 +70,11 @@ class NamedIONode(object):
         global_index = 0
         named_nodes = []
 
-        def construct(value, prefix: str, name: str, local_index: int) -> NamedIONode:
+        def construct(value, prefix: str, name: str) -> NamedIONode:
             nonlocal global_index
             nonlocal named_nodes
 
-            node = NamedIONode(prefix, name, global_index, local_index)
+            node = NamedIONode(prefix, name, global_index)
             named_nodes.append((node.prefix() + "_" + node.name(), node))
             global_index += 1
 
@@ -83,7 +83,7 @@ class NamedIONode(object):
                 def construct_func(enum):
                     (i, v) = enum
                     next_prefix = prefix + ("." if prefix else "") + str(i)
-                    new_node = construct(v, next_prefix, None, i)
+                    new_node = construct(v, next_prefix, None)
                     return new_node
 
                 node.set_value(value.__class__(map(construct_func, enumerate(value))))
@@ -93,7 +93,7 @@ class NamedIONode(object):
                 def construct_func(enum):
                     i, (key, v) = enum
                     next_prefix = prefix + ("." if prefix else "") + str(i)
-                    new_node = construct(v, next_prefix, key, i)
+                    new_node = construct(v, next_prefix, key)
                     return key, new_node
 
                 node.set_value(
@@ -103,14 +103,13 @@ class NamedIONode(object):
                 node.set_value(value)
             return node
 
-        root_node = construct(value, root_prefix, root_name, 0)
+        root_node = construct(value, root_prefix, root_name)
         return root_node, named_nodes
 
-    def __init__(self, prefix="", name=None, global_index=0, local_index=0) -> None:
+    def __init__(self, prefix="", name=None, global_index=0) -> None:
         self._name = name if name is not None else str(global_index)
         self._prefix = prefix
         self._global_index = global_index
-        self._local_index = local_index
         self._is_value_set = False
         self._value = None
 
@@ -119,9 +118,6 @@ class NamedIONode(object):
 
     def name(self):
         return self._name
-
-    def local_index(self):
-        return self._local_index
 
     def global_index(self):
         return self._global_index

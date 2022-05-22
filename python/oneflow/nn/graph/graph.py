@@ -643,7 +643,7 @@ class Graph(object):
                 state_block.lazy_origin_builder().method = partial(
                     graph_build_util.build_graph_state,
                     op_name,
-                    state_tensor.contiguous(),
+                    state_tensor,
                     state_config,
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
