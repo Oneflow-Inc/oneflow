@@ -88,8 +88,10 @@ class FunctionLibrary {
   void add_functor_creator(const std::string& func_name, Creator creator) {
     using func_type = typename function_traits<Func>::func_type;
     auto* functors = PackedFuncCreatorMap<typename PackedFunctorMaker<func_type>::FType>::Get();
-    CHECK_EQ(functors->count(func_name), 0)
-        << "The functor with name " << func_name << " has been registered more than once.";
+    if (functors->count(func_name) != 0) {
+      throw Error::RuntimeError() <<  "The functor with name " << func_name << " has been registered more than once.";
+      return;
+    }
     functors->emplace(func_name, creator);
   }
 };
