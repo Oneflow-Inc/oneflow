@@ -2533,32 +2533,60 @@ class FusedDotFeatureInteractionFunctor {
                                                 .Output("padded_concated_features")
                                                 .Build());
     }
+    ops_no_padded_concated_features_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_no_padded_concated_features_.size(); ++n) {
+      ops_no_padded_concated_features_[n] =
+          CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                         .Input("features", n + 1)
+                         .Output("out")
+                         .Build());
+    }
   }
 
   Maybe<Tensor> operator()(const TensorTuple& features, const Optional<one::Tensor>& output_concat,
-                           const bool& self_interaction, const int32_t& output_padding) const {
+                           const bool& self_interaction, const int32_t& output_padding,
+                           const std::string& pooling) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
     JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
+    JUST(attrs.SetAttr<std::string>("pooling", pooling));
     const int64_t n_features = features.size();
-    CHECK_LE_OR_RETURN(n_features, kMaxInputCount);
+    TensorTuple inputs;
+    if (n_features > kMaxInputCount) {
+      inputs.push_back(JUST(functional::Concat(features, 1)));
+    } else {
+      inputs = features;
+    }
+    CHECK_OR_RETURN(pooling == "sum" || pooling == "none")
+        << Error::RuntimeError() << "pooling should be sum or none, but get " << pooling;
+
+    if (pooling == "sum") {
+      CHECK_EQ_OR_RETURN(output_padding, 0)
+          << Error::RuntimeError() << "output_padding should be equal to 0. ";
+      CHECK_OR_RETURN(!output_concat) << Error::RuntimeError() << "output_concat should not exist";
+      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      const std::shared_ptr<one::Tensor>& bi_interaction = JUST(OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_no_padded_concated_features_, n_features - 1)), inputs,
+          attrs));
+      std::vector<int32_t> reduce_axes_vec = {1};
+      return functional::ReduceSum(bi_interaction, reduce_axes_vec, true);
+    }
     if (output_concat) {
       JUST(attrs.SetAttr<bool>("has_output_concat", true));
-      TensorTuple inputs(n_features + 1);
-      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = JUST(oneflow::VectorAt(features, i)); }
-      inputs[n_features] = JUST(output_concat);
+      inputs.push_back(JUST(output_concat));
       return OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
     } else {
       JUST(attrs.SetAttr<bool>("has_output_concat", false));
       return OpInterpUtil::Dispatch<Tensor>(
-          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), features, attrs);
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), inputs, attrs);
     }
   }
 
  private:
   std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
+  std::vector<std::shared_ptr<OpExpr>> ops_no_padded_concated_features_;
 };
 
 class OneEmbeddingIdShuffleFunctor {
