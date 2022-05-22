@@ -43,6 +43,7 @@ class ToContiguous : public OpExprGradFunction<ToContiguousCaptureState> {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("to_contiguous", ToContiguous);
+REGISTER_OP_EXPR_GRAD_FUNCTION("inplace_to_contiguous", ToContiguous);
 
 }  // namespace one
 }  // namespace oneflow

@@ -1189,6 +1189,25 @@ class ToContiguousFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceToContiguousFunctor {
+ public:
+  InplaceToContiguousFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("inplace_to_contiguous").Input("in").Output("temp").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
+    if (input->is_consistent() || input->is_lazy()) { return input; }
+    JUST(CheckInplaceValid(input));
+    auto outputs = std::make_shared<TensorTuple>(2);
+    (*outputs)[0] = input;
+    (*outputs)[1] = nullptr;
+    JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SliceBaseFunctor {
  public:
   SliceBaseFunctor() = default;
@@ -1939,7 +1958,7 @@ class TensorGetItemFunctor {
     if (is_identity) {
       result = expand_input;
     } else {
-      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/false));
+      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
@@ -2999,6 +3018,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::ViewFunctor>("View");
   m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
+  m.add_functor<impl::InplaceToContiguousFunctor>("InplaceToContiguous");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::NarrowFunctor>("Narrow");
