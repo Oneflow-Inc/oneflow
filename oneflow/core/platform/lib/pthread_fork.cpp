@@ -31,8 +31,7 @@ namespace {
 void CurrentRankVmSync() {
   // Instructions in forked subprocesses are not dispatched to vm,
   // so no need to sync vm in these processes.
-  if (!is_fork && Global<VirtualMachine>::Get() != nullptr) { /*CHECK_JUST(vm::CurrentRankSync());*/
-  }
+  if (!is_fork && Global<VirtualMachine>::Get() != nullptr) { CHECK_JUST(vm::CurrentRankSync()); }
 }
 }  // namespace
 
