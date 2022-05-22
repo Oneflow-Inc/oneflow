@@ -1,8 +1,8 @@
 ## XRT (X-Runtime)
 
-XRT是一个同时支持多个计算引擎的运行时加速库，目前已经集成了TensorFlow XLA和Nvidia TensorRT两个后端引擎。其中XLA全面支持训练和预测，TensorRT支持预测以及部分算子支持训练。对于同一个计算图，XRT允许多个计算引擎联合使用，以获得更好的加速效果。
+XRT 是一个同时支持多个计算引擎的运行时加速库，目前已经集成了 TensorFlow XLA、Nvidia TensorRT 和 OpenVINO 三个后端引擎。其中 XLA 全面支持训练和预测，TensorRT 支持预测以及部分算子支持训练，OpenVINO 只支持预测。对于同一个计算图，XRT 允许多个计算引擎联合使用，以获得更好的加速效果。
 
-不同的后端引擎支持不同的后端硬件，比如XLA支持CPU和Nvidia GPU，但TensorRT仅支持Nvidia GPU。
+不同的后端引擎支持不同的后端硬件，比如 XLA 支持 CPU 和 Nvidia GPU，但 TensorRT 仅支持 Nvidia GPU，OpenVINO 仅支持 CPU。
 
 对于任意后端引擎，XRT的执行过程均分成以下四个步骤：
 

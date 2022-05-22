@@ -54,8 +54,6 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function& functio
 // Build an xrt graph from op graph.
 std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph* op_graph);
 
-void InitXrtConfigurations(const XrtConfig& config);
-
 bool XrtCompilationEnabled();
 
 // Create a default options for xrt pass.

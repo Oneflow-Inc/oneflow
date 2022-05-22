@@ -344,7 +344,7 @@ message XrtLaunchOpConf {
   repeated string out = 2;
   required Function function = 3;
   // Function executing engine.
-  // Only "XLA" and "TensorRT" are supported currently.
+  // Only "OpenVINO", "XLA" and "TensorRT" are supported currently.
   required string engine = 4;
   // Input mutability.
   map<string, bool> input_mutability = 5;

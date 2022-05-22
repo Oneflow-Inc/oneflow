@@ -22,6 +22,13 @@ limitations under the License.
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 
+extern bool FLAGS_use_xla_jit;
+extern bool FLAGS_use_tensorrt;
+extern bool FLAGS_use_openvino;
+extern bool FLAGS_tensorrt_fp16;
+extern bool FLAGS_tensorrt_int8;
+extern std::string FLAGS_tensorrt_int8_calibration;
+
 namespace oneflow {
 
 Maybe<void> XrtLaunchOp::InitFromOpConf() {
@@ -131,6 +138,26 @@ void XrtLaunchOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_xrt_launch_conf()->mutable_parallel_ctx()) = *parallel_ctx;
+
+  {
+    const JobDesc& job_desc = GlobalJobDesc();
+    const XrtConfig& config = job_desc.xrt_config();
+
+    auto flags = kernel_conf->mutable_xrt_launch_conf()->mutable_flags();
+    flags->set_use_xla_jit(FLAGS_use_xla_jit || (config.has_use_xla_jit() && config.use_xla_jit()));
+    flags->set_use_tensorrt(FLAGS_use_tensorrt || (config.has_tensorrt_config() && config.use_tensorrt()));
+    flags->set_use_openvino(FLAGS_use_openvino || (config.has_use_openvino() && config.use_openvino()));
+
+    if (config.has_tensorrt_config()) {
+      const XrtConfig::TensorRTConfig& trt_config = config.tensorrt_config();
+      flags->set_tensorrt_fp16(FLAGS_tensorrt_fp16 || (trt_config.has_use_fp16() && trt_config.use_fp16()));
+      flags->set_tensorrt_int8(FLAGS_tensorrt_int8 || (trt_config.has_use_int8() && trt_config.use_int8()));
+      flags->set_tensorrt_int8_calibration(FLAGS_tensorrt_int8_calibration);
+      if (trt_config.has_int8_calibration()) {
+        flags->set_tensorrt_int8_calibration(trt_config.int8_calibration());
+      }
+    }
+  }
 }
 
 REGISTER_OP(OperatorConf::kXrtLaunchConf, XrtLaunchOp);

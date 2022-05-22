@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/xrt/launch_kernel.h"
+#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_desc.h"
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/compilation_cache.h"
 #include "oneflow/xrt/executable.h"
@@ -29,10 +31,6 @@ int64_t FLAGS_max_workspace_bytes = EnvToInt64(FLAGS_max_workspace_bytes, -1);
 // TENSORRT executable setup.
 // Maximum batch size for builder of TENSORRT engine.
 int32_t FLAGS_max_batch_size = EnvToInt(FLAGS_max_batch_size, 1);
-
-extern bool FLAGS_tensorrt_fp16;
-extern bool FLAGS_tensorrt_int8;
-extern std::string FLAGS_int8_calibration;
 
 namespace oneflow {
 namespace xrt {
@@ -193,10 +191,12 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
   }
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
     CHECK_EQ(device_type, DeviceType::kCUDA);
+    const auto& launch_conf = kernel_conf().xrt_launch_conf();
+    const auto& flags = launch_conf.flags();
     run_options.max_batch_size = FLAGS_max_batch_size;
-    run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
-    run_options.tensorrt_int8 = FLAGS_tensorrt_int8;
-    run_options.tensorrt_int8_calibration = FLAGS_int8_calibration;
+    run_options.tensorrt_fp16 = flags.tensorrt_fp16();
+    run_options.tensorrt_int8 = flags.tensorrt_int8();
+    run_options.tensorrt_int8_calibration = flags.tensorrt_int8_calibration();
   }
   bool status = executable->Run(entry_params, run_options, block_until_done);
   CHECK(status) << "Executable is running failed.";
