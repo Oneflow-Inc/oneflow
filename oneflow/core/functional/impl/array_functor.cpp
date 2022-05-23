@@ -1196,7 +1196,7 @@ class InplaceToContiguousFunctor {
     auto contiguous_tensor = JUST(functional::ToContiguous(input));
     CHECK_OR_RETURN(input->is_local() && contiguous_tensor->is_local())
         << "Both ref and value must be local tensor.";
-    input->set_data(contiguous_tensor);
+    JUST(input->set_data(contiguous_tensor));
     return input;
   }
 };
