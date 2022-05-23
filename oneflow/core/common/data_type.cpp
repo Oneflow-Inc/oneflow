@@ -168,4 +168,31 @@ COMMAND(CheckDataType());
 
 }  // namespace
 
+#ifdef WITH_ONEDNN
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<int8_t>() {
+  return dnnl::memory::data_type::s8;
+}
+
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<uint8_t>() {
+  return dnnl::memory::data_type::u8;
+}
+
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<int32_t>() {
+  return dnnl::memory::data_type::s32;
+}
+
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<float>() {
+  return dnnl::memory::data_type::f32;
+}
+
+template<>
+dnnl::memory::data_type CppTypeToOneDnnDtype<double>() {
+  return dnnl::memory::data_type::undef;
+}
+#endif  // WITH_ONEDNN
+
 }  // namespace oneflow
