@@ -559,7 +559,6 @@ __global__ void DotFeatureInteractionHalf(int64_t batch_size, int padded_num_row
         buf_pack[i * in_shared_mem_cols_num_pack + col] = zero;
       }
     }
-    __syncwarp();
     for (int col = threadIdx.x; col < vector_num_pack; col += blockDim.x) {
       batch_out_pack[col] = buf_pack[col];
     }
@@ -602,7 +601,7 @@ __global__ void DotFeatureInteractionHalf(int64_t batch_size, int padded_num_row
     half* emb_out = reinterpret_cast<half*>(batch_out_pack + vector_num_pack);
     for (int row = 0; row < param.features_dim; ++row) {
       for (int col = threadIdx.x; col < param.features_dim; col += blockDim.x) {
-        if (col < row) {
+        if (col < row + offset) {
           int64_t idx = row * (offset + row - 1 + offset) / 2 + col;
           emb_out[idx] = __float2half(acc_buf[row * acc_shared_mem_cols + col]);
         }
