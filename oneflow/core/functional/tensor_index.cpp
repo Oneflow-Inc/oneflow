@@ -106,8 +106,9 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
           int size = shape->At(dim);
           int expanded_size = expanded_shape->At(expanded_dim);
           CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << Error::RuntimeError() << "The size of tensor a (" << size << ") must match the size of tensor b ("
-              << expanded_size << ") at non-singleton dimension " << i;
+              << Error::RuntimeError() << "The size of tensor a (" << size
+              << ") must match the size of tensor b (" << expanded_size
+              << ") at non-singleton dimension " << i;
           sizes[j] = size == 1 ? expanded_size : size;
         }
       }
@@ -303,8 +304,8 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
   std::vector<int> mask(expand_slices.size(), 0);
   for (const auto& dim : expand_dims) {
     if (dim >= expand_slices.size()) {
-      return Error::IndexError()
-             << "Dimension " << dim << " is out of bounds for size " << expand_slices.size();
+      return Error::IndexError() << "Dimension " << dim << " is out of bounds for size "
+                                 << expand_slices.size();
     }
     mask[dim] = 1;
   }
