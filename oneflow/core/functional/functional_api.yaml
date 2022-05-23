@@ -2186,3 +2186,7 @@
 - name: "entr"
   signature: "Tensor (Tensor input) => Entr"
   bind_python: True
+
+- name: "entr_grad"
+  signature: "Tensor (Tensor input, Tensor dy) => EntrGrad"
+  bind_python: False
