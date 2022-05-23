@@ -75,8 +75,8 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
   OF_NCCL_CHECK(ncclCommInitRank(comm, device_vec.size(), nccl_unique_id, rank));
 }
 
-bool NeedNcclComm(const std::string& op_type_name) {
-  return NcclCommRegistry::Instance().IsRegistered(op_type_name);
+bool IsUnifiedNcclCommInitUseKernel(const std::string& op_type_name) {
+  return UserKernelUnifiedNcclCommInitRegistry::Instance().IsRegistered(op_type_name);
 }
 
 }  // namespace
@@ -149,8 +149,6 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
   const int64_t dev = GlobalProcessCtx::LocalRank();
   std::map<std::string, std::vector<std::pair<int64_t, int64_t>>> nccl_comm_key2devices;
 
-  CudaCurrentDeviceGuard guard(dev);
-
   for (const auto& task_proto : plan.task()) {
     if (task_proto.machine_id() != rank) { continue; }
     if (task_proto.exec_sequence().exec_node_size() != 1) { continue; }
@@ -169,7 +167,7 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
     }
     const auto& op_conf = op_attr->op_conf();
     if (!op_conf.has_user_conf()) { continue; }
-    if (!NeedNcclComm(op_conf.user_conf().op_type_name())) { continue; }
+    if (!IsUnifiedNcclCommInitUseKernel(op_conf.user_conf().op_type_name())) { continue; }
 
     if (!op_attr->has_parallel_conf_signature()) { continue; }
     if (!op_attr->parallel_conf_signature().has_op_parallel_conf()) { continue; }
@@ -191,7 +189,10 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
     nccl_comm_key2devices.emplace(std::move(key), std::move(device_vec));
   }
 
+  if (nccl_comm_key2devices.size() == 0) { return; }
+
   CHECK_JUST(vm::CurrentRankSync());
+  CudaCurrentDeviceGuard guard(dev);
 
   for (const auto& pair : nccl_comm_key2devices) {
     const auto& key = pair.first;

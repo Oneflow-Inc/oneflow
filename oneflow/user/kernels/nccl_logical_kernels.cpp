@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
@@ -48,11 +47,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
         device_set.emplace(std::make_pair(machine_id, device_id));
       }
       EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-      if (LazyMode::is_enabled()) {
-        comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
-      } else {
-        comm_ = comm_mgr->GetCommForDevice(device_set);
-      }
+      comm_ = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
       is_init_ = true;
     }
     return comm_;
@@ -446,11 +441,11 @@ REGISTER_S2S_KERNEL(float)
 REGISTER_S2S_KERNEL(double)
 REGISTER_S2S_KERNEL(float16)
 
-REGISTER_NCCL_COMM_KERNEL("_nccl_logical_all_reduce");
-REGISTER_NCCL_COMM_KERNEL("_nccl_logical_reduce_scatter");
-REGISTER_NCCL_COMM_KERNEL("_nccl_logical_all_gather");
-REGISTER_NCCL_COMM_KERNEL("_nccl_logical_all_gather_noncontinuous");
-REGISTER_NCCL_COMM_KERNEL("_nccl_logical_s2s");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_reduce");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_reduce_scatter");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_gather");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_gather_noncontinuous");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_s2s");
 
 }  // namespace oneflow
 

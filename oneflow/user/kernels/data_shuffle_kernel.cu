@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
@@ -283,11 +282,7 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     ncclComm_t comm;
-    if (LazyMode::is_enabled()) {
-      comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
-    } else {
-      comm = comm_mgr->GetCommForDevice(device_set);
-    }
+    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
     comm_.reset(new Comm(comm));
   }
 
@@ -1518,8 +1513,8 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_UNIQUE_KEY_VALUE_PAIR_KERNEL, ID_DATA_TYPE_SEQ,
                                  ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
-REGISTER_NCCL_COMM_KERNEL("id_shuffle");
-REGISTER_NCCL_COMM_KERNEL("embedding_shuffle");
-REGISTER_NCCL_COMM_KERNEL("embedding_gradient_shuffle");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("id_shuffle");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("embedding_shuffle");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("embedding_gradient_shuffle");
 
 }  // namespace oneflow

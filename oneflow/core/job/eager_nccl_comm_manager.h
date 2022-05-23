@@ -48,19 +48,21 @@ class EagerNcclCommMgr final {
   std::mutex mutex_;
 };
 
-class NcclCommRegistry final {
+class UserKernelUnifiedNcclCommInitRegistry final {
  public:
   struct Trigger {
-    explicit Trigger(const std::string& key) { NcclCommRegistry::Instance().Register(key); }
+    explicit Trigger(const std::string& key) {
+      UserKernelUnifiedNcclCommInitRegistry::Instance().Register(key);
+    }
   };
 
-  static NcclCommRegistry& Instance() {
-    static NcclCommRegistry reg;
+  static UserKernelUnifiedNcclCommInitRegistry& Instance() {
+    static UserKernelUnifiedNcclCommInitRegistry reg;
     return reg;
   }
 
-  OF_DISALLOW_COPY_AND_MOVE(NcclCommRegistry);
-  ~NcclCommRegistry() = default;
+  OF_DISALLOW_COPY_AND_MOVE(UserKernelUnifiedNcclCommInitRegistry);
+  ~UserKernelUnifiedNcclCommInitRegistry() = default;
 
   void Register(const std::string& key) {
     bool insert_success = reg_set_.insert(key).second;
@@ -73,15 +75,15 @@ class NcclCommRegistry final {
   bool IsRegistered(const std::string& key) const { return reg_set_.find(key) != reg_set_.end(); }
 
  private:
-  NcclCommRegistry() = default;
+  UserKernelUnifiedNcclCommInitRegistry() = default;
   std::set<std::string> reg_set_;
 };
 
 }  // namespace oneflow
 
-#define REGISTER_NCCL_COMM_KERNEL(op_type_name)          \
-  static auto OF_PP_CAT(g_nccl_comm_reg_, __COUNTER__) = \
-      ::oneflow::NcclCommRegistry::Trigger(op_type_name)
+#define REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT(op_type_name) \
+  static auto OF_PP_CAT(g_nccl_comm_reg_, __COUNTER__) =          \
+      ::oneflow::UserKernelUnifiedNcclCommInitRegistry::Trigger(op_type_name)
 
 #endif  // WITH_CUDA
 
