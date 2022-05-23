@@ -400,7 +400,11 @@ def get_tensor_graph_res(
 
     if verbose:
         get_fake_program_more_detail(
-            oneflow, "nn.Graph", "get_tensor_graph_res", tensor_graph_args, tensor_graph_kwargs
+            oneflow,
+            "nn.Graph",
+            "get_tensor_graph_res",
+            tensor_graph_args,
+            tensor_graph_kwargs,
         )
 
     class TestGraphOfTensorMethod(flow.nn.Graph):
