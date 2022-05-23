@@ -84,11 +84,19 @@ class AddOneDnnImpl : public Add {
   using Add::Launch;
   void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
-    for (int i = 1; i < arity; i++) {
-      if (srcs[i] == dst && srcs[0] != dst) {
+    if (arity < 2) {
+      // Todo arity 0 and 1
+      UNIMPLEMENTED() << "Addn only supports more than 2";
+    } else if (arity == 2) {
+      if (srcs[1] == dst && srcs[0] != dst) {
         LOG(FATAL) << "Only the first parameter can be operated inplace";
       }
+    } else {
+      for (int i = 2; i < arity; i++) {
+        if (srcs[i] == dst) { LOG(FATAL) << "Only the first parameter can be operated inplace"; }
+      }
     }
+
     CpuStream* cpu_stream = stream->As<CpuStream>();
     size_t num_threads = cpu_stream->device()->GetNumThreads();
     CpuNumThreadsGuard guard(num_threads);
