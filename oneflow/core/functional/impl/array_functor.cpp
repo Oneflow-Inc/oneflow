@@ -1199,6 +1199,8 @@ class InplaceToContiguousFunctor {
     CHECK_OR_RETURN(input->is_local() && contiguous_tensor->is_local())
         << "Both ref and value must be local tensor.";
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
+    std::shared_ptr<Stride> stride(new Stride(*input->shape()));
+    JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
     return input;
   }
 
