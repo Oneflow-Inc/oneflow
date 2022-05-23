@@ -34,13 +34,14 @@ namespace oneflow {
 
 namespace one {
 
-Parameter::Parameter(const std::shared_ptr<Tensor> &tensor, bool requires_grad) : ProxyTensor<Parameter>(tensor) {
+Parameter::Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
+    : ProxyTensor<Parameter>(tensor) {
   // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
   // (align with PyTorch) instead of sharing it with x
   CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
   auto blob_object = CHECK_JUST(tensor_->eager_blob_object());
   if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
-    dtr_eager_blob_object->set_evict_attr(false);
+    dtr_eager_blob_object->set_evictable(false);
   }
 }
 
@@ -49,7 +50,7 @@ Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
 
   auto blob_object = JUST(this->tensor_->eager_blob_object());
   if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
-    dtr_eager_blob_object->set_evict_attr(false);
+    dtr_eager_blob_object->set_evictable(false);
   }
   return Maybe<void>::Ok();
 }

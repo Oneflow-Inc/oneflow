@@ -51,13 +51,11 @@ void EvictDTRTensorInstructionType::Compute(vm::Instruction* instruction) const 
     const auto& ebo =
         CHECK_NOTNULL(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object()));
     if (dtr::debug_level() >= 2) {
-      LOG(INFO) << "eager eviction tensor " << ebo.get() << " of op "
-                << ebo->compute_op_type_name() << " with size " << ebo->BlobBodyBytes();
+      LOG(INFO) << "eager eviction tensor " << ebo.get() << " of op " << ebo->compute_op_type_name()
+                << " with size " << ebo->BlobBodyBytes();
     }
     if (!ebo->is_evictable()) {
-      if (dtr::debug_level() >= 2) {
-        LOG(INFO) << "but skip because non evictable" << std::endl;
-      }
+      if (dtr::debug_level() >= 2) { LOG(INFO) << "but skip because non evictable" << std::endl; }
     } else if (ebo->is_pinned()) {
       if (dtr::debug_level() >= 2) { LOG(INFO) << "but skip because pinned" << std::endl; }
     } else {
@@ -100,9 +98,10 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
     const auto* ptr =
         dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);
-    if (dtr::debug_level() >= 2) {
-      LOG(INFO) << "release tensor " << ptr->eager_blob_object().get() << " with ref count "
-                << ptr->eager_blob_object().use_count() << std::endl;
+    if (dtr::is_enabled_and_debug()) {
+      LOG(INFO) << "ReleaseTensor instruction: " << ptr->eager_blob_object().get() << "(id: "
+                << std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object())->id()
+                << ") with ref count " << ptr->eager_blob_object().use_count() << std::endl;
     }
     CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
   }

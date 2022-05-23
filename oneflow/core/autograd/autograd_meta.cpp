@@ -74,7 +74,7 @@ Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   if (acc_grad_ != nullptr) {
     if (auto dtr_grad_ebo = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(
             JUST(acc_grad_->eager_blob_object()))) {
-      dtr_grad_ebo->set_evict_attr(false);
+      dtr_grad_ebo->set_evictable(false);
     }
   }
   return Maybe<void>::Ok();

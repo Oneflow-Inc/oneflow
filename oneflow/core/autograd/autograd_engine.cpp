@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
@@ -88,8 +89,12 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
     // TODO(dtr): use `is_grad_acc_inplace()` instead of hardcoded `true`
+    LOG(INFO) << "grad acc";
+    LOG(INFO) << "old id: " << std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(std::dynamic_pointer_cast<DTRMirroredTensor>(autograd_meta->acc_grad())->eager_blob_object()))->id();
     const auto& output =
         JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1, /*inplace=*/true));
+    LOG(INFO) << "grad acc end";
+    LOG(INFO) << "new id: " << std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(std::dynamic_pointer_cast<DTRMirroredTensor>(output)->eager_blob_object()))->id();
     JUST(autograd_meta->set_acc_grad(output));
   } else {
     JUST(autograd_meta->set_acc_grad(current_grad));

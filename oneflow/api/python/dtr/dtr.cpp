@@ -52,14 +52,28 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   m.def("display_all_pieces",
         []() -> void { return Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces(); });
   m.def("pool_display", []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->display(); });
-  m.def("pool_verbose_display", []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->verbose_display(); });
+  m.def("pool_verbose_display",
+        []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->verbose_display(); });
   m.def("set_non_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
     auto dtr_tensor =
         std::dynamic_pointer_cast<one::DTRMirroredTensor>(JUST(t->AsMirroredTensor()));
     CHECK_NOTNULL_OR_RETURN(dtr_tensor);
     std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(dtr_tensor->eager_blob_object()))
-        ->set_evict_attr(false);
+        ->set_evictable(false);
     return Maybe<void>::Ok();
+  });
+  m.def("tensor_info", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<std::string> {
+    auto dtr_tensor =
+        std::dynamic_pointer_cast<one::DTRMirroredTensor>(JUST(t->AsMirroredTensor()));
+    CHECK_NOTNULL_OR_RETURN(dtr_tensor);
+    auto dtr_ebo =
+        std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(dtr_tensor->eager_blob_object()));
+    std::stringstream ss;
+    ss << "tensor: " << dtr_tensor.get() << ", compute op: " << dtr_ebo->compute_op_type_name()
+       << ", is_in_memory: " << dtr_ebo->is_in_memory()
+       << ", is_evictable: " << dtr_ebo->is_evictable() << ", pinned: " << dtr_ebo->num_pinned()
+       << ", id: " << dtr_ebo->id();
+    return ss.str();
   });
   m.def("evict", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
     auto dtr_tensor =

@@ -120,7 +120,6 @@ Maybe<void> DTREagerBlobObject::evict(bool eager_evict) {
     }
     return Maybe<void>::Ok();
   }
-  evict_flag_ = true;
   // NOTE: DeallocateBlobDataPtr() resets tensor_storage_, which is not we want
   tensor_storage_->Release();
   if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
@@ -147,7 +146,6 @@ void DTREagerBlobObject::set_compute_op(LocalCallOpKernelPhyInstrOperand* operan
   if (dtr::debug_level() >= 2) {
     LOG(INFO) << "set compute_op_ of " << this << " to " << compute_op_.get();
   }
-  could_evict_ = (input_size() > 0) && could_evict_;
 }
 
 void DTREagerBlobObject::update_access_time() {
@@ -163,7 +161,6 @@ void DTREagerBlobObject::AppendUserOp(vm::LocalCallOpKernelPhyInstrOperand* oper
 }
 
 bool DTREagerBlobObject::is_in_memory() const {
-  // return !evict_flag_;
   return tensor_storage_->blob_dptr() != nullptr || shape().elem_cnt() == 0;
 }
 

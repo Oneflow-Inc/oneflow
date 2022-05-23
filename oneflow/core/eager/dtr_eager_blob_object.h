@@ -80,7 +80,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   }
   void set_compute_time(double val);
   void set_last_access_time(double val) { last_access_time_ = val; }
-  void set_evict_attr(bool val) { could_evict_ = val; }
+  void set_evictable(bool val) { could_evict_ = val; }
   void set_bp_required(bool val) { is_bp_required_ = val; }
   void set_recompute_mode(int val) const { recompute_mode_ = val; }
 
@@ -130,7 +130,6 @@ class DTREagerBlobObject final : public EagerBlobObject {
 
  private:
   int id_;
-  bool evict_flag_ = false;
   bool could_evict_;
   bool is_bp_required_;
   double compute_time_;

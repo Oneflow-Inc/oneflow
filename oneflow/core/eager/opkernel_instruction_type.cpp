@@ -188,7 +188,7 @@ struct LocalCallOpKernelUtil final {
           LOG(INFO) << "mutable! op: " << op_type_name << ", input " << i;
           LOG(INFO) << " set it as non evictable";
         }
-        GetDTRInputs(operand)[i]->set_evict_attr(false);
+        GetDTRInputs(operand)[i]->set_evictable(false);
       }
     }
     if (dtr::is_check_enabled()) {
@@ -416,7 +416,7 @@ Maybe<void> _RecursivelyCompute(
       if (dtr::is_enabled_and_debug()) {
         LOG(INFO) << "going to recompute (No." << Global<dtr::TensorPool>::Get()->recompute_times()
                   << ") " << input->compute_op() << "(" << input->compute_op_type_name() << ") for "
-                  << input << ", whose dptr is " << input->dptr()
+                  << input.get() << "(id: " << input->id() << "), whose dptr is " << input->dptr()
                   << ", is in memory: " << input->is_in_memory() << std::endl;
       }
       // TODO for each ptr rather than shared_ptr
@@ -507,7 +507,7 @@ Maybe<void> DTRComputeInstruction(const vm::InstructionMsg& instr_msg) {
   bool is_inplace = IsInplace(inputs, outputs);
   for (const auto& output : outputs) {
     if (is_inplace) {
-      output->set_evict_attr(false);
+      output->set_evictable(false);
     } else {
       JUST(Global<dtr::TensorPool>::Get()->insert(output));
     }

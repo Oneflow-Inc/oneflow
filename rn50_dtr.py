@@ -120,7 +120,7 @@ setup_seed(seed)
 
 writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
-model = models.resnet50(fuse_bn_relu=True, fuse_bn_add_relu=True)
+model = models.resnet50(fuse_bn_relu=False, fuse_bn_add_relu=False)
 
 # weights = flow.load("/tmp/abcdef")
 # model.load_state_dict(weights, strict=False)
@@ -181,10 +181,12 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     if iter >= ALL_ITERS:
         break
 
-    flow.comm.barrier()
-
     train_data = train_data.to(cuda0)
     train_label = train_label.to(cuda0)
+
+    flow.comm.barrier()
+    print(f'iter {iter} start, all pieces:')
+    flow._oneflow_internal.dtr.display_all_pieces()
 
     logits = model(train_data)
     loss = logits.sum() # criterion(logits, train_label)
@@ -209,6 +211,8 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
             print(f'iter {iter} end, time: {this_time}')
 
     last_time = time.time()
+    print(f'iter {iter} end, all pieces:')
+    flow._oneflow_internal.dtr.display_all_pieces()
 
 print(
 f"{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s"
