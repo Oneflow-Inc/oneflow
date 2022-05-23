@@ -1214,8 +1214,8 @@ class InplaceToContiguousFunctor {
     return input;
   }
 
-  private:
-    std::shared_ptr<OpExpr> assign_op_;
+ private:
+  std::shared_ptr<OpExpr> assign_op_;
 };
 
 class SliceBaseFunctor {
