@@ -27,13 +27,11 @@ namespace oneflow {
 
 typedef std::vector<int64_t> DimVector;
 typedef std::vector<int64_t> AxisVector;
-typedef std::vector<int64_t> StrideVector;
 
 #else
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> DimVector;
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> AxisVector;
-typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> StrideVector;
 
 #endif
 }  // namespace oneflow

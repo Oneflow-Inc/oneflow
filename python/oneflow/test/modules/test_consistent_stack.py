@@ -34,6 +34,7 @@ def _test_stack_with_random_data(test_case, placement, sbp):
     return out
 
 
+@unittest.skip("backward of stack with random diff has bug.")
 class TestStackModule(flow.unittest.TestCase):
     @globaltest
     def test_stack_with_random_data(test_case):

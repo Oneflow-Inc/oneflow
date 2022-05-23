@@ -21,34 +21,6 @@ limitations under the License.
 namespace oneflow {
 #ifdef WITH_CUDA
 namespace {
-// total thread number: cs_up_space * cs_down_space
-// in cs_down_space part, use cs_down_space threads
-// to calculate as follows(m=cs_down_space-1, n=cs_space-1, there is no dependency in backward):
-// dm0, ..., d10, d00
-// dm1, ..., d11, d01
-// dm2, ..., d12, d02
-// ...       ...  ...
-// dmn, ..., d1n, d0n
-template<typename T>
-__global__ void CumsumBackwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_space,
-                                  int64_t cs_down_space, int64_t elem_cnt) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
-       i += step) {
-    auto tmp = cs_space * cs_down_space;
-    auto cs_space_id = (i - (i / tmp) * tmp) / cs_down_space;
-    out_ptr[i] = (cs_space - cs_space_id) * in_ptr[i];
-  }
-}
-template<typename T>
-__global__ void CumsumBackwardGpu_DownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_up_space,
-                                               int64_t cs_space, int64_t elem_cnt) {
-  for (auto i = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x; i < elem_cnt;
-       i += step) {
-    auto cs_space_id = i - (i / cs_space) * cs_space;
-    out_ptr[i] = (cs_space - cs_space_id) * in_ptr[i];
-  }
-}
-
 template<typename T>
 __global__ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr, const T* input_ptr,
                                 const int64_t up_space, const int64_t space,
@@ -107,62 +79,8 @@ __global__ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr,
 }
 }  // namespace
 
-class GpuCumGradKernel : public user_op::OpKernel {
- public:
-  GpuCumGradKernel() = default;
-  ~GpuCumGradKernel() = default;
-
- private:
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
 template<typename T>
-class GpuCumsumGradKernel final : public GpuCumGradKernel {
- public:
-  GpuCumsumGradKernel() = default;
-  ~GpuCumsumGradKernel() = default;
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    // judge whether tensor has 0 size dimension first
-    const auto* in = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    auto elem_cnt = in->shape().elem_cnt();
-    if (!elem_cnt) { return; }
-    auto* out = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    auto dim = ctx->Attr<int64_t>("dim");
-    const auto* in_ptr = in->dptr<T>();
-    auto* out_ptr = out->mut_dptr<T>();
-
-    // take cumsum's abbreviation as `cs`
-    // data partition: cs_up_space|cs_space|cs_down_space
-    auto cs_up_space = elem_cnt / in->shape().Count(dim);
-    auto cs_space = in->shape().At(dim);
-    auto cs_down_space = in->shape().Count(dim + 1);
-    auto thread_num = elem_cnt;
-
-    if (cs_down_space == 1) {
-      RUN_CUDA_KERNEL((CumsumBackwardGpu_DownSpaceIs1<T>), ctx->stream(), thread_num, in_ptr,
-                      out_ptr, cs_up_space, cs_space, elem_cnt);
-    } else {
-      RUN_CUDA_KERNEL((CumsumBackwardGpu<T>), ctx->stream(), thread_num, in_ptr, out_ptr, cs_space,
-                      cs_down_space, elem_cnt);
-    }
-  }
-};
-
-#define REGISTER_CUDA_CUMSUM_GRAD_KERNEL(dtype)                        \
-  REGISTER_USER_KERNEL("cumsum_grad")                                  \
-      .SetCreateFn<GpuCumsumGradKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
-REGISTER_CUDA_CUMSUM_GRAD_KERNEL(float)
-REGISTER_CUDA_CUMSUM_GRAD_KERNEL(double)
-#undef REGISTER_CUDA_CUMSUM_GRAD_KERNEL
-
-template<typename T>
-class GpuCumProdGradKernel final : public GpuCumGradKernel {
+class GpuCumProdGradKernel final : public user_op::OpKernel {
  public:
   GpuCumProdGradKernel() = default;
   ~GpuCumProdGradKernel() = default;
@@ -202,6 +120,8 @@ class GpuCumProdGradKernel final : public GpuCumGradKernel {
                       ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         dy_ptr, dx_ptr, output_ptr, input_ptr, up_space, space, down_space, thread_num);
   }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CUDA_CUMPROD_GRAD_KERNEL(dtype)                       \
