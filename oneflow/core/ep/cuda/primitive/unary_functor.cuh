@@ -55,17 +55,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kGelu, nv_bfloat16, nv_bfloat16>
 #endif
 
 template<>
-struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kLeakyRelu, half, half> {
-  UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(__float2half(attr0.Value<float>())) {}
-
-  __device__ half operator()(half src) const {
-    half zero = __float2half(0);
-    return (src > zero) ? src : alpha * src;
-  }
-  const half alpha;
-};
-
-template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, float, float> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
@@ -97,6 +86,14 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, nv_bfloat16, nv_bfloat16>
   }
 };
 #endif
+
+template<DeviceType device, typename Dst, typename Src>
+struct UnaryFunctor<device, UnaryOp::kLeakyRelu, Dst, Src> {
+  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<Src>()) {}
+
+  OF_DEVICE_FUNC Dst operator()(Src src) const { return (src > 0) ? src : alpha * src; }
+  const Src alpha;
+};
 
 }  // namespace primitive
 }  // namespace ep
