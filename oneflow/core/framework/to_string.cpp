@@ -22,20 +22,12 @@ namespace oneflow {
 
 Maybe<std::string> DeviceTag4DeviceType(DeviceType device_type) {
   auto device_tag = ep::DeviceManagerRegistry::GetDeviceTypeNameByDeviceType(device_type);
-  if (device_tag.empty()) {
-    return Error::DeviceTagNotFoundError() << "invalid_device";
-  } else {
-    return device_tag;
-  }
+  return device_tag;
 }
 
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag) {
   auto device_type = ep::DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(device_tag);
-  if (device_type == DeviceType::kInvalidDevice) {
-    return Error::DeviceTagNotFoundError() << "device tag `" << device_tag << "' not found";
-  } else {
-    return device_type;
-  }
+  return device_type;
 }
 
 }  // namespace oneflow

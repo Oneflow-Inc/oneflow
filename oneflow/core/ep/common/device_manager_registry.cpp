@@ -81,7 +81,7 @@ class DeviceManagerRegistry::Impl {
     if (factories()->size() <= device_type) { return ""; }
     auto& factory = factories()->at(device_type);
     if (!factory) {
-      return "";
+      return "invalid_device";
     } else {
       std::string name = factory->device_type_name();
       device_type2device_type_name.at(device_type) = name;
