@@ -135,10 +135,10 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     const auto& last_layer_wgrad_bgrad =
         JUST(functional::CublasMatmulBiasAddGrad(last_bias_dy, last_layer_x));
     if (last_layer_weight_requires_grad) {
-      *JUST(VectorAt(in_grads, weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 0));
+      JUST(VectorAt(*in_grads, weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 0));
     }
     if (last_layer_bias_requires_grad) {
-      *JUST(VectorAt(in_grads, 2 * weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 1));
+      JUST(VectorAt(*in_grads, 2 * weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 1));
     }
   }
 
@@ -161,14 +161,14 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
 
     if (JUST(VectorAt(ctx->biases_requires_grad, (hidden_layer_idx - 1)))) {
       // dbias
-      *JUST(VectorAt(in_grads, weight_num + hidden_layer_idx)) =
+      JUST(VectorAt(*in_grads, weight_num + hidden_layer_idx)) =
           matmul_relu_bias_bgrad->at(1);  // NOLINT
     }
     // dw, need to skip final layer, cause final layer's wgrad has used CublasMatmulBiasAddGrad to
     // calculate.
     if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))
         && hidden_layer_idx != weight_num - 1) {
-      *JUST(VectorAt(in_grads, (1 + hidden_layer_idx))) = JUST(functional::MatMul(
+      JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = JUST(functional::MatMul(
           cublas_dy, JUST(VectorAt(hiddens, hidden_layer_idx - 1)), true, false, 1.0));
     }
   }
@@ -189,7 +189,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   if (JUST(VectorAt(ctx->weights_requires_grad, 0)) && weight_num >= 2) {
     // If weight_num == 1, dw has been calculated by CublasMatmulBiasAddGrad, so we need to skip.
     // dw:
-    *JUST(VectorAt(in_grads, 1)) =
+    JUST(VectorAt(*in_grads, 1)) =
         JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false,
                                 1.0));  // use x instead just vectorat
   }

@@ -135,6 +135,8 @@ class DataLoader(Generic[T_co]):
 
     See :py:mod:`flow.utils.data` documentation page for more details.
 
+    In consideration of compatibility, the design of our dataloader is consistent with pytorch, ref:https://github.com/pytorch/pytorch/tree/v1.7.0
+
     Args:
         dataset (Dataset): dataset from which to load the data.
         batch_size (int, optional): how many samples per batch to load
@@ -153,6 +155,10 @@ class DataLoader(Generic[T_co]):
         collate_fn (callable, optional): merges a list of samples to form a
             mini-batch of Tensor(s).  Used when using batched loading from a
             map-style dataset.
+        pin_memory (bool, optional): If ``True``, the data loader will copy Tensors
+            into CUDA pinned memory before returning them.  If your data elements
+            are a custom type, or your :attr:`collate_fn` returns a batch that is a custom type,
+            see the example below. (default: ``False``)
         drop_last (bool, optional): set to ``True`` to drop the last incomplete batch,
             if the dataset size is not divisible by the batch size. If ``False`` and
             the size of dataset is not divisible by the batch size, then the last batch
@@ -191,6 +197,7 @@ class DataLoader(Generic[T_co]):
     dataset: Dataset[T_co]
     batch_size: Optional[int]
     num_workers: int
+    pin_memory: bool
     drop_last: bool
     timeout: float
     sampler: Sampler
@@ -207,6 +214,7 @@ class DataLoader(Generic[T_co]):
         batch_sampler: Optional[Sampler[Sequence[int]]] = None,
         num_workers: int = 0,
         collate_fn: Optional[_collate_fn_t] = None,
+        pin_memory: bool = False,
         drop_last: bool = False,
         timeout: float = 0,
         worker_init_fn: Optional[_worker_init_fn_t] = None,
@@ -240,6 +248,7 @@ class DataLoader(Generic[T_co]):
 
         self.dataset = dataset
         self.prefetch_factor = prefetch_factor
+        self.pin_memory = pin_memory
         self.timeout = timeout
         self.worker_init_fn = worker_init_fn
         self.multiprocessing_context = multiprocessing_context
@@ -519,7 +528,7 @@ class _BaseDataLoaderIter(object):
         self._index_sampler = loader._index_sampler
         self._num_workers = loader.num_workers
         self._prefetch_factor = loader.prefetch_factor
-        self._pin_memory = False
+        self._pin_memory = loader.pin_memory and flow.cuda.is_available()
         self._timeout = loader.timeout
         self._collate_fn = loader.collate_fn
         self._sampler_iter = iter(self._index_sampler)
@@ -590,9 +599,10 @@ class _SingleProcessDataLoaderIter(_BaseDataLoaderIter):
 
     def _next_data(self):
         index = self._next_index()  # may raise StopIteration
+        data = self._dataset_fetcher.fetch(index)  # may raise StopIteration
         if self._pin_memory:
-            raise NotImplementedError("Dataloader pin memory is not support yet!")
-        return self._dataset_fetcher.fetch(index)
+            data = _utils.pin_memory.pin_memory(data)
+        return data
 
 
 class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
@@ -964,7 +974,6 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
             self._workers.append(w)
 
         if self._pin_memory:
-            raise NotImplementedError("Dataloader pin memory is not support yet!")
             self._pin_memory_thread_done_event = threading.Event()
 
             # Queue is not type-annotated
@@ -974,7 +983,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                 args=(
                     self._worker_result_queue,
                     self._data_queue,
-                    flow.cuda.current_device(),  # TODO:flow.cuda.current_device()
+                    flow.cuda.current_device(),
                     self._pin_memory_thread_done_event,
                 ),
             )

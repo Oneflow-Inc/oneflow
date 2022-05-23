@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
@@ -35,7 +34,6 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
@@ -57,11 +55,12 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
       << "blob_desc of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
 
   auto shape = std::make_shared<Shape>(blob_desc_it->second.shape());
+  auto stride = std::make_shared<Stride>(shape);
   auto dtype = blob_desc_it->second.data_type();
   if (is_local) {
     const auto& device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
     const auto& tensor =
-        JUST(MirroredTensor::MakeTensor(shape, dtype, device, is_lazy,
+        JUST(MirroredTensor::MakeTensor(shape, stride, dtype, device, is_lazy,
                                         /* requires_grad= */ false, /* is_leaf= */ true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
@@ -801,11 +800,11 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   if (input_tensor->is_local()) {
-    (*outputs)[0] =
-        JUST(MirroredTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                        JUST(Device::New(device_type, device_id)),
-                                        /* is_lazy= */ true,
-                                        /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] = JUST(MirroredTensor::MakeTensor(
+        input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
+        JUST(Device::New(device_type, device_id)),
+        /* is_lazy= */ true,
+        /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
     parallel_conf.set_device_tag(device_type);

@@ -55,7 +55,6 @@ class TestFeedInputTensor(unittest.TestCase):
             input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
                 op_name, input_conf_str, ["in_0"], ["out_0"]
             )
-            attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
             out_tensor = _C.dispatch_feed_input(input_op, x)
             test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(out_tensor.is_lazy)

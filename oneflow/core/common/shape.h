@@ -26,6 +26,11 @@ limitations under the License.
 namespace oneflow {
 
 class ShapeView;
+class ShapeProto;
+
+namespace cfg {
+class ShapeProto;
+}  // namespace cfg
 
 class Shape final {
  public:
