@@ -275,7 +275,6 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                               \
   static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {   \
     HANDLE_ERRORS                                                                         \

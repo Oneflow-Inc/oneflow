@@ -35,7 +35,7 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 }
 
 void CheckDeviceType(const std::string& type) {
-  if (CHECK_JUST(DeviceType4DeviceTag(type))==kInvalidDevice) {
+  if (CHECK_JUST(DeviceType4DeviceTag(type)) == kInvalidDevice) {
     std::string error_msg = "Expected one of " + PrintAvailableDevices()
                             + " device type at start of device string: " + type;
     throw std::runtime_error(error_msg);
