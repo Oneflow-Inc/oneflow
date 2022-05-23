@@ -61,18 +61,15 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
-enum class XrtKind : int { kNone = 0, kTensorRT = 1, kOpenVino = 2 };
-
 namespace {
 
 class CompileScope {
  public:
-  CompileScope(const of::JobConfigProto& job_config, const of::Device& device, XrtKind kind) {
+  CompileScope(const of::JobConfigProto& job_config, const of::Device& device) {
     of::JobConfigProto mut_job_config = job_config;
     const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(mut_job_config, device));
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
-    ConfigXrt(mut_job_config, kind);
     CHECK_JUST(of::JobBuildAndInferCtx_Open(mut_job_config.job_name()));
     CHECK_JUST(CHECK_JUST(of::GetCurInferCtx())->SetJobConf(mut_job_config));
   }
@@ -84,22 +81,6 @@ class CompileScope {
 
  private:
   of::LazyMode::Guard lazy_mode_enabled_guard{true};
-
-  void ConfigXrt(of::JobConfigProto& job_config, XrtKind kind) {
-    if (kind == XrtKind::kTensorRT) {
-#ifdef WITH_TENSORRT
-      job_config.mutable_xrt_config()->set_use_tensorrt(true);
-#else
-      LOG(WARNING) << "XRT TensorRT is unavailable while tensorrt is enabled";
-#endif
-    } else if (kind == XrtKind::kOpenVino) {
-#ifdef WITH_OPENVINO
-      job_config.mutable_xrt_config()->set_use_openvino(true);
-#else
-      LOG(WARNING) << "XRT OpenVINO is unavailable while openvino is enabled";
-#endif
-    }
-  }
 };
 
 std::shared_ptr<of::one::TensorTuple> ConvertToTensorTuple(
@@ -145,8 +126,6 @@ class Graph::GraphImpl final {
   InputOutputInfos GetOutputInfos();
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
-  void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
-  void enable_openvino() { xrt_kind_ = XrtKind::kOpenVino; }
 
  private:
   of::Maybe<void> CollectInputOutputInfos();
@@ -161,7 +140,6 @@ class Graph::GraphImpl final {
   std::string model_path_;
   bool is_compiled_ = false;
   int batch_size_ = 0;
-  XrtKind xrt_kind_ = XrtKind::kNone;
   Device device_;
   of::Job job_;
 
@@ -213,10 +191,6 @@ IValue Graph::Forward(const IValue& inputs) {
 }
 
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
-
-void Graph::enable_tensorrt() { graph_->enable_tensorrt(); }
-
-void Graph::enable_openvino() { graph_->enable_openvino(); }
 
 Graph Graph::Load(const std::string& model_path, const Device& device) {
   Graph graph(model_path, device);
@@ -306,8 +280,7 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
 }
 
 of::Maybe<void> Graph::GraphImpl::BuildGraph() {
-  CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(),
-                                 xrt_kind_);
+  CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol());
   {
     const of::OpGraph op_graph(job_);
     op_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
