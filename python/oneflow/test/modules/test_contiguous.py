@@ -84,9 +84,9 @@ class TestContiguous(flow.unittest.TestCase):
 
 
 def _tets_inplace_contiguous(test_case, device):
-    arr = np.random.randn(4,5,6,7).astype(np.float32)
+    arr = np.random.randn(4, 5, 6, 7).astype(np.float32)
     input = flow.tensor(arr, device=device)
-    x = input.permute(0, 3, 2, 1) # x is non-contiguous tensor
+    x = input.permute(0, 3, 2, 1)  # x is non-contiguous tensor
     test_case.assertTrue(x.is_contiguous() == False)
     # y1 is normal version of tensor contiguous
     y1 = x.contiguous()
@@ -99,6 +99,7 @@ def _tets_inplace_contiguous(test_case, device):
     test_case.assertTrue(y1.is_contiguous() == True)
     test_case.assertTrue(y2.is_contiguous() == True)
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestInplaceContiguous(flow.unittest.TestCase):
     def test_inplace_contiguous(test_case):
@@ -106,12 +107,10 @@ class TestInplaceContiguous(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _tets_inplace_contiguous,
         ]
-        arg_dict["device"] = [
-            "cpu", 
-            "cuda"
-        ]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()
