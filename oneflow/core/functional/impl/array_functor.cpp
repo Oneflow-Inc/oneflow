@@ -1206,8 +1206,8 @@ class InplaceToContiguousFunctor {
     JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
     const auto& blob_object = JUST(input->eager_blob_object());
     // update eager_blob_object
-    JUST(input->mut_eager_mirrored_tensor_impl())
-        ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), false);
+    JUST(JUST(input->mut_eager_mirrored_tensor_impl())
+        ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), false));
     // assign contiguous tensor data
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
     return input;
