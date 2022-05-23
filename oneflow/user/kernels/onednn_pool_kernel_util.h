@@ -23,25 +23,34 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename T, dnnl::algorithm algorithm>
+template<typename T>
+bool OneDnnIsSupportDtype() {
+  return (std::is_same<T, float>::value || std::is_same<T, int32_t>::value);
+}
+
+template<typename T>
 struct OneDnnPoolKernelUtil {
   static void OneDnnPoolForwardCompute(
       ep::Stream* stream, const dnnl::memory::dims src_dims, const dnnl::memory::dims dst_dims,
       const dnnl::memory::dims kernel_dims, const dnnl::memory::dims strides_dims,
       const dnnl::memory::dims padding_dims_l, const dnnl::memory::dims padding_dims_r,
-      const dnnl::memory::dims dilation, dnnl::memory::format_tag format, const void* src,
-      void* dest, void* indice_ptr) {
+      const dnnl::memory::dims dilation, dnnl::memory::format_tag format, void* src,
+      void* dest, void* indice_ptr, dnnl::algorithm algorithm) {
     auto data_type = CppTypeToOneDnnDtype<T>();
     ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
     size_t num_threads = cpu_stream->device()->GetNumThreads();
     ep::CpuNumThreadsGuard guard(num_threads);
     dnnl::engine* onednn_engine = cpu_stream->onednn_engine();
     dnnl::stream* onednn_stream = cpu_stream->onednn_stream();
+    printf("engine->  %p \n", onednn_engine);
+    printf("stream->  %p \n", onednn_stream);
 
     auto src_md = dnnl::memory::desc(src_dims, data_type, format);
+    printf("1 engine->  %p \n", onednn_engine->get());
     auto dst_md = dnnl::memory::desc(dst_dims, data_type, format);
-    auto src_mem = dnnl::memory(src_md, *onednn_engine, (void*)src);
-    auto dst_mem = dnnl::memory(dst_md, *onednn_engine, (void*)dest);
+    printf("2 engine->  %p \n", onednn_engine->get());
+    auto src_mem = dnnl::memory(src_md, *onednn_engine, src);
+    auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dest);
 
     auto pooling_desc = dnnl::pooling_v2_forward::desc(dnnl::prop_kind::forward_training, algorithm,
                                                        src_md, dst_md, strides_dims, kernel_dims,
@@ -50,7 +59,7 @@ struct OneDnnPoolKernelUtil {
         dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
     auto pooling_primitive = dnnl::pooling_v2_forward(pooling_primitive_desc);
     auto workspace_mem =
-        dnnl::memory(pooling_primitive_desc.workspace_desc(), *onednn_engine, (void*)indice_ptr);
+        dnnl::memory(pooling_primitive_desc.workspace_desc(), *onednn_engine, indice_ptr);
 
     pooling_primitive.execute(
         *onednn_stream,
@@ -63,7 +72,8 @@ struct OneDnnPoolKernelUtil {
       const dnnl::memory::dims diff_src_dims, const dnnl::memory::dims kernel_dims,
       const dnnl::memory::dims strides_dims, const dnnl::memory::dims padding_dims_l,
       const dnnl::memory::dims padding_dims_r, const dnnl::memory::dims dilation,
-      dnnl::memory::format_tag format, void* diff_dst, void* diff_src, void* workspace) {
+      dnnl::memory::format_tag format, void* diff_dst, void* diff_src, void* workspace,
+      dnnl::algorithm algorithm) {
     auto data_type = CppTypeToOneDnnDtype<T>();
     ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
     size_t num_threads = cpu_stream->device()->GetNumThreads();
