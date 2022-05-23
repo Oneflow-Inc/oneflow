@@ -178,7 +178,6 @@ OneFlow Tensor Class
             tril, 
             triu, 
             type_as, 
-            type,
             t,
             T,
             unbind, 
