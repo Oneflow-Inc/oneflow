@@ -61,32 +61,11 @@ bool DTRMirroredTensor::is_in_memory() const {
   ;
 }
 
-Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
-  if (dtr::debug_level() >= 2) {
-    std::stringstream ss;
-    ss << "set inputs of " << this << " (ebo " << JUST(eager_blob_object()).get() << ") to ";
-    for (const auto& x : inputs) {
-      ss << x.get() << " (ebo " << JUST(x->eager_blob_object()).get() << "), ";
-    }
-    LOG(INFO) << ss.str();
-  }
-  std::vector<std::shared_ptr<Holder>> input_holders;
-  for (const auto& x : inputs) {
-    if (auto dtr_mirrored_tensor =
-            std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(x->AsMirroredTensor()))) {
-      const auto& input_holder = dtr_mirrored_tensor->holder();
-      CHECK_NOTNULL_OR_RETURN(input_holder);
-      input_holders.push_back(input_holder);
-    } else {
-      LOG(INFO) << "no dtr ebo, ebo " << JUST(x->eager_blob_object()).get() << ", real type "
-                << typeid(*x).name() << ", " << typeid(*JUST(x->AsMirroredTensor())).name()
-                << ", bug?" << std::endl;
-      // do nothing
-    }
-  }
+Maybe<void> DTRMirroredTensor::set_holder(
+    const std::vector<std::shared_ptr<Holder>>& input_holders) {
   holder_ =
       std::make_shared<Holder>(input_holders, JUST(tensor_storage()), JUST(eager_blob_object()));
-  if (dtr::debug_level() >= 3) { LOG(INFO) << "set_tenosr_inputs done"; }
+  if (dtr::debug_level() >= 3) { LOG(INFO) << "set_holder done"; }
   return Maybe<void>::Ok();
 }
 

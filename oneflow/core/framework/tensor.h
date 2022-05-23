@@ -550,17 +550,15 @@ class MirroredTensor : public TensorIf<MirroredTensor> {
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
 
-class Holder final {
- private:
-  std::vector<std::shared_ptr<Holder>> input_holders_;
-  std::shared_ptr<TensorStorage> storage_;
-  std::shared_ptr<vm::EagerBlobObject> ebo_;
+struct Holder final {
+  std::vector<std::shared_ptr<Holder>> input_holders;
+  std::shared_ptr<TensorStorage> storage;
+  std::shared_ptr<vm::EagerBlobObject> ebo;
 
- public:
   Holder(const std::vector<std::shared_ptr<Holder>>& input_holders,
          const std::shared_ptr<TensorStorage>& storage,
          const std::shared_ptr<vm::EagerBlobObject>& ebo)
-      : input_holders_(input_holders), storage_(storage), ebo_(ebo) {}
+      : input_holders(input_holders), storage(storage), ebo(ebo) {}
 };
 
 class DTRMirroredTensor final : public MirroredTensor {
@@ -573,7 +571,7 @@ class DTRMirroredTensor final : public MirroredTensor {
 
   bool is_in_memory() const;
 
-  Maybe<void> set_tensor_inputs(const TensorTuple& inputs);
+  Maybe<void> set_holder(const std::vector<std::shared_ptr<Holder>>& input_holders);
 
   Maybe<Tensor> detach() const override;
 

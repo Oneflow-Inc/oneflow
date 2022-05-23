@@ -176,16 +176,18 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
   if (dtr::is_enabled()) {
-    for (int i =0; i < input_eager_blob_objects->size(); i++) {
+    for (int i = 0; i < input_eager_blob_objects->size(); i++) {
       const auto& x = (*input_eager_blob_objects)[i];
       if (std::dynamic_pointer_cast<vm::DTREagerBlobObject>(x) == nullptr) {
-        LOG(FATAL) << "not debo, " << i << ", op typename " << JUST(user_op_expr.MutKernel4Stream(stream))->op_type_name() << std::endl;
+        return Error::RuntimeError() << "not debo, " << i << ", op typename "
+                                     << JUST(user_op_expr.MutKernel4Stream(stream))->op_type_name();
       }
     }
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
       const auto& x = (*output_eager_blob_objects)[i];
       if (std::dynamic_pointer_cast<vm::DTREagerBlobObject>(x) == nullptr) {
-        LOG(FATAL) << "not debo, " << i << ", op typename " << JUST(user_op_expr.MutKernel4Stream(stream))->op_type_name() << std::endl;
+        return Error::RuntimeError() << "not debo, " << i << ", op typename "
+                                     << JUST(user_op_expr.MutKernel4Stream(stream))->op_type_name();
       }
     }
   }
@@ -197,16 +199,25 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  for (const auto& output : *outputs) {
-    if (auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output)) {
-      JUST(dtr_output->set_tensor_inputs(inputs));
-    }
-  }
-
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, stream);
   }));
+
+  if (dtr::is_enabled()) {
+    std::vector<std::shared_ptr<Holder>> input_holders;
+    for (const auto& x : inputs) {
+      auto dtr_mirrored_tensor =
+          std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(x->AsMirroredTensor()));
+      const auto& input_holder = dtr_mirrored_tensor->holder();
+      CHECK_NOTNULL_OR_RETURN(input_holder);
+      input_holders.push_back(input_holder);
+    }
+    for (const auto& output : *outputs) {
+      auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output);
+      JUST(dtr_output->set_holder(input_holders));
+    }
+  }
 
   return Maybe<void>::Ok();
 }
