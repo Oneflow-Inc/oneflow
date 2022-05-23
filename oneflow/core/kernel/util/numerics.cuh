@@ -243,6 +243,18 @@ struct numerics<double> {
   OF_NUMERICS_FUNC bool isinf(double a) { return ::isinf(a); }
 };
 
+template<typename T>
+__inline__ __device__ T Nan();
+
+template<>
+__inline__ __device__ float Nan<float>() {
+  return nanf("");
+}
+
+template<>
+__inline__ __device__ double Nan<double>() {
+  return nan("");
+}
 }  // namespace detail
 }  // namespace oneflow
 

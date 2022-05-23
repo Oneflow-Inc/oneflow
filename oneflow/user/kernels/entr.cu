@@ -13,26 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <math_constants.h>
 #include "oneflow/user/kernels/entr.h"
+#include "oneflow/core/kernel/util/numerics.cuh"
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 namespace oneflow {
 #ifdef WITH_CUDA
-namespace {
-template<typename T>
-__inline__ __device__ T Nan();
-
-template<>
-__inline__ __device__ float Nan<float>() {
-  return CUDART_NAN_F;
-}
-
-template<>
-__inline__ __device__ double Nan<double>() {
-  return CUDART_NAN;
-}
-}  // namespace
 template<typename T>
 struct EntrFunctor<DeviceType::kCUDA, T> {
   OF_DEVICE_FUNC T operator()(const T x) const {
@@ -55,7 +41,7 @@ struct EntrGradFunctor<DeviceType::kCUDA, T> {
       // inf
       return INFINITY;
     } else {
-      return Nan<T>();
+      return detail::Nan<T>();
     }
   }
 };

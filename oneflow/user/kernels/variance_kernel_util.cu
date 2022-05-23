@@ -13,33 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <glog/logging.h>
 #include "oneflow/user/kernels/variance_kernel_util.h"
+#include "oneflow/core/kernel/util/numerics.cuh"
 #include "oneflow/core/cuda/layer_norm.cuh"
 
 namespace oneflow {
 namespace user_op {
-
-namespace {
-template<typename T>
-__inline__ __device__ T Nan();
-
-template<>
-__inline__ __device__ float Nan<float>() {
-  return CUDART_NAN_F;
-}
-
-template<>
-__inline__ __device__ double Nan<double>() {
-  return CUDART_NAN;
-}
-}  // namespace
-
 template<typename T>
 __global__ void ComputeVarUsingWelfordWrapper(const T* in_ptr, T* out_ptr, const VarParam var_param,
                                               bool is_nan) {
   if (is_nan) {
-    CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) { out_ptr[i] = Nan<T>(); }
+    CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) { out_ptr[i] = detail::Nan<T>(); }
   } else {
     CUDA_1D_KERNEL_LOOP(i, var_param.parallel_num) {
       const size_t input_offset = LinearIndex2Offset(
@@ -78,7 +62,7 @@ template<typename T>
 __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_ptr,
                                     const VarParam var_param) {
   if (var_param.elem_cnt == 1 && var_param.unbiased == true) {
-    if (blockIdx.x == 0 && threadIdx.x == 0) { *out_ptr = Nan<T>(); }
+    if (blockIdx.x == 0 && threadIdx.x == 0) { *out_ptr = detail::Nan<T>(); }
     return;
   }
   const size_t elems_per_block = var_param.elem_cnt / gridDim.x;
