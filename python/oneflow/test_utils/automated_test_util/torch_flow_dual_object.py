@@ -273,8 +273,12 @@ def get_args_copy(args, kwargs):
 def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
     print(f"\033[1;33m============= {mode} ================\033[1;33m")
     print(f"\033[1;33mEnter {func} function\033[1;33m")
-    if "__self__" in dir(oneflow) and flow.is_tensor(oneflow.__self__):
-        print(f"\033[1;33m{oneflow.__self__}\033[1;33m")
+    try:
+        if "__self__" in dir(oneflow) and flow.is_tensor(oneflow.__self__):
+            print(f"\033[1;33m{oneflow.__self__}\033[1;33m")
+    except:
+        if flow.is_tensor(oneflow):
+            print(f"\033[1;33m{oneflow}\033[1;33m")
     if args is not None:
         print(f"\033[1;33m{args}\033[1;33m")
     if kwargs is not None:
@@ -396,7 +400,7 @@ def get_tensor_graph_res(
 
     if verbose:
         get_fake_program_more_detail(
-            oneflow, "nn.Graph", "get_tensor_graph_res", oneflow_args, oneflow_kwargs
+            oneflow, "nn.Graph", "get_tensor_graph_res", tensor_graph_args, tensor_graph_kwargs
         )
 
     class TestGraphOfTensorMethod(flow.nn.Graph):
