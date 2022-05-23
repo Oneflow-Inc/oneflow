@@ -65,7 +65,6 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // Set Middle result shape.
     long cublas_aligned_aux_ld = AlignReluAuxLd(cublas_aux_ld);
     int64_t aux_size = cublas_aligned_aux_ld / 32;  // Cause we use int32_t as dtype
-    printf("Aux size is: %ld \n", aux_size); 
     *ctx->OutputShape("cublas_aux", idx) = Shape({m, aux_size});
     *ctx->OutputShape("hidden", idx) = Shape({m, n});
     // Set for next layer.
@@ -113,7 +112,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::GetSbp(user_op::SbpContext* ctx) {
-  // Currently Only support S0 B B B B ... S0
   auto builder = ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0);
   for (int i = 0; i < ctx->user_op_conf().input_size("weights"); ++i) {
     builder.Broadcast(user_op::OpArg("weights", i));
@@ -148,7 +146,7 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
 
       std::string last_bias_grad;
       if (!skip_final_activation || (dropout_rate_list[weight_num-1] != 0.0f)) {
-        // step1: use dy and final output to get last layer's relu+dropout grad.
+        // step1: Get last layer's relu+dropout grad.
         rate = dropout_rate_list.at(weight_num-1); 
         if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
         user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name() + "fused_relu_dropout_grad");
