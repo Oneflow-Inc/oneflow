@@ -42,7 +42,7 @@ int64_t GetDeviceCount(const std::string& device_name) {
 
 struct PlacementSymbolExportUtil {
   static Maybe<void> CheckDeviceTag(const std::string& type) {
-    if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
+    if (CHECK_JUST(DeviceType4DeviceTag(type)) == kInvalidDevice) {
       return Error::RuntimeError() << "Expected one of " << PrintAvailableDevices()
                                    << " device type at start of device string: " << type;
     }
