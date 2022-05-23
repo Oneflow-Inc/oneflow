@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include <mma.h>
 
 namespace oneflow {
 
@@ -503,7 +504,243 @@ user_op::InferTmpSizeFn GenFusedDotFeatureInteractionInferTmpSizeFn() {
       .SetInferTmpSizeFn(GenFusedDotFeatureInteractionInferTmpSizeFn<dtype>());
 
 REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(float)
-REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(half)
+// REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(half)
+
+namespace {
+
+template<typename T, int32_t N>
+struct DotFwdParam {
+  const T* in[N];
+  int32_t in_feature_dim[N];
+  int32_t dim_start_offset[N];
+  int32_t features_dim;
+  T* out;
+  int32_t num_in;
+};
+
+template<int32_t N, int32_t pack_size, int TILE_DIM, int M_BLOCKS, int K_BLOCKS>
+__global__ void DotFeatureInteractionHalf(int64_t batch_size, int padded_num_rows,
+                                          int vector_num_pack, int out_num_cols,
+                                          int out_num_cols_num_pack, int in_shared_mem_cols,
+                                          int in_shared_mem_cols_num_pack, int acc_shared_mem_cols,
+                                          int acc_shared_mem_cols_num_pack,
+                                          int warp_shared_mem_bytes, DotFwdParam<half, N> param) {
+  extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
+  int warp_id = threadIdx.y;
+  half* buf = reinterpret_cast<half*>(shared_buf + warp_id * warp_shared_mem_bytes);
+  Pack<half, pack_size>* buf_pack = reinterpret_cast<Pack<half, pack_size>*>(buf);
+  float* acc_buf = reinterpret_cast<float*>(buf);
+  int global_warp_id = warp_id + blockDim.y * blockIdx.x;
+  for (int batch_idx = global_warp_id; batch_idx < batch_size;
+       batch_idx += blockDim.y * gridDim.x) {
+    half* batch_out = param.out + batch_idx * out_num_cols;
+    Pack<half, pack_size>* batch_out_pack =
+        reinterpret_cast<Pack<half, pack_size>*>(param.out) + batch_idx * out_num_cols_num_pack;
+
+    for (int col = threadIdx.x; col < vector_num_pack; col += blockDim.x) {
+#pragma unroll
+      for (int i = 0; i < N; ++i) {
+        if (i >= param.num_in) { break; }
+        const Pack<half, pack_size>* batch_in =
+            reinterpret_cast<const Pack<half, pack_size>*>(param.in[i])
+            + batch_idx * param.in_feature_dim[i] * vector_num_pack;
+#pragma unroll
+        for (int j = 0; j < param.in_feature_dim[i]; ++j) {
+          int row = param.dim_start_offset[i] + j;
+          buf_pack[row * in_shared_mem_cols_num_pack + col] = batch_in[j * vector_num_pack + col];
+        }
+      }
+    }
+
+    Pack<half, pack_size> zero;
+    for (int k = 0; k < pack_size; ++k) { zero.elem[k] = 0; }
+    for (int i = param.features_dim; i < padded_num_rows; ++i) {
+      for (int col = threadIdx.x; col < vector_num_pack; col += blockDim.x) {
+        buf_pack[i * in_shared_mem_cols_num_pack + col] = zero;
+      }
+    }
+    __syncwarp();
+    for (int col = threadIdx.x; col < vector_num_pack; col += blockDim.x) {
+      batch_out_pack[col] = buf_pack[col];
+    }
+    nvcuda::wmma::fragment<nvcuda::wmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float>
+        acc[M_BLOCKS][M_BLOCKS];
+    for (int i = 0; i < M_BLOCKS; ++i) {
+      for (int j = 0; j < M_BLOCKS; ++j) {
+        if (i < j) { continue; }
+        nvcuda::wmma::fill_fragment(acc[i][j], 0.0f);
+      }
+    }
+    nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, half,
+                           nvcuda::wmma::row_major>
+        a[M_BLOCKS];
+    nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, half,
+                           nvcuda::wmma::col_major>
+        b[M_BLOCKS];
+    for (int step = 0; step < K_BLOCKS; ++step) {
+      for (int j = 0; j < M_BLOCKS; ++j) {
+        half* tile_ptr = buf + j * TILE_DIM * in_shared_mem_cols + step * TILE_DIM;
+        nvcuda::wmma::load_matrix_sync(a[j], tile_ptr, in_shared_mem_cols);
+        nvcuda::wmma::load_matrix_sync(b[j], tile_ptr, in_shared_mem_cols);
+      }
+      for (int i = 0; i < M_BLOCKS; ++i) {
+        for (int j = 0; j < M_BLOCKS; ++j) {
+          if (i < j) { continue; }
+          nvcuda::wmma::mma_sync(acc[i][j], a[i], b[j], acc[i][j]);
+        }
+      }
+    }
+    for (int i = 0; i < M_BLOCKS; i++) {
+      for (int j = 0; j < M_BLOCKS; j++) {
+        if (i < j) { continue; }
+        float* tile_ptr = acc_buf + i * TILE_DIM * acc_shared_mem_cols + j * TILE_DIM;
+        nvcuda::wmma::store_matrix_sync(tile_ptr, acc[i][j], acc_shared_mem_cols,
+                                        nvcuda::wmma::mem_row_major);
+      }
+    }
+
+    half* emb_out = reinterpret_cast<half*>(batch_out_pack + vector_num_pack);
+    for (int row = 0; row < M_BLOCKS * TILE_DIM; ++row) {
+      for (int col = threadIdx.x; col < M_BLOCKS * TILE_DIM; col += blockDim.x) {
+        if (col < row) {
+          int64_t offset = (row * (row - 1)) / 2 + col;
+          emb_out[offset] = __float2half(acc_buf[row * acc_shared_mem_cols + col]);
+        }
+      }
+    }
+    if (threadIdx.x == 0) { batch_out[out_num_cols - 1] = 0; }
+  }
+}
+
+}  // namespace
+
+template<typename T, int N>
+void DispatchFeatureInteractionDotPackSize(ep::Stream* stream, const int64_t batch_size,
+                                           const int64_t concated_padded_dim,
+                                           const int64_t vector_size, const int64_t out_num_cols,
+                                           const bool self_interaction,
+                                           const DotFwdParam<T, N>& param) {
+  int pack_size = 1;
+  if (vector_size % 4 == 0 && out_num_cols % 4 == 0) {
+    pack_size = 4;
+  } else if (vector_size % 2 == 0 && out_num_cols % 2 == 0) {
+    pack_size = 2;
+  } else {
+    pack_size = 1;
+  }
+  const int TILE_DIM = 16;
+  const int M_BLOCKS = 2;
+  CHECK_EQ(vector_size % TILE_DIM, 0);
+  const int K_BLOCKS = 8;
+  const int skew_half = 8;
+  const int skew_acc = 8;
+  const int in_shared_mem_num_cols = vector_size + skew_half;
+  const int acc_shared_mem_num_cols = concated_padded_dim + skew_acc;
+  const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(T);
+  using ComputeType = typename DefaultComputeType<T>::type;
+  const size_t acc_shared_mem_bytes =
+      concated_padded_dim * acc_shared_mem_num_cols * sizeof(ComputeType);
+  const size_t warp_shared_mem_bytes = std::max(in_shared_mem_bytes, acc_shared_mem_bytes);
+  const int block_size = 128;
+  const int block_dim_x = 32;
+  const int block_dim_y = block_size / block_dim_x;
+  const int num_blocks = batch_size / block_dim_y;
+
+  const int out_num_cols_num_pack = out_num_cols / pack_size;
+  const int vector_num_pack = vector_size / pack_size;
+  const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
+  const int acc_shared_mem_cols_num_pack = acc_shared_mem_num_cols / pack_size;
+  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+
+  if (pack_size == 4) {
+    DotFeatureInteractionHalf<N, 4, TILE_DIM, M_BLOCKS, K_BLOCKS>
+        <<<num_blocks, dim3(block_dim_x, block_dim_y), block_dim_y * warp_shared_mem_bytes,
+           cuda_stream>>>(batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
+                          out_num_cols_num_pack, in_shared_mem_num_cols,
+                          in_shared_mem_cols_num_pack, acc_shared_mem_num_cols,
+                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, param);
+  } else if (pack_size == 2) {
+    DotFeatureInteractionHalf<N, 2, TILE_DIM, M_BLOCKS, K_BLOCKS>
+        <<<num_blocks, dim3(block_dim_x, block_dim_y), block_dim_y * warp_shared_mem_bytes,
+           cuda_stream>>>(batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
+                          out_num_cols_num_pack, in_shared_mem_num_cols,
+                          in_shared_mem_cols_num_pack, acc_shared_mem_num_cols,
+                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, param);
+  } else {
+    DotFeatureInteractionHalf<N, 1, TILE_DIM, M_BLOCKS, K_BLOCKS>
+        <<<num_blocks, dim3(block_dim_x, block_dim_y), block_dim_y * warp_shared_mem_bytes,
+           cuda_stream>>>(batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
+                          out_num_cols_num_pack, in_shared_mem_num_cols,
+                          in_shared_mem_cols_num_pack, acc_shared_mem_num_cols,
+                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, param);
+  }
+}
+
+template<typename T, int N>
+void DispatchFeatureInteractionDotInputSize(user_op::KernelComputeContext* ctx,
+                                            const int32_t input_size) {
+  CHECK_LE(input_size, N) << input_size;
+  user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  const int64_t batch_size = out->shape().At(0);
+  const int64_t out_num_cols = out->shape().At(1);
+  const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features", 0)->shape().At(2);
+  DotFwdParam<T, N> param;
+  param.num_in = input_size;
+  param.out = out->mut_dptr<T>();
+  int64_t features_concated_dim = 0;
+  for (int i = 0; i < input_size; ++i) {
+    param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
+    param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
+    param.dim_start_offset[i] = features_concated_dim;
+    features_concated_dim += param.in_feature_dim[i];
+  }
+  param.features_dim = features_concated_dim;
+  const int64_t align_dim = 16;
+  const int64_t concated_padded_dim =
+      std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
+      * align_dim;
+  const bool self_interaction = ctx->Attr<bool>("self_interaction");
+  DispatchFeatureInteractionDotPackSize<T, N>(ctx->stream(), batch_size, concated_padded_dim,
+                                              vector_size, out_num_cols, self_interaction, param);
+}
+
+template<typename T>
+class FusedDotFeatureInteractionHalfKernel final : public user_op::OpKernel,
+                                                   public user_op::CudaGraphSupport {
+ public:
+  FusedDotFeatureInteractionHalfKernel() = default;
+  ~FusedDotFeatureInteractionHalfKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    if (GetCudaSmVersion() < 700) {
+      LOG(ERROR) << "version";
+      return;
+    }
+    const int input_size = ctx->input_size("features");
+    if (input_size == 1) {
+      DispatchFeatureInteractionDotInputSize<T, 1>(ctx, input_size);
+    } else if (input_size == 2) {
+      DispatchFeatureInteractionDotInputSize<T, 2>(ctx, input_size);
+    } else if (input_size <= 8) {
+      DispatchFeatureInteractionDotInputSize<T, 8>(ctx, input_size);
+    } else {
+      CHECK_LE(input_size, 128) << "input_size must not greater than 128. ";
+      DispatchFeatureInteractionDotInputSize<T, 128>(ctx, input_size);
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_FUSED_DOT_FEATURE_INTERACTION_HALF_KERNEL(dtype)                       \
+  REGISTER_USER_KERNEL("fused_dot_feature_interaction")                                 \
+      .SetCreateFn<FusedDotFeatureInteractionHalfKernel<dtype>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobAttr<std::string>("pooling") == "none"));
+
+REGISTER_FUSED_DOT_FEATURE_INTERACTION_HALF_KERNEL(half)
 
 template<typename T>
 class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
