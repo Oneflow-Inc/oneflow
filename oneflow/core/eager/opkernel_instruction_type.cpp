@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -28,13 +30,13 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
-#include "oneflow/core/job/parallel_signature.cfg.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
@@ -86,6 +88,8 @@ struct LocalCallOpKernelUtil final {
                          operand->consistent_tensor_infer_result().get());
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
     temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+    temp_eager_blob_object->mut_stride() = Stride(temp_eager_blob_object->mut_shape());
+    temp_eager_blob_object->set_pin_memory(false);
     temp_eager_blob_object->set_is_dynamic(true);
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
   }
@@ -126,7 +130,37 @@ struct LocalCallOpKernelUtil final {
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
-    operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    {
+      auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
+          opkernel->op_type_name(),
+#if defined(WITH_CUDA)
+          compute_ctx->device_type() == DeviceType::kCUDA
+              ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
+              : nullptr,
+          [compute_ctx]() -> int64_t {
+            const auto cal_memory_size = [compute_ctx](const one::ArgVec& args) -> int64_t {
+              return std::accumulate(
+                  args.begin(), args.end(), static_cast<int64_t>(0),
+                  [compute_ctx](int64_t memory_size, const auto& pair) {
+                    const auto tensor =
+                        compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+                    return memory_size
+                           + tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+                  });
+            };
+            return cal_memory_size(compute_ctx->inputs()) + cal_memory_size(compute_ctx->outputs());
+          },
+#endif
+          [compute_ctx]() -> std::vector<Shape> {
+            std::vector<Shape> shapes;
+            for (const auto& pair : compute_ctx->inputs()) {
+              shapes.push_back(
+                  compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
+            }
+            return shapes;
+          }));
+      operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    }
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
