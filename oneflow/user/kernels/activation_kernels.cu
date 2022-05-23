@@ -282,10 +282,12 @@ struct SoftShrinkGradFunctor<half> {
 #define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)           \
   REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);         \
   REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_GELU_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);   \
   REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype); \
   REGISTER_HARDSHRINK_KERNEL(DeviceType::kCUDA, dtype);  \
   REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);    \
+  REGISTER_TANH_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);        \

@@ -356,6 +356,18 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
       },                                                          \
       "dx", "x", "dy");
 
+#define REGISTER_GELU_KERNEL(device, dtype)                                                     \
+  REGISTER_USER_KERNEL("gelu")                                                                  \
+      .SetCreateFn([]() {                                                                       \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                      \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                               \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(       \
+                  ctx->device_type(), ep::primitive::UnaryOp::kGelu, GetDataType<dtype>::value, \
+                  GetDataType<dtype>::value);                                                   \
+            });                                                                                 \
+      })                                                                                        \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kGelu, "out", "in"));
+
 #define REGISTER_LEAKYRELU_KERNEL(device, dtype)                                            \
   REGISTER_USER_KERNEL("leaky_relu")                                                        \
       .SetCreateFn([]() {                                                                   \
@@ -477,6 +489,18 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
         return Maybe<void>::Ok();                                                               \
       });
+
+#define REGISTER_TANH_KERNEL(device, dtype)                                                     \
+  REGISTER_USER_KERNEL("tanh")                                                                  \
+      .SetCreateFn([]() {                                                                       \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                      \
+            "y", "x", [](user_op::KernelComputeContext* ctx) {                                  \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(       \
+                  ctx->device_type(), ep::primitive::UnaryOp::kTanh, GetDataType<dtype>::value, \
+                  GetDataType<dtype>::value);                                                   \
+            });                                                                                 \
+      })                                                                                        \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kTanh, "y", "x"));
 
 #define REGISTER_MISH_KERNEL(device, dtype)                                                   \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                        \

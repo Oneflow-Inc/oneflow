@@ -20,10 +20,12 @@ namespace oneflow {
 #define REGISTER_ACTIVATION_CPU_KERNEL(dtype)           \
   REGISTER_ELU_KERNEL(DeviceType::kCPU, dtype);         \
   REGISTER_CELU_KERNEL(DeviceType::kCPU, dtype);        \
+  REGISTER_GELU_KERNEL(DeviceType::kCPU, dtype);        \
   REGISTER_HARDSWISH_KERNEL(DeviceType::kCPU, dtype);   \
   REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCPU, dtype); \
   REGISTER_HARDSHRINK_KERNEL(DeviceType::kCPU, dtype);  \
   REGISTER_HARDTANH_KERNEL(DeviceType::kCPU, dtype);    \
+  REGISTER_TANH_KERNEL(DeviceType::kCPU, dtype);        \
   REGISTER_MISH_KERNEL(DeviceType::kCPU, dtype);        \
   REGISTER_SILU_KERNEL(DeviceType::kCPU, dtype);        \
   REGISTER_SELU_KERNEL(DeviceType::kCPU, dtype);        \
