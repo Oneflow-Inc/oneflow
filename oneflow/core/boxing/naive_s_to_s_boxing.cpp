@@ -53,31 +53,24 @@ Maybe<one::Tensor> NaiveSToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   const auto& in_sbp_list = JUST(GetSbpList(tensor_nd_sbp));
   const auto& out_sbp_list = JUST(GetSbpList(out->nd_sbp()));
 
-  std::shared_ptr<one::Tensor> processed_in_tensor = JUST(PreprocessInputTensor4SliceBoxing(
-      tensor, /* log_prefix */ "\t\tInternal boxing of naive-s-to-s, "));
-
-  Symbol<ParallelDesc> new_out_placement = JUST(ReplaceDeviceType(
-      out->placement(), JUST(processed_in_tensor->parallel_desc())->device_type()));
-
-  std::shared_ptr<one::Tensor> local_tensor = JUST(processed_in_tensor->cur_rank_phy_tensor());
+  std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   {
-    const auto& in_parallel_id =
-        JUST(GetParallelId4CurrentProcessCtx(JUST(processed_in_tensor->parallel_desc())));
-    const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(new_out_placement));
+    const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
+    const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
     if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
-      local_tensor = JUST(one::functional::EagerNaiveSToS(
-          local_tensor, JUST(processed_in_tensor->parallel_desc()), new_out_placement, *in_sbp_list,
-          *out_sbp_list, *tensor->shape()));
+      local_tensor =
+          JUST(one::functional::EagerNaiveSToS(local_tensor, tensor_placement, out->placement(),
+                                               *in_sbp_list, *out_sbp_list, *tensor->shape()));
     }
   }
 
-  std::shared_ptr<one::Tensor> out_tensor = JUST(one::functional::LocalToConsistent(
-      local_tensor, new_out_placement, *out_sbp_list, *tensor->shape(), tensor->dtype()));
-
-  return JUST(PostprocessOutputTensor4SliceBoxing(
-      out_tensor, out, /* log_prefix */ "\t\tInternal boxing of naive-b-to-s, "));
+  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *out_sbp_list,
+                                                 *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-s-to-s", CheckNaiveSToS, &NaiveSToS));
+static constexpr auto* NaiveSToSWithAutoConvert =
+    EAGER_SLICE_BOXING_WARPPER(&NaiveSToS, EagerSliceBoxingType::kNaiveSToS);
+
+COMMAND(RegisterBoxingFunction("naive-s-to-s", CheckNaiveSToS, NaiveSToSWithAutoConvert));
 
 }  // namespace oneflow

@@ -34,8 +34,8 @@ bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
 
 static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocalCached);
 
-Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                            const Shape& logical_shape) {
+Maybe<void> RawCheckNaiveSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                              const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));
@@ -44,42 +44,35 @@ Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckCclSToB = DECORATE(&RawCheckCclSToB, ThreadLocalCachedCopiable);
+static constexpr auto* CheckNaiveSToB = DECORATE(&RawCheckNaiveSToB, ThreadLocalCachedCopiable);
 
 }  // namespace
 
-Maybe<one::Tensor> CclSToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                           Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> NaiveSToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                             Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
   const auto& tensor_placement = JUST(tensor->parallel_desc());
   CHECK_OR_RETURN(tensor_placement == in->placement());
-  std::shared_ptr<one::Tensor> processed_in_tensor = JUST(PreprocessInputTensor4SliceBoxing(
-      tensor, /* log_prefix */ "\t\tInternal boxing of naive-s-to-b, "));
-
-  Symbol<ParallelDesc> new_out_placement = JUST(ReplaceDeviceType(
-      out->placement(), JUST(processed_in_tensor->parallel_desc())->device_type()));
-
-  std::shared_ptr<one::Tensor> local_tensor = JUST(processed_in_tensor->cur_rank_phy_tensor());
+  std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   {
-    const auto& in_parallel_id =
-        JUST(GetParallelId4CurrentProcessCtx(JUST(processed_in_tensor->parallel_desc())));
-    const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(new_out_placement));
+    const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(tensor_placement));
+    const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out->placement()));
     if (in_parallel_id->has_value() || out_parallel_id->has_value()) {
-      local_tensor = JUST(one::functional::EagerSToB(
-          local_tensor, JUST(processed_in_tensor->parallel_desc()), new_out_placement,
-          *JUST(GetSbpList(tensor_nd_sbp)), *tensor->shape()));
+      local_tensor =
+          JUST(one::functional::EagerSToB(local_tensor, tensor_placement, out->placement(),
+                                          *JUST(GetSbpList(tensor_nd_sbp)), *tensor->shape()));
     }
   }
 
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
-  std::shared_ptr<one::Tensor> out_tensor = JUST(one::functional::LocalToConsistent(
-      local_tensor, new_out_placement, *sbp_list, *tensor->shape(), tensor->dtype()));
-
-  return JUST(PostprocessOutputTensor4SliceBoxing(
-      out_tensor, out, /* log_prefix */ "\t\tInternal boxing of naive-b-to-s, "));
+  return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(), *sbp_list,
+                                                 *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-s-to-b", CheckCclSToB, &CclSToB));
+static constexpr auto* NaiveSToBWithAutoConvert =
+    EAGER_SLICE_BOXING_WARPPER(&NaiveSToB, EagerSliceBoxingType::kNaiveSToB);
+
+COMMAND(RegisterBoxingFunction("naive-s-to-b", CheckNaiveSToB, NaiveSToBWithAutoConvert));
 
 }  // namespace oneflow

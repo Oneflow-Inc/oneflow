@@ -13,12 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/boxing/slice_boxing_util.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 
 namespace oneflow {
+
+namespace private_details {
 
 Maybe<one::Tensor> PreprocessInputTensor4SliceBoxing(const std::shared_ptr<one::Tensor>& tensor,
                                                      const std::string& log_prefix) {
@@ -67,5 +70,18 @@ Maybe<one::Tensor> PostprocessOutputTensor4SliceBoxing(const std::shared_ptr<one
                                             placed_nd_sbp->nd_sbp(), JUST(tensor->parallel_desc()),
                                             placed_nd_sbp->placement()));
 }
+
+const std::string& LogPrefix4EagerSliceBoxingType(EagerSliceBoxingType boxing_type) {
+  static thread_local const HashMap<EagerSliceBoxingType, std::string> boxing_type2log_prefix = {
+      {EagerSliceBoxingType::kNaiveBToS, "\t\tInternal boxing of naive-b-to-s, "},
+      {EagerSliceBoxingType::kNaivePToB, "\t\tInternal boxing of naive-p-to-b, "},
+      {EagerSliceBoxingType::kNaivePToS, "\t\tInternal boxing of naive-p-to-s, "},
+      {EagerSliceBoxingType::kNaiveSToB, "\t\tInternal boxing of naive-s-to-b, "},
+      {EagerSliceBoxingType::kNaiveSToP, "\t\tInternal boxing of naive-s-to-p, "},
+      {EagerSliceBoxingType::kNaiveSToS, "\t\tInternal boxing of naive-s-to-s, "}};
+  return CHECK_JUST(MapAt(boxing_type2log_prefix, boxing_type));
+}
+
+}  // namespace private_details
 
 }  // namespace oneflow
