@@ -62,9 +62,9 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
-    printf("Aux shape [0] is: %ld \n", aux->shape().At(0)); 
-    printf("Aux shape [1] is: %ld \n", aux->shape().At(1)); 
-    DumpToFile(ctx->stream(), "aux_ld", 0, 4*4 * sizeof(int32_t), aux->dptr());
+    // printf("Aux shape [0] is: %ld \n", aux->shape().At(0)); 
+    // printf("Aux shape [1] is: %ld \n", aux->shape().At(1)); 
+    // DumpToFile(ctx->stream(), "aux_ld", 0, 4*4 * sizeof(int32_t), aux->dptr());
     
     user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", 0);
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);

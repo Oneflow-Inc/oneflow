@@ -45,8 +45,10 @@ constexpr int32_t GetDropoutPackSize<double>() {
 };
 
 union RandPack4 {
-  float4 storage;
-  float elem[4];
+  // float4 storage;
+  // float elem[4];
+  uint4 storage;
+  uint32_t elem[4];
 };
 
 template<typename T>
@@ -157,13 +159,13 @@ __device__ void SetCublasBitMask(const int32_t aux_ld,
 #define RETURN_VOID_IF_DOUBLE typename std::enable_if_t<std::is_same<T, double>::value, void>
 
 template<typename T, int pack_size, bool relu>
-__global__ RETURN_VOID_IF_FLOAT FusedVectorizedReluDropoutKernel(uint64_t seed,
-                                                    one::CUDAGeneratorState* cuda_gen_state,
-                                                    uint64_t inc_offset, const int64_t elem_cnt,
-                                                    const int32_t aux_ld, 
-                                                    const int64_t cols,  
-                                                    float rate, float scale, 
-                                                    const T* x, int32_t* mask, T* y) {
+__global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
+                                                one::CUDAGeneratorState* cuda_gen_state,
+                                                uint64_t inc_offset, const int64_t elem_cnt,
+                                                const int32_t aux_ld, 
+                                                const int64_t cols,  
+                                                const uint32_t rate, float scale, 
+                                                const T* x, int32_t* mask, T* y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
@@ -182,12 +184,13 @@ __global__ RETURN_VOID_IF_FLOAT FusedVectorizedReluDropoutKernel(uint64_t seed,
     const int64_t col = linear_index - row * cols; 
     int32_t thread_bitmask = 0; 
 
-    rand_uniform_pack4.storage = curand_uniform4(&state);
+    // rand_uniform_pack4.storage = curand_uniform4(&state);
+    rand_uniform_pack4.storage = curand4(&state);
+
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
     LoadPack x_vec;
     x_vec.storage = *x_load;
 
-    MaskPack mask_vec;
     LoadPack y_vec;
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
@@ -200,9 +203,9 @@ __global__ RETURN_VOID_IF_FLOAT FusedVectorizedReluDropoutKernel(uint64_t seed,
       bool mask_val = rand_uniform_pack4.elem[i] > rate;
       // Combined relu_mask, dropout_mask together. 
       bool combined_mask = relu_mask && mask_val; 
-      T float_combined_mask = static_cast<float>(combined_mask);
+      T t_combined_mask = static_cast<T>(combined_mask);
       thread_bitmask |= (combined_mask << i); 
-      y_vec.elem[i] = x_vec.elem[i] * float_combined_mask * t_scale;
+      y_vec.elem[i] = x_vec.elem[i] * t_combined_mask * t_scale;
     }
     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
     SetCublasBitMask<4>(aux_ld, row, col, thread_bitmask, mask);
@@ -271,163 +274,6 @@ __global__ void FusedReluDropoutKernel(uint64_t seed,
   }
 }
 
-
-// template<typename T, int pack_size, bool tail>
-// __global__ RETURN_VOID_IF_HALF FusedVectorizedReluDropoutKernel(uint64_t seed,
-//                                                    one::CUDAGeneratorState* cuda_gen_state,
-//                                                    uint64_t inc_offset, const int64_t elem_cnt,
-//                                                    float rate, float scale, int64_t n_tail,
-//                                                    const T* x, int32_t* mask, T* y, const T* tail_x,
-//                                                    int32_t* tail_mask, T* tail_y) {
-//   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-//   curandStatePhilox4_32_10_t state;
-//   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-//   using LoadType = cuda::elementwise::PackType<T, pack_size>;
-//   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-//   using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
-//   using StorePack = cuda::elementwise::Pack<Pack2Type<T>, pack_size / 2>;
-//   using MaskType = cuda::elementwise::PackType<bool, pack_size>;
-//   using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
-
-//   RandPack4 rand_uniform_pack4;
-//   Pack2Type<T> h2_scale = Make2<T>(scale);
-//   T zero_val = static_cast<T>(0.0);
-
-//   for (int64_t linear_index = global_thread_id * pack_size,
-//                step = gridDim.x * blockDim.x * pack_size;
-//        linear_index < elem_cnt; linear_index += step) {
-//     rand_uniform_pack4.storage = curand_uniform4(&state);
-//     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-//     H2Pack<T> x_vec{};
-//     x_vec.pack_storage.storage = *x_load;
-
-//     MaskPack mask_vec;
-//     StorePack y_vec;
-//     StorePack one_or_zero_h2;
-
-//     mask_vec.elem[0] = rand_uniform_pack4.elem[0] > rate;
-//     float tmp_float_mask = static_cast<float>(mask_vec.elem[0]);
-//     one_or_zero_h2.elem[0].x = tmp_float_mask;
-//     mask_vec.elem[1] = rand_uniform_pack4.elem[1] > rate;
-//     tmp_float_mask = static_cast<float>(mask_vec.elem[1]);
-//     one_or_zero_h2.elem[0].y = tmp_float_mask;
-
-//     // relu
-//     x_vec.h2[0].x = x_vec.h2[0].x > zero_val ? x_vec.h2[0].x : x_vec.h2[0].x;
-//     x_vec.h2[0].y = x_vec.h2[0].y > zero_val ? x_vec.h2[0].y : x_vec.h2[0].y;
-//     // dropout
-//     y_vec.elem[0] = __hmul2(__hmul2(x_vec.h2[0], one_or_zero_h2.elem[0]), h2_scale);
-
-//     mask_vec.elem[2] = rand_uniform_pack4.elem[2] > rate;
-//     tmp_float_mask = static_cast<float>(mask_vec.elem[2]);
-//     one_or_zero_h2.elem[1].x = tmp_float_mask;
-//     mask_vec.elem[3] = rand_uniform_pack4.elem[3] > rate;
-//     tmp_float_mask = static_cast<float>(mask_vec.elem[3]);
-//     one_or_zero_h2.elem[1].y = tmp_float_mask;
-
-//     // relu
-//     x_vec.h2[1].x = x_vec.h2[1].x > zero_val ? x_vec.h2[1].x : x_vec.h2[1].x;
-//     x_vec.h2[1].y = x_vec.h2[1].y > zero_val ? x_vec.h2[1].y : x_vec.h2[1].y;
-//     // dropout
-//     y_vec.elem[1] = __hmul2(__hmul2(x_vec.h2[1], one_or_zero_h2.elem[1]), h2_scale);
-
-//     *(reinterpret_cast<StoreType*>(y + linear_index)) = y_vec.storage;
-//     *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
-//   }
-
-//   if (tail && global_thread_id < n_tail) {
-//     // relu
-//     T tail_x_val = tail_x[global_thread_id];
-//     T tail_out = tail_x_val > zero_val ? tail_x_val : zero_val;
-//     // dropout
-//     const float rand_uniform = curand_uniform(&state);
-//     const bool mask_val = rand_uniform > rate;
-//     tail_mask[global_thread_id] = mask_val;
-//     float tmp_half_mask = static_cast<float>(mask_val);
-//     tail_out = tail_out * static_cast<T>(tmp_half_mask) * h2_scale.x;
-//     tail_y[global_thread_id] = tail_out;
-//   }
-
-//   __syncthreads();
-//   if (threadIdx.x == 0) {
-//     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-//     if (new_counter == gridDim.x) {
-//       cuda_gen_state->dev_counter = 0;           // reset counter to zero
-//       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-//     }
-//   }
-// }
-
-// template<typename T, int pack_size, bool tail>
-// __global__ RETURN_VOID_IF_DOUBLE FusedVectorizedReluDropoutKernel(uint64_t seed,
-//                                                      one::CUDAGeneratorState* cuda_gen_state,
-//                                                      uint64_t inc_offset, const int64_t elem_cnt,
-//                                                      float rate, float scale, int64_t n_tail,
-//                                                      const T* x, int32_t* mask, T* y, const T* tail_x,
-//                                                      int32_t* tail_mask, T* tail_y) {
-//   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-//   curandStatePhilox4_32_10_t state;
-//   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
-//   using LoadType = cuda::elementwise::PackType<T, pack_size>;
-//   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-//   using MaskType = cuda::elementwise::PackType<bool, pack_size>;
-//   using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
-
-//   RandPack4 rand_uniform_pack4;
-//   bool grid_loop_rand_state = 0;
-//   T zero_val = static_cast<T>(0.0);
-
-//   for (int64_t linear_index = global_thread_id * pack_size; linear_index < elem_cnt;
-//        linear_index += gridDim.x * blockDim.x * pack_size) {
-//     if (grid_loop_rand_state == 0) {
-//       rand_uniform_pack4.storage = curand_uniform4(&state);
-//       grid_loop_rand_state ^= 1;
-//     } else {
-//       // Use the last two random numbers we generated in previous iteration.
-//       rand_uniform_pack4.elem[0] = rand_uniform_pack4.elem[2];
-//       rand_uniform_pack4.elem[1] = rand_uniform_pack4.elem[3];
-//       grid_loop_rand_state ^= 1;
-//     }
-//     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-//     LoadPack x_vec;
-//     x_vec.storage = *x_load;
-
-//     MaskPack mask_vec;
-//     LoadPack y_vec;
-// #pragma unroll
-//     for (int i = 0; i < pack_size; i++) {
-//       // Relu
-//       y_vec.elem[i] = x_vec.elem[i] > zero_val ? x_vec.elem[i] : zero_val;
-//       // Dropout
-//       mask_vec.elem[i] = rand_uniform_pack4.elem[i] > rate;
-//       y_vec.elem[i] = y_vec.elem[i] * mask_vec.elem[i] * scale;
-//     }
-//     *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
-//     *(reinterpret_cast<MaskType*>(mask + linear_index)) = mask_vec.storage;
-//   }
-
-//   if (tail && global_thread_id < n_tail) {
-//     // relu
-//     T tail_x_val = tail_x[global_thread_id];
-//     T tail_out = tail_x_val > zero_val ? tail_x_val : zero_val;
-//     // dropout
-//     const float rand_uniform = curand_uniform(&state);
-//     const bool mask_val = rand_uniform > rate;
-//     tail_mask[global_thread_id] = mask_val;
-//     tail_out = tail_out * mask_val * scale;
-//     tail_y[global_thread_id] = tail_out;
-//   }
-
-//   __syncthreads();
-//   if (threadIdx.x == 0) {
-//     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
-//     if (new_counter == gridDim.x) {
-//       cuda_gen_state->dev_counter = 0;           // reset counter to zero
-//       cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
-//     }
-//   }
-// }
-
 template<int pack_size>
 unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
   auto* cuda_stream = stream->As<ep::CudaStream>();
@@ -474,8 +320,9 @@ void LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
     constexpr int pack_size = GetDropoutPackSize<T>();
     const int64_t pack_num = elem_cnt / pack_size;
     unsigned int grid_size = ComputeGridSize<4>(stream, kBlockSize, elem_cnt);
+    const uint32_t int_rate = UINT_MAX * rate; 
     FusedVectorizedReluDropoutKernel<T, pack_size, relu><<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(
-      seed, cuda_gen_state, inc_offset, elem_cnt, aux_ld, cols, rate, scale, x, mask, y
+      seed, cuda_gen_state, inc_offset, elem_cnt, aux_ld, cols, int_rate, scale, x, mask, y
     );   
   } else {
     printf("Launch this \n"); 
@@ -506,9 +353,15 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
     return CreateCublasFusedMLPKernelCache();
   }
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+    user_op::KernelInitContext* ctx) const override {
+    const auto& generator = CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA));
+    return std::make_shared<FusedDropoutKernelState>(generator);
+  }
+
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* dropout_state,
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const override {
     /*
     Fused DenseActivation Layer. Assume we have two layers:
@@ -529,7 +382,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     bool skip_final_activation = ctx->Attr<bool>("skip_final_activation");
 
-    auto* fused_dropout_kernel_state = dynamic_cast<FusedDropoutKernelState*>(dropout_state);
+    auto* fused_dropout_kernel_state = dynamic_cast<FusedDropoutKernelState*>(state);
     CHECK_NOTNULL(fused_dropout_kernel_state);
     const auto& generator = fused_dropout_kernel_state->generator();
     CHECK_NOTNULL(generator);
@@ -606,6 +459,8 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       printf("Aux ld is: %d \n", aux_ld); 
       printf("out feature is: %d \n", out_feature); 
       if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+      OF_CUDA_CHECK(cudaMemsetAsync(cublas_aux->mut_dptr(), 0, batchsize * aux_ld * sizeof(int32_t),
+        cuda_stream->cuda_stream()));
 
       if (idx != weight_size - 1 || !skip_final_activation) {
         LaunchFusedReluDropoutKernel<T, true>(cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, 
@@ -650,7 +505,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
 
 // REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(double, DataType::kDouble)
 REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(float, DataType::kFloat)
-// REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(half, DataType::kFloat16)
+REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(half, DataType::kFloat16)
 // REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16)
 
 }  // namespace
