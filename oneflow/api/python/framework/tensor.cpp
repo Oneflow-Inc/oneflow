@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/api/python/framework/tensor.h"
 
+#include <methodobject.h>
 #include <pybind11/pybind11.h>
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
@@ -35,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
+#include "oneflow/api/python/framework/tensor_functions.h"
 
 namespace py = pybind11;
 
@@ -320,7 +322,23 @@ static PyObject* PyTensorObject__register_storage_delete_hook(PyObject* self, Py
   END_HANDLE_ERRORS
 }
 
-static PyMethodDef PyTensorObject_methods[] = {
+PyMethodDef* PyTensorObject_methods = NULL;
+
+PyMethodDef* concat_method_def(PyMethodDef original_methods[], PyMethodDef extra_methods[]) {
+  int len1 = 0;
+  int len2 = 0;
+  PyMethodDef* p1 = original_methods;
+  PyMethodDef* p2 = extra_methods;
+  while ((p1++)->ml_name != NULL) { len1++; }
+  while ((p2++)->ml_name != NULL) { len2++; }
+  PyMethodDef* total_methods = new PyMethodDef[len1 + len2 + 1];
+  for (int i = 0; i < len1; i++) total_methods[i] = original_methods[i];
+  for (int i = 0; i < len2; i++) total_methods[i + len1] = extra_methods[i];
+  total_methods[len1 + len2] = {NULL};
+  return total_methods;
+}
+
+static PyMethodDef PyTensorObject_original_methods[] = {
     {"storage_offset", PyTensorObject_storage_offset, METH_NOARGS, NULL},
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
@@ -531,6 +549,10 @@ static PyHeapTypeObject* MakeTensorMetaclass() {
   return heap_type;
 }
 
+extern PyNumberMethods PyTensorObject_as_number;
+extern PyObject* PyTensorObject_richcompare(PyObject*, PyObject*, int);
+extern PyMethodDef PyTensorObject_extra_methods[];
+
 static PyHeapTypeObject* TensorMetaclass_Type = MakeTensorMetaclass();
 
 static PyTypeObject* MakeTensorType() {
@@ -548,11 +570,15 @@ static PyTypeObject* MakeTensorType() {
   type->tp_init = PyTensorObject_init;
   type->tp_dealloc = PyTensorObject_dealloc;
   type->tp_getset = PyTensorObject_properties;
-  type->tp_methods = PyTensorObject_methods;
+  type->tp_methods = PyTensorObject_original_methods;
+  // type->tp_methods =
+  //     concat_method_def(PyTensorObject_original_methods, PyTensorObject_extra_methods);
 
-  type->tp_as_number = &heap_type->as_number;
+  // type->tp_as_number = &heap_type->as_number;
+  type->tp_as_number = &PyTensorObject_as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
+  // type->tp_richcompare = PyTensorObject_richcompare;
 
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 

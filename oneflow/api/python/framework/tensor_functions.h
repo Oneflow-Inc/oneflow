@@ -18,12 +18,12 @@ limitations under the License.
 
 #include <Python.h>
 
-
 namespace oneflow {
 namespace one {
 
 extern PyNumberMethods PyTensorObject_as_number;
 extern PyMethodDef PyTensorObject_extra_methods[];
+extern PyObject* PyTensorObject_richcompare(PyObject*, PyObject*, int);
 
 }  // namespace one
 }  // namespace oneflow

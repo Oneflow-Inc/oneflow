@@ -42,22 +42,22 @@ namespace one {
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
-#define NB_UNARY_FUNC(func_name, bind_func, name)               \
+#define NB_UNARY_FUNC(func_name, bind_func, name)            \
   static PyObject* func_name(PyObject* self) {               \
     HANDLE_ERRORS                                            \
     PyObject* tuple = PyTuple_Pack(1, self);                 \
-    std::cout << "cpython " << name << std::endl; \
+    std::cout << "cpython " << name << std::endl;            \
     auto* result = bind_func(NULL, tuple, NULL);             \
     if (PyErr_Occurred()) { throw py::error_already_set(); } \
     return result;                                           \
     END_HANDLE_ERRORS                                        \
   }
 
-#define NB_BINARY_FUNC(func_name, bind_func, name)              \
+#define NB_BINARY_FUNC(func_name, bind_func, name)           \
   static PyObject* func_name(PyObject* a, PyObject* b) {     \
     HANDLE_ERRORS                                            \
     PyObject* tuple = PyTuple_Pack(2, a, b);                 \
-    std::cout << "cpython " << name << std::endl; \
+    std::cout << "cpython " << name << std::endl;            \
     auto* result = bind_func(NULL, tuple, NULL);             \
     if (PyErr_Occurred()) { throw py::error_already_set(); } \
     return result;                                           \
@@ -179,7 +179,6 @@ PyNumberMethods PyTensorObject_as_number = {
     NULL,                            // not implemented yet nb_inplace_matrix_multiply
 
 };
-
 
 // extra methods
 
@@ -328,8 +327,34 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"sin_", PyTensorObject_sin_, METH_NOARGS, NULL},
     {"isnan", PyTensorObject_isnan, METH_NOARGS, NULL},
     {"isinf", PyTensorObject_isinf, METH_NOARGS, NULL},
+
+    {"floor_divide", PyTensorObject_div, METH_O, NULL},
+    {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
+    {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
+    {NULL},
 };
 
+// tp_richcompare
+
+PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
+  std::cout << "cpython compare" << std::endl;
+  PyObject* tuple = PyTuple_Pack(2, self, other);
+
+  switch (op) {
+    case Py_LT: return functional::less(NULL, tuple, NULL);
+    case Py_LE: return functional::less_equal(NULL, tuple, NULL);
+    case Py_EQ: {
+      if (self == Py_None || other == Py_None) return Py_False;
+      return functional::equal(NULL, tuple, NULL);
+    }
+    case Py_NE: return functional::not_equal(NULL, tuple, NULL);
+    case Py_GT: return functional::greater(NULL, tuple, NULL);
+    case Py_GE: return functional::greater_equal(NULL, tuple, NULL);
+  }
+  return NULL;
+}
+
+// normal methods
 
 }  // namespace one
 }  // namespace oneflow
