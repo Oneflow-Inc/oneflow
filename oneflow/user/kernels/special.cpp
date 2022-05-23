@@ -42,13 +42,6 @@ struct EntrGradFunctor<DeviceType::kCPU, T> {
   }
 };
 
-template<typename T>
-struct ErfFunctor<DeviceType::kCPU, T> {
-  OF_DEVICE_FUNC T operator()(const T x, const T dy) const {
-
-  }
-};
-
 #define REGISTER_SPECIAL_OPS_CPU_KERNEL(kernel_name, func_prefix)                             \
   REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCPU, float); \
   REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCPU, double);

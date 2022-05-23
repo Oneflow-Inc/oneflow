@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_ENTR_H
-#define ONEFLOW_USER_KERNELS_ENTR_H
+#ifndef ONEFLOW_USER_KERNELS_SPECIAL_H
+#define ONEFLOW_USER_KERNELS_SPECIAL_H
 #include <cmath>
 #include <limits>
 #include "oneflow/core/common/device_type.pb.h"
@@ -70,4 +70,4 @@ OF_PP_FOR_EACH_TUPLE(DECL_SPECIAL_OPS_FUNCTORS, SPECIAL_UNARY_OPS)
                             "dx", "x", "dy");
 
 }  // namespace oneflow
-#endif  // ONEFLOW_USER_KERNELS_ENTR_H
+#endif  // ONEFLOW_USER_KERNELS_SPECIAL_H
