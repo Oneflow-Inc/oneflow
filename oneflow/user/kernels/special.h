@@ -21,15 +21,17 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/user/kernels/elementwise_xpu_kernel.h"
 namespace oneflow {
-template<DeviceType device_type, typename T>
-struct EntrFunctor {
-  OF_DEVICE_FUNC T operator()(const T x) const;
-};
 
-template<DeviceType device_type, typename T>
-struct EntrGradFunctor {
-  OF_DEVICE_FUNC T operator()(const T x, const T dy) const;
-};
+#define SPECIAL_UNARY_OPS OF_PP_MAKE_TUPLE_SEQ("entr", Entr)
+
+#define DECL_SPECIAL_OPS_FUNCTORS(placeholder, functor_name) \
+  template<DeviceType device_type, typename T>               \
+  struct functor_name##Functor;                              \
+  template<DeviceType device_type, typename T>               \
+  struct functor_name##GradFunctor;
+
+OF_PP_FOR_EACH_TUPLE(DECL_SPECIAL_OPS_FUNCTORS, SPECIAL_UNARY_OPS)
+#undef DECL_SPECIAL_OPS_FUNCTORS
 
 #define REGISTER_ENTR_KERNEL(device, kernel_name, functor, out_dtype, input_a_dtype,               \
                              create_function, out_name, input_a_name)                              \
@@ -56,14 +58,16 @@ struct EntrGradFunctor {
           (user_op::HobDeviceType() == device)                                             \
           && (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
-#define REGISTER_ENTR_KERNEL_DEVICE_TYPE(device, type)                                             \
-  REGISTER_ENTR_KERNEL(                                                                            \
-      device, "entr", EntrFunctor, type, type,                                                     \
-      ([](user_op::KernelComputeContext* ctx) { return EntrFunctor<device, type>(); }), "y", "x"); \
-  REGISTER_ENTR_GRAD_KERNEL(                                                                       \
-      device, "entr_grad", EntrGradFunctor, type, type, type,                                      \
-      ([](user_op::KernelComputeContext* ctx) { return EntrGradFunctor<device, type>(); }), "dx",  \
-      "x", "dy");
+#define REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, device, type)          \
+  REGISTER_ENTR_KERNEL(                                                                          \
+      device, kernel_name, func_prefix##Functor, type, type,                                     \
+      ([](user_op::KernelComputeContext* ctx) { return func_prefix##Functor<device, type>(); }), \
+      "y", "x");                                                                                 \
+  REGISTER_ENTR_GRAD_KERNEL(device, kernel_name "_grad", func_prefix##GradFunctor, type, type,   \
+                            type, ([](user_op::KernelComputeContext* ctx) {                      \
+                              return func_prefix##GradFunctor<device, type>();                   \
+                            }),                                                                  \
+                            "dx", "x", "dy");
 
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_KERNELS_ENTR_H
