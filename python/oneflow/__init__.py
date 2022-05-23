@@ -405,9 +405,9 @@ from . import (
     boxing,
     backends,
     amp,
+    special,
 )
 import oneflow.utils.data
-import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing

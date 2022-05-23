@@ -2183,3 +2183,6 @@
   signature: "Tensor (Tensor input) => PinMemory"
   bind_python: True
 
+- name: "entr"
+  signature: "Tensor (Tensor input) => Entr"
+  bind_python: True

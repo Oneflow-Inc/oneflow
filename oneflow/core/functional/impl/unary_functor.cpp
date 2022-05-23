@@ -43,32 +43,33 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                         \
   OF_PP_MAKE_TUPLE_SEQ("round", Round)
 
-#define FLOAT_UNARY_FUNC_SEQ                     \
-  OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)           \
-  OF_PP_MAKE_TUPLE_SEQ("asin", Asin)             \
-  OF_PP_MAKE_TUPLE_SEQ("asinh", Asinh)           \
-  OF_PP_MAKE_TUPLE_SEQ("atan", Atan)             \
-  OF_PP_MAKE_TUPLE_SEQ("atanh", Atanh)           \
-  OF_PP_MAKE_TUPLE_SEQ("sin", Sin)               \
-  OF_PP_MAKE_TUPLE_SEQ("cos", Cos)               \
-  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)               \
-  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)             \
-  OF_PP_MAKE_TUPLE_SEQ("exp", Exp)               \
-  OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)           \
-  OF_PP_MAKE_TUPLE_SEQ("log", Log)               \
-  OF_PP_MAKE_TUPLE_SEQ("log2", Log2)             \
-  OF_PP_MAKE_TUPLE_SEQ("log1p", Log1p)           \
-  OF_PP_MAKE_TUPLE_SEQ("negative", Negative)     \
-  OF_PP_MAKE_TUPLE_SEQ("reciprocal", Reciprocal) \
-  OF_PP_MAKE_TUPLE_SEQ("rsqrt", Rsqrt)           \
-  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid)    \
-  OF_PP_MAKE_TUPLE_SEQ("sign", Sign)             \
-  OF_PP_MAKE_TUPLE_SEQ("sinh", Sinh)             \
-  OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)             \
-  OF_PP_MAKE_TUPLE_SEQ("square", Square)         \
-  OF_PP_MAKE_TUPLE_SEQ("tan", Tan)               \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             \
-  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
+#define FLOAT_UNARY_FUNC_SEQ                           \
+  OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)                 \
+  OF_PP_MAKE_TUPLE_SEQ("asin", Asin)                   \
+  OF_PP_MAKE_TUPLE_SEQ("asinh", Asinh)                 \
+  OF_PP_MAKE_TUPLE_SEQ("atan", Atan)                   \
+  OF_PP_MAKE_TUPLE_SEQ("atanh", Atanh)                 \
+  OF_PP_MAKE_TUPLE_SEQ("sin", Sin)                     \
+  OF_PP_MAKE_TUPLE_SEQ("cos", Cos)                     \
+  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)                     \
+  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)                   \
+  OF_PP_MAKE_TUPLE_SEQ("exp", Exp)                     \
+  OF_PP_MAKE_TUPLE_SEQ("expm1", Expm1)                 \
+  OF_PP_MAKE_TUPLE_SEQ("log", Log)                     \
+  OF_PP_MAKE_TUPLE_SEQ("log2", Log2)                   \
+  OF_PP_MAKE_TUPLE_SEQ("log1p", Log1p)                 \
+  OF_PP_MAKE_TUPLE_SEQ("negative", Negative)           \
+  OF_PP_MAKE_TUPLE_SEQ("reciprocal", Reciprocal)       \
+  OF_PP_MAKE_TUPLE_SEQ("rsqrt", Rsqrt)                 \
+  OF_PP_MAKE_TUPLE_SEQ("sigmoid_v2", Sigmoid)          \
+  OF_PP_MAKE_TUPLE_SEQ("sign", Sign)                   \
+  OF_PP_MAKE_TUPLE_SEQ("sinh", Sinh)                   \
+  OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)                   \
+  OF_PP_MAKE_TUPLE_SEQ("square", Square)               \
+  OF_PP_MAKE_TUPLE_SEQ("tan", Tan)                     \
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)                   \
+  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero) \
+  OF_PP_MAKE_TUPLE_SEQ("entr", Entr)
 
 #define LOGICAL_FLOAT_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
 
@@ -153,6 +154,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR(Tan, "Tan");
   ADD_UNARY_FUNCTOR(Tanh, "Tanh");
   ADD_UNARY_FUNCTOR(NotEqualZero, "NotEqualZero")
+  ADD_UNARY_FUNCTOR(Entr, "Entr")
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
   m.add_functor<InplaceFloorFunctor>("Floor_");
