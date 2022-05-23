@@ -78,7 +78,7 @@ class DeviceManagerRegistry::Impl {
       if (!name.empty()) { return name; }
     }
     std::lock_guard<std::mutex> factories_lock(*factories_mutex());
-    if (factories()->size() <= device_type) { return ""; }
+    if (factories()->size() <= device_type) { return "invalid_device"; }
     auto& factory = factories()->at(device_type);
     if (!factory) {
       return "invalid_device";
