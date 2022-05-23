@@ -524,7 +524,8 @@ __global__ void DotFeatureInteractionHalf(int64_t batch_size, int padded_num_row
                                           int out_num_cols_num_pack, int in_shared_mem_cols,
                                           int in_shared_mem_cols_num_pack, int acc_shared_mem_cols,
                                           int acc_shared_mem_cols_num_pack,
-                                          int warp_shared_mem_bytes, DotFwdParam<half, N> param) {
+                                          int warp_shared_mem_bytes, int offset,
+                                          DotFwdParam<half, N> param) {
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
   half* buf = reinterpret_cast<half*>(shared_buf + warp_id * warp_shared_mem_bytes);
@@ -536,7 +537,6 @@ __global__ void DotFeatureInteractionHalf(int64_t batch_size, int padded_num_row
     half* batch_out = param.out + batch_idx * out_num_cols;
     Pack<half, pack_size>* batch_out_pack =
         reinterpret_cast<Pack<half, pack_size>*>(param.out) + batch_idx * out_num_cols_num_pack;
-
     for (int col = threadIdx.x; col < vector_num_pack; col += blockDim.x) {
 #pragma unroll
       for (int i = 0; i < N; ++i) {
@@ -600,11 +600,11 @@ __global__ void DotFeatureInteractionHalf(int64_t batch_size, int padded_num_row
     }
 
     half* emb_out = reinterpret_cast<half*>(batch_out_pack + vector_num_pack);
-    for (int row = 0; row < M_BLOCKS * TILE_DIM; ++row) {
-      for (int col = threadIdx.x; col < M_BLOCKS * TILE_DIM; col += blockDim.x) {
+    for (int row = 0; row < param.features_dim; ++row) {
+      for (int col = threadIdx.x; col < param.features_dim; col += blockDim.x) {
         if (col < row) {
-          int64_t offset = (row * (row - 1)) / 2 + col;
-          emb_out[offset] = __float2half(acc_buf[row * acc_shared_mem_cols + col]);
+          int64_t idx = row * (offset + row - 1 + offset) / 2 + col;
+          emb_out[idx] = __float2half(acc_buf[row * acc_shared_mem_cols + col]);
         }
       }
     }
@@ -651,28 +651,28 @@ void DispatchFeatureInteractionDotPackSize(ep::Stream* stream, const int64_t bat
   const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
   const int acc_shared_mem_cols_num_pack = acc_shared_mem_num_cols / pack_size;
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-
+  const int32_t offset = self_interaction ? 1 : 0;
   if (pack_size == 4) {
     DotFeatureInteractionHalf<N, 4, TILE_DIM, M_BLOCKS, K_BLOCKS>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), block_dim_y * warp_shared_mem_bytes,
            cuda_stream>>>(batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
                           out_num_cols_num_pack, in_shared_mem_num_cols,
                           in_shared_mem_cols_num_pack, acc_shared_mem_num_cols,
-                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, param);
+                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, offset, param);
   } else if (pack_size == 2) {
     DotFeatureInteractionHalf<N, 2, TILE_DIM, M_BLOCKS, K_BLOCKS>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), block_dim_y * warp_shared_mem_bytes,
            cuda_stream>>>(batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
                           out_num_cols_num_pack, in_shared_mem_num_cols,
                           in_shared_mem_cols_num_pack, acc_shared_mem_num_cols,
-                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, param);
+                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, offset, param);
   } else {
     DotFeatureInteractionHalf<N, 1, TILE_DIM, M_BLOCKS, K_BLOCKS>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), block_dim_y * warp_shared_mem_bytes,
            cuda_stream>>>(batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
                           out_num_cols_num_pack, in_shared_mem_num_cols,
                           in_shared_mem_cols_num_pack, acc_shared_mem_num_cols,
-                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, param);
+                          acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, offset, param);
   }
 }
 
