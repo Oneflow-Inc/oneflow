@@ -30,7 +30,7 @@ struct UnaryFunctor;
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
-  explicit UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     const Src zero_val = static_cast<Src>(0.0);
@@ -44,17 +44,9 @@ struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kLogicalNot, Dst, Src> {
-  explicit UnaryFunctor(Scalar attr0, Scalar attr1) {}
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const { return static_cast<Dst>(!src); }
-};
-
-template<DeviceType device, typename Dst, typename Src>
-struct UnaryFunctor<device, UnaryOp::kLeakyRelu, Dst, Src> {
-  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<Src>()) {}
-
-  OF_DEVICE_FUNC Dst operator()(Src src) const { return (src > 0) ? src : alpha * src; }
-  const Src alpha;
 };
 
 }  // namespace primitive
