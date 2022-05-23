@@ -2168,11 +2168,11 @@ class TensorSplitVecFunctor {
     for (int32_t i = 0; i < num_indices; i++) {
       int32_t end_idx = indices_or_sections[i];
       stop[pos_dim] = end_idx;
-      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
       start[pos_dim] = end_idx;
     }
     stop[pos_dim] = input->shape()->At(ndim - 1);
-    output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
+    output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
 
     return output;
   }
@@ -2205,7 +2205,7 @@ class TensorSplitIntFunctor {
     for (int32_t i = 0; i < indices_or_sections; i++) {
       int64_t split_size = (i < num_splits_one_extra) ? (min_split_size + 1) : min_split_size;
       stop[pos_dim] += split_size;
-      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/true));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
       start[pos_dim] += split_size;
     }
 
@@ -2347,19 +2347,6 @@ class CumProdFunctor : public CumBaseFunctor {
 class CumGradBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> op_;
-};
-
-class CumsumGradFunctor : public CumGradBaseFunctor {
- public:
-  CumsumGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    // No need to check dim validation here, while CumsumFunctor handled already
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-  }
 };
 
 class CumProdGradFunctor : public CumGradBaseFunctor {
@@ -3048,7 +3035,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvFunctor>("Erfinv");
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
-  m.add_functor<CumsumGradFunctor>("CumsumGrad");
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");

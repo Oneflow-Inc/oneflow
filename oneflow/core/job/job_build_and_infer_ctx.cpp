@@ -186,6 +186,18 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
     (*op_name2is_mirrored_parallel_view)[operator_conf.name()] = true;
   }
   job_->mutable_net()->add_op()->CopyFrom(operator_conf);
+
+  // set up the module config
+  const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(operator_conf.scope_symbol_id());
+  if (scope.scope_proto().has_module_name()) {
+    const auto& module_name = scope.scope_proto().module_name();
+    auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+    if (!(*module_name2module_conf)[module_name].has_name()) {
+      (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
+    }
+
+    (*module_name2module_conf)[module_name].add_ops()->CopyFrom(operator_conf);
+  }
 }
 
 Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
@@ -1167,10 +1179,11 @@ void FormateUserConf(nlohmann::json& json_conf) {
     json_conf.erase(json_conf.find("user_conf"));
     return;
   }
-  std::string nomarl_array[] = {"at_int32",  "at_int64",  "at_bool",  "at_float",
-                                "at_double", "at_string", "at_shape", "at_data_type"};
+  std::string nomarl_array[] = {"at_int32",  "at_int64", "at_bool",   "at_float",    "at_double",
+                                "at_string", "at_shape", "at_stride", "at_data_type"};
   std::string list_array[] = {"at_list_int32",     "at_list_int64", "at_list_float",
-                              "at_list_data_type", "at_list_shape", "at_list_string"};
+                              "at_list_data_type", "at_list_shape", "at_list_stride",
+                              "at_list_string"};
   nlohmann::json attr_json = user_conf["attr"];
   for (int32_t i = 0; i < attr_json.size(); i++) {
     std::string key = attr_json[i]["key"];
@@ -1180,7 +1193,7 @@ void FormateUserConf(nlohmann::json& json_conf) {
       std::string value_key = nomarl_array[j];
       if (value_json.contains(value_key)) {
         is_found_normal = true;
-        if ("at_shape" == value_key) {
+        if ("at_shape" == value_key || "at_stride" == value_key) {
           json_conf[key] = value_json[value_key]["dim"];
         } else {
           json_conf[key] = value_json[value_key];
