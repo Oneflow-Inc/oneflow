@@ -19,32 +19,101 @@ limitations under the License.
 #include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
 namespace oneflow {
 #ifdef WITH_CUDA
-template<typename T>
-struct EntrFunctor<DeviceType::kCUDA, T> {
-  OF_DEVICE_FUNC T operator()(const T x) const {
-    if (x > static_cast<T>(0)) {
-      return -x * log(x);
-    } else if (x == static_cast<T>(0)) {
-      return static_cast<T>(0);
+namespace {
+#define HALF_VAL_2RSQRT_PI __float2half(1.1283791671f)
+}  // namespace
+template<>
+struct EntrFunctor<DeviceType::kCUDA, float> {
+  __device__ float operator()(const float x) const {
+    if (x > 0.0f) {
+      return -x * logf(x);
+    } else if (x == 0.0f) {
+      return 0.0f;
     } else {
       // -inf
       return -INFINITY;
     }
   }
 };
-template<typename T>
-struct EntrGradFunctor<DeviceType::kCUDA, T> {
-  OF_DEVICE_FUNC T operator()(const T x, const T dy) const {
-    if (x > static_cast<T>(0)) {
-      return (-log(x) - 1) * dy;
-    } else if (x == static_cast<T>(0)) {
-      // inf
-      return INFINITY;
+
+template<>
+struct EntrFunctor<DeviceType::kCUDA, double> {
+  __device__ double operator()(const double x) const {
+    if (x > 0.0) {
+      return -x * log(x);
+    } else if (x == 0.0) {
+      return 0.0;
     } else {
-      return detail::Nan<T>();
+      // -inf
+      return -INFINITY;
     }
   }
 };
+
+template<>
+struct EntrGradFunctor<DeviceType::kCUDA, float> {
+  __device__ float operator()(const float x, const float dy) const {
+    if (x > 0.0f) {
+      return (-logf(x) - 1) * dy;
+    } else if (x == 0.0f) {
+      // inf
+      return INFINITY;
+    } else {
+      return detail::Nan<float>();
+    }
+  }
+};
+
+template<>
+struct EntrGradFunctor<DeviceType::kCUDA, double> {
+  __device__ double operator()(const double x, const double dy) const {
+    if (x > 0.0) {
+      return (-log(x) - 1) * dy;
+    } else if (x == 0.0) {
+      // inf
+      return INFINITY;
+    } else {
+      return detail::Nan<double>();
+    }
+  }
+};
+
+template<>
+struct ErfFunctor<DeviceType::kCUDA, float> {
+  __device__ float operator()(const float x) const { return erff(x); }
+};
+
+template<>
+struct ErfFunctor<DeviceType::kCUDA, double> {
+  __device__ double operator()(const double x) const { return erf(x); }
+};
+
+template<>
+struct ErfFunctor<DeviceType::kCUDA, half> {
+  __device__ half operator()(const half x) const { return __float2half(erf(__half2float(x))); }
+};
+
+template<>
+struct ErfGradFunctor<DeviceType::kCUDA, float> {
+  __device__ float operator()(const float x, const float dy) const {
+    return dy * 2.0f * expf(-x * x) / sqrtf(x);
+  }
+};
+
+template<>
+struct ErfGradFunctor<DeviceType::kCUDA, double> {
+  __device__ double operator()(const double x, const double dy) const {
+    return dy * 2.0 * exp(-x * x) / sqrt(x);
+  }
+};
+
+template<>
+struct ErfGradFunctor<DeviceType::kCUDA, half> {
+  __device__ half operator()(const half x, const half dy) const {
+    return __hmul(dy, __hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x))));
+  }
+};
+
 #define REGISTER_SPECIAL_OPS_CUDA_KERNEL(kernel_name, func_prefix)                             \
   REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCUDA, float); \
   REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCUDA, double);

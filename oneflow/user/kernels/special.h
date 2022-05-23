@@ -22,7 +22,9 @@ limitations under the License.
 #include "oneflow/user/kernels/elementwise_xpu_kernel.h"
 namespace oneflow {
 
-#define SPECIAL_UNARY_OPS OF_PP_MAKE_TUPLE_SEQ("entr", Entr)
+#define SPECIAL_UNARY_OPS            \
+  OF_PP_MAKE_TUPLE_SEQ("entr", Entr) \
+  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)
 
 #define DECL_SPECIAL_OPS_FUNCTORS(placeholder, functor_name) \
   template<DeviceType device_type, typename T>               \
