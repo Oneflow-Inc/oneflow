@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/env_desc.h"
-#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_context.h"
@@ -63,7 +62,6 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 Runtime::Runtime(
     const Plan& plan,
     const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
-  LazyMode::Guard guard{true};
   DumpThreadIdsFromPlan(plan);
   {
     // NOTE(chengcheng): All runtime Global objects AddPlan
