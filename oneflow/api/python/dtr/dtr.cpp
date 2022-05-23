@@ -38,6 +38,7 @@ Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
 
 ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   m.def("enable", &EnableDTRStrategy);
+  m.def("set_left", [](bool left) { Global<vm::DtrCudaAllocator>::Get()->set_left(left); });
   m.def("is_enabled", &dtr::is_enabled);
   m.def("is_dtr_tensor", [](const std::shared_ptr<one::Tensor>& tensor) -> bool {
     return std::dynamic_pointer_cast<one::DTRMirroredTensor>(tensor) != nullptr;

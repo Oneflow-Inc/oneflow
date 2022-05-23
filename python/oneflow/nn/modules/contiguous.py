@@ -5,12 +5,12 @@ def ContiguousGrad(module):
 
     def grad_setting_fn(module, param):
         def grad_setting(grad):
-            assert param.grad is None
-            tmp = module._grad_buf[param]
-            # print('tensor info:')
-            # print(flow._oneflow_internal.dtr.tensor_info(tmp))
-            param.grad = tmp
-            param._is_grad_acc_inplace = True
+            if param.grad is None:
+                tmp = module._grad_buf[param]
+                # print('tensor info:')
+                # print(flow._oneflow_internal.dtr.tensor_info(tmp))
+                param.grad = tmp
+                param._is_grad_acc_inplace = True
             return grad
 
         return grad_setting

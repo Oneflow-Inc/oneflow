@@ -244,7 +244,6 @@ Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(
 
 Maybe<void> DTREagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
-  LOG(INFO) << "set_eager_blob_object: impl " << this << ", old: " << eager_blob_object_ << ", new: " << eager_blob_object;
   CHECK_OR_RETURN(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(eager_blob_object) != nullptr)
       << "real type: " << typeid(*eager_blob_object).name();
   bool has_eager_blob_object_already = eager_blob_object_ != nullptr;

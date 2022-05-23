@@ -114,7 +114,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       if (!outputs->at(i) || EnvBool<ONEFLOW_DTR_OLD_IMMUTABLE>()) {
         const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
-        LOG(INFO) << "tensor: " << (*outputs)[i].get() << ", impl: " << tensor_impl.get();
         output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
       } else if (EnvBool<ONEFLOW_DTR_FBIP>()) {
         if (!outputs->at(i)) {
@@ -254,7 +253,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
               }));
             });
         tensor->holder()->storage = one_tensor_storage;
-        LOG(INFO) << "fbip: update ebo of " << tensor.get() << " from " << old_ebo->id() << " to " << new_ebo->id();
         JUST(tensor->set_eager_blob_object(new_ebo));
       }
     }

@@ -36,6 +36,7 @@ class DtrCudaAllocator final : public Allocator {
   void Mark(DTREagerBlobObject* ebo, char* mem_ptr);
   void DisplayAllPieces();
   size_t allocated_memory();
+  void set_left(bool is_left) { left_ = is_left; }
 
  private:
   ptrdiff_t get_offset(const char* mem_ptr) const;

@@ -89,12 +89,8 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
     // TODO(dtr): use `is_grad_acc_inplace()` instead of hardcoded `true`
-    LOG(INFO) << "grad acc";
-    LOG(INFO) << "old id: " << std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(std::dynamic_pointer_cast<DTRMirroredTensor>(autograd_meta->acc_grad())->eager_blob_object()))->id();
     const auto& output =
         JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1, /*inplace=*/true));
-    LOG(INFO) << "grad acc end";
-    LOG(INFO) << "new id: " << std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(std::dynamic_pointer_cast<DTRMirroredTensor>(output)->eager_blob_object()))->id();
     JUST(autograd_meta->set_acc_grad(output));
   } else {
     JUST(autograd_meta->set_acc_grad(current_grad));

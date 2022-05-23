@@ -122,8 +122,9 @@ writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
 model = models.resnet50(fuse_bn_relu=False, fuse_bn_add_relu=False)
 
-# weights = flow.load("/tmp/abcdef")
-# model.load_state_dict(weights, strict=False)
+# flow.save(model.state_dict(), '/tmp/abcde')
+weights = flow.load("/tmp/abcde")
+model.load_state_dict(weights)
 
 criterion = nn.CrossEntropyLoss()
 
@@ -133,7 +134,7 @@ model.to(cuda0)
 
 criterion.to(cuda0)
 
-learning_rate = 0.1
+learning_rate = 0.001
 optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
 
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -170,7 +171,6 @@ else:
     )
 
 total_time = 0
-# train_bar = tqdm(train_data_loader, dynamic_ncols=True)
 
 if args.dtr:
     flow.nn.ContiguousGrad(model)
@@ -185,20 +185,17 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     train_label = train_label.to(cuda0)
 
     flow.comm.barrier()
-    print(f'iter {iter} start, all pieces:')
-    flow._oneflow_internal.dtr.display_all_pieces()
+    # print(f'iter {iter} start, all pieces:')
+    # flow._oneflow_internal.dtr.display_all_pieces()
 
     logits = model(train_data)
-    loss = logits.sum() # criterion(logits, train_label)
+    loss = criterion(logits, train_label)
     loss.backward()
-    # train_bar.set_description(
-    #     "Epoch {}: loss: {:.4f}".format(iter + 1, loss.item())
-    # )
-    # writer.add_scalar("Loss/train/loss", loss.item(), iter)
-    # writer.flush()
+    writer.add_scalar("Loss/train/loss", loss.item(), iter)
+    writer.flush()
 
     optimizer.step()
-    optimizer.zero_grad(True)
+    optimizer.zero_grad()
     del logits
     del loss
 
@@ -211,8 +208,9 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
             print(f'iter {iter} end, time: {this_time}')
 
     last_time = time.time()
-    print(f'iter {iter} end, all pieces:')
-    flow._oneflow_internal.dtr.display_all_pieces()
+    # print(f'iter {iter} end, all pieces:')
+    # flow._oneflow_internal.dtr.display_all_pieces()
+    flow._oneflow_internal.dtr.set_left(True)
 
 print(
 f"{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s"

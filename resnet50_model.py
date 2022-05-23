@@ -49,7 +49,7 @@ class BasicBlock(nn.Module):
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
         self.bn1 = norm_layer(planes)
-        self.relu = nn.ReLU()
+        self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = norm_layer(planes)
         self.downsample = downsample
@@ -68,7 +68,7 @@ class BasicBlock(nn.Module):
         if self.downsample is not None:
             identity = self.downsample(x)
 
-        out = out + identity
+        out += identity
         out = self.relu(out)
 
         return out
@@ -105,7 +105,7 @@ class Bottleneck(nn.Module):
         else:
             self.bn1 = norm_layer(width)
             self.bn2 = norm_layer(width)
-            self.relu = nn.ReLU()
+            self.relu = nn.ReLU(inplace=True)
 
         self.conv2 = conv3x3(width, width, stride, groups, dilation)
         self.conv3 = conv1x1(width, planes * self.expansion)
@@ -114,7 +114,7 @@ class Bottleneck(nn.Module):
             self.bn3 = nn.FusedBatchNorm2d(planes * self.expansion)
         else:
             self.bn3 = norm_layer(planes * self.expansion)
-            self.relu = nn.ReLU()
+            self.relu = nn.ReLU(inplace=True)
 
         self.downsample = downsample
         self.stride = stride
@@ -147,7 +147,7 @@ class Bottleneck(nn.Module):
             out = self.bn3(out, identity)
         else:
             out = self.bn3(out)
-            out = out + identity
+            out += identity
             out = self.relu(out)
 
         return out
@@ -194,7 +194,7 @@ class ResNet(nn.Module):
             self.bn1 = nn.FusedBatchNorm2d(self.inplanes)
         else:
             self.bn1 = norm_layer(self.inplanes)
-            self.relu = nn.ReLU()
+            self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(
