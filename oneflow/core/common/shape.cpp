@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -67,9 +66,6 @@ Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)), is_initialized
 Shape::Shape(const ShapeProto& shape_proto) : is_initialized_(true) {
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
 }
-Shape::Shape(const cfg::ShapeProto& shape_proto) : is_initialized_(true) {
-  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
-}
 
 Shape& Shape::operator=(const Shape& shape) {
   dim_vec_ = shape.dim_vec_;
@@ -79,6 +75,7 @@ Shape& Shape::operator=(const Shape& shape) {
 
 Shape& Shape::assign(const DimVector& dim_vec) {
   dim_vec_ = dim_vec;
+  is_initialized_ = true;
   return *this;
 }
 

@@ -17,6 +17,7 @@ import os
 import random
 import sys
 import traceback
+from google.protobuf import text_format
 from typing import List, Optional, Sequence, Tuple, Union
 
 import oneflow as flow
@@ -440,12 +441,18 @@ class OFRecordImageGpuDecoderRandomCropResize(Module):
         self.warmup_size = warmup_size
         self.max_num_pixels = max_num_pixels
         gpu_decoder_conf = (
-            flow._oneflow_internal.oneflow.core.operator.op_conf.ImageDecoderRandomCropResizeOpConf()
+            flow.core.operator.op_conf_pb2.ImageDecoderRandomCropResizeOpConf()
         )
-        gpu_decoder_conf.set_in("error_input_need_to_be_replaced")
-        gpu_decoder_conf.set_out("out")
+        # parse failed when excu clang format if use `gpu_decoder_conf.in = "error_input_need_to_be_replaced"`
+        setattr(gpu_decoder_conf, "in", "error_input_need_to_be_replaced")
+        gpu_decoder_conf.out = "out"
+        gpu_decoder_conf.target_width = (
+            -1
+        )  # Set the default value, otherwise the parsing fails
+        gpu_decoder_conf.target_height = -1
+        gpu_decoder_conf_str = text_format.MessageToString(gpu_decoder_conf)
         self._op = flow._oneflow_internal.one.ImageDecoderRandomCropResizeOpExpr(
-            id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf, ["in"], ["out"]
+            id_util.UniqueStr("ImageGpuDecoder"), gpu_decoder_conf_str, ["in"], ["out"]
         )
 
     def forward(self, input):
