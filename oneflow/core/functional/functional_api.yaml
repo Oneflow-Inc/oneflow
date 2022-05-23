@@ -2190,3 +2190,4 @@
 - name: "entr_grad"
   signature: "Tensor (Tensor input, Tensor dy) => EntrGrad"
   bind_python: False
+  
