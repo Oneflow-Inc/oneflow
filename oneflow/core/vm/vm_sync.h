@@ -13,16 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/blob_trait.h"
+#ifndef ONEFLOW_CORE_VM_SYNC_H_
+#define ONEFLOW_CORE_VM_SYNC_H_
+
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+namespace vm {
 
-namespace compatible_py {
+Maybe<void> ClusterSync();
+Maybe<void> CurrentRankSync();
 
-std::shared_ptr<Shape> BlobHeaderTrait::static_shape() const { UNIMPLEMENTED(); }
-std::shared_ptr<Shape> BlobHeaderTrait::shape() const { UNIMPLEMENTED(); }
-DataType BlobHeaderTrait::dtype() const { UNIMPLEMENTED(); }
-
-}  // namespace compatible_py
-
+}  // namespace vm
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_VM_SYNC_H_
