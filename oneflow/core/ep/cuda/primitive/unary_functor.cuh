@@ -87,14 +87,6 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, nv_bfloat16, nv_bfloat16>
 };
 #endif
 
-template<DeviceType device, typename Dst, typename Src>
-struct UnaryFunctor<device, UnaryOp::kLeakyRelu, Dst, Src> {
-  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<Src>()) {}
-
-  OF_DEVICE_FUNC Dst operator()(Src src) const { return (src > 0) ? src : alpha * src; }
-  const Src alpha;
-};
-
 }  // namespace primitive
 }  // namespace ep
 }  // namespace oneflow
