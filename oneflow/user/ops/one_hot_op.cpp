@@ -23,7 +23,9 @@ namespace oneflow {
   const int64_t depth = ctx->Attr<int64_t>("depth");
   CHECK_GT_OR_RETURN(depth, 0);
   const user_op::TensorDesc& indices_desc = ctx->InputTensorDesc("indices", 0);
-  CHECK_GT_OR_RETURN(indices_desc.shape().NumAxes(), 0);
+  // For 0-dim Tensor
+  CHECK_GE_OR_RETURN(indices_desc.shape().NumAxes(), 0)
+      << "indices dim must be great or equal than 0";
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = indices_desc.is_dynamic();
   DimVector dim_vec = indices_desc.shape().dim_vec();

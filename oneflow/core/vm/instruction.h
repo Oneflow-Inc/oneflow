@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/instruction.pb.h"
-#include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
@@ -100,7 +99,7 @@ FLAT_MSG_BEGIN(InstructionStatusBuffer);
 FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on
 
-struct Instruction;
+class Instruction;
 class InstructionEdge final
     : public intrusive::Base,
       public intrusive::EnableObjectPool<InstructionEdge,
@@ -149,7 +148,7 @@ class InstructionEdge final
   intrusive::ListHook out_edge_hook_;
 };
 
-struct Stream;
+class Stream;
 class Instruction final : public intrusive::Base {
  public:
   // types

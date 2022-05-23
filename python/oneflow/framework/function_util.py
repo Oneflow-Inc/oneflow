@@ -22,7 +22,7 @@ import traceback
 from typing import Any, Callable, Optional, Union
 
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
+import oneflow.core.common.data_type_pb2 as data_type_pb
 import oneflow.framework.session_context as session_ctx
 import oneflow.support.enable_if as enable_if
 import oneflow.support.pb_util as pb_util
@@ -42,9 +42,7 @@ class FunctionConfig(object):
     ) -> Callable[[Optional[Union[bool, int, float, str]]], None]:
         name2default = session_ctx.GetDefaultSession().function_flag_name2default_val
         assert attr_name in name2default
-        flag_name2flag_value = (
-            self.function_desc.job_config_proto.mutable_flag_name2flag_value()
-        )
+        flag_name2flag_value = self.function_desc.job_config_proto.flag_name2flag_value
         default_val = name2default[attr_name]
 
         def FunctionConfigSetter(
@@ -54,16 +52,16 @@ class FunctionConfig(object):
                 if attr_value is None:
                     attr_value = True
                 assert type(attr_value) is bool
-                flag_name2flag_value[attr_name].set_at_bool(attr_value)
+                flag_name2flag_value[attr_name].at_bool = attr_value
             elif default_val.HasField("at_int64"):
                 assert type(attr_value) is int
-                flag_name2flag_value[attr_name].set_at_int64(attr_value)
+                flag_name2flag_value[attr_name].at_int64 = attr_value
             elif default_val.HasField("at_double"):
                 assert type(attr_value) is float
-                flag_name2flag_value[attr_name].set_at_double(attr_value)
+                flag_name2flag_value[attr_name].at_double = attr_value
             elif default_val.HasField("at_string"):
                 assert type(attr_value) is str
-                flag_name2flag_value[attr_name].set_at_string(attr_value)
+                flag_name2flag_value[attr_name].at_string = attr_value
             else:
                 raise NotImplementedError(
                     "config_flag `%s' with type %s is not supported"
@@ -133,10 +131,8 @@ def set_default_data_type(func_desc, value):
         func_desc ([type]): job function
         value ([type]): data type. e.g. flow.float
     """
-    func_desc.job_config_proto.set_default_data_type(
-        data_type_cfg.DataType(
-            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(value)
-        )
+    func_desc.job_config_proto.default_data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+        value
     )
 
 
@@ -149,8 +145,8 @@ def set_default_initializer_conf(func_desc, value):
         value ([type]): [description]
     """
     assert type(value) is dict
-    pb_util.PythonDict2CFG(
-        value, func_desc.job_config_proto.mutable_default_initializer_conf()
+    pb_util.PythonDict2PbMessage(
+        value, func_desc.job_config_proto.default_initializer_conf
     )
 
 
@@ -162,7 +158,7 @@ def set_exp_run_conf(value):
         value ([type]): [description]
     """
     assert type(func_desc, value) is dict
-    pb_util.PythonDict2CFG(value, func_desc.job_config_proto.mutable_exp_run_conf())
+    pb_util.PythonDict2PbMessage(value, func_desc.job_config_proto.exp_run_conf)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.has")
@@ -176,9 +172,7 @@ def static_mem_alloc_policy_white_list_has_policy(func_desc, policy):
     Returns:
         [type]: [description]
     """
-    return getattr(
-        func_desc.job_config_proto.mutable_memory_allocation_algorithm_conf(), policy
-    )()
+    return getattr(func_desc.job_config_proto.memory_allocation_algorithm_conf, policy)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.add")
@@ -189,10 +183,7 @@ def static_mem_alloc_policy_white_list_add_policy(func_desc, policy):
         func_desc ([type]): [description]
         policy ([type]): [description]
     """
-    getattr(
-        func_desc.job_config_proto.mutable_memory_allocation_algorithm_conf(),
-        "set_" + policy,
-    )(True)
+    setattr(func_desc.job_config_proto.memory_allocation_algorithm_conf, policy, True)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.remove")
@@ -203,10 +194,7 @@ def static_mem_alloc_policy_white_list_remove_policy(func_desc, policy):
         func_desc ([type]): [description]
         policy ([type]): [description]
     """
-    getattr(
-        func_desc.job_config_proto.mutable_memory_allocation_algorithm_conf(),
-        "set_" + policy,
-    )(False)
+    setattr(func_desc.job_config_proto.memory_allocation_algorithm_conf, policy, False)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.policy_mem_size_first")
@@ -276,7 +264,7 @@ def set_enable_cudnn(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_cudnn(value)
+    func_desc.job_config_proto.enable_cudnn = value
 
 
 @oneflow_function_config("cudnn_buf_limit_mbyte")
@@ -287,7 +275,7 @@ def set_cudnn_buf_limit_mbyte(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_cudnn_buf_limit_mbyte(value)
+    func_desc.job_config_proto.cudnn_buf_limit_mbyte = value
 
 
 @oneflow_function_config("cudnn_conv_force_fwd_algo")
@@ -298,7 +286,7 @@ def set_cudnn_conv_force_fwd_algo(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_cudnn_conv_force_fwd_algo(value)
+    func_desc.job_config_proto.cudnn_conv_force_fwd_algo = value
 
 
 @oneflow_function_config("cudnn_conv_force_bwd_data_algo")
@@ -309,7 +297,7 @@ def set_cudnn_conv_force_bwd_data_algo(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_cudnn_conv_force_bwd_data_algo(value)
+    func_desc.job_config_proto.cudnn_conv_force_bwd_data_algo = value
 
 
 @oneflow_function_config("cudnn_conv_force_bwd_filter_algo")
@@ -320,7 +308,7 @@ def set_cudnn_conv_force_bwd_filter_algo(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_cudnn_conv_force_bwd_filter_algo(value)
+    func_desc.job_config_proto.cudnn_conv_force_bwd_filter_algo = value
 
 
 @oneflow_function_config("cudnn_conv_heuristic_search_algo")
@@ -331,7 +319,7 @@ def set_cudnn_conv_heuristic_search_algo(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_cudnn_conv_heuristic_search_algo(value)
+    func_desc.job_config_proto.cudnn_conv_heuristic_search_algo = value
 
 
 @oneflow_function_config("enable_cudnn_fused_normalization_add_relu")
@@ -342,7 +330,7 @@ def set_enable_cudnn_fused_normalization_add_relu(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_enable_cudnn_fused_normalization_add_relu(value)
+    func_desc.job_config_proto.enable_cudnn_fused_normalization_add_relu = value
 
 
 @oneflow_function_config("enable_fuse_add_to_output")
@@ -354,7 +342,7 @@ def set_enable_fuse_add_to_output(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_enable_fuse_add_to_output(value)
+    func_desc.job_config_proto.enable_fuse_add_to_output = value
 
 
 @oneflow_function_config("enable_fuse_cast_scale")
@@ -366,7 +354,7 @@ def set_enable_fuse_cast_scale(func_desc, value=True):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_enable_fuse_cast_scale(value)
+    func_desc.job_config_proto.enable_fuse_cast_scale = value
 
 
 @oneflow_function_config("cudnn_conv_use_deterministic_algo_only")
@@ -377,10 +365,10 @@ def set_cudnn_conv_use_deterministic_algo_only(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_cudnn_conv_use_deterministic_algo_only(value)
+    func_desc.job_config_proto.cudnn_conv_use_deterministic_algo_only = value
 
 
-@oneflow_function_config("enable_reused_mem")
+@oneflow_function_config("enable_reuse_mem")
 def set_enable_reused_mem(func_desc, value=True):
     """Whether enable reuse memory or not
 
@@ -388,7 +376,7 @@ def set_enable_reused_mem(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_reused_mem(value)
+    func_desc.job_config_proto.enable_reuse_mem = value
 
 
 @oneflow_function_config("enable_inplace")
@@ -399,7 +387,7 @@ def set_enable_inplace(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_inplace(value)
+    func_desc.job_config_proto.enable_inplace = value
 
 
 @oneflow_function_config("enable_inplace_in_reduce_struct")
@@ -432,7 +420,7 @@ def set_use_boxing_v2(func_desc, value=True):
 
 @oneflow_function_config("do_parallel_cast_before_widening_type_cast")
 def set_do_parallel_cast_before_widening_type_cast(func_desc, value=True):
-    func_desc.job_config_proto.set_do_parallel_cast_before_widening_type_cast(value)
+    func_desc.job_config_proto.do_parallel_cast_before_widening_type_cast = value
 
 
 @oneflow_function_config("enable_all_reduce_group")
@@ -489,7 +477,7 @@ def set_optimizer_placement_optimization_mode(func_desc, mode):
         mode (str): [description].
     """
     assert mode in ["non_distributed", "distributed_split"]
-    func_desc.job_config_proto.set_optimizer_placement_optimization_mode(mode)
+    func_desc.job_config_proto.optimizer_placement_optimization_mode = mode
 
 
 @oneflow_function_config(
@@ -497,7 +485,7 @@ def set_optimizer_placement_optimization_mode(func_desc, mode):
     "train.optimizer_placement_optimization_threshold",
 )
 def set_optimizer_placement_optimization_threshold(func_desc, value):
-    func_desc.job_config_proto.set_optimizer_placement_optimization_threshold(value)
+    func_desc.job_config_proto.optimizer_placement_optimization_threshold = value
 
 
 @oneflow_function_config("enable_non_distributed_optimizer")
@@ -527,7 +515,7 @@ def set_prune_parallel_cast_ops(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_prune_parallel_cast_ops(value)
+    func_desc.job_config_proto.prune_parallel_cast_ops = value
 
 
 @oneflow_function_config("prune_cast_to_static_shape_ops")
@@ -538,7 +526,7 @@ def set_prune_cast_to_static_shape_ops(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_prune_cast_to_static_shape_ops(value)
+    func_desc.job_config_proto.prune_cast_to_static_shape_ops = value
 
 
 @oneflow_function_config("prune_amp_white_identity_ops")
@@ -549,7 +537,7 @@ def set_prune_amp_white_identity_ops(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_prune_amp_white_identity_ops(value)
+    func_desc.job_config_proto.prune_amp_white_identity_ops = value
 
 
 @oneflow_function_config("non_distributed_optimizer_group_size_mbyte")
@@ -569,7 +557,7 @@ def set_cudnn_conv_enable_true_half(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_cudnn_conv_enable_pseudo_half(not value)
+    func_desc.job_config_proto.cudnn_conv_enable_pseudo_half = not value
 
 
 @oneflow_function_config(
@@ -582,7 +570,7 @@ def set_cudnn_conv_enable_pseudo_half(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_cudnn_conv_enable_pseudo_half(value)
+    func_desc.job_config_proto.cudnn_conv_enable_pseudo_half = value
 
 
 @oneflow_function_config("enable_float_compute_for_half_gemm")
@@ -609,36 +597,32 @@ def set_enable_quantization_aware_training(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_quantization_aware_training(value)
+    func_desc.job_config_proto.enable_quantization_aware_training = value
 
 
 @oneflow_function_config("qat.per_channel_weight_quantization")
 def set_qat_per_channel(func_desc, value=True):
-    func_desc.job_config_proto.mutable_qat_config().set_per_channel_weight_quantization(
-        value
-    )
+    func_desc.job_config_proto.qat_config.per_channel_weight_quantization = value
 
 
 @oneflow_function_config("qat.symmetric")
 def set_qat_symmetric(func_desc, value=True):
-    func_desc.job_config_proto.mutable_qat_config().set_symmetric(value)
+    func_desc.job_config_proto.qat_config.symmetric = value
 
 
 @oneflow_function_config("qat.moving_min_max_momentum")
 def set_qat_moving_min_max_momentum(func_desc, value: float):
-    func_desc.job_config_proto.mutable_qat_config().set_moving_min_max_momentum(value)
+    func_desc.job_config_proto.qat_config.moving_min_max_momentum = value
 
 
 @oneflow_function_config("qat.moving_min_max_stop_update_after_iters")
 def set_qat_moving_min_max_momentum(func_desc, value: float):
-    func_desc.job_config_proto.mutable_qat_config().set_moving_min_max_stop_update_after_iters(
-        value
-    )
+    func_desc.job_config_proto.qat_config.moving_min_max_stop_update_after_iters = value
 
 
 @oneflow_function_config("qat.target_backend")
 def set_qat_symmetric(func_desc, value: str):
-    func_desc.job_config_proto.mutable_qat_config().set_target_backend(value)
+    func_desc.job_config_proto.qat_config.target_backend = value
 
 
 @oneflow_function_config("enable_auto_mixed_precision")
@@ -649,7 +633,7 @@ def set_enable_auto_mixed_precision(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.set_enable_auto_mixed_precision(value)
+    func_desc.job_config_proto.enable_auto_mixed_precision = value
 
 
 @oneflow_function_config("enable_keep_header_only")
@@ -671,7 +655,7 @@ def set_concurrency_width(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_concurrency_width(value)
+    func_desc.job_config_proto.concurrency_width = value
 
 
 @oneflow_function_config("train.model_update_conf")
@@ -687,8 +671,10 @@ def set_model_update_conf(func_desc, value):
     )
     print(traceback.format_stack()[-3])
     assert type(value) is dict
-    pb_msg = func_desc.job_config_proto.mutable_train_conf().mutable_model_update_conf()
-    pb_util.PythonDict2CFG(value, pb_msg)
+    func_desc.job_config_proto.train_conf.model_update_conf.SetInParent()
+    pb_util.PythonDict2PbMessage(
+        value, func_desc.job_config_proto.train_conf.model_update_conf
+    )
 
 
 @oneflow_function_config("indexed_slices_optimizer_conf")
@@ -700,8 +686,10 @@ def set_indexed_slices_optimizer_conf(func_desc, value):
         value ([type]): [description]
     """
     assert type(value) is dict
-    pb_msg = func_desc.job_config_proto.mutable_indexed_slices_optimizer_conf()
-    pb_util.PythonDict2CFG(value, pb_msg)
+    func_desc.job_config_proto.indexed_slices_optimizer_conf.SetInParent()
+    pb_util.PythonDict2PbMessage(
+        value, func_desc.job_config_proto.indexed_slices_optimizer_conf
+    )
 
 
 @oneflow_function_config("enable_fuse_model_update_ops")
@@ -713,7 +701,7 @@ def set_enable_fuse_model_update_ops(func_desc, value=True):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_enable_fuse_model_update_ops(value)
+    func_desc.job_config_proto.enable_fuse_model_update_ops = value
 
 
 @oneflow_function_config("enable_gradients_stats_aggregation")
@@ -725,7 +713,7 @@ def set_enable_gradients_stats_aggregation(func_desc, value=True):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    func_desc.job_config_proto.set_enable_gradients_stats_aggregation(value)
+    func_desc.job_config_proto.enable_gradients_stats_aggregation = value
 
 
 @oneflow_function_config("train.loss_scale_factor")
@@ -740,7 +728,7 @@ def set_loss_scale_factor(func_desc, value):
         "WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.\n        "
     )
     print(traceback.format_stack()[-3])
-    func_desc.job_config_proto.mutable_train_conf().set_loss_scale_factor(value)
+    func_desc.job_config_proto.train_conf.loss_scale_factor = value
 
 
 @oneflow_function_config("train.primary_lr")
@@ -755,7 +743,7 @@ def set_primary_lr(func_desc, value):
         "WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.\n        "
     )
     print(traceback.format_stack()[-3])
-    func_desc.job_config_proto.mutable_train_conf().set_primary_lr(value)
+    func_desc.job_config_proto.train_conf.primary_lr = value
 
 
 @oneflow_function_config("train.secondary_lr")
@@ -770,12 +758,12 @@ def set_secondary_lr(func_desc, value):
         "WARNING: func_config.train.* has been deprecated. Please replace it by the new optimizer api.\n        "
     )
     print(traceback.format_stack()[-3])
-    func_desc.job_config_proto.mutable_train_conf().set_secondary_lr(value)
+    func_desc.job_config_proto.train_conf.secondary_lr = value
 
 
 @oneflow_function_config("train.num_gradient_accumulation_steps")
 def set_num_gradient_accumulation_steps(func_desc, value):
-    func_desc.job_config_proto.set_num_gradient_accumulation_steps(value)
+    func_desc.job_config_proto.num_gradient_accumulation_steps = value
 
 
 @oneflow_function_config("use_xla_jit")
@@ -786,7 +774,7 @@ def set_use_xla_jit(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.mutable_xrt_config().set_use_xla_jit(value)
+    func_desc.job_config_proto.xrt_config.use_xla_jit = value
 
 
 @oneflow_function_config("use_tensorrt")
@@ -797,7 +785,7 @@ def set_use_tensorrt(func_desc, value=True):
         func_desc ([type]): [description]
         value (bool, optional): [description]. Defaults to True.
     """
-    func_desc.job_config_proto.mutable_xrt_config().set_use_tensorrt(value)
+    func_desc.job_config_proto.xrt_config.use_tensorrt = value
 
 
 @oneflow_function_config("tensorrt.use_fp16")
@@ -809,9 +797,7 @@ def set_tensorrt_use_fp16(func_desc, value=True):
         value (bool, optional): [description]. Defaults to True.
     """
     set_use_tensorrt(func_desc, True)
-    func_desc.job_config_proto.mutable_xrt_config().mutable_tensorrt_config().set_use_fp16(
-        value
-    )
+    func_desc.job_config_proto.xrt_config.tensorrt_config.use_fp16 = value
 
 
 @oneflow_function_config("tensorrt.use_int8")
@@ -823,9 +809,7 @@ def set_tensorrt_use_int8(func_desc, value=True):
         value (bool, optional): [description]. Defaults to True.
     """
     set_use_tensorrt(func_desc, True)
-    func_desc.job_config_proto.mutable_xrt_config().mutable_tensorrt_config().set_use_int8(
-        value
-    )
+    func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8 = value
 
 
 @oneflow_function_config("tensorrt.int8_calibration")
@@ -836,10 +820,8 @@ def set_tensorrt_int8_calibration(func_desc, value):
         func_desc ([type]): [description]
         value ([type]): [description]
     """
-    assert func_desc.job_config_proto.xrt_config().tensorrt_config().use_int8()
-    func_desc.job_config_proto.mutable_xrt_config().mutable_tensorrt_config().set_int8_calibration(
-        value
-    )
+    assert func_desc.job_config_proto.xrt_config.tensorrt_config.use_int8
+    func_desc.job_config_proto.xrt_config.tensorrt_config.int8_calibration = value
 
 
 @oneflow_function_config("default_logical_view")

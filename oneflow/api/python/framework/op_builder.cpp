@@ -18,6 +18,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 
@@ -33,7 +34,15 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def(py::init<const std::string&, const std::string&>())
       .def("input", &OpBuilder::MaybeInput)
       .def("output", &OpBuilder::MaybeOutput)
-      .def("attr", &OpBuilder::MaybeAttr<cfg::AttrValue>)
+      .def("attr",
+           [](const std::shared_ptr<one::OpBuilder>& x, const std::string& attr_name,
+              const std::string& attr_val_str) -> Maybe<OpBuilder&> {
+             AttrValue attr_val;
+             if (!TxtString2PbMessage(attr_val_str, &attr_val)) {
+               THROW(RuntimeError) << "attr val parse failed.\n" << attr_val_str;
+             }
+             return x->MaybeAttr(attr_name, attr_val);
+           })
       .def("build", &OpBuilder::Build);
 }
 
