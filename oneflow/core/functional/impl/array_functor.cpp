@@ -1196,12 +1196,21 @@ class InplaceToContiguousFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     // TODO: use original "inplace_to_contiguous" op replace assign
+    if(input->is_contiguous()){
+      return input;
+    }
+
     auto contiguous_tensor = JUST(functional::ToContiguous(input));
     CHECK_OR_RETURN(input->is_local() && contiguous_tensor->is_local())
         << "Both ref and value must be local tensor.";
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
     std::shared_ptr<Stride> stride(new Stride(*input->shape()));
+    // update stride
     JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
+    const auto& blob_object = JUST(input->eager_blob_object());
+    // update eager_blob_object
+    JUST(input->mut_eager_mirrored_tensor_impl())->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), false);
+    // assign contiguous tensor data
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
     return input;
   }
 
