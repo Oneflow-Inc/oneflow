@@ -11,17 +11,17 @@ namespace {
 
 constexpr int32_t kWarpSize = 32; 
 
-template<typename T, int pack_size, bool tail>
+template<typename T, typename IndexType, int pack_size, bool tail>
 __global__ void VectorizedReluDropoutBitmaskBackwardKernel(
-    const int64_t elem_cnt, const int64_t cols, const int64_t aux_ld, 
-    const float scale, const int64_t n_tail, const int64_t tail_offset, 
+    const IndexType elem_cnt, const IndexType cols, const IndexType aux_ld, 
+    const float scale, const IndexType n_tail, const IndexType tail_offset, 
     const T* dy, const int32_t* mask, T* dx) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   using LoadStoreType = cuda::elementwise::PackType<T, pack_size>;
   using LoadStorePack = cuda::elementwise::Pack<T, pack_size>;
   
   T t_scale = static_cast<T>(scale);
-  for (int64_t linear_pack_index = global_thread_id * pack_size; linear_pack_index < elem_cnt;
+  for (IndexType linear_pack_index = global_thread_id * pack_size; linear_pack_index < elem_cnt;
     linear_pack_index += gridDim.x * blockDim.x * pack_size) {
 
     const LoadStoreType* dy_load = reinterpret_cast<const LoadStoreType*>(dy + linear_pack_index);
@@ -31,11 +31,11 @@ __global__ void VectorizedReluDropoutBitmaskBackwardKernel(
     LoadStorePack dx_vec;
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-        const int64_t linear_index = (linear_pack_index + i); 
-        const int64_t row = linear_index / cols; 
-        const int64_t col = linear_index - row * cols; 
+        const IndexType linear_index = (linear_pack_index + i); 
+        const IndexType row = linear_index / cols; 
+        const IndexType col = linear_index - row * cols; 
         const int32_t lane_id = col % kWarpSize; 
-        const int64_t aux_idx = ((row * aux_ld) + col) / kWarpSize; 
+        const IndexType aux_idx = ((row * aux_ld) + col) / kWarpSize; 
         bool is_positive = mask[aux_idx] & (1 << lane_id);
         dx_vec.elem[i] = dy_vec.elem[i] * static_cast<T>(is_positive) * static_cast<T>(scale); 
     }
@@ -43,11 +43,11 @@ __global__ void VectorizedReluDropoutBitmaskBackwardKernel(
   }
 
   if (tail && global_thread_id < n_tail) {
-    const int64_t tail_index = tail_offset + global_thread_id; 
-    const int64_t tail_row = tail_index / cols; 
-    const int64_t tail_col = tail_index - tail_row * cols; 
-    const int32_t tail_lane_id = tail_col % kWarpSize; 
-    const int64_t tail_aux_idx = ((tail_row * aux_ld) + tail_col) / kWarpSize; 
+    const IndexType tail_index = tail_offset + global_thread_id; 
+    const IndexType tail_row = tail_index / cols; 
+    const IndexType tail_col = tail_index - tail_row * cols; 
+    const IndexType tail_lane_id = tail_col % kWarpSize; 
+    const IndexType tail_aux_idx = ((tail_row * aux_ld) + tail_col) / kWarpSize; 
     bool is_positive = mask[tail_aux_idx] & (1 << tail_lane_id);
     dx[tail_index] = dy[tail_index] * static_cast<T>(is_positive) * static_cast<T>(scale); 
   }
@@ -65,15 +65,29 @@ void LaunchVectorizedReluDropoutBackwardKernel(ep::Stream* stream,
   const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
   if (tail) {
-    stream->As<ep::CudaStream>()->LaunchKernelDefaultWaves(
-        (VectorizedReluDropoutBitmaskBackwardKernel<T, pack_size, true>), 
+    if(elem_cnt < GetMaxVal<int32_t>()){
+      stream->As<ep::CudaStream>()->LaunchKernelDefaultWaves(
+        (VectorizedReluDropoutBitmaskBackwardKernel<T, int32_t, pack_size, true>), 
         pack_num, elem_cnt, cols, aux_ld, scale, n_tail, tail_offset, 
         dy, mask, dx);
+    } else {
+      stream->As<ep::CudaStream>()->LaunchKernelDefaultWaves(
+        (VectorizedReluDropoutBitmaskBackwardKernel<T, int64_t, pack_size, true>), 
+        pack_num, elem_cnt, cols, aux_ld, scale, n_tail, tail_offset, 
+        dy, mask, dx);
+    }
   } else {
-    stream->As<ep::CudaStream>()->LaunchKernelDefaultWaves(
-        (VectorizedReluDropoutBitmaskBackwardKernel<T, pack_size, true>), 
+    if(elem_cnt < GetMaxVal<int32_t>()){
+      stream->As<ep::CudaStream>()->LaunchKernelDefaultWaves(
+          (VectorizedReluDropoutBitmaskBackwardKernel<T, int32_t,pack_size, true>), 
+          pack_num, elem_cnt, cols, aux_ld, scale, /*n_tail=*/0, tail_offset, 
+          dy, mask, dx);
+    } else {
+      stream->As<ep::CudaStream>()->LaunchKernelDefaultWaves(
+        (VectorizedReluDropoutBitmaskBackwardKernel<T, int64_t, pack_size, true>), 
         pack_num, elem_cnt, cols, aux_ld, scale, /*n_tail=*/0, tail_offset, 
         dy, mask, dx);
+    }
   }
 }
 
@@ -113,7 +127,10 @@ class FusedReluDropoutGradKernel final : public user_op::OpKernel,
                         && (user_op::HobDataType("dx", 0) == data_type));
 
 REGISTER_FUSED_RELU_DROPOUT_GRAD_KERNEL_GPU(float, DataType::kFloat)
-
+REGISTER_FUSED_RELU_DROPOUT_GRAD_KERNEL_GPU(half, DataType::kFloat16)
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_RELU_DROPOUT_GRAD_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16)
+#endif 
 
 } // namespace 
 
