@@ -29,7 +29,6 @@ import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
 
 import oneflow._oneflow_internal._C as _C
-from oneflow.nn.graph.block import ModuleBlock
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
@@ -146,7 +145,7 @@ def make_new_block_scope(prev_scope, block):
         scope_proto.ClearField("scope_op_name_prefixes")
         scope_proto.scope_op_name_prefixes.append(block.name_prefix + block.name)
         # set module name
-        if isinstance(block, ModuleBlock):
+        if isinstance(block, oneflow.nn.graph.block.ModuleBlock):
             scope_proto.module_name = block.name_prefix + block.name
 
         return str(text_format.MessageToString(scope_proto))
