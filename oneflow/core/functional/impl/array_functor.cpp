@@ -1191,21 +1191,14 @@ class ToContiguousFunctor {
 
 class InplaceToContiguousFunctor {
  public:
-  InplaceToContiguousFunctor() {
-    assign_op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
-  }
+  InplaceToContiguousFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     auto contiguous_tensor = JUST(functional::ToContiguous(input));
     CHECK_OR_RETURN(input->is_local() && contiguous_tensor->is_local())
         << "Both ref and value must be local tensor.";
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
-    std::shared_ptr<Stride> stride(new Stride(*input->shape()));
-    JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
+    input->set_data(contiguous_tensor);
     return input;
   }
-
- private:
-  std::shared_ptr<OpExpr> assign_op_;
 };
 
 class SliceBaseFunctor {
