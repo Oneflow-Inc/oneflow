@@ -637,13 +637,15 @@ void TaskGraph::StraightenNodes() {
           return decide_parameter_a < decide_parameter_b;
         }
       }
-      auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
-      if (comp_str == 0) {
-        // the order does not matter right now, but we need a strict order
-        return a < b;
-      } else {
-        return comp_str < 0;
-      };
+      return a->node->node_id() < b->node->node_id();
+      // auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
+      // if (comp_str == 0) {
+      //   // the order does not matter right now, but we need a strict order
+      //   return a < b;
+      // } else {
+      //   return comp_str < 0;
+      // };
+
       // if (a->TributaryLayer == b->TributaryLayer) {
       //   if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
       //     if (a->MinLayer == b->MinLayer) {
@@ -687,9 +689,13 @@ void TaskGraph::StraightenNodes() {
     return 3;
   };
 
+  HashMap<int32_t, HashMap<int32_t, std::set<TopoStruct*, comp>>> task_type2machine_id2topo_structs;
+
   // wait in the list
   auto wait = [&](TaskNode* node) {
-    waiting_lists[set_classifier(node)].insert(&task_node2topo_struct[node]);
+    TopoStruct* topo_struct = &task_node2topo_struct[node];
+    waiting_lists[set_classifier(node)].insert(topo_struct);
+    task_type2machine_id2topo_structs[node->GetTaskType()][node->machine_id()].insert(topo_struct);
   };
 
   // initialization
@@ -710,7 +716,36 @@ void TaskGraph::StraightenNodes() {
 
   // The same order in the set
   auto should_run_simultaneously = [](TopoStruct* a, TopoStruct* b) -> bool {
-    return a->MinLayer == b->MinLayer && a->node->VisualStr() == b->node->VisualStr();
+    // Normal node would have the same name
+    if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
+    // Otherwise they must have the same parameters with different machine ids and the closest node
+    // id
+    return a->MinLayer == b->MinLayer && a->TributaryLayer == b->TributaryLayer
+           && a->MinDistance2Transfer == b->MinDistance2Transfer;
+  };
+
+  // Move the first node of the waiting list to the execution list
+  auto move2execution_list = [&](std::set<TopoStruct*, comp>& waiting_list,
+                                 std::vector<TaskNode*>& execution_list) {
+    TaskNode* first_node = (*waiting_list.begin())->node;
+    int32_t execution_num = 0;
+    TopoStruct* target_topo_struct = &task_node2topo_struct[first_node];
+    // Find all the same nodes in different machine
+    // They should be run simultaneously
+    for (auto& machine_id2topo_structs :
+         task_type2machine_id2topo_structs[first_node->GetTaskType()]) {
+      auto& topo_structs = machine_id2topo_structs.second;
+      if (topo_structs.empty()) { continue; }
+      TopoStruct* first_topo_struct = *topo_structs.begin();
+      if (should_run_simultaneously(target_topo_struct, first_topo_struct)) {
+        execution_num++;
+        execution_list.push_back(first_topo_struct->node);
+        waiting_list.erase(first_topo_struct);
+        // topo_structs.erase(first_topo_struct);
+        topo_structs.erase(topo_structs.begin());
+      }
+    }
+    CHECK_GT(execution_num, 0) << "Error, no task nodes are moved to the execution list";
   };
 
   // Execute the first n nodes in the waiting list
@@ -718,25 +753,16 @@ void TaskGraph::StraightenNodes() {
     // n>=1
     if (n <= 0) { return; }
     auto& waiting_list = waiting_lists[list_classifier];
-    remain_task_nums[list_classifier] -= n;
     std::vector<TaskNode*> execution_list;
-    std::set<TopoStruct*, comp>::iterator it_curr = waiting_list.begin();
-    TopoStruct* last_topo_struct = nullptr;
-    // At least add n nodes in the execution list
-    int32_t count = 1;
-    while (it_curr != waiting_list.end()) {
-      if (count >= n) {
-        if (count == n) {
-          last_topo_struct = *it_curr;
-        } else {
-          if (!should_run_simultaneously(last_topo_struct, *it_curr)) { break; }
-        }
-      }
-      execution_list.push_back((*it_curr)->node);
+    int32_t count = 0;
+    // Move to the execution list
+    while (!waiting_list.empty()) {
+      move2execution_list(waiting_list, execution_list);
       count++;
-      ++it_curr;
+      if (count >= n) { break; }
     }
-    waiting_list.erase(waiting_list.begin(), it_curr);
+    remain_task_nums[list_classifier] -= execution_list.size();
+    // Set the order and then remove from the execution list
     for (auto* node : execution_list) {
       SetOrderInGraph(node);
       finish_execution(node);
@@ -760,15 +786,19 @@ void TaskGraph::StraightenNodes() {
           execute(1, 1);
         }
       } else {
+        int32_t computation_num =
+            std::min(int32_t(waiting_lists[1].size() / (waiting_lists[0].size())),
+                     remain_task_nums[1] / remain_task_nums[0]);
         // Holding the transfer
-        auto* node = (*waiting_lists[0].begin())->node;
-        waiting_lists[0].erase(waiting_lists[0].begin());
-        SetOrderInGraph(node);
+        std::vector<TaskNode*> transfer_execution_list;
+        move2execution_list(waiting_lists[0], transfer_execution_list);
+        remain_task_nums[0] -= transfer_execution_list.size();
+        for (auto* transfer_node : transfer_execution_list) { SetOrderInGraph(transfer_node); }
         // Overlap transfer with computation
-        execute(1, std::min(int32_t(waiting_lists[1].size() / (waiting_lists[0].size() + 1)),
-                            remain_task_nums[1] / remain_task_nums[0]));
+        execute(1, computation_num);
+
         // Release the transfer
-        finish_execution(node);
+        for (auto* transfer_node : transfer_execution_list) { finish_execution(transfer_node); }
       }
     } else {
       execute(2, waiting_lists[2].size());
