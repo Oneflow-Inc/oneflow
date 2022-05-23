@@ -346,7 +346,7 @@ struct SoftShrinkGradFunctor {
 #define REGISTER_LEAKYRELU_KERNEL(device, dtype)                                          \
   REGISTER_USER_KERNEL("leaky_relu")                                                      \
       .SetCreateFn([]() {                                                                 \
-        return user_op::NewOpKernel<UnaryPrimitiveKernel<device, dtype, dtype>>(          \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
             "y", "x", [](user_op::KernelComputeContext* ctx) {                            \
               return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
                   device, ep::primitive::UnaryOp::kLeakyRelu, GetDataType<dtype>::value,  \

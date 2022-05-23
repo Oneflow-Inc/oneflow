@@ -89,7 +89,14 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::C
   std::string input_a_name;
 };
 
-template<DeviceType device_type, typename OutputT, typename InputA>
+template<typename Context>
+std::unique_ptr<ep::primitive::ElementwiseUnary> NewReluPrimitive(Context* ctx) {
+  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+      ctx->device_type(), ep::primitive::UnaryOp::kRelu, src->data_type(), dst->data_type());
+}
+
 class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UnaryPrimitiveKernel);
@@ -101,34 +108,31 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
 
   UnaryPrimitiveKernel(const std::string& output_name, const std::string& input_name,
                        PrimitiveFactoryFuncType fn)
-      : output_name(output_name), input_name(input_name), PrimitiveFactoryFunc(std::move(fn)) {}
+      : output_name_(output_name),
+        input_name_(input_name),
+        primitive_factory_func_(std::move(fn)) {}
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex(input_name, 0);
-    // const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex(output_name, 0);
-    auto primitive = PrimitiveFactoryFunc(ctx);
+    auto primitive = primitive_factory_func_(ctx);
     CHECK(primitive);
 
-    const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex(input_name, 0);
-    user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
+    const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex(input_name_, 0);
+    user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex(output_name_, 0);
 
-    const ShapeView input_shape = input_tensor->shape();
-    const ShapeView output_shape = output_tensor->shape();
+    const ShapeView& input_shape = input_tensor->shape();
+    const ShapeView& output_shape = output_tensor->shape();
     CHECK_EQ(input_shape, output_shape);
     const int64_t elem_cnt = input_shape.elem_cnt();
 
-    const InputA* input_ptr = input_tensor->dptr<InputA>();
-    OutputT* output_ptr = output_tensor->mut_dptr<OutputT>();
-
-    primitive->Launch(ctx->stream(), input_ptr, output_ptr, elem_cnt);
+    primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(), elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  std::string output_name;
-  std::string input_name;
-  PrimitiveFactoryFuncType PrimitiveFactoryFunc;
+  std::string output_name_;
+  std::string input_name_;
+  PrimitiveFactoryFuncType primitive_factory_func_;
 };
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
