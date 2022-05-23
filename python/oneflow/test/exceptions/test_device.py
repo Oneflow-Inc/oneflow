@@ -13,26 +13,36 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import re
 import unittest
 import oneflow as flow
 import oneflow.unittest
 import oneflow.nn.functional as F
-import torch
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestErrorMsg(flow.unittest.TestCase):
-    def test_torch_error_msg(test_case):
+class TestDevice(flow.unittest.TestCase):
+    def test_device_type(test_case):
         with test_case.assertRaises(RuntimeError) as exp:
-            F.pad(torch.randn(2, 2))
-        test_case.assertTrue("torch.Tensor" in str(exp.exception))
+            flow.device("xpu")
+        test_case.assertTrue(
+            re.match(
+                "Expected one of (.*) device type at start of device string: xpu",
+                str(exp.exception),
+            )
+            is not None
+        )
 
-    def test_numpy_error_msg(test_case):
-        import numpy as np
+    def test_device_index(test_case):
+        # TODO(hjchen2): throw runtime error if cuda reports error
+        #     with test_case.assertRaises(RuntimeError) as exp:
+        #         device = flow.device("cuda:1000")
+        #         flow.Tensor(2, 3).to(device=device)
+        #     test_case.assertTrue("CUDA error: invalid device ordinal" in str(exp.exception))
 
         with test_case.assertRaises(RuntimeError) as exp:
-            F.pad(np.random.randn(2, 2))
-        test_case.assertTrue("numpy" in str(exp.exception))
+            device = flow.device("cpu:1000")
+            flow.Tensor(2, 3).to(device=device)
 
 
 if __name__ == "__main__":
