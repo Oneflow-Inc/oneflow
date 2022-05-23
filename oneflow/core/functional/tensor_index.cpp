@@ -106,7 +106,7 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
           int size = shape->At(dim);
           int expanded_size = expanded_shape->At(expanded_dim);
           CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << "The size of tensor a (" << size << ") must match the size of tensor b ("
+              << Error::RuntimeError() << "The size of tensor a (" << size << ") must match the size of tensor b ("
               << expanded_size << ") at non-singleton dimension " << i;
           sizes[j] = size == 1 ? expanded_size : size;
         }
@@ -203,9 +203,6 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
                                 std::vector<int64_t>* target_dims) {
   int64_t ndims = shape.NumAxes();
   int64_t specified_ndims = CountSpecifiedDims(index);
-  CHECK_NE_OR_RETURN(ndims, 0) << Error::IndexError()
-                               << "invalid index of a 0-dim tensor. Use `tensor.item()` to convert "
-                                  "a 0-dim tensor to a number";
   CHECK_LE_OR_RETURN(specified_ndims, ndims)
       << Error::IndexError() << "Too many indices for tensor of dimension " << ndims;
   bool has_false_index = JUST(HasFalseIndex(index));
@@ -306,7 +303,7 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
   std::vector<int> mask(expand_slices.size(), 0);
   for (const auto& dim : expand_dims) {
     if (dim >= expand_slices.size()) {
-      return Error::RuntimeError()
+      return Error::IndexError()
              << "Dimension " << dim << " is out of bounds for size " << expand_slices.size();
     }
     mask[dim] = 1;
