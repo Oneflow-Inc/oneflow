@@ -31,7 +31,7 @@ template<UnaryOp unary_op, typename Src, typename Dst>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryImpl);
-  ElementwiseUnaryImpl(Scalar attr0, Scalar attr1) : ElementwiseUnary(attr0, attr1) {}
+  ElementwiseUnaryImpl(Scalar attr0, Scalar attr1) : attr0(attr0), attr1(attr1) {}
   ~ElementwiseUnaryImpl() override = default;
 
   void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
@@ -44,6 +44,9 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
       for (int64_t i = begin; i < end; i++) { dst[i] = functor(src[i]); }
     });
   }
+
+ protected:
+  Scalar attr0, attr1;
 };
 
 template<UnaryOp unary_op, typename Src, typename Dst>

@@ -96,29 +96,19 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
   UnaryPrimitiveKernel() = default;
   ~UnaryPrimitiveKernel() = default;
 
-  UnaryPrimitiveKernel(ep::primitive::UnaryOp op, const std::string& output_name,
-                       const std::string& input_name)
-      : op(op), output_name(output_name), input_name(input_name) {}
+  using PrimitiveFactoryFuncType = std::function<std::unique_ptr<ep::primitive::ElementwiseUnary>(
+      user_op::KernelComputeContext*)>;
 
-  using ConstructAttrFuncType =
-      std::function<void(user_op::KernelComputeContext*, Scalar&, Scalar&)>;
-
-  UnaryPrimitiveKernel(ep::primitive::UnaryOp op, const std::string& output_name,
-                       const std::string& input_name, ConstructAttrFuncType fn)
-      : op(op),
-        output_name(output_name),
-        input_name(input_name),
-        ConstructAttrFunc(std::move(fn)) {}
+  UnaryPrimitiveKernel(const std::string& output_name, const std::string& input_name,
+                       PrimitiveFactoryFuncType fn)
+      : output_name(output_name), input_name(input_name), PrimitiveFactoryFunc(std::move(fn)) {}
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex(input_name, 0);
-    const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex(output_name, 0);
-    Scalar attr0, attr1;
-    if (ConstructAttrFunc) ConstructAttrFunc(ctx, attr0, attr1);
-    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-        ctx->device_type(), op, src->data_type(), dst->data_type(), attr0, attr1);
+    // const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex(input_name, 0);
+    // const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex(output_name, 0);
+    auto primitive = PrimitiveFactoryFunc(ctx);
     CHECK(primitive);
 
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex(input_name, 0);
@@ -136,10 +126,9 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
-  ep::primitive::UnaryOp op;
   std::string output_name;
   std::string input_name;
-  ConstructAttrFuncType ConstructAttrFunc;
+  PrimitiveFactoryFuncType PrimitiveFactoryFunc;
 };
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,

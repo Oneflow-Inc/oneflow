@@ -343,22 +343,23 @@ struct SoftShrinkGradFunctor {
       },                                                          \
       "dx", "x", "dy");
 
-#define REGISTER_LEAKYRELU_KERNEL(device, dtype)                                        \
-  REGISTER_USER_KERNEL("leaky_relu")                                                    \
-      .SetCreateFn([]() {                                                               \
-        return user_op::NewOpKernel<UnaryPrimitiveKernel<device, dtype, dtype>>(        \
-            ep::primitive::UnaryOp::kLeakyRelu, "y", "x",                               \
-            [](user_op::KernelComputeContext* ctx, Scalar& attr0, Scalar& attr1) {      \
-              attr0 = ctx->Attr<float>("alpha");                                        \
-            });                                                                         \
-      })                                                                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)); \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                 \
-      device, "leaky_relu_grad", LeakyReluGradFunctor, dtype, dtype, dtype,             \
-      [](user_op::KernelComputeContext* ctx) {                                          \
-        return LeakyReluGradFunctor<dtype>(ctx->Attr<float>("alpha"));                  \
-      },                                                                                \
+#define REGISTER_LEAKYRELU_KERNEL(device, dtype)                                          \
+  REGISTER_USER_KERNEL("leaky_relu")                                                      \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel<device, dtype, dtype>>(          \
+            "y", "x", [](user_op::KernelComputeContext* ctx) {                            \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  device, ep::primitive::UnaryOp::kLeakyRelu, GetDataType<dtype>::value,  \
+                  GetDataType<dtype>::value, ctx->Attr<float>("alpha"));                  \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));   \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                   \
+      device, "leaky_relu_grad", LeakyReluGradFunctor, dtype, dtype, dtype,               \
+      [](user_op::KernelComputeContext* ctx) {                                            \
+        return LeakyReluGradFunctor<dtype>(ctx->Attr<float>("alpha"));                    \
+      },                                                                                  \
       "dx", "x", "dy");
 
 #define REGISTER_CELU_KERNEL(device, dtype)                        \

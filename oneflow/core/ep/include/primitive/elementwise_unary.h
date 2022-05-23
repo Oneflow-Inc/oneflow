@@ -28,13 +28,10 @@ namespace primitive {
 class ElementwiseUnary : public Primitive {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnary);
-  ElementwiseUnary(Scalar attr0, Scalar attr1) : attr0(attr0), attr1(attr1) {}
+  ElementwiseUnary() = default;
   ~ElementwiseUnary() override = default;
 
   virtual void Launch(Stream* stream, const void* src, void* dst, size_t count) = 0;
-
- protected:
-  Scalar attr0, attr1;
 };
 
 class ElementwiseUnaryFactory : public Factory<ElementwiseUnary> {
