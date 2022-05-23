@@ -17,32 +17,7 @@ namespace vm {
 Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL_OR_RETURN(allocator);
-  size_t required_body_bytes = AlignedByteSizeOfBlobBody();
-  if (required_body_bytes == 0) {
-    CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
-    if (dtr::is_enabled_and_debug()) {
-      LOG(INFO) << "ebo " << this << " has no body";
-      LOG(INFO) << shape();
-    }
-    return Maybe<void>::Ok();
-  }
-  if (tensor_storage_->blob_dptr() != nullptr) {
-    CHECK_EQ_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
-    if (dtr::debug_level() >= 2) {
-      LOG(INFO) << "ebo " << this
-                << " body already allocated, blob_body_bytes_: " << tensor_storage_->blob_bytes()
-                << ", required_body_bytes: " << required_body_bytes;
-    }
-    return Maybe<void>::Ok();
-  }
-  {
-    // reset tensor_buffer_;
-    const auto& Free = [allocator, required_body_bytes](char* dptr) {
-      if (IsShuttingDown()) { return; }
-      allocator->Deallocate(dptr, required_body_bytes);
-    };
-    char* dptr = nullptr;
-    allocator->Allocate(&dptr, required_body_bytes);
+  auto MarkDptrInAllocator = [allocator, this](char* dptr) -> Maybe<void> {
     if (ParseBooleanFromEnv("OF_DTR_ALLO", true)) {
       if (auto* b_allocator = dynamic_cast<vm::ThreadSafeAllocator*>(allocator)) {
         if (auto* dtr_allocator =
@@ -61,7 +36,37 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
         }
       }
     }
+    return Maybe<void>::Ok();
+  };
+  size_t required_body_bytes = AlignedByteSizeOfBlobBody();
+  if (required_body_bytes == 0) {
+    CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
+    if (dtr::is_enabled_and_debug()) {
+      LOG(INFO) << "ebo " << this << " has no body";
+      LOG(INFO) << shape();
+    }
+    return Maybe<void>::Ok();
+  }
+  if (tensor_storage_->blob_dptr() != nullptr) {
+    CHECK_EQ_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
+    if (dtr::debug_level() >= 2) {
+      LOG(INFO) << "ebo " << this
+                << " body already allocated, blob_body_bytes_: " << tensor_storage_->blob_bytes()
+                << ", required_body_bytes: " << required_body_bytes;
+    }
+    JUST(MarkDptrInAllocator(tensor_storage_->blob_dptr()));
+    return Maybe<void>::Ok();
+  }
+  {
+    // reset tensor_buffer_;
+    const auto& Free = [allocator, required_body_bytes](char* dptr) {
+      if (IsShuttingDown()) { return; }
+      allocator->Deallocate(dptr, required_body_bytes);
+    };
+    char* dptr = nullptr;
+    allocator->Allocate(&dptr, required_body_bytes);
     CHECK_NOTNULL_OR_RETURN(dptr);
+    JUST(MarkDptrInAllocator(dptr));
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
     InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
@@ -110,8 +115,10 @@ void DTREagerBlobObject::unpin() {
 Maybe<void> DTREagerBlobObject::evict(bool eager_evict) {
   if (dtr::is_enabled_and_debug()) {
     static size_t c = 0;
-    LOG(INFO) << "evict (No." << c++ << ")" << std::endl;
-    LOG(INFO) << "this:" << this << std::endl;
+    LOG(INFO) << "evict (No." << c++ << "), id: " << id() << std::endl;
+  }
+  if (!is_evictable()) {
+    Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces();
   }
   CHECK_OR_RETURN(is_evictable());
   if (shape().elem_cnt() == 0) {

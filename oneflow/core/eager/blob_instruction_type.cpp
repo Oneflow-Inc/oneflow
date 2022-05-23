@@ -51,6 +51,11 @@ void AccessBlobByCallbackInstructionType::ComputeInstrMsg(
   DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
   if (auto dtr_ebo = std::dynamic_pointer_cast<DTREagerBlobObject>(ptr->eager_blob_object())) {
     CHECK_JUST(DTRUtil::recompute(dtr_ebo.get(), instr_msg.phy_instr_stream()->device_ctx().get()));
+    if (ptr->modifier() == "mut") {
+      // the content is modified by an external function, no way to recompute it,
+      // so set tensor as unevictable
+      dtr_ebo->set_evictable(false);
+    }
     // LOG(INFO) << "access blob";
     // LOG(INFO) << dtr_ebo->is_in_memory();
     // LOG(INFO) << dtr_ebo->is_evictable();
