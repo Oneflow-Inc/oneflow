@@ -203,6 +203,10 @@ class EvictTrigger {
     if (!IsShuttingDown()) { (*releaser_hook_)(); }
   }
 
+  void set_releaser_hook(ReleaserHookT releaser_hook) {
+    releaser_hook_ = std::make_shared<ReleaserHookT>(releaser_hook);
+  }
+
  private:
   std::shared_ptr<ReleaserHookT> releaser_hook_;
 };
@@ -239,12 +243,36 @@ Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(
 // }
 
 Maybe<void> DTREagerMirroredTensorImpl::set_eager_blob_object(
-    std::shared_ptr<vm::DTREagerBlobObject> eager_blob_object) {
+    std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
+  LOG(INFO) << "set_eager_blob_object: impl " << this << ", old: " << eager_blob_object_ << ", new: " << eager_blob_object;
+  CHECK_OR_RETURN(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(eager_blob_object) != nullptr)
+      << "real type: " << typeid(*eager_blob_object).name();
+  bool has_eager_blob_object_already = eager_blob_object_ != nullptr;
   eager_blob_object_ = eager_blob_object;
   CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get() == tensor_meta()->shape_ptr().get());
   CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype());
-  JUST(UpdateTensorStorage());
-  JUST(UpdateEvictTrigger());
+  if (EnvBool<ONEFLOW_DTR_FBIP>() && has_eager_blob_object_already) {
+    const auto& parallel_desc = JUST(Placement4Device(this->device())).shared_from_symbol();
+    tensor_storage_->set_releaser_hook(
+        [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
+          CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+            if (eager_blob_object->producer_stream().has_value()) {
+              JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
+            }
+            return Maybe<void>::Ok();
+          }));
+        });
+    // TODO: move releaser hook into EvictTrigger itself
+    evict_trigger_->set_releaser_hook([eager_blob_object, parallel_desc]() {
+      CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+        JUST(builder->EvictDTRTensor(eager_blob_object, parallel_desc));
+        return Maybe<void>::Ok();
+      }));
+    });
+  } else {
+    JUST(UpdateTensorStorage());
+    JUST(UpdateEvictTrigger());
+  }
   return Maybe<void>::Ok();
 }
 

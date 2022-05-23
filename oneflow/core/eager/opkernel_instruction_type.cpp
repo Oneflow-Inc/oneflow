@@ -506,7 +506,7 @@ Maybe<void> DTRComputeInstruction(const vm::InstructionMsg& instr_msg) {
   JUST(RecursivelyCompute(operand, device_ctx));
   bool is_inplace = IsInplace(inputs, outputs);
   for (const auto& output : outputs) {
-    if (is_inplace) {
+    if (is_inplace && !EnvBool<ONEFLOW_DTR_FBIP>()) {
       output->set_evictable(false);
     } else {
       JUST(Global<dtr::TensorPool>::Get()->insert(output));

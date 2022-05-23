@@ -63,6 +63,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   double blob_body_bytes_double() const { return static_cast<double>(BlobBodyBytes()); }
 
   void set_compute_op(LocalCallOpKernelPhyInstrOperand* operand);
+  std::shared_ptr<DTREagerBlobObject> Clone();
 
   int parent_depth() const;
   int child_depth() const;

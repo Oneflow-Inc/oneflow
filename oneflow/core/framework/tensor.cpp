@@ -130,6 +130,13 @@ Maybe<void> DTRMirroredTensor::set_blob_object_bp_required() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> DTRMirroredTensor::set_eager_blob_object(
+    const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
+  // impl_->set_eager_blob_object will update one::tensor_storage
+  JUST(std::dynamic_pointer_cast<DTREagerMirroredTensorImpl>(impl_)->set_eager_blob_object(debo));
+  return Maybe<void>::Ok();
+}
+
 std::shared_ptr<Tensor> MirroredTensor::contiguous() const {
   std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
   if (tensor->is_contiguous()) { return tensor; }

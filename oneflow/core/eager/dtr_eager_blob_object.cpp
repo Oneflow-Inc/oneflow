@@ -139,6 +139,16 @@ Maybe<void> DTREagerBlobObject::evict(bool eager_evict) {
   return Maybe<void>::Ok();
 }
 
+std::shared_ptr<DTREagerBlobObject> DTREagerBlobObject::Clone() {
+  auto new_ebo = std::make_shared<vm::DTREagerBlobObject>(
+      // is it legal to use the same Shape object? Don't know
+      std::make_shared<MemoryCase>(mem_case()), std::const_pointer_cast<Shape>(shape_ptr()),
+      std::make_shared<Stride>(stride()), data_type(), tensor_storage(), compute_local_dep_object_);
+  // TODO: move is_evictable to TensorStorage?
+  new_ebo->set_evictable(this->is_evictable());
+  return new_ebo;
+}
+
 void DTREagerBlobObject::clear_invalid_object() {
   if (IsShuttingDown()) { return; }
   CHECK_JUST(Global<dtr::TensorPool>::Get()->clear());
@@ -484,7 +494,6 @@ const std::string& DTREagerBlobObject::compute_op_type_name() const {
 
 bool DTREagerBlobObject::is_evictable() const {
   if (!compute_op_) { return false; }
-  if (compute_op_->inputs().empty()) { return false; }
   // FIXME: set_tensor_inputs should also include other outputs of the compute_op
   if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
   if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "copy") { return false; }

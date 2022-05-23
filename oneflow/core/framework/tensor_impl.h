@@ -256,9 +256,10 @@ class EagerMirroredTensorImpl : public MirroredTensorImpl {
 
   Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override;
 
+  virtual Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
+
  protected:
   Maybe<void> UpdateTensorStorage();
-  Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
 
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
@@ -284,11 +285,11 @@ class DTREagerMirroredTensorImpl final : public EagerMirroredTensorImpl {
   Maybe<MirroredTensorImpl> detach() const override;
   Maybe<void> InitEagerBlobObject(const intrusive::shared_ptr<LocalDepObject>& dep_object, const bool pin_memory) override;
 
+  Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object) override;
  private:
   Maybe<void> UpdateEvictTrigger();
 
   std::shared_ptr<EvictTrigger> evict_trigger_;
-  Maybe<void> set_eager_blob_object(std::shared_ptr<vm::DTREagerBlobObject> eager_blob_object);
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {

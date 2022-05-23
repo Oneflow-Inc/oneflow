@@ -588,6 +588,7 @@ class DTRMirroredTensor final : public MirroredTensor {
   }
 
   Maybe<void> set_blob_object_bp_required();
+  Maybe<void> set_eager_blob_object(const std::shared_ptr<vm::DTREagerBlobObject>& debo);
 
  private:
   std::shared_ptr<Holder> holder_;
