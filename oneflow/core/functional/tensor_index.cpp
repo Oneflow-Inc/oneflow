@@ -179,7 +179,7 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
   if (index_subspace_pos <= 0) { return input; }
   int ndim = input->ndim();
   CHECK_LE_OR_RETURN(index_subspace_pos + index_ndim, ndim)
-      << Error::RuntimeError()
+      << Error::IndexError()
       << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
   std::vector<int> permute;
   permute.reserve(ndim);
