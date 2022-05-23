@@ -31,11 +31,10 @@ template<UnaryOp unary_op, typename Src, typename Dst>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryImpl);
-  ElementwiseUnaryImpl() = default;
+  ElementwiseUnaryImpl(Scalar attr0, Scalar attr1) : ElementwiseUnary(attr0, attr1) {}
   ~ElementwiseUnaryImpl() override = default;
 
-  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, Scalar attr0, Scalar attr1,
-              size_t count) override {
+  void Launch(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count) override {
     CpuStream* cpu_stream = stream->As<CpuStream>();
 
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
@@ -48,8 +47,9 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
 };
 
 template<UnaryOp unary_op, typename Src, typename Dst>
-std::unique_ptr<ElementwiseUnary> NewElementwiseUnary() {
-  return std::unique_ptr<ElementwiseUnary>(new ElementwiseUnaryImpl<unary_op, Src, Dst>());
+std::unique_ptr<ElementwiseUnary> NewElementwiseUnary(Scalar attr0, Scalar attr1) {
+  return std::unique_ptr<ElementwiseUnary>(
+      new ElementwiseUnaryImpl<unary_op, Src, Dst>(attr0, attr1));
 }
 
 class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
@@ -60,6 +60,16 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
 
   std::unique_ptr<ElementwiseUnary> New(UnaryOp unary_op, DataType src_type,
                                         DataType dst_dtype) override {
+    return New(unary_op, src_type, dst_dtype, Scalar(), Scalar());
+  }
+
+  std::unique_ptr<ElementwiseUnary> New(UnaryOp unary_op, DataType src_type, DataType dst_dtype,
+                                        Scalar attr0) override {
+    return New(unary_op, src_type, dst_dtype, attr0, Scalar());
+  }
+
+  std::unique_ptr<ElementwiseUnary> New(UnaryOp unary_op, DataType src_type, DataType dst_dtype,
+                                        Scalar attr0, Scalar attr1) override {
 #define MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)                   \
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
    NewElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
@@ -70,7 +80,7 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
                        OF_PP_PAIR_FIRST(dst_dtype_pair)>},
 
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
-                          std::function<std::unique_ptr<ElementwiseUnary>()>>
+                          std::function<std::unique_ptr<ElementwiseUnary>(Scalar, Scalar)>>
         new_elementwise_unary_handle{
             // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
@@ -91,7 +101,7 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
     const auto it =
         new_elementwise_unary_handle.find(std::make_tuple(unary_op, src_type, dst_dtype));
     if (it != new_elementwise_unary_handle.end()) {
-      return it->second();
+      return it->second(attr0, attr1);
     } else {
       return nullptr;
     }

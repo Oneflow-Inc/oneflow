@@ -82,7 +82,7 @@ void TestElementwise(DeviceManagerRegistry* registry, const std::set<DeviceType>
 
     ep::test::StreamGuard stream(device.get());
     std::unique_ptr<ElementwiseUnary> elementwise_primitive = NewPrimitive<ElementwiseUnaryFactory>(
-        device_type, unary_op, /*src_type=*/SrcType, /*dst_type=*/DstType);
+        device_type, unary_op, /*src_type=*/SrcType, /*dst_type=*/DstType, attr0, attr1);
     ASSERT_TRUE(elementwise_primitive.operator bool());
     std::unique_ptr<Memcpy> h2d = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kHtoD);
     std::unique_ptr<Memcpy> d2h = NewPrimitive<MemcpyFactory>(device_type, MemcpyKind::kDtoH);
@@ -92,7 +92,7 @@ void TestElementwise(DeviceManagerRegistry* registry, const std::set<DeviceType>
     std::memcpy(host_src.ptr(), eigen_src_data, src_data_size);
     h2d->Launch(stream.stream(), device_src.ptr<Src>(), host_src.ptr<Src>(), src_data_size);
     elementwise_primitive->Launch(stream.stream(), device_src.ptr<Dst>(), device_dst.ptr<Dst>(),
-                                  attr0, attr1, elem_cnt);
+                                  elem_cnt);
     d2h->Launch(stream.stream(), host_dst.ptr<Dst>(), device_dst.ptr<Dst>(), dst_data_size);
     CHECK_JUST(stream.stream()->Sync());
 

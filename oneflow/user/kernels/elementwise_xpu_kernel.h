@@ -102,6 +102,7 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
 
   using ConstructAttrFuncType =
       std::function<void(user_op::KernelComputeContext*, Scalar&, Scalar&)>;
+
   UnaryPrimitiveKernel(ep::primitive::UnaryOp op, const std::string& output_name,
                        const std::string& input_name, ConstructAttrFuncType fn)
       : op(op),
@@ -114,8 +115,10 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex(input_name, 0);
     const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex(output_name, 0);
+    Scalar attr0, attr1;
+    if (ConstructAttrFunc) ConstructAttrFunc(ctx, attr0, attr1);
     auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-        ctx->device_type(), op, src->data_type(), dst->data_type());
+        ctx->device_type(), op, src->data_type(), dst->data_type(), attr0, attr1);
     CHECK(primitive);
 
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex(input_name, 0);
@@ -126,12 +129,10 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
     CHECK_EQ(input_shape, output_shape);
     const int64_t elem_cnt = input_shape.elem_cnt();
 
-    const InputA* input_a_ptr = input_tensor->dptr<InputA>();
+    const InputA* input_ptr = input_tensor->dptr<InputA>();
     OutputT* output_ptr = output_tensor->mut_dptr<OutputT>();
-    Scalar attr0, attr1;
-    if (ConstructAttrFunc) ConstructAttrFunc(ctx, attr0, attr1);
 
-    primitive->Launch(ctx->stream(), input_a_ptr, output_ptr, attr0, attr1, elem_cnt);
+    primitive->Launch(ctx->stream(), input_ptr, output_ptr, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
