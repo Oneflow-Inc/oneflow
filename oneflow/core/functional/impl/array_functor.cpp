@@ -3022,6 +3022,19 @@ class PinMemoryFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FillFunctor {
+ public:
+  FillFunctor() { op_ = CHECK_JUST(one::OpBuilder("fill_").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& value) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("value", value));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3034,6 +3047,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
+  m.add_functor<impl::FillFunctor>("Fill");
   m.add_functor<impl::WhereFunctor>("Where");
   m.add_functor<impl::WhereScalarXFunctor>("WhereScalarX");
   m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");

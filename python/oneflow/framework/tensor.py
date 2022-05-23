@@ -824,8 +824,9 @@ def _normal(self, mean=0, std=1):
 
 
 def _fill(self, value):
-    initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
-    return _init_by_initializer_conf(self, initializer_conf)
+    # initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
+    # return _init_by_initializer_conf(self, initializer_conf)
+    return flow._C.fill_(self, value)
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
