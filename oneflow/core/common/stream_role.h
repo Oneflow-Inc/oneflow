@@ -53,6 +53,7 @@ struct StreamRoleVisitor {
       case StreamRole::kLazyJobLauncher:
         return DerivedT::VisitLazyJobLauncher(std::forward<Args>(args)...);
     }
+    return DerivedT::VisitInvalid(std::forward<Args>(args)...);
   }
 };
 
