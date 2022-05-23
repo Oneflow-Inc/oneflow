@@ -412,7 +412,7 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     for (int64_t i = 0; i < weight_size; i++) {
-      CHECK_GE_OR_RETURN(dropout_rate_list.at(i), static_cast<float>(0.0))
+      CHECK_GE_OR_RETURN(dropout_rate_list.at(i), 0.0f)
           << Error::RuntimeError() << "Dropout rate should be >= 0.0";
 
       const auto& weight_shape = weights[i]->shape();
@@ -457,17 +457,12 @@ class FusedMatmulBiasAddReluDropoutFunctor {
       out = JUST(
           functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
                               biases[layer_idx], 1));
-      if ((layer_idx != weight_size - 1)) {
+      if ((layer_idx != weight_size - 1) || !skip_final_activation) {
         out = JUST(functional::Relu(out, false));
         out = JUST(functional::Dropout(out, dropout_rate_list.at(layer_idx), /*training=*/true,
                                        /*inplace=*/false,
                                        /*generator=*/gen, /*addend=*/NullOpt));
-      }
-      if ((layer_idx == weight_size - 1) && (!skip_final_activation)) {
-        /*
-        When it is not last dense layer, or it is last dense layer and skip_final_activate=False,
-        we add relu Layer.
-        */
+      } else {
         out = JUST(functional::Relu(out, false));
       }
     }
