@@ -289,8 +289,9 @@ class LocalTensorSharedNumpyDataFunctor {
     // Init blob
     JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject(), /*pin_memory=*/false));
     const auto& stream = JUST(GetDefaultStreamByDevice(device));
-    JUST(tensor_impl->eager_blob_object())->init_producer_stream(stream);
-    JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
+    const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
+    JUST(eager_blob_object->init_producer_stream(stream));
+    eager_blob_object->set_last_used_stream(stream);
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
     return out;
   }

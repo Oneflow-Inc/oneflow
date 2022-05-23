@@ -38,21 +38,33 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuStreamType>();
     } else if (device_type == DeviceType::kCUDA) {
+#ifdef WITH_CUDA
       return SingletonPtr<vm::CudaStreamType>();
+#else
+      UNIMPLEMENTED_THEN_RETURN();
+#endif
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
   }
   static Maybe<const vm::StreamType*> VisitHost2Device(DeviceType device_type) {
     if (device_type == DeviceType::kCUDA) {
+#ifdef WITH_CUDA
       return SingletonPtr<vm::CudaCopyH2DStreamType>();
+#else
+      UNIMPLEMENTED_THEN_RETURN();
+#endif
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
   }
   static Maybe<const vm::StreamType*> VisitDevice2Host(DeviceType device_type) {
     if (device_type == DeviceType::kCUDA) {
+#ifdef WITH_CUDA
       return SingletonPtr<vm::CudaCopyD2HStreamType>();
+#else
+      UNIMPLEMENTED_THEN_RETURN();
+#endif
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -61,7 +73,11 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuStreamType>();
     } else if (device_type == DeviceType::kCUDA) {
+#ifdef WITH_CUDA
       return SingletonPtr<vm::CudaStreamType>();
+#else
+      UNIMPLEMENTED_THEN_RETURN();
+#endif
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
@@ -70,7 +86,11 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuStreamType>();
     } else if (device_type == DeviceType::kCUDA) {
+#ifdef WITH_CUDA
       return SingletonPtr<vm::AsyncCudaStreamType>();
+#else
+      UNIMPLEMENTED_THEN_RETURN();
+#endif
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }

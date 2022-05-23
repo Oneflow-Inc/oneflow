@@ -126,7 +126,7 @@ void VirtualMachine::ControlSync() {
 }
 
 Maybe<void> VirtualMachine::CloseVMThreads() {
-  CHECK_OR_RETURN(!disable_vm_threads_);
+  CHECK_OR_RETURN(!disable_vm_threads_) << "vm threads closed";
   ControlSync();
   pending_notifier_.Close();
   schedule_thread_.join();
@@ -243,7 +243,7 @@ Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_lis
   CHECK_OR_RETURN(vm_->SchedulerEmpty()) << "vm scheduler not empty. May be a fatal error occured";
   CHECK_OR_RETURN(vm_->CallbackEmpty())
       << "vm callback handler not empty. May be a fatal error occured";
-  CHECK_OR_RETURN(scheduler_stopped_);
+  CHECK_OR_RETURN(scheduler_stopped_) << "vm scheduler stopped.";
   JUST(vm_->Receive(instr_list));
   ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
   return Maybe<void>::Ok();
