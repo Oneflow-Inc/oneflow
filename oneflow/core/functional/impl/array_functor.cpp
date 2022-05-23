@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -1192,20 +1193,18 @@ class ToContiguousFunctor {
 class InplaceToContiguousFunctor {
  public:
   InplaceToContiguousFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("inplace_to_contiguous").Input("in").Output("temp").Output("out").Build());
+    assign_op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    if (input->is_consistent() || input->is_lazy()) { return input; }
-    JUST(CheckInplaceValid(input));
-    auto outputs = std::make_shared<TensorTuple>(2);
-    (*outputs)[0] = input;
-    (*outputs)[1] = nullptr;
-    JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get()));
-    return outputs->at(0);
+    auto contiguous_tensor = JUST(functional::ToContiguous(input));
+    CHECK_OR_RETURN(input->is_local() && contiguous_tensor->is_local())
+        << "Both ref and value must be local tensor.";
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
+    return input;
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> assign_op_;
 };
 
 class SliceBaseFunctor {
