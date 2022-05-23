@@ -59,7 +59,7 @@ class ProfResult:
 
 WARMUP_NUM = int(os.getenv("ONEFLOW_PROFILE_WARMUP_NUM", 10))
 RUN_NUM = int(os.getenv("ONEFLOW_PROFILE_RUN_NUM", 1000))
-PRINT_PROF_RESULT = flow.support.env_var_util.parse_boolean_form_env(
+PRINT_PROF_RESULT = flow.support.env_var_util.parse_boolean_from_env(
     "ONEFLOW_PROFILE_PRINT_RESULT", True
 )
 END_TO_END = "end-to-end"
