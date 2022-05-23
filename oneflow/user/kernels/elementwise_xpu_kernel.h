@@ -89,14 +89,6 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::C
   std::string input_a_name;
 };
 
-template<typename Context>
-std::unique_ptr<ep::primitive::ElementwiseUnary> NewReluPrimitive(Context* ctx) {
-  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-      ctx->device_type(), ep::primitive::UnaryOp::kRelu, src->data_type(), dst->data_type());
-}
-
 class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(UnaryPrimitiveKernel);

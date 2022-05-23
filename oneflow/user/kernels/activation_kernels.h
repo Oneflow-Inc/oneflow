@@ -315,6 +315,19 @@ struct SoftShrinkGradFunctor {
   const T alpha;
 };
 
+namespace {
+auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_name,
+                          const std::string& input_name) {
+  return hob::make_custom("PrimitiveExists", [&](const user_op::KernelRegContext& ctx) {
+    const user_op::TensorDesc* src = ctx.TensorDesc4ArgNameAndIndex(input_name, 0);
+    const user_op::TensorDesc* dst = ctx.TensorDesc4ArgNameAndIndex(output_name, 0);
+    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+        ctx.device_type(), op, src->data_type(), dst->data_type());
+    return primitive != nullptr;
+  });
+}
+}  // namespace
+
 #define REGISTER_SOFTSHRINK_KERNEL(device, dtype)                            \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                       \
       device, "softshrink", SoftShrinkFunctor, dtype, dtype,                 \
@@ -343,23 +356,23 @@ struct SoftShrinkGradFunctor {
       },                                                          \
       "dx", "x", "dy");
 
-#define REGISTER_LEAKYRELU_KERNEL(device, dtype)                                          \
-  REGISTER_USER_KERNEL("leaky_relu")                                                      \
-      .SetCreateFn([]() {                                                                 \
-        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
-            "y", "x", [](user_op::KernelComputeContext* ctx) {                            \
-              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
-                  device, ep::primitive::UnaryOp::kLeakyRelu, GetDataType<dtype>::value,  \
-                  GetDataType<dtype>::value, ctx->Attr<float>("alpha"));                  \
-            });                                                                           \
-      })                                                                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));   \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                   \
-      device, "leaky_relu_grad", LeakyReluGradFunctor, dtype, dtype, dtype,               \
-      [](user_op::KernelComputeContext* ctx) {                                            \
-        return LeakyReluGradFunctor<dtype>(ctx->Attr<float>("alpha"));                    \
-      },                                                                                  \
+#define REGISTER_LEAKYRELU_KERNEL(device, dtype)                                            \
+  REGISTER_USER_KERNEL("leaky_relu")                                                        \
+      .SetCreateFn([]() {                                                                   \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                  \
+            "y", "x", [](user_op::KernelComputeContext* ctx) {                              \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(   \
+                  ctx->device_type(), ep::primitive::UnaryOp::kLeakyRelu,                   \
+                  GetDataType<dtype>::value, GetDataType<dtype>::value,                     \
+                  ctx->Attr<float>("alpha"));                                               \
+            });                                                                             \
+      })                                                                                    \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kLeakyRelu, "y", "x")); \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                     \
+      device, "leaky_relu_grad", LeakyReluGradFunctor, dtype, dtype, dtype,                 \
+      [](user_op::KernelComputeContext* ctx) {                                              \
+        return LeakyReluGradFunctor<dtype>(ctx->Attr<float>("alpha"));                      \
+      },                                                                                    \
       "dx", "x", "dy");
 
 #define REGISTER_CELU_KERNEL(device, dtype)                        \
