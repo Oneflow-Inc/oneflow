@@ -43,15 +43,21 @@ struct OneDnnPoolKernelUtil {
     auto src_mem = dnnl::memory(src_md, *onednn_engine, (void*)src);
     auto dst_mem = dnnl::memory(dst_md, *onednn_engine, (void*)dest);
 
+    printf("pooling_v2_forward 1 ---->\n");
+    printf("%ld, %ld --> %ld, %ld\n", src_dims[2], src_dims[3], dst_dims[2], dst_dims[3]);
+    printf("l=%ld, s=%ld, p=%ld, \n", kernel_dims[1], strides_dims[1], padding_dims_l[1]);
     auto pooling_desc = dnnl::pooling_v2_forward::desc(dnnl::prop_kind::forward_training, algorithm,
                                                        src_md, dst_md, strides_dims, kernel_dims,
                                                        dilation, padding_dims_l, padding_dims_r);
+    printf("pooling_v2_forward 2 ---->\n");
     auto pooling_primitive_desc =
         dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
+    printf("pooling_v2_forward 3 ---->\n");
     auto pooling_primitive = dnnl::pooling_v2_forward(pooling_primitive_desc);
+    printf("pooling_v2_forward 4 ---->\n");
     auto workspace_mem =
         dnnl::memory(pooling_primitive_desc.workspace_desc(), *onednn_engine, (void*)indice_ptr);
-
+    printf("pooling_v2_forward 5 ---->\n");
     pooling_primitive.execute(
         *onednn_stream,
         {{DNNL_ARG_SRC, src_mem}, {DNNL_ARG_DST, dst_mem}, {DNNL_ARG_WORKSPACE, workspace_mem}});
@@ -76,15 +82,19 @@ struct OneDnnPoolKernelUtil {
     auto diff_dst_mem = dnnl::memory(diff_dst_md, *onednn_engine, diff_dst);
     auto diff_src_mem = dnnl::memory(diff_src_md, *onednn_engine, diff_src);
 
+    printf("pooling_v2_backward 1 ---->\n");
     auto pooling_back_desc =
         dnnl::pooling_v2_backward::desc(algorithm, diff_src_md, diff_dst_md, strides_dims,
                                         kernel_dims, dilation, padding_dims_l, padding_dims_r);
     // forward
+    printf("pooling_v2_backward 2 ---->\n");
     auto pooling_desc = dnnl::pooling_v2_forward::desc(
         dnnl::prop_kind::forward_training, algorithm, diff_src_md, diff_dst_md, strides_dims,
         kernel_dims, dilation, padding_dims_l, padding_dims_r);
+    printf("pooling_v2_backward 3 ---->\n");
     auto pooling_primitive_desc =
         dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
+    printf("pooling_v2_backward 4 ---->\n");
     auto workspace_mem =
         dnnl::memory(pooling_primitive_desc.workspace_desc(), *onednn_engine, workspace);
     // Backward

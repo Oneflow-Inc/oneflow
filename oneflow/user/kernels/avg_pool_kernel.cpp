@@ -418,6 +418,13 @@ class OneDnnAvgPool1dKernel final : public user_op::OpKernel {
     void* src = reinterpret_cast<void*>(const_cast<T*>(x->dptr<T>()));
     void* dest = reinterpret_cast<void*>(const_cast<T*>(y->mut_dptr<T>()));
 
+    printf("src dims : %ld, %ld, %ld\n", x->shape().At(0), x->shape().At(1), x->shape().At(2));
+    printf("dst dims : %ld, %ld, %ld\n", x->shape().At(0), x->shape().At(1), x->shape().At(2));
+    printf("kernel_dims : %d, %d, %d\n", params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[1],
+           params_3d.pool_size_3d()[2]);
+    printf("strides_dims : %d, %d, %d\n", params_3d.stride_3d()[1], params_3d.stride_3d()[1],
+           params_3d.stride_3d()[2]);
+
     dnnl::memory::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
     dnnl::memory::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
     dnnl::memory::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
@@ -426,15 +433,37 @@ class OneDnnAvgPool1dKernel final : public user_op::OpKernel {
     dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
     dnnl::memory::dims dilation = {0, 0};
 
-    if (params_3d.count_include_pad()) {
-      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
-          OneDnnPoolForwardCompute(ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims,
-                                   padding_dims_l, padding_dims_r, dilation,
-                                   dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    if (!params_3d.ceil_mode()) {
+      printf("onednn false ceil_mode ------>\n");
+      if (params_3d.count_include_pad()) {
+        OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+            OneDnnPoolForwardCompute(ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims,
+                                     padding_dims_l, padding_dims_r, dilation,
+                                     dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      } else {
+        OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnPoolForwardCompute(
+            ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+            padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      }
+
     } else {
-      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnPoolForwardCompute(
-          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      printf("default false ceil_mode ------>\n");
+      const int64_t elem_num = y->shape().elem_cnt();
+      const T* src = x->dptr<T>();
+      T* dest = y->mut_dptr<T>();
+
+      DimVector y_vector(2);
+      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+      y_vector.at(1) = y->shape().At(2);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool1dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 2> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool1dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
     }
   };
 };
@@ -472,16 +501,39 @@ class OneDnnAvgPool1dGradKernel final : public user_op::OpKernel {
     dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
     dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
     dnnl::memory::dims dilation = {0, 0};
+    if (!params_3d.ceil_mode()) {
+      printf("onednn false ceil_mode back ------>\n");
+      if (params_3d.count_include_pad()) {
+        OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+            OneDnnpoolBackwardCompute(ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims,
+                                      strides_dims, padding_dims_l, padding_dims_r, dilation,
+                                      dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      } else {
+        OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnpoolBackwardCompute(
+            ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+            padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      }
 
-    if (params_3d.count_include_pad()) {
-      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
-          OneDnnpoolBackwardCompute(ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims,
-                                    strides_dims, padding_dims_l, padding_dims_r, dilation,
-                                    dnnl::memory::format_tag::nchw, src, dest, nullptr);
     } else {
-      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnpoolBackwardCompute(
-          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      printf("default false ceil_mode back------>\n");
+      const int64_t elem_num = dy->shape().elem_cnt();
+      const T* src = dy->dptr<T>();
+      T* dest = dx->mut_dptr<T>();
+      size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+      Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
+
+      DimVector dy_vector(2);
+      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+      dy_vector.at(1) = dy->shape().At(2);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 2> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool1dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 2> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool1dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
     }
   };
 };
@@ -518,16 +570,35 @@ class OneDnnAvgPool2dKernel final : public user_op::OpKernel {
     dnnl::memory::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
     dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
     dnnl::memory::dims dilation = {0, 0};
-
-    if (params_3d.count_include_pad()) {
-      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
-          OneDnnPoolForwardCompute(ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims,
-                                   padding_dims_l, padding_dims_r, dilation,
-                                   dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    if (!params_3d.ceil_mode() && params_3d.divisor_override()==0) {
+      if (params_3d.count_include_pad()) {
+        OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+            OneDnnPoolForwardCompute(ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims,
+                                     padding_dims_l, padding_dims_r, dilation,
+                                     dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      } else {
+        OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnPoolForwardCompute(
+            ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+            padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      }
     } else {
-      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnPoolForwardCompute(
-          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      const int64_t elem_num = y->shape().elem_cnt();
+      const T* src = x->dptr<T>();
+      T* dest = y->mut_dptr<T>();
+
+      DimVector y_vector(3);
+      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+      y_vector.at(1) = y->shape().At(2);
+      y_vector.at(2) = y->shape().At(3);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool2dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool2dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
     }
   };
 };
@@ -564,16 +635,38 @@ class OneDnnAvgPool2dGradKernel final : public user_op::OpKernel {
     dnnl::memory::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
     dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
     dnnl::memory::dims dilation = {0, 0};
-
-    if (params_3d.count_include_pad()) {
-      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
-          OneDnnpoolBackwardCompute(ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims,
-                                    strides_dims, padding_dims_l, padding_dims_r, dilation,
-                                    dnnl::memory::format_tag::nchw, src, dest, nullptr);
+    if (!params_3d.ceil_mode() && params_3d.divisor_override()==0) {
+      if (params_3d.count_include_pad()) {
+        OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
+            OneDnnpoolBackwardCompute(ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims,
+                                      strides_dims, padding_dims_l, padding_dims_r, dilation,
+                                      dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      } else {
+        OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnpoolBackwardCompute(
+            ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+            padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      }
     } else {
-      OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnpoolBackwardCompute(
-          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw, src, dest, nullptr);
+      const int64_t elem_num = dy->shape().elem_cnt();
+      const T* src = dy->dptr<T>();
+      T* dest = dx->mut_dptr<T>();
+
+      size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+      Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
+
+      DimVector dy_vector(3);
+      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+      dy_vector.at(1) = dy->shape().At(2);
+      dy_vector.at(2) = dy->shape().At(3);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 3> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool2dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool2dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
     }
   };
 };
@@ -614,7 +707,7 @@ class OneDnnAvgPool3dKernel final : public user_op::OpKernel {
     dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
                                          params_3d.padding()[2]};
     dnnl::memory::dims dilation = {0, 0, 0};
-
+    if (!params_3d.ceil_mode() && params_3d.divisor_override()==0) {
     if (params_3d.count_include_pad()) {
       OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
           OneDnnPoolForwardCompute(ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims,
@@ -624,6 +717,26 @@ class OneDnnAvgPool3dKernel final : public user_op::OpKernel {
       OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
           padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, src, dest, nullptr);
+    }
+    }else {
+      const int64_t elem_num = y->shape().elem_cnt();
+      const T* src = x->dptr<T>();
+      T* dest = y->mut_dptr<T>();
+
+      DimVector y_vector(4);
+      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+      y_vector.at(1) = y->shape().At(2);
+      y_vector.at(2) = y->shape().At(3);
+      y_vector.at(3) = y->shape().At(4);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool3dForward(ctx->stream(), index_helper,
+                                                                    elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool3dForward(ctx->stream(), index_helper,
+                                                                    elem_num, src, dest, params_3d);
+      }
     }
   };
 };
@@ -665,6 +778,7 @@ class OneDnnAvgPool3dGradKernel final : public user_op::OpKernel {
                                          params_3d.padding()[2]};
     dnnl::memory::dims dilation = {0, 0, 0};
 
+    if (!params_3d.ceil_mode() && params_3d.divisor_override()==0) {
     if (params_3d.count_include_pad()) {
       OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg_include_padding>::
           OneDnnpoolBackwardCompute(ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims,
@@ -674,6 +788,29 @@ class OneDnnAvgPool3dGradKernel final : public user_op::OpKernel {
       OneDnnPoolKernelUtil<T, dnnl::algorithm::pooling_avg>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
           padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw, src, dest, nullptr);
+    }
+    }else{
+      const int64_t elem_num = dy->shape().elem_cnt();
+      const T* src = dy->dptr<T>();
+      T* dest = dx->mut_dptr<T>();
+
+      size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+      Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
+
+      DimVector dy_vector(4);
+      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+      dy_vector.at(1) = dy->shape().At(2);
+      dy_vector.at(2) = dy->shape().At(3);
+      dy_vector.at(3) = dy->shape().At(4);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool3dBackward(ctx->stream(), index_helper,
+                                                                      elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool3dBackward(ctx->stream(), index_helper,
+                                                                      elem_num, src, dest, params_3d);
+      }
     }
   };
 };
