@@ -135,7 +135,7 @@ class AvgPool1dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
 
 #ifdef WITH_ONEDNN
-// #if 0
+    // #if 0
     if (!params_3d.ceil_mode() && OneDnnIsSupportDtype<T>()) {
       dnnl::memory::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
       dnnl::memory::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
