@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from re import X
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -24,7 +25,10 @@ def _test_fill_with_alpha(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     value = random().to(float)
-    return torch.Tensor.fill_(x, value)
+    x.fill_(value)
+    # y = x + 1
+    # return y
+    return x
 
 
 class TestAddModule(flow.unittest.TestCase):

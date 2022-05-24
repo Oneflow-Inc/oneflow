@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
@@ -23,7 +24,7 @@ namespace one {
 
 struct FillCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  float value;
+  Scalar value;
 };
 
 class Fill : public OpExprGradFunction<FillCaptureState> {
@@ -50,7 +51,13 @@ Maybe<void> Fill::Capture(FillCaptureState* ctx, const TensorTuple& inputs,
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->value = JUST(composed_attrs.GetAttr<float>("value"));
+  if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
+    ctx->value = Scalar(JUST(composed_attrs.GetAttr<double>("floating_value")));
+  } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
+    ctx->value = Scalar(JUST(composed_attrs.GetAttr<int64_t>("integral_value")));
+  } else {
+    UNIMPLEMENTED_THEN_RETURN() << "Data type is not floating or integral type.";
+  }
   return Maybe<void>::Ok();
 }
 
@@ -58,7 +65,7 @@ Maybe<void> Fill::Apply(const FillCaptureState* ctx, const TensorTuple& out_grad
                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  if (ctx->requires_grad) { (*in_grads)[0] = out_grads[0]; }
+  if (ctx->requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads.at(0), 0)); }
   return Maybe<void>::Ok();
 }
 

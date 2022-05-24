@@ -3025,9 +3025,15 @@ class PinMemoryFunctor {
 class FillFunctor {
  public:
   FillFunctor() { op_ = CHECK_JUST(one::OpBuilder("fill_").Input("x").Output("y").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& value) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& value) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<float>("value", value));
+    if (IsFloatingDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+    } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
     JUST(CheckInplaceValid(x));
     auto outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;

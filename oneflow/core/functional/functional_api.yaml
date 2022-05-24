@@ -2184,6 +2184,6 @@
   bind_python: True
 
 - name: "fill_"
-  signature: "Tensor (Tensor x, Float value) => Fill"
+  signature: "Tensor (Tensor x, Scalar value) => Fill"
   bind_python: True
 

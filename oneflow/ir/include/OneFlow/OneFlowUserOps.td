@@ -9415,7 +9415,8 @@ def OneFlow_FillOp : OneFlow_BaseOp<"fill_", [NoSideEffect, DeclareOpInterfaceMe
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    F32Attr:$value
+    DefaultValuedAttr<F64Attr, "0.">:$floating_value,
+    DefaultValuedAttr<SI64Attr, "0.">:$integral_value
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
