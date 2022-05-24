@@ -61,8 +61,7 @@ __device__ void SetCublasBitMask(FastIntegerMath<IndexType> fast_div, const Inde
     bitmask |= __shfl_down_sync(__activemask(), bitmask, stride, kWarpSize);
   }
   if (mask_offset == 0) {
-    int32_t aux_ld_load_index = linear_index / 32;  // cause we use int32 to store aux_ld
-    mask[aux_ld_load_index] = bitmask;
+    mask[mask_index] = bitmask;
   }
 }
 
