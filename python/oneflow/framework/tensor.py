@@ -17,7 +17,6 @@ import oneflow as flow
 import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
-import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
 from typing import Union
@@ -832,6 +831,7 @@ def _fill(self, value):
         else:
             value = float(value)
     return flow._C.fill_(self, value)
+
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     method_name = eager_local_tensor._get_copy_mirrored_tensor_from_numpy_func_name()

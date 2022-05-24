@@ -58,7 +58,7 @@ Maybe<void> Fill::Apply(const FillCaptureState* ctx, const TensorTuple& out_grad
                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  if (ctx->requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads[0], ctx->value)); }
+  if (ctx->requires_grad) { (*in_grads)[0] = out_grads[0]; }
   return Maybe<void>::Ok();
 }
 

@@ -16,10 +16,8 @@ limitations under the License.
 
 import copy
 import os
-import unittest
-from collections import OrderedDict
-
 import numpy as np
+import unittest
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
@@ -1082,6 +1080,11 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(np_arr, dtype=flow.int8)
         test_case.assertTrue(np.array_equal(x.numpy(), [1.0, 2.0, 3.0]))
         test_case.assertEquals(x.dtype, flow.int8)
+
+    @profile(torch.Tensor.fill_)
+    def profile_fill_(test_case):
+        torch.Tensor.fill_(torch.ones(1, 8, 16, 16), 2)
+        torch.Tensor.fill_(torch.ones(100, 100, 100, 100), 2)
 
 
 if __name__ == "__main__":

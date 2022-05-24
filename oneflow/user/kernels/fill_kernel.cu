@@ -40,7 +40,6 @@ class FillGpuKernel final : public user_op::OpKernel {
     const float value = ctx->Attr<float>("value");
     const int32_t elem_cnt = x->shape().elem_cnt();
     T* y_ptr = y->mut_dptr<T>();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) { y_ptr[i] = value; }
     RUN_CUDA_KERNEL((FillForwardGpu<T>), ctx->stream(), elem_cnt, elem_cnt, value,
                     y->mut_dptr<T>());
   }
