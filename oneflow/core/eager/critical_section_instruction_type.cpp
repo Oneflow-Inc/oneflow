@@ -47,13 +47,13 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   using stream_type = CriticalSectionStreamType;
 
   void Compute(vm::Instruction* instruction) const override {
-    OF_PROFILER_RANGE_GUARD("CriticalSectionBegin");
     {
       auto ptr = instruction->instr_msg().phy_instr_operand();
       auto phy_instr_operand = std::dynamic_pointer_cast<CriticalSectionBeginPhyInstrOperand>(ptr);
       CHECK_NOTNULL(phy_instr_operand);
       const auto& critical_section_instance = MakeCriticalSectionInstance(phy_instr_operand);
       const auto& job_name = critical_section_instance->job_name();
+      OF_PROFILER_RANGE_GUARD("CriticalSectionBegin-" + job_name);
       auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
       for (int i = 0; i < phy_instr_operand->interfaces_op_names().size(); ++i) {
         if (phy_instr_operand->interfaces_valid().at(i)) {

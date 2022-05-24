@@ -17,13 +17,14 @@ limitations under the License.
 #include "oneflow/core/kernel/wait_and_send_ids_kernel.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
 class WaitAndSendIdsActor final : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WaitAndSendIdsActor);
-  WaitAndSendIdsActor() : wait_and_send_ids_status_(nullptr) {}
+  WaitAndSendIdsActor() : wait_and_send_ids_status_(nullptr), my_act_cnt_(0) {}
   ~WaitAndSendIdsActor() = default;
 
  private:
@@ -40,6 +41,7 @@ class WaitAndSendIdsActor final : public Actor {
   int HandlerWaitToStart(const ActorMsg&);
 
   WaitAndSendIdsStatus* wait_and_send_ids_status_;
+  int64_t my_act_cnt_;
 };
 
 void WaitAndSendIdsActor::VirtualActorInit(const TaskProto& task_proto) {
@@ -54,6 +56,8 @@ void WaitAndSendIdsActor::VirtualActorInit(const TaskProto& task_proto) {
 }
 
 void WaitAndSendIdsActor::Act() {
+  OF_PROFILER_RANGE_PUSH("WaitAndSendIdsActor i = " + std::to_string(my_act_cnt_++));
+  OF_PROFILER_RANGE_POP();
   CHECK_LE(wait_and_send_ids_status_->out_idx_, wait_and_send_ids_status_->out_num_);
   AsyncLaunchKernel();
 }
