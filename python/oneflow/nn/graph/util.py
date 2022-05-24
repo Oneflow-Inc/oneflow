@@ -20,7 +20,6 @@ from oneflow.framework.tensor import Tensor
 from typing import Callable, Dict, Union, List, Tuple
 from string import Template
 import google.protobuf as protobuf
-from typing import List
 
 
 def operators_repr(
@@ -94,6 +93,21 @@ def seq_to_func_return(seq, need_unpack=False):
         return seq[0]
     return seq
 
+class IOArgs(object):
+
+    def __init__(self, io_args: Union[Tuple, List, Dict], gen_name: bool = False) -> None:
+        self._io_args = io_args 
+        self._gen_name = gen_name
+        self._named_io_args = None 
+
+        if self._gen_name:
+            self._named_io_args = self._construct_named_io_args()
+
+    def gen_name(self):
+        return self._gen_name
+        
+    def _construct_named_io_args(self):
+        pass 
 
 class NamedIONode(object):
     r"""
