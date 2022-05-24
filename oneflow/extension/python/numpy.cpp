@@ -82,12 +82,24 @@ std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec) {
 }
 
 // NumPy strides use bytes. OneFlow strides use element counts.
-std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type) {
+std::vector<size_t> OFStrideToNumpyStride(const DimVector& fixed_vec, const DataType data_type) {
   size_t ndim = fixed_vec.size();
   auto result = std::vector<size_t>(ndim);
   int byte_per_elem = GetSizeOfDataType(data_type);
   for (int i = 0; i < ndim; i++) { result[i] = fixed_vec.at(i) * byte_per_elem; }
   return result;
+}
+
+bool PyArrayCheckLongScalar(PyObject* obj) {
+  return PyArray_CheckScalar(obj) && PyDataType_ISINTEGER(PyArray_DescrFromScalar(obj));
+}
+
+bool PyArrayCheckFloatScalar(PyObject* obj) {
+  return PyArray_CheckScalar(obj) && PyDataType_ISFLOAT(PyArray_DescrFromScalar(obj));
+}
+
+bool PyArrayCheckBoolScalar(PyObject* obj) {
+  return PyArray_CheckScalar(obj) && PyDataType_ISBOOL(PyArray_DescrFromScalar(obj));
 }
 
 // Executing any numpy c api before _import_array() results in segfault

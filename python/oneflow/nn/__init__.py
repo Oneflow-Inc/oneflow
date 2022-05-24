@@ -21,6 +21,7 @@ from oneflow.nn.modules.activation import (
     GELU,
     GLU,
     Hardsigmoid,
+    Hardshrink,
     Hardswish,
     Hardtanh,
     LeakyReLU,
@@ -65,6 +66,7 @@ from oneflow.nn.modules.conv import (
     ConvTranspose2d,
     ConvTranspose3d,
 )
+from oneflow.nn.modules.distance import CosineSimilarity
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,

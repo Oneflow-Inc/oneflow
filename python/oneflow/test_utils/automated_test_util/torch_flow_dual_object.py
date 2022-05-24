@@ -19,9 +19,11 @@ import inspect
 import copy
 import os
 import warnings
+import gc
 
 import numpy as np
 import oneflow as flow
+import oneflow.test_utils.automated_test_util.profiler as auto_profiler
 
 flow.backends.cudnn.deterministic = True
 
@@ -38,7 +40,13 @@ except ImportError:
 
 from .util import broadcast
 from .global_scope import *
-from .generators import Nothing, generator, random_pytorch_tensor, choice_pytorch_tensor
+from .generators import (
+    Nothing,
+    generator,
+    random_pytorch_tensor,
+    choice_pytorch_tensor,
+    rng,
+)
 
 postulate = [".rand", ".Tensor"]
 
@@ -57,7 +65,6 @@ def torch_tensor_to_flow(x):
 note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
-vis_tensor = []
 vis_parameters = {}
 call_tensor_id = []
 extra_input_tensor = set()
@@ -211,6 +218,20 @@ def get_args(callable, *args, **kwargs):
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
 
 
+def to_string(*args, **kwargs) -> str:
+    def _to_string(x):
+        if isinstance(x, DualObject):
+            return x.name
+        return str(x)
+
+    strs = []
+    if len(args) > 0:
+        strs.append(", ".join([_to_string(arg) for arg in args]))
+    if len(kwargs) > 0:
+        strs.append(", ".join([f"{k}={_to_string(v)}" for k, v in kwargs.items()]))
+    return ", ".join(strs)
+
+
 counter = 0
 align_exception = os.getenv("ONEFLOW_TEST_ALIGN_EXCEPTION") is not None
 
@@ -228,14 +249,7 @@ def check_eager_graph_tensor(eager_res, graph_res):
             atol=global_atol,
             equal_nan=True,
         )
-        if equality_res == False:
-            print_note_fake_program()
-            print("===================Wrong nn.Graph Tensor Shape=================")
-            print(eager_res.shape)
-            print(graph_res.shape)
-        assert (
-            equality_res
-        ), f"Check graph failed: graph result {graph_res.numpy()} not equals to eager result {eager_res.numpy()}."
+        return equality_res
 
 
 # NOTE(lixiang): Deepcopy the input parameters in order to correctly test the inplace version of the op.
@@ -256,14 +270,38 @@ def get_args_copy(args, kwargs):
     return copy_args, copy_kwargs
 
 
+def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
+    print(f"\033[1;33m============= {mode} ================\033[1;33m")
+    print(f"\033[1;33mEnter {func} function\033[1;33m")
+    try:
+        if "__self__" in dir(oneflow) and flow.is_tensor(oneflow.__self__):
+            print(f"\033[1;33m{oneflow.__self__}\033[1;33m")
+    except:
+        if flow.is_tensor(oneflow):
+            print(f"\033[1;33m{oneflow}\033[1;33m")
+    if args is not None:
+        print(f"\033[1;33m{args}\033[1;33m")
+    if kwargs is not None:
+        print(f"\033[1;33m{kwargs}\033[1;33m")
+    print_note_fake_program()
+    print(f"\033[1;33mLeave {func} function\033[1;33m")
+    print(f"\033[1;37m\033[1;37m")
+    print("\n\n")
+
+
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
 #   graph_train_oneflow: is a deepcopy of oneflow.
-def get_module_graph_test(graph_train_oneflow, oneflow, *args):
+def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *args):
     of_sgd = flow.optim.SGD(graph_train_oneflow.parameters(), lr=0.001, momentum=0.9,)
     graph_train_parameters_len = 0
     for param in oneflow._parameters.values():
         if param is not None:
             graph_train_parameters_len += 1
+
+    if verbose:
+        get_fake_program_more_detail(
+            oneflow, "nn.Graph", "get_module_graph_test", oneflow_args
+        )
 
     class TestGraphOfModule(flow.nn.Graph):
         def __init__(self):
@@ -276,11 +314,21 @@ def get_module_graph_test(graph_train_oneflow, oneflow, *args):
             res = self.test_module(*args)
             forward_res = res
             if global_backward and graph_train_parameters_len:
+                if isinstance(res, (list, tuple)):
+                    res = res[0]
                 res = res.sum()
                 res.backward()
             return forward_res
 
-    return TestGraphOfModule()
+    try:
+        test_g_res = TestGraphOfModule()
+    except Exception as e:
+        if not verbose:
+            get_fake_program_more_detail(
+                oneflow, "nn.Graph", "get_module_graph_test", oneflow_args
+            )
+        raise OneFlowGraphBuildOrRunError(e)
+    return test_g_res
 
 
 # NOTE(lixiang): When oneflow is of functional type, build the following Graph for testing, and return the test results in Graph mode.
@@ -296,6 +344,15 @@ def get_functional_graph_res(
     **graph_kwargs,
 ):
     test_g_res = []
+
+    if verbose:
+        get_fake_program_more_detail(
+            oneflow,
+            "nn.Graph",
+            "get_functional_graph_res",
+            oneflow_args,
+            oneflow_kwargs,
+        )
 
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
@@ -315,35 +372,21 @@ def get_functional_graph_res(
                     test_g_res = oneflow_res
             else:
                 pass
-            if verbose:
-                print(
-                    "Run graph of function: ",
-                    repr(oneflow),
-                    ", graph check is intentionally skiped.",
-                )
         elif oneflow.__name__ == "Parameter":
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
-            if verbose:
-                print(
-                    "Run graph of function: ",
-                    repr(oneflow),
-                    ", graph check is intentionally skiped.",
-                )
         else:
             test_g = TestGraphOfFunctional()
-            if verbose:
-                print(
-                    "Run graph of function: ", repr(oneflow),
-                )
-                test_g.debug(3)
             test_g_res = test_g()
-            if verbose:
-                print(
-                    "The result after running graph functional: ", test_g_res,
-                )
     except Exception as e:
-        print_note_fake_program()
+        if not verbose:
+            get_fake_program_more_detail(
+                oneflow,
+                "nn.Graph",
+                "get_functional_graph_res",
+                oneflow_args,
+                oneflow_kwargs,
+            )
         raise OneFlowGraphBuildOrRunError(e)
     return test_g_res
 
@@ -355,6 +398,15 @@ def get_tensor_graph_res(
 ):
     test_g_res = []
 
+    if verbose:
+        get_fake_program_more_detail(
+            oneflow,
+            "nn.Graph",
+            "get_tensor_graph_res",
+            tensor_graph_args,
+            tensor_graph_kwargs,
+        )
+
     class TestGraphOfTensorMethod(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -364,16 +416,16 @@ def get_tensor_graph_res(
 
     try:
         test_g = TestGraphOfTensorMethod()
-        if verbose:
-            print("Run graph of method: ", repr(oneflow))
-            test_g.debug(3)
         test_g_res = test_g()
-        if verbose:
-            print(
-                "The result after running graph tensor method: ", test_g_res,
-            )
     except Exception as e:
-        print_note_fake_program()
+        if not verbose:
+            get_fake_program_more_detail(
+                oneflow,
+                "nn.Graph",
+                "get_tensor_graph_res",
+                oneflow_args,
+                oneflow_kwargs,
+            )
         raise OneFlowGraphBuildOrRunError(e)
     return test_g_res
 
@@ -381,27 +433,14 @@ def get_tensor_graph_res(
 def get_oneflow_eager_res(
     oneflow, oneflow_args, oneflow_kwargs, verbose, is_tesnor_method=False
 ):
+    if verbose:
+        get_fake_program_more_detail(
+            oneflow, "Eager", "get_oneflow_eager_res", oneflow_args, oneflow_kwargs
+        )
     if not is_tesnor_method:
-        if verbose:
-            print(
-                "Before running eager module or functional: ", repr(oneflow),
-            )
-
         oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
-        if verbose:
-            print(
-                "The result after running eager module or functional: ", oneflow_res,
-            )
     else:
-        if verbose:
-            print(
-                "Before running eager tensor method: ", repr(oneflow),
-            )
         oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
-        if verbose:
-            print(
-                "The result after running eager tensor method: ", oneflow_res,
-            )
     return oneflow_res
 
 
@@ -426,31 +465,25 @@ def oneflow_eager_run_with_graph_check(
 
     oneflow_res = get_oneflow_eager_res(oneflow, oneflow_args, oneflow_kwargs, verbose)
     if testing_graph:
-        if verbose:
-            print(
-                "After running eager module or functional: ", repr(oneflow),
-            )
         find_check_module_func = True
         ignore_apis_list = ["tensor", "train"]
         test_g_res = []
         if isinstance(oneflow, flow.nn.Module):
-            test_g = get_module_graph_test(graph_train_oneflow, oneflow, *args)
-            if verbose:
-                print("Run graph of module: ", repr(oneflow))
-                test_g.debug(3)
+            test_g = get_module_graph_test(
+                graph_train_oneflow, oneflow, verbose, oneflow_args, *args
+            )
             # When testing module methods, kwargs are not considered.
             test_g_res = test_g(*graph_args)
-            if verbose:
-                print(
-                    "The result after running graph module: ", test_g_res,
-                )
         elif oneflow.__name__ in ignore_apis_list:
             find_check_module_func = False
         # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
         # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
         # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
         elif (
-            ("oneflow.nn.modules" not in oneflow.__module__)
+            (
+                oneflow.__module__ is not None
+                and ("oneflow.nn.modules" not in oneflow.__module__)
+            )
             or inspect.isfunction(oneflow)
             or (
                 inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__
@@ -470,9 +503,25 @@ def oneflow_eager_run_with_graph_check(
         if find_check_module_func:
             if isinstance(test_g_res, tuple):
                 for _, g_res in enumerate(test_g_res):
-                    check_eager_graph_tensor(oneflow_res, g_res)
+                    if not check_eager_graph_tensor(oneflow_res, g_res):
+                        if verbose:
+                            get_fake_program_more_detail(
+                                oneflow,
+                                "Eager + nn.Graph",
+                                "oneflow_eager_run_with_graph_check",
+                                oneflow_args,
+                                oneflow_kwargs,
+                            )
             else:
-                check_eager_graph_tensor(oneflow_res, test_g_res)
+                if not check_eager_graph_tensor(oneflow_res, test_g_res):
+                    if verbose:
+                        get_fake_program_more_detail(
+                            oneflow,
+                            "Eager + nn.Graph",
+                            "oneflow_eager_run_with_graph_check",
+                            oneflow_args,
+                            oneflow_kwargs,
+                        )
     return oneflow_res
 
 
@@ -491,10 +540,6 @@ def oneflow_tensor_eager_run_with_graph_check(
     )
 
     if testing_graph:
-        if verbose:
-            print(
-                "After running eager tensor method: ", repr(oneflow_method),
-            )
 
         test_g_res = get_tensor_graph_res(
             graph_tensor_oneflow,
@@ -506,9 +551,23 @@ def oneflow_tensor_eager_run_with_graph_check(
 
         if isinstance(test_g_res, tuple):
             for _, g_res in enumerate(test_g_res):
-                check_eager_graph_tensor(oneflow_res, g_res)
+                if not check_eager_graph_tensor(oneflow_res, g_res):
+                    get_fake_program_more_detail(
+                        oneflow,
+                        "nn.Graph",
+                        "oneflow_tensor_eager_run_with_graph_check",
+                        oneflow_args,
+                        oneflow_kwargs,
+                    )
         else:
-            check_eager_graph_tensor(oneflow_res, test_g_res)
+            if not check_eager_graph_tensor(oneflow_res, test_g_res):
+                get_fake_program_more_detail(
+                    oneflow,
+                    "nn.Graph",
+                    "oneflow_tensor_eager_run_with_graph_check",
+                    oneflow_args,
+                    oneflow_kwargs,
+                )
     return oneflow_res
 
 
@@ -555,6 +614,13 @@ def get_pytorch_oneflow_res(
             print(
                 "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
             )
+            get_fake_program_more_detail(
+                oneflow,
+                "Eager",
+                "get_pytorch_oneflow_res",
+                oneflow_args,
+                oneflow_kwargs,
+            )
         raise PyTorchDoesNotSupportError(e)
 
     if name in postulate:
@@ -597,6 +663,9 @@ def get_pytorch_oneflow_tensor_res(
     return pytorch_res, oneflow_res
 
 
+profiled_method_name = []
+
+
 def GetDualObject(name, pytorch, oneflow):
     global counter
     counter += 1
@@ -627,7 +696,17 @@ def GetDualObject(name, pytorch, oneflow):
             def get_dual_method(method_name):
                 if method_name == "__call__":
 
+                    if name in profiled_method_name:
+
+                        def method(self, *args, **kwargs):
+                            return auto_profiler.profile_dual_object(self)(
+                                *args, **kwargs
+                            )
+
+                        return method
+
                     def dual_method(self, *args, **kwargs):
+                        param_str = to_string(*args, **kwargs)
                         (
                             pytorch_args,
                             pytorch_kwargs,
@@ -647,7 +726,9 @@ def GetDualObject(name, pytorch, oneflow):
                             testing_graph,
                             *args,
                         )
-                        return GetDualObject("unused", pytorch_res, oneflow_res)
+                        return GetDualObject(
+                            f"{name}({param_str})", pytorch_res, oneflow_res
+                        )
 
                 else:
 
@@ -730,55 +811,18 @@ def print_note_fake_program():
                 )
         print(f"\033[32m)\033[0m")
 
-    print(f"\033[32m-----------------------------------------------------------\033[0m")
-    unique_vis_tensor = []
-    flag_vis_tensor = [False for _ in range(len(vis_tensor))]
-    for i in range(len(vis_tensor)):
-        if flag_vis_tensor[i] == True:
-            continue
-        unique_vis_tensor.append(vis_tensor[i])
-        flag_vis_tensor[i] = True
-        for j in range(i + 1, len(vis_tensor)):
-            if id(vis_tensor[i]) == id(vis_tensor[j]) and flag_vis_tensor[j] == False:
-                flag_vis_tensor[j] = True
-
-    if len(unique_vis_tensor) == 0:
-        print(
-            f"\033[32mThis program has {len(extra_input_tensor)} input tensor: \033[0m"
-        )
-        for input_tensor in iter(extra_input_tensor):
-            print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
-            print(f"\033[32m{input_tensor}\033[0m")
-            print(
-                f"\033[32m-----------------------------------------------------------\033[0m"
-            )
-    else:
-        print(
-            f"\033[32mThis program has {len(unique_vis_tensor)} input tensor: \033[0m"
-        )
-        for input_tensor in unique_vis_tensor:
-            print(f"\033[32mShape{get_tensor_shape(input_tensor)}\033[0m")
-            print(f"\033[32m{input_tensor}\033[0m")
-            print(
-                f"\033[32m-----------------------------------------------------------\033[0m"
-            )
-        if vis_parameters:
-            print(
-                f"\033[32m-------------------nn.Module Parameters---------------------\033[0m"
-            )
-            for name, param in vis_parameters.items():
-                print(f"\033[32m{name}: {param}\033[0m")
-
 
 def clear_note_fake_program():
     note_pytorch_method_names.clear()
     note_pytorch_args.clear()
     note_pytorch_kwargs.clear()
     call_tensor_id.clear()
-    vis_tensor.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
     flow.set_printoptions(profile="full")
+
+
+tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 32))
 
 
 class DualObject:
@@ -789,15 +833,35 @@ class DualObject:
                 pytorch.load_state_dict(broadcast(pytorch).state_dict())
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
+            oneflow_state_dict = oneflow.state_dict()
+            oneflow_state_dict = {
+                k: v.detach() for (k, v) in oneflow_state_dict.items()
+            }
+            already_global = any([v.is_global for v in oneflow_state_dict.values()])
             oneflow.load_state_dict(state_dict, strict=False)
+
             if is_global():
-                oneflow = oneflow.to_global(
-                    placement=flow.env.all_device_placement("cpu"),
-                    sbp=[flow.sbp.broadcast,],
-                )
+                if already_global:
+                    for (k, v) in oneflow_state_dict.items():
+                        if v.is_global:
+                            t = getattr(oneflow, k)
+                            setattr(
+                                oneflow,
+                                k,
+                                t.to_global(placement=v.placement, sbp=v.sbp),
+                            )
+                else:
+                    oneflow = oneflow.to_global(
+                        placement=flow.env.all_device_placement("cpu"),
+                        sbp=[flow.sbp.broadcast,],
+                    )
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
+            tensor_size_mb = pytorch.nelement() * pytorch.element_size() / 1024 / 1024
+            assert (
+                tensor_size_mb < tensor_size_limit_mb
+            ), f"Tensor memory in autotest cannot be larger than {tensor_size_limit_mb}MB, but got {tensor_size_mb}MB"
             if testing:
                 dual_objects_to_test.append(self)
         self.pytorch = pytorch
@@ -817,6 +881,12 @@ class DualObject:
             pytorch_attr = identity
         elif key in ["placement", "sbp"]:
             pytorch_attr = "unused"
+        elif key in ["broadcast_like"]:
+
+            def broadcast_like(x, y, *args, **kwargs):
+                return self.pytorch.broadcast_to(x, y.size())
+
+            pytorch_attr = broadcast_like
         else:
             pytorch_attr = getattr(self.pytorch, key)
         oneflow_attr = getattr(self.oneflow, key)
@@ -929,6 +999,33 @@ def check_basetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return a == b
 
 
+@equality_checker(tuple, tuple)
+@equality_checker(list, list)
+def check_basetype_equality(a, b, rtol=0.0001, atol=1e-05, check_dtype=False):
+    if len(a) != len(b):
+        equality_res = False
+    else:
+        for i in range(len(a)):
+            torch_np = a[i].detach().cpu().numpy()
+            flow_np = b[i].detach().cpu().numpy()
+            equality_res = np.allclose(
+                torch_np, flow_np, rtol=rtol, atol=atol, equal_nan=True,
+            )
+            if check_dtype:
+                equality_res = equality_res and (torch_np.dtype == flow_np.dtype)
+            if equality_res == False:
+                print_note_fake_program()
+                print("---------Tensor Shape--------")
+                print(a[i].shape)
+                print(b[i].shape)
+                print("---------Tensor dtype--------")
+                print(a[i].dtype)
+                print(b[i].dtype)
+                break
+
+    return equality_res
+
+
 @equality_checker(type(None), type(None))
 def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return True
@@ -942,6 +1039,7 @@ def autotest(
     check_graph=True,
     check_allclose=True,
     check_dtype=False,
+    check_grad_use_random_data=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -994,7 +1092,37 @@ def autotest(
                         if auto_backward:
                             if isinstance(x.pytorch, torch_original.Tensor):
                                 call_tensor_id.append(id(x.pytorch))
-                                x.sum().backward()
+                                if check_grad_use_random_data:
+                                    np_arr = rng.uniform(
+                                        low=0, high=1, size=list(x.oneflow.shape)
+                                    )
+                                    if is_global():
+                                        np_arr = broadcast(np_arr)
+                                        flow_tensor = flow.tensor(
+                                            np_arr,
+                                            dtype=x.oneflow.dtype,
+                                            placement=x.oneflow.placement,
+                                            sbp=len(x.oneflow.sbp)
+                                            * [flow.sbp.broadcast],
+                                        )
+                                    else:
+                                        flow_tensor = flow.tensor(
+                                            np_arr,
+                                            dtype=x.oneflow.dtype,
+                                            device=x.oneflow.device,
+                                        )
+                                    # TODO(): Inferred shape of some op is different between oneflow and torch
+                                    pytorch_tensor = torch_original.tensor(
+                                        np_arr.reshape(list(x.pytorch.shape)),
+                                        dtype=x.pytorch.dtype,
+                                        device=x.pytorch.device,
+                                    )
+                                    diff_output = GetDualObject(
+                                        "unused", pytorch_tensor, flow_tensor
+                                    )
+                                    x.backward(diff_output)
+                                else:
+                                    x.sum().backward()
                         dual_objects_to_test.append(x)
                 for x in dual_modules_to_test:
                     for key in x.pytorch.state_dict().keys():
@@ -1018,13 +1146,6 @@ def autotest(
                             )
                         )
                         call_tensor_id.append(id(getattr(x.pytorch, key).grad))
-
-                for x in dual_objects_to_test:
-                    if (
-                        isinstance(x.pytorch, torch_original.Tensor)
-                        and id(x.pytorch) not in call_tensor_id
-                    ):
-                        vis_tensor.append(x.pytorch)
 
                 # check eager
                 for x in dual_objects_to_test:
@@ -1070,11 +1191,14 @@ def random_tensor(
     high=1,
     dtype=float,
     requires_grad=True,
+    pin_memory=False,
 ):
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
     pytorch_tensor = (
-        random_pytorch_tensor(ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype)
+        random_pytorch_tensor(
+            ndim, dim0, dim1, dim2, dim3, dim4, low, high, dtype, pin_memory
+        )
         .value()
         .requires_grad_(requires_grad and dtype != int)
     )
@@ -1089,6 +1213,7 @@ def random_tensor(
         flow_tensor = flow.tensor(
             pytorch_tensor.detach().cpu().numpy(),
             requires_grad=(requires_grad and dtype != int),
+            pin_memory=pin_memory,
         )
 
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
@@ -1124,5 +1249,5 @@ def choice_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
-torch = GetDualObject("", torch_original, flow)
+torch = GetDualObject("torch", torch_original, flow)
 __all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]

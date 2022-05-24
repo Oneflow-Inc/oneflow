@@ -24,9 +24,6 @@ from oneflow.framework.sysconfig import (
     has_rpc_backend_local,
     with_cuda,
     get_cuda_version,
-    with_xla,
-    with_openvino,
-    with_tensorrt,
     with_rdma,
 )
 

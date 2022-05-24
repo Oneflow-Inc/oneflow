@@ -82,14 +82,13 @@ void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
 }
 
 void Instruction::Delete() {
-  OF_PROFILER_RANGE_PUSH("Instruction::Delete");
+  OF_PROFILER_RANGE_GUARD("Instruction::Delete");
   instr_msg().instr_type_id().instruction_type().DeleteInstructionStatusIf(this);
   OF_PROFILER_RANGE_PUSH("ClearInstrMsg");
   clear_instr_msg();
   OF_PROFILER_RANGE_POP();
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
-  OF_PROFILER_RANGE_POP();
 }
 
 bool Instruction::Done() const {

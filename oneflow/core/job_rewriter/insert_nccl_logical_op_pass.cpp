@@ -338,7 +338,7 @@ Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
   std::shared_ptr<Scope> new_scope;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     new_scope =
-        JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_desc.cfg_parallel_conf()));
+        JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_desc.parallel_conf()));
     return Maybe<void>::Ok();
   }));
   // NOTE(chengcheng): need sync vm for get scope right now
@@ -373,7 +373,12 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
 
   // NOTE(chengcheng): nccl donot support dynamic shape.
   if (logical_blob_desc.is_dynamic()) { return false; }
-  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
+  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0)
+      << dst_node->op().op_name() << " consume " << GenLogicalBlobName(lbi) << ", "
+      << *CHECK_JUST(PlacementToString(*src_reduced_parallel_desc)) << " "
+      << NdSbpToString(*src_reduced_nd_sbp) << " -> "
+      << *CHECK_JUST(PlacementToString(*dst_reduced_parallel_desc)) << " "
+      << NdSbpToString(*dst_reduced_nd_sbp);
 
   int64_t scope_symbol_id = CHECK_JUST(BuildScopeWithReducedParallelDesc(
       src_node->op().op_conf().scope_symbol_id(), *src_reduced_parallel_desc));

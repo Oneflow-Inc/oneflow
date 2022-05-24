@@ -25,6 +25,7 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_Open", &JobBuildAndInferCtx_Open);
   m.def("JobBuildAndInferCtx_GetCurrentJobName", &JobBuildAndInferCtx_GetCurrentJobName);
+  m.def("JobBuildAndInferCtx_GetCurrentJobId", &JobBuildAndInferCtx_GetCurrentJobId);
   m.def("JobBuildAndInferCtx_Close", &JobBuildAndInferCtx_Close);
 
   m.def("CurJobBuildAndInferCtx_CheckJob", &CurJobBuildAndInferCtx_CheckJob);

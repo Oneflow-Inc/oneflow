@@ -56,6 +56,12 @@ struct ScatterNdAddFunctor final {
 };
 
 template<DeviceType device_type, typename T, typename I>
+struct ScatterNdUpdateFunctor final {
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                  const T* slices, T* dense) const;
+};
+
+template<DeviceType device_type, typename T, typename I>
 struct FillByNdIndexFunctor final {
   void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
                   T* dense, T value) const;
@@ -98,6 +104,16 @@ OF_DEVICE_FUNC void DoScatterNdAdd(int64_t elem_cnt, int64_t slice_size, int64_t
   XPU_1D_KERNEL_LOOP(i, elem_cnt) {
     int64_t offset = OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
     DeviceAdd<device_type, T>::Invoke(slices + i, dense + offset);
+  }
+}
+
+template<DeviceType device_type, typename T, typename I>
+OF_DEVICE_FUNC void DoScatterNdUpdate(int64_t elem_cnt, int64_t slice_size, int64_t index_ndims,
+                                      const int64_t* dense_shape, const I* indices, const T* slices,
+                                      T* dense) {
+  XPU_1D_KERNEL_LOOP(i, elem_cnt) {
+    int64_t offset = OffsetInSliceToOffsetInDense(slice_size, index_ndims, dense_shape, indices, i);
+    dense[offset] = slices[i];
   }
 }
 

@@ -140,7 +140,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                 def forward(self, t):
                     return t[0]
 
-            class CustomGraph(flow.nn.Graph):
+            class CustomGraphCheck1Ret(flow.nn.Graph):
                 def __init__(self):
                     super().__init__()
                     self.m = CustomModule()
@@ -150,7 +150,7 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                     return rt
 
             model = CustomModule()
-            graph = CustomGraph()
+            graph = CustomGraphCheck1Ret()
 
             model_out = model(input)
             graph_out = graph(input)
