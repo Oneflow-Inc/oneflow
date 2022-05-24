@@ -27,8 +27,7 @@ __global__ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr,
                                 const int64_t down_space, const int64_t thread_num) {
   // A thread is responsible for a row along specific dimension.
   const size_t step = space * down_space;
-  for (size_t i = blockDim.x * blockIdx.x + threadIdx.x; i < thread_num;
-       i += gridDim.x * blockDim.x) {
+  CUDA_1D_KERNEL_LOOP(i, thread_num) {
     const size_t up_space_id = i / down_space;
     const size_t down_space_id = i % down_space;
     const size_t ptr_offset = up_space_id * step + down_space_id;
