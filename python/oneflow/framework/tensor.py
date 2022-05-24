@@ -825,8 +825,6 @@ def _normal(self, mean=0, std=1):
 
 
 def _fill(self, value):
-    # initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
-    # return _init_by_initializer_conf(self, initializer_conf)
     if type(value) == flow.Tensor:
         if len(value.size()) > 0:
             raise RuntimeError(
