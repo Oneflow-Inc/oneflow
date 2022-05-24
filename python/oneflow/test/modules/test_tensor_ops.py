@@ -293,6 +293,34 @@ class TestTensorOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_type_dtype(test_case, *arg)
 
+    def test_type_tensortype_str_cpu(test_case):
+        # test tensor.type(x: str) rather than tensor.type_tensortype
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["src_dtype"] = [
+            flow.uint8,
+            flow.int8,
+            flow.int64,
+            flow.int32,
+            flow.float16,
+            flow.float32,
+            flow.float64,
+        ]
+        tensortype_dict = {
+            "oneflow.CharTensor": [flow.int8, flow.device("cpu")],
+            "oneflow.ByteTensor": [flow.uint8, flow.device("cpu")],
+            "oneflow.IntTensor": [flow.int32, flow.device("cpu")],
+            "oneflow.LongTensor": [flow.int64, flow.device("cpu")],
+            "oneflow.HalfTensor": [flow.float16, flow.device("cpu")],
+            "oneflow.FloatTensor": [flow.float32, flow.device("cpu")],
+            "oneflow.DoubleTensor": [flow.float64, flow.device("cpu")],
+        }
+        arg_dict["tgt_tensortype_str"] = list(tensortype_dict.keys())
+        for arg in GenArgList(arg_dict):
+            _test_type_str(test_case, tensortype_dict, *arg)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_type_tensortype_str(test_case):
         # test tensor.type(x: str) rather than tensor.type_tensortype
         arg_dict = OrderedDict()
@@ -327,6 +355,35 @@ class TestTensorOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_type_str(test_case, tensortype_dict, *arg)
 
+    def test_type_tensortype_cpu(test_case):
+        # test tensor.type(x: tensortype) rather than tensor.type_tensortype
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["src_dtype"] = [
+            flow.uint8,
+            flow.int8,
+            flow.int64,
+            flow.int32,
+            flow.float16,
+            flow.float32,
+            flow.float64,
+        ]
+        tensortype_dict = {
+            flow.CharTensor: [flow.int8, flow.device("cpu")],
+            flow.ByteTensor: [flow.uint8, flow.device("cpu")],
+            flow.IntTensor: [flow.int32, flow.device("cpu")],
+            flow.LongTensor: [flow.int64, flow.device("cpu")],
+            flow.HalfTensor: [flow.float16, flow.device("cpu")],
+            flow.FloatTensor: [flow.float32, flow.device("cpu")],
+            flow.DoubleTensor: [flow.float64, flow.device("cpu")],
+        }
+        arg_dict["tgt_tensortype"] = list(tensortype_dict.keys())
+        for arg in GenArgList(arg_dict):
+            _test_type_tensortype(test_case, tensortype_dict, *arg)
+
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_type_tensortype(test_case):
         # test tensor.type(x: tensortype) rather than tensor.type_tensortype
         arg_dict = OrderedDict()
