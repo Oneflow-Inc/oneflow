@@ -115,10 +115,12 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
 
     const ShapeView& input_shape = input_tensor->shape();
     const ShapeView& output_shape = output_tensor->shape();
-    CHECK_EQ(input_shape, output_shape);
+    CHECK_EQ(input_shape, output_shape) << "Input shape should be equal to Output shape.";
     const int64_t elem_cnt = input_shape.elem_cnt();
 
-    primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(), elem_cnt);
+    if (elem_cnt != 0) {
+      primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(), elem_cnt);
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 

@@ -17,26 +17,29 @@ limitations under the License.
 
 namespace oneflow {
 
-#define REGISTER_ACTIVATION_CPU_KERNEL(dtype)           \
-  REGISTER_ELU_KERNEL(DeviceType::kCPU, dtype);         \
-  REGISTER_CELU_KERNEL(DeviceType::kCPU, dtype);        \
-  REGISTER_GELU_KERNEL(DeviceType::kCPU, dtype);        \
-  REGISTER_HARDSWISH_KERNEL(DeviceType::kCPU, dtype);   \
-  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCPU, dtype); \
-  REGISTER_HARDSHRINK_KERNEL(DeviceType::kCPU, dtype);  \
-  REGISTER_HARDTANH_KERNEL(DeviceType::kCPU, dtype);    \
-  REGISTER_TANH_KERNEL(DeviceType::kCPU, dtype);        \
-  REGISTER_MISH_KERNEL(DeviceType::kCPU, dtype);        \
-  REGISTER_SILU_KERNEL(DeviceType::kCPU, dtype);        \
-  REGISTER_SELU_KERNEL(DeviceType::kCPU, dtype);        \
-  REGISTER_SOFTSHRINK_KERNEL(DeviceType::kCPU, dtype);  \
-  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCPU, dtype);    \
-  REGISTER_SOFTPLUS_KERNEL(DeviceType::kCPU, dtype);    \
-  REGISTER_LEAKYRELU_KERNEL(DeviceType::kCPU, dtype);   \
-  REGISTER_THRESHOLD_KERNEL(DeviceType::kCPU, dtype);   \
+#define REGISTER_ACTIVATION_CPU_KERNEL(dtype)                  \
+  REGISTER_ELU_KERNEL(DeviceType::kCPU, dtype);                \
+  REGISTER_CELU_KERNEL(DeviceType::kCPU, dtype);               \
+  REGISTER_HARDSWISH_KERNEL(DeviceType::kCPU, dtype);          \
+  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCPU, dtype);        \
+  REGISTER_HARDSHRINK_KERNEL(DeviceType::kCPU, dtype);         \
+  REGISTER_HARDTANH_KERNEL(DeviceType::kCPU, dtype);           \
+  REGISTER_MISH_KERNEL(DeviceType::kCPU, dtype);               \
+  REGISTER_SILU_KERNEL(DeviceType::kCPU, dtype);               \
+  REGISTER_SELU_KERNEL(DeviceType::kCPU, dtype);               \
+  REGISTER_SOFTSHRINK_KERNEL(DeviceType::kCPU, dtype);         \
+  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCPU, dtype);           \
+  REGISTER_SOFTPLUS_KERNEL(DeviceType::kCPU, dtype);           \
+  REGISTER_LEAKYRELU_BACKWARD_KERNEL(DeviceType::kCPU, dtype); \
+  REGISTER_THRESHOLD_KERNEL(DeviceType::kCPU, dtype);          \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCPU, dtype);
 
 REGISTER_ACTIVATION_CPU_KERNEL(float);
 REGISTER_ACTIVATION_CPU_KERNEL(double);
+
+REGISTER_RELU_FORWARD_KERNEL();
+REGISTER_GELU_FORWARD_KERNEL();
+REGISTER_LEAKYRELU_FORWARD_KERNEL();
+REGISTER_TANH_FORWARD_KERNEL();
 
 }  // namespace oneflow

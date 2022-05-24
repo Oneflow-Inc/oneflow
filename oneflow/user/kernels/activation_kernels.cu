@@ -279,23 +279,21 @@ struct SoftShrinkGradFunctor<half> {
   SoftShrinkGradFunctor<float> float_functor;
 };
 
-#define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)           \
-  REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);         \
-  REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);        \
-  REGISTER_GELU_KERNEL(DeviceType::kCUDA, dtype);        \
-  REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);   \
-  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype); \
-  REGISTER_HARDSHRINK_KERNEL(DeviceType::kCUDA, dtype);  \
-  REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);    \
-  REGISTER_TANH_KERNEL(DeviceType::kCUDA, dtype);        \
-  REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);        \
-  REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);        \
-  REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);        \
-  REGISTER_SOFTSHRINK_KERNEL(DeviceType::kCUDA, dtype);  \
-  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);    \
-  REGISTER_LEAKYRELU_KERNEL(DeviceType::kCUDA, dtype);   \
-  REGISTER_THRESHOLD_KERNEL(DeviceType::kCUDA, dtype);   \
-  REGISTER_SOFTPLUS_KERNEL(DeviceType::kCUDA, dtype);    \
+#define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)                  \
+  REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);                \
+  REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);               \
+  REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);          \
+  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_HARDSHRINK_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);           \
+  REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);               \
+  REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);               \
+  REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);               \
+  REGISTER_SOFTSHRINK_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);           \
+  REGISTER_LEAKYRELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype); \
+  REGISTER_THRESHOLD_KERNEL(DeviceType::kCUDA, dtype);          \
+  REGISTER_SOFTPLUS_KERNEL(DeviceType::kCUDA, dtype);           \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);
 
 namespace {

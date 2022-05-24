@@ -51,9 +51,11 @@ struct UnaryFunctor<device, UnaryOp::kLogicalNot, Dst, Src> {
 
 template<DeviceType device, typename Dst, typename Src>
 struct UnaryFunctor<device, UnaryOp::kLeakyRelu, Dst, Src> {
-  explicit UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<Src>()) {}
+  UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<float>()) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src) const { return (src > 0) ? src : alpha * src; }
+  OF_DEVICE_FUNC Dst operator()(Src src) const {
+    return (src > static_cast<Src>(0.0)) ? src : alpha * src;
+  }
   const Src alpha;
 };
 
