@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/common/global.h"
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
@@ -25,6 +27,8 @@ limitations under the License.
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/boxing_identity_task_node.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
@@ -590,20 +594,6 @@ void TaskGraph::StraightenNodes() {
   // The function for settle the order in the graph
   int64_t order_in_graph = 0;
   HashMap<int32_t, int32_t> task_type_map;
-  auto SetOrderInGraph = [&](TaskNode* task_node) {
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "Execution order: " << order_in_graph << ": " << task_node->VisualStr()
-                << ": task type: " << task_node->GetTaskType() << ", "
-                << (task_node->parallel_ctx() == 0) << std::endl;
-      if (task_type_map.find(task_node->GetTaskType()) == task_type_map.end()) {
-        task_type_map[task_node->GetTaskType()] = 0;
-      }
-      task_type_map[task_node->GetTaskType()]++;
-    }
-    task_node->set_order_in_graph(order_in_graph);
-    ordered_task_nodes_.emplace_back(task_node);
-    ++order_in_graph;
-  };
 
   // Generate topological data structure for each task node
   HashMap<TaskNode*, TopoStruct> task_node2topo_struct;
@@ -620,9 +610,16 @@ void TaskGraph::StraightenNodes() {
       topo_struct.MinLayer = max_min_layer + 1;
     }
   });
+
   // Generate other parameters in the topological data structure
   FindMainstem(task_node2topo_struct);
 
+  // test debug
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "Straightening order type: " << ParseIntegerFromEnv("Parameter0", 0) << ", "
+              << ParseIntegerFromEnv("Parameter1", 1) << ", "
+              << ParseIntegerFromEnv("Parameter2", 2) << std::endl;
+  }
   // Order in the waiting sets
   // Decide which node should run first
   struct comp {
@@ -691,6 +688,28 @@ void TaskGraph::StraightenNodes() {
 
   HashMap<int32_t, HashMap<int32_t, std::set<TopoStruct*, comp>>> task_type2machine_id2topo_structs;
 
+  auto SetOrderInGraph = [&](TaskNode* task_node) {
+    if (GlobalProcessCtx::Rank() == 0) {
+      auto& topo_struct = task_node2topo_struct[task_node];
+      std::cout << "Execution order: " << order_in_graph << ": " << task_node->VisualStr()
+                << ", node id: " << task_node->node_id() << std::endl;
+      std::cout << ": task type: " << task_node->GetTaskType() << ", "
+                << (task_node->parallel_ctx() == 0) << ", MinLayer: " << topo_struct.MinLayer
+                << ", TributaryLayer: " << topo_struct.TributaryLayer
+                << ", MinDist2Transfer: " << topo_struct.MinDistance2Transfer
+                << ", machine id: " << task_node->machine_id()
+                << ", thread id: " << task_node->thrd_id() << std::endl;
+
+      if (task_type_map.find(task_node->GetTaskType()) == task_type_map.end()) {
+        task_type_map[task_node->GetTaskType()] = 0;
+      }
+      task_type_map[task_node->GetTaskType()]++;
+    }
+    task_node->set_order_in_graph(order_in_graph);
+    ordered_task_nodes_.emplace_back(task_node);
+    ++order_in_graph;
+  };
+
   // wait in the list
   auto wait = [&](TaskNode* node) {
     TopoStruct* topo_struct = &task_node2topo_struct[node];
@@ -698,6 +717,7 @@ void TaskGraph::StraightenNodes() {
     task_type2machine_id2topo_structs[node->GetTaskType()][node->machine_id()].insert(topo_struct);
   };
 
+  std::map<int32_t, std::map<int32_t, int32_t>> task_type2node_id2machine_id;
   // initialization
   HashMap<TaskNode*, int32_t> counter_in;
   ForEachNode([&](TaskNode* node) {
@@ -705,7 +725,25 @@ void TaskGraph::StraightenNodes() {
     counter_in[node] = count;
     if (count == 0) { wait(node); }
     remain_task_nums[set_classifier(node)]++;
+    task_type2node_id2machine_id[node->GetTaskType()][node->node_id()] = node->machine_id();
   });
+
+  for (auto& task_type_group : task_type2node_id2machine_id) {
+    std::cout << "task type: " << task_type_group.first << std::endl;
+    int32_t pre_machine_id = -1;
+    for (auto& pair : task_type_group.second) {
+      std::cout << "node id: " << pair.first << ", machine id: " << pair.second << ", ? "
+                << (pair.second == 0 || pair.second > pre_machine_id) << std::endl;
+      pre_machine_id = pair.second;
+    }
+  }
+
+  if (GlobalProcessCtx::Rank() == 0) {
+    std::cout << "Total task nums:" << std::endl;
+    std::cout << "Transfers: " << remain_task_nums[0] << ", Computation: " << remain_task_nums[1]
+              << ", Run Asap: " << remain_task_nums[2] << ", Run Alap: " << remain_task_nums[3]
+              << std::endl;
+  }
 
   // Finish execution
   auto finish_execution = [&](TaskNode* node) {
@@ -752,6 +790,13 @@ void TaskGraph::StraightenNodes() {
   auto execute = [&](int32_t list_classifier, int32_t n, bool if_reverse = false) {
     // n>=1
     if (n <= 0) { return; }
+    if (GlobalProcessCtx::Rank() == 0) {
+      std::cout << "Total task nums:" << std::endl;
+      std::cout << "Transfers: " << waiting_lists[0].size()
+                << ", Computation: " << waiting_lists[1].size()
+                << ", Run Asap: " << waiting_lists[2].size()
+                << ", Run Alap: " << waiting_lists[3].size() << std::endl;
+    }
     auto& waiting_list = waiting_lists[list_classifier];
     std::vector<TaskNode*> execution_list;
     int32_t count = 0;
