@@ -151,6 +151,7 @@ Maybe<void> CheckMetaInfoConsistencyAsyncTransportCtx::Check() const {
 
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement) {
+  return Maybe<void>::Ok();
   if (!placement->containing_current_rank()) { return Maybe<void>::Ok(); }
 
   const auto& rank_group = JUST(RankGroup::New(placement));
@@ -187,6 +188,7 @@ namespace {
 Maybe<void> MetaInfoConsistencyCheckUtil(const Symbol<ParallelDesc>& placement,
                                          const Optional<Symbol<NdSbp>>& nd_sbp,
                                          const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
+  return Maybe<void>::Ok();
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
