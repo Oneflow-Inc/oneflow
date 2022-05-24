@@ -45,7 +45,7 @@ __global__ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr,
       dx_ptr_base[data_offset] = is_zero + (j == 0 ? 0 : dx_ptr_base[data_offset - down_space]);
     }
 
-    // Find index of first zero in index.
+    // Find index of first zero in input.
     size_t first_zero_index = space;
     for (size_t j = 0; j < space; j++) {
       const size_t data_offset = j * down_space;
