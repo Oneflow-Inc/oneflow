@@ -757,9 +757,9 @@ void TaskGraph::StraightenNodes() {
     // Normal node would have the same name
     if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
     // Otherwise they must have the same parameters with different machine ids and the closest node
-    // id
-    return a->MinLayer == b->MinLayer && a->TributaryLayer == b->TributaryLayer
-           && a->MinDistance2Transfer == b->MinDistance2Transfer;
+    // id. We only use Min Layer here, since Tributary Layer might be different due to asymmetry of
+    // graph.
+    return a->MinLayer == b->MinLayer;
   };
 
   // Move the first node of the waiting list to the execution list
