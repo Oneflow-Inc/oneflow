@@ -45,7 +45,9 @@ def _test_cast_with_non_contiguous_input(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.int8)
     permute_dims = np.arange(len(shape)).tolist()
     shuffle(permute_dims)
-    input = flow.tensor(np_arr, dtype=flow.int8, device=flow.device(device)).permute(permute_dims)
+    input = flow.tensor(np_arr, dtype=flow.int8, device=flow.device(device)).permute(
+        permute_dims
+    )
     output = flow.cast(input, flow.float32)
     np_out = np_arr.astype(np.float32).transpose(permute_dims)
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
