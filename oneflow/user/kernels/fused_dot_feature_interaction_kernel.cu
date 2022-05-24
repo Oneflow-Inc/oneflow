@@ -528,7 +528,7 @@ __global__ void DotFeatureInteractionHalf(int M_BLOCKS, int K_BLOCKS, int64_t ba
                                           int out_num_cols, int out_num_cols_num_pack,
                                           int in_shared_mem_cols, int in_shared_mem_cols_num_pack,
                                           int acc_shared_mem_cols, int acc_shared_mem_cols_num_pack,
-                                          int warp_shared_mem_bytes, int offset, int output_padding,
+                                          int offset, int output_padding,
                                           DotFwdParam<half, N> param) {
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
@@ -642,7 +642,7 @@ void DispatchFeatureInteractionDotPackSize(ep::Stream* stream, const int64_t bat
   using ComputeType = typename DefaultComputeType<T>::type;
   const size_t acc_shared_mem_bytes =
       concated_padded_dim * acc_shared_mem_num_cols * sizeof(ComputeType);
-  const size_t warp_shared_mem_bytes = std::max(in_shared_mem_bytes, acc_shared_mem_bytes);
+  const size_t warp_shared_mem_bytes = in_shared_mem_bytes + acc_shared_mem_bytes;
   const int block_size = 128;
   const int block_dim_x = 32;
   const int block_dim_y = block_size / block_dim_x;
@@ -655,26 +655,23 @@ void DispatchFeatureInteractionDotPackSize(ep::Stream* stream, const int64_t bat
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   const int32_t offset = self_interaction ? 1 : 0;
   if (pack_size == 4) {
-    DotFeatureInteractionHalf<N, 4, TILE_DIM><<<num_blocks, dim3(block_dim_x, block_dim_y),
-                                                block_dim_y * warp_shared_mem_bytes, cuda_stream>>>(
-        M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
-        out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
-        acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, offset,
-        output_padding, param);
+    DotFeatureInteractionHalf<N, 4, TILE_DIM>
+        <<<num_blocks, dim3(block_dim_x, block_dim_y), warp_shared_mem_bytes, cuda_stream>>>(
+            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
+            out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
+            acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, offset, output_padding, param);
   } else if (pack_size == 2) {
-    DotFeatureInteractionHalf<N, 2, TILE_DIM><<<num_blocks, dim3(block_dim_x, block_dim_y),
-                                                block_dim_y * warp_shared_mem_bytes, cuda_stream>>>(
-        M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
-        out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
-        acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, offset,
-        output_padding, param);
+    DotFeatureInteractionHalf<N, 2, TILE_DIM>
+        <<<num_blocks, dim3(block_dim_x, block_dim_y), warp_shared_mem_bytes, cuda_stream>>>(
+            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
+            out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
+            acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, offset, output_padding, param);
   } else {
-    DotFeatureInteractionHalf<N, 1, TILE_DIM><<<num_blocks, dim3(block_dim_x, block_dim_y),
-                                                block_dim_y * warp_shared_mem_bytes, cuda_stream>>>(
-        M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
-        out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
-        acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, warp_shared_mem_bytes, offset,
-        output_padding, param);
+    DotFeatureInteractionHalf<N, 1, TILE_DIM>
+        <<<num_blocks, dim3(block_dim_x, block_dim_y), warp_shared_mem_bytes, cuda_stream>>>(
+            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
+            out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
+            acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, offset, output_padding, param);
   }
 }
 
