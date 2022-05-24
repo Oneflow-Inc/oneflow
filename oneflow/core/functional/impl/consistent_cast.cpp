@@ -70,9 +70,9 @@ bool NeedSyncAndCheckShapeAndDtype(bool check_meta_hint) {
   thread_local Optional<bool> eager_local_to_global_balanced_override =
       ParseEagerLocalToGlobalBalancedOverride();
   if (eager_local_to_global_balanced_override.has_value()) {
-    return IsInDebugMode() || !CHECK_JUST(eager_local_to_global_balanced_override);
+    return !CHECK_JUST(eager_local_to_global_balanced_override);
   } else {
-    return IsInDebugMode() || check_meta_hint;
+    return check_meta_hint;
   }
 }
 

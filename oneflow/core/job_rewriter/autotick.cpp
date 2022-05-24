@@ -684,7 +684,7 @@ Maybe<void> InsertCriticalSectionWaitTicks(const OpGraph& op_graph, JobBuilder* 
     lbi.set_blob_name(wait_and_send_id_op_node->op().op_conf().wait_and_send_ids_conf().out());
     OperatorConf critical_section_wait_op;
     {
-      critical_section_wait_op.set_name("System-EagerCriticalSection-Wait-" + NewUniqueId());
+      critical_section_wait_op.set_name("System-" + wait_buffer_name + NewUniqueId());
       auto* conf = critical_section_wait_op.mutable_critical_section_wait_tick_conf();
       conf->add_tick(GenLogicalBlobName(lbi));
       conf->set_out("out");
@@ -704,7 +704,7 @@ Maybe<LogicalBlobId> InsertCriticalSectionCallbackTicks(const OpGraph& op_graph,
                                                         const LogicalBlobId& dst_subset_tick_lbi,
                                                         const std::string& callback_buffer_name) {
   OperatorConf critical_section_callback_op;
-  critical_section_callback_op.set_name("System-EagerCriticalSection-Callback-" + NewUniqueId());
+  critical_section_callback_op.set_name("System-" + callback_buffer_name + NewUniqueId());
   auto* conf = critical_section_callback_op.mutable_critical_section_callback_tick_conf();
   conf->add_tick(GenLogicalBlobName(dst_subset_tick_lbi));
   conf->set_out("out");
