@@ -22,7 +22,7 @@ import oneflow as flow
 
 
 def _matmul_bias_relu(x, weight, bias, skip_activate):
-    # We do not add dropout in unittest, cause its result is random. 
+    # We do not add dropout in unittest, cause its result is random.
     out = flow._C.bias_add(flow._C.matmul(x, weight, transpose_b=True), bias, axis=1)
     if not skip_activate:
         out = flow._C.relu(out)
@@ -58,17 +58,13 @@ def _test_fused_matmul_bias_add_relu_dropout(
         np_first_bias = np.random.uniform(low=-1, high=1, size=hidden_size_list[0])
 
         fused_weight_list.append(
-            flow.tensor(
-                np_first_weight, dtype=dtype, device=device, requires_grad=True
-            )
+            flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=True)
         )
         fused_bias_list.append(
             flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True)
         )
         naive_weight_list.append(
-            flow.tensor(
-                np_first_weight, dtype=dtype, device=device, requires_grad=True
-            )
+            flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=True)
         )
         naive_bias_list.append(
             flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True)
@@ -119,8 +115,8 @@ def _test_fused_matmul_bias_add_relu_dropout(
         fused_x,
         fused_weight_list,
         fused_bias_list,
-        # We do not add dropout in unittest, cause its result is random. 
-        dropout_rate_list=[0.0] * len(fused_weight_list), 
+        # We do not add dropout in unittest, cause its result is random.
+        dropout_rate_list=[0.0] * len(fused_weight_list),
         skip_final_activation=skip_final_activation,
     )
 
@@ -151,7 +147,7 @@ def _test_fused_matmul_bias_add_relu_dropout(
     test_case.assertTrue(
         np.allclose(fused_out.numpy(), naive_out.numpy(), atol=1e-4, rtol=1e-4)
     )
-    
+
     # Test weight grad equality
     for idx in range(hidden_num + 1):
         test_case.assertTrue(

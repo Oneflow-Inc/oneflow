@@ -140,16 +140,17 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
       bool skip_final_activation = op.attr<bool>("skip_final_activation");
       const std::vector<float> dropout_rate_list = op.attr<std::vector<float>>("dropout_rate_list");
-      float scale = 1.0; 
-      float rate = 0.0; 
+      float scale = 1.0;
+      float rate = 0.0;
       int64_t weight_num = op.input_size("weights");
 
       std::string last_bias_grad;
-      if (!skip_final_activation || (dropout_rate_list[weight_num-1] != 0.0f)) {
+      if (!skip_final_activation || (dropout_rate_list[weight_num - 1] != 0.0f)) {
         // step1: Get last layer's relu+dropout grad.
-        rate = dropout_rate_list.at(weight_num-1); 
+        rate = dropout_rate_list.at(weight_num - 1);
         if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
-        user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name() + "fused_relu_dropout_grad");
+        user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name()
+                                                            + "fused_relu_dropout_grad");
         user_op::UserOpConfWrapper relu_dropout_grad_op =
             relu_grad_builder.Op("fused_relu_dropout_grad")
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
@@ -179,24 +180,21 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
       AddOp(cublas_matmul_bias_add_grad_op);
 
       if (op.NeedGenGradTensor4OpInput("biases", weight_num - 1)) {
-        op.BindGradTensorWithOpInput(cublas_matmul_bias_add_grad_op.output("b_grad", 0),
-        "biases",
+        op.BindGradTensorWithOpInput(cublas_matmul_bias_add_grad_op.output("b_grad", 0), "biases",
                                      weight_num - 1);
       }
       if (op.NeedGenGradTensor4OpInput("weights", weight_num - 1)) {
-        op.BindGradTensorWithOpInput(cublas_matmul_bias_add_grad_op.output("w_grad", 0),
-        "weights",
+        op.BindGradTensorWithOpInput(cublas_matmul_bias_add_grad_op.output("w_grad", 0), "weights",
                                      weight_num - 1);
       }
 
       std::string cublas_dy = last_bias_grad;
       for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
-        rate = dropout_rate_list.at(hidden_layer_idx-1); 
-        scale = 1.0; 
+        rate = dropout_rate_list.at(hidden_layer_idx - 1);
+        scale = 1.0;
         if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
         user_op::UserOpConfWrapperBuilder cublas_bias_add_relu_matmul_grad_builder(
-            op.op_name() + "_cublas_bias_add_relu_matmul_grad_" +
-            std::to_string(hidden_layer_idx));
+            op.op_name() + "_cublas_bias_add_relu_matmul_grad_" + std::to_string(hidden_layer_idx));
         user_op::UserOpConfWrapper cublas_bias_add_relu_matmul_grad_op =
             cublas_bias_add_relu_matmul_grad_builder.Op("cublas_bias_add_relu_matmul_grad")
                 .Input("dy", cublas_dy)
@@ -257,10 +255,8 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
       if (op.NeedGenGradTensor4OpInput("weights", 0) && weight_num >= 2) {
         // dw:
         user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()
-                                                                     +
-                                                                     "_matmul_input_weight_grad");
-        user_op::UserOpConfWrapper matmul_weight_grad_op =
-        matmul_weight_grad_builder.Op("matmul")
+                                                                     + "_matmul_input_weight_grad");
+        user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
                                                                .Input("a", last_dy)
                                                                .Input("b", op.input("x", 0))
                                                                .Output("out")

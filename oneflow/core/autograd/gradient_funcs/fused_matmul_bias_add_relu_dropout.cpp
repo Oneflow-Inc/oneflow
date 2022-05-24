@@ -38,13 +38,14 @@ struct FusedMatmulBiasAddReluDropoutCaptureState : public AutoGradCaptureState {
   std::vector<float> dropout_rate_list;
 };
 
-class FusedMatmulBiasAddReluDropout : public OpExprGradFunction<FusedMatmulBiasAddReluDropoutCaptureState> {
+class FusedMatmulBiasAddReluDropout
+    : public OpExprGradFunction<FusedMatmulBiasAddReluDropoutCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(FusedMatmulBiasAddReluDropoutCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const FusedMatmulBiasAddReluDropoutCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override;
+  Maybe<void> Apply(const FusedMatmulBiasAddReluDropoutCaptureState* ctx,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 
  protected:
   AttrMap base_attrs_;
@@ -57,8 +58,10 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedMatmulBiasAddReluDropout::Capture(FusedMatmulBiasAddReluDropoutCaptureState* ctx, const TensorTuple& inputs,
-                                    const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> FusedMatmulBiasAddReluDropout::Capture(FusedMatmulBiasAddReluDropoutCaptureState* ctx,
+                                                   const TensorTuple& inputs,
+                                                   const TensorTuple& outputs,
+                                                   const AttrMap& attrs) const {
   CHECK_OR_RETURN(inputs.size() % 2 == 1) << "Both weight and bias should be passed together. ";
   int32_t weight_num = (inputs.size() - 1) / 2;
   ctx->weight_num = weight_num;
@@ -92,8 +95,9 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Capture(FusedMatmulBiasAddReluDropout
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedMatmulBiasAddReluDropout::Apply(const FusedMatmulBiasAddReluDropoutCaptureState* ctx,
-                                  const TensorTuple& out_grads, TensorTuple* in_grads) const {
+Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
+    const FusedMatmulBiasAddReluDropoutCaptureState* ctx, const TensorTuple& out_grads,
+    TensorTuple* in_grads) const {
   int32_t weight_num = ctx->weight_num;
   in_grads->resize(1 + 2 * weight_num);
 
@@ -116,18 +120,20 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(const FusedMatmulBiasAddReluDro
   for (int32_t i = 0; i < weight_num - 1; ++i) {
     hiddens[i] = JUST(VectorAt(ctx->SavedTensors(), i + 2 + 2 * weight_num));
   }
-  float rate = ctx->dropout_rate_list.at(weight_num-1); 
-  float scale = 0.0f; 
+  float rate = ctx->dropout_rate_list.at(weight_num - 1);
+  float scale = 0.0f;
   if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
-  
+
   /*
   step1: use dy and mask to get last layer's dropout + relu grad.
-  Because curand_uniform distribution is (0.0, 1.0], so the value after relu will be write into mask too. 
-  And DropoutGrad use this mask to generate grad, it will generate dropout and relu grad simultaneously. 
+  Because curand_uniform distribution is (0.0, 1.0], so the value after relu will be write into mask
+  too. And DropoutGrad use this mask to generate grad, it will generate dropout and relu grad
+  simultaneously.
   */
   std::shared_ptr<one::Tensor> last_bias_dy = JUST(VectorAt(out_grads, 0));
-  if(!ctx->skip_final_activation || rate != 0.0f){
-    last_bias_dy = JUST(functional::FusedReluDropoutGrad(JUST(VectorAt(out_grads, 0)), cublas_auxs[weight_num-1], scale));
+  if (!ctx->skip_final_activation || rate != 0.0f) {
+    last_bias_dy = JUST(functional::FusedReluDropoutGrad(JUST(VectorAt(out_grads, 0)),
+                                                         cublas_auxs[weight_num - 1], scale));
   }
 
   const bool last_layer_weight_requires_grad =
@@ -160,8 +166,8 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(const FusedMatmulBiasAddReluDro
     Here we use cublas to compute bias + relu + dropout + matmul grad.
     Then use Matmul to compute weight grad.
     */
-    rate = ctx->dropout_rate_list.at(hidden_layer_idx-1); 
-    scale = 1.0; 
+    rate = ctx->dropout_rate_list.at(hidden_layer_idx - 1);
+    scale = 1.0;
     if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
     const auto& bias_relu_dropout_matmul_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
         cublas_dy, JUST(VectorAt(weights, hidden_layer_idx)),

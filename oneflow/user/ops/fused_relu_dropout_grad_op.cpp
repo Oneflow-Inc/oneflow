@@ -41,22 +41,20 @@ Maybe<void> InferDataType4FusedReluDropoutGrad(user_op::InferContext* ctx) {
   return InferTensorDesc4FusedReluDropoutGrad(ctx);
 }
 
-/*static*/ Maybe<void> FusedReluDropoutGradOp::InferPhysicalTensorDesc(
-    user_op::InferContext* ctx) {
+/*static*/ Maybe<void> FusedReluDropoutGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> FusedReluDropoutGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
-        .Split(user_op::OpArg("dy", 0), 0)
-        .Split(user_op::OpArg("mask", 0), 0)
-        .Split(user_op::OpArg("dx", 0), 0)
-        .Build();
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("mask", 0), 0)
+      .Split(user_op::OpArg("dx", 0), 0)
+      .Build();
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedReluDropoutGradOp::InferDataType(
-    user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedReluDropoutGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataType4FusedReluDropoutGrad(ctx);
 }
 

@@ -906,7 +906,7 @@ class CublasBiasAddReluMatmulGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const std::shared_ptr<one::Tensor>& weight,
-                                const std::shared_ptr<one::Tensor>& aux, 
+                                const std::shared_ptr<one::Tensor>& aux,
                                 const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
@@ -936,25 +936,22 @@ class CublasMatmulBiasAddGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedReluDropoutGradFunctor{
-  public: 
-  FusedReluDropoutGradFunctor(){
-    op_ = CHECK_JUST(one::OpBuilder("fused_relu_dropout_grad")
-                          .Input("dy")
-                          .Input("mask")
-                          .Output("dx")
-                          .Build()); 
+class FusedReluDropoutGradFunctor {
+ public:
+  FusedReluDropoutGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_relu_dropout_grad").Input("dy").Input("mask").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& mask,
-                           const float& scale) const {
-    MutableAttrMap attr_map; 
-    JUST(attr_map.SetAttr<float>("scale", scale)); 
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
+    MutableAttrMap attr_map;
+    JUST(attr_map.SetAttr<float>("scale", scale));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, mask}, attr_map);
   }
-  private:
-    std::shared_ptr<OpExpr> op_;
-}; 
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 
 class FusedDotFeatureInteractionGradFunctor {
  public:
@@ -1074,7 +1071,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
   m.add_functor<impl::CublasBiasAddReluMatmulGradFunctor>("CublasBiasAddReluMatmulGrad");
   m.add_functor<impl::CublasMatmulBiasAddGradFunctor>("CublasMatmulBiasAddGrad");
-  m.add_functor<impl::FusedReluDropoutGradFunctor>("FusedReluDropoutGrad"); 
+  m.add_functor<impl::FusedReluDropoutGradFunctor>("FusedReluDropoutGrad");
   m.add_functor<impl::FusedDotFeatureInteractionGradFunctor>("FusedDotFeatureInteractionGrad");
 };
 
