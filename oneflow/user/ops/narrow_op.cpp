@@ -23,11 +23,12 @@ namespace oneflow {
   CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0);
   const int64_t& dim = ctx->Attr<int64_t>("dim");
   const int64_t& start = ctx->Attr<int64_t>("start");
-  const int64_t& length = ctx->Attr<int64_t>("length");
+  int64_t length = ctx->Attr<int64_t>("length");
   CHECK_GE_OR_RETURN(dim, 0);
   CHECK_GE_OR_RETURN(start, 0);
   CHECK_GE_OR_RETURN(length, 0);
-  CHECK_GE_OR_RETURN(in.shape().At(dim), start + length);
+  // length should be input size if split the full slice dimension
+  if (start == 0 && length > in.shape().At(dim)) { length = in.shape().At(dim); }
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
   DimVector dim_vec;
