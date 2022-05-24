@@ -45,6 +45,7 @@ def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
 
 
 @autotest(n=1, check_graph=False)
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 def _test_global_cuda(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
     x = x.cuda()
