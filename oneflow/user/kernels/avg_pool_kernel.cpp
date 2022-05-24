@@ -135,8 +135,8 @@ class AvgPool1dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
 
 #ifdef WITH_ONEDNN
-// #if 0
-    if (!params_3d.ceil_mode() && OneDnnIsSupportDtype<T>()) {
+    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
+        && params_3d.divisor_override() == 0) {
       dnnl::memory::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
       dnnl::memory::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
       dnnl::memory::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
@@ -144,9 +144,7 @@ class AvgPool1dKernel final : public user_op::OpKernel {
       dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
       dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
       dnnl::memory::dims dilation = {0, 0};
-      printf("dim: %ld, %ld ---- %ld, %ld \n", src_dims[2], src_dims[3], dst_dims[2], dst_dims[3]);
-      printf("%ld, %ld, %ld, %ld\n", kernel_dims[1], strides_dims[1], padding_dims_l[1],
-             padding_dims_r[1]);
+
       if (params_3d.count_include_pad()) {
         printf("include pad \n");
         OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
@@ -218,9 +216,9 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
     T* dest = dx->mut_dptr<T>();
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
-// #ifdef WITH_ONEDNN
-#if 0
-    if (!params_3d.ceil_mode() && OneDnnIsSupportDtype<T>()) {
+#ifdef WITH_ONEDNN
+    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
+        && params_3d.divisor_override() == 0) {
       dnnl::memory::dims diff_dst_dims = {1, 1, dy->shape().At(0) * dy->shape().At(1),
                                           dy->shape().At(2)};
       dnnl::memory::dims diff_src_dims = {1, 1, dx->shape().At(0) * dx->shape().At(1),
@@ -300,7 +298,8 @@ class AvgPool2dKernel final : public user_op::OpKernel {
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnIsSupportDtype<T>()) {
+    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && params_3d.divisor_override() == 0
+        && device_type == DeviceType::kCPU && params_3d.divisor_override() == 0) {
       dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
                                      x->shape().At(3)};
       dnnl::memory::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2),
@@ -386,7 +385,8 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnIsSupportDtype<T>()) {
+    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
+        && params_3d.divisor_override() == 0) {
       dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
                                           dy->shape().At(3)};
       dnnl::memory::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
@@ -468,7 +468,8 @@ class AvgPool3dKernel final : public user_op::OpKernel {
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnIsSupportDtype<T>()) {
+    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
+        && params_3d.divisor_override() == 0) {
       dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
                                      x->shape().At(3), x->shape().At(4)};
       dnnl::memory::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2),
@@ -559,7 +560,8 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnIsSupportDtype<T>()) {
+    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
+        && params_3d.divisor_override() == 0) {
       dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
                                           dy->shape().At(3), dy->shape().At(4)};
       dnnl::memory::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),

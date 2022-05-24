@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-bool OneDnnIsSupportDtype() {
+bool OneDnnPoolIsSupportDtype() {
   return (std::is_same<T, float>::value || std::is_same<T, int32_t>::value);
 }
 
@@ -34,21 +34,17 @@ struct OneDnnPoolKernelUtil {
       ep::Stream* stream, const dnnl::memory::dims src_dims, const dnnl::memory::dims dst_dims,
       const dnnl::memory::dims kernel_dims, const dnnl::memory::dims strides_dims,
       const dnnl::memory::dims padding_dims_l, const dnnl::memory::dims padding_dims_r,
-      const dnnl::memory::dims dilation, dnnl::memory::format_tag format, void* src,
-      void* dest, void* indice_ptr, dnnl::algorithm algorithm) {
+      const dnnl::memory::dims dilation, dnnl::memory::format_tag format, void* src, void* dest,
+      void* indice_ptr, dnnl::algorithm algorithm) {
     auto data_type = CppTypeToOneDnnDtype<T>();
     ep::CpuStream* cpu_stream = stream->As<ep::CpuStream>();
     size_t num_threads = cpu_stream->device()->GetNumThreads();
     ep::CpuNumThreadsGuard guard(num_threads);
     dnnl::engine* onednn_engine = cpu_stream->onednn_engine();
     dnnl::stream* onednn_stream = cpu_stream->onednn_stream();
-    printf("engine->  %p \n", onednn_engine);
-    printf("stream->  %p \n", onednn_stream);
 
     auto src_md = dnnl::memory::desc(src_dims, data_type, format);
-    printf("1 engine->  %p \n", onednn_engine->get());
     auto dst_md = dnnl::memory::desc(dst_dims, data_type, format);
-    printf("2 engine->  %p \n", onednn_engine->get());
     auto src_mem = dnnl::memory(src_md, *onednn_engine, src);
     auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dest);
 
