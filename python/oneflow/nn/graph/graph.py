@@ -592,9 +592,13 @@ class Graph(object):
         for _, b in self._blocks.items():
             pa_gen = b.parameters(recurse=True)
             for pa in pa_gen:
+                if not pa.origin.is_contiguous():
+                    pa.origin.contiguous_()
                 yield pa
             bu_gen = b.buffers(recurse=True)
             for bu in bu_gen:
+                if not bu.origin.contiguous():
+                    bu.origin.contiguous_()
                 yield bu
 
     def _filter_states(self):
@@ -708,6 +712,7 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
         _, eager_outputs = self.build_graph(*args, **kwargs)
         self.finish_complie_and_init_runtime()
         return eager_outputs
@@ -1341,6 +1346,16 @@ class Graph(object):
             # So it's safe to skip sync here.
             return
         oneflow._oneflow_internal.eager.Sync()
+
+    def __ensure_input_tensors_contiguous(self, *args, **kwargs):
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + "input")
+
+        def leaf_node_fn(node):
+            if isinstance(node._value, Tensor) and not node._value.is_contiguous():
+                node._value.contiguous_()
+            return node
+
+        io_node.map_leaf(leaf_node_fn)
 
 
 if __name__ == "__main__":
