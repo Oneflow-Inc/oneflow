@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -50,6 +51,26 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
   Symbol<PlacedNdSbp> reduced_in;
   Symbol<PlacedNdSbp> reduced_out;
   std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out));
+
+  for (int64_t in_parallel_id = 0; in_parallel_id < in->placement()->parallel_num();
+       ++in_parallel_id) {
+    const auto& in_physical_shape =
+        JUST(GetPhysicalShape(logical_shape, *in->nd_sbp(), *in->placement(), in_parallel_id));
+    const auto& reduce_in_physical_shape = JUST(GetPhysicalShape(
+        logical_shape, *reduced_in->nd_sbp(), *reduced_in->placement(), in_parallel_id));
+    CHECK_EQ_OR_RETURN(*in_physical_shape,          // NOLINT(maybe-need-error-msg)
+                       *reduce_in_physical_shape);  // NOLINT(maybe-need-error-msg)
+  }
+
+  for (int64_t out_parallel_id = 0; out_parallel_id < out->placement()->parallel_num();
+       ++out_parallel_id) {
+    const auto& out_physical_shape =
+        JUST(GetPhysicalShape(logical_shape, *out->nd_sbp(), *out->placement(), out_parallel_id));
+    const auto& reduce_out_physical_shape = JUST(GetPhysicalShape(
+        logical_shape, *reduced_out->nd_sbp(), *reduced_out->placement(), out_parallel_id));
+    CHECK_EQ_OR_RETURN(*out_physical_shape,          // NOLINT(maybe-need-error-msg)
+                       *reduce_out_physical_shape);  // NOLINT(maybe-need-error-msg)
+  }
 
   if (reduced_in->nd_sbp()->sbp_parallel_size() == 1
       && reduced_out->nd_sbp()->sbp_parallel_size() == 1) {

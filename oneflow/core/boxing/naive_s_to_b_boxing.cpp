@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/boxing/slice_boxing_util.h"
 
 namespace oneflow {
 
@@ -33,8 +34,8 @@ bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
 
 static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocalCached);
 
-Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
-                            const Shape& logical_shape) {
+Maybe<void> RawCheckNaiveSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                              const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));
@@ -43,12 +44,12 @@ Maybe<void> RawCheckCclSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckCclSToB = DECORATE(&RawCheckCclSToB, ThreadLocalCachedCopiable);
+static constexpr auto* CheckNaiveSToB = DECORATE(&RawCheckNaiveSToB, ThreadLocalCachedCopiable);
 
 }  // namespace
 
-Maybe<one::Tensor> CclSToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
-                           Symbol<PlacedNdSbp> out) {
+Maybe<one::Tensor> NaiveSToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
+                             Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
   CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
       << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
@@ -74,6 +75,9 @@ Maybe<one::Tensor> CclSToB(const std::shared_ptr<one::Tensor>& tensor, Symbol<Pl
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-s-to-b", CheckCclSToB, &CclSToB));
+static constexpr auto* NaiveSToBWithAutoConvert =
+    EAGER_SLICE_BOXING_WARPPER(&NaiveSToB, EagerSliceBoxingType::kNaiveSToB);
+
+COMMAND(RegisterBoxingFunction("naive-s-to-b", CheckNaiveSToB, NaiveSToBWithAutoConvert));
 
 }  // namespace oneflow

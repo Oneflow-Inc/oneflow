@@ -15,6 +15,8 @@ limitations under the License.
 """
 import unittest
 import numpy as np
+from random import shuffle
+
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
@@ -40,6 +42,23 @@ class TestAsStrided(flow.unittest.TestCase):
         x = x.to(device)
         storage_offset = random(0, 3).to(int)
         z = torch.as_strided(x, (2, 2, 3), (1, 1, 2), storage_offset)
+        return z
+
+    # TODO:(zhaoluyang) some bug in as_strided backward to be fixed
+    @autotest(n=10, auto_backward=False, check_graph=False)
+    def test_flow_as_strided_with_stride(test_case):
+        device = random_device()
+        dim0 = np.random.randint(2, 4)
+        dim1 = np.random.randint(2, 4)
+        dim2 = np.random.randint(2, 4)
+        dim3 = np.random.randint(2, 4)
+        x = random_tensor(4, dim0, dim1, dim2, dim3)
+        x = x.to(device)
+        storage_offset = random(0, 3).to(int)
+        perm = [0, 1, 2, 3]
+        shuffle(perm)
+        y = x.permute(perm)
+        z = torch.as_strided(y, (2, 2, 3), (1, 1, 2), storage_offset)
         return z
 
 

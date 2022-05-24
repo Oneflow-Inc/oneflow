@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -37,6 +38,14 @@ Maybe<void> RawCheckFlattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp>
   const auto& flatten_placement = SymbolOf(ParallelDesc(flattened_parallel_conf));
   CHECK_OR_RETURN(flatten_placement == out->placement())
       << "The output placement is not a hierarch-flattened version of the input placement";
+  for (int64_t in_parallel_id = 0; in_parallel_id < in->placement()->parallel_num();
+       ++in_parallel_id) {
+    const auto& in_physical_shape =
+        JUST(GetPhysicalShape(logical_shape, *in->nd_sbp(), *in->placement(), in_parallel_id));
+    const auto& out_physical_shape =
+        JUST(GetPhysicalShape(logical_shape, *out->nd_sbp(), *out->placement(), in_parallel_id));
+    CHECK_EQ_OR_RETURN(*in_physical_shape, *out_physical_shape);  // NOLINT(maybe-need-error-msg)
+  }
   return Maybe<void>::Ok();
 }
 
