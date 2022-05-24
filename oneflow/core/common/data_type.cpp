@@ -171,26 +171,31 @@ COMMAND(CheckDataType());
 #ifdef WITH_ONEDNN
 template<>
 dnnl::memory::data_type CppTypeToOneDnnDtype<int8_t>() {
+  printf("___   int8_t   ___\n");
   return dnnl::memory::data_type::s8;
 }
 
 template<>
 dnnl::memory::data_type CppTypeToOneDnnDtype<uint8_t>() {
+  printf("___   uint8_t   ___\n");
   return dnnl::memory::data_type::u8;
 }
 
 template<>
 dnnl::memory::data_type CppTypeToOneDnnDtype<int32_t>() {
+  printf("___   int32_t   ___\n");
   return dnnl::memory::data_type::s32;
 }
 
 template<>
 dnnl::memory::data_type CppTypeToOneDnnDtype<float>() {
+  printf("___   float   ___\n");
   return dnnl::memory::data_type::f32;
 }
 
 template<>
 dnnl::memory::data_type CppTypeToOneDnnDtype<double>() {
+  printf("___   double   ___\n");
   return dnnl::memory::data_type::undef;
 }
 #endif  // WITH_ONEDNN
