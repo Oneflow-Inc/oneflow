@@ -79,12 +79,12 @@ void LaunchVectorizedReluDropoutBackwardKernel(ep::Stream* stream,
   } else {
     if(elem_cnt < GetMaxVal<int32_t>()){
       stream->As<ep::CudaStream>()->LaunchKernelDefaultWaves(
-          (VectorizedReluDropoutBitmaskBackwardKernel<T, int32_t,pack_size, true>), 
+          (VectorizedReluDropoutBitmaskBackwardKernel<T, int32_t,pack_size, false>), 
           pack_num, elem_cnt, cols, aux_ld, scale, /*n_tail=*/0, tail_offset, 
           dy, mask, dx);
     } else {
       stream->As<ep::CudaStream>()->LaunchKernelDefaultWaves(
-        (VectorizedReluDropoutBitmaskBackwardKernel<T, int64_t, pack_size, true>), 
+        (VectorizedReluDropoutBitmaskBackwardKernel<T, int64_t, pack_size, false>), 
         pack_num, elem_cnt, cols, aux_ld, scale, /*n_tail=*/0, tail_offset, 
         dy, mask, dx);
     }

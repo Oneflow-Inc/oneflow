@@ -61,7 +61,6 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Capture(FusedMatmulBiasAddReluDropout
                                     const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_OR_RETURN(inputs.size() % 2 == 1) << "Both weight and bias should be passed together. ";
   int32_t weight_num = (inputs.size() - 1) / 2;
-  printf("Weight num is: %d \n", weight_num); 
   ctx->weight_num = weight_num;
   ctx->x_requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
   ctx->weights_requires_grad.resize(weight_num);
