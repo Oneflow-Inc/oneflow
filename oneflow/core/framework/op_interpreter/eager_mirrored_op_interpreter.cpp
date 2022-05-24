@@ -149,7 +149,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       // NOTE: if op support stride(non-contiguous input), than output tensor's stride
       // should be inferred in InferLogicalTensorDesc.
       // otherwise, it will be set here(according to shape).
-      if(!JUST(user_op_expr.SupportNonContiguous())){
+      if (!JUST(user_op_expr.SupportNonContiguous())) {
         std::shared_ptr<Stride> stride(new Stride(*tensor_impl->shape()));
         tensor_impl->mut_tensor_meta()->set_stride(stride);
       }
