@@ -65,4 +65,4 @@ limitations under the License.
 
 #define OF_PP_FORCE(...) OF_PP_TUPLE2VARADIC(OF_PP_CAT((__VA_ARGS__), ))
 
-#endif  // ONEFLOW_CORE_COMMON_PREPROCESSOR_H_
+#endif // ONEFLOW_CORE_COMMON_PREPROCESSOR_H_

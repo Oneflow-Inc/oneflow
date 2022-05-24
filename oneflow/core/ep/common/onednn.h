@@ -18,15 +18,16 @@ limitations under the License.
 
 #ifdef WITH_ONEDNN
 
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_ONEDNN_OPTS, true);
+
 namespace ep {
 namespace primitive {
 
-inline bool OneDNNIsEnabled() {
-  return ::oneflow::ParseBooleanFromEnv("ONEFLOW_ENABLE_ONEDNN_OPTS", true);
-}
+inline bool OneDNNIsEnabled() { return EnvBool<ONEFLOW_ENABLE_ONEDNN_OPTS>(); }
 
 }  // namespace primitive
 }  // namespace ep
