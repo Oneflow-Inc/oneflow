@@ -62,7 +62,7 @@ static PyObject* PyTensorTypeMetaCls_call(PyObject* self, PyObject* args, PyObje
   auto* tensor = functional::_legacy_tensor_ctor(NULL, args, kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
 
-  if(!TRY(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self))).IsOk())
+  if (!TRY(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self))).IsOk())
     return PyErr_Format(PyExc_ValueError, "invalid device");
   Optional<std::string> device = ASSERT(DeviceTag4DeviceType(PyTensorType_UnpackDevice(self)));
   const auto& data_type = PyTensorType_UnpackDType(self);
@@ -88,12 +88,12 @@ static const char* get_doc(PyTensorType* tensortype) {
 
   std::string dtype = tensortype->dtype->name();
   std::string doc = "";
-  if(!TRY(DeviceTag4DeviceType(tensortype->devicetype)).IsOk())
+  if (!TRY(DeviceTag4DeviceType(tensortype->devicetype)).IsOk())
     doc = "The tensortype " + std::string(tensortype->name) + " is not available.";
   else {
     std::string device = ASSERT(DeviceTag4DeviceType(tensortype->devicetype));
     doc = "Creates a Tensor with the dtype of " + dtype + " and the device on " + device
-                      + ", it has the same parameters as :func:`oneflow.Tensor`";
+          + ", it has the same parameters as :func:`oneflow.Tensor`";
   }
   tensortype_doc.emplace_back(doc);
   return tensortype_doc.back().data();
@@ -146,9 +146,8 @@ PyObject* PyTensorType_FromDTypeAndDeviceType(Symbol<DType> dtype, DeviceType de
       std::find_if(tensor_types.begin(), tensor_types.end(), [dtype, device](PyTensorType* x) {
         return (x->dtype == dtype) && (x->devicetype == device);
       });
-  if (it == tensor_types.end())
-  {
-    if(!TRY(DeviceTag4DeviceType(device)).IsOk())
+  if (it == tensor_types.end()) {
+    if (!TRY(DeviceTag4DeviceType(device)).IsOk())
       return PyErr_Format(PyExc_ValueError, "unsupported device");
     return PyErr_Format(PyExc_ValueError, "unsupported data type (%s) or device (%s)",
                         dtype->name().c_str(), ASSERT(DeviceTag4DeviceType(device)).c_str());
