@@ -40,6 +40,7 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+
 @autotest(check_graph=True)
 def test_avgpool2d_with_random_data(test_case):
     m = torch.nn.AvgPool2d(
@@ -56,6 +57,7 @@ def test_avgpool2d_with_random_data(test_case):
     x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
     y = m(x)
     return y
+
 
 @autotest()
 def test_avgpool3d_with_random_data(test_case):
