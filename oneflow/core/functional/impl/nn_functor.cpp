@@ -463,7 +463,9 @@ class FusedMatmulBiasAddReluDropoutFunctor {
                                        /*inplace=*/false,
                                        /*generator=*/gen, /*addend=*/NullOpt));
       } else {
-        out = JUST(functional::Relu(out, false));
+        out = JUST(functional::Dropout(out, dropout_rate_list.at(layer_idx), /*training=*/true,
+                                       /*inplace=*/false,
+                                       /*generator=*/gen, /*addend=*/NullOpt));
       }
     }
     return out;
