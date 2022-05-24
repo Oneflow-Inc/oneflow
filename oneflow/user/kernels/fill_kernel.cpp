@@ -70,15 +70,43 @@ class FillCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+template<typename T>
+class FillGradCpuKernel final : public user_op::OpKernel {
+ public:
+  FillGradCpuKernel() = default;
+  ~FillGradCpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int32_t elem_cnt = in->shape().elem_cnt();
+    T* out_ptr = out->mut_dptr<T>();
+    FOR_RANGE(int32_t, i, 0, elem_cnt) { out_ptr[i] = 0; }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 #define REGISTER_FILL_CPU_KERNEL(dtype)                                              \
   REGISTER_USER_KERNEL("fill_").SetCreateFn<FillCpuKernel<dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCPU)                                 \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_FILL_CPU_KERNEL(float)
-REGISTER_FILL_CPU_KERNEL(double)
-REGISTER_FILL_CPU_KERNEL(int8_t)
-REGISTER_FILL_CPU_KERNEL(int32_t)
-REGISTER_FILL_CPU_KERNEL(int64_t)
+#define REGISTER_FILL_GRAD_CPU_KERNEL(dtype)                          \
+  REGISTER_USER_KERNEL("fill_grad")                                   \
+      .SetCreateFn<FillGradCpuKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+
+REGISTER_FILL_CPU_KERNEL(float);
+REGISTER_FILL_CPU_KERNEL(double);
+REGISTER_FILL_CPU_KERNEL(int8_t);
+REGISTER_FILL_CPU_KERNEL(int32_t);
+REGISTER_FILL_CPU_KERNEL(int64_t);
+REGISTER_FILL_GRAD_CPU_KERNEL(float);
+REGISTER_FILL_GRAD_CPU_KERNEL(double);
+REGISTER_FILL_GRAD_CPU_KERNEL(int8_t);
+REGISTER_FILL_GRAD_CPU_KERNEL(int32_t);
+REGISTER_FILL_GRAD_CPU_KERNEL(int64_t);
 
 }  // namespace oneflow

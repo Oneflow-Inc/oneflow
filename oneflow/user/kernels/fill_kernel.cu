@@ -26,6 +26,11 @@ __global__ void FillForwardGpu(const int n, const T value, T* y) {
 }
 
 template<typename T>
+__global__ void FillGradForwardGpu(const int n, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 0; }
+}
+
+template<typename T>
 T GetDtypeMatchedValue(double floating, int64_t integral);
 
 template<>
@@ -71,8 +76,24 @@ class FillGpuKernel final : public user_op::OpKernel {
     const T value_ = GetDtypeMatchedValue<T>(floating_value, integral_value);
     const int32_t elem_cnt = x->shape().elem_cnt();
     T* y_ptr = y->mut_dptr<T>();
-    RUN_CUDA_KERNEL((FillForwardGpu<T>), ctx->stream(), elem_cnt, elem_cnt, value_,
-                    y->mut_dptr<T>());
+    RUN_CUDA_KERNEL((FillForwardGpu<T>), ctx->stream(), elem_cnt, elem_cnt, value_, y_ptr);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+template<typename T>
+class FillGradGpuKernel final : public user_op::OpKernel {
+ public:
+  FillGradGpuKernel() = default;
+  ~FillGradGpuKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int32_t elem_cnt = in->shape().elem_cnt();
+    T* out_ptr = out->mut_dptr<T>();
+    RUN_CUDA_KERNEL((FillGradForwardGpu<T>), ctx->stream(), elem_cnt, elem_cnt, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -82,10 +103,21 @@ class FillGpuKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == DeviceType::kCUDA)                                \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_FILL_CUDA_KERNEL(float)
-REGISTER_FILL_CUDA_KERNEL(double)
-REGISTER_FILL_CUDA_KERNEL(int8_t)
-REGISTER_FILL_CUDA_KERNEL(int32_t)
-REGISTER_FILL_CUDA_KERNEL(int64_t)
+#define REGISTER_FILL_Grad_CUDA_KERNEL(dtype)                          \
+  REGISTER_USER_KERNEL("fill_grad")                                    \
+      .SetCreateFn<FillGradGpuKernel<dtype>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+
+REGISTER_FILL_CUDA_KERNEL(float);
+REGISTER_FILL_CUDA_KERNEL(double);
+REGISTER_FILL_CUDA_KERNEL(int8_t);
+REGISTER_FILL_CUDA_KERNEL(int32_t);
+REGISTER_FILL_CUDA_KERNEL(int64_t);
+REGISTER_FILL_Grad_CUDA_KERNEL(float);
+REGISTER_FILL_Grad_CUDA_KERNEL(double);
+REGISTER_FILL_Grad_CUDA_KERNEL(int8_t);
+REGISTER_FILL_Grad_CUDA_KERNEL(int32_t);
+REGISTER_FILL_Grad_CUDA_KERNEL(int64_t);
 
 }  // namespace oneflow

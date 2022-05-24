@@ -3045,6 +3045,19 @@ class FillFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FillGradFunctor {
+ public:
+  FillGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fill_grad").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3058,6 +3071,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
   m.add_functor<impl::FillFunctor>("Fill");
+  m.add_functor<impl::FillGradFunctor>("FillGrad");
   m.add_functor<impl::WhereFunctor>("Where");
   m.add_functor<impl::WhereScalarXFunctor>("WhereScalarX");
   m.add_functor<impl::WhereScalarYFunctor>("WhereScalarY");

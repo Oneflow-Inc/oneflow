@@ -25,10 +25,9 @@ def _test_fill_with_alpha(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     value = random().to(float)
-    x.fill_(value)
-    # y = x + 1
-    # return y
-    return x
+    y = x + 1
+    y.fill_(1.6844421846030757)
+    return y
 
 
 class TestAddModule(flow.unittest.TestCase):

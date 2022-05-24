@@ -9424,4 +9424,17 @@ def OneFlow_FillOp : OneFlow_BaseOp<"fill_", [NoSideEffect, DeclareOpInterfaceMe
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FillGradOp : OneFlow_BaseOp<"fill_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
