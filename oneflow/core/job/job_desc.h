@@ -60,9 +60,6 @@ class JobDesc final {
   bool prune_amp_white_identity_ops() const { return job_conf_.prune_amp_white_identity_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
-  bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
-  const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
-
 #define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name) \
   T func_name(const std::string& field_name) const {            \
     const AttrValue& attr_val = GetFunctionFlagVal(field_name); \
