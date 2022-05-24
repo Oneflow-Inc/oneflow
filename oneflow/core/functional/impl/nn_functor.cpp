@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
@@ -37,6 +38,8 @@ limitations under the License.
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -254,12 +257,16 @@ class BatchMatMulFunctor {
                            const bool& transpose_b, const double& alpha) const {
     const auto& a_shape = a->shape();
     const auto& b_shape = b->shape();
-    CHECK_GE_OR_RETURN(a_shape->NumAxes(), 3) << "Tensor a's dim should >= 3";
-    CHECK_GE_OR_RETURN(b_shape->NumAxes(), 3) << "Tensor b's dim should >= 3";
-    CHECK_GE_OR_RETURN(a_shape->At(0), b_shape->At(0))
-        << "batch dim not match, please check input!";
-    CHECK_GE_OR_RETURN(a_shape->At(2), b_shape->At(1))
-        << "matmul dim not match, please check input!";
+    CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 3)
+        << Error::RuntimeError() << "Expected 3-dimensional tensor, but got " << a_shape->NumAxes()
+        << "-dimensional tensor for argument #1";
+    CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 3)
+        << Error::RuntimeError() << "Expected 3-dimensional tensor, but got " << b_shape->NumAxes()
+        << "-dimensional tensor for argument #2";
+    CHECK_EQ_OR_RETURN(a_shape->At(0), b_shape->At(0))
+        << Error::RuntimeError() << "Batch dim not match, please check input!";
+    CHECK_EQ_OR_RETURN(a_shape->At(2), b_shape->At(1))
+        << Error::RuntimeError() << "Matmul dim not match, please check input!";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
@@ -451,10 +458,10 @@ class PixelShuffleFunctor {
   }
 };
 
-class PoolNDFunctor {
+class TFPoolNDFunctor {
  public:
-  PoolNDFunctor() = default;
-  virtual ~PoolNDFunctor() = default;
+  TFPoolNDFunctor() = default;
+  virtual ~TFPoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& strides, const std::string& padding,
@@ -476,10 +483,10 @@ class PoolNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class PoolingNDFunctor {
+class MaxPoolNDFunctor {
  public:
-  PoolingNDFunctor() = default;
-  virtual ~PoolingNDFunctor() = default;
+  MaxPoolNDFunctor() = default;
+  virtual ~MaxPoolNDFunctor() = default;
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::vector<int32_t>& kernel_size,
                                 const Optional<std::vector<int32_t>>& stride,
@@ -532,32 +539,32 @@ class PoolingNDFunctor {
   std::shared_ptr<OpExpr> tf_maxpool_op_;
 };
 
-class TFAvgPool2DFunctor : public PoolNDFunctor {
+class TFAvgPool2DFunctor : public TFPoolNDFunctor {
  public:
   TFAvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tf_avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class Maxpool1DFunctor : public PoolingNDFunctor {
+class MaxPool1DFunctor : public MaxPoolNDFunctor {
  public:
-  Maxpool1DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("maxpool_1d").Input("x").Output("y").Output("indice").Build());
+  MaxPool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("max_pool_1d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
-class Maxpool2DFunctor : public PoolingNDFunctor {
+class MaxPool2DFunctor : public MaxPoolNDFunctor {
  public:
-  Maxpool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("maxpool_2d").Input("x").Output("y").Output("indice").Build());
+  MaxPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Output("indice").Build());
     tf_maxpool_op_ = CHECK_JUST(one::OpBuilder("tf_max_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class Maxpool3DFunctor : public PoolingNDFunctor {
+class MaxPool3DFunctor : public MaxPoolNDFunctor {
  public:
-  Maxpool3DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("maxpool_3d").Input("x").Output("y").Output("indice").Build());
+  MaxPool3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("max_pool_3d").Input("x").Output("y").Output("indice").Build());
   }
 };
 
@@ -620,7 +627,7 @@ class MseLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     const auto out = sequence_function(functional::Sub)
                          .then(functional::Square)
-                         .call(input, target, /*inplace=*/false);
+                         .call(input, target, /*alpha=*/1.0, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -633,7 +640,7 @@ class L1LossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     const auto out = sequence_function(functional::Sub)
                          .then(functional::Abs)
-                         .call(input, target, /*inplace=*/false);
+                         .call(input, target, /*alpha=*/1.0, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -688,7 +695,7 @@ class MarginRankingLossFunctor : public LossFunctorBase {
               return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1, /*inplace=*/true);
             })
             .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
-            .call(input_1, input_2, /*inplace=*/false);
+            .call(input_1, input_2, /*alpha=*/1.0, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -1269,7 +1276,8 @@ class CtcLossFunctor {
     if (reduction == "sum") { return functional::ReduceSum(out, {}, false); }
     if (reduction == "mean") {
       return sequence_function(functional::Clamp)
-          .then(std::bind(functional::Cast, std::placeholders::_1, log_probs->dtype()))
+          .then(std::bind(functional::Cast, std::placeholders::_1, log_probs->dtype(),
+                          /*pin_memory=*/false))
           .then([&](const std::shared_ptr<one::Tensor>& x) {
             return OpInterpUtil::Dispatch<Tensor>(*op_xdivy_, {out, x});
           })
@@ -1301,21 +1309,27 @@ class TripletMarginLossFunctor {
       return true;
     }());
     auto da_p = JUST(VectorNorm(
-        JUST(ScalarAdd(eps, JUST(Sub(anchor, positive, /*inplace=*/false)), /*alpha=*/1)), p, dim,
+        JUST(ScalarAdd(eps, JUST(Sub(anchor, positive, /*alpha=*/1.0, /*inplace=*/false)),
+                       /*alpha=*/1)),
+        p, dim,
         /*keepdim=*/false, anchor->dtype()));
     auto da_n = JUST(VectorNorm(
-        JUST(ScalarAdd(eps, JUST(Sub(anchor, negative, /*inplace=*/false)), /*alpha=*/1)), p, dim,
+        JUST(ScalarAdd(eps, JUST(Sub(anchor, negative, /*alpha=*/1.0, /*inplace=*/false)),
+                       /*alpha=*/1)),
+        p, dim,
         /*keepdim=*/false, anchor->dtype()));
     if (swap) {
       auto distance_swap = JUST(VectorNorm(
-          JUST(ScalarAdd(eps, JUST(Sub(positive, negative, /*inplace=*/false)), /*alpha=*/1)), p,
-          dim,
+          JUST(ScalarAdd(eps, JUST(Sub(positive, negative, /*alpha=*/1.0, /*inplace=*/false)),
+                         /*alpha=*/1)),
+          p, dim,
           /*keepdim=*/false, positive->dtype()));
       da_n = JUST(Minimum(distance_swap, da_n));
     }
-    auto triplet_loss = JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n, /*inplace=*/false)), margin,
-                                                  /*alpha=*/1, /*inplace=*/false)),
-                                   /*min=*/0.0, NullOpt));
+    auto triplet_loss =
+        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n, /*alpha=*/1.0, /*inplace=*/false)), margin,
+                                  /*alpha=*/1, /*inplace=*/false)),
+                   /*min=*/0.0, NullOpt));
     int32_t ndim = triplet_loss->ndim() - 1;
     std::vector<int32_t> axis(1, ndim);
 
@@ -1360,6 +1374,133 @@ class GridSampleFunctor {
     JUST(attrs.SetAttr<std::string>("padding_mode", padding_mode));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, grid}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class NormalFunctor {
+ public:
+  NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
+                           const Optional<one::Tensor>& out,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<Symbol<Device>>& optional_device,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
+    Symbol<DType> dtype = DType::Float();
+    if (optional_dtype.has_value()) {
+      dtype = JUST(optional_dtype);
+      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+      }
+    }
+    Symbol<Device> device = JUST(Device::New("cpu"));
+    if (optional_device.has_value()) { device = JUST(optional_device); }
+
+    if (out.has_value()) {
+      auto out_tensor = JUST(out);
+      Symbol<DType> output_tensor_dtype = out_tensor->dtype();
+      if (optional_dtype.has_value()) {
+        CHECK_OR_RETURN(output_tensor_dtype == dtype)
+            << Error::RuntimeError() << "data type " << dtype->name()
+            << " does not match data type of out parameter (" << output_tensor_dtype->name();
+      }
+      dtype = output_tensor_dtype;
+      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
+      if (optional_device.has_value()) {
+        CHECK_OR_RETURN(out_tensor_device == JUST(optional_device))
+            << Error::RuntimeError() << "device type " << device->ToString()
+            << " does not match device type of out parameter (" << out_tensor_device->ToString();
+      }
+      device = out_tensor_device;
+    }
+
+    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("mean", mean));
+    JUST(attrs.SetAttr<double>("std", std));
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    OpExprInterpContext ctx(attrs, distribution_state);
+    ctx.device = device;
+    if (out.has_value()) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      (*outputs)[0] = JUST(out);
+      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+      return (*outputs)[0];
+    }
+
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentNormalFunctor {
+ public:
+  ConsistentNormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
+                           const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<one::Generator>& optional_generator,
+                           const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
+
+    Symbol<DType> dtype = DType::Float();
+    if (optional_dtype.has_value()) {
+      dtype = JUST(optional_dtype);
+      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+      }
+    }
+
+    if (out.has_value()) {
+      auto out_tensor = JUST(out);
+      Symbol<DType> output_tensor_dtype = out_tensor->dtype();
+      if (optional_dtype.has_value()) {
+        CHECK_OR_RETURN(output_tensor_dtype == dtype)
+            << Error::RuntimeError() << "data type " << dtype->name()
+            << " does not match data type of out parameter (" << output_tensor_dtype->name();
+      }
+      dtype = output_tensor_dtype;
+    }
+
+    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("mean", mean));
+    JUST(attrs.SetAttr<double>("std", std));
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+    const auto& nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    if (LazyMode::is_enabled()) {
+      JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
+    }
+
+    if (out.has_value()) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      (*outputs)[0] = JUST(out);
+      JUST(OpInterpUtil::Dispatch(
+          *op_, {}, outputs.get(),
+          OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
+      return (*outputs)[0];
+    }
+
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *op_, {}, OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
   }
 
  private:
@@ -1699,10 +1840,10 @@ class DropoutGradFunctor {
   std::shared_ptr<OpExpr> dropout_grad_op_;
 };
 
-class AvgPoolingNDFunctor {
+class AvgPoolNDFunctor {
  public:
-  AvgPoolingNDFunctor() = default;
-  virtual ~AvgPoolingNDFunctor() = default;
+  AvgPoolNDFunctor() = default;
+  virtual ~AvgPoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const Optional<std::vector<int32_t>>& stride,
@@ -1729,24 +1870,24 @@ class AvgPoolingNDFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Avgpool1DFunctor : public AvgPoolingNDFunctor {
+class AvgPool1DFunctor : public AvgPoolNDFunctor {
  public:
-  Avgpool1DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avgpool_1d").Input("x").Output("y").Build());
+  AvgPool1DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_1d").Input("x").Output("y").Build());
   }
 };
 
-class Avgpool2DFunctor : public AvgPoolingNDFunctor {
+class AvgPool2DFunctor : public AvgPoolNDFunctor {
  public:
-  Avgpool2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avgpool_2d").Input("x").Output("y").Build());
+  AvgPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class Avgpool3DFunctor : public AvgPoolingNDFunctor {
+class AvgPool3DFunctor : public AvgPoolNDFunctor {
  public:
-  Avgpool3DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("avgpool_3d").Input("x").Output("y").Build());
+  AvgPool3DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_3d").Input("x").Output("y").Build());
   }
 };
 
@@ -1852,6 +1993,56 @@ class OneHotFunctor {
 
  private:
   std::shared_ptr<OpExpr> one_hot_op_;
+};
+
+class CosineSimilarityFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y, const int32_t& dim,
+                           const double& eps) const {
+    const auto& x_shape = *(x->shape());
+    const auto& y_shape = *(y->shape());
+    std::shared_ptr<one::Tensor> x_extend = x;
+    std::shared_ptr<one::Tensor> y_extend = y;
+    if (x_shape != y_shape) {
+      Shape max_shape = Shape::Ones(std::max(x_shape.NumAxes(), y_shape.NumAxes()));
+      for (int64_t i = max_shape.NumAxes() - 1; i >= 0; i--) {
+        int64_t offset = max_shape.NumAxes() - 1 - i;
+        int64_t dim_x = x_shape.NumAxes() - 1 - offset;
+        int64_t dim_y = y_shape.NumAxes() - 1 - offset;
+        int64_t size_x = (dim_x >= 0) ? x_shape.At(i) : 1;
+        int64_t size_y = (dim_y >= 0) ? y_shape.At(i) : 1;
+        if (!(size_x == size_y || size_x == 1 || size_y == 1)) {
+          return Error::RuntimeError()
+                 << "The size of tensor a (" << size_x << ") must match the size of tensor b ("
+                 << size_y << ") at non-singleton dimension " << i;
+        }
+        max_shape.Set(i, std::max(size_x, size_y));
+      }
+      x_extend = JUST(Expand(x, max_shape));
+      y_extend = JUST(Expand(y, max_shape));
+    }
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x_extend, y_extend}).Apply());
+    TensorTuple input_vec = JUST(tensor_processor.GetInputs());
+    const auto common_dtype = JUST(oneflow::VectorAt(input_vec, 0))->dtype();
+    if (!IsFloatingDataType(common_dtype->data_type())) {
+      return Error::RuntimeError()
+             << "expected common dtype to be floating point, yet common dtype is "
+             << common_dtype->name();
+    }
+    auto& x_ = JUST(oneflow::VectorAt(input_vec, 0));
+    auto& y_ = JUST(oneflow::VectorAt(input_vec, 1));
+    std::shared_ptr<Tensor> w12 =
+        JUST(functional::ReduceSum(JUST(functional::Mul(x_, y_)), {dim}, false));
+    std::shared_ptr<Tensor> w1 =
+        JUST(functional::ReduceSum(JUST(functional::Mul(x_, x_)), {dim}, false));
+    std::shared_ptr<Tensor> w2 =
+        JUST(functional::ReduceSum(JUST(functional::Mul(y_, y_)), {dim}, false));
+    std::shared_ptr<Tensor> n12 = JUST(functional::Sqrt(
+        JUST(functional::Clamp(JUST(functional::Mul(w1, w2)), Scalar(eps * eps), NullOpt))));
+    return functional::Div(w12, n12);
+  }
 };
 
 class L2NormalizeFunctor {
@@ -2342,32 +2533,60 @@ class FusedDotFeatureInteractionFunctor {
                                                 .Output("padded_concated_features")
                                                 .Build());
     }
+    ops_no_padded_concated_features_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_no_padded_concated_features_.size(); ++n) {
+      ops_no_padded_concated_features_[n] =
+          CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                         .Input("features", n + 1)
+                         .Output("out")
+                         .Build());
+    }
   }
 
   Maybe<Tensor> operator()(const TensorTuple& features, const Optional<one::Tensor>& output_concat,
-                           const bool& self_interaction, const int32_t& output_padding) const {
+                           const bool& self_interaction, const int32_t& output_padding,
+                           const std::string& pooling) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
     JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
+    JUST(attrs.SetAttr<std::string>("pooling", pooling));
     const int64_t n_features = features.size();
-    CHECK_LE_OR_RETURN(n_features, kMaxInputCount);
+    TensorTuple inputs;
+    if (n_features > kMaxInputCount) {
+      inputs.push_back(JUST(functional::Concat(features, 1)));
+    } else {
+      inputs = features;
+    }
+    CHECK_OR_RETURN(pooling == "sum" || pooling == "none")
+        << Error::RuntimeError() << "pooling should be sum or none, but get " << pooling;
+
+    if (pooling == "sum") {
+      CHECK_EQ_OR_RETURN(output_padding, 0)
+          << Error::RuntimeError() << "output_padding should be equal to 0. ";
+      CHECK_OR_RETURN(!output_concat) << Error::RuntimeError() << "output_concat should not exist";
+      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      const std::shared_ptr<one::Tensor>& bi_interaction = JUST(OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_no_padded_concated_features_, n_features - 1)), inputs,
+          attrs));
+      std::vector<int32_t> reduce_axes_vec = {1};
+      return functional::ReduceSum(bi_interaction, reduce_axes_vec, true);
+    }
     if (output_concat) {
       JUST(attrs.SetAttr<bool>("has_output_concat", true));
-      TensorTuple inputs(n_features + 1);
-      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = JUST(oneflow::VectorAt(features, i)); }
-      inputs[n_features] = JUST(output_concat);
+      inputs.push_back(JUST(output_concat));
       return OpInterpUtil::Dispatch<Tensor>(
           *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
     } else {
       JUST(attrs.SetAttr<bool>("has_output_concat", false));
       return OpInterpUtil::Dispatch<Tensor>(
-          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), features, attrs);
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), inputs, attrs);
     }
   }
 
  private:
   std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
+  std::vector<std::shared_ptr<OpExpr>> ops_no_padded_concated_features_;
 };
 
 class OneEmbeddingIdShuffleFunctor {
@@ -2700,6 +2919,46 @@ class OneEmbeddingAdagradUpdateFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class OneEmbeddingFtrlUpdateFunctor {
+ public:
+  OneEmbeddingFtrlUpdateFunctor() {
+    // This functor is just for unittest
+    op_ = CHECK_JUST(one::OpBuilder("ftrl_embedding_update")
+                         .Input("num_unique_ids")
+                         .Input("unique_embeddings")
+                         .Input("embedding_grad")
+                         .Input("learning_rate")
+                         .Input("down_scale_by_tensor")
+                         .Input("skip_if")
+                         .Output("updated_unique_embeddings")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
+                           const std::shared_ptr<one::Tensor>& unique_embeddings,
+                           const std::shared_ptr<one::Tensor>& embedding_grad,
+                           const std::shared_ptr<one::Tensor>& learning_rate,
+                           const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
+                           const std::shared_ptr<one::Tensor>& skip_if, const double scale,
+                           const float weight_decay, const float lr_power, const float lambda1,
+                           const float lambda2, const float beta) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    JUST(attrs.SetAttr<float>("lr_power", lr_power));
+    JUST(attrs.SetAttr<float>("lambda1", lambda1));
+    JUST(attrs.SetAttr<float>("lambda2", lambda2));
+    JUST(attrs.SetAttr<float>("beta", beta));
+    return OpInterpUtil::Dispatch<Tensor>(*op_,
+                                          {num_unique_ids, unique_embeddings, embedding_grad,
+                                           learning_rate, down_scale_by_tensor, skip_if},
+                                          attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class RocAucScoreFunctor {
  public:
   RocAucScoreFunctor() {
@@ -2731,10 +2990,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
-  m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");
-  m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
-  m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
-  m.add_functor<impl::Maxpool3DFunctor>("Maxpool3D");
+  m.add_functor<impl::TFAvgPool2DFunctor>("TFAvgPool2D");
+  m.add_functor<impl::MaxPool1DFunctor>("MaxPool1D");
+  m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
+  m.add_functor<impl::MaxPool3DFunctor>("MaxPool3D");
   m.add_functor<impl::AdaptiveAvgPool1DFunctor>("AdaptiveAvgPool1D");
   m.add_functor<impl::AdaptiveAvgPool2DFunctor>("AdaptiveAvgPool2D");
   m.add_functor<impl::AdaptiveAvgPool3DFunctor>("AdaptiveAvgPool3D");
@@ -2763,14 +3022,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
   m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");
-  m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
-  m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
-  m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
+  m.add_functor<impl::AvgPool1DFunctor>("AvgPool1D");
+  m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
+  m.add_functor<impl::AvgPool3DFunctor>("AvgPool3D");
   m.add_functor<impl::UnfoldFunctor>("Unfold");
   m.add_functor<impl::FoldFunctor>("Fold");
   m.add_functor<impl::OneHotFunctor>("OneHot");
   m.add_functor<impl::FusedSelfAttentionFunctor>("FusedSelfAttention");
   m.add_functor<impl::FusedSelfAttentionGradFunctor>("FusedSelfAttentionGrad");
+  m.add_functor<impl::CosineSimilarityFunctor>("CosineSimilarity");
   m.add_functor<impl::NormalizeFunctor>("Normalize");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
@@ -2793,11 +3053,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "OneEmbeddingEmbeddingGradientShuffle");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
+  m.add_functor<impl::NormalFunctor>("Normal");
+  m.add_functor<impl::ConsistentNormalFunctor>("ConsistentNormal");
   m.add_functor<impl::OneEmbeddingSgdUpdateFunctor>("OneEmbeddingSgdUpdate");
   m.add_functor<impl::OneEmbeddingAdamUpdateFunctor>("OneEmbeddingAdamUpdate");
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
+  m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
-};
+}
 
 }  // namespace functional
 }  // namespace one

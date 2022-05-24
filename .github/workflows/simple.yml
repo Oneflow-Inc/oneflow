@@ -42,7 +42,7 @@ jobs:
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON
-          cmake --build . -j$(nproc) --target oneflow_deps of_cfgobj of_protoobj of_functional_obj of_functional_tensor_obj of_op_schema
+          cmake --build . -j$(nproc) --target oneflow_deps of_protoobj of_functional_obj of_functional_tensor_obj of_op_schema
       - name: Run clang-tidy for all translation units
         # use clang as compiler for correct compiler flags
         run: |
@@ -97,6 +97,10 @@ jobs:
             cmake_generator: "Unix Makefiles"
             cmake_build_type: "Release"
     steps:
+      - name: Set Swap Space
+        uses: pierotofy/set-swap-space@master
+        with:
+          swap-size-gb: 5
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
@@ -241,7 +245,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
         name: Build with gcc7
         if: ${{ matrix.build-type == 'gcc7'}}
         with:
@@ -250,7 +254,7 @@ jobs:
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/gcc7/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
-      - uses: Oneflow-Inc/get-oneflow@fix-benchmark-typo
+      - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
         name: Build with clang10
         if: ${{ matrix.build-type == 'clang10'}}
         with:

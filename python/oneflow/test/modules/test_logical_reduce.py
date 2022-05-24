@@ -28,6 +28,20 @@ import oneflow.unittest
 @flow.unittest.skip_unless_1n1d()
 class TestLogicalReduce(flow.unittest.TestCase):
     @autotest(auto_backward=False)
+    def test_sum_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.sum(x, dim)
+
+    @autotest(auto_backward=False)
+    def test_mean_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.mean(x, dim)
+
+    @autotest(auto_backward=False)
     def test_all_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
@@ -35,15 +49,6 @@ class TestLogicalReduce(flow.unittest.TestCase):
         return torch.all(x, dim)
 
     @autotest(auto_backward=False)
-    def test_all_bool_input_with_random_data(test_case):
-        device = random_device()
-        dim = random(1, 4).to(int)
-        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
-            device, dtype=torch.bool
-        )
-        return torch.all(x, dim)
-
-    @autotest(auto_backward=False, check_graph=True)
     def test_any_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
@@ -51,15 +56,60 @@ class TestLogicalReduce(flow.unittest.TestCase):
         return torch.any(x, dim)
 
     @autotest(auto_backward=False)
-    def test_any_bool_input_with_random_data(test_case):
+    def test_prod_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
-        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
-            device, dtype=torch.bool
-        )
-        return torch.any(x, dim)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.prod(x, dim)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(auto_backward=False)
+    def test_sum_keepdim_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.sum(x, dim, keepdim=True)
+
+    @autotest(auto_backward=False)
+    def test_mean_keepdim_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.mean(x, dim, keepdim=True)
+
+    @autotest(auto_backward=False)
+    def test_all_keepdim_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.all(x, dim, keepdim=True)
+
+    @autotest(auto_backward=False)
+    def test_any_keepdim_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.any(x, dim, keepdim=True)
+
+    @autotest(auto_backward=False)
+    def test_prod_keepdim_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.prod(x, dim, keepdim=True)
+
+    @autotest(auto_backward=False)
+    def test_scalar_reduce_sum_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.sum(x)
+
+    @autotest(auto_backward=False)
+    def test_scalar_reduce_mean_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
+        return torch.mean(x)
+
+    @autotest(auto_backward=False)
     def test_scalar_reduce_all_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
@@ -72,40 +122,28 @@ class TestLogicalReduce(flow.unittest.TestCase):
         return torch.any(x)
 
     @autotest(auto_backward=False)
-    def test_matrix_row_all_with_random_data(test_case):
-        device = random_device()
-        x = random_tensor(ndim=2, dtype=float, requires_grad=False).to(device)
-        return torch.all(x, 1)
-
-    @autotest(auto_backward=False)
-    def test_matrix_row_any_with_random_data(test_case):
-        device = random_device()
-        x = random_tensor(ndim=2, dtype=float, requires_grad=False).to(device)
-        return torch.any(x, 1)
-
-    @autotest(auto_backward=False)
-    def test_matrix_col_all_with_random_data(test_case):
-        device = random_device()
-        x = random_tensor(ndim=2, dtype=float, requires_grad=False).to(device)
-        return torch.all(x, 0)
-
-    @autotest(auto_backward=False)
-    def test_matrix_col_any_with_random_data(test_case):
-        device = random_device()
-        x = random_tensor(ndim=2, dtype=float, requires_grad=False).to(device)
-        return torch.any(x, 0)
-
-    @autotest(auto_backward=False)
-    def test_all_keepdim_with_random_data(test_case):
+    def test_scalar_reduce_prod_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
-        return torch.all(x, 1, keepdim=True)
+        return torch.prod(x)
 
     @autotest(auto_backward=False)
-    def test_any_keepdim_with_random_data(test_case):
+    def test_all_bool_input_with_random_data(test_case):
         device = random_device()
-        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
-        return torch.any(x, 1, keepdim=True)
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return torch.all(x, dim)
+
+    @autotest(auto_backward=False)
+    def test_any_bool_input_with_random_data(test_case):
+        device = random_device()
+        dim = random(1, 4).to(int)
+        x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(
+            device, dtype=torch.bool
+        )
+        return torch.any(x, dim)
 
 
 if __name__ == "__main__":

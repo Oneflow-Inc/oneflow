@@ -22,7 +22,7 @@ add_docstr(
     input.index_select(dim, index) -> Tensor
 
     The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/1.11/generated/torch.index_select.html#torch.index_select
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.index_select.html.
 
     Select values along an axis specified by `dim`.
 
@@ -45,7 +45,7 @@ add_docstr(
         >>> input 
         tensor([[1, 2, 3],
                 [4, 5, 6]], dtype=oneflow.int32)
-        >>> index = flow.tensor([0,1], dtype=flow.int32)
+        >>> index = flow.tensor([0,1], dtype=flow.int64)
         >>> output = flow.index_select(input, 1, index)
         >>> output
         tensor([[1, 2],

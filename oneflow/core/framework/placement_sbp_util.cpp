@@ -38,29 +38,23 @@ namespace private_details {
 namespace {
 
 using IndexVector = DimVector;
-using StrideVector = DimVector;
 
-void GetStrideVector(const Shape& shape, StrideVector* strides) {
-  strides->resize(shape.NumAxes());
-  for (int i = 0; i < shape.NumAxes(); ++i) { strides->at(i) = shape.Count(i + 1); }
-}
-
-Maybe<void> GetIndexesFromOffset(const StrideVector& strides, int64_t offset,
-                                 IndexVector* indexes) {
-  indexes->resize(strides.size());
-  for (int i = 0; i < strides.size(); ++i) {
-    indexes->at(i) = offset / strides.at(i);
-    offset = offset % strides.at(i);
+Maybe<void> GetIndexesFromOffset(const Stride& strides, int64_t offset, IndexVector* indexes) {
+  indexes->resize(strides.NumAxes());
+  for (int i = 0; i < strides.NumAxes(); ++i) {
+    indexes->at(i) = offset / strides.At(i);
+    offset = offset % strides.At(i);
   }
   CHECK_EQ_OR_RETURN(offset, 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetOffsetFromIndexes(const StrideVector& strides, const IndexVector& indexes,
+Maybe<void> GetOffsetFromIndexes(const Stride& strides, const IndexVector& indexes,
                                  int64_t* offset) {
-  CHECK_EQ_OR_RETURN(strides.size(), indexes.size());
+  CHECK_EQ_OR_RETURN(strides.NumAxes(), indexes.size())
+      << Error::RuntimeError() << "Expected size of strides to match that of indexes";
   *offset = 0;
-  for (int i = 0; i < strides.size(); ++i) { *offset += indexes.at(i) * strides.at(i); }
+  for (int i = 0; i < strides.NumAxes(); ++i) { *offset += indexes.at(i) * strides.At(i); }
   return Maybe<void>::Ok();
 }
 
@@ -122,19 +116,40 @@ static auto* GetSelectedSubParallelDesc = DECORATE(&CalcSelectedSubParallelDesc,
 
 }  // namespace
 
+Maybe<Symbol<ParallelDesc>> CalcSubParallelDesc4Axis(Symbol<ParallelDesc> parallel_desc, int axis) {
+  const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+  int64_t parallel_id = JUST(*opt_parallel_id);
+  const auto& hierarchy_shape = *parallel_desc->hierarchy();
+  Stride hierarchy_strides(hierarchy_shape);
+
+  int64_t index = CalcIndex4Axis(parallel_id, hierarchy_strides, axis);
+
+  int64_t stride = hierarchy_strides.At(axis);
+
+  int64_t start_parallel_id = parallel_id - index * stride;
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(parallel_desc->device_tag());
+  for (int64_t i = 0; i < hierarchy_shape.At(axis); ++i) {
+    int64_t id = start_parallel_id + i * stride;
+    int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(id));
+    int64_t device_id = JUST(parallel_desc->DeviceId4ParallelId(id));
+    parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                  + std::to_string(device_id));
+  }
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
+
 Maybe<std::vector<int64_t>> GetSelectedParallelIds(const Shape& hierarchy_shape,
                                                    const std::vector<int>& axis2is_selected,
                                                    int64_t parallel_id) {
   CHECK_EQ_OR_RETURN(hierarchy_shape.NumAxes(), axis2is_selected.size());
-  StrideVector hierarchy_strides{};
-  GetStrideVector(hierarchy_shape, &hierarchy_strides);
+  Stride hierarchy_strides(hierarchy_shape);
   IndexVector indexes{};
   JUST(GetIndexesFromOffset(hierarchy_strides, parallel_id, &indexes));
   std::function<void(const DimVector&, DimVector*)> SelectedIndex2OriginIndex;
   JUST(GetSelectedIndex2OriginIndex(indexes, axis2is_selected, &SelectedIndex2OriginIndex));
   const auto& broadcast_shape = JUST(GetSelectedShape(hierarchy_shape, axis2is_selected));
-  StrideVector broadcast_strides{};
-  GetStrideVector(*broadcast_shape, &broadcast_strides);
+  Stride broadcast_strides(*broadcast_shape);
   const auto& origin_offsets = std::make_shared<std::vector<int64_t>>(broadcast_shape->elem_cnt());
   for (int64_t i = 0; i < broadcast_shape->elem_cnt(); ++i) {
     IndexVector broadcast_indexes{};
@@ -224,7 +239,8 @@ Maybe<void> InitShapAxis2ExpandedDim(
   for (int i = 0; i < shape.NumAxes(); ++i) {
     int64_t total_dim = shape.At(i);
     shape_axis2expanded_dims->at(i).clear();
-    if (shape_axis2required_dim.at(i).empty()) {
+    if (JUST(VectorAt(shape_axis2required_dim, i)).empty()
+        || JUST(VectorAt(shape_axis2required_dim, i)).size() == 1) {
       shape_axis2expanded_dims->at(i).emplace_back(total_dim);
     } else {
       Shape inner_shape(shape_axis2required_dim.at(i));
@@ -492,13 +508,26 @@ Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<NdSbp> nd_sbp,
   return GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id));
 }
 
+Maybe<Shape> GetSubLogicalShape(Symbol<one::ConsistentTensorMeta> tensor_meta,
+                                Symbol<ParallelDesc> sub_parallel_desc, Symbol<NdSbp> sub_nd_sbp) {
+  CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
+  const auto& logical_shape = tensor_meta->shape();
+  const auto& physical_shape =
+      JUST(GetPhysicalShape(logical_shape, tensor_meta->nd_sbp(), tensor_meta->parallel_desc()));
+
+  std::shared_ptr<Shape> sub_logical_shape = std::make_shared<Shape>(*physical_shape);
+  if (sub_nd_sbp->sbp_parallel(0).has_split_parallel()) {
+    const int64_t split_axis = sub_nd_sbp->sbp_parallel(0).split_parallel().axis();
+    sub_logical_shape->Set(split_axis, logical_shape.At(split_axis));
+  }
+  return sub_logical_shape;
+}
+
 Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
     Symbol<NdSbp> sub_nd_sbp) {
-  const auto& physical_shape = JUST(
-      GetPhysicalShape(tensor_meta->shape(), tensor_meta->nd_sbp(), tensor_meta->parallel_desc()));
-  const auto& logical_shape =
-      JUST(GetLogicalShape(*physical_shape, *sub_nd_sbp, *sub_parallel_desc));
+  CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
+  const auto& logical_shape = JUST(GetSubLogicalShape(tensor_meta, sub_parallel_desc, sub_nd_sbp));
   one::ConsistentTensorMeta sub_consistent_tensor_meta(logical_shape, tensor_meta->dtype(),
                                                        sub_nd_sbp, sub_parallel_desc);
   return SymbolOf(sub_consistent_tensor_meta);
@@ -608,14 +637,15 @@ Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> CalcBroadcastGroup(
         const auto& src_process_ids = node_iter->second;
         int64_t src_process_index = (node_id2counter[node_id]++) % src_process_ids.size();
         int64_t src_process_id = src_process_ids.at(src_process_index);
-        JUST(MapAt(&process_id2group, src_process_id))->emplace_back(process_id);
+        JUST(MapAt(process_id2group, src_process_id)).emplace_back(process_id);
       }
     }
   }
   // put remainder process ids into src groups.
   for (int i = 0; i < remainder_process_ids.size(); ++i) {
     int64_t src_process_id = src_process_ids.at(i % src_process_ids.size());
-    JUST(MapAt(&process_id2group, src_process_id))->emplace_back(remainder_process_ids.at(i));
+    JUST(MapAt(process_id2group, src_process_id))
+        .emplace_back(JUST(oneflow::VectorAt(remainder_process_ids, i)));
   }
   const auto& map = std::make_shared<std::unordered_map<int64_t, Symbol<ParallelDesc>>>();
   for (const auto& pair : process_id2group) {
@@ -676,6 +706,17 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
 }
 
 }  // namespace
+
+int64_t CalcIndex4Axis(int64_t offset, const Stride& stride, int axis) {
+  CHECK_LT(axis, stride.NumAxes())
+      << "Expected axis (" << axis << ") to be less than size of stride (" << stride.NumAxes()
+      << ")";
+  if (axis == 0) {
+    return offset / stride.At(0);
+  } else {
+    return offset % stride.At(axis - 1) / stride.At(axis);
+  }
+}
 
 decltype(CheckIsNdSbpBoxingAcyclic) CheckIsNdSbpBoxingAcyclic =
     DECORATE(&RawCheckIsNdSbpBoxingAcyclic, ThreadLocal);

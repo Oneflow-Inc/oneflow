@@ -270,20 +270,6 @@ message AccTickOpConf {
   optional int32 max_acc_num = 3 [default = 1];
 }
 
-message ModelInitOpConf {
-  optional string tick = 1;
-  repeated string out = 2;
-  repeated string variable_op_name = 3;
-  repeated VariableOpConf original_variable_conf = 4;
-}
-
-message ModelLoadOpConf {
-  required string path = 1;
-  repeated string out = 2;
-  repeated string variable_op_name = 3;
-  repeated VariableOpConf original_variable_conf = 4;
-}
-
 message IdentityOpConf {
   required string in = 1;
   required string out = 2;
@@ -322,12 +308,6 @@ message AssignOpConf {
   required string value = 2;
 }
 
-message ModelSaveOpConf {
-  required string path = 1;
-  repeated string in = 2;
-  repeated string key = 3;
-}
-
 message LearningRateScheduleOpConf {
   required string train_step = 1;
   required string out = 2;
@@ -348,52 +328,6 @@ message SliceBoxingCopyOpConf {
 
 message SliceBoxingAddOpConf {
   required SliceBoxingConf slice_boxing_conf = 1;
-}
-
-message XrtLaunchOpConf {
-  message Argument {
-    required string name = 1;
-    required string value = 2;
-    required DeviceType device_type = 3;
-  }
-  message Function {
-    repeated Argument argument = 1;
-    repeated OperatorConf node = 2;
-  }
-  repeated string in = 1;
-  repeated string out = 2;
-  required Function function = 3;
-  // Function executing engine.
-  // Only "XLA" and "TensorRT" are supported currently.
-  required string engine = 4;
-  // Input mutability.
-  map<string, bool> input_mutability = 5;
-  // Mapping launch op's input and output names into function.
-  map<string, string> input_output_mapping = 6;
-  // Sbp signatures of each function node.
-  map<string, SbpSignature> sbp_signatures = 8;
-  optional bool model_update = 9 [default = false];
-  map<string, BlobDescProto> lbn2logical_blob_desc = 10;
-}
-
-message ModelInitV2OpConf {
-  repeated string ref = 1;
-  repeated string variable_op_name = 2;
-  repeated VariableOpConf original_variable_conf = 3;
-}
-
-message ModelLoadV2OpConf {
-  required string path = 1;
-  repeated string ref = 2;
-  repeated string variable_op_name = 3;
-  repeated VariableOpConf original_variable_conf = 4;
-}
-
-message ModelSaveV2OpConf {
-  required string path = 1;
-  repeated string in = 2;
-  repeated string variable_op_name = 3;
-  repeated VariableOpConf original_variable_conf = 4;
 }
 
 message ConstantLikeOpConf {
@@ -520,21 +454,14 @@ message OperatorConf {
     IdentityOpConf identity_conf = 290;
     CaseOpConf case_conf = 291;
     EsacOpConf esac_conf = 292;
-    ModelInitOpConf model_init_conf = 293;
     AssignOpConf assign_conf = 296;
-    ModelSaveOpConf model_save_conf = 297;
     LearningRateScheduleOpConf learning_rate_schedule_conf = 298;
-    ModelLoadOpConf model_load_conf = 301;
     ConstantLikeOpConf constant_like_conf = 339;
     SyncDynamicResizeOpConf sync_dynamic_resize_conf = 340;
     CopyOpConf copy_conf = 343;
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
     CastFromMirroredOpConf cast_from_mirrored_conf = 345;
-    ModelInitV2OpConf model_init_v2_conf = 346;
-    ModelLoadV2OpConf model_load_v2_conf = 347;
-    ModelSaveV2OpConf model_save_v2_conf = 348;
     ImageDecoderRandomCropResizeOpConf image_decoder_random_crop_resize_conf = 349;
-    XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;
