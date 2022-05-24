@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/boxing/slice_boxing_util.h"
 
 namespace oneflow {
 
@@ -67,6 +68,9 @@ Maybe<one::Tensor> NaiveSToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-s-to-s", CheckNaiveSToS, &NaiveSToS));
+static constexpr auto* NaiveSToSWithAutoConvert =
+    EAGER_SLICE_BOXING_WARPPER(&NaiveSToS, EagerSliceBoxingType::kNaiveSToS);
+
+COMMAND(RegisterBoxingFunction("naive-s-to-s", CheckNaiveSToS, NaiveSToSWithAutoConvert));
 
 }  // namespace oneflow
