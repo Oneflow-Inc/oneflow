@@ -1246,6 +1246,10 @@
   signature: "Tensor (Tensor input) => ToContiguous"
   bind_python: True
 
+- name: "contiguous_"
+  signature: "Tensor (Tensor input) => InplaceToContiguous"
+  bind_python: True
+
 - name: "slice_view_1d_contiguous"
   signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
   bind_python: True
@@ -1298,94 +1302,94 @@
 
 - name: "upsample"
   signature:
-    'Tensor (Tensor x, Float height_scale, Float width_scale, Bool align_corners,
+    'Tensor (Tensor x, Double height_scale, Double width_scale, Bool align_corners,
     String interpolation, String data_format="channels_first") => Upsample'
   bind_python: True
 
 - name: "upsample_grad"
   signature:
-    'Tensor (Tensor dy, Tensor x, Float height_scale, Float width_scale, Bool align_corners,
+    'Tensor (Tensor dy, Tensor x, Double height_scale, Double width_scale, Bool align_corners,
     String data_format, String interpolation) => UpsampleGrad'
   bind_python: False
 
 - name: "upsample_linear_1d"
-  signature: 'Tensor (Tensor x, Float scale_factor, Bool align_corners,
+  signature: 'Tensor (Tensor x, Double scale_factor=0.0, Bool align_corners=False, Int64List[1] output_size=None, 
     String data_format="channels_first") => UpsampleLinear1D'
   bind_python: True
 
 - name: "upsample_linear_1d_grad"
   signature:
-    'Tensor (Tensor dy, Tensor x, Float scale_factor, Bool align_corners,
+    'Tensor (Tensor dy, Tensor x, Double scale_factor=0.0, Bool align_corners=False, Int64List[1] output_size=None, 
     String data_format="channels_first") => UpsampleLinear1DGrad'
   bind_python: False
 
 - name: "upsample_nearest_1d"
-  signature: 'Tensor (Tensor x, Float scale_factor,
+  signature: 'Tensor (Tensor x, Double scale_factor=0.0, Int64List[1] output_size=None, 
     String data_format="channels_first") => UpsampleNearest1D'
   bind_python: True
 
 - name: "upsample_nearest_1d_grad"
-  signature: 'Tensor (Tensor dy, Tensor x, Float scale_factor,
+  signature: 'Tensor (Tensor dy, Tensor x, Double scale_factor=0.0, Int64List[1] output_size=None, 
     String data_format="channels_first") => UpsampleNearest1DGrad'
   bind_python: False
 
 - name: "upsample_nearest_2d"
-  signature: 'Tensor (Tensor x, Float height_scale, Float width_scale,
+  signature: 'Tensor (Tensor x, Double height_scale=0.0, Double width_scale=0.0, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleNearest2D'
   bind_python: True
 
 - name: "upsample_nearest_2d_grad"
   signature:
-    'Tensor (Tensor dy, Tensor x, Float height_scale, Float width_scale,
+    'Tensor (Tensor dy, Tensor x, Double height_scale=0.0, Double width_scale=0.0, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleNearest2DGrad'
   bind_python: False
 
 - name: "upsample_bilinear_2d"
   signature:
-    'Tensor (Tensor x, Float height_scale, Float width_scale, Bool align_corners,
+    'Tensor (Tensor x, Double height_scale=0.0, Double width_scale=0.0, Bool align_corners=False, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleBilinear2D'
   bind_python: True
 
 - name: "upsample_bilinear_2d_grad"
   signature:
-    'Tensor (Tensor dy, Tensor x, Float height_scale, Float width_scale, Bool align_corners,
+    'Tensor (Tensor dy, Tensor x, Double height_scale=0.0, Double width_scale=0.0, Bool align_corners=False, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleBilinear2DGrad'
   bind_python: False
 
 - name: "upsample_bicubic_2d"
   signature:
-    'Tensor (Tensor x, Float height_scale, Float width_scale, Bool align_corners,
+    'Tensor (Tensor x, Double height_scale=0.0, Double width_scale=0.0, Bool align_corners=False, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleBicubic2D'
   bind_python: True
 
 - name: "upsample_bicubic_2d_grad"
   signature:
-    'Tensor (Tensor dy, Tensor x, Float height_scale, Float width_scale, Bool align_corners,
+    'Tensor (Tensor dy, Tensor x, Double height_scale=0.0, Double width_scale=0.0, Bool align_corners=False, Int64List[2] output_size=None, 
     String data_format="channels_first") => UpsampleBicubic2DGrad'
   bind_python: False
 
 - name: "upsample_nearest_3d"
   signature:
-    'Tensor (Tensor x, Float depth_scale, Float height_scale, Float width_scale,
+    'Tensor (Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0, Int64List[3] output_size=None, 
     String data_format="channels_first") => UpsampleNearest3D'
   bind_python: True
 
 - name: "upsample_nearest_3d_grad"
   signature:
-    'Tensor (Tensor dy, Tensor x, Float depth_scale, Float height_scale, Float width_scale,
+    'Tensor (Tensor dy, Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0, Int64List[3] output_size=None, 
     String data_format="channels_first") => UpsampleNearest3DGrad'
   bind_python: False
 
 - name: "upsample_trilinear_3d"
   signature:
-    'Tensor (Tensor x, Float depth_scale, Float height_scale, Float width_scale,
-    Bool align_corners, String data_format="channels_first") => UpsampleTrilinear3D'
+    'Tensor (Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0, Bool align_corners=False, 
+    Int64List[3] output_size=None, String data_format="channels_first") => UpsampleTrilinear3D'
   bind_python: True
 
 - name: "upsample_trilinear_3d_grad"
   signature:
-    'Tensor (Tensor dy, Tensor x, Float depth_scale, Float height_scale, Float width_scale,
-    Bool align_corners, String data_format="channels_first") => UpsampleTrilinear3DGrad'
+    'Tensor (Tensor dy, Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0,
+    Bool align_corners=False, Int64List[3] output_size=None, String data_format="channels_first") => UpsampleTrilinear3DGrad'
   bind_python: False
 
 - name: "abs"
@@ -2084,11 +2088,11 @@
   bind_python: True
 
 - name: "fused_dot_feature_interaction"
-  signature: "Tensor (TensorTuple features, Tensor output_concat=None, Bool self_interaction=False, Int32 output_padding=0) => FusedDotFeatureInteraction"
+  signature: "Tensor (TensorTuple features, Tensor output_concat=None, Bool self_interaction=False, Int32 output_padding=0, String pooling=\"none\") => FusedDotFeatureInteraction"
   bind_python: True
 
 - name: "fused_dot_feature_interaction_grad"
-  signature: "TensorTuple (Tensor dy, Tensor padded_concated_features, TensorTuple features_grad_like, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0) => FusedDotFeatureInteractionGrad"
+  signature: "TensorTuple (Tensor dy, Tensor padded_concated_features=None, TensorTuple features_grad_like, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0, String pooling=\"none\") => FusedDotFeatureInteractionGrad"
   bind_python: False
 
 - name: "tensor_buffer_to_tensor"

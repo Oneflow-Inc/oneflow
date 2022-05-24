@@ -21,10 +21,8 @@ namespace oneflow {
 /*static*/ Maybe<void> MedianWithIndicesOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0);
   int64_t num_axes = in_tensor.shape().NumAxes();
-  FOR_RANGE(int64_t, i, 0, num_axes) {
-    if (i != num_axes - 1) {
-      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-    }
+  FOR_RANGE(int64_t, i, 0, num_axes - 1) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
   if (num_axes == 0) {
     ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();

@@ -13,22 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_H_
-#define ONEFLOW_CORE_VM_H_
+#ifndef ONEFLOW_CORE_VM_SYNC_H_
+#define ONEFLOW_CORE_VM_SYNC_H_
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/intrusive/intrusive.h"
-#include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/vm_sync.h"
 
 namespace oneflow {
 namespace vm {
 
-class InstructionMsg;
-
-Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
+Maybe<void> ClusterSync();
+Maybe<void> CurrentRankSync();
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_H_
+#endif  // ONEFLOW_CORE_VM_SYNC_H_
