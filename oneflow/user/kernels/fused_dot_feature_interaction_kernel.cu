@@ -525,11 +525,11 @@ constexpr int unroll_dim = 2;
 template<int32_t N, int32_t pack_size, int TILE_DIM>
 __global__ void DotFeatureInteractionHalf(int M_BLOCKS, int K_BLOCKS, int64_t batch_size,
                                           int padded_num_rows, int vector_num_pack,
-                                          int out_num_cols, int out_num_cols_num_pack,
-                                          int in_shared_mem_cols, int in_shared_mem_cols_num_pack,
-                                          int acc_shared_mem_cols, int acc_shared_mem_cols_num_pack,
-                                          int offset, int output_padding,
-                                          DotFwdParam<half, N> param) {
+                                          int padded_vector_num_pack, int out_num_cols,
+                                          int out_num_cols_num_pack, int in_shared_mem_cols,
+                                          int in_shared_mem_cols_num_pack, int acc_shared_mem_cols,
+                                          int acc_shared_mem_cols_num_pack, int offset,
+                                          int output_padding, DotFwdParam<half, N> param) {
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
   half* buf = reinterpret_cast<half*>(shared_buf);
@@ -561,6 +561,13 @@ __global__ void DotFeatureInteractionHalf(int M_BLOCKS, int K_BLOCKS, int64_t ba
               batch_in[in_row * vector_num_pack + col];
         }
       }
+    }
+  }
+  Pack<half, pack_size> zero;
+  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = 0; }
+  for (int row = threadIdx.y; row < param.features_dim; row += blockDim.y) {
+    for (int col = vector_num_pack + threadIdx.x; col < padded_vector_num_pack; col += blockDim.x) {
+      buf_pack[row * in_shared_mem_cols_num_pack + col] = zero;
     }
   }
   __syncthreads();
@@ -616,12 +623,10 @@ __global__ void DotFeatureInteractionHalf(int M_BLOCKS, int K_BLOCKS, int64_t ba
 }  // namespace
 
 template<typename T, int N>
-void DispatchFeatureInteractionDotPackSize(ep::Stream* stream, const int64_t batch_size,
-                                           const int64_t concated_padded_dim,
-                                           const int64_t vector_size, const int64_t out_num_cols,
-                                           const bool self_interaction,
-                                           const int32_t output_padding,
-                                           const DotFwdParam<T, N>& param) {
+void DispatchFeatureInteractionDotPackSize(
+    ep::Stream* stream, const int64_t batch_size, const int64_t concated_padded_dim,
+    const int64_t padded_vector_size, const int64_t vector_size, const int64_t out_num_cols,
+    const bool self_interaction, const int32_t output_padding, const DotFwdParam<T, N>& param) {
   int pack_size;
   if (vector_size % 4 == 0 && out_num_cols % 4 == 0) {
     pack_size = 4;
@@ -632,11 +637,10 @@ void DispatchFeatureInteractionDotPackSize(ep::Stream* stream, const int64_t bat
   }
   const int TILE_DIM = 16;
   const int M_BLOCKS = concated_padded_dim / TILE_DIM;
-  CHECK_EQ(vector_size % TILE_DIM, 0);
-  const int K_BLOCKS = vector_size / TILE_DIM;
+  const int K_BLOCKS = padded_vector_size / TILE_DIM;
   const int skew_half = 8;
   const int skew_acc = 8;
-  const int in_shared_mem_num_cols = vector_size + skew_half;
+  const int in_shared_mem_num_cols = padded_vector_size + skew_half;
   const int acc_shared_mem_num_cols = concated_padded_dim + skew_acc;
   const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(T);
   using ComputeType = typename DefaultComputeType<T>::type;
@@ -650,6 +654,7 @@ void DispatchFeatureInteractionDotPackSize(ep::Stream* stream, const int64_t bat
 
   const int out_num_cols_num_pack = out_num_cols / pack_size;
   const int vector_num_pack = vector_size / pack_size;
+  const int padded_vector_num_pack = padded_vector_size / pack_size;
   const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
   const int acc_shared_mem_cols_num_pack = acc_shared_mem_num_cols / pack_size;
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
@@ -657,21 +662,24 @@ void DispatchFeatureInteractionDotPackSize(ep::Stream* stream, const int64_t bat
   if (pack_size == 4) {
     DotFeatureInteractionHalf<N, 4, TILE_DIM>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), warp_shared_mem_bytes, cuda_stream>>>(
-            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
-            out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
-            acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, offset, output_padding, param);
+            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
+            padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
+            in_shared_mem_cols_num_pack, acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack,
+            offset, output_padding, param);
   } else if (pack_size == 2) {
     DotFeatureInteractionHalf<N, 2, TILE_DIM>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), warp_shared_mem_bytes, cuda_stream>>>(
-            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
-            out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
-            acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, offset, output_padding, param);
+            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
+            padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
+            in_shared_mem_cols_num_pack, acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack,
+            offset, output_padding, param);
   } else {
     DotFeatureInteractionHalf<N, 1, TILE_DIM>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), warp_shared_mem_bytes, cuda_stream>>>(
-            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack, out_num_cols,
-            out_num_cols_num_pack, in_shared_mem_num_cols, in_shared_mem_cols_num_pack,
-            acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack, offset, output_padding, param);
+            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
+            padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
+            in_shared_mem_cols_num_pack, acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack,
+            offset, output_padding, param);
   }
 }
 
@@ -706,11 +714,13 @@ void DispatchFeatureInteractionDotInputSize(user_op::KernelComputeContext* ctx,
   const int64_t concated_padded_dim =
       std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
       * align_dim;
+  const int64_t padded_vector_size =
+      std::ceil(static_cast<float>(vector_size) / static_cast<float>(align_dim)) * align_dim;
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
   const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
   DispatchFeatureInteractionDotPackSize<T, N>(ctx->stream(), batch_size, concated_padded_dim,
-                                              vector_size, out_num_cols, self_interaction,
-                                              output_padding, param);
+                                              padded_vector_size, vector_size, out_num_cols,
+                                              self_interaction, output_padding, param);
 }
 
 template<typename T>
