@@ -32,10 +32,10 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 namespace {
 
 Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
-  return JUST(BoxingExpr(
-      JUST(ReplaceInDeviceType(DeviceType::kCUDA)), JUST(OptionalBoxing("cuda-copy-h2d")),
-      JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCUDA)), core_boxing_expr,
-                      JUST(OptionalBoxing("cuda-copy-d2h"))))));
+  return JUST(BoxingExpr(JUST(ReplaceInDeviceType(DeviceType::kCUDA)),
+                         JUST(OptionalBoxing("copy-h2d")),
+                         JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCUDA)),
+                                         core_boxing_expr, JUST(OptionalBoxing("copy-d2h"))))));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimSxToBBoxingExpr() {
@@ -130,8 +130,8 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
   // clang-format off
   const auto& core = JUST(BoxingExpr("identity"))
-                     | JUST(BoxingExpr("cuda-copy-h2d"))
-                     | JUST(BoxingExpr("cuda-copy-d2h"))
+                     | JUST(BoxingExpr("copy-h2d"))
+                     | JUST(BoxingExpr("copy-d2h"))
                      | JUST(BoxingExpr("nccl-p-to-b"))
                      | JUST(BoxingExpr("ccl-p-to-b"))
                      | JUST(BoxingExpr("nccl-s-to-s"))
