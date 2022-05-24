@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+from oneflow.framework import tensor
 import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
@@ -826,8 +827,14 @@ def _normal(self, mean=0, std=1):
 def _fill(self, value):
     # initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
     # return _init_by_initializer_conf(self, initializer_conf)
+    if type(value) == flow.Tensor:
+        if len(value.size()) > 0:
+            raise RuntimeError(
+                "fill_ only supports 0-dimension value tensor but got tensor with 1 dimensions."
+            )
+        else:
+            value = float(value)
     return flow._C.fill_(self, value)
-
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     method_name = eager_local_tensor._get_copy_mirrored_tensor_from_numpy_func_name()

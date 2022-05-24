@@ -3028,7 +3028,11 @@ class FillFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& value) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("value", value));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    JUST(CheckInplaceValid(x));
+    auto outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+    return outputs->at(0);
   }
 
  private:

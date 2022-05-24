@@ -276,10 +276,9 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_autograd_related_methods(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
-        y = flow.Tensor(*shape)
+        y = flow.ones(*shape)
         y.requires_grad = True
         x.fill_(1.0)
-        y.fill_(2.0)
         z = x + y
         test_case.assertFalse(x.requires_grad)
         test_case.assertTrue(x.is_leaf)
