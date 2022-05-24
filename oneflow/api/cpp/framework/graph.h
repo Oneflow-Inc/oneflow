@@ -63,8 +63,6 @@ class Graph {
   InputOutputInfos GetOutputInfos();
   IValue Forward(const IValue& inputs);
   void set_batch_size(int batch_size);
-  void enable_tensorrt();
-  void enable_openvino();
 
   static Graph Load(const std::string& model_path, const Device& device = Device("cpu"));
 

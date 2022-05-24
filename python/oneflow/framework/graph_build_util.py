@@ -121,7 +121,6 @@ class DebugScopeContext(object):
 def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
     assert block is not None
-
     attr_dict = dict()
     if block.config.stage_id is not None:
         attr_dict["pipeline_stage_id_hint"] = block.config.stage_id
@@ -145,6 +144,10 @@ def make_new_block_scope(prev_scope, block):
         # append name prefix
         scope_proto.ClearField("scope_op_name_prefixes")
         scope_proto.scope_op_name_prefixes.append(block.name_prefix + block.name)
+        # set module name
+        if isinstance(block, oneflow.nn.graph.block.ModuleBlock):
+            scope_proto.module_name = block.name_prefix + block.name
+
         return str(text_format.MessageToString(scope_proto))
 
     new_scope = None
