@@ -1246,6 +1246,10 @@
   signature: "Tensor (Tensor input) => ToContiguous"
   bind_python: True
 
+- name: "contiguous_"
+  signature: "Tensor (Tensor input) => InplaceToContiguous"
+  bind_python: True
+
 - name: "slice_view_1d_contiguous"
   signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
   bind_python: True
