@@ -597,7 +597,7 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
-    def _ensure_state_tensors_contiguous(self):
+    def __ensure_state_tensors_contiguous(self):
         for state_block in self._state():
             state_tensor = state_block.origin
             if not state_tensor.is_contiguous():
@@ -808,7 +808,7 @@ class Graph(object):
         self._additional_variable_tobe_loaded.clear()
 
     def __build_graph(self, *args, **kwargs):
-        self._ensure_state_tensors_contiguous()
+        self.__ensure_state_tensors_contiguous()
 
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
