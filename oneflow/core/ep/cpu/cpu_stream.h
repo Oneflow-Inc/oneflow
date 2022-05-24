@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
 #define ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
 
-#include <functional>
-#include <memory>
 #include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 
