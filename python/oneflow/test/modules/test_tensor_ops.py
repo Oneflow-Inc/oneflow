@@ -382,7 +382,6 @@ class TestTensorOps(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_type_tensortype(test_case, tensortype_dict, *arg)
 
-
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_type_tensortype(test_case):
         # test tensor.type(x: tensortype) rather than tensor.type_tensortype
