@@ -85,7 +85,7 @@ class AddOneDnnImpl : public Add {
   void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
     if (arity < 2) {
-      // Todo arity 0 and 1
+      // TODO: arity 0 and 1
       UNIMPLEMENTED() << "Addn only supports summation of 2 or more tensors";
     } else if (arity == 2) {
       if (srcs[1] == dst && srcs[0] != dst) {
