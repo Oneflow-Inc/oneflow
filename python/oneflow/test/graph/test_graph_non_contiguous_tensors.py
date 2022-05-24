@@ -34,7 +34,7 @@ class ModuleTest(flow.nn.Module):
         return res
 
 
-def _test_graph_non_contiguous_tensors(test_case, device):
+def _test_graph_non_contiguous_tensors(test_case):
     class GraphTestContiguousTensors(flow.nn.Graph):
         def __init__(self):
             super().__init__()
