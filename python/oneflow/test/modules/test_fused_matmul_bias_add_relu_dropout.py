@@ -22,6 +22,7 @@ import oneflow as flow
 
 
 def _matmul_bias_relu(x, weight, bias, skip_activate):
+    # We do not add dropout in unittest, cause its result is random. 
     out = flow._C.bias_add(flow._C.matmul(x, weight, transpose_b=True), bias, axis=1)
     if not skip_activate:
         out = flow._C.relu(out)
@@ -40,8 +41,8 @@ def _test_fused_matmul_bias_add_relu_dropout(
 ):
     x = np.random.uniform(low=-1, high=1, size=(batchsize, in_feature))
 
-    fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=False)
-    naive_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=False)
+    fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
+    naive_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
 
     fused_weight_list = []
     naive_weight_list = []
@@ -58,19 +59,19 @@ def _test_fused_matmul_bias_add_relu_dropout(
 
         fused_weight_list.append(
             flow.tensor(
-                np_first_weight, dtype=dtype, device=device, requires_grad=False
+                np_first_weight, dtype=dtype, device=device, requires_grad=True
             )
         )
         fused_bias_list.append(
-            flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=False)
+            flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True)
         )
         naive_weight_list.append(
             flow.tensor(
-                np_first_weight, dtype=dtype, device=device, requires_grad=False
+                np_first_weight, dtype=dtype, device=device, requires_grad=True
             )
         )
         naive_bias_list.append(
-            flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=False)
+            flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True)
         )
 
     for idx in range(1, hidden_num):
@@ -80,16 +81,16 @@ def _test_fused_matmul_bias_add_relu_dropout(
         np_bias = np.random.uniform(low=-1, high=1, size=hidden_size_list[idx])
 
         fused_weight_list.append(
-            flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=False)
+            flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True)
         )
         fused_bias_list.append(
-            flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=False)
+            flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=True)
         )
         naive_weight_list.append(
-            flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=False)
+            flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True)
         )
         naive_bias_list.append(
-            flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=False)
+            flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=True)
         )
 
     np_final_weight = np.random.uniform(low=-1, high=1, size=(out_feature, in_feature))
@@ -102,23 +103,24 @@ def _test_fused_matmul_bias_add_relu_dropout(
     np_final_bias = np.random.uniform(low=-1, high=1, size=(out_feature))
 
     fused_weight_list.append(
-        flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=False)
+        flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True)
     )
     fused_bias_list.append(
-        flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=False)
+        flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True)
     )
     naive_weight_list.append(
-        flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=False)
+        flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True)
     )
     naive_bias_list.append(
-        flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=False)
+        flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True)
     )
 
     fused_out = flow._C.fused_matmul_bias_add_relu_dropout(
         fused_x,
         fused_weight_list,
         fused_bias_list,
-        dropout_rate_list=[0.0] * len(fused_weight_list),
+        # We do not add dropout in unittest, cause its result is random. 
+        dropout_rate_list=[0.0] * len(fused_weight_list), 
         skip_final_activation=skip_final_activation,
     )
 
@@ -142,65 +144,50 @@ def _test_fused_matmul_bias_add_relu_dropout(
                 naive_out, naive_weight_list[idx], naive_bias_list[idx], False
             )
 
-    # total_out = fused_out.sum() + naive_out.sum()
-    # total_out.backward()
+    total_out = fused_out.sum() + naive_out.sum()
+    total_out.backward()
 
     # Test output equality
     test_case.assertTrue(
         np.allclose(fused_out.numpy(), naive_out.numpy(), atol=1e-4, rtol=1e-4)
     )
-    # # Test weight grad equality
-    # for idx in range(hidden_num + 1):
-    #     test_case.assertTrue(
-    #         np.allclose(
-    #             fused_weight_list[idx].grad.numpy(),
-    #             naive_weight_list[idx].grad.numpy(),
-    #             atol=1e-4,
-    #             rtol=1e-4,
-    #         )
-    #     )
-    #     test_case.assertTrue(
-    #         np.allclose(
-    #             fused_bias_list[idx].grad.numpy(),
-    #             naive_bias_list[idx].grad.numpy(),
-    #             atol=1e-4,
-    #             rtol=1e-4,
-    #         )
-    #     )
-    # # Test dx equality
-    # test_case.assertTrue(
-    #     np.allclose(fused_x.grad.numpy(), naive_x.grad.numpy(), atol=1e-4, rtol=1e-4)
-    # )
+    
+    # Test weight grad equality
+    for idx in range(hidden_num + 1):
+        test_case.assertTrue(
+            np.allclose(
+                fused_weight_list[idx].grad.numpy(),
+                naive_weight_list[idx].grad.numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(
+                fused_bias_list[idx].grad.numpy(),
+                naive_bias_list[idx].grad.numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
+        )
+    # Test dx equality
+    test_case.assertTrue(
+        np.allclose(fused_x.grad.numpy(), naive_x.grad.numpy(), atol=1e-4, rtol=1e-4)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusedMatmulBiasAddReluDropout(flow.unittest.TestCase):
-    # def test_fused_matmul_bias_add_relu_dropout(test_case):
-    #     args_dict = OrderedDict()
-    #     args_dict["test_func"] = [_test_fused_matmul_bias_add_relu_dropout]
-    #     args_dict["batchsize"] = [1, 2, 4]
-    #     args_dict["in_feature"] = [96, 128]
-    #     args_dict["hidden_size_list"] = [[256, 512], [256], [96, 144], []]
-    #     args_dict["out_feature"] = [512, 1024, 288]
-    #     # args_dict["skip_final_activation"] = [True, False]
-    #     args_dict["skip_final_activation"] = [False]
-    #     args_dict["dtype"] = [flow.float32, flow.float64]
-    #     args_dict["device"] = ["cuda", "cpu"]
-
-    #     for arg in GenArgList(args_dict):
-    #         arg[0](test_case, *arg[1:])
-
     def test_fused_matmul_bias_add_relu_dropout(test_case):
         args_dict = OrderedDict()
         args_dict["test_func"] = [_test_fused_matmul_bias_add_relu_dropout]
-        args_dict["batchsize"] = [1]
-        args_dict["in_feature"] = [96]
-        args_dict["hidden_size_list"] = [[256, 512]]
-        args_dict["out_feature"] = [512]
-        # args_dict["skip_final_activation"] = [True, False]
-        args_dict["skip_final_activation"] = [False]
+        args_dict["batchsize"] = [1, 2, 4]
+        args_dict["in_feature"] = [96, 128, 64]
+        args_dict["hidden_size_list"] = [[256, 512], [400, 400, 400, 400], [17, 33, 79]]
+        args_dict["out_feature"] = [512, 400, 1024]
+        args_dict["skip_final_activation"] = [True, False]
         args_dict["dtype"] = [flow.float32]
-        args_dict["device"] = ["cuda"]
+        args_dict["device"] = ["cuda", "cpu"]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])

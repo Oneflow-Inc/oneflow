@@ -21,9 +21,9 @@ from oneflow.test_utils.test_util import GenArgList
 import oneflow as flow
 
 
-def _matmul_bias_relu(x, weight, bias, skip_activate):
+def _matmul_bias_relu(x, weight, bias, skip_activation):
     out = flow._C.bias_add(flow._C.matmul(x, weight, transpose_b=True), bias, axis=1)
-    if not skip_activate:
+    if not skip_activation:
         out = flow._C.relu(out)
     return out
 
