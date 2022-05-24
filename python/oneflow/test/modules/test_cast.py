@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from random import random
 from random import shuffle
 import unittest
 from collections import OrderedDict
