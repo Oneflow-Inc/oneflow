@@ -592,14 +592,16 @@ class Graph(object):
         for _, b in self._blocks.items():
             pa_gen = b.parameters(recurse=True)
             for pa in pa_gen:
-                if not pa.origin.is_contiguous():
-                    pa.origin.contiguous_()
                 yield pa
             bu_gen = b.buffers(recurse=True)
             for bu in bu_gen:
-                if not bu.origin.contiguous():
-                    bu.origin.contiguous_()
                 yield bu
+
+    def _ensure_state_tensors_contiguous(self):
+        for state_block in self._state():
+            state_tensor = state_block.origin
+            if not state_tensor.is_contiguous():
+                state_tensor.contiguous_()
 
     def _filter_states(self):
         state_tensor_set = set()
@@ -806,6 +808,8 @@ class Graph(object):
         self._additional_variable_tobe_loaded.clear()
 
     def __build_graph(self, *args, **kwargs):
+        self._ensure_state_tensors_contiguous()
+
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
 
@@ -1040,6 +1044,7 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
         try:
             flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
