@@ -86,7 +86,7 @@ class AddOneDnnImpl : public Add {
               size_t count) override {
     if (arity < 2) {
       // Todo arity 0 and 1
-      UNIMPLEMENTED() << "Addn only supports more than 2";
+      UNIMPLEMENTED() << "Addn only supports summation of more than 2 tensors";
     } else if (arity == 2) {
       if (srcs[1] == dst && srcs[0] != dst) {
         LOG(FATAL) << "Only the first parameter can be operated inplace";
