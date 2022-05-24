@@ -504,6 +504,17 @@ def oneflow_eager_run_with_graph_check(
             if isinstance(test_g_res, tuple):
                 for _, g_res in enumerate(test_g_res):
                     if not check_eager_graph_tensor(oneflow_res, g_res):
+                        if verbose:
+                            get_fake_program_more_detail(
+                                oneflow,
+                                "Eager + nn.Graph",
+                                "oneflow_eager_run_with_graph_check",
+                                oneflow_args,
+                                oneflow_kwargs,
+                            )
+            else:
+                if not check_eager_graph_tensor(oneflow_res, test_g_res):
+                    if verbose:
                         get_fake_program_more_detail(
                             oneflow,
                             "Eager + nn.Graph",
@@ -511,15 +522,6 @@ def oneflow_eager_run_with_graph_check(
                             oneflow_args,
                             oneflow_kwargs,
                         )
-            else:
-                if not check_eager_graph_tensor(oneflow_res, test_g_res):
-                    get_fake_program_more_detail(
-                        oneflow,
-                        "Eager + nn.Graph",
-                        "oneflow_eager_run_with_graph_check",
-                        oneflow_args,
-                        oneflow_kwargs,
-                    )
     return oneflow_res
 
 
