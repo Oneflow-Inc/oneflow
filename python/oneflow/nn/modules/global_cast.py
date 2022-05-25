@@ -46,6 +46,9 @@ def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True):
         placement, flow.placement
     ), f"Invalid parameter placement with type {type(placement)}"
 
+    if placement.ranks.size == 1:
+        sbp = [flow.sbp.broadcast for _ in range(placement.ranks.ndim)]
+
     sbp = _check_sbp(sbp)
     grad_sbp = tuple()
     return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
@@ -61,7 +64,9 @@ def global_to_global_op(
     if placement is None:
         placement = input.placement
 
-    if sbp is None:
+    if placement.ranks.size == 1:
+        sbp = [flow.sbp.broadcast for _ in range(placement.ranks.ndim)]
+    elif sbp is None:
         sbp = input.sbp
 
     assert isinstance(
