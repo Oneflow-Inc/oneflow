@@ -25,9 +25,9 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=2, check_graph=False)
 def _test_lstm_cell(test_case, placement, sbp):
     batch_size = random(2, 3) * 8
-    time_steps = random(1, 6)
-    input_size = random(1, 6) * 2
-    hidden_size = random(1, 6) * 2
+    time_steps = random(2, 3) * 8
+    input_size = random(2, 3) * 8
+    hidden_size = random(2, 3) * 8
     has_bias = random().to(bool)
     cx_requires_grad = random().to(bool)
     m = torch.nn.LSTMCell(
@@ -71,9 +71,9 @@ def _test_lstm_cell(test_case, placement, sbp):
 @autotest(n=2, check_graph=False)
 def _test_rnn_relu_cell(test_case, placement, sbp):
     batch_size = random(2, 3) * 8
-    time_steps = random(1, 6)
-    input_size = random(1, 6) * 2
-    hidden_size = random(1, 6) * 2
+    time_steps = random(2, 3) * 8
+    input_size = random(2, 3) * 8
+    hidden_size = random(2, 3) * 8
     has_bias = random().to(bool)
     m = torch.nn.RNNCell(
         input_size=input_size,
@@ -115,9 +115,9 @@ def _test_rnn_relu_cell(test_case, placement, sbp):
 @autotest(n=2, check_graph=False)
 def _test_rnn_tanh_cell(test_case, placement, sbp):
     batch_size = random(2, 3) * 8
-    time_steps = random(1, 6)
-    input_size = random(1, 6) * 2
-    hidden_size = random(1, 6) * 2
+    time_steps = random(2, 3) * 8
+    input_size = random(2, 3) * 8
+    hidden_size = random(2, 3) * 8
     has_bias = random().to(bool)
     m = torch.nn.RNNCell(
         input_size=input_size,
@@ -159,9 +159,9 @@ def _test_rnn_tanh_cell(test_case, placement, sbp):
 @autotest(n=2, check_graph=False)
 def _test_gru_cell(test_case, placement, sbp):
     batch_size = random(2, 3) * 8
-    time_steps = random(1, 6)
-    input_size = random(1, 6) * 2
-    hidden_size = random(1, 6) * 2
+    time_steps = random(2, 3) * 8
+    input_size = random(2, 3) * 8
+    hidden_size = random(2, 3) * 8
     has_bias = random().to(bool)
     m = torch.nn.GRUCell(input_size=input_size, hidden_size=hidden_size, bias=has_bias,)
 
