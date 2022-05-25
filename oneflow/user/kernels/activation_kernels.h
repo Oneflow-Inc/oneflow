@@ -328,13 +328,21 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
 }
 }  // namespace
 
-#define REGISTER_SOFTSHRINK_KERNEL(device, dtype)                            \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                       \
-      device, "softshrink", SoftShrinkFunctor, dtype, dtype,                 \
-      [](user_op::KernelComputeContext* ctx) {                               \
-        return SoftShrinkFunctor<dtype>(ctx->Attr<double>("alpha"));         \
-      },                                                                     \
-      "out", "in");                                                          \
+#define REGISTER_SOFTSHRINK_FORWARD_KERNEL()                                                 \
+  REGISTER_USER_KERNEL("softshrink")                                                         \
+      .SetCreateFn([]() {                                                                    \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                   \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                            \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);     \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);    \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(    \
+                  ctx->device_type(), ep::primitive::UnaryOp::kSoftShrink, src->data_type(), \
+                  dst->data_type(), ctx->Attr<double>("alpha"));                             \
+            });                                                                              \
+      })                                                                                     \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kSoftShrink, "out", "in"));
+
+#define REGISTER_SOFTSHRINK_BACKWARD_KERNEL(device, dtype)                   \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                      \
       device, "softshrink_grad", SoftShrinkGradFunctor, dtype, dtype, dtype, \
       [](user_op::KernelComputeContext* ctx) {                               \
@@ -342,13 +350,21 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
       },                                                                     \
       "dx", "y", "dy");
 
-#define REGISTER_ELU_KERNEL(device, dtype)                        \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
-      device, "elu", EluFunctor, dtype, dtype,                    \
-      [](user_op::KernelComputeContext* ctx) {                    \
-        return EluFunctor<dtype>(ctx->Attr<double>("alpha"));     \
-      },                                                          \
-      "out", "in");                                               \
+#define REGISTER_ELU_FORWARD_KERNEL()                                                     \
+  REGISTER_USER_KERNEL("elu")                                                             \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                         \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);  \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), ep::primitive::UnaryOp::kElu, src->data_type(),     \
+                  dst->data_type(), ctx->Attr<double>("alpha"));                          \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kElu, "out", "in"));
+
+#define REGISTER_ELU_BACKWARD_KERNEL(device, dtype)               \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                           \
       device, "elu_grad", EluGradFunctor, dtype, dtype, dtype,    \
       [](user_op::KernelComputeContext* ctx) {                    \
@@ -392,13 +408,21 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
       },                                                                    \
       "dx", "x", "dy");
 
-#define REGISTER_CELU_KERNEL(device, dtype)                        \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                             \
-      device, "celu", CeluFunctor, dtype, dtype,                   \
-      [](user_op::KernelComputeContext* ctx) {                     \
-        return CeluFunctor<dtype>(ctx->Attr<double>("alpha"));     \
-      },                                                           \
-      "out", "in");                                                \
+#define REGISTER_CELU_FORWARD_KERNEL()                                                    \
+  REGISTER_USER_KERNEL("celu")                                                            \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                         \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);  \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), ep::primitive::UnaryOp::kCelu, src->data_type(),    \
+                  dst->data_type(), ctx->Attr<double>("alpha"));                          \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kCelu, "out", "in"));
+
+#define REGISTER_CELU_BACKWARD_KERNEL(device, dtype)               \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                            \
       device, "celu_grad", CeluGradFunctor, dtype, dtype, dtype,   \
       [](user_op::KernelComputeContext* ctx) {                     \
@@ -406,42 +430,66 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
       },                                                           \
       "dx", "x", "dy");
 
-#define REGISTER_HARDSWISH_KERNEL(device, dtype)                                                   \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                             \
-      device, "hardswish", HardswishFunctor, dtype, dtype,                                         \
-      [](user_op::KernelComputeContext* ctx) { return HardswishFunctor<dtype>(); }, "out", "in");  \
+#define REGISTER_HARDSWISH_FORWARD_KERNEL()                                                 \
+  REGISTER_USER_KERNEL("hardswish")                                                         \
+      .SetCreateFn([]() {                                                                   \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                  \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                           \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);    \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);   \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(   \
+                  ctx->device_type(), ep::primitive::UnaryOp::kHardSwish, src->data_type(), \
+                  dst->data_type());                                                        \
+            });                                                                             \
+      })                                                                                    \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kHardSwish, "out", "in"));
+
+#define REGISTER_HARDSWISH_BACKWARD_KERNEL(device, dtype)                                          \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                            \
       device, "hardswish_grad", HardswishGradFunctor, dtype, dtype, dtype,                         \
       [](user_op::KernelComputeContext* ctx) { return HardswishGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
 
-#define REGISTER_HARDSIGMOID_KERNEL(device, dtype)                                              \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                          \
-      device, "hardsigmoid", HardsigmoidFunctor, dtype, dtype,                                  \
-      [](user_op::KernelComputeContext* ctx) { return HardsigmoidFunctor<dtype>(); }, "out",    \
-      "in");                                                                                    \
+#define REGISTER_HARDSIGMOID_FORWARD_KERNEL()                                                 \
+  REGISTER_USER_KERNEL("hardsigmoid")                                                         \
+      .SetCreateFn([]() {                                                                     \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                    \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                             \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);      \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);     \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(     \
+                  ctx->device_type(), ep::primitive::UnaryOp::kHardSigmoid, src->data_type(), \
+                  dst->data_type());                                                          \
+            });                                                                               \
+      })                                                                                      \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kHardSigmoid, "out", "in"));
+
+#define REGISTER_HARDSIGMOID_BACKWARD_KERNEL(device, dtype)                                     \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                         \
       device, "hardsigmoid_grad", HardsigmoidGradFunctor, dtype, dtype, dtype,                  \
       [](user_op::KernelComputeContext* ctx) { return HardsigmoidGradFunctor<dtype>(); }, "dx", \
       "x", "dy");
 
-#define REGISTER_HARDSHRINK_KERNEL(device, dtype)                                                \
-  REGISTER_USER_KERNEL("hardshrink")                                                             \
-      .SetCreateFn([]() {                                                                        \
-        return user_op::NewOpKernel<                                                             \
-            UnaryElemwiseXpuKernel<device, HardShrinkFunctor<dtype>, dtype, dtype>>(             \
-            [](user_op::KernelComputeContext* ctx) {                                             \
-              return HardShrinkFunctor<dtype>(ctx->Attr<double>("lambd"));                       \
-            },                                                                                   \
-            "out", "in");                                                                        \
-      })                                                                                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
-                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                        \
-        return Maybe<void>::Ok();                                                                \
-      });                                                                                        \
+#define REGISTER_HARDSHRINK_FORWARD_KERNEL()                                                    \
+  REGISTER_USER_KERNEL("hardshrink")                                                            \
+      .SetCreateFn([]() {                                                                       \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                      \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                               \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);        \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);       \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(       \
+                  ctx->device_type(), ep::primitive::UnaryOp::kHardShrink, src->data_type(),    \
+                  dst->data_type(), ctx->Attr<double>("lambd"));                                \
+            });                                                                                 \
+      })                                                                                        \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kHardShrink, "out", "in"))  \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+#define REGISTER_HARDSHRINK_BACKWARD_KERNEL(device, dtype)                                       \
   REGISTER_USER_KERNEL("hardshrink_grad")                                                        \
       .SetCreateFn([]() {                                                                        \
         return user_op::NewOpKernel<                                                             \
@@ -459,24 +507,26 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
         return Maybe<void>::Ok();                                                                \
       });
 
-#define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("hardtanh")                                                              \
-      .SetCreateFn([]() {                                                                       \
-        return user_op::NewOpKernel<                                                            \
-            UnaryElemwiseXpuKernel<device, HardtanhFunctor<dtype>, dtype, dtype>>(              \
-            [](user_op::KernelComputeContext* ctx) {                                            \
-              return HardtanhFunctor<dtype>(ctx->Attr<double>("min_val"),                       \
-                                            ctx->Attr<double>("max_val"));                      \
-            },                                                                                  \
-            "out", "in");                                                                       \
-      })                                                                                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))         \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
-        return Maybe<void>::Ok();                                                               \
-      });                                                                                       \
+#define REGISTER_HARDTANH_FORWARD_KERNEL()                                                       \
+  REGISTER_USER_KERNEL("hardtanh")                                                               \
+      .SetCreateFn([]() {                                                                        \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                       \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                                \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);         \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);        \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(        \
+                  ctx->device_type(), ep::primitive::UnaryOp::kHardTanh, src->data_type(),       \
+                  dst->data_type(), ctx->Attr<double>("min_val"), ctx->Attr<double>("max_val")); \
+            });                                                                                  \
+      })                                                                                         \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kHardTanh, "out", "in"))     \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                        \
+        return Maybe<void>::Ok();                                                                \
+      });
+
+#define REGISTER_HARDTANH_BACKWARD_KERNEL(device, dtype)                                        \
   REGISTER_USER_KERNEL("hardtanh_grad")                                                         \
       .SetCreateFn([]() {                                                                       \
         return user_op::NewOpKernel<                                                            \
@@ -509,50 +559,102 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
       })                                                                                  \
       .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kTanh, "y", "x"));
 
-#define REGISTER_MISH_KERNEL(device, dtype)                                                   \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                        \
-      device, "mish", MishFunctor, dtype, dtype,                                              \
-      [](user_op::KernelComputeContext* ctx) { return MishFunctor<dtype>(); }, "out", "in");  \
+#define REGISTER_MISH_FORWARD_KERNEL()                                                    \
+  REGISTER_USER_KERNEL("mish")                                                            \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                         \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);  \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), ep::primitive::UnaryOp::kMish, src->data_type(),    \
+                  dst->data_type());                                                      \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kMish, "out", "in"));
+
+#define REGISTER_MISH_BACKWARD_KERNEL(device, dtype)                                          \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                       \
       device, "mish_grad", MishGradFunctor, dtype, dtype, dtype,                              \
       [](user_op::KernelComputeContext* ctx) { return MishGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
 
-#define REGISTER_SILU_KERNEL(device, dtype)                                                   \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                        \
-      device, "silu", SiluFunctor, dtype, dtype,                                              \
-      [](user_op::KernelComputeContext* ctx) { return SiluFunctor<dtype>(); }, "out", "in");  \
+#define REGISTER_SILU_FORWARD_KERNEL()                                                    \
+  REGISTER_USER_KERNEL("silu")                                                            \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                         \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);  \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), ep::primitive::UnaryOp::kSilu, src->data_type(),    \
+                  dst->data_type());                                                      \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kSilu, "out", "in"));
+
+#define REGISTER_SILU_BACKWARD_KERNEL(device, dtype)                                          \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                       \
       device, "silu_grad", SiluGradFunctor, dtype, dtype, dtype,                              \
       [](user_op::KernelComputeContext* ctx) { return SiluGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
 
-#define REGISTER_SELU_KERNEL(device, dtype)                                                   \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                        \
-      device, "selu", SeluFunctor, dtype, dtype,                                              \
-      [](user_op::KernelComputeContext* ctx) { return SeluFunctor<dtype>(); }, "out", "in");  \
+#define REGISTER_SELU_FORWARD_KERNEL()                                                    \
+  REGISTER_USER_KERNEL("selu")                                                            \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                         \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);  \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), ep::primitive::UnaryOp::kSelu, src->data_type(),    \
+                  dst->data_type());                                                      \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kSelu, "out", "in"));
+
+#define REGISTER_SELU_BACKWARD_KERNEL(device, dtype)                                          \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                       \
       device, "selu_grad", SeluGradFunctor, dtype, dtype, dtype,                              \
       [](user_op::KernelComputeContext* ctx) { return SeluGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
 
-#define REGISTER_SOFTSIGN_KERNEL(device, dtype)                                                   \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                            \
-      device, "softsign", SoftSignFunctor, dtype, dtype,                                          \
-      [](user_op::KernelComputeContext* ctx) { return SoftSignFunctor<dtype>(); }, "out", "in");  \
+#define REGISTER_SOFTSIGN_FORWARD_KERNEL()                                                 \
+  REGISTER_USER_KERNEL("softsign")                                                         \
+      .SetCreateFn([]() {                                                                  \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                 \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                          \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);   \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);  \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(  \
+                  ctx->device_type(), ep::primitive::UnaryOp::kSoftSign, src->data_type(), \
+                  dst->data_type());                                                       \
+            });                                                                            \
+      })                                                                                   \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kSoftSign, "out", "in"));
+
+#define REGISTER_SOFTSIGN_BACKWARD_KERNEL(device, dtype)                                          \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                           \
       device, "softsign_grad", SoftSignGradFunctor, dtype, dtype, dtype,                          \
       [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
 
-#define REGISTER_THRESHOLD_KERNEL(device, dtype)                                \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                          \
-      device, "threshold", ThresholdFunctor, dtype, dtype,                      \
-      [](user_op::KernelComputeContext* ctx) {                                  \
-        return ThresholdFunctor<dtype>(ctx->Attr<double>("threshold_val"),      \
-                                       ctx->Attr<double>("value"));             \
-      },                                                                        \
-      "out", "in");                                                             \
+#define REGISTER_THRESHOLD_FORWARD_KERNEL()                                                 \
+  REGISTER_USER_KERNEL("threshold")                                                         \
+      .SetCreateFn([]() {                                                                   \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                  \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                           \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);    \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);   \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(   \
+                  ctx->device_type(), ep::primitive::UnaryOp::kThreshold, src->data_type(), \
+                  dst->data_type(), ctx->Attr<double>("threshold_val"),                     \
+                  ctx->Attr<double>("value"));                                              \
+            });                                                                             \
+      })                                                                                    \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kThreshold, "out", "in"));
+
+#define REGISTER_THRESHOLD_BACKWARD_KERNEL(device, dtype)                       \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                         \
       device, "threshold_grad", ThresholdGradFunctor, dtype, dtype, dtype,      \
       [](user_op::KernelComputeContext* ctx) {                                  \
@@ -560,19 +662,27 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
       },                                                                        \
       "dx", "x", "dy");
 
-#define REGISTER_SOFTPLUS_KERNEL(device, dtype)                                                   \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                            \
-      device, "softplus", SoftplusFunctor, dtype, dtype,                                          \
-      [](user_op::KernelComputeContext* ctx) {                                                    \
-        return SoftplusFunctor<dtype>(ctx->Attr<double>("beta"), ctx->Attr<double>("threshold")); \
-      },                                                                                          \
-      "out", "in");                                                                               \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                           \
-      device, "softplus_grad", SoftplusGradFunctor, dtype, dtype, dtype,                          \
-      [](user_op::KernelComputeContext* ctx) {                                                    \
-        return SoftplusGradFunctor<dtype>(ctx->Attr<double>("beta"),                              \
-                                          ctx->Attr<double>("threshold"));                        \
-      },                                                                                          \
+#define REGISTER_SOFTPLUS_FORWARD_KERNEL()                                                      \
+  REGISTER_USER_KERNEL("softplus")                                                              \
+      .SetCreateFn([]() {                                                                       \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                      \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                               \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);        \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);       \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(       \
+                  ctx->device_type(), ep::primitive::UnaryOp::kSoftPlus, src->data_type(),      \
+                  dst->data_type(), ctx->Attr<double>("beta"), ctx->Attr<double>("threshold")); \
+            });                                                                                 \
+      })                                                                                        \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kSoftPlus, "out", "in"));
+
+#define REGISTER_SOFTPLUS_BACKWARD_KERNEL(device, dtype)                   \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                    \
+      device, "softplus_grad", SoftplusGradFunctor, dtype, dtype, dtype,   \
+      [](user_op::KernelComputeContext* ctx) {                             \
+        return SoftplusGradFunctor<dtype>(ctx->Attr<double>("beta"),       \
+                                          ctx->Attr<double>("threshold")); \
+      },                                                                   \
       "dx", "x", "dy");
 
 #define REGISTER_RELU_FORWARD_KERNEL()                                                    \
