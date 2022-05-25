@@ -82,7 +82,7 @@ class Runner(object):
         return res
 
     def _get_function(self, *args, **kwargs):
-        full_name = self.full_name()
+        full_name = self._full_name()
         if full_name in Runner._cache:
             return Runner._cache[full_name]
         else:
@@ -102,7 +102,7 @@ class Runner(object):
         else:
             return output.to_host()
 
-    def full_name(self):
+    def _full_name(self):
         full_name = self.raw_graph.__name__
         for elem in self.input:
             full_name += str(elem.shape) + str(elem.dtype)
