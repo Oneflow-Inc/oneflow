@@ -118,7 +118,6 @@ class TestAutograd(flow.unittest.TestCase):
         y.backward(torch.tensor(False))
         return x.grad
 
-
     @autotest(n=10, auto_backward=False, check_graph=False)
     def test_grad_grad(test_case):
         device = random_device()
