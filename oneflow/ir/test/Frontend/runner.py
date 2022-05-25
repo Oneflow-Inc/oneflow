@@ -22,11 +22,21 @@ class GraphModule(flow.nn.Graph):
 
 
 func = Runner(GraphModule).cuda()
+
+
 input = flow.Tensor([-1, 1.])
 output = func(input)
 print(output)
 
-input = flow.Tensor([-1, 1., -2])
+input = flow.Tensor([1, -1.])
+output = func(input)
+print(output)
+
 func = func.cpu()
+input = flow.Tensor([-1, 1., -2])
+output = func(input)
+print(output)
+
+input = flow.Tensor([-1, 1.])
 output = func(input)
 print(output)

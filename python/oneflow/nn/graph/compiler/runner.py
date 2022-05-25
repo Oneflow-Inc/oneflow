@@ -4,7 +4,6 @@ from google.protobuf import text_format
 from iree import runtime as ireert
 from iree.compiler import compile_str
 import numpy as np
-import copy
 
 class Iree:
 
@@ -35,9 +34,9 @@ class Iree:
     def cuda(self):
         self.target = Iree.Cuda
 
-    def build(self, graph: Graph):
+    def generate_tosa(self, graph: Graph):
         self.graph = graph
-        [step() for step in (self._get_job, self._convert_job_to_tosa, self._generate_context)]
+        [step() for step in (self._get_job, self._convert_job_to_tosa)]
     
     def _get_job(self):
         self.job = str(text_format.MessageToString(self.graph._forward_job_proto))
@@ -45,17 +44,19 @@ class Iree:
     def _convert_job_to_tosa(self):
         self.tosa = flow._oneflow_internal.nn.graph.ConvertJobToTosaIR(self.job)
 
-    def _generate_context(self):
+    def generate_context(self):
         config = ireert.Config(self.target.config)
         self.ctx = ireert.SystemContext(config=config)
         flat_buffer = compile_str(self.tosa, target_backends=self.target.backend, input_type='tosa')
         vm_module = ireert.VmModule.from_flatbuffer(flat_buffer)
         self.ctx.add_vm_module(vm_module)
+        return self.ctx
+
 
 
 class Runner(object):
 
-    _cache = {}
+    _tosa_cache = {}
 
     def __init__(self, raw_graph, backend=Iree):
         self.raw_graph = raw_graph
@@ -83,18 +84,19 @@ class Runner(object):
 
     def _get_function(self, *args, **kwargs):
         full_name = self._full_name()
-        if full_name in Runner._cache:
-            return Runner._cache[full_name]
-        else:
+        if not full_name in Runner._tosa_cache:
             graph = self.raw_graph()
             # graph.build_graph(*args, **kwargs)
             graph._compile(*args, **kwargs)
-            self.backend.build(graph)
-            ctx = self.backend.ctx
-            name = graph._name
-            f = ctx.modules.module[name]
-            Runner._cache[full_name] = f
-            return f
+            self.backend.generate_tosa(graph)
+            Runner._tosa_cache[full_name] = {"name":graph._name, "data":self.backend.tosa}
+
+        config = Runner._tosa_cache[full_name]
+        self.backend.tosa = config["data"]
+
+        ctx = self.backend.generate_context()
+        f = ctx.modules.module[config["name"]]
+        return f
     
     def _parse_output(self, output):
         if output.is_host_accessible:
