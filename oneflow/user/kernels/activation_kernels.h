@@ -20,25 +20,9 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-struct LeakyReluFunctor {
-  OF_DEVICE_FUNC explicit LeakyReluFunctor(float alpha) : alpha(alpha) {}
-  OF_DEVICE_FUNC T operator()(T x) const { return (x > 0) ? x : alpha * x; }
-  const T alpha;
-};
-
-template<typename T>
 struct LeakyReluGradFunctor {
   OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const { return (x > 0) ? dy : dy * alpha; }
-  const T alpha;
-};
-
-template<typename T>
-struct EluFunctor {
-  OF_DEVICE_FUNC explicit EluFunctor(float alpha) : alpha(alpha) {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > static_cast<T>(0)) ? x : static_cast<T>(alpha * (exp(x) - static_cast<T>(1)));
-  }
   const T alpha;
 };
 
@@ -52,37 +36,12 @@ struct EluGradFunctor {
 };
 
 template<typename T>
-struct CeluFunctor {
-  OF_DEVICE_FUNC explicit CeluFunctor(float alpha) : alpha(alpha), inv_alpha(1.0f / alpha) {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > static_cast<T>(0))
-               ? x
-               : static_cast<T>(alpha * (exp(x * inv_alpha) - static_cast<T>(1)));
-  }
-  const T alpha;
-  const T inv_alpha;
-};
-
-template<typename T>
 struct CeluGradFunctor {
   OF_DEVICE_FUNC explicit CeluGradFunctor(float alpha) : inv_alpha(1.0f / alpha) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     return (x > static_cast<T>(0)) ? dy : dy * static_cast<T>(exp(x * inv_alpha));
   }
   const T inv_alpha;
-};
-
-template<typename T>
-struct HardswishFunctor {
-  OF_DEVICE_FUNC T operator()(const T x) const {
-    if (x <= static_cast<T>(-3)) {
-      return static_cast<T>(0);
-    } else if (x >= static_cast<T>(3)) {
-      return x;
-    } else {
-      return (x * (x + static_cast<T>(3))) / static_cast<T>(6);
-    }
-  }
 };
 
 template<typename T>
@@ -99,33 +58,11 @@ struct HardswishGradFunctor {
 };
 
 template<typename T>
-struct HardsigmoidFunctor {
-  OF_DEVICE_FUNC T operator()(T x) const {
-    if (x <= static_cast<T>(-3))
-      return static_cast<T>(0);
-    else if (x >= static_cast<T>(3))
-      return static_cast<T>(1);
-    else
-      return (x / static_cast<T>(6)) + static_cast<T>(0.5);
-  }
-};
-
-template<typename T>
 struct HardsigmoidGradFunctor {
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     return (x > static_cast<T>(-3) && x < static_cast<T>(3)) ? dy / static_cast<T>(6)
                                                              : static_cast<T>(0);
   }
-};
-
-template<typename T>
-struct HardShrinkFunctor {
-  OF_DEVICE_FUNC explicit HardShrinkFunctor(double lambd) : lambd(lambd) {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return (x <= lambd && x >= -lambd) ? static_cast<T>(0) : x;
-  }
-
-  const T lambd;
 };
 
 template<typename T>
@@ -139,23 +76,6 @@ struct HardShrinkGradFunctor {
 };
 
 template<typename T>
-struct HardtanhFunctor {
-  OF_DEVICE_FUNC explicit HardtanhFunctor(float min_val, float max_val)
-      : min_val(min_val), max_val(max_val) {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    if (x <= min_val) {
-      return min_val;
-    } else if (x >= max_val) {
-      return max_val;
-    } else {
-      return x;
-    }
-  }
-  const T min_val;
-  const T max_val;
-};
-
-template<typename T>
 struct HardtanhGradFunctor {
   OF_DEVICE_FUNC explicit HardtanhGradFunctor(float min_val, float max_val)
       : min_val(min_val), max_val(max_val) {}
@@ -164,18 +84,6 @@ struct HardtanhGradFunctor {
   }
   const T min_val;
   const T max_val;
-};
-
-template<typename T>
-struct MishFunctor {
-  OF_DEVICE_FUNC explicit MishFunctor() {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    T soft_plus_val = log(static_cast<T>(1) + exp(x));
-    T exp_val = exp(soft_plus_val);
-    T neg_exp_val = exp(-soft_plus_val);
-    T tanh_val = (exp_val - neg_exp_val) / (exp_val + neg_exp_val);
-    return x * tanh_val;
-  }
 };
 
 template<typename T>
@@ -191,28 +99,12 @@ struct MishGradFunctor {
 };
 
 template<typename T>
-struct SiluFunctor {
-  OF_DEVICE_FUNC explicit SiluFunctor() {}
-  OF_DEVICE_FUNC T operator()(T x) const { return (x / (static_cast<T>(1) + exp(-x))); }
-};
-
-template<typename T>
 struct SiluGradFunctor {
   OF_DEVICE_FUNC explicit SiluGradFunctor() {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     T sig = static_cast<T>(1) / (static_cast<T>(1) + exp(-x));
     return dy * (sig * (static_cast<T>(1) + x * (static_cast<T>(1) - sig)));
   }
-};
-
-template<typename T>
-struct SeluFunctor {
-  OF_DEVICE_FUNC explicit SeluFunctor() {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > static_cast<T>(0)) ? scale * x : scale * alpha * (exp(x) - static_cast<T>(1));
-  }
-  const T scale = 1.0507009873554804934193349852946;
-  const T alpha = 1.6732632423543772848170429916717;
 };
 
 template<typename T>
@@ -226,12 +118,6 @@ struct SeluGradFunctor {
 };
 
 template<typename T>
-struct SoftSignFunctor {
-  OF_DEVICE_FUNC explicit SoftSignFunctor() {}
-  OF_DEVICE_FUNC T operator()(T x) const { return x / (static_cast<T>(1) + abs(x)); }
-};
-
-template<typename T>
 struct SoftSignGradFunctor {
   OF_DEVICE_FUNC explicit SoftSignGradFunctor() {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
@@ -241,30 +127,9 @@ struct SoftSignGradFunctor {
 };
 
 template<typename T>
-struct ThresholdFunctor {
-  OF_DEVICE_FUNC explicit ThresholdFunctor(double threshold, double value)
-      : threshold(threshold), value(value) {}
-  OF_DEVICE_FUNC T operator()(T x) const { return (x > threshold) ? x : value; }
-  const T threshold;
-  const T value;
-};
-
-template<typename T>
 struct ThresholdGradFunctor {
   OF_DEVICE_FUNC explicit ThresholdGradFunctor(double threshold) : threshold(threshold) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const { return (x > threshold) ? dy : static_cast<T>(0); }
-  const T threshold;
-};
-
-template<typename T>
-struct SoftplusFunctor {
-  OF_DEVICE_FUNC explicit SoftplusFunctor(double beta, double threshold)
-      : beta(beta), threshold(threshold) {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return (x * beta) > threshold ? x : log(static_cast<T>(1.0) + exp(x * beta)) / beta;
-  }
-
-  const T beta;
   const T threshold;
 };
 
@@ -282,27 +147,9 @@ struct SoftplusGradFunctor {
 };
 
 template<typename T>
-struct ReluFunctor {
-  OF_DEVICE_FUNC explicit ReluFunctor() {}
-  OF_DEVICE_FUNC T operator()(T x) const { return x > static_cast<T>(0) ? x : static_cast<T>(0); }
-};
-
-template<typename T>
 struct ReluGradFunctor {
   OF_DEVICE_FUNC explicit ReluGradFunctor() {}
   OF_DEVICE_FUNC T operator()(T y, T dy) const { return (y > static_cast<T>(0)) * dy; }
-};
-
-template<typename T>
-struct SoftShrinkFunctor {
-  OF_DEVICE_FUNC explicit SoftShrinkFunctor(double alpha) : alpha(alpha) {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    if (x > alpha) return x - alpha;
-    if (x < -alpha) return x + alpha;
-    return static_cast<T>(0);
-  }
-
-  const T alpha;
 };
 
 template<typename T>
