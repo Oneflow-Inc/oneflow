@@ -3,6 +3,7 @@ import oneflow as flow
 from google.protobuf import text_format
 from iree import runtime as ireert
 from iree.compiler import compile_str
+import numpy as np
 
 class Iree:
 
@@ -66,6 +67,8 @@ class Runner(object):
         for arg in args:
             if isinstance(arg, flow.Tensor):
                 res.append(arg.cpu().detach().numpy())
+            elif isinstance(arg, np.ndarray):
+                res.append(arg)
             else:
                 print('not support class')
                 exit(1)

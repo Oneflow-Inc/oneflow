@@ -24,8 +24,12 @@ class Graph(flow.nn.Graph):
 graph_to_run = Graph()
 
 func = Runner(graph_to_run)
-
 input = flow.Tensor([-1, 1.])
 output = func(input)
+print(output)
 
+import numpy as np
+func = Runner(graph_to_run)
+input = np.array([-1, 0], dtype=np.float32)
+output = func(input)
 print(output)
