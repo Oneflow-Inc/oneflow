@@ -25,8 +25,9 @@ namespace primitive {
 
 #define UNARY_MATH_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kRelu)
 
-#define UNARY_FLOATING_MATH_OP_SEQ     \
-  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGelu) \
+#define UNARY_FLOATING_MATH_OP_SEQ          \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kGelu)      \
+  OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLeakyRelu) \
   OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kTanh)
 
 #define UNARY_LOGICAL_OP_SEQ OF_PP_MAKE_TUPLE_SEQ(UnaryOp::kLogicalNot)
