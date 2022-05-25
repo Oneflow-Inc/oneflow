@@ -2944,6 +2944,54 @@ class RepeatFunctor {
   }
 };
 
+class RepeatInterLeaveIndexFunctor {
+ public:
+  RepeatInterLeaveIndexFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("repeat_interleave").Input("in").Input("cumsum").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& cumsum,
+                           const int32_t& repeat_num) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::int64_t>("repeat_num", repeat_num));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, cumsum}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RepeatInterLeaveIntFunctor {
+ public:
+  RepeatInterLeaveIntFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& repeats,
+                           const Optional<int32_t>& dim) const {
+    std::shared_ptr<one::Tensor> res;
+    if (!dim.has_value()) {
+      std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
+      std::shared_ptr<one::Tensor> repeat_expand = JUST(Expand(
+          JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
+          Shape{input->shape()->At(0)}));
+
+      res = JUST(IndexSelect(flatten_input, 0, repeat_expand));
+    } else {
+      int32_t dim_ = JUST(dim);
+      const auto input_shape = input->shape();
+      const int64_t num_axes = input_shape->NumAxes();
+      if (dim_ < 0) { dim_ += num_axes; }
+      CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+          << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
+      std::shared_ptr<one::Tensor> repeat_expand = JUST(Expand(
+          JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
+          Shape{input->shape()->At(dim_)}));
+      res = JUST(IndexSelect(input, dim_, repeat_expand));
+    }
+    return res;
+  }
+};
+
 class TileFunctor {
  public:
   TileFunctor() {}
@@ -3161,6 +3209,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
   m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
   m.add_functor<impl::RepeatFunctor>("Repeat");
+  m.add_functor<impl::RepeatInterLeaveIndexFunctor>("RepeatInterLeaveIndex");
+  m.add_functor<impl::RepeatInterLeaveIntFunctor>("RepeatInterLeaveInt");
   m.add_functor<impl::TileFunctor>("Tile");
   m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");

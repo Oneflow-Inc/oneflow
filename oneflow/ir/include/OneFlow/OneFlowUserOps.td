@@ -8411,8 +8411,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
 
 def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$in,
-    OneFlow_Tensor:$cumsum
+    OneFlow_Tensor:$in
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -8429,7 +8428,8 @@ def OneFlow_RepeatOp : OneFlow_BaseOp<"repeat", [NoSideEffect, DeclareOpInterfac
 
 def OneFlow_Repeat_InterLeaveOp : OneFlow_BaseOp<"repeat_interleave", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$in
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$cumsum
   );
   let output = (outs
     OneFlow_Tensor:$out
