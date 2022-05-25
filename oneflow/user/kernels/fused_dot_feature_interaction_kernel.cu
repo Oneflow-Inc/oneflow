@@ -369,6 +369,13 @@ void DispatchFeatureInteractionSumGradInputSize(user_op::KernelComputeContext* c
           batch_size, vector_size, param);
 }
 
+int64_t GetPaddedDim(int64_t dim) {
+  const int64_t align_dim = 16;
+  const int64_t padded_dim =
+      std::ceil(static_cast<float>(dim) / static_cast<float>(align_dim)) * align_dim;
+  return padded_dim;
+}
+
 }  // namespace
 
 template<typename T>
@@ -425,10 +432,7 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
     for (int64_t i = 0; i < ctx->input_size("features"); ++i) {
       features_concated_dim += ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
     }
-    const int64_t align_dim = 16;
-    const int64_t concated_padded_dim =
-        std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
-        * align_dim;
+    const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features", 0)->shape().At(2);
     const int64_t out_dim = out->shape().At(1);
     const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
@@ -485,10 +489,7 @@ user_op::InferTmpSizeFn GenFusedDotFeatureInteractionInferTmpSizeFn() {
     for (int32_t i = 0; i < ctx->input_size("features"); ++i) {
       features_concated_dim += ctx->InputShape("features", i).At(1);
     }
-    const int64_t align_dim = 16;
-    const int64_t concated_padded_dim =
-        std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
-        * align_dim;
+    const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     size_t matmul_out_size =
         GetCudaAlignedSize(batch_size * concated_padded_dim * concated_padded_dim * sizeof(T));
     const bool self_interaction = ctx->Attr<bool>("self_interaction");
@@ -708,6 +709,7 @@ void DispatchFeatureInteractionDotInputSize(user_op::KernelComputeContext* ctx,
     param.dim_start_offset[i] = features_concated_dim;
     features_concated_dim += param.in_feature_dim[i];
   }
+  const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
   param.features_dim = features_concated_dim;
   if (ctx->has_input("output_concat", 0)) {
     const user_op::Tensor* output_concat = ctx->Tensor4ArgNameAndIndex("output_concat", 0);
@@ -717,12 +719,7 @@ void DispatchFeatureInteractionDotInputSize(user_op::KernelComputeContext* ctx,
     param.output_concat = nullptr;
     param.output_concat_size = 0;
   }
-  const int64_t align_dim = 16;
-  const int64_t concated_padded_dim =
-      std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
-      * align_dim;
-  const int64_t padded_vector_size =
-      std::ceil(static_cast<float>(vector_size) / static_cast<float>(align_dim)) * align_dim;
+  const int64_t padded_vector_size = GetPaddedDim(vector_size);
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
   const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
   DispatchFeatureInteractionDotPackSize<T, N>(ctx->stream(), batch_size, concated_padded_dim,
@@ -786,10 +783,7 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
     for (int32_t i = 0; i < ctx->output_size("features_grad"); ++i) {
       features_concated_dim += ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
     }
-    const int64_t align_dim = 16;
-    const int64_t concated_padded_dim =
-        std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
-        * align_dim;
+    const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features_grad", 0)->shape().At(2);
     const int64_t out_dim = dy->shape().At(1);
     const bool self_interaction = ctx->Attr<bool>("self_interaction");
@@ -840,10 +834,7 @@ user_op::InferTmpSizeFn GenFusedDotFeatureInteractionGradInferTmpSizeFn() {
     for (int32_t i = 0; i < ctx->output_size("features_grad"); ++i) {
       features_concated_dim += ctx->InputShape("features_grad", i).At(1);
     }
-    const int64_t align_dim = 16;
-    const int64_t concated_padded_dim =
-        std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
-        * align_dim;
+    const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     const int64_t batch_size = ctx->InputShape("features_grad", 0).At(0);
     const int64_t vector_size = ctx->InputShape("features_grad", 0).At(2);
     size_t matmul_out_grad_size =
