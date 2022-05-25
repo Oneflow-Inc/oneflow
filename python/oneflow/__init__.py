@@ -27,7 +27,6 @@ device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
-locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
 locals()["float32"] = oneflow._oneflow_internal.float32
@@ -215,10 +214,8 @@ import atexit
 
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
-import oneflow.framework.register_python_callback
 
 
-INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
 import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
@@ -232,13 +229,12 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback, register_python_callback
+from oneflow.framework import python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
     python_callback.global_python_callback
 )
 del python_callback
-del register_python_callback
 
 
 class ExitHook:
@@ -345,9 +341,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
 )
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
-from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
-from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
@@ -415,6 +408,7 @@ import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
 import oneflow.one_embedding
+import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

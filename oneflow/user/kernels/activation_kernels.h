@@ -315,6 +315,19 @@ struct SoftShrinkGradFunctor {
   const T alpha;
 };
 
+namespace {
+auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_name,
+                          const std::string& input_name) {
+  return hob::make_custom("PrimitiveExists", [=](const user_op::KernelRegContext& ctx) {
+    const user_op::TensorDesc* src = ctx.TensorDesc4ArgNameAndIndex(input_name, 0);
+    const user_op::TensorDesc* dst = ctx.TensorDesc4ArgNameAndIndex(output_name, 0);
+    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+        ctx.device_type(), op, src->data_type(), dst->data_type());
+    return primitive.operator bool();
+  });
+}
+}  // namespace
+
 #define REGISTER_SOFTSHRINK_KERNEL(device, dtype)                            \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                       \
       device, "softshrink", SoftShrinkFunctor, dtype, dtype,                 \
@@ -343,13 +356,35 @@ struct SoftShrinkGradFunctor {
       },                                                          \
       "dx", "x", "dy");
 
-#define REGISTER_LEAKYRELU_KERNEL(device, dtype)                            \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                      \
-      device, "leaky_relu", LeakyReluFunctor, dtype, dtype,                 \
-      [](user_op::KernelComputeContext* ctx) {                              \
-        return LeakyReluFunctor<dtype>(ctx->Attr<float>("alpha"));          \
-      },                                                                    \
-      "y", "x");                                                            \
+#define REGISTER_GELU_FORWARD_KERNEL()                                                    \
+  REGISTER_USER_KERNEL("gelu")                                                            \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                         \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);  \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), ep::primitive::UnaryOp::kGelu, src->data_type(),    \
+                  dst->data_type());                                                      \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kGelu, "out", "in"));
+
+#define REGISTER_LEAKYRELU_FORWARD_KERNEL()                                                 \
+  REGISTER_USER_KERNEL("leaky_relu")                                                        \
+      .SetCreateFn([]() {                                                                   \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                  \
+            "y", "x", [](user_op::KernelComputeContext* ctx) {                              \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);     \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);     \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(   \
+                  ctx->device_type(), ep::primitive::UnaryOp::kLeakyRelu, src->data_type(), \
+                  dst->data_type(), ctx->Attr<float>("alpha"));                             \
+            });                                                                             \
+      })                                                                                    \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kLeakyRelu, "y", "x"));
+
+#define REGISTER_LEAKYRELU_BACKWARD_KERNEL(device, dtype)                   \
   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                     \
       device, "leaky_relu_grad", LeakyReluGradFunctor, dtype, dtype, dtype, \
       [](user_op::KernelComputeContext* ctx) {                              \
@@ -460,6 +495,20 @@ struct SoftShrinkGradFunctor {
         return Maybe<void>::Ok();                                                               \
       });
 
+#define REGISTER_TANH_FORWARD_KERNEL()                                                    \
+  REGISTER_USER_KERNEL("tanh")                                                            \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "y", "x", [](user_op::KernelComputeContext* ctx) {                            \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);   \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);   \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), ep::primitive::UnaryOp::kTanh, src->data_type(),    \
+                  dst->data_type());                                                      \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kTanh, "y", "x"));
+
 #define REGISTER_MISH_KERNEL(device, dtype)                                                   \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                        \
       device, "mish", MishFunctor, dtype, dtype,                                              \
@@ -526,21 +575,24 @@ struct SoftShrinkGradFunctor {
       },                                                                                          \
       "dx", "x", "dy");
 
-// For Relu Inplace Proposal Fn.
-#define REGISTER_RELU_FORWARD_KERNEL(device, dtype)                                                \
-  REGISTER_USER_KERNEL("relu")                                                                     \
-      .SetCreateFn([]() {                                                                          \
-        return user_op::NewOpKernel<                                                               \
-            UnaryElemwiseXpuKernel<device, ReluFunctor<dtype>, dtype, dtype>>(                     \
-            [](user_op::KernelComputeContext* ctx) { return ReluFunctor<dtype>(); }, "out", "in"); \
-      })                                                                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))           \
-      .SetInplaceProposalFn(                                                                       \
-          [](const user_op::InferContext&,                                                         \
-             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {               \
-            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                      \
-            return Maybe<void>::Ok();                                                              \
+#define REGISTER_RELU_FORWARD_KERNEL()                                                    \
+  REGISTER_USER_KERNEL("relu")                                                            \
+      .SetCreateFn([]() {                                                                 \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
+            "y", "x", [](user_op::KernelComputeContext* ctx) {                            \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);   \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("y", 0);   \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
+                  ctx->device_type(), ep::primitive::UnaryOp::kRelu, src->data_type(),    \
+                  dst->data_type());                                                      \
+            });                                                                           \
+      })                                                                                  \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kRelu, "y", "x"))     \
+      .SetInplaceProposalFn(                                                              \
+          [](const user_op::InferContext&,                                                \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {      \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                \
+            return Maybe<void>::Ok();                                                     \
           });
 
 #define REGISTER_RELU_BACKWARD_KERNEL(device, dtype)                                           \

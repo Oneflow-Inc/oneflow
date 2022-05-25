@@ -17,11 +17,12 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_logger.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 
