@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
@@ -24,17 +25,10 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
-  }
-  return true;
-}
-
 Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(IsAllBroadcastNdSbp(*in->nd_sbp()));
   CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
   return Maybe<void>::Ok();
 }

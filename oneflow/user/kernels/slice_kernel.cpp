@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/slice_util.h"
@@ -285,20 +286,28 @@ std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheCon
     // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
     return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   }
-  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
-  if (in_sbp.has_split_parallel()) {
-    const user_op::TensorDesc* in_logical_desc =
-        ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0);
-    const auto split_axis = in_sbp.split_parallel().axis();
-    const int64_t split_dim_size = in_logical_desc->shape().At(split_axis);
-    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
-    return std::make_shared<OpKernelCacheWrapper<SliceContext>>(
-        split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
-  } else if (in_sbp.has_broadcast_parallel() || in_sbp.has_partial_sum_parallel()) {
+  // TODO(wyg): support nd_sbp SliceContext
+  const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex(large_tensor_name, 0);
+  if (in_nd_sbp.sbp_parallel_size() > 1) {
+    CHECK(IsAllBroadcastNdSbp(in_nd_sbp)) << large_tensor_name << "'s nd_sbp must be broadcast'";
     return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   } else {
-    UNIMPLEMENTED();
+    const auto& in_sbp = in_nd_sbp.sbp_parallel(0);
+    if (in_sbp.has_split_parallel()) {
+      const user_op::TensorDesc* in_logical_desc =
+          ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0);
+      const auto split_axis = in_sbp.split_parallel().axis();
+      const int64_t split_dim_size = in_logical_desc->shape().At(split_axis);
+      const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+      BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
+      return std::make_shared<OpKernelCacheWrapper<SliceContext>>(
+          split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
+    } else if (in_sbp.has_broadcast_parallel() || in_sbp.has_partial_sum_parallel()) {
+      return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0,
+                                                                  0);
+    } else {
+      UNIMPLEMENTED();
+    }
   }
 }
 
@@ -350,8 +359,8 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
-      const SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
-      CHECK(value_sbp.has_broadcast_parallel());
+      const NdSbp& value_nd_sbp = ctx->NdSbp4ArgNameAndIndex("value", 0);
+      CHECK(IsAllBroadcastNdSbp(value_nd_sbp)) << "value's sbp must be broadcast";
     }
     return CreateSliceCache(ctx, "ref");
   }

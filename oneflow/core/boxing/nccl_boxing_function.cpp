@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
@@ -22,37 +23,14 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
-  }
-  return true;
-}
-
-bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
-  }
-  return true;
-}
-
-bool IsAllSplitNdSbp(Symbol<NdSbp> nd_sbp, int64_t axis) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
-      return false;
-    }
-  }
-  return true;
-}
-
 bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
 Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(IsAllPartialSumNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(IsAllPartialSumNdSbp(*in->nd_sbp()));
+  CHECK_OR_RETURN(IsAllBroadcastNdSbp(*out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
@@ -65,8 +43,8 @@ Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(IsAllPartialSumNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(IsAllSplitNdSbp(out->nd_sbp(), 0));
+  CHECK_OR_RETURN(IsAllPartialSumNdSbp(*in->nd_sbp()));
+  CHECK_OR_RETURN(IsAllSplitNdSbp(*out->nd_sbp(), 0));
 
   CHECK_GT_OR_RETURN(logical_shape.NumAxes(), 0);
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
@@ -82,8 +60,8 @@ Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(IsAllSplitNdSbp(in->nd_sbp(), 0));
-  CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(IsAllSplitNdSbp(*in->nd_sbp(), 0));
+  CHECK_OR_RETURN(IsAllBroadcastNdSbp(*out->nd_sbp()));
 
   CHECK_GT_OR_RETURN(logical_shape.NumAxes(), 0);
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);

@@ -79,18 +79,12 @@ def _setitem(self, key, value):
                 value,
                 dtype=self.dtype,
                 placement=self.placement,
-                sbp=flow.sbp.broadcast,
+                sbp=[flow.sbp.broadcast for _ in self.sbp],
             )
         else:
-            if value.is_global:
-                value = value.to_global(sbp=flow.sbp.broadcast)
-                # TODO: remove these lines after asymmetric boxing is ready
-                local_tensor = value.to_local()
-                if local_tensor.nelement() == 0:
-                    local_tensor = flow.zeros(*value.shape)
-                value = local_tensor.to_global(self.placement, sbp=flow.sbp.broadcast)
-            else:
-                value = value.to_global(self.placement, sbp=flow.sbp.broadcast)
+            value = value.to_global(
+                self.placement, sbp=[flow.sbp.broadcast for _ in self.sbp]
+            )
     else:
         if isinstance(value, (int, float)):
             value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
