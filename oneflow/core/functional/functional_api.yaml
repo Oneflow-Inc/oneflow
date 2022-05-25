@@ -967,6 +967,13 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "tensordot"
+  signature: [
+    "Tensor (Tensor a, Tensor b, Int32List dims_a, Int32List dims_b) => TensorDot",
+    "Tensor (Tensor a, Tensor b, Int32 dims) => TensorDotIntDims"
+  ]
+  bind_python: True
+
 - name: "l1_loss"
   signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
   bind_python: True
