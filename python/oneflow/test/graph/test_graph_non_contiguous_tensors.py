@@ -20,13 +20,13 @@ import numpy as np
 
 
 class ModuleTest(flow.nn.Module):
-    def __init__(self, in_features, out_features, contiguous: bool):
+    def __init__(self, contiguous: bool, device):
         super().__init__()
         if contiguous:
-            self.weight = flow.nn.Parameter(flow.ones(in_features, out_features))
+            self.weight = flow.nn.Parameter(flow.ones(4, 3, device=device))
         else:
             self.weight = flow.nn.Parameter(
-                flow.ones(out_features, in_features).transpose(0, 1)
+                flow.ones(3, 4, device=device).transpose(0, 1)
             )
 
     def forward(self, input):
@@ -34,23 +34,32 @@ class ModuleTest(flow.nn.Module):
         return res
 
 
-def _test_graph_non_contiguous_tensors(test_case):
+def _test_graph_non_contiguous_tensors(test_case, device):
+    bias = flow.tensor(
+        [[1, 2, 3], [3, 4, 5], [7, 7, 7],], dtype=flow.float32, device=device
+    )
+
+    free_eager_bias_contiguous = bias
+    free_eager_bias_non_contiguous = bias.transpose(0, 1).contiguous().transpose(0, 1)
+    test_case.assertTrue(free_eager_bias_contiguous.is_contiguous())
+    test_case.assertFalse(free_eager_bias_non_contiguous.is_contiguous())
+
     class GraphTestContiguousTensors(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            self.model = ModuleTest(4, 3, True)
+            self.model = ModuleTest(True, device)
 
         def build(self, input):
-            res = self.model(input)
+            res = self.model(input) + free_eager_bias_contiguous
             return res
 
     class GraphTestNonContiguousTensors(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            self.model = ModuleTest(4, 3, False)
+            self.model = ModuleTest(False, device)
 
         def build(self, input):
-            res = self.model(input)
+            res = self.model(input) + free_eager_bias_non_contiguous
             return res
 
     graph_contiguous_tensors = GraphTestContiguousTensors()
@@ -61,7 +70,9 @@ def _test_graph_non_contiguous_tensors(test_case):
         graph_non_contiguous_tensors.model.weight.origin.is_contiguous()
     )
 
-    inp = flow.tensor([[1, 2, 3], [4, 5, 6], [3, 3, 3], [7, 8, 8]], dtype=flow.float32)
+    inp = flow.tensor(
+        [[1, 2, 3], [4, 5, 6], [3, 3, 3], [7, 8, 8]], dtype=flow.float32, device=device
+    )
 
     non_contiguous_input = inp.transpose(0, 1)
     test_case.assertFalse(non_contiguous_input.is_contiguous())
@@ -71,7 +82,6 @@ def _test_graph_non_contiguous_tensors(test_case):
 
     contiguous_graph_output = graph_contiguous_tensors(contiguous_input)
     non_contiguous_graph_output = graph_non_contiguous_tensors(non_contiguous_input)
-
     test_case.assertTrue(
         np.array_equal(
             contiguous_graph_output.numpy(), non_contiguous_graph_output.numpy()
@@ -81,8 +91,11 @@ def _test_graph_non_contiguous_tensors(test_case):
 
 @flow.unittest.skip_unless_1n1d()
 class TestGraphNonContiguousTensor(oneflow.unittest.TestCase):
+    def test_graph_non_contiguous_tensors_cpu(test_case):
+        _test_graph_non_contiguous_tensors(test_case, flow.device("cpu"))
+
     def test_graph_non_contiguous_tensors_gpu(test_case):
-        _test_graph_non_contiguous_tensors(test_case)
+        _test_graph_non_contiguous_tensors(test_case, flow.device("cuda"))
 
 
 if __name__ == "__main__":
