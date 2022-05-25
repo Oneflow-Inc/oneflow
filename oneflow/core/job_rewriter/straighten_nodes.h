@@ -32,6 +32,7 @@ class TopoStruct {
   bool IfMainstem = false;
   int32_t counter = 0;
   int32_t MinDistance2Transfer = -1;
+  TopoStruct* next_same_node = nullptr;
   // We can have some other nodes in it for example
   // SbpNode<NdSbpSignature>* node;
   // SbpEdge<NdSbpSignature>* node;

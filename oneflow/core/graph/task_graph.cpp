@@ -595,8 +595,34 @@ void TaskGraph::StraightenNodes() {
   int64_t order_in_graph = 0;
   HashMap<int32_t, int32_t> task_type_map;
 
+  // The same order in the set
+  // It is only run in the following situation because there are too many implicit conditions.
+  auto should_run_simultaneously = [](TopoStruct* a, TopoStruct* b) -> bool {
+    // Normal node would have the same name
+    if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
+    // Otherwise they must have the same parameters with different machine ids and the closest node
+    // id. We only use Min Layer here, since Tributary Layer might be different due to asymmetry of
+    // graph.
+    return true;
+  };
+
+  // move the head from source to target
+  auto move_front_between_maps = [](std::map<int32_t, TopoStruct*>& source,
+                                    std::map<int32_t, TopoStruct*>& target) {
+    if (!source.empty()) {
+      const auto& front = source.begin();
+      target[front->first] = front->second;
+      source.erase(front);
+    }
+  };
+
   // Generate topological data structure for each task node
   HashMap<TaskNode*, TopoStruct> task_node2topo_struct;
+  // Determine the same nodes which should run simultaneously
+  HashMap<int32_t, HashMap<int32_t, std::map<int32_t, TopoStruct*>>>
+      task_type2machine_id2node_id2topo_structs;
+  std::map<int32_t, TopoStruct*> min_node_id2topo_struct;
+  int32_t previous_MinLayer = 0;
   TopoForEachNodeFast([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
@@ -608,7 +634,54 @@ void TaskGraph::StraightenNodes() {
         max_min_layer = std::max(max_min_layer, task_node2topo_struct[in].MinLayer);
       });
       topo_struct.MinLayer = max_min_layer + 1;
+      // Deal with all the nodes with MinLayer=previous_MinLayer
+      std::cout << "Min Layer: " << topo_struct.MinLayer << std::endl;
+      if (max_min_layer >= previous_MinLayer) {
+        // Using "7" to represent "and"
+        // a7b means a pair (a, b)
+        for (auto& task_type7machine_id2node_id2topo_structs :
+             task_type2machine_id2node_id2topo_structs) {
+          auto& machine_id2node_id2topo_structs = task_type7machine_id2node_id2topo_structs.second;
+          // Initializing the smallest node id for each machine
+          for (auto& machine_id7node_id2topo_structs : machine_id2node_id2topo_structs) {
+            move_front_between_maps(machine_id7node_id2topo_structs.second,
+                                    min_node_id2topo_struct);
+          }
+          //
+          while (!min_node_id2topo_struct.empty()) {
+            auto* topo_struct_min_node_id = min_node_id2topo_struct.begin()->second;
+            // Store the same nodes in different machine
+            std::vector<TopoStruct*> same_nodes;
+            for (auto& min_node_id7topo_struct : min_node_id2topo_struct) {
+              auto* curr_topo_struct = min_node_id7topo_struct.second;
+              // Find out all the same nodes
+              if (should_run_simultaneously(topo_struct_min_node_id, curr_topo_struct)) {
+                same_nodes.push_back(curr_topo_struct);
+              }
+            }
+            // Cyclize them
+            for (int32_t i = 1; i < same_nodes.size(); i++) {
+              same_nodes[i - 1]->next_same_node = same_nodes[i];
+            }
+            (*same_nodes.rbegin())->next_same_node = same_nodes[0];
+            // Delete them and add new candidates
+            for (auto* same_node_topo_struct : same_nodes) {
+              // Erase them from min_node_id2topo_struct
+              min_node_id2topo_struct.erase(same_node_topo_struct->node->node_id());
+              // Add new candidate
+              move_front_between_maps(
+                  machine_id2node_id2topo_structs[same_node_topo_struct->node->machine_id()],
+                  min_node_id2topo_struct);
+            }
+          }
+        }
+        // Renew the previous MinLayer at the end
+        previous_MinLayer = topo_struct.MinLayer;
+      }
     }
+    // Put the topo structure into the map, waiting for determine the same nodes
+    task_type2machine_id2node_id2topo_structs[node->GetTaskType()][node->machine_id()]
+                                             [node->node_id()] = &topo_struct;
   });
 
   // Generate other parameters in the topological data structure
@@ -686,8 +759,6 @@ void TaskGraph::StraightenNodes() {
     return 3;
   };
 
-  HashMap<int32_t, HashMap<int32_t, std::set<TopoStruct*, comp>>> task_type2machine_id2topo_structs;
-
   auto SetOrderInGraph = [&](TaskNode* task_node) {
     if (GlobalProcessCtx::Rank() == 0) {
       auto& topo_struct = task_node2topo_struct[task_node];
@@ -712,17 +783,31 @@ void TaskGraph::StraightenNodes() {
 
   // wait in the list
   auto wait = [&](TaskNode* node) {
-    TopoStruct* topo_struct = &task_node2topo_struct[node];
-    waiting_lists[set_classifier(node)].insert(topo_struct);
-    task_type2machine_id2topo_structs[node->GetTaskType()][node->machine_id()].insert(topo_struct);
+    TopoStruct* first_topo_struct = &task_node2topo_struct[node];
+    // Check if all the same nodes are ready simultaneously
+    TopoStruct* curr_topo_struct = first_topo_struct->next_same_node;
+    while (curr_topo_struct && curr_topo_struct != first_topo_struct) {
+      if (curr_topo_struct->counter) { return; }
+      curr_topo_struct = curr_topo_struct->next_same_node;
+    }
+    // Add all the same nodes at the same time
+    curr_topo_struct = first_topo_struct;
+    auto& waiting_list = waiting_lists[set_classifier(node)];
+    while (true) {
+      waiting_list.insert(curr_topo_struct);
+      // Reduce counter then this node will never be added again
+      // Though inserting into a map twice does not matter because of the same keys
+      curr_topo_struct->counter--;
+      curr_topo_struct = curr_topo_struct->next_same_node;
+      if ((!curr_topo_struct) || (curr_topo_struct == first_topo_struct)) { break; }
+    }
   };
 
   std::map<int32_t, std::map<int32_t, int32_t>> task_type2node_id2machine_id;
   // initialization
-  HashMap<TaskNode*, int32_t> counter_in;
   ForEachNode([&](TaskNode* node) {
     int32_t count = node->in_edges().size();
-    counter_in[node] = count;
+    task_node2topo_struct[node].counter = count;
     if (count == 0) { wait(node); }
     remain_task_nums[set_classifier(node)]++;
     task_type2node_id2machine_id[node->GetTaskType()][node->node_id()] = node->machine_id();
@@ -748,18 +833,8 @@ void TaskGraph::StraightenNodes() {
   // Finish execution
   auto finish_execution = [&](TaskNode* node) {
     node->ForEachNodeOnOutEdge([&](TaskNode* out) {
-      if (--counter_in[out] == 0) { wait(out); }
+      if (--(task_node2topo_struct[out].counter) == 0) { wait(out); }
     });
-  };
-
-  // The same order in the set
-  auto should_run_simultaneously = [](TopoStruct* a, TopoStruct* b) -> bool {
-    // Normal node would have the same name
-    if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
-    // Otherwise they must have the same parameters with different machine ids and the closest node
-    // id. We only use Min Layer here, since Tributary Layer might be different due to asymmetry of
-    // graph.
-    return a->MinLayer == b->MinLayer;
   };
 
   // Move the first node of the waiting list to the execution list
@@ -767,21 +842,17 @@ void TaskGraph::StraightenNodes() {
                                  std::vector<TaskNode*>& execution_list) {
     TaskNode* first_node = (*waiting_list.begin())->node;
     int32_t execution_num = 0;
-    TopoStruct* target_topo_struct = &task_node2topo_struct[first_node];
+    TopoStruct* first_topo_struct = &task_node2topo_struct[first_node];
     // Find all the same nodes in different machine
     // They should be run simultaneously
-    for (auto& machine_id2topo_structs :
-         task_type2machine_id2topo_structs[first_node->GetTaskType()]) {
-      auto& topo_structs = machine_id2topo_structs.second;
-      if (topo_structs.empty()) { continue; }
-      TopoStruct* first_topo_struct = *topo_structs.begin();
-      if (should_run_simultaneously(target_topo_struct, first_topo_struct)) {
-        execution_num++;
-        execution_list.push_back(first_topo_struct->node);
-        waiting_list.erase(first_topo_struct);
-        // topo_structs.erase(first_topo_struct);
-        topo_structs.erase(topo_structs.begin());
-      }
+    TopoStruct* curr_topo_struct = first_topo_struct;
+    while (true) {
+      execution_num++;
+      execution_list.push_back(curr_topo_struct->node);
+      waiting_list.erase(curr_topo_struct);
+      // move and maybe leave
+      curr_topo_struct = curr_topo_struct->next_same_node;
+      if ((!curr_topo_struct) || (curr_topo_struct == first_topo_struct)) { break; }
     }
     CHECK_GT(execution_num, 0) << "Error, no task nodes are moved to the execution list";
   };
