@@ -17,6 +17,7 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include <Python.h>
+#include <cstdint>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
@@ -27,6 +28,7 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/device.h"
@@ -34,7 +36,9 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/tensor_index.h"
+#include "oneflow/core/common/just.h"
 
 namespace py = pybind11;
 
@@ -178,6 +182,61 @@ static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(PyTensor_Unpack(self)->pin_memory());
+  END_HANDLE_ERRORS
+}
+
+int64_t unpack_long(PyObject* self){
+  int overflow = -1;
+  long long val = PyLong_AsLongLongAndOverflow(self, &overflow);
+  if (val == -1 && PyErr_Occurred()) { THROW(RuntimeError) << "unpack_long >> Python exception occurs. tp_name:" << Py_TYPE(self)->tp_name << "; tp_doc:" << Py_TYPE(self)->tp_doc; }
+  if (overflow != 0) { THROW(RuntimeError)  << "unpack_long >> Overflow when unpacking long"; }
+  return (int64_t)val;
+}
+
+static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  if(!PyTuple_Check(args)){ THROW(TypeError)  << "reshape(): argument 'shape' must be tuple of ints, but found " << Py_TYPE(args)->tp_name; }
+
+  size_t size = (size_t)PyTuple_Size(args);
+  if(size==-1) { size = tensor->ndim(); }
+  PyObject* shape = PyTuple_GetItem(args, 0);
+  if(PyList_Check(shape)){
+    size = (size_t)PyList_Size(shape);
+    DimVector vec(size);
+    for(int i=0; i<size; ++i){
+      vec.at(i) = unpack_long(PyList_GetItem(shape, i));
+    }
+    auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
+    return PyTensor_New(result);
+
+  } else {
+    if(PyLong_Check(shape)){
+      DimVector vec(size);
+      for(int i=0; i < size; ++i){
+        vec.at(i) = unpack_long(PyTuple_GetItem(args, i));
+      }
+      auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
+      return PyTensor_New(result);
+    } else {
+        size = (size_t)PyTuple_Size(shape);
+        DimVector vec(size);
+        for(int i=0; i < size; ++i){
+          vec.at(i) = unpack_long(PyTuple_GetItem(shape, i));
+        }
+        auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
+        return PyTensor_New(result);
+    }
+  }
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  PyObject* other = PyTuple_GetItem(args, 0);
+  auto result = CHECK_JUST(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape()));
+  return PyTensor_New(result);
   END_HANDLE_ERRORS
 }
 
@@ -325,6 +384,8 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
+    {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
+    {"reshape_as", PyTensorObject_reshape_as, METH_VARARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},

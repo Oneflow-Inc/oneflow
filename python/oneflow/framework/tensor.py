@@ -1018,20 +1018,6 @@ def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
 
-def _reshape(self, *shape):
-    if len(shape) == 1:
-        new_shape = shape[0]
-        if isinstance(new_shape, int):
-            new_shape = (new_shape,)
-    else:
-        new_shape = shape
-    return flow._C.reshape(self, new_shape)
-
-
-def _reshape_as(self, other):
-    return _reshape(self, other.size())
-
-
 def _view(self, *shape):
     if len(shape) == 1:
         new_shape = shape[0]
@@ -1359,8 +1345,6 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
-    Tensor.reshape = _reshape
-    Tensor.reshape_as = _reshape_as
     Tensor.view = _view
     Tensor.view_as = _view_as
     Tensor.sort = _sort
