@@ -185,47 +185,47 @@ static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-int64_t unpack_long(PyObject* self){
+int64_t unpack_long(PyObject* self) {
   int overflow = -1;
   long long val = PyLong_AsLongLongAndOverflow(self, &overflow);
-  if (val == -1 && PyErr_Occurred()) { THROW(RuntimeError) << "unpack_long >> Python exception occurs. python type:" << Py_TYPE(self)->tp_name; }
-  if (overflow != 0) { THROW(RuntimeError)  << "unpack_long >> Overflow when unpacking long"; }
+  if (val == -1 && PyErr_Occurred()) {
+    THROW(RuntimeError) << "unpack_long >> Python exception occurs. python type:"
+                        << Py_TYPE(self)->tp_name;
+  }
+  if (overflow != 0) { THROW(RuntimeError) << "unpack_long >> Overflow when unpacking long"; }
   return (int64_t)val;
 }
 
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
-  if(!PyTuple_Check(args)){ THROW(TypeError)  << "reshape(): argument 'shape' must be tuple of ints, but found " << Py_TYPE(args)->tp_name; }
+  if (!PyTuple_Check(args)) {
+    THROW(TypeError) << "reshape(): argument 'shape' must be tuple of ints, but found "
+                     << Py_TYPE(args)->tp_name;
+  }
 
   size_t size = (size_t)PyTuple_Size(args);
-  if(size==-1) { size = tensor->ndim(); }
+  if (size == -1) { size = tensor->ndim(); }
   PyObject* shape = PyTuple_GetItem(args, 0);
-  if(PyList_Check(shape)){
+  if (PyList_Check(shape)) {
     size = (size_t)PyList_Size(shape);
     DimVector vec(size);
-    for(int i=0; i<size; ++i){
-      vec.at(i) = unpack_long(PyList_GetItem(shape, i));
-    }
+    for (int i = 0; i < size; ++i) { vec.at(i) = unpack_long(PyList_GetItem(shape, i)); }
     auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
     return PyTensor_New(result);
 
   } else {
-    if(PyLong_Check(shape)){
+    if (PyLong_Check(shape)) {
       DimVector vec(size);
-      for(int i=0; i < size; ++i){
-        vec.at(i) = unpack_long(PyTuple_GetItem(args, i));
-      }
+      for (int i = 0; i < size; ++i) { vec.at(i) = unpack_long(PyTuple_GetItem(args, i)); }
       auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
       return PyTensor_New(result);
     } else {
-        size = (size_t)PyTuple_Size(shape);
-        DimVector vec(size);
-        for(int i=0; i < size; ++i){
-          vec.at(i) = unpack_long(PyTuple_GetItem(shape, i));
-        }
-        auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
-        return PyTensor_New(result);
+      size = (size_t)PyTuple_Size(shape);
+      DimVector vec(size);
+      for (int i = 0; i < size; ++i) { vec.at(i) = unpack_long(PyTuple_GetItem(shape, i)); }
+      auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
+      return PyTensor_New(result);
     }
   }
   END_HANDLE_ERRORS
