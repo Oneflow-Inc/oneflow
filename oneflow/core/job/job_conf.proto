@@ -155,7 +155,7 @@ message PredictConf {
 message MemoryAllocationAlgorithmConf {
   optional bool use_mem_size_first_algo = 1 [default = true];
   optional bool use_mutual_exclusion_first_algo = 2 [default = true];
-  optional bool use_time_line_algo = 3 [default = false];
+  optional bool use_time_line_algo = 3 [default = true];
 }
 
 message QatConfig {
