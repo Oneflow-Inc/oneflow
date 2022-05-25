@@ -9425,9 +9425,10 @@ def OneFlow_FillOp : OneFlow_BaseOp<"fill_", [NoSideEffect, SupportNonContiguous
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FillGradOp : OneFlow_BaseOp<"fill_grad", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FillTensorOp : OneFlow_BaseOp<"fill_tensor_", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$in
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$value
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -9441,10 +9442,9 @@ def OneFlow_FillGradOp : OneFlow_BaseOp<"fill_grad", [NoSideEffect, SupportNonCo
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FillTensorOp : OneFlow_BaseOp<"fill_tensor_", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FillGradOp : OneFlow_BaseOp<"fill_grad", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$in,
-    OneFlow_Tensor:$value
+    OneFlow_Tensor:$in
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -9454,5 +9454,6 @@ def OneFlow_FillTensorOp : OneFlow_BaseOp<"fill_tensor_", [NoSideEffect, Support
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
 
 #endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
