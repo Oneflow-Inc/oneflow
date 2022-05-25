@@ -14,29 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import numpy as np
 import oneflow as flow
 import oneflow.unittest
+
 from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def _test_narrow(test_case, ndim, placement, sbp):
-    dims = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
+def _test_chunk(test_case, ndim, placement, sbp):
+    dims = [random(1, 3).to(int) * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
-    dim = random(-ndim, ndim).to(int).value()
-    start = random(0, dims[dim]).to(int).value()
-    length = random(1, dims[dim] - start + 1).to(int).value()
+    dim = random(-ndim, ndim).to(int)
+    chunks = random(low=1, high=4).to(int)
+    y = torch.chunk(x, chunks=chunks, dim=dim)
+    z = torch.cat(y, dim=dim)
+    return z
 
-    return torch.narrow(x, dim=dim, start=start, length=length)
 
-
-class TestNarrow(flow.unittest.TestCase):
+class TestModule(flow.unittest.TestCase):
     @globaltest
-    def test_narrow(test_case):
+    def test_chunk(test_case):
         for placement in all_placement():
             ndim = random(1, 4).to(int).value()
             for sbp in all_sbp(placement, max_dim=min(ndim, 2)):
-                _test_narrow(test_case, ndim, placement, sbp)
+                _test_chunk(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
