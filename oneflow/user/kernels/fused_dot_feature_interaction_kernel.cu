@@ -407,27 +407,28 @@ __global__ void DotFeatureInteractionHalfBackward(
     batch_output_concat_grad[i] = batch_dy[i];
   }
   const half* batch_interaction_dy = batch_dy + output_concat_size;
-  for (int i = thread_id; i < padded_num_rows * matrix_dy_shared_mem_cols;
-       i += blockDim.x * blockDim.y) {
-    const int32_t matrix_row = i / matrix_dy_shared_mem_cols;
-    const int32_t matrix_col = i - matrix_row * matrix_dy_shared_mem_cols;
-    half grad_val = 0;
-    if (matrix_row < features_dim && matrix_col < features_dim) {
-      if (matrix_col < matrix_row) {
-        int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
-        grad_val = batch_interaction_dy[dy_col_idx];
-      } else if (matrix_row < matrix_col) {
-        // transpose add
-        int32_t trans_row_id = matrix_col;
-        int32_t trans_col_id = matrix_row;
-        int32_t dy_col_idx = trans_row_id * (offset + trans_row_id - 1 + offset) / 2 + trans_col_id;
-        grad_val = batch_interaction_dy[dy_col_idx];
-      } else if ((matrix_row == matrix_col) && (offset == 1)) {
-        int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
-        grad_val = batch_interaction_dy[dy_col_idx] * static_cast<half>(2);
+  for (int matrix_row = threadIdx.y; matrix_row < padded_num_rows; matrix_row += blockDim.y) {
+    for (int matrix_col = threadIdx.x; matrix_col < padded_num_rows; matrix_col += blockDim.x) {
+      const int64_t i = matrix_row * matrix_dy_shared_mem_cols + matrix_col;
+      half grad_val = 0;
+      if (matrix_row < features_dim && matrix_col < features_dim) {
+        if (matrix_col < matrix_row) {
+          int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
+          grad_val = batch_interaction_dy[dy_col_idx];
+        } else if (matrix_row < matrix_col) {
+          // transpose add
+          int32_t trans_row_id = matrix_col;
+          int32_t trans_col_id = matrix_row;
+          int32_t dy_col_idx =
+              trans_row_id * (offset + trans_row_id - 1 + offset) / 2 + trans_col_id;
+          grad_val = batch_interaction_dy[dy_col_idx];
+        } else if ((matrix_row == matrix_col) && (offset == 1)) {
+          int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
+          grad_val = batch_interaction_dy[dy_col_idx] * static_cast<half>(2);
+        }
       }
+      matrix_dy_buf[i] = grad_val;
     }
-    matrix_dy_buf[i] = grad_val;
   }
 
   // 2.load in to in in_buf
