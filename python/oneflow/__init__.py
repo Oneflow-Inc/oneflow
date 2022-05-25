@@ -341,9 +341,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
 )
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
-from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
-from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
