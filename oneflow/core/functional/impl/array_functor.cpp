@@ -2696,6 +2696,7 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
   std::shared_ptr<Tensor> tensor;
   auto input_placement = JUST(x->parallel_desc());
   std::string input_device_tag = input_placement->device_tag();
+  if (input_device_tag == "gpu") { input_device_tag = "cuda"; }
   if (device_type == input_device_tag) {
     if (dtype == x->dtype()) {
       return (copy ? JUST(x->clone()) : x);
