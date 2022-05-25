@@ -178,7 +178,6 @@ template class IRRoundTrip<kBeforeAD>;
 template class IRRoundTrip<kAfterAD>;
 
 Maybe<std::string> ConvertJobToTosaIR(Job* job) {
-  // TODO: check path is valid dir
   if (IsInDebugMode()) { TeePersistentLogStream::Create("saved_job")->Write(*job); }
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
   return ::mlir::oneflow::ConvertJobToTosaIR(job_wrapper);
