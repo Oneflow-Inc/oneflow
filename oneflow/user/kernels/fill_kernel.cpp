@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdint>
+#include "oneflow/core/common/scalar.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -49,6 +51,29 @@ class FillKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+class FillTensorKernel final : public user_op::OpKernel {
+ public:
+  FillTensorKernel() = default;
+  ~FillTensorKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
+    const int32_t elem_cnt = in->shape().elem_cnt();
+    bool is_floating_value = ctx->Attr<bool>("is_floating_value");
+    const Scalar value_scalar =
+        is_floating_value ? Scalar(value->dptr<double>()[0]) : Scalar(value->dptr<int64_t>()[0]);
+    CHECK_GE(elem_cnt, 0);
+    if (elem_cnt == 0) { return; }
+    std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
+    CHECK(fill);
+    fill->Launch(ctx->stream(), out->mut_dptr(), value_scalar, elem_cnt);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
 class FillGradKernel final : public user_op::OpKernel {
  public:
   FillGradKernel() = default;
@@ -75,7 +100,9 @@ auto FillPrimitiveExists() {
 
 REGISTER_USER_KERNEL("fill_").SetCreateFn<FillKernel>().SetIsMatchedHob(FillPrimitiveExists()
                                                                         == true);
-
+REGISTER_USER_KERNEL("fill_tensor_")
+    .SetCreateFn<FillTensorKernel>()
+    .SetIsMatchedHob(FillPrimitiveExists() == true);
 REGISTER_USER_KERNEL("fill_grad")
     .SetCreateFn<FillGradKernel>()
     .SetIsMatchedHob(FillPrimitiveExists() == true);

@@ -2184,7 +2184,10 @@
   bind_python: True
 
 - name: "fill_"
-  signature: "Tensor (Tensor in, Scalar value) => Fill"
+  signature: [
+    "Tensor (Tensor in, Scalar value) => Fill",
+    "Tensor (Tensor in, Tensor value) => FillTensor"
+    ]
   bind_python: True
 
 - name: "fill_grad"

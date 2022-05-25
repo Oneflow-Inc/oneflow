@@ -823,16 +823,6 @@ def _normal(self, mean=0, std=1):
 
 
 def _fill(self, value):
-    if type(value) == flow.Tensor:
-        if len(value.size()) > 0:
-            raise RuntimeError(
-                "fill_ only supports 0-dimension value tensor but got tensor with 1 dimensions."
-            )
-        else:
-            if value.dtype == flow.int:
-                value = int(value)
-            else:
-                value = float(value)
     return flow._C.fill_(self, value)
 
 

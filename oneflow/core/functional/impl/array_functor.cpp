@@ -3047,6 +3047,36 @@ class FillFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FillTensorFunctor {
+ public:
+  FillTensorFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fill_").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& value) const {
+    MutableAttrMap attrs;
+    const int64_t ndim = value->ndim();
+    CHECK_EQ_OR_RETURN(ndim, 0)
+        << Error::RuntimeError()
+        << "fill_ only supports 0-dimension value tensor but got tensor with 1 dimensions.";
+    if (IsFloatingDataType(in->dtype()->data_type())) {
+      JUST(attrs.SetAttr<bool>("is_floating_value", true));
+    } else if (IsIntegralDataType(in->dtype()->data_type())) {
+      JUST(attrs.SetAttr<bool>("is_floating_value", false));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    JUST(CheckInplaceValid(in));
+    auto outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = in;
+    JUST(OpInterpUtil::Dispatch(*op_, {in, value}, outputs.get(), attrs));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FillGradFunctor {
  public:
   FillGradFunctor() {
@@ -3073,6 +3103,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
   m.add_functor<impl::FillFunctor>("Fill");
+  m.add_functor<impl::FillTensorFunctor>("FillTensor");
   m.add_functor<impl::FillGradFunctor>("FillGrad");
   m.add_functor<impl::WhereFunctor>("Where");
   m.add_functor<impl::WhereScalarXFunctor>("WhereScalarX");

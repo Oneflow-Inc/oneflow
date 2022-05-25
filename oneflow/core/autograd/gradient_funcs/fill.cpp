@@ -24,7 +24,6 @@ namespace one {
 
 struct FillCaptureState : public AutoGradCaptureState {
   bool requires_grad;
-  Scalar value;
 };
 
 class Fill : public OpExprGradFunction<FillCaptureState> {
@@ -51,13 +50,6 @@ Maybe<void> Fill::Capture(FillCaptureState* ctx, const TensorTuple& inputs,
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
-    ctx->value = Scalar(JUST(composed_attrs.GetAttr<double>("floating_value")));
-  } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
-    ctx->value = Scalar(JUST(composed_attrs.GetAttr<int64_t>("integral_value")));
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "Data type is not floating or integral type.";
-  }
   return Maybe<void>::Ok();
 }
 
@@ -70,6 +62,7 @@ Maybe<void> Fill::Apply(const FillCaptureState* ctx, const TensorTuple& out_grad
 }
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("fill_", Fill);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fill_tensor_", Fill);
 
 }  // namespace one
 }  // namespace oneflow
