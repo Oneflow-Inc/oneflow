@@ -30,8 +30,7 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
-    NamedIONode,
-    map_structed_value_leaf,
+    IOArgs,
     operators_repr,
     seq_to_func_return,
 )
@@ -196,17 +195,16 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        _, named_nodes = NamedIONode.construct(
-            (args, kwargs), "_" + self.name_prefix + self.name + "_input", None
-        )
-        for (name, node) in named_nodes:
-            if node.is_leaf():
-                arg = node.value()
+        io_args = IOArgs((args, kwargs), True, "_" + self.name_prefix + self.name + "_input", None)
+       
+        for (name, arg) in io_args.flattened_named_args():
+            if arg.is_leaf():
+                arg_value = arg.value()
                 meta_repr_str = (
-                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                    arg_value._meta_repr() if isinstance(arg_value, Tensor) else str(type(arg_value))
                 )
                 in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg, Tensor):
+                if not isinstance(arg_value, Tensor):
                     in_str = "[WARNING]" + in_str
                 self._args_repr.append(in_str)
                 self.__print(0, 1, in_str)
@@ -236,18 +234,16 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        _, named_nodes = NamedIONode.construct(
-            (outputs, {}), "_" + self.name_prefix + self.name + "_output", None
-        )
-
-        for (name, node) in named_nodes:
-            if node.is_leaf():
-                arg = node.value()
+        io_args = IOArgs((outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None)
+   
+        for (name, arg) in io_args.flattened_named_args():
+            if arg.is_leaf():
+                arg_value = arg.value()
                 meta_repr_str = (
-                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                    arg_value._meta_repr() if isinstance(arg_value, Tensor) else str(type(arg_value))
                 )
                 out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg, Tensor):
+                if not isinstance(arg_value, Tensor):
                     out_str = "[WARNING]" + out_str
                 self._outs_repr.append(out_str)
                 self.__print(0, 1, out_str)
@@ -336,10 +332,8 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_node, _ = NamedIONode.construct(
-            (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type, None
-        )
-
+        io_args = IOArgs((args, kwargs), True, "_" + self.name_prefix + self.name + "_" + io_type, None)
+     
         def leaf_node_fn(leaf_node):
             arg = leaf_node.value()
             name = leaf_node.prefix() + "_" + leaf_node.name()
@@ -359,7 +353,7 @@ class ModuleBlock(Block):
                 )
                 return arg
 
-        out = map_structed_value_leaf(io_node, leaf_node_fn)
+        out = io_args.map_leaf(leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs

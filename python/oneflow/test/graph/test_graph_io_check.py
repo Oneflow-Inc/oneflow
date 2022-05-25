@@ -22,7 +22,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.nn.graph.util import NamedIONode, map_structed_value_leaf
+from oneflow.nn.graph.util import IOArgs
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -50,17 +50,17 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             inp = (args, kwargs)
             print("origin: ", inp)
 
-            io_node, named_nodes = NamedIONode.construct(inp, "Graph_0", None)
+            io_args = IOArgs(inp, True, "Graph_0", None)
 
-            for (name, node) in named_nodes:
-                print(name, repr(node))
+            for (name, arg) in io_args.flattened_named_args():
+                print(name, repr(arg))
 
-            def leaf_fn(node):
-                if isinstance(node.value(), str):
+            def leaf_fn(arg):
+                if isinstance(arg.value(), str):
                     return "mapped_str"
-                return node.value()
+                return arg.value()
 
-            m_v = map_structed_value_leaf(io_node, leaf_fn)
+            m_v = io_args.map_leaf(leaf_fn)
             print("mapped:", m_v)
             return m_v[0], m_v[1]
 
