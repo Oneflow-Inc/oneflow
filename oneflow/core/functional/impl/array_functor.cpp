@@ -2029,7 +2029,7 @@ class TensorGetItemFunctor {
     if (is_identity) {
       result = expand_input;
     } else {
-      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/false));
+      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
