@@ -24,6 +24,7 @@ namespace primitive {
 enum class UnaryOp {
   kRelu,
   kGelu,
+  kLeakyRelu,
   kTanh,
   kLogicalNot,
 };
