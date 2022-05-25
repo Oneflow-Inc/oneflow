@@ -27,16 +27,16 @@ template<typename T>
 __global__ void UpsampleLinear1DForward(const int64_t elem_cnt, const T* in_dptr,
                                         NdIndexOffsetHelper<int64_t, 3> in_helper,
                                         NdIndexOffsetHelper<int64_t, 3> out_helper,
-                                        const int in_height, const float scale_factor,
+                                        const int in_height, const double scale_factor,
                                         bool align_corners, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
     out_helper.OffsetToNdIndex(index, n, c, h);
-    const T h1r = GetLinearInputIndex(h, scale_factor, align_corners);
+    const double h1r = GetLinearInputIndex(h, scale_factor, align_corners);
     const int64_t h1 = h1r;
     const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
-    const T h1lambda = h1r - h1;
-    const T h0lambda = static_cast<T>(1.) - h1lambda;
+    const double h1lambda = h1r - h1;
+    const double h0lambda = static_cast<double>(1.) - h1lambda;
     out_dptr[index] = h0lambda * in_dptr[in_helper.NdIndexToOffset(n, c, h1)]
                       + h1lambda * in_dptr[in_helper.NdIndexToOffset(n, c, h1 + h1p)];
   }
@@ -46,16 +46,16 @@ template<typename T>
 __global__ void UpsampleLinear1DBackward(const int64_t elem_cnt, const T* dy_dptr,
                                          NdIndexOffsetHelper<int64_t, 3> dy_helper,
                                          NdIndexOffsetHelper<int64_t, 3> dx_helper,
-                                         const int in_height, const float scale_factor,
+                                         const int in_height, const double scale_factor,
                                          bool align_corners, T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h;
     dy_helper.OffsetToNdIndex(index, n, c, h);
-    const T h1r = GetLinearInputIndex(h, scale_factor, align_corners);
+    const double h1r = GetLinearInputIndex(h, scale_factor, align_corners);
     const int64_t h1 = h1r;
     const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
-    const T h1lambda = h1r - h1;
-    const T h0lambda = static_cast<T>(1.) - h1lambda;
+    const double h1lambda = h1r - h1;
+    const double h0lambda = static_cast<double>(1.) - h1lambda;
 
     cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, h1), h0lambda * dy_dptr[index]);
     cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, h1 + h1p),
@@ -76,7 +76,6 @@ class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float height_scale = ctx->Attr<float>("scale_factor");
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = y_tensor->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 3> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
@@ -85,6 +84,11 @@ class UpsampleLinear1DGPUKernel final : public user_op::OpKernel {
                                                y_tensor->shape().At(2));
     const int64_t in_height = x_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(2);
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<double>("scale_factor");
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+    }
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
@@ -112,7 +116,6 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                               dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float height_scale = ctx->Attr<float>("scale_factor");
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
     NdIndexOffsetHelper<int64_t, 3> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
@@ -122,6 +125,11 @@ class UpsampleLinearGrad1DGPUKernel final : public user_op::OpKernel {
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
     const int64_t in_height = dx_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(2);
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double height_scale = ctx->Attr<double>("scale_factor");
+    if (!output_size.empty()) {
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+    }
     if (in_height == out_height) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
