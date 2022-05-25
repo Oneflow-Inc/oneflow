@@ -871,7 +871,7 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
         else:
             assert other.is_global
             if other.placement.type == 'cpu':
-                cpu_placement = flow.placement('cpu', self.placement.ranks())
+                cpu_placement = flow.placement('cpu', self.placement.ranks)
                 other = other.to_global(placement=cpu_placement, sbp=self.sbp)
                 _copy_from_numpy_to_eager_local_tensor(self.to_local(), other.to_local().numpy())   
                 return

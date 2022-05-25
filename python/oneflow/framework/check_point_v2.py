@@ -132,11 +132,11 @@ def _LoadSingleVariable(
             file_backed_blob = FileBackendVariableBlob(path)
             loaded = flow.tensor(
                 file_backed_blob.numpy(), dtype=file_backed_blob.dtype
-            ).to("cuda")
+            )
         else:
-            loaded = flow.tensor([]).to("cuda")
+            loaded = flow.tensor([])
         loaded = loaded.to_global(
-            flow.placement("cuda", [global_src_rank]), flow.sbp.broadcast
+            flow.placement("cpu", [global_src_rank]), flow.sbp.broadcast
         )
         return loaded
 
