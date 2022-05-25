@@ -615,7 +615,6 @@ static PyTypeObject* MakeTensorType() {
       concat_method_def(PyTensorObject_methods, PyTensorObject_extra_methods);
   type->tp_methods = total_methods.data();
 
-
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
 
