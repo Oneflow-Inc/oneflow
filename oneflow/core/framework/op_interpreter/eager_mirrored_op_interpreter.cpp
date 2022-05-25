@@ -338,6 +338,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
   JUST(LocalToConsistent(op_expr, inputs, outputs, ctx));
+  bool sync_data = JUST(ctx.attrs.GetAttr<bool>("sync_data"));
   const auto& consistent_tensor = JUST(outputs->at(0)->AsConsistentTensor());
   JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
     if (IsConsistentTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
@@ -348,8 +349,10 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& tensor_meta = JUST(consistent_tensor->consistent_tensor_meta());
     const auto& local_tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
-    const auto& synced_tensor =
-        JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+    std::shared_ptr<Tensor> synced_tensor = reshaped_tensor;
+    if (sync_data) {
+      synced_tensor = JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+    }
     auto* consistent_tensor_impl =
         reinterpret_cast<EagerConsistentTensorImpl*>(consistent_tensor->mut_impl());
     CHECK_NOTNULL_OR_RETURN(consistent_tensor_impl);

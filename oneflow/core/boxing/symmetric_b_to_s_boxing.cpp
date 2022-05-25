@@ -87,7 +87,7 @@ Maybe<one::Tensor> SymmetricB2S(const std::shared_ptr<one::Tensor>& tensor, Symb
 
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
                                                  *JUST(GetSbpList(out->nd_sbp())), *tensor->shape(),
-                                                 tensor->dtype()));
+                                                 tensor->dtype(), /* check_data */ false));
 }
 
 COMMAND(RegisterBoxingFunction("symmetric-b-to-s", CheckSymmetricB2S, &SymmetricB2S));

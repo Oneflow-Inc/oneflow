@@ -446,6 +446,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
+  JUST(attrs.SetAttr<bool>("sync_data", sync_and_check_meta));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -463,7 +464,7 @@ class LocalToConsistentFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                           const Shape& shape, const Symbol<DType>& dtype) const {
+                           const Shape& shape, const Symbol<DType>& dtype, bool sync_data) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1, /* force_check */ false));
@@ -490,6 +491,7 @@ class LocalToConsistentFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<bool>("sync_data", sync_data));
     DisableCheckConsistentTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
