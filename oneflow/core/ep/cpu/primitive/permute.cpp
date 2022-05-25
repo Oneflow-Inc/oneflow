@@ -83,7 +83,7 @@ class OneDnnPermuteImpl : public Permute {
     CHECK_LE(num_dims, kMaxNumDims);
     CHECK_GT(num_dims, 0);
 
-    stream->As<CpuStream>()->onednn_fallback()->Launch([&](dnnl::engine* onednn_engine,
+    stream->As<CpuStream>()->onednn_exector()->Launch([&](dnnl::engine* onednn_engine,
                                                            dnnl::stream* onednn_stream) {
       size_t onednn_num_dims = num_dims;
       dnnl::memory::dims onednn_dims(kMaxNumDims + 1, 0);
@@ -139,7 +139,7 @@ class PermuteFactoryImpl : public PermuteFactory {
   std::unique_ptr<Permute> New(size_t max_num_dims) override {
     if (max_num_dims <= kMaxNumDims) {
 #ifdef WITH_ONEDNN
-      if (OneDNNIsEnabled()) { return std::unique_ptr<Permute>(new OneDnnPermuteImpl()); }
+      if (OneDnnIsEnabled()) { return std::unique_ptr<Permute>(new OneDnnPermuteImpl()); }
 #endif
       return std::unique_ptr<Permute>(new PermuteImpl());
     } else {

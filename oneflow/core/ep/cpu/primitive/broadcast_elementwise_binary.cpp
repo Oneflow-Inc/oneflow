@@ -180,7 +180,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    stream->As<CpuStream>()->onednn_fallback()->Launch([&](dnnl::engine* onednn_engine,
+    stream->As<CpuStream>()->onednn_exector()->Launch([&](dnnl::engine* onednn_engine,
                                                            dnnl::stream* onednn_stream) {
       // onednn do not optimize for 3d tensor in our experiments, so expand it
       // to 4d if needed.
@@ -193,7 +193,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
       const void* onednn_src0 = nullptr;
       const void* onednn_src1 = nullptr;
 
-      // OneDNN inplace operations only support src_0
+      // OneDnn inplace operations only support src_0
       if (src1 == dst) {
         onednn_src0 = src1;
         onednn_src1 = src0;
@@ -238,7 +238,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool) \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)
 
-// OneDNN binary op does not support s32
+// OneDnn binary op does not support s32
 // CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ
 
 #define CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ \
@@ -357,7 +357,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY, BINARY_MATH_OP_ONEDNN_PAIR,
                 CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ)
-            // For OneDNN comparasion binary op
+            // For OneDnn comparasion binary op
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                 MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                 BINARY_LOGICAL_COMPARISION_OP_ONEDNN_PAIR, CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ,
@@ -365,7 +365,7 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 
 #undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
 #undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
-    if (OneDNNIsEnabled()) {
+    if (OneDnnIsEnabled()) {
       auto broadcast_elementwise_binary_primitive =
           GetPrimitiveFromHandlers(new_broadcast_elementwise_binary_onednn_handle,
                                    std::make_tuple(binary_op, src_type, dst_type));

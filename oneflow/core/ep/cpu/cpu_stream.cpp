@@ -29,8 +29,8 @@ void CpuStream::RecordEvent(Event* /*event*/) {}
 
 #ifdef WITH_ONEDNN
 
-const std::unique_ptr<ep::OneDNNFallback>& CpuStream::onednn_fallback() const {
-  return onednn_fallback_;
+const std::unique_ptr<ep::OneDnnExecutor>& CpuStream::onednn_exector() const {
+  return onednn_exector_;
 }
 
 #endif

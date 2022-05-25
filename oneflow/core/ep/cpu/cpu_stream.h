@@ -79,7 +79,7 @@ class CpuNumThreadsGuard {
 
 #ifdef WITH_ONEDNN
 
-class OneDNNFallback;
+class OneDnnExecutor;
 
 #endif
 
@@ -141,12 +141,12 @@ class CpuStream : public Stream {
   }
 
 #ifdef WITH_ONEDNN
-  const std::unique_ptr<ep::OneDNNFallback>& onednn_fallback() const;
+  const std::unique_ptr<ep::OneDnnExecutor>& onednn_exector() const;
 #endif
 
  private:
 #ifdef WITH_ONEDNN
-  std::unique_ptr<ep::OneDNNFallback> onednn_fallback_ = std::make_unique<ep::OneDNNFallback>(this);
+  std::unique_ptr<ep::OneDnnExecutor> onednn_exector_ = std::make_unique<ep::OneDnnExecutor>(this);
 #endif
   CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
@@ -154,18 +154,18 @@ class CpuStream : public Stream {
 
 #ifdef WITH_ONEDNN
 
-class OneDNNFallback {
+class OneDnnExecutor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(OneDNNFallback);
+  OF_DISALLOW_COPY_AND_MOVE(OneDnnExecutor);
 
-  OneDNNFallback() = delete;
+  OneDnnExecutor() = delete;
 
-  explicit OneDNNFallback(CpuStream* cpu_stream) : cpu_stream_(cpu_stream) {
+  explicit OneDnnExecutor(CpuStream* cpu_stream) : cpu_stream_(cpu_stream) {
     engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
     stream_.reset(new dnnl::stream(*engine_));
   }
 
-  ~OneDNNFallback() = default;
+  ~OneDnnExecutor() = default;
 
   template<typename F>
   void Launch(const F& f) {

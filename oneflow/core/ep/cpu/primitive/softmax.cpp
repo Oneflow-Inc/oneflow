@@ -81,7 +81,7 @@ class SoftmaxImpl : public SoftmaxBase {
 
 template<class OneDnnSoftmax, dnnl::memory::data_type data_type>
 void SoftmaxOneDnn(Stream* stream, size_t rows, size_t cols, const void* x, void* y) {
-  stream->As<CpuStream>()->onednn_fallback()->Launch(
+  stream->As<CpuStream>()->onednn_exector()->Launch(
       [&](dnnl::engine* onednn_engine, dnnl::stream* onednn_stream) {
         dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(rows),
                                        static_cast<dnnl::memory::dim>(cols)};
@@ -157,7 +157,7 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
             MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(dnnl::memory::data_type::f32, DataType::kFloat)};
 
 #undef MAKE_NEW_ONEDNN_SOFTMAX_ENTRY
-    if (OneDNNIsEnabled()) {
+    if (OneDnnIsEnabled()) {
       auto softmax_primitive = GetPrimitiveFromHandlers(new_softmax_onednn_handle, data_type);
       if (softmax_primitive) { return softmax_primitive; }
     }
