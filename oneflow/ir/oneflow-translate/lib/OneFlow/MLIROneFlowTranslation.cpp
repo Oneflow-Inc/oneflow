@@ -890,6 +890,10 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<mlir::func::FuncDialect>();
   OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(path, &context);
+  if (!module) {
+    llvm::errs() << "fail to parse file: " << path << "\n";
+    exit(EXIT_FAILURE);
+  }
   JobImporter imp(job_wrapper, &context, module.get());
   if (failed(imp.TryToUpdateJob())) {
     llvm::errs() << "fail to load job from IR";
