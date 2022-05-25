@@ -198,7 +198,6 @@ jobs:
             cu102
             cpu
             llvm13
-            openvino
 
   build-oneflow:
     name: "Build OneFlow"
@@ -266,27 +265,6 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
-        name: Build manylinux ${{ matrix.entry }}
-        id: build-openvino
-        if: ${{ matrix.entry =='openvino' && !matrix.cache-hit }}
-        with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/serving/openvino.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          oneflow-build-env: openvino
-          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
-          clear-wheelhouse-dir: true
-          self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: none
-          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
-          docker-run-use-system-http-proxy: false
-          docker-run-use-lld: true
-          retry-failed-build: true
-          wheel-audit: false
-          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          python-versions: |
-            3.6
       - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
@@ -912,8 +890,8 @@ jobs:
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
-          unknown-threshold: 15
-          error-threshold: 20
+          unknown-threshold: 30
+          error-threshold: 40
       - name: Remove automerge
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
