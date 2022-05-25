@@ -40,17 +40,13 @@ namespace one {
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
-
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   HANDLE_ERRORS
   PyObject* new_shape = NULL;
-  if(PyTuple_Size(args) == 1)
-  {
+  if (PyTuple_Size(args) == 1) {
     new_shape = PyTuple_GetItem(args, 0);
-    if(PyLong_Check(new_shape))
-      new_shape = PyTuple_Pack(1, new_shape);
-  }
-  else {
+    if (PyLong_Check(new_shape)) new_shape = PyTuple_Pack(1, new_shape);
+  } else {
     new_shape = args;
   }
   PyObject* tuple = PyTuple_Pack(2, self, new_shape);
