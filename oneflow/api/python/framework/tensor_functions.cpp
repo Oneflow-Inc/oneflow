@@ -53,8 +53,8 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   }
   PyObject* tuple = PyTuple_Pack(2, self, new_shape);
   return functional::reshape(NULL, tuple, NULL);
-  if (new_shape) { Py_DECREF(new_shape); }
-  new_shape = NULL;
+  Py_DECREF(new_shape);
+  Py_DECREF(tuple);
   END_HANDLE_ERRORS
 }
 
@@ -64,8 +64,6 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args) {
   PyObject* other = PyTuple_GetItem(args, 0);
   auto result = ASSERT_PTR(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape()));
   return PyTensor_New(result);
-  if (other) { Py_DECREF(other); }
-  other = NULL;
   END_HANDLE_ERRORS
 }
 
