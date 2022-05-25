@@ -15,10 +15,8 @@ limitations under the License.
 */
 #include "oneflow/api/python/framework/tensor.h"
 
-#include <methodobject.h>
 #include <pybind11/pybind11.h>
 #include <Python.h>
-#include <pyhash.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
