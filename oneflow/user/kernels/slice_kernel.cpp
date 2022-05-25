@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
@@ -289,7 +290,11 @@ std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheCon
   // TODO(wyg): support nd_sbp SliceContext
   const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex(large_tensor_name, 0);
   if (in_nd_sbp.sbp_parallel_size() > 1) {
-    CHECK(IsAllBroadcastNdSbp(in_nd_sbp)) << large_tensor_name << "'s nd_sbp must be broadcast'";
+    CHECK(std::all_of(in_nd_sbp.sbp_parallel().begin(), in_nd_sbp.sbp_parallel().end(),
+                      [](const SbpParallel& sbp) {
+                        return sbp.has_broadcast_parallel() || sbp.has_partial_sum_parallel();
+                      }))
+        << large_tensor_name << "'s nd_sbp must be broadcast or partial_sum";
     return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   } else {
     const auto& in_sbp = in_nd_sbp.sbp_parallel(0);
@@ -360,7 +365,11 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const NdSbp& value_nd_sbp = ctx->NdSbp4ArgNameAndIndex("value", 0);
-      CHECK(IsAllBroadcastNdSbp(value_nd_sbp)) << "value's sbp must be broadcast";
+      CHECK(std::all_of(value_nd_sbp.sbp_parallel().begin(), value_nd_sbp.sbp_parallel().end(),
+                        [](const SbpParallel& sbp) {
+                          return sbp.has_partial_sum_parallel() || sbp.has_broadcast_parallel();
+                        }))
+          << "value's sbp must be broadcast or partial_sum";
     }
     return CreateSliceCache(ctx, "ref");
   }
