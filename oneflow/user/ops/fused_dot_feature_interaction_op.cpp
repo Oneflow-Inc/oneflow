@@ -39,10 +39,6 @@ namespace oneflow {
     *ctx->OutputShape("out", 0) = Shape({batch_size, vector_size});
     return Maybe<void>::Ok();
   }
-  const int64_t align_dim = 16;
-  const int64_t concated_padded_dim =
-      std::ceil(static_cast<float>(features_concated_dim) / static_cast<float>(align_dim))
-      * align_dim;
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
   const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
   const int64_t interaction_dim = self_interaction
