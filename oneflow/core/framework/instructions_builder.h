@@ -29,9 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/blocking_then_busy.h"
-#include "oneflow/core/framework/object.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
-#include "oneflow/core/framework/opkernel_object.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 
 namespace oneflow {

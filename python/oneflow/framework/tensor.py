@@ -1158,6 +1158,10 @@ def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
 
 
+def inplace_contiguous_(self):
+    return flow._C.contiguous_(self)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -1385,6 +1389,7 @@ def RegisterMethods():
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
+    Tensor.contiguous_ = inplace_contiguous_
 
 
 def register_tensor_op(op_name):
