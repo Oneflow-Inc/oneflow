@@ -84,7 +84,7 @@ class OneDnnPermuteImpl : public Permute {
     CHECK_GT(num_dims, 0);
 
     stream->As<CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
-                                                          dnnl::stream* onednn_stream) {
+                                                           dnnl::stream* onednn_stream) {
       size_t onednn_num_dims = num_dims;
       dnnl::memory::dims onednn_dims(kMaxNumDims + 1, 0);
       dnnl::memory::dims onednn_permute(kMaxNumDims + 1, 0);

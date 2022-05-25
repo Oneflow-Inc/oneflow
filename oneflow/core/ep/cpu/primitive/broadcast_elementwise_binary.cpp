@@ -181,7 +181,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
     stream->As<CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
-                                                          dnnl::stream* onednn_stream) {
+                                                           dnnl::stream* onednn_stream) {
       // onednn do not optimize for 3d tensor in our experiments, so expand it
       // to 4d if needed.
       // Note that only onednn "internal" dims will be affected, the shape

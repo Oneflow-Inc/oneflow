@@ -190,4 +190,4 @@ class OneDnnExecutor {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+#endif  // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
