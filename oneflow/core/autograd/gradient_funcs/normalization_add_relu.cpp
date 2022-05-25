@@ -152,7 +152,7 @@ class NormalizationAddReluGrad : public OpExprGradFunction<NormalizationAddReluG
     CHECK_EQ_OR_RETURN(
         results->size(),
         ctx->has_addend ? 4
-                        : 3);  // here output includes "gamma_diff" "beta_diff" "dx" "addend_diff"
+                        : 3) << "The result size is incorrect";  // here output includes "gamma_diff" "beta_diff" "dx" "addend_diff"
 
     if (ctx->track_running_stats) {
       // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and
