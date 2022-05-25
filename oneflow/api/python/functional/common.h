@@ -96,6 +96,18 @@ inline std::vector<T> PyUnpackFloatSequence(PyObject* obj) {
       obj, [](PyObject* item) -> T { return static_cast<T>(PyFloat_AsDouble(item)); });
 }
 
+int64_t unpack_long(PyObject* obj) {
+  int overflow = -1;
+  long long val = PyLong_AsLongLongAndOverflow(obj, &overflow);
+  if (val == -1 && PyErr_Occurred()) {
+    THROW(RuntimeError) << "unpack_long >> Python exception occurs. python type:"
+                        << Py_TYPE(obj)->tp_name;
+  }
+  if (overflow != 0) { THROW(RuntimeError) << "unpack_long >> Overflow when unpacking long"; }
+  return (int64_t)val;
+}
+
+
 // String
 bool PyStringCheck(PyObject* obj);
 bool PyStringSequenceCheck(PyObject* obj);
@@ -182,6 +194,8 @@ inline PyObject* CastToPyObject<Maybe<void>>(Maybe<void>&& t) {
 
 // int64_t
 Maybe<int64_t> PyUnpackLong(PyObject* py_obj);
+// Long
+int64_t unpack_long(PyObject* obj);
 
 }  // namespace functional
 }  // namespace one

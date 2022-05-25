@@ -40,16 +40,6 @@ namespace one {
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
-int64_t unpack_long(PyObject* self) {
-  int overflow = -1;
-  long long val = PyLong_AsLongLongAndOverflow(self, &overflow);
-  if (val == -1 && PyErr_Occurred()) {
-    THROW(RuntimeError) << "unpack_long >> Python exception occurs. python type:"
-                        << Py_TYPE(self)->tp_name;
-  }
-  if (overflow != 0) { THROW(RuntimeError) << "unpack_long >> Overflow when unpacking long"; }
-  return (int64_t)val;
-}
 
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   HANDLE_ERRORS
@@ -65,21 +55,21 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   if (PyList_Check(shape)) {
     size = (size_t)PyList_Size(shape);
     DimVector vec(size);
-    for (int i = 0; i < size; ++i) { vec.at(i) = unpack_long(PyList_GetItem(shape, i)); }
+    for (int i = 0; i < size; ++i) { vec.at(i) = functional::unpack_long(PyList_GetItem(shape, i)); }
     auto result = ASSERT_PTR(functional::Reshape(tensor, Shape(vec)));
     return PyTensor_New(result);
 
   } else {
     if (PyLong_Check(shape)) {
       DimVector vec(size);
-      for (int i = 0; i < size; ++i) { vec.at(i) = unpack_long(PyTuple_GetItem(args, i)); }
+      for (int i = 0; i < size; ++i) { vec.at(i) = functional::unpack_long(PyTuple_GetItem(args, i)); }
       auto result = ASSERT_PTR(functional::Reshape(tensor, Shape(vec)));
       return PyTensor_New(result);
     } else {
       size = (size_t)PyTuple_Size(shape);
       DimVector vec(size);
-      for (int i = 0; i < size; ++i) { vec.at(i) = unpack_long(PyTuple_GetItem(shape, i)); }
-      auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
+      for (int i = 0; i < size; ++i) { vec.at(i) = functional::unpack_long(PyTuple_GetItem(shape, i)); }
+      auto result = ASSERT_PTR(functional::Reshape(tensor, Shape(vec)));
       return PyTensor_New(result);
     }
   }
@@ -90,7 +80,7 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
   PyObject* other = PyTuple_GetItem(args, 0);
-  auto result = CHECK_JUST(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape()));
+  auto result = ASSERT_PTR(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape()));
   return PyTensor_New(result);
   END_HANDLE_ERRORS
 }
