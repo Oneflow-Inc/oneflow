@@ -193,7 +193,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
       const void* onednn_src0 = nullptr;
       const void* onednn_src1 = nullptr;
 
-      // OneDnn inplace operations only support src_0
+      // OneDNN inplace operations only support src_0
       if (src1 == dst) {
         onednn_src0 = src1;
         onednn_src1 = src0;
@@ -238,7 +238,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool) \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)
 
-// OneDnn binary op does not support s32
+// OneDNN binary op does not support s32
 // CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ
 
 #define CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ \
