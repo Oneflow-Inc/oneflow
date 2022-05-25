@@ -12,7 +12,7 @@ class RELU(flow.nn.Module):
     def forward(self, x):
         return self.relu(x)
 
-class Graph(flow.nn.Graph):
+class GraphModule(flow.nn.Graph):
     def __init__(self):
         super().__init__()
         self.fw = RELU()
@@ -21,15 +21,13 @@ class Graph(flow.nn.Graph):
         return self.fw(x)
 
 
-graph_to_run = Graph()
-
-func = Runner(graph_to_run)
+func = Runner(GraphModule)
 input = flow.Tensor([-1, 1.])
 output = func(input)
 print(output)
 
 import numpy as np
-func = Runner(graph_to_run)
-input = np.array([-1, 0, 1, 1, 1, 1, 1], dtype=np.float32)
+func = Runner(GraphModule)
+input = flow.Tensor([-1, 1., -2])
 output = func(input)
 print(output)

@@ -42,9 +42,6 @@ class Iree:
         [step() for step in (self._get_job, self._convert_job_to_tosa, self._generate_context)]
     
     def _get_job(self):
-        if not self.graph._is_compiled:
-            print('graph is not compiled')
-            exit(1)
         self.job = str(text_format.MessageToString(self.graph._forward_job_proto))
     
     def _convert_job_to_tosa(self):
@@ -61,8 +58,8 @@ class Runner(object):
 
     _cache = {}
 
-    def __init__(self, graph: Graph, backend=Iree):
-        self.graph = graph
+    def __init__(self, raw_graph, backend=Iree):
+        self.raw_graph = raw_graph
         self.backend = Iree()
 
     def _parse_input(self, *args, **kwargs):
@@ -82,11 +79,12 @@ class Runner(object):
         if full_name in Runner._cache:
             return Runner._cache[full_name]
         else:
-            compiled_graph = copy.copy(self.graph)
-            compiled_graph._compile(*args, **kwargs)
-            self.backend.build(compiled_graph)
+            graph = self.raw_graph()
+            # graph.build_graph(*args, **kwargs)
+            graph._compile(*args, **kwargs)
+            self.backend.build(graph)
             ctx = self.backend.ctx
-            name = self.graph._name
+            name = graph._name
             f = ctx.modules.module[name]
             Runner._cache[full_name] = f
             return f
@@ -98,7 +96,7 @@ class Runner(object):
             return output.to_host()
 
     def full_name(self):
-        full_name = self.graph._name
+        full_name = self.raw_graph.__name__
         for elem in self.input:
             full_name += str(elem.shape) + str(elem.dtype)
         return full_name
