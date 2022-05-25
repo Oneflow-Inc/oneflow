@@ -2553,8 +2553,7 @@ def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_int
     Optional<OneFlow_Tensor>:$output_concat
   );
   let output = (outs
-    OneFlow_Tensor:$out,
-    Optional<OneFlow_Tensor>:$padded_concated_features
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$self_interaction,
@@ -2571,7 +2570,6 @@ def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_int
 def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    Optional<OneFlow_Tensor>:$padded_concated_features,
     Variadic<OneFlow_Tensor>:$features
   );
   let output = (outs
