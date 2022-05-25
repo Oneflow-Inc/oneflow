@@ -43,36 +43,18 @@ namespace one {
 
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   HANDLE_ERRORS
-  auto tensor = PyTensor_Unpack(self);
-  if (!PyTuple_Check(args)) {
-    THROW(TypeError) << "reshape(): argument 'shape' must be tuple of ints, but found "
-                     << Py_TYPE(args)->tp_name;
+  PyObject* new_shape = NULL;
+  if(PyTuple_Size(args) == 1)
+  {
+    new_shape = PyTuple_GetItem(args, 0);
+    if(PyLong_Check(new_shape))
+      new_shape = PyTuple_Pack(1, new_shape);
   }
-
-  size_t size = (size_t)PyTuple_Size(args);
-  if (size == -1) { size = tensor->ndim(); }
-  PyObject* shape = PyTuple_GetItem(args, 0);
-  if (PyList_Check(shape)) {
-    size = (size_t)PyList_Size(shape);
-    DimVector vec(size);
-    for (int i = 0; i < size; ++i) { vec.at(i) = functional::unpack_long(PyList_GetItem(shape, i)); }
-    auto result = ASSERT_PTR(functional::Reshape(tensor, Shape(vec)));
-    return PyTensor_New(result);
-
-  } else {
-    if (PyLong_Check(shape)) {
-      DimVector vec(size);
-      for (int i = 0; i < size; ++i) { vec.at(i) = functional::unpack_long(PyTuple_GetItem(args, i)); }
-      auto result = ASSERT_PTR(functional::Reshape(tensor, Shape(vec)));
-      return PyTensor_New(result);
-    } else {
-      size = (size_t)PyTuple_Size(shape);
-      DimVector vec(size);
-      for (int i = 0; i < size; ++i) { vec.at(i) = functional::unpack_long(PyTuple_GetItem(shape, i)); }
-      auto result = ASSERT_PTR(functional::Reshape(tensor, Shape(vec)));
-      return PyTensor_New(result);
-    }
+  else {
+    new_shape = args;
   }
+  PyObject* tuple = PyTuple_Pack(2, self, new_shape);
+  return functional::reshape(NULL, tuple, NULL);
   END_HANDLE_ERRORS
 }
 
