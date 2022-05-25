@@ -4,6 +4,7 @@ from google.protobuf import text_format
 from iree import runtime as ireert
 from iree.compiler import compile_str
 import numpy as np
+import copy
 
 class Iree:
 
@@ -25,8 +26,7 @@ class Iree:
     ctx: ireert.SystemContext
 
 
-    def __init__(self, graph: Graph, target=Cpu):
-        self.graph = graph
+    def __init__(self, target=Cpu):
         self.target = target
     
     def cpu(self):
@@ -37,7 +37,8 @@ class Iree:
         self.target = Iree.Cuda
         self.build()
 
-    def build(self):
+    def build(self, graph: Graph):
+        self.graph = graph
         [step() for step in (self._get_job, self._convert_job_to_tosa, self._generate_context)]
     
     def _get_job(self):
@@ -58,9 +59,11 @@ class Iree:
 
 class Runner(object):
 
+    _cache = {}
+
     def __init__(self, graph: Graph, backend=Iree):
         self.graph = graph
-        self.backend = Iree(graph)
+        self.backend = Iree()
 
     def _parse_input(self, *args, **kwargs):
         res = []
@@ -75,14 +78,18 @@ class Runner(object):
         return res
 
     def _get_function(self, *args, **kwargs):
-        if not self.graph._is_compiled:
-            self.graph._compile(*args, **kwargs)
-
-        self.backend.build()
-        ctx = self.backend.ctx
-        name = self.graph._name
-        f = ctx.modules.module[name]
-        return f
+        full_name = self.full_name()
+        if full_name in Runner._cache:
+            return Runner._cache[full_name]
+        else:
+            compiled_graph = copy.copy(self.graph)
+            compiled_graph._compile(*args, **kwargs)
+            self.backend.build(compiled_graph)
+            ctx = self.backend.ctx
+            name = self.graph._name
+            f = ctx.modules.module[name]
+            Runner._cache[full_name] = f
+            return f
     
     def _parse_output(self, output):
         if output.is_host_accessible:
@@ -90,8 +97,15 @@ class Runner(object):
         else:
             return output.to_host()
 
+    def full_name(self):
+        full_name = self.graph._name
+        for elem in self.input:
+            full_name += str(elem.shape) + str(elem.dtype)
+        return full_name
+
+
     def __call__(self, *args, **kwargs):
-        input = self._parse_input(*args, **kwargs)
+        self.input = self._parse_input(*args, **kwargs)
         function = self._get_function(*args, **kwargs)
-        output = function(*input)
+        output = function(*self.input)
         return self._parse_output(output)

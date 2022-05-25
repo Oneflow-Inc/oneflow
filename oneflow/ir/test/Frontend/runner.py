@@ -30,6 +30,6 @@ print(output)
 
 import numpy as np
 func = Runner(graph_to_run)
-input = np.array([-1, 0], dtype=np.float32)
+input = np.array([-1, 0, 1, 1, 1, 1, 1], dtype=np.float32)
 output = func(input)
 print(output)
