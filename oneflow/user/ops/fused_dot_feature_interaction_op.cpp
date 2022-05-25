@@ -100,9 +100,9 @@ namespace oneflow {
         << padded_concated_features_shape.NumAxes();
   }
   const int64_t batch_size = dy_shape.At(0);
-  CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features_grad_like"));
+  CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features"));
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
-    *ctx->OutputShape("features_grad", i) = ctx->InputShape("features_grad_like", i);
+    *ctx->OutputShape("features_grad", i) = ctx->InputShape("features", i);
   }
   if (ctx->has_output("output_concat_grad", 0)) {
     const int32_t output_concat_grad_dim = ctx->Attr<int32_t>("output_concat_grad_dim");
@@ -145,7 +145,7 @@ REGISTER_USER_OP_GRAD("fused_dot_feature_interaction")
         builder.Input("padded_concated_features", op.output("padded_concated_features", 0));
       }
       for (int64_t i = 0; i < op.input_size("features"); ++i) {
-        builder.Input("features_grad_like", op.input("features", i));
+        builder.Input("features", op.input("features", i));
       }
       if (op.user_op_conf().has_input("output_concat", 0)) {
         builder.Output("output_concat_grad")

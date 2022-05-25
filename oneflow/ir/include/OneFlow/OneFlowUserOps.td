@@ -2572,7 +2572,7 @@ def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature
   let input = (ins
     OneFlow_Tensor:$dy,
     Optional<OneFlow_Tensor>:$padded_concated_features,
-    Variadic<OneFlow_Tensor>:$features_grad_like
+    Variadic<OneFlow_Tensor>:$features
   );
   let output = (outs
     Variadic<OneFlow_Tensor>:$features_grad,

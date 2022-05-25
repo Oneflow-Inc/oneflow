@@ -942,7 +942,7 @@ class FusedDotFeatureInteractionGradFunctor {
       ops_has_output_concat_grad_[n] =
           CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction_grad")
                          .Input("dy")
-                         .Input("features_grad_like", n + 1)
+                         .Input("features", n + 1)
                          .Input("padded_concated_features")
                          .Output("features_grad", n + 1)
                          .Output("output_concat_grad")
@@ -952,7 +952,7 @@ class FusedDotFeatureInteractionGradFunctor {
       ops_no_output_concat_grad_[n] =
           CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction_grad")
                          .Input("dy")
-                         .Input("features_grad_like", n + 1)
+                         .Input("features", n + 1)
                          .Input("padded_concated_features")
                          .Output("features_grad", n + 1)
                          .Build());
@@ -962,7 +962,7 @@ class FusedDotFeatureInteractionGradFunctor {
       ops_no_padded_concated_features_[n] =
           CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction_grad")
                          .Input("dy")
-                         .Input("features_grad_like", n + 1)
+                         .Input("features", n + 1)
                          .Output("features_grad", n + 1)
                          .Build());
     }
@@ -970,9 +970,8 @@ class FusedDotFeatureInteractionGradFunctor {
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const Optional<one::Tensor>& padded_concated_features,
-                                const TensorTuple& features_grad_like,
-                                const bool& has_output_concat, const bool& self_interaction,
-                                const int32_t& output_concat_grad_dim,
+                                const TensorTuple& features, const bool& has_output_concat,
+                                const bool& self_interaction, const int32_t& output_concat_grad_dim,
                                 const std::string& pooling) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
@@ -980,10 +979,9 @@ class FusedDotFeatureInteractionGradFunctor {
     JUST(attrs.SetAttr<std::string>("pooling", pooling));
     CHECK_OR_RETURN(pooling == "sum" || pooling == "none")
         << Error::RuntimeError() << "pooling should be sum or none, but get " << pooling << ". ";
-    const int64_t n_features_grad = features_grad_like.size();
+    const int64_t n_features_grad = features.size();
     CHECK_LE_OR_RETURN(n_features_grad, kMaxInputCount)
-        << Error::RuntimeError()
-        << "The number of tensors in features_grad_like should be less than 128.";
+        << Error::RuntimeError() << "The number of tensors in features should be less than 128.";
     TensorTuple inputs;
     if (padded_concated_features) {
       inputs.resize(n_features_grad + 2);
@@ -991,7 +989,7 @@ class FusedDotFeatureInteractionGradFunctor {
       inputs.resize(n_features_grad + 1);
     }
     inputs[0] = dy;
-    for (int32_t i = 0; i < n_features_grad; ++i) { inputs[i + 1] = features_grad_like[i]; }
+    for (int32_t i = 0; i < n_features_grad; ++i) { inputs[i + 1] = features[i]; }
     if (padded_concated_features) {
       inputs[n_features_grad + 1] = JUST(padded_concated_features);
     } else {
