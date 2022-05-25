@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/ep/include/primitive/fast_integer_math.h"
+#include "oneflow/core/cuda/random_generator.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11060
 
@@ -150,8 +151,11 @@ __global__ void FusedVectorizedReluDropoutKernelv2(uint64_t seed,
                                                  const uint32_t rate, float scale, const T* x,
                                                  int32_t* mask, T* y) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandStatePhilox4_32_10_t state;
-  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  // curandStatePhilox4_32_10_t state;
+  // curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
+  oneflow::cuda::random::internal::curandStatePhilox4_32_10 state;
+  oneflow::cuda::random::internal::curand_init(seed, cuda_gen_state->dev_offset + global_thread_id, &state); // maybe fix the offset value. 
+
   using LoadType = cuda::elementwise::PackType<T, kVecSize>;
   using LoadPack = cuda::elementwise::Pack<T, kVecSize>;
 
@@ -168,7 +172,9 @@ __global__ void FusedVectorizedReluDropoutKernelv2(uint64_t seed,
     
     if(col < cols){
       const IndexType actual_index = row * cols + col; 
-      rand_uniform_pack4.storage = curand4(&state);
+      // rand_uniform_pack4.storage = curand4(&state);
+      rand_uniform_pack4.storage = oneflow::cuda::random::internal::curand4(&state);
+
       const LoadType* x_load = reinterpret_cast<const LoadType*>(x + actual_index);
       LoadPack x_vec;
       x_vec.storage = *x_load;
@@ -193,7 +199,7 @@ __global__ void FusedVectorizedReluDropoutKernelv2(uint64_t seed,
     SetCublasBitMask<kVecSize, IndexType>(fast_div, aux_ld, row, col, thread_bitmask, mask);
   }
 
-  if (threadIdx.x == 0) {
+  if (threadIdx.x == 0 && threadIdx.y == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
       cuda_gen_state->dev_counter = 0;           // reset counter to zero
@@ -278,6 +284,7 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
   T t_scale = static_cast<T>(scale);
   T zero_val = static_cast<T>(0.0);
   FastIntegerMath<IndexType> fast_div(kWarpSize);
+  // todo 加unroll
   for (IndexType row = global_warp_id; row < rows; row += step) {
     for (IndexType col = lane_id; col < cols; col += kWarpSize) {
       int32_t thread_bitmask = 0;
@@ -300,6 +307,7 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
       T t_combined_mask = static_cast<T>(combined_mask);
       y_val = x_val * t_combined_mask * t_scale;
       y[linear_index] = y_val;
+      // 是否用add_relu的方式，而不是用warp来弄
       SetCublasBitMask<1, IndexType>(fast_div, aux_ld, row, col, thread_bitmask, mask);
     }
   }
@@ -320,7 +328,8 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
       cuda_stream->device_properties().maxThreadsPerMultiProcessor;
   const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
   unsigned int blocks_per_sm = max_threads_multi_process / block_size;
-  unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
+  unsigned int pack_num = elem_cnt / pack_size; 
+  unsigned int grid_size = ((pack_num + block_size - 1) / block_size);
   grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
   return grid_size;
 }
@@ -356,57 +365,79 @@ cudaError_t LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
   uint64_t inc_offset = 0;
   const uint32_t uint_rate = UINT_MAX * rate;
   int grid_size = 0;
-  if (cols % 4 == 0) {
+  if (cols % 32 == 0) {
     // Launch Elementwise Vectorized Kernel.
-    // const int64_t pack_num = elem_cnt / kVecSize;
-    // grid_size = ComputeGridSize<kVecSize>(stream, kBlockSize, elem_cnt);
-    // if (elem_cnt < GetMaxVal<int32_t>()) {
-    //   FusedVectorizedReluDropoutKernel<T, relu, int32_t>
-    //       <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
-    //                                                             elem_cnt, aux_ld, cols, uint_rate,
-    //                                                             scale, x, mask, y);
-    // } else {
-    //   FusedVectorizedReluDropoutKernel<T, relu, int64_t>
-    //       <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
-    //                                                             elem_cnt, aux_ld, cols, uint_rate,
-    //                                                             scale, x, mask, y);
-    // }
-
-    const int64_t align32_cols = (cols + 32 - 1) / 32 * 32; 
-    const int64_t align32_elem_cnt = rows * align32_cols; 
-    const int64_t pack_num = align32_elem_cnt / kVecSize;
+    const int64_t pack_num = elem_cnt / kVecSize;
     grid_size = ComputeGridSize<kVecSize>(stream, kBlockSize, elem_cnt);
-    if (align32_elem_cnt < GetMaxVal<int32_t>()) {
-      FusedVectorizedReluDropoutKernelv2<T, relu, int32_t>
+    if (elem_cnt < GetMaxVal<int32_t>()) {
+      FusedVectorizedReluDropoutKernel<T, relu, int32_t>
           <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
-                                                                align32_elem_cnt, aux_ld, align32_cols, 
-                                                                cols, uint_rate,
+                                                                elem_cnt, aux_ld, cols, uint_rate,
                                                                 scale, x, mask, y);
     } else {
-      FusedVectorizedReluDropoutKernelv2<T, relu, int64_t>
+      FusedVectorizedReluDropoutKernel<T, relu, int64_t>
           <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
-                                                                align32_elem_cnt, aux_ld, align32_cols, 
-                                                                cols, uint_rate,
+                                                                elem_cnt, aux_ld, cols, uint_rate,
                                                                 scale, x, mask, y);
     }
+
+    // const int64_t align32_cols = (cols + 32 - 1) / 32 * 32; 
+    // const int64_t align32_elem_cnt = rows * align32_cols; 
+    // const int64_t pack_num = align32_elem_cnt / kVecSize;
+    // grid_size = ComputeGridSize<kVecSize>(stream, kBlockSize, elem_cnt);
+    // if (align32_elem_cnt < GetMaxVal<int32_t>()) {
+    //   FusedVectorizedReluDropoutKernelv2<T, relu, int32_t>
+    //       <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
+    //                                                             align32_elem_cnt, aux_ld, align32_cols, 
+    //                                                             cols, uint_rate,
+    //                                                             scale, x, mask, y);
+    // } else {
+    //   FusedVectorizedReluDropoutKernelv2<T, relu, int64_t>
+    //       <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
+    //                                                             align32_elem_cnt, aux_ld, align32_cols, 
+    //                                                             cols, uint_rate,
+    //                                                             scale, x, mask, y);
+    // }
   } else {
     // Process a row by using a warp.
-    dim3 block_dim(32, 4);
-    const int64_t num_blocks = (rows + 4 - 1) / 4;  // since each block has 4 warps.
-    cudaError_t err = GetWarpImplNumBlocks(block_size, num_blocks, waves, &grid_size);
+    // dim3 block_dim(32, 4);
+    // const int64_t num_blocks = (rows + 4 - 1) / 4;  // since each block has 4 warps.
+    dim3 block_dim(32, 8);
+    const int64_t num_blocks = (rows + 8 - 1) / 8;  // since each block has 4 warps.
+    cudaError_t err = GetWarpImplNumBlocks(256, num_blocks, 1, &grid_size);
     if (err != cudaSuccess) { return err; }
-    if (cols % 15 == 0) {
-      if (elem_cnt < GetMaxVal<int32_t>()) {
-        FusedWarpVectorizedReluDropoutKernel<T, relu, int32_t>
-            <<<grid_size, block_dim, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
-                                                                 elem_cnt, aux_ld, rows, cols,
-                                                                 uint_rate, scale, x, mask, y);
+    if (cols % 4 == 0) {
+      // if (elem_cnt < GetMaxVal<int32_t>()) {
+      //   FusedWarpVectorizedReluDropoutKernel<T, relu, int32_t>
+      //       <<<grid_size, block_dim, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
+      //                                                            elem_cnt, aux_ld, rows, cols,
+      //                                                            uint_rate, scale, x, mask, y);
+      // } else {
+      //   FusedWarpVectorizedReluDropoutKernel<T, relu, int64_t>
+      //       <<<grid_size, block_dim, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
+      //                                                            elem_cnt, aux_ld, rows, cols,
+      //                                                            uint_rate, scale, x, mask, y);
+      // }
+
+      const int64_t align32_cols = (cols + 32 - 1) / 32 * 32; 
+      const int64_t align32_elem_cnt = rows * align32_cols; 
+      const int64_t pack_num = align32_elem_cnt / kVecSize;
+      grid_size = ComputeGridSize<kVecSize>(stream, kBlockSize, align32_elem_cnt) / 2;
+      // grid_size = ComputeGridSize<kVecSize>(stream, kBlockSize, align32_elem_cnt);
+
+      if (align32_elem_cnt < GetMaxVal<int32_t>()) {
+        FusedVectorizedReluDropoutKernelv2<T, relu, int32_t>
+            <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
+                                                                  align32_elem_cnt, aux_ld, align32_cols, 
+                                                                  cols, uint_rate,
+                                                                  scale, x, mask, y);
       } else {
-        FusedWarpVectorizedReluDropoutKernel<T, relu, int64_t>
-            <<<grid_size, block_dim, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
-                                                                 elem_cnt, aux_ld, rows, cols,
-                                                                 uint_rate, scale, x, mask, y);
-      }
+        FusedVectorizedReluDropoutKernelv2<T, relu, int64_t>
+            <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
+                                                                  align32_elem_cnt, aux_ld, align32_cols, 
+                                                                  cols, uint_rate,
+                                                                  scale, x, mask, y);
+      } 
     } else {
       if (elem_cnt < GetMaxVal<int32_t>()) {
         FusedWarpReluDropoutKernel<T, relu, int32_t>

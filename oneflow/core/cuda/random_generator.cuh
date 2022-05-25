@@ -47,7 +47,7 @@ __forceinline__ __device__ void Philox_State_Incr(internal::curandStatePhilox4_3
    unsigned int nhi = (unsigned int)(n>>32);
 
    s->ctr.x += nlo;
-   if( s->ctr.x < nlo )
+   if(s->ctr.x < nlo)
       nhi++;
 
    s->ctr.y += nhi;
