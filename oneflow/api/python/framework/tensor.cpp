@@ -28,7 +28,6 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/device.h"
@@ -36,9 +35,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/tensor_index.h"
-#include "oneflow/core/common/just.h"
 
 namespace py = pybind11;
 

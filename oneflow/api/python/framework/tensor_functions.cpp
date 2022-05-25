@@ -51,14 +51,14 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
     size = (size_t)PyList_Size(shape);
     DimVector vec(size);
     for (int i = 0; i < size; ++i) { vec.at(i) = unpack_long(PyList_GetItem(shape, i)); }
-    auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
+    auto result = ASSERT_PTR(functional::Reshape(tensor, Shape(vec)));
     return PyTensor_New(result);
 
   } else {
     if (PyLong_Check(shape)) {
       DimVector vec(size);
       for (int i = 0; i < size; ++i) { vec.at(i) = unpack_long(PyTuple_GetItem(args, i)); }
-      auto result = CHECK_JUST(functional::Reshape(tensor, Shape(vec)));
+      auto result = ASSERT_PTR(functional::Reshape(tensor, Shape(vec)));
       return PyTensor_New(result);
     } else {
       size = (size_t)PyTuple_Size(shape);
