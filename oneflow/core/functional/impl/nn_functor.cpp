@@ -265,7 +265,12 @@ class BatchMatMulFunctor {
         << "-dimensional tensor for argument #2";
     CHECK_EQ_OR_RETURN(a_shape->At(0), b_shape->At(0))
         << Error::RuntimeError() << "Batch dim not match, please check input!";
-    CHECK_EQ_OR_RETURN(a_shape->At(2), b_shape->At(1))
+    // assume a: (batch, m, k), b: (batch, k, n)
+    int64_t a_kdim = a_shape->At(2);
+    int64_t b_kdim = b_shape->At(1);
+    if (transpose_a) { a_kdim = a_shape->At(1); }
+    if (transpose_b) { b_kdim = b_shape->At(2); }
+    CHECK_EQ_OR_RETURN(a_kdim, b_kdim)
         << Error::RuntimeError() << "Matmul dim not match, please check input!";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
