@@ -17,6 +17,7 @@ env:
   LIBAI_SRC: libai
   LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:afaf913e02a4ba02db92260daee22f99121cef62
+  MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
 jobs:
   check-priority-pr:
@@ -160,11 +161,11 @@ jobs:
       - name: Wait for GPU slot
         uses: Oneflow-Inc/get-oneflow/wait-for-gpu@single-matrix-for-efficiency
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 150
+        timeout-minutes: 90
         continue-on-error: true
         with:
           token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
-          timeout-minutes: 5
+          timeout-minutes: 3
           max-try-times: 30
 
   find-build-cache:
@@ -197,7 +198,6 @@ jobs:
             cu102
             cpu
             llvm13
-            openvino
 
   build-oneflow:
     name: "Build OneFlow"
@@ -265,27 +265,6 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
-        name: Build manylinux ${{ matrix.entry }}
-        id: build-openvino
-        if: ${{ matrix.entry =='openvino' && !matrix.cache-hit }}
-        with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/serving/openvino.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          oneflow-build-env: openvino
-          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
-          clear-wheelhouse-dir: true
-          self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: none
-          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
-          docker-run-use-system-http-proxy: false
-          docker-run-use-lld: true
-          retry-failed-build: true
-          wheel-audit: false
-          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          python-versions: |
-            3.6
       - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
@@ -542,7 +521,7 @@ jobs:
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
-            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
+            ${{ env.MLIR_DOCKER_ARGS }} \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
@@ -748,7 +727,7 @@ jobs:
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
-            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
+            ${{ env.MLIR_DOCKER_ARGS }} \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
@@ -864,7 +843,7 @@ jobs:
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Module API test
-        timeout-minutes: 140
+        timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
@@ -911,8 +890,8 @@ jobs:
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
-          unknown-threshold: 15
-          error-threshold: 20
+          unknown-threshold: 30
+          error-threshold: 40
       - name: Remove automerge
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
