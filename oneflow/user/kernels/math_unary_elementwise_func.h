@@ -186,15 +186,6 @@ struct CoshFunctor<float> {
 };
 
 template<>
-struct ErfcFunctor<float> {
-  static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(erfc, x); }
-
-  static OF_DEVICE_FUNC float Backward(const float x, const float dy) {
-    return dy * -2.0f * RsqrtFunctor<float>::Forward(M_PI) * expf(-x * x);
-  }
-};
-
-template<>
 struct ExpFunctor<float> {
   static OF_DEVICE_FUNC float Forward(const float x) { return MATH_FUNC_F(exp, x); }
 
@@ -449,15 +440,6 @@ struct CoshFunctor<double> {
 
   static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
     return dy * MATH_FUNC_D(sinh, x);
-  }
-};
-
-template<>
-struct ErfcFunctor<double> {
-  static OF_DEVICE_FUNC double Forward(const double x) { return MATH_FUNC_D(erfc, x); }
-
-  static OF_DEVICE_FUNC double Backward(const double x, const double dy) {
-    return dy * -2.0 * RsqrtFunctor<double>::Forward(M_PI) * expf(-x * x);
   }
 };
 
@@ -735,15 +717,6 @@ struct CoshFunctor<half> {
 
   static OF_HALF_FUNC half Backward(const half x, const half dy) {
     return __hmul(dy, MATH_FUNC_H(sinh, x));
-  }
-};
-
-template<>
-struct ErfcFunctor<half> {
-  static OF_HALF_FUNC half Forward(const half x) { return MATH_FUNC_H(erfc, x); }
-
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-    return __hmul(dy, __hneg(__hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x)))));
   }
 };
 

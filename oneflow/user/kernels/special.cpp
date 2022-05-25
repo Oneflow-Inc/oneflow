@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/special.h"
 #include "oneflow/core/common/device_type.pb.h"
+#include "oneflow/user/kernels/math_unary_elementwise_func.h"
 namespace oneflow {
 template<typename T>
 struct EntrFunctor<DeviceType::kCPU, T> {
@@ -51,6 +52,18 @@ template<typename T>
 struct ErfGradFunctor<DeviceType::kCPU, T> {
   OF_DEVICE_FUNC T operator()(const T x, const T dy) const {
     return dy * 2.0 * std::exp(-x * x) / std::sqrt(x);
+  }
+};
+
+template<typename T>
+struct ErfcFunctor<DeviceType::kCPU, T> {
+  OF_DEVICE_FUNC T operator()(const T x) const { return std::erfc(x); }
+};
+
+template<typename T>
+struct ErfcGradFunctor<DeviceType::kCPU, T> {
+  OF_DEVICE_FUNC T operator()(const T x, const T dy) const {
+    return dy * -2.0f * RsqrtFunctor<T>::Forward(M_PI) * std::exp(-x * x);
   }
 };
 

@@ -24,7 +24,8 @@ namespace oneflow {
 
 #define SPECIAL_UNARY_OPS            \
   OF_PP_MAKE_TUPLE_SEQ("entr", Entr) \
-  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)
+  OF_PP_MAKE_TUPLE_SEQ("erf", Erf)   \
+  OF_PP_MAKE_TUPLE_SEQ("erfc", Erfc)
 
 #define DECL_SPECIAL_OPS_FUNCTORS(placeholder, functor_name) \
   template<DeviceType device_type, typename T>               \
@@ -35,8 +36,8 @@ namespace oneflow {
 OF_PP_FOR_EACH_TUPLE(DECL_SPECIAL_OPS_FUNCTORS, SPECIAL_UNARY_OPS)
 #undef DECL_SPECIAL_OPS_FUNCTORS
 
-#define REGISTER_ENTR_KERNEL(device, kernel_name, functor, out_dtype, input_a_dtype,               \
-                             create_function, out_name, input_a_name)                              \
+#define REGISTER_SPECIAL_OPS_KERNEL(device, kernel_name, functor, out_dtype, input_a_dtype,        \
+                                    create_function, out_name, input_a_name)                       \
   REGISTER_USER_KERNEL(kernel_name)                                                                \
       .SetCreateFn([]() {                                                                          \
         return user_op::NewOpKernel<                                                               \
@@ -47,29 +48,29 @@ OF_PP_FOR_EACH_TUPLE(DECL_SPECIAL_OPS_FUNCTORS, SPECIAL_UNARY_OPS)
           (user_op::HobDeviceType() == device)                                                     \
           && (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
-#define REGISTER_ENTR_GRAD_KERNEL(device, kernel_name, functor, out_dtype, input_a_dtype,  \
-                                  input_b_dtype, create_function, out_name, input_a_name,  \
-                                  input_b_name)                                            \
-  REGISTER_USER_KERNEL(kernel_name)                                                        \
-      .SetCreateFn([]() {                                                                  \
-        return user_op::NewOpKernel<BinaryElemwiseXpuKernel<                               \
-            device, functor<device, out_dtype>, out_dtype, input_a_dtype, input_b_dtype>>( \
-            create_function, out_name, input_a_name, input_b_name);                        \
-      })                                                                                   \
-      .SetIsMatchedHob(                                                                    \
-          (user_op::HobDeviceType() == device)                                             \
+#define REGISTER_SPECIAL_OPS_GRAD_KERNEL(device, kernel_name, functor, out_dtype, input_a_dtype, \
+                                         input_b_dtype, create_function, out_name, input_a_name, \
+                                         input_b_name)                                           \
+  REGISTER_USER_KERNEL(kernel_name)                                                              \
+      .SetCreateFn([]() {                                                                        \
+        return user_op::NewOpKernel<BinaryElemwiseXpuKernel<                                     \
+            device, functor<device, out_dtype>, out_dtype, input_a_dtype, input_b_dtype>>(       \
+            create_function, out_name, input_a_name, input_b_name);                              \
+      })                                                                                         \
+      .SetIsMatchedHob(                                                                          \
+          (user_op::HobDeviceType() == device)                                                   \
           && (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
 #define REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, device, type)          \
-  REGISTER_ENTR_KERNEL(                                                                          \
+  REGISTER_SPECIAL_OPS_KERNEL(                                                                   \
       device, kernel_name, func_prefix##Functor, type, type,                                     \
       ([](user_op::KernelComputeContext* ctx) { return func_prefix##Functor<device, type>(); }), \
       "y", "x");                                                                                 \
-  REGISTER_ENTR_GRAD_KERNEL(device, kernel_name "_grad", func_prefix##GradFunctor, type, type,   \
-                            type, ([](user_op::KernelComputeContext* ctx) {                      \
-                              return func_prefix##GradFunctor<device, type>();                   \
-                            }),                                                                  \
-                            "dx", "x", "dy");
+  REGISTER_SPECIAL_OPS_GRAD_KERNEL(device, kernel_name "_grad", func_prefix##GradFunctor, type,  \
+                                   type, type, ([](user_op::KernelComputeContext* ctx) {         \
+                                     return func_prefix##GradFunctor<device, type>();            \
+                                   }),                                                           \
+                                   "dx", "x", "dy");
 
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_KERNELS_SPECIAL_H

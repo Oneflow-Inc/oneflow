@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/user/ops/math_unary_elementwise_seq.h"
+#include "oneflow/user/kernels/special.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -57,9 +58,9 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathCaptureState> {
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS, SPECIAL_UNARY_OPS);
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS,
                      OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh));
-INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS("entr", Entr);
 
 // higher order derivative
 OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS,

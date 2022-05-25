@@ -30,7 +30,6 @@ struct EntrFunctor<DeviceType::kCUDA, float> {
     } else if (x == 0.0f) {
       return 0.0f;
     } else {
-      // -inf
       return -INFINITY;
     }
   }
@@ -44,8 +43,20 @@ struct EntrFunctor<DeviceType::kCUDA, double> {
     } else if (x == 0.0) {
       return 0.0;
     } else {
-      // -inf
       return -INFINITY;
+    }
+  }
+};
+
+template<>
+struct EntrFunctor<DeviceType::kCUDA, half> {
+  __device__ half operator()(const half x) const {
+    if (__hgt(x, 0.0)) {
+      return -x * hlog(x);
+    } else if (__heq(x, static_cast<half>(0.0))) {
+      return static_cast<half>(0.0);
+    } else {
+      return static_cast<half>(-INFINITY);
     }
   }
 };
@@ -71,6 +82,19 @@ struct EntrGradFunctor<DeviceType::kCUDA, double> {
       return (-log(x) - 1) * dy;
     } else if (x == 0.0) {
       // inf
+      return INFINITY;
+    } else {
+      return detail::Nan<double>();
+    }
+  }
+};
+
+template<>
+struct EntrGradFunctor<DeviceType::kCUDA, half> {
+  __device__ half operator()(const half x, const half dy) const {
+    if (x > static_cast<half>(0.0)) {
+      return (-hlog(x) - static_cast<half>(1)) * dy;
+    } else if (x == static_cast<half>(0.0)) {
       return INFINITY;
     } else {
       return detail::Nan<double>();
@@ -114,9 +138,48 @@ struct ErfGradFunctor<DeviceType::kCUDA, half> {
   }
 };
 
-#define REGISTER_SPECIAL_OPS_CUDA_KERNEL(kernel_name, func_prefix)                             \
-  REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCUDA, float); \
-  REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCUDA, double);
+template<>
+struct ErfcFunctor<DeviceType::kCUDA, float> {
+  __device__ float operator()(const float x) const { return erfcf(x); }
+};
+
+template<>
+struct ErfcFunctor<DeviceType::kCUDA, double> {
+  __device__ double operator()(const double x) const { return erfc(x); }
+};
+
+template<>
+struct ErfcFunctor<DeviceType::kCUDA, half> {
+  __device__ half operator()(const half x) const { return __float2half(erfcf(__half2float(x))); }
+};
+
+template<>
+struct ErfcGradFunctor<DeviceType::kCUDA, float> {
+  __device__ float operator()(const float x, const float dy) const {
+    // return dy * -2.0f * RsqrtFunctor<float>::Forward(M_PI) * expf(-x * x);
+    return 0;
+  }
+};
+
+template<>
+struct ErfcGradFunctor<DeviceType::kCUDA, double> {
+  __device__ double operator()(const double x, const double dy) const {
+    // return dy * -2.0f * RsqrtFunctor<double>::Forward(M_PI) * exp(-x * x);
+    return 0;
+  }
+};
+
+template<>
+struct ErfcGradFunctor<DeviceType::kCUDA, half> {
+  __device__ half operator()(const half x, const half dy) const {
+    return __hmul(dy, __hneg(__hmul(HALF_VAL_2RSQRT_PI, hexp(__hmul(__hneg(x), x)))));
+  }
+};
+
+#define REGISTER_SPECIAL_OPS_CUDA_KERNEL(kernel_name, func_prefix)                              \
+  REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCUDA, float);  \
+  REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCUDA, double); \
+  REGISTER_SPECIAL_OPS_KERNEL_DEVICE_TYPE(kernel_name, func_prefix, DeviceType::kCUDA, half);
 OF_PP_FOR_EACH_TUPLE(REGISTER_SPECIAL_OPS_CUDA_KERNEL, SPECIAL_UNARY_OPS)
 #undef REGISTER_SPECIAL_OPS_CUDA_KERNEL
 #endif  // WITH_CUDA
