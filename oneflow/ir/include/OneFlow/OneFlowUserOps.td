@@ -9409,14 +9409,15 @@ def OneFlow_RocAucScoreOp : OneFlow_BaseOp<"roc_auc_score", [NoSideEffect, NoGra
 
 def OneFlow_FillOp : OneFlow_BaseOp<"fill_", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "0.">:$floating_value,
-    DefaultValuedAttr<SI64Attr, "0.">:$integral_value
+    DefaultValuedAttr<SI64Attr, "0.">:$integral_value,
+    DefaultValuedAttr<BoolAttr, "false">:$is_floating_value
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

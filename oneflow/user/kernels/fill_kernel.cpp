@@ -13,100 +13,71 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/framework/op_kernel.h"
-#include "oneflow/core/framework/user_op_hob.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 namespace {
 
-template<typename T>
-T GetDtypeMatchedValue(double floating, int64_t integral);
-
-template<>
-float GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<float>(floating);
-}
-
-template<>
-double GetDtypeMatchedValue(double floating, int64_t integral) {
-  return floating;
-}
-
-template<>
-int8_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<int8_t>(integral);
-}
-
-template<>
-int32_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return static_cast<int32_t>(integral);
-}
-
-template<>
-int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
-  return integral;
+template<typename Context>
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->device_type(), data_type);
 }
 
 }  // namespace
 
-template<typename T>
-class FillCpuKernel final : public user_op::OpKernel {
+class FillKernel final : public user_op::OpKernel {
  public:
-  FillCpuKernel() = default;
-  ~FillCpuKernel() = default;
+  FillKernel() = default;
+  ~FillKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    double floating_value = ctx->Attr<double>("floating_value");
-    int64_t integral_value = ctx->Attr<int64_t>("integral_value");
-    const T value_ = GetDtypeMatchedValue<T>(floating_value, integral_value);
-    const int32_t elem_cnt = x->shape().elem_cnt();
-    T* y_ptr = y->mut_dptr<T>();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) { y_ptr[i] = value_; }
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    bool is_floating_value = ctx->Attr<bool>("is_floating_value");
+    const Scalar value = is_floating_value ? Scalar(ctx->Attr<double>("floating_value"))
+                                           : Scalar(ctx->Attr<int64_t>("integral_value"));
+    const int32_t elem_cnt = in->shape().elem_cnt();
+    CHECK_GE(elem_cnt, 0);
+    if (elem_cnt == 0) { return; }
+    std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
+    CHECK(fill);
+    fill->Launch(ctx->stream(), out->mut_dptr(), value, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class FillGradCpuKernel final : public user_op::OpKernel {
+class FillGradKernel final : public user_op::OpKernel {
  public:
-  FillGradCpuKernel() = default;
-  ~FillGradCpuKernel() = default;
+  FillGradKernel() = default;
+  ~FillGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t elem_cnt = in->shape().elem_cnt();
-    T* out_ptr = out->mut_dptr<T>();
-    FOR_RANGE(int32_t, i, 0, elem_cnt) { out_ptr[i] = 0; }
+    const Scalar value = Scalar(0);
+    std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
+    CHECK(fill);
+    fill->Launch(ctx->stream(), out->mut_dptr(), value, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FILL_CPU_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("fill_").SetCreateFn<FillCpuKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)                                 \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
+}
 
-#define REGISTER_FILL_GRAD_CPU_KERNEL(dtype)                          \
-  REGISTER_USER_KERNEL("fill_grad")                                   \
-      .SetCreateFn<FillGradCpuKernel<dtype>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+REGISTER_USER_KERNEL("fill_").SetCreateFn<FillKernel>().SetIsMatchedHob(FillPrimitiveExists()
+                                                                        == true);
 
-REGISTER_FILL_CPU_KERNEL(float);
-REGISTER_FILL_CPU_KERNEL(double);
-REGISTER_FILL_CPU_KERNEL(int8_t);
-REGISTER_FILL_CPU_KERNEL(int32_t);
-REGISTER_FILL_CPU_KERNEL(int64_t);
-REGISTER_FILL_GRAD_CPU_KERNEL(float);
-REGISTER_FILL_GRAD_CPU_KERNEL(double);
-REGISTER_FILL_GRAD_CPU_KERNEL(int8_t);
-REGISTER_FILL_GRAD_CPU_KERNEL(int32_t);
-REGISTER_FILL_GRAD_CPU_KERNEL(int64_t);
+REGISTER_USER_KERNEL("fill_grad")
+    .SetCreateFn<FillGradKernel>()
+    .SetIsMatchedHob(FillPrimitiveExists() == true);
 
 }  // namespace oneflow

@@ -3024,20 +3024,22 @@ class PinMemoryFunctor {
 
 class FillFunctor {
  public:
-  FillFunctor() { op_ = CHECK_JUST(one::OpBuilder("fill_").Input("x").Output("y").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& value) const {
+  FillFunctor() { op_ = CHECK_JUST(one::OpBuilder("fill_").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const Scalar& value) const {
     MutableAttrMap attrs;
-    if (IsFloatingDataType(x->dtype()->data_type())) {
+    if (IsFloatingDataType(in->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
-    } else if (IsIntegralDataType(x->dtype()->data_type())) {
+      JUST(attrs.SetAttr<bool>("is_floating_value", true));
+    } else if (IsIntegralDataType(in->dtype()->data_type())) {
       JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
+      // JUST(attrs.SetAttr<bool>("is_floating_value", false));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
-    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceValid(in));
     auto outputs = std::make_shared<TensorTuple>(1);
-    outputs->at(0) = x;
-    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+    outputs->at(0) = in;
+    JUST(OpInterpUtil::Dispatch(*op_, {in}, outputs.get(), attrs));
     return outputs->at(0);
   }
 

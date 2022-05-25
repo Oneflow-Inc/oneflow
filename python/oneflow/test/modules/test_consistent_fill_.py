@@ -25,7 +25,7 @@ def _test_fill_with_alpha(test_case, ndim, placement, sbp):
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     value = random().to(float)
     y = x + 1
-    y.fill_(1.6844421846030757)
+    y.fill_(value)
     return y
 
 

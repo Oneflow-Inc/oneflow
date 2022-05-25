@@ -19,9 +19,9 @@ limitations under the License.
 namespace oneflow {
 
 /* static */ Maybe<void> FillOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
-  *y_shape = x_shape;
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
+  *out_shape = in_shape;
   return Maybe<void>::Ok();
 }
 
@@ -30,22 +30,22 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FillOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
   }
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FillOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FillGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& x_shape = ctx->InputShape("x", 0);
-  Shape* y_shape = ctx->OutputShape("y", 0);
-  *y_shape = x_shape;
+  const Shape& in_shape = ctx->InputShape("in", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
+  *out_shape = in_shape;
   return Maybe<void>::Ok();
 }
 
@@ -54,15 +54,15 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FillGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
   }
   return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> FillGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 
