@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <iostream>
 #include <memory>
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
@@ -34,11 +35,12 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
-
+#include "oneflow/core/functional/functional.h"
 namespace oneflow {
 
 namespace one {
@@ -412,6 +414,12 @@ Maybe<std::string> GradAccTryInsertRepeatAfterFreeVar(const OperatorConf& var_co
 }
 
 Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
+  if (!input_tensor->is_contiguous()) {
+    LazyMode::Guard lazy_mode_disabled_guard(false);
+    JUST(functional::InplaceToContiguous(input_tensor));
+    JUST(vm::CurrentRankSync());
+  }
+
   CHECK_OR_RETURN(input_tensor->is_eager());
   const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(empty_lbn.empty());
@@ -455,7 +463,6 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   //  create a new tensor for repeat op out. We just set repeat lbn as this free eager tensor's lbn.
   TensorNameScope::Global()->Record(input_tensor,
                                     *JUST(GradAccTryInsertRepeatAfterFreeVar(op_conf)));
-
   return Maybe<void>::Ok();
 }
 
