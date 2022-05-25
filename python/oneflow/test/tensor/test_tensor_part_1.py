@@ -1006,7 +1006,7 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor(ndim=4).to(device)
         y = x.reshape(-1,)
         return y
-    
+
     @autotest(check_graph=True)
     def test_reshape_as_tensor_with_random_data(test_case):
         device = random_device()
