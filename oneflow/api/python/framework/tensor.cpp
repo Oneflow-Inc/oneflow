@@ -35,7 +35,6 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
-#include "oneflow/api/python/framework/tensor_functions.h"
 
 namespace py = pybind11;
 
@@ -321,15 +320,15 @@ static PyObject* PyTensorObject__register_storage_delete_hook(PyObject* self, Py
   END_HANDLE_ERRORS
 }
 
-
-PyMethodDef* concat_method_def(PyMethodDef methods[], PyMethodDef extra_methods[]) {
+static std::vector<PyMethodDef> concat_method_def(PyMethodDef methods[],
+                                                  PyMethodDef extra_methods[]) {
   int len1 = 0;
   int len2 = 0;
   PyMethodDef* p1 = methods;
   PyMethodDef* p2 = extra_methods;
   while ((p1++)->ml_name != NULL) { len1++; }
   while ((p2++)->ml_name != NULL) { len2++; }
-  PyMethodDef* total_methods = new PyMethodDef[len1 + len2 + 1];
+  std::vector<PyMethodDef> total_methods(len1 + len2 + 1);
   for (int i = 0; i < len1; i++) total_methods[i] = methods[i];
   for (int i = 0; i < len2; i++) total_methods[i + len1] = extra_methods[i];
   total_methods[len1 + len2] = {NULL};
@@ -568,8 +567,10 @@ static PyTypeObject* MakeTensorType() {
   type->tp_init = PyTensorObject_init;
   type->tp_dealloc = PyTensorObject_dealloc;
   type->tp_getset = PyTensorObject_properties;
-  type->tp_methods =
+
+  static std::vector<PyMethodDef> total_methods =
       concat_method_def(PyTensorObject_methods, PyTensorObject_extra_methods);
+  type->tp_methods = total_methods.data();
 
   type->tp_as_number = &PyTensorObject_as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;

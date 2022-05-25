@@ -26,11 +26,13 @@ namespace one {
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
+using functional::PyObjectPtr;
+
 #define NB_UNARY_FUNC(func_name, bind_func)                  \
   static PyObject* func_name(PyObject* self) {               \
     HANDLE_ERRORS                                            \
-    PyObject* tuple = PyTuple_Pack(1, self);                 \
-    auto* result = bind_func(NULL, tuple, NULL);             \
+    PyObjectPtr tuple(PyTuple_Pack(1, self));                \
+    auto* result = bind_func(NULL, tuple.get(), NULL);       \
     if (PyErr_Occurred()) { throw py::error_already_set(); } \
     return result;                                           \
     END_HANDLE_ERRORS                                        \
@@ -39,8 +41,8 @@ namespace one {
 #define NB_BINARY_FUNC(func_name, bind_func)                 \
   static PyObject* func_name(PyObject* a, PyObject* b) {     \
     HANDLE_ERRORS                                            \
-    PyObject* tuple = PyTuple_Pack(2, a, b);                 \
-    auto* result = bind_func(NULL, tuple, NULL);             \
+    PyObjectPtr tuple(PyTuple_Pack(2, a, b));                \
+    auto* result = bind_func(NULL, tuple.get(), NULL);       \
     if (PyErr_Occurred()) { throw py::error_already_set(); } \
     return result;                                           \
     END_HANDLE_ERRORS                                        \
@@ -64,8 +66,8 @@ NB_BINARY_FUNC(PyTensorObject_matrix_multiply, functional::matmul);
 // NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
 PyObject* PyTensorObject_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
-  PyObject* tuple = PyTuple_Pack(2, a, b);
-  auto* result = functional::pow(NULL, tuple, NULL);
+  PyObjectPtr tuple(PyTuple_Pack(2, a, b));
+  auto* result = functional::pow(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -75,23 +77,23 @@ static PyObject* PyTensorObject_invert(PyObject* self) {
   HANDLE_ERRORS
   CHECK_OR_THROW(PyTensor_Unpack(self)->dtype()->data_type() == DataType::kBool)
       << "~ (operator.invert) is only implemented on integer and Boolean-type tensors";
-  PyObject* tuple = PyTuple_Pack(1, self);
-  auto* result = functional::logical_not(NULL, tuple, NULL);
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  auto* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
 }
 
-#define NB_INPLACE_BINARY_FUNC(func_name, bind_func)                     \
-  static PyObject* func_name(PyObject* a, PyObject* b) {                 \
-    HANDLE_ERRORS                                                        \
-    PyObject* tuple = PyTuple_Pack(2, a, b);                             \
-    PyObject* dict = PyDict_New();                                       \
-    CHECK_OR_THROW(PyDict_SetItemString(dict, "inplace", Py_True) > -1); \
-    const auto& result = bind_func(NULL, tuple, dict);                   \
-    if (PyErr_Occurred()) { throw py::error_already_set(); }             \
-    return result;                                                       \
-    END_HANDLE_ERRORS                                                    \
+#define NB_INPLACE_BINARY_FUNC(func_name, bind_func)                           \
+  static PyObject* func_name(PyObject* a, PyObject* b) {                       \
+    HANDLE_ERRORS                                                              \
+    PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                  \
+    PyObjectPtr dict(PyDict_New());                                            \
+    CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1); \
+    const auto& result = bind_func(NULL, tuple.get(), dict.get());             \
+    if (PyErr_Occurred()) { throw py::error_already_set(); }                   \
+    return result;                                                             \
+    END_HANDLE_ERRORS                                                          \
   }
 
 // TODO: still have bug here
@@ -109,10 +111,10 @@ NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_true_div, functional::div);
 
 PyObject* PyTensorObject_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
-  PyObject* tuple = PyTuple_Pack(2, a, b);
-  PyObject* dict = PyDict_New();
-  CHECK_OR_THROW(PyDict_SetItemString(dict, "inplace", Py_True) > -1);
-  auto* result = functional::pow(NULL, tuple, NULL);
+  PyObjectPtr tuple(PyTuple_Pack(2, a, b));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
+  auto* result = functional::pow(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -143,7 +145,7 @@ PyNumberMethods PyTensorObject_as_number = {
     PyTensorObject_inplace_sub,   // nb_inplace_sub
     PyTensorObject_inplace_mul,   // nb_inplace_mul
     PyTensorObject_inplace_fmod,  // nb_inplace_remainder
-    PyTensorObject_inplace_pow,   // nb_inplace_pow
+    NULL,                         // nb_inplace_pow
     NULL,                         // nb_inplace_lshift
     NULL,                         // nb_inplace_rshift
     PyTensorObject_inplace_and,   // nb_inplace_and
@@ -310,18 +312,18 @@ PyMethodDef PyTensorObject_extra_methods[] = {
 
 // tp_richcompare
 PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
-  PyObject* tuple = PyTuple_Pack(2, self, other);
+  PyObjectPtr tuple(PyTuple_Pack(2, self, other));
 
   switch (op) {
-    case Py_LT: return functional::less(NULL, tuple, NULL);
-    case Py_LE: return functional::less_equal(NULL, tuple, NULL);
+    case Py_LT: return functional::less(NULL, tuple.get(), NULL);
+    case Py_LE: return functional::less_equal(NULL, tuple.get(), NULL);
     case Py_EQ: {
       if (self == Py_None || other == Py_None) return Py_False;
-      return functional::equal(NULL, tuple, NULL);
+      return functional::equal(NULL, tuple.get(), NULL);
     }
-    case Py_NE: return functional::not_equal(NULL, tuple, NULL);
-    case Py_GT: return functional::greater(NULL, tuple, NULL);
-    case Py_GE: return functional::greater_equal(NULL, tuple, NULL);
+    case Py_NE: return functional::not_equal(NULL, tuple.get(), NULL);
+    case Py_GT: return functional::greater(NULL, tuple.get(), NULL);
+    case Py_GE: return functional::greater_equal(NULL, tuple.get(), NULL);
   }
   return NULL;
 }
