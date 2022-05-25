@@ -110,7 +110,7 @@ def arcsinh_op(input):
     return flow._C.asinh(input)
 
 
-@register_tensor_op("asinh")
+# @register_tensor_op("asinh")
 def asinh_op_tensor(input):
     """
 
@@ -119,7 +119,7 @@ def asinh_op_tensor(input):
     return flow._C.asinh(input)
 
 
-@register_tensor_op("sin_")
+# @register_tensor_op("sin_")
 def inplace_sin_op_tensor(input):
     """
     In-place version of :func:`oneflow.sin`
