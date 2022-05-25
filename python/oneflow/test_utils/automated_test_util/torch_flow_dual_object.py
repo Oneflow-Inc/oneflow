@@ -895,7 +895,7 @@ class DualObject:
                 oneflow_attr is None
             ), f"pytorch value is None for attr {key}, but oneflow is not."
             return None
-        if self.name == '':
+        if self.name == "":
             new_name = key
         else:
             new_name = f"{self.name}.{key}"

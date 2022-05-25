@@ -83,7 +83,7 @@ def get_oneflow_cpu_end_to_end_time(prof):
 
 
 def print_summary_from_csv():
-    print('----------------------------------------------------------------------')
+    print("----------------------------------------------------------------------")
     print('Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time"):')
     with open(csv_filename, "r") as f:
         table: PrettyTable = prettytable.from_csv(f)
@@ -99,8 +99,8 @@ def print_summary_from_csv():
             "Desc",
         ]
         for row in table.rows:
-            row[2] = {'PyTorch': 'PT', 'OneFlow': 'OF'}[row[2]]
-        table.del_column('Desc')
+            row[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row[2]]
+        table.del_column("Desc")
         print(table)
 
 
@@ -130,9 +130,7 @@ writer.writerow(
 )
 
 
-auto_profiler.set_hardware_info_list(
-    [("cuda", None), ("cpu", 1), ("cpu", 32)]
-)
+auto_profiler.set_hardware_info_list([("cuda", None), ("cpu", 1), ("cpu", 32)])
 
 
 def add_row(profs):
