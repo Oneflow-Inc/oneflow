@@ -87,26 +87,26 @@ class FillGradCpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-// #define REGISTER_FILL_CPU_KERNEL(dtype)                                              \
-//   REGISTER_USER_KERNEL("fill_").SetCreateFn<FillCpuKernel<dtype>>().SetIsMatchedHob( \
-//       (user_op::HobDeviceType() == DeviceType::kCPU)                                 \
-//       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_FILL_CPU_KERNEL(dtype)                                              \
+  REGISTER_USER_KERNEL("fill_").SetCreateFn<FillCpuKernel<dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                 \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-// #define REGISTER_FILL_GRAD_CPU_KERNEL(dtype)                          \
-//   REGISTER_USER_KERNEL("fill_grad")                                   \
-//       .SetCreateFn<FillGradCpuKernel<dtype>>()                        \
-//       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
-//                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+#define REGISTER_FILL_GRAD_CPU_KERNEL(dtype)                          \
+  REGISTER_USER_KERNEL("fill_grad")                                   \
+      .SetCreateFn<FillGradCpuKernel<dtype>>()                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
-// REGISTER_FILL_CPU_KERNEL(float);
-// REGISTER_FILL_CPU_KERNEL(double);
-// REGISTER_FILL_CPU_KERNEL(int8_t);
-// REGISTER_FILL_CPU_KERNEL(int32_t);
-// REGISTER_FILL_CPU_KERNEL(int64_t);
-// REGISTER_FILL_GRAD_CPU_KERNEL(float);
-// REGISTER_FILL_GRAD_CPU_KERNEL(double);
-// REGISTER_FILL_GRAD_CPU_KERNEL(int8_t);
-// REGISTER_FILL_GRAD_CPU_KERNEL(int32_t);
-// REGISTER_FILL_GRAD_CPU_KERNEL(int64_t);
+REGISTER_FILL_CPU_KERNEL(float);
+REGISTER_FILL_CPU_KERNEL(double);
+REGISTER_FILL_CPU_KERNEL(int8_t);
+REGISTER_FILL_CPU_KERNEL(int32_t);
+REGISTER_FILL_CPU_KERNEL(int64_t);
+REGISTER_FILL_GRAD_CPU_KERNEL(float);
+REGISTER_FILL_GRAD_CPU_KERNEL(double);
+REGISTER_FILL_GRAD_CPU_KERNEL(int8_t);
+REGISTER_FILL_GRAD_CPU_KERNEL(int32_t);
+REGISTER_FILL_GRAD_CPU_KERNEL(int64_t);
 
 }  // namespace oneflow
