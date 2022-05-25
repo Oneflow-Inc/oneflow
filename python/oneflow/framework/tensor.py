@@ -865,12 +865,16 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
     # Possibility 1: self and other are tensors on the same device/placement and have the same sbp.
     if isinstance(other, Tensor):
         if self.is_global:
-            assert other.is_global, "Only global tensor can be assigned to global tensor."
+            assert (
+                other.is_global
+            ), "Only global tensor can be assigned to global tensor."
             if self.placement == other.placement and self.sbp == other.sbp:
                 flow._C.assign_local_tensor(self.to_local(), other.to_local())
                 return
         else:
-            assert not other.is_global, "Only local tensor can be assigned to local tensor."
+            assert (
+                not other.is_global
+            ), "Only local tensor can be assigned to local tensor."
             if self.device == other.device:
                 flow._C.assign_local_tensor(self, other)
                 return
@@ -878,19 +882,23 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
     # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
     # In this case, we run boxing through cpu to avoid extra gpu memory usage.
     if self.is_global:
-        self_cpu_placement = flow.placement('cpu', self.placement.ranks)
+        self_cpu_placement = flow.placement("cpu", self.placement.ranks)
         if isinstance(other, Tensor):
-            other_cpu_placement = flow.placement('cpu', other.placement.ranks)
-            other = other.to_global(placement=other_cpu_placement).to_global(placement=self_cpu_placement, sbp=self.sbp)
+            other_cpu_placement = flow.placement("cpu", other.placement.ranks)
+            other = other.to_global(placement=other_cpu_placement).to_global(
+                placement=self_cpu_placement, sbp=self.sbp
+            )
         else:
             other = flow.tensor(
                 other, dtype=self.dtype, placement=self_cpu_placement, sbp=self.sbp
             )
-        _copy_from_numpy_to_eager_local_tensor(self.to_local(), other.to_local().numpy())   
+        _copy_from_numpy_to_eager_local_tensor(
+            self.to_local(), other.to_local().numpy()
+        )
     else:
         if isinstance(other, Tensor):
             other = other.numpy()
-        
+
         _copy_from_numpy_to_eager_local_tensor(self, other)
 
 

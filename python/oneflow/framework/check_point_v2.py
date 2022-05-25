@@ -130,9 +130,7 @@ def _LoadSingleVariable(
         if rank == global_src_rank:
             assert isinstance(path, str)
             file_backed_blob = FileBackendVariableBlob(path)
-            loaded = flow.tensor(
-                file_backed_blob.numpy(), dtype=file_backed_blob.dtype
-            )
+            loaded = flow.tensor(file_backed_blob.numpy(), dtype=file_backed_blob.dtype)
         else:
             loaded = flow.tensor([])
         loaded = loaded.to_global(
