@@ -16,27 +16,34 @@ limitations under the License.
 import unittest
 import oneflow as flow
 import oneflow.unittest
+
 from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def _test_narrow(test_case, ndim, placement, sbp):
-    dims = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
-    dim = random(-ndim, ndim).to(int).value()
-    start = random(0, dims[dim]).to(int).value()
-    length = random(1, dims[dim] - start + 1).to(int).value()
+def _test_global_tensordot_against_pytorch(test_case, ndim, placement, sbp):
+    k = random(1, 2) * 8
+    tensordot_dim = random(0, ndim + 1).to(int)
 
-    return torch.narrow(x, dim=dim, start=start, length=length)
+    x = random_tensor(ndim=ndim, dim0=k, dim1=k, dim2=k, dim3=k).to_global(
+        placement=placement, sbp=sbp
+    )
+    y = random_tensor(ndim=ndim, dim0=k, dim1=k, dim2=k, dim3=k).to_global(
+        placement=placement, sbp=sbp
+    )
+    z = torch.tensordot(x, y, dims=tensordot_dim)
+    return z
 
 
-class TestNarrow(flow.unittest.TestCase):
+class TestTensorDotConsistent(flow.unittest.TestCase):
     @globaltest
-    def test_narrow(test_case):
+    def test_tensordot(test_case):
         for placement in all_placement():
-            ndim = random(1, 4).to(int).value()
-            for sbp in all_sbp(placement, max_dim=min(ndim, 2)):
-                _test_narrow(test_case, ndim, placement, sbp)
+            for ndim in range(1, 4):
+                for sbp in all_sbp(placement, max_dim=ndim):
+                    _test_global_tensordot_against_pytorch(
+                        test_case, ndim, placement, sbp
+                    )
 
 
 if __name__ == "__main__":
