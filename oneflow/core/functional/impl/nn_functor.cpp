@@ -266,10 +266,8 @@ class BatchMatMulFunctor {
     CHECK_EQ_OR_RETURN(a_shape->At(0), b_shape->At(0))
         << Error::RuntimeError() << "Batch dim not match, please check input!";
     // assume a: (batch, m, k), b: (batch, k, n)
-    int64_t a_kdim = a_shape->At(2);
-    int64_t b_kdim = b_shape->At(1);
-    if (transpose_a) { a_kdim = a_shape->At(1); }
-    if (transpose_b) { b_kdim = b_shape->At(2); }
+    int64_t a_kdim = transpose_a ? a_shape->At(1) : a_shape->At(2);
+    int64_t b_kdim = transpose_b ? b_shape->At(2) : b_shape->At(1);
     CHECK_EQ_OR_RETURN(a_kdim, b_kdim)
         << Error::RuntimeError() << "Matmul dim not match, please check input!";
     MutableAttrMap attrs;
