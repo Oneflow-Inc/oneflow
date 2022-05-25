@@ -228,20 +228,7 @@ class MaxPool1dKernel final : public user_op::OpKernel {
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           static_cast<void*>(indice_ptr), dnnl::algorithm::pooling_max);
     } else {
-      DimVector y_vector(2);
-      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-      y_vector.at(1) = y->shape().At(2);
-      if (elem_num < GetMaxVal<int32_t>()) {
-        NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
-        PoolKernelUtil<device_type, T, int32_t>::Maxpool1dForward(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      } else {
-        NdIndexOffsetHelper<int64_t, 2> index_helper(y_vector.data());
-        PoolKernelUtil<device_type, T, int64_t>::Maxpool1dForward(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      }
-    }
-#else
+#endif
     DimVector y_vector(2);
     y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
     y_vector.at(1) = y->shape().At(2);
@@ -254,7 +241,9 @@ class MaxPool1dKernel final : public user_op::OpKernel {
       PoolKernelUtil<device_type, T, int64_t>::Maxpool1dForward(
           ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
     }
-#endif  // WITH_ONEDNN
+#ifdef WITH_ONEDNN
+    }
+#endif
   }
 };
 
@@ -303,23 +292,7 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
     } else {
-      DimVector dy_vector(2);
-      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-      dy_vector.at(1) = dy->shape().At(2);
-      size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-      Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
-
-      if (elem_num < GetMaxVal<int32_t>()) {
-        NdIndexOffsetHelper<int32_t, 2> index_helper(dy_vector.data());
-        PoolKernelUtil<device_type, T, int32_t>::Maxpool1dBackward(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      } else {
-        NdIndexOffsetHelper<int64_t, 2> index_helper(dy_vector.data());
-        PoolKernelUtil<device_type, T, int64_t>::Maxpool1dBackward(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      }
-    }
-#else
+#endif
     DimVector dy_vector(2);
     dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
     dy_vector.at(1) = dy->shape().At(2);
@@ -334,6 +307,8 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
       NdIndexOffsetHelper<int64_t, 2> index_helper(dy_vector.data());
       PoolKernelUtil<device_type, T, int64_t>::Maxpool1dBackward(
           ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    }
+#ifdef WITH_ONEDNN
     }
 #endif
   };
@@ -397,38 +372,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
         UNIMPLEMENTED() << "Unsupported data_format";
       }
     } else {
-      if (data_format == "channels_first") {
-        DimVector y_vector(3);
-        y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-        y_vector.at(1) = y->shape().At(2);
-        y_vector.at(2) = y->shape().At(3);
-        if (elem_num < GetMaxVal<int32_t>()) {
-          NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
-          PoolKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCFirst(
-              ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-        } else {
-          NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
-          PoolKernelUtil<device_type, T, int64_t>::Maxpool2dForwardCFirst(
-              ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-        }
-      } else if (data_format == "channels_last") {
-        DimVector y_vector;
-        y->shape().ToDimVector(&y_vector);
-        if (elem_num < GetMaxVal<int32_t>()) {
-          NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
-          PoolKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCLast(
-              ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-        } else {
-          NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-          PoolKernelUtil<device_type, T, int64_t>::Maxpool2dForwardCLast(
-              ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-        }
-      } else {
-        UNIMPLEMENTED() << "Unsupported data_format";
-      }
-    }
-#else
-
+#endif
     if (data_format == "channels_first") {
       DimVector y_vector(3);
       y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
@@ -457,6 +401,8 @@ class MaxPool2dKernel final : public user_op::OpKernel {
       }
     } else {
       UNIMPLEMENTED() << "Unsupported data_format";
+    }
+#ifdef WITH_ONEDNN
     }
 #endif
   };
@@ -523,37 +469,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
         UNIMPLEMENTED() << "Unsupported data_format";
       }
     } else {
-      if (data_format == "channels_first") {
-        DimVector dy_vector(3);
-        dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-        dy_vector.at(1) = dy->shape().At(2);
-        dy_vector.at(2) = dy->shape().At(3);
-        if (elem_num < GetMaxVal<int32_t>()) {
-          NdIndexOffsetHelper<int32_t, 3> index_helper(dy_vector.data());
-          PoolKernelUtil<device_type, T, int32_t>::Maxpool2dBackwardCFirst(
-              ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-        } else {
-          NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
-          PoolKernelUtil<device_type, T, int64_t>::Maxpool2dBackwardCFirst(
-              ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-        }
-      } else if (data_format == "channels_last") {
-        DimVector dy_vector;
-        dy->shape().ToDimVector(&dy_vector);
-        if (elem_num < GetMaxVal<int32_t>()) {
-          NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
-          PoolKernelUtil<device_type, T, int32_t>::Maxpool2dBackwardCLast(
-              ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-        } else {
-          NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
-          PoolKernelUtil<device_type, T, int64_t>::Maxpool2dBackwardCLast(
-              ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-        }
-      } else {
-        UNIMPLEMENTED() << "Unsupported data_format";
-      }
-    }
-#else
+#endif
     if (data_format == "channels_first") {
       DimVector dy_vector(3);
       dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
@@ -582,6 +498,8 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
       }
     } else {
       UNIMPLEMENTED() << "Unsupported data_format";
+    }
+#ifdef WITH_ONEDNN
     }
 #endif
   };
@@ -637,23 +555,7 @@ class MaxPool3dKernel final : public user_op::OpKernel {
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           static_cast<void*>(indice_ptr), dnnl::algorithm::pooling_max);
     } else {
-      DimVector y_vector(4);
-      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-      y_vector.at(1) = y->shape().At(2);
-      y_vector.at(2) = y->shape().At(3);
-      y_vector.at(3) = y->shape().At(4);
-
-      if (elem_num < GetMaxVal<int32_t>()) {
-        NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
-        PoolKernelUtil<device_type, T, int32_t>::Maxpool3dForward(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      } else {
-        NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-        PoolKernelUtil<device_type, T, int64_t>::Maxpool3dForward(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      }
-    }
-#else
+#endif
     DimVector y_vector(4);
     y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
     y_vector.at(1) = y->shape().At(2);
@@ -668,6 +570,8 @@ class MaxPool3dKernel final : public user_op::OpKernel {
       NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
       PoolKernelUtil<device_type, T, int64_t>::Maxpool3dForward(
           ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    }
+#ifdef WITH_ONEDNN
     }
 #endif
   };
@@ -723,26 +627,7 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
     } else {
-      DimVector dy_vector(4);
-      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-      dy_vector.at(1) = dy->shape().At(2);
-      dy_vector.at(2) = dy->shape().At(3);
-      dy_vector.at(3) = dy->shape().At(4);
-
-      size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
-      Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
-
-      if (elem_num < GetMaxVal<int32_t>()) {
-        NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
-        PoolKernelUtil<device_type, T, int32_t>::Maxpool3dBackward(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      } else {
-        NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
-        PoolKernelUtil<device_type, T, int64_t>::Maxpool3dBackward(
-            ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
-      }
-    }
-#else
+#endif
     DimVector dy_vector(4);
     dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
     dy_vector.at(1) = dy->shape().At(2);
@@ -760,6 +645,8 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
       NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
       PoolKernelUtil<device_type, T, int64_t>::Maxpool3dBackward(
           ctx->stream(), index_helper, elem_num, src, dest, indice_ptr, params_3d);
+    }
+#ifdef WITH_ONEDNN
     }
 #endif
   };
