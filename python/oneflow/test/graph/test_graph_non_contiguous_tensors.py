@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import oneflow.unittest
 import oneflow as flow
@@ -94,6 +95,7 @@ class TestGraphNonContiguousTensor(oneflow.unittest.TestCase):
     def test_graph_non_contiguous_tensors_cpu(test_case):
         _test_graph_non_contiguous_tensors(test_case, flow.device("cpu"))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_graph_non_contiguous_tensors_gpu(test_case):
         _test_graph_non_contiguous_tensors(test_case, flow.device("cuda"))
 
