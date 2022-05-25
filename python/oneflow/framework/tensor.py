@@ -879,8 +879,8 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
     # In this case, we run boxing through cpu to avoid extra gpu memory usage.
     if self.is_global:
         self_cpu_placement = flow.placement('cpu', self.placement.ranks)
-        other_cpu_placement = flow.placement('cpu', other.placement.ranks)
         if isinstance(other, Tensor):
+            other_cpu_placement = flow.placement('cpu', other.placement.ranks)
             other = other.to_global(placement=other_cpu_placement).to_global(placement=self_cpu_placement, sbp=self.sbp)
         else:
             other = flow.tensor(
