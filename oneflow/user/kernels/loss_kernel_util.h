@@ -116,4 +116,4 @@ namespace {
 }  // namespace user_op
 }  // namespace oneflow
 
-#endif // ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_H_
+#endif  // ONEFLOW_USER_KERNELS_LOSS_KERNEL_UTIL_H_
