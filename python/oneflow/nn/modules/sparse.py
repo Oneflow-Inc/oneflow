@@ -121,7 +121,7 @@ def embedding(
     See :class:`oneflow.nn.Embedding` for more details.
 
     Args:
-        input (LongTensor): Tensor containing indices into the embedding matrix
+        input (oneflow.LongTensor): Tensor containing indices into the embedding matrix
         weight (Tensor): The embedding matrix with number of rows equal to the maximum possible index + 1,
             and number of columns equal to the embedding size
         padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
