@@ -180,7 +180,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    stream->As<CpuStream>()->onednn_exector()->Launch([&](dnnl::engine* onednn_engine,
+    stream->As<CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
                                                           dnnl::stream* onednn_stream) {
       // onednn do not optimize for 3d tensor in our experiments, so expand it
       // to 4d if needed.
@@ -367,13 +367,13 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 #undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
     if (OneDnnIsEnabled()) {
       auto broadcast_elementwise_binary_primitive =
-          GetPrimitiveFromHandlers(new_broadcast_elementwise_binary_onednn_handle,
+          NewPrimitiveFromHandlers(new_broadcast_elementwise_binary_onednn_handle,
                                    std::make_tuple(binary_op, src_type, dst_type));
       if (broadcast_elementwise_binary_primitive) { return broadcast_elementwise_binary_primitive; }
     }
 
 #endif
-    return GetPrimitiveFromHandlers(new_broadcast_elementwise_binary_handle,
+    return NewPrimitiveFromHandlers(new_broadcast_elementwise_binary_handle,
                                     std::make_tuple(binary_op, src_type, dst_type));
   }
 };

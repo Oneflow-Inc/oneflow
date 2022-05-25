@@ -29,8 +29,8 @@ void CpuStream::RecordEvent(Event* /*event*/) {}
 
 #ifdef WITH_ONEDNN
 
-const std::unique_ptr<ep::OneDnnExecutor>& CpuStream::onednn_exector() const {
-  return onednn_exector_;
+const std::unique_ptr<ep::OneDnnExecutor>& CpuStream::onednn_executor() const {
+  return onednn_executor_;
 }
 
 #endif

@@ -99,7 +99,7 @@ class AddOneDnnImpl : public Add {
       }
     }
 
-    stream->As<CpuStream>()->onednn_exector()->Launch(
+    stream->As<CpuStream>()->onednn_executor()->Launch(
         [&](dnnl::engine* onednn_engine, dnnl::stream* onednn_stream) {
           dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(count)};
           std::vector<dnnl::memory::desc> src_md;
@@ -184,12 +184,12 @@ class AddFactoryImpl : public AddFactory {
 #undef MAKE_NEW_ONEDNN_ADD_ENTRY
 
     if (OneDnnIsEnabled()) {
-      auto add_primitive = GetPrimitiveFromHandlers(new_add_onednn_handle, data_type);
+      auto add_primitive = NewPrimitiveFromHandlers(new_add_onednn_handle, data_type);
       if (add_primitive) { return add_primitive; }
     }
 
 #endif
-    return GetPrimitiveFromHandlers(new_add_handle, data_type);
+    return NewPrimitiveFromHandlers(new_add_handle, data_type);
   }
 };
 

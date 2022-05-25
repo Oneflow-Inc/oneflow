@@ -123,7 +123,7 @@ inline void SimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims
 }
 
 template<typename T, typename D>
-std::unique_ptr<T> GetPrimitiveFromHandlers(
+std::unique_ptr<T> NewPrimitiveFromHandlers(
     const std::map<D, std::function<std::unique_ptr<T>()>>& handlers, const D& key) {
   const auto iter = handlers.find(key);
   if (iter != handlers.end()) { return iter->second(); }

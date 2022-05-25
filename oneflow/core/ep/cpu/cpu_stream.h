@@ -87,7 +87,11 @@ class CpuStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
 
-  explicit CpuStream(CpuDevice* device) : device_(device) {}
+  explicit CpuStream(CpuDevice* device) : device_(device) {
+#ifdef WITH_ONEDNN
+    onednn_executor_ = std::make_unique<ep::OneDnnExecutor>(this);
+#endif
+  }
 
   ~CpuStream() override = default;
 
@@ -141,15 +145,15 @@ class CpuStream : public Stream {
   }
 
 #ifdef WITH_ONEDNN
-  const std::unique_ptr<ep::OneDnnExecutor>& onednn_exector() const;
+  const std::unique_ptr<ep::OneDnnExecutor>& onednn_executor() const;
 #endif
 
  private:
-#ifdef WITH_ONEDNN
-  std::unique_ptr<ep::OneDnnExecutor> onednn_exector_ = std::make_unique<ep::OneDnnExecutor>(this);
-#endif
   CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
+#ifdef WITH_ONEDNN
+  std::unique_ptr<ep::OneDnnExecutor> onednn_executor_;
+#endif
 };
 
 #ifdef WITH_ONEDNN
@@ -186,4 +190,4 @@ class OneDnnExecutor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
+#endif // ONEFLOW_CORE_EP_CPU_CPU_STREAM_H_
