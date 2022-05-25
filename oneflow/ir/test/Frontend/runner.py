@@ -21,13 +21,12 @@ class GraphModule(flow.nn.Graph):
         return self.fw(x)
 
 
-func = Runner(GraphModule)
+func = Runner(GraphModule).cuda()
 input = flow.Tensor([-1, 1.])
 output = func(input)
 print(output)
 
-import numpy as np
-func = Runner(GraphModule)
 input = flow.Tensor([-1, 1., -2])
+func = func.cpu()
 output = func(input)
 print(output)

@@ -12,11 +12,11 @@ class Iree:
         pass
     class Cpu(Target):
         backend = ['dylib-llvm-aot']
-        config = ireert.Config('dylib')
+        config = 'dylib'
 
     class Cuda(Target):
         backend = ['cuda']
-        config = ireert.Config('dylib')
+        config = 'cuda'
 
     # members
     graph: Graph
@@ -31,11 +31,9 @@ class Iree:
     
     def cpu(self):
         self.target = Iree.Cpu
-        self.build()
     
     def cuda(self):
         self.target = Iree.Cuda
-        self.build()
 
     def build(self, graph: Graph):
         self.graph = graph
@@ -48,7 +46,8 @@ class Iree:
         self.tosa = flow._oneflow_internal.nn.graph.ConvertJobToTosaIR(self.job)
 
     def _generate_context(self):
-        self.ctx = ireert.SystemContext(config=self.target.config)
+        config = ireert.Config(self.target.config)
+        self.ctx = ireert.SystemContext(config=config)
         flat_buffer = compile_str(self.tosa, target_backends=self.target.backend, input_type='tosa')
         vm_module = ireert.VmModule.from_flatbuffer(flat_buffer)
         self.ctx.add_vm_module(vm_module)
@@ -61,6 +60,14 @@ class Runner(object):
     def __init__(self, raw_graph, backend=Iree):
         self.raw_graph = raw_graph
         self.backend = Iree()
+    
+    def cuda(self):
+        self.backend.cuda()
+        return self
+
+    def cpu(self):
+        self.backend.cpu()
+        return self
 
     def _parse_input(self, *args, **kwargs):
         res = []
