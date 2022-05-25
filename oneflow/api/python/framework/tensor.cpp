@@ -188,7 +188,7 @@ static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
 int64_t unpack_long(PyObject* self){
   int overflow = -1;
   long long val = PyLong_AsLongLongAndOverflow(self, &overflow);
-  if (val == -1 && PyErr_Occurred()) { THROW(RuntimeError) << "unpack_long >> Python exception occurs. tp_name:" << Py_TYPE(self)->tp_name << "; tp_doc:" << Py_TYPE(self)->tp_doc; }
+  if (val == -1 && PyErr_Occurred()) { THROW(RuntimeError) << "unpack_long >> Python exception occurs. python type:" << Py_TYPE(self)->tp_name; }
   if (overflow != 0) { THROW(RuntimeError)  << "unpack_long >> Overflow when unpacking long"; }
   return (int64_t)val;
 }
