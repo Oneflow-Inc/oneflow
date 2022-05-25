@@ -190,6 +190,7 @@ struct NormalizationOpLowering final : public OpConversionPattern<NormalizationO
     // Value erfPlus1 = rewriter.create<tosa::AddOp>(loc, outType, one, erf);
     // Value oneHalf = tosa::getConstTensor<float>(rewriter, op, 0.5, {}).getValue();
     // Value normalCdf = rewriter.create<tosa::MulOp>(loc, outType, oneHalf, erfPlus1, /*shift=*/0);
+    // TODO:
     return success();
   }
 };
@@ -219,9 +220,10 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
   LogicalResult matchAndRewrite(Conv2DOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     // oneflow 的卷积操作的输入是5D的输入和5D的输出，tosa的卷积操作是4D的输入和4D的输出，需要把oneflow的卷积操作进行迭代
-    auto slice_input = rewriter.create<tosa::SliceOp>(op->getLoc());
-    auto slice_conv2d_ouput = rewriter.create<tosa::Conv2DOp>(op->getLoc(), slice_input, op.weight(), op.bias(), op.padding_before(), op.strides(), op.dilation_rate());
-    auto output = rewriter.create<tosa::ConcatOp>(op->getLoc());
+    // auto slice_input = rewriter.create<tosa::SliceOp>(op->getLoc());
+    // auto slice_conv2d_ouput = rewriter.create<tosa::Conv2DOp>(op->getLoc(), slice_input, op.weight(), op.bias(), op.padding_before(), op.strides(), op.dilation_rate());
+    // auto output = rewriter.create<tosa::ConcatOp>(op->getLoc());
+    // TODO:
     return success();
   }
 };

@@ -4,10 +4,8 @@
 // RUN: -tensor-bufferize -func-bufferize -buffer-results-to-out-params \
 // RUN: -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm \
 // RUN: -convert-func-to-llvm -convert-memref-to-llvm -reconcile-unrealized-casts --print-after-all %s \
-// RUN: | oneflow-translate -mlir-to-llvmir | clang -x ir - -c -o test.o; nm test.o; rm test.o \
-// RUN: | FileCheck %s
+// RUN: | oneflow-translate -mlir-to-llvmir | clang -x ir - -c -o test.o
 
-// CHECK: 0000000000000000 T Graph_0
 builtin.module {
   func.func @Graph_0(%arg0: tensor<2xf32>) -> tensor<2xf32> {
     %0 = "tosa.cast"(%arg0) : (tensor<2xf32>) -> tensor<2xf32>

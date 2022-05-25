@@ -1,7 +1,6 @@
+# RUN: python3 %s | FileCheck %s
 import oneflow as flow
-print(flow.__file__)
-
-from oneflow.nn.graph.compiler import Runner
+from oneflow_iree.compiler import Runner
 
 
 class RELU(flow.nn.Module):
@@ -24,19 +23,23 @@ class GraphModule(flow.nn.Graph):
 func = Runner(GraphModule).cuda()
 
 
+# CHECK:[0. 1.]
 input = flow.Tensor([-1, 1.])
 output = func(input)
 print(output)
 
+# CHECK:[1. 0.]
 input = flow.Tensor([1, -1.])
 output = func(input)
 print(output)
 
+# CHECK:[0. 1. 0.]
 func = func.cpu()
 input = flow.Tensor([-1, 1., -2])
 output = func(input)
 print(output)
 
+# CHECK:[0. 1.]
 input = flow.Tensor([-1, 1.])
 output = func(input)
 print(output)
