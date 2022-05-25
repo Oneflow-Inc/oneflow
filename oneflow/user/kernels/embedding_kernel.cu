@@ -112,7 +112,7 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
     CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream(), dx_buf, 0, dx->shape().Count(0) * sizeof(T));
+    memset_primitive->Launch(ctx->stream(), dx_buf, 0, dx->shape().elem_cnt() * sizeof(T));
     memset_primitive->Launch(ctx->stream(), tmp_buf, 0,
                              GetCudaAlignedSize(sizeof(int32_t) * emb_size));
     EmbeddingGradFunctor<DeviceType::kCUDA, T, IndexType>()(

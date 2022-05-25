@@ -124,7 +124,8 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> EmbeddingGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("weight", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("weight", 0), ctx->InputDType("dy", 0));
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 
