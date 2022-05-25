@@ -27,6 +27,7 @@ bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_spl
 
 Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
+  // NOLINTBEGIN(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllPartialSumNdSbp(*in->nd_sbp()));
@@ -34,6 +35,7 @@ Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
+  // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
@@ -41,6 +43,7 @@ static constexpr auto* CheckNcclP2B = DECORATE(&RawCheckNcclP2B, ThreadLocalCach
 
 Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
+  // NOLINTBEGIN(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllPartialSumNdSbp(*in->nd_sbp()));
@@ -51,6 +54,7 @@ Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
+  // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
@@ -58,6 +62,7 @@ static constexpr auto* CheckNcclP2S = DECORATE(&RawCheckNcclP2S, ThreadLocalCach
 
 Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
+  // NOLINTBEGIN(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllSplitNdSbp(*in->nd_sbp(), 0));
@@ -68,6 +73,7 @@ Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
+  // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
@@ -75,6 +81,7 @@ static constexpr auto* CheckNcclS2B = DECORATE(&RawCheckNcclS2B, ThreadLocalCach
 
 Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
+  // NOLINTBEGIN(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
@@ -92,6 +99,7 @@ Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCUDA);
+  // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 

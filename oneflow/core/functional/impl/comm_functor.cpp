@@ -190,8 +190,9 @@ class ConsistentAllReduceFunctor {
   ConsistentAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
-      CHECK_OR_RETURN(IsAllPartialSumNdSbp(*JUST(x->nd_sbp())));
+      CHECK_OR_RETURN(x->is_consistent()) << "Tensor is not consistent";
+      CHECK_OR_RETURN(IsAllPartialSumNdSbp(*JUST(x->nd_sbp())))
+          << "Tensor's sbp must be partial_sum";
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
@@ -207,10 +208,13 @@ class ConsistentReduceScatterFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       if (op_type == "max") {
-        CHECK_OR_RETURN(IsAllBroadcastNdSbp(*JUST(x->nd_sbp())));
-        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA);
+        CHECK_OR_RETURN(IsAllBroadcastNdSbp(*JUST(x->nd_sbp())))
+            << "Tensor's sbp must be broadcast to get reduce_max";
+        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA)
+            << "reduce_max only support CUDA";
       } else if (op_type == "sum") {
-        CHECK_OR_RETURN(IsAllPartialSumNdSbp(*JUST(x->nd_sbp())));
+        CHECK_OR_RETURN(IsAllPartialSumNdSbp(*JUST(x->nd_sbp())))
+            << "Tensor's sbp must be partial_sum to get reduce_sum";
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
@@ -226,8 +230,9 @@ class ConsistentAllGatherFunctor {
   ConsistentAllGatherFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
-      CHECK_OR_RETURN(IsAllSplitNdSbp(*JUST(x->nd_sbp()), 0));
+      CHECK_OR_RETURN(x->is_consistent()) << "Tensor is not consistent";
+      CHECK_OR_RETURN(IsAllSplitNdSbp(*JUST(x->nd_sbp()), 0))
+          << "Tensor's sbp must be split to get all_gather";
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));

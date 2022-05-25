@@ -32,12 +32,14 @@ namespace {
 
 Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                         const Shape& logical_shape) {
+  // NOLINTBEGIN(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(*in->nd_sbp()));
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(*out->nd_sbp()));
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement())
                   || in->placement()->Bigger(*out->placement()));
+  // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
