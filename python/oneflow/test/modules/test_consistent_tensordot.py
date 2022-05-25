@@ -22,8 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_global_tensordot_against_pytorch(test_case, ndim, placement, sbp):
-    k = random(2, 4) * 8
-    dims = [k for i in range(ndim)]
+    k = random(1, 3) * 8
     tensordot_dim = random(0, ndim + 1).to(int)
 
     x = random_tensor(ndim=ndim, dim0=k, dim1=k, dim2=k, dim3=k).to_global(
