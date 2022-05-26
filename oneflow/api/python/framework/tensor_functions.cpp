@@ -32,14 +32,14 @@ using functional::PyObjectPtr;
 
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   HANDLE_ERRORS
-   PyObject* shape = args;
-   if (PyTuple_Size(args) == 1) {
-     PyObject* item = PyTuple_GetItem(args, 0);
-     if (!PyLong_Check(item)) {
-       shape = item;
-     }
+  PyObject* shape = args;
+  if (PyTuple_Size(args) == 1) {
+    PyObject* item = PyTuple_GetItem(args, 0);
+    if (!PyLong_Check(item)) { shape = item; }
   }
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(shape)) << "reshape(): argument 'shape' must be tuple of ints, but found " << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape)));
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(shape))
+      << Error::TypeError() << "reshape(): argument 'shape' must be tuple of ints, but found "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape)));
   const auto& dims = functional::PyUnpackLongSequence<int64_t>(shape);
   DimVector dim(dims.begin(), dims.end());
   return PyTensor_New(ASSERT_PTR(functional::Reshape(PyTensor_Unpack(self), Shape(dim))));
