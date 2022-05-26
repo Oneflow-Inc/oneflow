@@ -18,7 +18,7 @@ limitations under the License.
 class BlockConfig(object):
     r"""Configurations on Module Block in nn.Graph.
 
-    When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. You can set or get optimization configs on an nn.Module with it's `ModuleBlock.config`. 
+    When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. You can set or get optimization configs on an nn.Module with it's `ModuleBlock.config`.
     """
 
     def __init__(self):
@@ -31,7 +31,7 @@ class BlockConfig(object):
     @property
     def stage_id(self):
         r"""Set/Get stage id of nn.Module/ModuleBlock in pipeline parallelism.
-        
+
         When calling stage_id(value: int = None), set different module's stage id to hint the graph preparing right num of buffers in pipeline.
 
         For example:
@@ -39,7 +39,7 @@ class BlockConfig(object):
         .. code-block:: python
 
             # m_stage0 and m_stage1 are the two pipeline stages of the network, respectively.
-            # We can set Stage ID by setting the config.stage_id attribute of Module. 
+            # We can set Stage ID by setting the config.stage_id attribute of Module.
             # The Stage ID is numbered starting from 0 and increasing by 1.
             self.module_pipeline.m_stage0.config.stage_id = 0
             self.module_pipeline.m_stage1.config.stage_id = 1
@@ -54,8 +54,8 @@ class BlockConfig(object):
         """
         self._is_null = False
         self._stage_id = value
-    
-    def set_stage(self, stage_id: int = None, placement = None)
+
+    def set_stage(self, stage_id: int = None, placement = None):
         self._is_null = False
         self._stage_id = stage_id
         self._stage_placement = placement
