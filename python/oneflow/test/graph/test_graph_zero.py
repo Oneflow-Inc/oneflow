@@ -209,8 +209,8 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         def one_train_iter():
             out = linear_t_g(x)
-            #if flow.env.get_rank() == 0:
-            #    print(linear_t_g)
+            if flow.env.get_rank() == 0:
+                print(linear_t_g)
 
         def one_eval_iter():
             out = linear_e_g(x)
@@ -225,7 +225,7 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).
         # But their consumer will consum them as flow.sbp.broadcast.
-        one_eval_iter()
+        #one_eval_iter()
 
     iter_num = 1
     graph_check_list = train_with_graph(iter_num)
