@@ -63,13 +63,13 @@ class FillTensorKernel final : public user_op::OpKernel {
     const user_op::Tensor* value = ctx->Tensor4ArgNameAndIndex("value", 0);
     const int32_t elem_cnt = in->shape().elem_cnt();
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
-    const Scalar value_scalar =
+    const Scalar scalar_value =
         is_floating_value ? Scalar(value->dptr<double>()[0]) : Scalar(value->dptr<int64_t>()[0]);
     CHECK_GE(elem_cnt, 0);
     if (elem_cnt == 0) { return; }
     std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
     CHECK(fill);
-    fill->Launch(ctx->stream(), out->mut_dptr(), value_scalar, elem_cnt);
+    fill->Launch(ctx->stream(), out->mut_dptr(), scalar_value, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

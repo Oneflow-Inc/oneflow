@@ -275,8 +275,9 @@ class TestTensor(flow.unittest.TestCase):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
         y = flow.ones(*shape)
-        y.requires_grad = True
         x.fill_(1.0)
+        y.fill_(flow.tensor(1.0))
+        y.requires_grad = True
         z = x + y
         test_case.assertFalse(x.requires_grad)
         test_case.assertTrue(x.is_leaf)
@@ -306,6 +307,7 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(z.grad.numpy(), np.ones(shape), atol=1e-4, rtol=1e-4)
         )
         test_case.assertIsNone(x.grad)
+        test_case.assertIsNotNone(y.grad)
         w.backward(gradient=grad, retain_graph=True)
 
     @flow.unittest.skip_unless_1n1d()

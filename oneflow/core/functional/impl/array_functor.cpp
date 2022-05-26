@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
@@ -3034,7 +3035,8 @@ class FillFunctor {
       JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+      Error::RuntimeError()
+          << "fill_ only supports 0-dimension value tensor but got tensor with 1 dimensions.";
     }
     JUST(CheckInplaceValid(in));
     auto outputs = std::make_shared<TensorTuple>(1);
@@ -3050,7 +3052,7 @@ class FillFunctor {
 class FillTensorFunctor {
  public:
   FillTensorFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fill_").Input("in").Output("out").Build());
+    op_ = CHECK_JUST(one::OpBuilder("fill_tensor_").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& value) const {
@@ -3064,7 +3066,8 @@ class FillTensorFunctor {
     } else if (IsIntegralDataType(in->dtype()->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
     } else {
-      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+      Error::RuntimeError()
+          << "fill_ only supports 0-dimension value tensor but got tensor with 1 dimensions.";
     }
     JUST(CheckInplaceValid(in));
     auto outputs = std::make_shared<TensorTuple>(1);
