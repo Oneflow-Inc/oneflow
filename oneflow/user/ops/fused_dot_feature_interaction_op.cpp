@@ -83,7 +83,8 @@ namespace oneflow {
     user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   const int64_t batch_size = dy_shape.At(0);
-  CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features"));
+  CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features"))
+      << "features_grad and features must have same size";
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
     *ctx->OutputShape("features_grad", i) = ctx->InputShape("features", i);
   }

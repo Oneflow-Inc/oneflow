@@ -401,6 +401,18 @@ struct DotFeatureInteractionKernel {
   }
 };
 
+#if __CUDA_ARCH__ < 800
+template<int N, int32_t pack_size>
+struct DotFeatureInteractionKernel<float, N, pack_size> {
+  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
+                     int vector_size, int out_num_cols, bool self_interaction, int output_padding,
+                     const DotFwdParam<float, N>& param) {
+    UNIMPLEMENTED();
+    return false;
+  }
+};
+#endif
+
 template<typename T, int32_t N>
 struct DotBwdParam {
   const T* dy;
@@ -608,6 +620,18 @@ struct DotFeatureInteractionBackwardKernel {
     return true;
   }
 };
+
+#if __CUDA_ARCH__ < 800
+template<int N, int32_t pack_size>
+struct DotFeatureInteractionBackwardKernel<float, N, pack_size> {
+  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
+                     int vector_size, int out_num_cols, bool self_interaction,
+                     const DotBwdParam<float, N>& param) {
+    UNIMPLEMENTED();
+    return false;
+  }
+};
+#endif
 
 template<typename T, int N>
 bool DispatchFeatureInteractionDotPackSize(user_op::KernelComputeContext* ctx,
