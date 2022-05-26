@@ -1216,8 +1216,8 @@ def RegisterMethods():
     # Tensor.clamp_ = _clamp_
     # Tensor.clip = _clip
     # Tensor.clip_ = _clip_
-    Tensor.cpu = _cpu
-    Tensor.cuda = _cuda
+    # Tensor.cpu = _cpu
+    # Tensor.cuda = _cuda
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
     # Tensor.fmod = _fmod

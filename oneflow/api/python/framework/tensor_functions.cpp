@@ -545,6 +545,38 @@ static PyObject* PyTensorObject_clip_(PyObject* self, PyObject* args, PyObject* 
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_cpu(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObjectPtr dict(PyDict_New());
+  PyObjectPtr device(PyUnicode_FromString("cpu"));
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device.get()) > -1);
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  return functional::to(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* device = Py_None;
+  static const char* keywords[2] = {"device", NULL};
+  if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:cuda", const_cast<char**>(keywords), &device))
+  {
+    return NULL;
+  }
+  if(device == Py_None)
+    device = PyUnicode_FromString("cuda");
+  else if(PyLong_Check(device)) {
+    device = PyUnicode_Concat(PyUnicode_FromString("cuda:"), PyUnicode_FromFormat("%d", PyLong_AsLong(device)));
+  }
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device) > -1);
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  return functional::to(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"byte", PyTensorObject_byte, METH_NOARGS, NULL},
     {"size", (PyCFunction)PyTensorObject_size, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -568,6 +600,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"clamp_", (PyCFunction)PyTensorObject_clamp_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip", (PyCFunction)PyTensorObject_clip, METH_VARARGS | METH_KEYWORDS, NULL},
     {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"cpu", PyTensorObject_cpu, METH_NOARGS, NULL},
+    {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro BINARY_METHOD
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
