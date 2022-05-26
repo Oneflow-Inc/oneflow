@@ -3064,8 +3064,7 @@ class FillFunctor {
       JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
     } else {
-      Error::RuntimeError()
-          << "fill_ only supports 0-dimension value tensor but got tensor with 1 dimensions.";
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
     JUST(CheckInplaceValid(in));
     auto outputs = std::make_shared<TensorTuple>(1);
@@ -3086,8 +3085,7 @@ class FillTensorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& value) const {
     MutableAttrMap attrs;
-    const int64_t ndim = value->ndim();
-    CHECK_EQ_OR_RETURN(ndim, 0)
+    CHECK_EQ_OR_RETURN(value->ndim(), 0)
         << Error::RuntimeError()
         << "fill_ only supports 0-dimension value tensor but got tensor with 1 dimensions.";
     if (IsFloatingDataType(in->dtype()->data_type())) {
@@ -3095,8 +3093,7 @@ class FillTensorFunctor {
     } else if (IsIntegralDataType(in->dtype()->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
     } else {
-      Error::RuntimeError()
-          << "fill_ only supports 0-dimension value tensor but got tensor with 1 dimensions.";
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
     JUST(CheckInplaceValid(in));
     auto outputs = std::make_shared<TensorTuple>(1);

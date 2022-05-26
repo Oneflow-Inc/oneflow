@@ -20,11 +20,21 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def _test_fill_with_alpha(test_case, ndim, placement, sbp):
+def _test_fill_(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     value = random().to(float)
     y = x + 1
+    y.fill_(value)
+    return y
+
+
+@autotest(n=1, check_graph=False)
+def _test_fill_tensor_(test_case, ndim, placement, sbp):
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+    y = x + 1
+    value = random().to(float)
     y.fill_(value)
     return y
 
@@ -35,7 +45,8 @@ class TestAddModule(flow.unittest.TestCase):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                _test_fill_with_alpha(test_case, ndim, placement, sbp)
+                _test_fill_(test_case, ndim, placement, sbp)
+                _test_fill_tensor_(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
