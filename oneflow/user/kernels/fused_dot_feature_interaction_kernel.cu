@@ -219,35 +219,31 @@ struct DotFwdParam {
 };
 
 constexpr int unroll_dim = 2;
-
-template<int32_t N, int32_t pack_size, int TILE_DIM>
-__global__ void DotFeatureInteractionHalf(int M_BLOCKS, int K_BLOCKS, int64_t batch_size,
-                                          int padded_num_rows, int vector_num_pack,
-                                          int padded_vector_num_pack, int out_num_cols,
-                                          int out_num_cols_num_pack, int in_shared_mem_cols,
-                                          int in_shared_mem_cols_num_pack, int acc_shared_mem_cols,
-                                          int acc_shared_mem_cols_num_pack, int offset,
-                                          int output_padding, DotFwdParam<half, N> param) {
+template<typename T, typename ComputeType, int32_t N, int32_t pack_size, int TILE_DIM>
+__global__ void DotFeatureInteractionTensorCore(
+    int M_BLOCKS, int K_BLOCKS, int64_t batch_size, int padded_num_rows, int vector_num_pack,
+    int padded_vector_num_pack, int out_num_cols, int out_num_cols_num_pack, int in_shared_mem_cols,
+    int in_shared_mem_cols_num_pack, int acc_shared_mem_cols, int acc_shared_mem_cols_num_pack,
+    int offset, int output_padding, DotFwdParam<T, N> param) {
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
-  half* buf = reinterpret_cast<half*>(shared_buf);
-  Pack<half, pack_size>* buf_pack = reinterpret_cast<Pack<half, pack_size>*>(shared_buf);
-  float* acc_buf =
-      reinterpret_cast<float*>(shared_buf + padded_num_rows * in_shared_mem_cols * sizeof(half));
+  T* buf = reinterpret_cast<T*>(shared_buf);
+  Pack<T, pack_size>* buf_pack = reinterpret_cast<Pack<T, pack_size>*>(shared_buf);
+  ComputeType* acc_buf =
+      reinterpret_cast<ComputeType*>(shared_buf + padded_num_rows * in_shared_mem_cols * sizeof(T));
   int batch_idx = blockIdx.x;
-  half* batch_out = param.out + batch_idx * out_num_cols;
-  Pack<half, pack_size>* batch_out_pack =
-      reinterpret_cast<Pack<half, pack_size>*>(param.out) + batch_idx * out_num_cols_num_pack;
+  T* batch_out = param.out + batch_idx * out_num_cols;
+  Pack<T, pack_size>* batch_out_pack =
+      reinterpret_cast<Pack<T, pack_size>*>(param.out) + batch_idx * out_num_cols_num_pack;
   const int output_concat_size = param.output_concat_size;
-  const half* batch_output_concat =
+  const T* batch_output_concat =
       (param.output_concat) ? (param.output_concat + batch_idx * output_concat_size) : nullptr;
   for (int col = threadIdx.x; col < vector_num_pack; col += blockDim.x) {
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (i >= param.num_in) { break; }
-      const Pack<half, pack_size>* batch_in =
-          reinterpret_cast<const Pack<half, pack_size>*>(param.in[i])
-          + batch_idx * param.in_feature_dim[i] * vector_num_pack;
+      const Pack<T, pack_size>* batch_in = reinterpret_cast<const Pack<T, pack_size>*>(param.in[i])
+                                           + batch_idx * param.in_feature_dim[i] * vector_num_pack;
       for (int j = threadIdx.y * unroll_dim; j < param.in_feature_dim[i];
            j += blockDim.y * unroll_dim) {
 #pragma unroll
@@ -261,7 +257,7 @@ __global__ void DotFeatureInteractionHalf(int M_BLOCKS, int K_BLOCKS, int64_t ba
       }
     }
   }
-  Pack<half, pack_size> zero;
+  Pack<T, pack_size> zero;
   for (int k = 0; k < pack_size; ++k) { zero.elem[k] = 0; }
   for (int row = threadIdx.y; row < param.features_dim; row += blockDim.y) {
     for (int col = vector_num_pack + threadIdx.x; col < padded_vector_num_pack; col += blockDim.x) {
@@ -273,29 +269,30 @@ __global__ void DotFeatureInteractionHalf(int M_BLOCKS, int K_BLOCKS, int64_t ba
     int blocks_row_id = blocks_id / M_BLOCKS;
     int blocks_col_id = blocks_id - blocks_row_id * M_BLOCKS;
     if (blocks_row_id >= blocks_col_id) {
-      nvcuda::wmma::fragment<nvcuda::wmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float> acc;
-      nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, half,
+      nvcuda::wmma::fragment<nvcuda::wmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, ComputeType>
+          acc;
+      nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, T,
                              nvcuda::wmma::row_major>
           a;
-      nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, half,
+      nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, T,
                              nvcuda::wmma::col_major>
           b;
       nvcuda::wmma::fill_fragment(acc, 0.0f);
       for (int step = 0; step < K_BLOCKS; ++step) {
-        half* tile_a_ptr = buf + blocks_row_id * TILE_DIM * in_shared_mem_cols + step * TILE_DIM;
-        half* tile_b_ptr = buf + blocks_col_id * TILE_DIM * in_shared_mem_cols + step * TILE_DIM;
+        T* tile_a_ptr = buf + blocks_row_id * TILE_DIM * in_shared_mem_cols + step * TILE_DIM;
+        T* tile_b_ptr = buf + blocks_col_id * TILE_DIM * in_shared_mem_cols + step * TILE_DIM;
         nvcuda::wmma::load_matrix_sync(a, tile_a_ptr, in_shared_mem_cols);
         nvcuda::wmma::load_matrix_sync(b, tile_b_ptr, in_shared_mem_cols);
         nvcuda::wmma::mma_sync(acc, a, b, acc);
       }
-      float* tile_ptr =
+      ComputeType* tile_ptr =
           acc_buf + blocks_row_id * TILE_DIM * acc_shared_mem_cols + blocks_col_id * TILE_DIM;
       nvcuda::wmma::store_matrix_sync(tile_ptr, acc, acc_shared_mem_cols,
                                       nvcuda::wmma::mem_row_major);
     }
   }
   __syncthreads();
-  half* emb_out = batch_out + output_concat_size;
+  T* emb_out = batch_out + output_concat_size;
   for (int base_row = threadIdx.y * unroll_dim; base_row < param.features_dim;
        base_row += unroll_dim * blockDim.y) {
 #pragma unroll
@@ -305,7 +302,7 @@ __global__ void DotFeatureInteractionHalf(int M_BLOCKS, int K_BLOCKS, int64_t ba
       for (int col = threadIdx.x; col < param.features_dim; col += blockDim.x) {
         if (col < row + offset) {
           int64_t idx = row * (offset + row - 1 + offset) / 2 + col;
-          emb_out[idx] = __float2half(acc_buf[row * acc_shared_mem_cols + col]);
+          emb_out[idx] = static_cast<T>(acc_buf[row * acc_shared_mem_cols + col]);
         }
       }
     }
@@ -342,7 +339,6 @@ bool LaunchDotFeatureInteractionKernel(ep::Stream* stream, int64_t batch_size,
       concated_padded_dim * acc_shared_mem_num_cols * sizeof(ComputeType);
   const size_t total_shared_mem_bytes = in_shared_mem_bytes + acc_shared_mem_bytes;
   const int32_t offset = self_interaction ? 1 : 0;
-
   const int out_num_cols_num_pack = out_num_cols / pack_size;
   const int vector_num_pack = vector_size / pack_size;
   const int padded_vector_num_pack = padded_vector_size / pack_size;
@@ -350,11 +346,11 @@ bool LaunchDotFeatureInteractionKernel(ep::Stream* stream, int64_t batch_size,
   const int acc_shared_mem_cols_num_pack = acc_shared_mem_num_cols / pack_size;
   int max_active_blocks;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks, DotFeatureInteractionHalf<N, pack_size, TILE_DIM>, block_size,
-      total_shared_mem_bytes));
+      &max_active_blocks, DotFeatureInteractionTensorCore<T, ComputeType, N, pack_size, TILE_DIM>,
+      block_size, total_shared_mem_bytes));
   if (max_active_blocks <= 0) { return false; }
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-  DotFeatureInteractionHalf<N, pack_size, TILE_DIM>
+  DotFeatureInteractionTensorCore<T, ComputeType, N, pack_size, TILE_DIM>
       <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
           M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
           padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
@@ -376,41 +372,42 @@ struct DotBwdParam {
   int32_t num_in;
 };
 
-template<int32_t N, int32_t pack_size, int TILE_DIM>
-__global__ void DotFeatureInteractionHalfBackward(
+template<typename T, typename ComputeType, int32_t N, int32_t pack_size, int TILE_DIM>
+__global__ void DotFeatureInteractionBackwardTensorCore(
     int M_BLOCKS, int N_BLOCKS, int K_BLOCKS, int64_t batch_size, int padded_num_rows,
     int vector_num_pack, int padded_vector_num_pack, int out_num_cols, int out_num_cols_num_pack,
     int in_shared_mem_cols, int in_shared_mem_cols_num_pack, int matrix_dy_shared_mem_cols,
-    int matrix_dy_shared_mem_cols_num_pack, int offset, DotBwdParam<half, N> param) {
+    int matrix_dy_shared_mem_cols_num_pack, int offset, DotBwdParam<T, N> param) {
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
-  half* in_buf = reinterpret_cast<half*>(shared_buf);
-  Pack<half, pack_size>* in_buf_pack = reinterpret_cast<Pack<half, pack_size>*>(shared_buf);
-  half* matrix_dy_buf = in_buf + padded_num_rows * in_shared_mem_cols;
-  Pack<half, pack_size>* matrix_dy_pack = reinterpret_cast<Pack<half, pack_size>*>(matrix_dy_buf);
-  float* in_grad_buf =
-      reinterpret_cast<float*>(matrix_dy_buf + padded_num_rows * matrix_dy_shared_mem_cols);
-  Pack<float, pack_size>* in_grad_buf_pack = reinterpret_cast<Pack<float, pack_size>*>(in_grad_buf);
+  T* in_buf = reinterpret_cast<T*>(shared_buf);
+  Pack<T, pack_size>* in_buf_pack = reinterpret_cast<Pack<T, pack_size>*>(shared_buf);
+  T* matrix_dy_buf = in_buf + padded_num_rows * in_shared_mem_cols;
+  Pack<T, pack_size>* matrix_dy_pack = reinterpret_cast<Pack<T, pack_size>*>(matrix_dy_buf);
+  ComputeType* in_grad_buf =
+      reinterpret_cast<ComputeType*>(matrix_dy_buf + padded_num_rows * matrix_dy_shared_mem_cols);
+  Pack<ComputeType, pack_size>* in_grad_buf_pack =
+      reinterpret_cast<Pack<ComputeType, pack_size>*>(in_grad_buf);
 
   int batch_idx = blockIdx.x;
-  const half* batch_dy = param.dy + batch_idx * out_num_cols;
-  const Pack<half, pack_size>* batch_dy_pack =
-      reinterpret_cast<const Pack<half, pack_size>*>(param.dy) + batch_idx * out_num_cols_num_pack;
+  const T* batch_dy = param.dy + batch_idx * out_num_cols;
+  const Pack<T, pack_size>* batch_dy_pack =
+      reinterpret_cast<const Pack<T, pack_size>*>(param.dy) + batch_idx * out_num_cols_num_pack;
   const int output_concat_size = param.output_concat_size;
-  half* batch_output_concat_grad = (param.output_concat_grad)
-                                       ? (param.output_concat_grad + batch_idx * output_concat_size)
-                                       : nullptr;
+  T* batch_output_concat_grad = (param.output_concat_grad)
+                                    ? (param.output_concat_grad + batch_idx * output_concat_size)
+                                    : nullptr;
   int features_dim = param.features_dim;
   // 1.split dy to concat_out_grad and matrix_dy buf
   int thread_id = threadIdx.x + threadIdx.y * blockDim.x;
   for (int i = thread_id; i < output_concat_size; i += blockDim.x * blockDim.y) {
     batch_output_concat_grad[i] = batch_dy[i];
   }
-  const half* batch_interaction_dy = batch_dy + output_concat_size;
+  const T* batch_interaction_dy = batch_dy + output_concat_size;
   for (int matrix_row = threadIdx.y; matrix_row < padded_num_rows; matrix_row += blockDim.y) {
     for (int matrix_col = threadIdx.x; matrix_col < padded_num_rows; matrix_col += blockDim.x) {
       const int64_t i = matrix_row * matrix_dy_shared_mem_cols + matrix_col;
-      half grad_val = 0;
+      T grad_val = 0;
       if (matrix_row < features_dim && matrix_col < features_dim) {
         if (matrix_col < matrix_row) {
           int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
@@ -424,7 +421,7 @@ __global__ void DotFeatureInteractionHalfBackward(
           grad_val = batch_interaction_dy[dy_col_idx];
         } else if ((matrix_row == matrix_col) && (offset == 1)) {
           int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
-          grad_val = batch_interaction_dy[dy_col_idx] * static_cast<half>(2);
+          grad_val = batch_interaction_dy[dy_col_idx] * static_cast<T>(2);
         }
       }
       matrix_dy_buf[i] = grad_val;
@@ -436,9 +433,8 @@ __global__ void DotFeatureInteractionHalfBackward(
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (i >= param.num_in) { break; }
-      const Pack<half, pack_size>* batch_in =
-          reinterpret_cast<const Pack<half, pack_size>*>(param.in[i])
-          + batch_idx * param.in_feature_dim[i] * vector_num_pack;
+      const Pack<T, pack_size>* batch_in = reinterpret_cast<const Pack<T, pack_size>*>(param.in[i])
+                                           + batch_idx * param.in_feature_dim[i] * vector_num_pack;
       for (int j = threadIdx.y * unroll_dim; j < param.in_feature_dim[i];
            j += blockDim.y * unroll_dim) {
 #pragma unroll
@@ -452,7 +448,7 @@ __global__ void DotFeatureInteractionHalfBackward(
       }
     }
   }
-  Pack<half, pack_size> zero;
+  Pack<T, pack_size> zero;
   for (int k = 0; k < pack_size; ++k) { zero.elem[k] = 0; }
 #pragma unroll
   for (int row = features_dim + threadIdx.y; row < padded_num_rows; row += blockDim.y) {
@@ -470,25 +466,26 @@ __global__ void DotFeatureInteractionHalfBackward(
   for (int blocks_id = warp_id; blocks_id < M_BLOCKS * N_BLOCKS; blocks_id += blockDim.y) {
     int blocks_row_id = blocks_id / N_BLOCKS;
     int blocks_col_id = blocks_id - blocks_row_id * N_BLOCKS;
-    nvcuda::wmma::fragment<nvcuda::wmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, float> acc;
-    nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, half,
+    nvcuda::wmma::fragment<nvcuda::wmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, ComputeType>
+        acc;
+    nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, T,
                            nvcuda::wmma::row_major>
         a;
-    nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, half,
+    nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, T,
                            nvcuda::wmma::row_major>
         b;
     nvcuda::wmma::fill_fragment(acc, 0.0f);
     for (int step = 0; step < K_BLOCKS; ++step) {
       // blocks_row_id is a row_id, step is a col_id. blocks_col_id is b col_id,
       // step is b row_id.
-      half* tile_a_ptr =
+      T* tile_a_ptr =
           matrix_dy_buf + blocks_row_id * TILE_DIM * matrix_dy_shared_mem_cols + step * TILE_DIM;
-      half* tile_b_ptr = in_buf + step * TILE_DIM * in_shared_mem_cols + blocks_col_id * TILE_DIM;
+      T* tile_b_ptr = in_buf + step * TILE_DIM * in_shared_mem_cols + blocks_col_id * TILE_DIM;
       nvcuda::wmma::load_matrix_sync(a, tile_a_ptr, matrix_dy_shared_mem_cols);
       nvcuda::wmma::load_matrix_sync(b, tile_b_ptr, in_shared_mem_cols);
       nvcuda::wmma::mma_sync(acc, a, b, acc);
     }
-    float* tile_ptr =
+    ComputeType* tile_ptr =
         in_grad_buf + blocks_row_id * TILE_DIM * in_shared_mem_cols + blocks_col_id * TILE_DIM;
     nvcuda::wmma::store_matrix_sync(tile_ptr, acc, in_shared_mem_cols, nvcuda::wmma::mem_row_major);
   }
@@ -499,9 +496,8 @@ __global__ void DotFeatureInteractionHalfBackward(
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (i >= param.num_in) { break; }
-      Pack<half, pack_size>* batch_in_grad =
-          reinterpret_cast<Pack<half, pack_size>*>(param.in_grad[i])
-          + batch_idx * param.in_feature_dim[i] * vector_num_pack;
+      Pack<T, pack_size>* batch_in_grad = reinterpret_cast<Pack<T, pack_size>*>(param.in_grad[i])
+                                          + batch_idx * param.in_feature_dim[i] * vector_num_pack;
       for (int j = threadIdx.y * unroll_dim; j < param.in_feature_dim[i];
            j += blockDim.y * unroll_dim) {
 #pragma unroll
@@ -509,11 +505,11 @@ __global__ void DotFeatureInteractionHalfBackward(
           int in_row = j + k;
           if (in_row >= param.in_feature_dim[i]) { break; }
           int buf_row = param.dim_start_offset[i] + in_row;
-          Pack<half, pack_size> grad_val;
-          Pack<float, pack_size> buf_grad_val =
+          Pack<T, pack_size> grad_val;
+          Pack<ComputeType, pack_size> buf_grad_val =
               in_grad_buf_pack[buf_row * in_shared_mem_cols_num_pack + col];
           for (int t = 0; t < pack_size; ++t) {
-            grad_val.elem[t] = static_cast<half>(buf_grad_val.elem[t]);
+            grad_val.elem[t] = static_cast<T>(buf_grad_val.elem[t]);
           }
           batch_in_grad[in_row * vector_num_pack + col] = grad_val;
         }
@@ -555,11 +551,12 @@ bool LaunchDotFeatureInteractionBackwardKernel(ep::Stream* stream, int64_t batch
   const int matrix_dy_shared_mem_cols_num_pack = matrix_dy_shared_mem_cols / pack_size;
   int max_active_blocks;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks, DotFeatureInteractionHalfBackward<N, pack_size, TILE_DIM>, block_size,
+      &max_active_blocks,
+      DotFeatureInteractionBackwardTensorCore<T, ComputeType, N, pack_size, TILE_DIM>, block_size,
       total_shared_mem_bytes));
   if (max_active_blocks <= 0) { return false; }
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-  DotFeatureInteractionHalfBackward<N, pack_size, TILE_DIM>
+  DotFeatureInteractionBackwardTensorCore<T, ComputeType, N, pack_size, TILE_DIM>
       <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
           M_BLOCKS, N_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
           padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
