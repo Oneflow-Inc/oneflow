@@ -250,6 +250,7 @@ __global__ void DotFeatureInteractionTensorCore(
     int padded_vector_num_pack, int out_num_cols, int out_num_cols_num_pack, int in_shared_mem_cols,
     int in_shared_mem_cols_num_pack, int acc_shared_mem_cols, int acc_shared_mem_cols_num_pack,
     int offset, int output_padding, DotFwdParam<T, N> param) {
+#if __CUDA_ARCH__ >= 700
   using PrecisionType = typename DefaultPrecision<T>::type;
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
@@ -343,6 +344,9 @@ __global__ void DotFeatureInteractionTensorCore(
   for (int i = thread_id; i < output_padding; i += blockDim.x * blockDim.y) {
     batch_out[out_num_cols - 1 - i] = 0;
   }
+#else
+  __trap();
+#endif  // __CUDA_ARCH__ >= 700
 }
 
 template<typename T>
@@ -433,6 +437,7 @@ __global__ void DotFeatureInteractionBackwardTensorCore(
     int vector_num_pack, int padded_vector_num_pack, int out_num_cols, int in_shared_mem_cols,
     int in_shared_mem_cols_num_pack, int matrix_dy_shared_mem_cols, int offset,
     DotBwdParam<T, N> param) {
+#if __CUDA_ARCH__ >= 700
   using PrecisionType = typename DefaultPrecision<T>::type;
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
@@ -572,6 +577,9 @@ __global__ void DotFeatureInteractionBackwardTensorCore(
       }
     }
   }
+#else
+  __trap();
+#endif  // __CUDA_ARCH__ >= 700
 }
 
 template<typename T, int N, int32_t pack_size>
