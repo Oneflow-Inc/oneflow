@@ -218,13 +218,39 @@ struct DotFwdParam {
   int32_t num_in;
 };
 
+template<typename T>
+struct DefaultPrecision {
+  using type = T;
+};
+
+#if __CUDA_ARCH__ >= 800
+template<>
+struct DefaultPrecision<float> {
+  using type = nvcuda::wmma::precision::tf32;
+};
+#endif
+
+template<typename T>
+__device__ T ConvertToPrecision(T src) {
+  return src;
+}
+
+#if __CUDA_ARCH__ >= 800
+template<>
+__device__ float ConvertToPrecision<float>(float src) {
+  return nvcuda::wmma::__float_to_tf32(src);
+}
+#endif
+
 constexpr int unroll_dim = 2;
-template<typename T, typename ComputeType, int32_t N, int32_t pack_size, int TILE_DIM>
+template<typename T, typename ComputeType, int32_t N, int32_t pack_size, int tile_dim,
+         int k_tile_dim>
 __global__ void DotFeatureInteractionTensorCore(
     int m_num_tiles, int k_num_tiles, int64_t batch_size, int padded_num_rows, int vector_num_pack,
     int padded_vector_num_pack, int out_num_cols, int out_num_cols_num_pack, int in_shared_mem_cols,
     int in_shared_mem_cols_num_pack, int acc_shared_mem_cols, int acc_shared_mem_cols_num_pack,
     int offset, int output_padding, DotFwdParam<T, N> param) {
+  using PrecisionType = typename DefaultPrecision<T>::type;
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
   T* buf = reinterpret_cast<T*>(shared_buf);
@@ -251,14 +277,17 @@ __global__ void DotFeatureInteractionTensorCore(
           int in_row = j + k;
           if (in_row >= param.in_feature_dim[i]) { break; }
           int buf_row = param.dim_start_offset[i] + in_row;
-          buf_pack[buf_row * in_shared_mem_cols_num_pack + col] =
-              batch_in[in_row * vector_num_pack + col];
+          Pack<T, pack_size> pack_in_val = batch_in[in_row * vector_num_pack + col];
+          for (int t = 0; t < pack_size; ++t) {
+            pack_in_val.elem[t] = ConvertToPrecision<T>(pack_in_val.elem[t]);
+          }
+          buf_pack[buf_row * in_shared_mem_cols_num_pack + col] = pack_in_val;
         }
       }
     }
   }
   Pack<T, pack_size> zero;
-  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = 0; }
+  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = ConvertToPrecision<T>(0); }
   for (int row = threadIdx.y; row < param.features_dim; row += blockDim.y) {
     for (int col = vector_num_pack + threadIdx.x; col < padded_vector_num_pack; col += blockDim.x) {
       buf_pack[row * in_shared_mem_cols_num_pack + col] = zero;
@@ -269,24 +298,24 @@ __global__ void DotFeatureInteractionTensorCore(
     int blocks_row_id = blocks_id / m_num_tiles;
     int blocks_col_id = blocks_id - blocks_row_id * m_num_tiles;
     if (blocks_row_id >= blocks_col_id) {
-      nvcuda::wmma::fragment<nvcuda::wmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, ComputeType>
+      nvcuda::wmma::fragment<nvcuda::wmma::accumulator, tile_dim, tile_dim, k_tile_dim, ComputeType>
           acc;
-      nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, T,
+      nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, tile_dim, tile_dim, k_tile_dim, PrecisionType,
                              nvcuda::wmma::row_major>
           a;
-      nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, T,
+      nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, tile_dim, tile_dim, k_tile_dim, PrecisionType,
                              nvcuda::wmma::col_major>
           b;
       nvcuda::wmma::fill_fragment(acc, 0.0f);
       for (int step = 0; step < k_num_tiles; ++step) {
-        T* tile_a_ptr = buf + blocks_row_id * TILE_DIM * in_shared_mem_cols + step * TILE_DIM;
-        T* tile_b_ptr = buf + blocks_col_id * TILE_DIM * in_shared_mem_cols + step * TILE_DIM;
+        T* tile_a_ptr = buf + blocks_row_id * tile_dim * in_shared_mem_cols + step * k_tile_dim;
+        T* tile_b_ptr = buf + blocks_col_id * tile_dim * in_shared_mem_cols + step * k_tile_dim;
         nvcuda::wmma::load_matrix_sync(a, tile_a_ptr, in_shared_mem_cols);
         nvcuda::wmma::load_matrix_sync(b, tile_b_ptr, in_shared_mem_cols);
         nvcuda::wmma::mma_sync(acc, a, b, acc);
       }
       ComputeType* tile_ptr =
-          acc_buf + blocks_row_id * TILE_DIM * acc_shared_mem_cols + blocks_col_id * TILE_DIM;
+          acc_buf + blocks_row_id * tile_dim * acc_shared_mem_cols + blocks_col_id * tile_dim;
       nvcuda::wmma::store_matrix_sync(tile_ptr, acc, acc_shared_mem_cols,
                                       nvcuda::wmma::mem_row_major);
     }
@@ -316,35 +345,36 @@ __global__ void DotFeatureInteractionTensorCore(
   }
 }
 
+template<typename T>
+struct KTileDim {
+  static const int val = 16;
+};
+
+template<>
+struct KTileDim<float> {
+  static const int val = 8;
+};
+
 template<typename T, int N, int32_t pack_size>
 struct DotFeatureInteractionKernel {
   static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
                      int vector_size, int out_num_cols, bool self_interaction, int output_padding,
                      const DotFwdParam<T, N>& param) {
-    UNIMPLEMENTED();
-    return false;
-  }
-};
-
-template<int N, int32_t pack_size>
-struct DotFeatureInteractionKernel<half, N, pack_size> {
-  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
-                     int vector_size, int out_num_cols, bool self_interaction, int output_padding,
-                     const DotFwdParam<half, N>& param) {
     const int block_size = 128;
     const int block_dim_x = 32;
     const int block_dim_y = block_size / block_dim_x;
     const int num_blocks = batch_size;
-    const int TILE_DIM = 16;
+    const int tile_dim = 16;
+    const int k_tile_dim = KTileDim<T>::val;
     const int64_t padded_vector_size = GetPaddedDim(vector_size);
-    const int m_num_tiles = concated_padded_dim / TILE_DIM;
-    const int k_num_tiles = padded_vector_size / TILE_DIM;
-    const int skew_half = 8;
-    const int skew_acc = 8;  // consider adjust this
-    const int in_shared_mem_num_cols = padded_vector_size + skew_half;
+    const int m_num_tiles = concated_padded_dim / tile_dim;
+    const int k_num_tiles = padded_vector_size / k_tile_dim;
+    const int skew_in = 8;
+    const int skew_acc = 8;
+    const int in_shared_mem_num_cols = padded_vector_size + skew_in;
     const int acc_shared_mem_num_cols = concated_padded_dim + skew_acc;
-    const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(half);
-    using ComputeType = typename DefaultComputeType<half>::type;
+    const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(T);
+    using ComputeType = typename DefaultComputeType<T>::type;
     const size_t acc_shared_mem_bytes =
         concated_padded_dim * acc_shared_mem_num_cols * sizeof(ComputeType);
     const size_t total_shared_mem_bytes = in_shared_mem_bytes + acc_shared_mem_bytes;
@@ -357,11 +387,11 @@ struct DotFeatureInteractionKernel<half, N, pack_size> {
     int max_active_blocks;
     OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks,
-        DotFeatureInteractionTensorCore<half, ComputeType, N, pack_size, TILE_DIM>, block_size,
-        total_shared_mem_bytes));
+        DotFeatureInteractionTensorCore<T, ComputeType, N, pack_size, tile_dim, k_tile_dim>,
+        block_size, total_shared_mem_bytes));
     if (max_active_blocks <= 0) { return false; }
     cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-    DotFeatureInteractionTensorCore<half, ComputeType, N, pack_size, TILE_DIM>
+    DotFeatureInteractionTensorCore<T, ComputeType, N, pack_size, tile_dim, k_tile_dim>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
             m_num_tiles, k_num_tiles, batch_size, concated_padded_dim, vector_num_pack,
             padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
@@ -384,12 +414,14 @@ struct DotBwdParam {
   int32_t num_in;
 };
 
-template<typename T, typename ComputeType, int32_t N, int32_t pack_size, int TILE_DIM>
+template<typename T, typename ComputeType, int32_t N, int32_t pack_size, int tile_dim,
+         int k_tile_dim>
 __global__ void DotFeatureInteractionBackwardTensorCore(
     int m_num_tiles, int n_num_tiles, int k_num_tiles, int64_t batch_size, int padded_num_rows,
     int vector_num_pack, int padded_vector_num_pack, int out_num_cols, int in_shared_mem_cols,
     int in_shared_mem_cols_num_pack, int matrix_dy_shared_mem_cols, int offset,
     DotBwdParam<T, N> param) {
+  using PrecisionType = typename DefaultPrecision<T>::type;
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
   T* in_buf = reinterpret_cast<T*>(shared_buf);
@@ -433,7 +465,7 @@ __global__ void DotFeatureInteractionBackwardTensorCore(
           grad_val = batch_interaction_dy[dy_col_idx] * static_cast<T>(2);
         }
       }
-      matrix_dy_buf[i] = grad_val;
+      matrix_dy_buf[i] = ConvertToPrecision<T>(grad_val);
     }
   }
 
@@ -451,14 +483,17 @@ __global__ void DotFeatureInteractionBackwardTensorCore(
           int in_row = j + k;
           if (in_row >= param.in_feature_dim[i]) { break; }
           int buf_row = param.dim_start_offset[i] + in_row;
-          in_buf_pack[buf_row * in_shared_mem_cols_num_pack + col] =
-              batch_in[in_row * vector_num_pack + col];
+          Pack<T, pack_size> pack_in_val = batch_in[in_row * vector_num_pack + col];
+          for (int t = 0; t < pack_size; ++t) {
+            pack_in_val.elem[t] = ConvertToPrecision<T>(pack_in_val.elem[t]);
+          }
+          in_buf_pack[buf_row * in_shared_mem_cols_num_pack + col] = pack_in_val;
         }
       }
     }
   }
   Pack<T, pack_size> zero;
-  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = 0; }
+  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = ConvertToPrecision<T>(0); }
 #pragma unroll
   for (int row = features_dim + threadIdx.y; row < padded_num_rows; row += blockDim.y) {
     for (int col = threadIdx.x; col < padded_vector_num_pack; col += blockDim.x) {
@@ -475,12 +510,12 @@ __global__ void DotFeatureInteractionBackwardTensorCore(
   for (int blocks_id = warp_id; blocks_id < m_num_tiles * n_num_tiles; blocks_id += blockDim.y) {
     int blocks_row_id = blocks_id / n_num_tiles;
     int blocks_col_id = blocks_id - blocks_row_id * n_num_tiles;
-    nvcuda::wmma::fragment<nvcuda::wmma::accumulator, TILE_DIM, TILE_DIM, TILE_DIM, ComputeType>
+    nvcuda::wmma::fragment<nvcuda::wmma::accumulator, tile_dim, tile_dim, k_tile_dim, ComputeType>
         acc;
-    nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, TILE_DIM, TILE_DIM, TILE_DIM, T,
+    nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, tile_dim, tile_dim, k_tile_dim, PrecisionType,
                            nvcuda::wmma::row_major>
         a;
-    nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, TILE_DIM, TILE_DIM, TILE_DIM, T,
+    nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, tile_dim, tile_dim, k_tile_dim, PrecisionType,
                            nvcuda::wmma::row_major>
         b;
     nvcuda::wmma::fill_fragment(acc, 0.0f);
@@ -488,14 +523,14 @@ __global__ void DotFeatureInteractionBackwardTensorCore(
       // blocks_row_id is a row_id, step is a col_id. blocks_col_id is b col_id,
       // step is b row_id.
       T* tile_a_ptr =
-          matrix_dy_buf + blocks_row_id * TILE_DIM * matrix_dy_shared_mem_cols + step * TILE_DIM;
-      T* tile_b_ptr = in_buf + step * TILE_DIM * in_shared_mem_cols + blocks_col_id * TILE_DIM;
+          matrix_dy_buf + blocks_row_id * tile_dim * matrix_dy_shared_mem_cols + step * k_tile_dim;
+      T* tile_b_ptr = in_buf + step * k_tile_dim * in_shared_mem_cols + blocks_col_id * tile_dim;
       nvcuda::wmma::load_matrix_sync(a, tile_a_ptr, matrix_dy_shared_mem_cols);
       nvcuda::wmma::load_matrix_sync(b, tile_b_ptr, in_shared_mem_cols);
       nvcuda::wmma::mma_sync(acc, a, b, acc);
     }
     ComputeType* tile_ptr =
-        in_grad_buf + blocks_row_id * TILE_DIM * in_shared_mem_cols + blocks_col_id * TILE_DIM;
+        in_grad_buf + blocks_row_id * tile_dim * in_shared_mem_cols + blocks_col_id * tile_dim;
     nvcuda::wmma::store_matrix_sync(tile_ptr, acc, in_shared_mem_cols, nvcuda::wmma::mem_row_major);
   }
   __syncthreads();
@@ -532,32 +567,23 @@ struct DotFeatureInteractionBackwardKernel {
   static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
                      int vector_size, int out_num_cols, bool self_interaction,
                      const DotBwdParam<T, N>& param) {
-    UNIMPLEMENTED();
-    return false;
-  }
-};
-
-template<int N, int32_t pack_size>
-struct DotFeatureInteractionBackwardKernel<half, N, pack_size> {
-  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
-                     int vector_size, int out_num_cols, bool self_interaction,
-                     const DotBwdParam<half, N>& param) {
     const int block_size = 256;
     const int block_dim_x = 32;
     const int block_dim_y = block_size / block_dim_x;
     const int num_blocks = batch_size;
-    const int TILE_DIM = 16;
+    const int tile_dim = 16;
+    const int k_tile_dim = KTileDim<T>::val;
     const int64_t padded_vector_size = GetPaddedDim(vector_size);
-    const int m_num_tiles = concated_padded_dim / TILE_DIM;
-    const int k_num_tiles = concated_padded_dim / TILE_DIM;
-    const int n_num_tiles = padded_vector_size / TILE_DIM;
-    const int skew_half = 8;
-    const int in_shared_mem_num_cols = padded_vector_size + skew_half;
-    const int matrix_dy_shared_mem_cols = concated_padded_dim + skew_half;
-    const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(half);
+    const int m_num_tiles = concated_padded_dim / tile_dim;
+    const int k_num_tiles = concated_padded_dim / k_tile_dim;
+    const int n_num_tiles = padded_vector_size / tile_dim;
+    const int skew_in = 8;
+    const int in_shared_mem_num_cols = padded_vector_size + skew_in;
+    const int matrix_dy_shared_mem_cols = concated_padded_dim + skew_in;
+    const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(T);
     const size_t matrix_dy_shared_mem_bytes =
-        concated_padded_dim * matrix_dy_shared_mem_cols * sizeof(half);
-    using ComputeType = typename DefaultComputeType<half>::type;
+        concated_padded_dim * matrix_dy_shared_mem_cols * sizeof(T);
+    using ComputeType = typename DefaultComputeType<T>::type;
     const size_t in_grad_shared_mem_bytes =
         concated_padded_dim * in_shared_mem_num_cols * sizeof(ComputeType);
     const size_t total_shared_mem_bytes =
@@ -569,11 +595,11 @@ struct DotFeatureInteractionBackwardKernel<half, N, pack_size> {
     int max_active_blocks;
     OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks,
-        DotFeatureInteractionBackwardTensorCore<half, ComputeType, N, pack_size, TILE_DIM>,
+        DotFeatureInteractionBackwardTensorCore<T, ComputeType, N, pack_size, tile_dim, k_tile_dim>,
         block_size, total_shared_mem_bytes));
     if (max_active_blocks <= 0) { return false; }
     cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-    DotFeatureInteractionBackwardTensorCore<half, ComputeType, N, pack_size, TILE_DIM>
+    DotFeatureInteractionBackwardTensorCore<T, ComputeType, N, pack_size, tile_dim, k_tile_dim>
         <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
             m_num_tiles, n_num_tiles, k_num_tiles, batch_size, concated_padded_dim, vector_num_pack,
             padded_vector_num_pack, out_num_cols, in_shared_mem_num_cols,
@@ -923,7 +949,8 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
     const DataType data_type = out->data_type();
     CHECK_LT(out->shape().elem_cnt(), GetMaxVal<int32_t>());
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
-    if (cuda_stream->device_properties().major >= 7 && data_type == DataType::kFloat16) {
+    if ((cuda_stream->device_properties().major >= 7 && data_type == DataType::kFloat16)
+        || (cuda_stream->device_properties().major >= 8 && data_type == DataType::kFloat)) {
       bool success = TryLaunchTensorCoreDotKernel<T>(ctx);
       if (success == true) { return; }
     }
@@ -1029,7 +1056,8 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const DataType data_type = dy->data_type();
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
-    if (cuda_stream->device_properties().major >= 7 && data_type == DataType::kFloat16) {
+    if ((cuda_stream->device_properties().major >= 7 && data_type == DataType::kFloat16)
+        || (cuda_stream->device_properties().major >= 8 && data_type == DataType::kFloat)) {
       bool success = TryLaunchTensorCoreDotBackwardKernel<T>(ctx);
       if (success == true) { return; }
     }
