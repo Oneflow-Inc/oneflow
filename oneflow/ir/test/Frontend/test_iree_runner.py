@@ -45,21 +45,20 @@ def _test_check_iree_runner(test_case):
     # run on iree cuda backend
     input = flow.Tensor([-1.0, 1.0])
     output = func(input)
-    test_case.assertTrue(np.allclose(output, [0., 1.]))
+    test_case.assertTrue(np.allclose(output, [0.0, 1.0]))
     # change input shape
     input = flow.Tensor([-1.0, 1.0, -1])
     output = func(input)
-    test_case.assertTrue(np.allclose(output, [0., 1., 0.]))
+    test_case.assertTrue(np.allclose(output, [0.0, 1.0, 0.0]))
     # change on iree cpu backend
     func = func.cpu()
     input = flow.Tensor([-1.0, 0.0, 1.0])
     output = func(input)
-    test_case.assertTrue(np.allclose(output, [0., 0., 1.]))
+    test_case.assertTrue(np.allclose(output, [0.0, 0.0, 1.0]))
     # change input shape
     input = flow.Tensor([-1, 1.0])
     output = func(input)
-    test_case.assertTrue(np.allclose(output, [0., 1.]))
-
+    test_case.assertTrue(np.allclose(output, [0.0, 1.0]))
 
 
 @flow.unittest.skip_unless_1n1d()
