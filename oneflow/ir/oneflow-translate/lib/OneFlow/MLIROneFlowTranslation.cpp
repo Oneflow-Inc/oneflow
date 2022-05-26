@@ -864,7 +864,7 @@ std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper)
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createLowerOneFlowToTosaPass());
     if (mlir::failed(pm.run(*module))) {
-      module->emitError("Failed to run canonicalizer pass");
+      module->emitError("Failed to run oneflow-to-tosa pass");
       exit(EXIT_FAILURE);
     }
 
