@@ -885,6 +885,7 @@
 - name: "repeat_interleave"
   signature: [
     "Tensor (Tensor input, Int32 repeats, Int32 dim=None) => RepeatInterLeaveInt",
+    "Tensor (Tensor input, Tensor repeats, Int32 dim=None, Int32 output_size=None) => RepeatInterLeaveTensor",
   ]
   bind_python: True
 

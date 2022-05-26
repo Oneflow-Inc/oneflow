@@ -44,6 +44,8 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/api/common/ofblob.h"
+#include "oneflow/core/framework/tensor_util.h"
 
 namespace oneflow {
 namespace one {
@@ -2970,12 +2972,12 @@ class RepeatInterLeaveIntFunctor {
     std::shared_ptr<one::Tensor> res;
     if (!dim.has_value()) {
       std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
-      std::shared_ptr<one::Tensor> repeat_expand = JUST(Expand(
+      std::shared_ptr<one::Tensor> repeats_expand = JUST(Expand(
           JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
           Shape{input->shape()->At(0)}));
-      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeat_expand, 0, DType::Int32()));
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
       res = JUST(
-          IndexSelect(flatten_input, 0, JUST(RepeatInterLeaveIndex(repeat_expand, cumsum, 0))));
+          IndexSelect(flatten_input, 0, JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, 0))));
     } else {
       int32_t dim_ = JUST(dim);
       const auto input_shape = input->shape();
@@ -2984,12 +2986,71 @@ class RepeatInterLeaveIntFunctor {
       CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
           << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
-      std::shared_ptr<one::Tensor> repeat_expand = JUST(Expand(
+      std::shared_ptr<one::Tensor> repeats_expand = JUST(Expand(
           JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
           Shape{input->shape()->At(dim_)}));
-      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeat_expand, dim_, DType::Int32()));
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, dim_, DType::Int32()));
       res =
-          JUST(IndexSelect(input, dim_, JUST(RepeatInterLeaveIndex(repeat_expand, cumsum, dim_))));
+          JUST(IndexSelect(input, dim_, JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, dim_))));
+    }
+    return res;
+  }
+};
+
+class RepeatInterLeaveTensorFunctor {
+ public:
+  RepeatInterLeaveTensorFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& repeats,
+                           const Optional<int32_t>& dim,
+                           const Optional<int32_t>& output_size) const {
+    const auto repeats_shape = repeats->shape();
+    const int64_t& repeat_num_axes = repeats_shape->NumAxes();
+    CHECK_OR_RETURN(repeat_num_axes == 1)
+        << Error::RuntimeError << "repeat_interleave only accept 1D vector as repeat";
+    CHECK_OR_RETURN(repeats->dtype() == DType::Int64())
+        << Error::RuntimeError << "repeats has to be Long tensor";
+
+    std::vector<int64_t> repeats_value;
+    if (!output_size.has_value()) {
+      const auto& callback = [&](uint64_t ofblob_ptr) {
+        CHECK_JUST(BlobBufferCopyUtil<int64_t>::To(ofblob_ptr, repeats_value.data(),
+                                                   repeats_value.size()));
+      };
+      SyncAccessTensorWithTimeOut(repeats, callback, "const").GetOrThrow();
+      for (const auto x : repeats_value) {
+        CHECK_OR_RETURN(x < 0) << Error::RuntimeError << "repeats can not be negative";
+      }
+    } else {
+      repeats_value.push_back(JUST(output_size));
+    }
+
+    std::shared_ptr<one::Tensor> res;
+    if (!dim.has_value()) {
+      std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
+
+      std::shared_ptr<one::Tensor> repeats_expand = repeats;
+      if (repeat_num_axes == 0 || (repeat_num_axes == 1 && repeats_shape->At(0) == 1)) {
+        repeats_expand = JUST(Expand(
+            JUST(Unsqueeze(
+                JUST(Constant(Shape{1}, Scalar(repeats_value[0]), DType::Int32(), NullOpt)), 0)),
+            Shape{input->shape()->At(0)}));
+      }
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
+      res = JUST(
+          IndexSelect(flatten_input, 0, JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, 0))));
+    } else {
+      int32_t dim_ = JUST(dim);
+      CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))
+          << Error::RuntimeError << "repeats must have the same size as input along dim ";
+      const auto input_shape = input->shape();
+      const int64_t num_axes = input_shape->NumAxes();
+      if (dim_ < 0) { dim_ += num_axes; }
+      CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+          << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, dim_, DType::Int32()));
+      res = JUST(IndexSelect(input, dim_, JUST(RepeatInterLeaveIndex(repeats, cumsum, dim_))));
     }
     return res;
   }
@@ -3214,6 +3275,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RepeatFunctor>("Repeat");
   m.add_functor<impl::RepeatInterLeaveIndexFunctor>("RepeatInterLeaveIndex");
   m.add_functor<impl::RepeatInterLeaveIntFunctor>("RepeatInterLeaveInt");
+  m.add_functor<impl::RepeatInterLeaveTensorFunctor>("RepeatInterLeaveTensor");
   m.add_functor<impl::TileFunctor>("Tile");
   m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
