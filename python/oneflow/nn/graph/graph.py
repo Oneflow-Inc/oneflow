@@ -556,7 +556,7 @@ class Graph(object):
             module_conf = self._compiled_graph_proto.module_name2module_conf[
                 self.name
             ]
-            return operators_repr(module_conf.ops, self)
+            return operators_repr(module_conf.ops, self._compiled_graph_proto)
 
         return []
 

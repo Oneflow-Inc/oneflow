@@ -77,7 +77,8 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
 
     return arg_repr_list
 
-def _get_user_op_io_repr(user_op_conf, bn2nd_sbp, lbn2blob_desc):
+def _get_user_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
+    user_op_conf = op_conf.user_conf
     input_sig_str = ", ".join(_get_args_repr(user_op_conf.input_order, user_op_conf.input, bn2nd_sbp, lbn2blob_desc))
     output_sig_str = ", ".join(_get_args_repr(user_op_conf.output_order, user_op_conf.output, bn2nd_sbp, lbn2blob_desc))
     return input_sig_str, output_sig_str
@@ -121,12 +122,12 @@ def operators_repr(ops, graph_proto):
 
         # Only deal with UserOpConf and VariableOpConf for now.
         if op.HasField("user_conf"):
-            input_sig_str, output_sig_str = _get_user_op_io_repr(op.user_conf, bn2nd_sbp, lbn2blob_desc)
+            input_sig_str, output_sig_str = _get_user_op_io_repr(op, bn2nd_sbp, lbn2blob_desc)
         elif op.HasField("variable_conf"):
-            input_sig_str, output_sig_str = _get_var_op_io_repr(op.variable_conf, bn2nd_sbp, lbn2blob_desc)
+            input_sig_str, output_sig_str = _get_var_op_io_repr(op, bn2nd_sbp, lbn2blob_desc)
         elif op.HasField("identity_conf"):
             input_sig_str, output_sig_str = _get_iden_op_io_repr(op, bn2nd_sbp, lbn2blob_desc)
-        else:
+        elif op.name.startswith("System-"):
             return False, ""
 
         op_str = "(OPERATOR: "
