@@ -160,7 +160,9 @@ class Optimizer(object):
                     value = value.to(param.device)
                 else:
                     cpu_param_placement = flow.placement("cpu", param.placement.ranks)
-                    value = value.to_global(placement=cpu_param_placement, sbp=param.sbp).to_global(placement=param.placement)
+                    value = value.to_global(
+                        placement=cpu_param_placement, sbp=param.sbp
+                    ).to_global(placement=param.placement)
                 return value
             elif isinstance(value, dict):
                 return {k: cast(param, v) for k, v in value.items()}
