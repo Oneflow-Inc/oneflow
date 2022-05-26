@@ -59,7 +59,7 @@ class NarrowKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
-    const int64_t& length = ctx->Attr<int64_t>("length");
+    int64_t length = out->shape().At(dim);
     const ShapeView in_shape = in->shape();
     auto copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
@@ -92,7 +92,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
-    const int64_t& length = ctx->Attr<int64_t>("length");
+    int64_t length = dy->shape().At(dim);
 
     size_t dx_byte_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     void* dst = dx->mut_dptr();

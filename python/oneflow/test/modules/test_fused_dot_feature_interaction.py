@@ -155,6 +155,10 @@ def _test_fused_dot_feature_interaction_pooling_sum(
     )
     fused_loss = fused_R.sum()
     fused_loss.backward()
+    if dtype == flow.float16:
+        tol = 1e-2
+    else:
+        tol = 1e-3
     for i in range(len(feature_dims)):
         test_case.assertTrue(
             np.allclose(
@@ -164,7 +168,7 @@ def _test_fused_dot_feature_interaction_pooling_sum(
                 atol=1e-3,
             )
         )
-    test_case.assertTrue(np.allclose(fused_R.numpy(), R.numpy(), rtol=1e-3, atol=1e-3))
+    test_case.assertTrue(np.allclose(fused_R.numpy(), R.numpy(), rtol=tol, atol=tol))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

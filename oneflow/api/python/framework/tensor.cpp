@@ -19,6 +19,7 @@ limitations under the License.
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
+#include "oneflow/api/python/framework/tensortype.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
@@ -275,6 +276,45 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  const auto& tensor = PyTensor_Unpack(self);
+  PyObject* tensor_type = NULL;
+  int non_blocking = 0;
+  static const char* keywords[3] = {"dtype", "non_blocking", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|Op:type", const_cast<char**>(keywords),
+                                   &tensor_type, &non_blocking)) {
+    return NULL;
+  }
+  // TODO: support non_blocking=True
+  if (non_blocking == 1) {
+    return PyErr_Format(PyExc_TypeError, "non_blocking=True is not supported yet");
+  }
+  if (tensor_type == NULL) {
+    tensor_type =
+        PyTensorType_FromDTypeAndDeviceType(tensor->dtype(), ASSERT(tensor->device())->enum_type());
+    return PyUnicode_FromString(((PyTensorType*)tensor_type)->name);
+  }
+  if (PyUnicode_Check(tensor_type)) {
+    tensor_type = PyTensorType_FromString(PyUnicode_AsUTF8(tensor_type));
+  }
+  if (PyTensorType_Check(tensor_type)) {
+    const auto& dtype = PyTensorType_UnpackDType(tensor_type);
+    DeviceType device_type = PyTensorType_UnpackDevice(tensor_type);
+    if (device_type == ASSERT(tensor->device())->enum_type()) {
+      return PyTensor_New(ASSERT_PTR(functional::To(tensor, dtype, /*copy=*/false)));
+    }
+    Optional<std::string> device = ASSERT(DeviceTag4DeviceType(device_type));
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, dtype, /*copy=*/false)));
+
+  } else if (functional::PyDTypeCheck(tensor_type)) {
+    return PyTensor_New(
+        ASSERT_PTR(functional::To(tensor, functional::PyUnpackDType(tensor_type), /*copy=*/false)));
+  }
+  return PyErr_Format(PyExc_TypeError, "dtype must be a type, str, or dtype object");
+  END_HANDLE_ERRORS
+}
+
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                               \
   static PyObject* PyTensorObject__copy_to_numpy_##T(PyObject* self, PyObject* array) {   \
     HANDLE_ERRORS                                                                         \
@@ -338,6 +378,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
+    {"type", (PyCFunction)PyTensorObject_type, METH_VARARGS | METH_KEYWORDS, NULL},
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                \
   {"_copy_to_numpy_" #T, PyTensorObject__copy_to_numpy_##T, METH_O, NULL}, \
       {"_copy_from_numpy_" #T, PyTensorObject__copy_from_numpy_##T, METH_O, NULL},

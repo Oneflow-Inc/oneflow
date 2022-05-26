@@ -1189,6 +1189,34 @@ class ToContiguousFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceToContiguousFunctor {
+ public:
+  InplaceToContiguousFunctor() {
+    assign_op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
+    // TODO: use original "inplace_to_contiguous" op replace assign
+    if (input->is_contiguous()) { return input; }
+
+    auto contiguous_tensor = JUST(functional::ToContiguous(input));
+    CHECK_OR_RETURN(input->is_local() && contiguous_tensor->is_local())
+        << "Both ref and value must be local tensor.";
+    std::shared_ptr<Stride> stride(new Stride(*input->shape()));
+    // update stride
+    JUST(input->mut_eager_mirrored_tensor_impl())->mut_tensor_meta()->set_stride(stride);
+    const auto& blob_object = JUST(input->eager_blob_object());
+    // update eager_blob_object
+    JUST(JUST(input->mut_eager_mirrored_tensor_impl())
+             ->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()), false));
+    // assign contiguous tensor data
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {input, contiguous_tensor}));
+    return input;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> assign_op_;
+};
+
 class SliceBaseFunctor {
  public:
   SliceBaseFunctor() = default;
@@ -2664,6 +2692,7 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
   std::shared_ptr<Tensor> tensor;
   auto input_placement = JUST(x->parallel_desc());
   std::string input_device_tag = input_placement->device_tag();
+  if (input_device_tag == "gpu") { input_device_tag = "cuda"; }
   if (device_type == input_device_tag) {
     if (dtype == x->dtype()) {
       return (copy ? JUST(x->clone()) : x);
@@ -3061,6 +3090,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::ViewFunctor>("View");
   m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
+  m.add_functor<impl::InplaceToContiguousFunctor>("InplaceToContiguous");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::NarrowFunctor>("Narrow");
