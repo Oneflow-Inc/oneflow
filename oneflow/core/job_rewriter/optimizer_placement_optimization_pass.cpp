@@ -14,9 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -35,6 +39,7 @@ class DataParallelNodeSequence final {
     const OpNode* var_node = nodes_.front();
     CHECK(var_node->op().op_conf().has_variable_conf());
     model_size_ = GetSoleOutBlobSize(var_node);
+    len_ = nodes_.size();
   }
   ~DataParallelNodeSequence() = default;
 
@@ -50,10 +55,13 @@ class DataParallelNodeSequence final {
 
   int64_t model_size() const { return model_size_; }
 
+  int64_t len() const { return len_; }
+
  private:
   std::vector<const OpNode*> nodes_;
   int64_t order_;
   int64_t model_size_;
+  int64_t len_;
 };
 
 using SequencePtr = std::shared_ptr<const DataParallelNodeSequence>;
@@ -76,7 +84,6 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
   // Find sequence like: vairable -> cast_fp32_to_fp16
   if (!start->op().op_conf().has_variable_conf()) { return Maybe<void>::Ok(); }
   const ParallelDesc& pd = start->parallel_desc();
-  if (pd.device_type() != DeviceType::kCUDA) { return Maybe<void>::Ok(); }
   if (pd.parallel_num() == 1) { return Maybe<void>::Ok(); }
   const OpNode* cur_node = start;
   while (cur_node != nullptr) {
@@ -85,12 +92,27 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
       if (cur_node->in_edges().size() > 1) { break; }
       if (cur_node->op().input_bns().size() != 1) { break; }
       const std::string& sole_ibn = cur_node->op().SoleIbn();
-      if (!cur_node->SbpParallel4BnInOp(sole_ibn).has_broadcast_parallel()) { break; }
+      VLOG(3) << cur_node->op().op_name()
+              << " has sbp: " << cur_node->NdSbp4BnInOp(sole_ibn).DebugString();
+      const NdSbp& ibn_nd_sbp = cur_node->NdSbp4BnInOp(sole_ibn);
+      if (ibn_nd_sbp.sbp_parallel_size() == 0) { break; }
+      bool has_broadcast = false;
+      FOR_RANGE(int, i, 0, ibn_nd_sbp.sbp_parallel_size()) {
+        if (ibn_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { has_broadcast = true; };
+      }
+      if (!has_broadcast) { break; }
     }
     if (!IsAllowed(cur_node)) { break; }
     if (cur_node->op().output_bns().size() != 1) { break; }
     const std::string& sole_obn = cur_node->op().SoleObn();
-    if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
+    VLOG(3) << cur_node->op().op_name()
+            << " has sbp: " << cur_node->NdSbp4BnInOp(sole_obn).DebugString();
+    const NdSbp& obn_nd_sbp = cur_node->NdSbp4BnInOp(sole_obn);
+    bool has_broadcast = false;
+    FOR_RANGE(int, i, 0, obn_nd_sbp.sbp_parallel_size()) {
+      if (obn_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { has_broadcast = true; };
+    }
+    if (!has_broadcast) { break; }
     out->emplace_back(cur_node);
     if (cur_node->out_edges().size() == 1) {
       cur_node = cur_node->SoleOutEdge()->dst_node();
@@ -121,6 +143,78 @@ void SetBroadcastParallel4Consumers(JobBuilder* builder, const SequencePtr& sequ
       }
     }
   });
+}
+
+void SetNdSbp4OpNodeIbn(JobBuilder* builder, const OpNode* node, const std::string& ibn,
+                        const NdSbp& nd_sbp) {
+  OpBlobArg op_blob_arg;
+  op_blob_arg.set_op_name(node->op().op_name());
+  op_blob_arg.set_bn_in_op(ibn);
+  builder->SetNdSbp4Oba(op_blob_arg, nd_sbp);
+}
+
+void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const NdSbp& nd_sbp) {
+  const OpNode* node = sequence->GetLastNode();
+  const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
+  const int64_t limit_consumer_mode =
+      builder->job().job_conf().optimizer_placement_optimization_comsumer_limit_level();
+  // If limit_consumer_mode == 0, no limit on consumer
+  if (limit_consumer_mode == 1) {
+    // input lbn for parallel cast op
+    std::string parallel_cast_input_lbn = GenLogicalBlobName(lbi);
+    // Add indentity to enable mem reuse of boxing op when there is no op between var op and boxing.
+    if (sequence->len() == 1) {
+      LOG(ERROR) << "ZeRO find a data-parallel sequence only has one variable " << sequence->GetVariableNode()->op().op_name();
+      const auto var_identity_op = user_op::UserOpConfWrapperBuilder("System-ZeRO-Identity-" + node->op().op_name() + "-"
+                                          + NewUniqueId())
+            .Op("identity")
+            .Input("in", GenLogicalBlobName(lbi))
+            .Output("out")
+            .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
+            .Build();
+      builder->AddOps(node->parallel_desc().parallel_conf(), {var_identity_op.op_conf()});
+      parallel_cast_input_lbn = var_identity_op.output("out", 0);
+    }
+    // Add parallel cast op to make soft limt on consumer to consume weight with Broadcast SBP.
+    const auto parallel_cast_op =
+        user_op::UserOpConfWrapperBuilder("System-ZeRO-ParallelCast-" + node->op().op_name() + "-"
+                                          + NewUniqueId())
+            .Op("hierarchical_parallel_cast")
+            .Input("in", parallel_cast_input_lbn)
+            .Output("out")
+            .Attr<std::vector<std::string>>("nd_sbp", NdSbpToStringList(nd_sbp))
+            .Attr<std::string>("grad_mode", "identity")  // don't do ndsbp cast at backward
+            .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
+            .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
+            .Build();
+    builder->AddOps(node->parallel_desc().parallel_conf(), {parallel_cast_op.op_conf()});
+
+    // Make consumers to consume parallel cast op
+    auto out_lbn = parallel_cast_op.output("out", 0);
+    node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
+      for (const std::string& ibn : out_node->op().input_bns()) {
+        if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
+          if (!CHECK_JUST(builder->IsInMutOpTransaction(out_node->op().op_name()))) {
+            CHECK_JUST(builder->MutOpTransactionMut(out_node->op().op_conf()));
+          }
+          OperatorConf& mut_consumer_op =
+              *CHECK_JUST(builder->MutOpTransactionGet(out_node->op().op_name()));
+          const auto& old_lbn = ReplaceInputLbnInOpCustomizedConf(&mut_consumer_op, ibn, out_lbn);
+          CHECK_EQ(old_lbn, GenLogicalBlobName(lbi));
+        }
+      }
+    });
+  } else if (limit_consumer_mode == 2) {
+    // Hard limt consumer to consume weight as Broadcast.
+    // Default is 2.
+    node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
+      for (const std::string& ibn : out_node->op().input_bns()) {
+        if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
+          SetNdSbp4OpNodeIbn(builder, out_node, ibn, nd_sbp);
+        }
+      }
+    });
+  }
 }
 
 std::function<int64_t(const OpNode*)> MakeGetterOpNode2TopoOrder(const OpGraph& op_graph) {
@@ -228,6 +322,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     if (n->op().op_conf().has_variable_conf()) {
       const Shape shape(n->op().op_conf().variable_conf().shape());
       const int64_t parallel_num = n->parallel_desc().parallel_num();
+      // TODO(strint): zero with nd check size
       // Parameter needs to be able to evenly splited and one slice size >= threshold
       return shape.At(0) % parallel_num == 0 && shape.elem_cnt() >= threshold * parallel_num;
     } else {
@@ -236,28 +331,67 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
   };
   const auto PlacementSequencesAsSplitParallel = [&](const ParallelDesc& pd,
                                                      std::vector<SequencePtr>&& sorted_sequences) {
-    // For all sorted sequnence, set the variable op in the sequence to S(0)
+    // For all sorted sequnence, set the variable op in the sequence to S
     // and add ctrl edge to control the exectuion order between variable ops.
     // A sequence is a variable op and its cast(fp32 to fp16) op. This is because the forward pass
     // consume the fp16 variable and the optimizer consume the fp32 variable.
     for (int64_t i = 0; i < sorted_sequences.size(); ++i) {
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
-      CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
-      new_var_op_conf.mutable_variable_conf()->clear_nd_sbp();
-      *new_var_op_conf.mutable_variable_conf()->add_nd_sbp() = "S(0)";
+      const std::string& sole_obn = var_node->op().SoleObn();
+      const NdSbp& var_nd_sbp = var_node->NdSbp4BnInOp(sole_obn);
+      std::string new_split_signature = "";
+      int64_t split_dim = 0;
+      if (new_var_op_conf.variable_conf().nd_sbp_size() == 1
+          && new_var_op_conf.variable_conf().nd_sbp(0) == "B") {
+        new_split_signature = "S(0)";
+        split_dim = 0;
+      } else {
+        FOR_RANGE(int64_t, j, 0, new_var_op_conf.variable_conf().nd_sbp_size()) {
+          if (new_var_op_conf.variable_conf().nd_sbp(j) == "B") {
+            std::vector<int64_t> adjacent_dim{j - 1, j + 1};
+            for (auto const& dim_to_try : adjacent_dim) {
+              if (dim_to_try >= 0 && dim_to_try < new_var_op_conf.variable_conf().nd_sbp_size()) {
+                SbpParallel sbp;
+                if (ParseSbpParallelFromString(new_var_op_conf.variable_conf().nd_sbp(dim_to_try),
+                                               &sbp)
+                    && sbp.has_split_parallel()) {
+                  new_split_signature = new_var_op_conf.variable_conf().nd_sbp(dim_to_try);
+                  split_dim = j;
+                }
+              }
+              if (new_split_signature != "") break;
+            }
+          }
+          // Only split one more dim.
+          if (new_split_signature != "") break;
+        }
+      }
+      if (new_split_signature != "") {
+        *new_var_op_conf.mutable_variable_conf()->mutable_nd_sbp(split_dim) = new_split_signature;
+        VLOG(3) << var_node->op().op_name() << " succeed to change form B to "
+                << new_split_signature << " on ranks dim " << split_dim << " with op conf "
+                << new_var_op_conf.variable_conf().DebugString();
+      } else {
+        VLOG(3) << var_node->op().op_name() << " failed to change form B to  S "
+                << " with op conf " << new_var_op_conf.variable_conf().DebugString();
+      }
       if (i != 0) {
         const std::string& prev_op_name =
             sorted_sequences.at(i - 1)->GetVariableNode()->op().op_name();
         new_var_op_conf.add_ctrl_in_op_name(prev_op_name);
       }
+      // TODO(strint): rewrite with MutOpTransactioin
       builder->MutOpsOnlyOnce({new_var_op_conf});
       // Set consumers to consum this variable op's cast op's output as Broadcast.
-      SetBroadcastParallel4Consumers(builder, sorted_sequences.at(i));
+      if (new_split_signature != "") {
+        SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
+      }
     }
   };
   ForEachParallelSortedNodeSequence(op_graph, IsAllowed, SequenceCompSortedByOrderAsc,
                                     PlacementSequencesAsSplitParallel);
+  JUST(builder->MutOpTransactionCommit());
   return Maybe<void>::Ok();
 }
 
@@ -313,7 +447,8 @@ class OptimizerPlacementOptimizationPass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!(ctx->job_desc().IsTrain()
-          && ctx->job_desc().job_conf().has_optimizer_placement_optimization_mode())) {
+          && ctx->job_desc().job_conf().has_optimizer_placement_optimization_mode()
+          && ctx->job_desc().job_conf().optimizer_placement_optimization_mode() != "none")) {
       return Maybe<void>::Ok();
     }
     const std::string& mode = ctx->job_desc().job_conf().optimizer_placement_optimization_mode();

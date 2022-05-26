@@ -124,4 +124,7 @@ class MultiClientSession(object):
         self._session_ctx.update_resource(config_proto_str)
 
     def __del__(self):
+        if self._env.is_shutting_down():
+            # After python shutting down, it's not safe to call oneflow
+            return
         self._TryClose()
