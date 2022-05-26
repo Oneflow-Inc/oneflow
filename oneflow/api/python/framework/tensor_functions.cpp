@@ -18,7 +18,9 @@ limitations under the License.
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 namespace one {
@@ -30,16 +32,17 @@ using functional::PyObjectPtr;
 
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   HANDLE_ERRORS
-  PyObject* new_shape = NULL;
-  if (PyTuple_Size(args) == 1) {
-    new_shape = PyTuple_GetItem(args, 0);
-    if (PyLong_Check(new_shape)) new_shape = PyTuple_Pack(1, new_shape);
-  } else {
-    new_shape = args;
+   PyObject* shape = args;
+   if (PyTuple_Size(args) == 1) {
+     PyObject* item = PyTuple_GetItem(args, 0);
+     if (!PyLong_Check(item)) {
+       shape = item;
+     }
   }
-  PyObjectPtr tuple(PyTuple_Pack(2, self, new_shape));
-  Py_DECREF(new_shape);
-  return functional::reshape(NULL, tuple.get(), NULL);
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(shape)) << "reshape(): argument 'shape' must be tuple of ints, but found " << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape)));
+  const auto& dims = functional::PyUnpackLongSequence<int64_t>(shape);
+  DimVector dim(dims.begin(), dims.end());
+  return PyTensor_New(ASSERT_PTR(functional::Reshape(PyTensor_Unpack(self), Shape(dim))));
   END_HANDLE_ERRORS
 }
 
@@ -52,8 +55,7 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
                                    &other)) {
     return NULL;
   }
-  auto result = ASSERT_PTR(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape()));
-  return PyTensor_New(result);
+  return PyTensor_New(ASSERT_PTR(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape())));
   END_HANDLE_ERRORS
 }
 
