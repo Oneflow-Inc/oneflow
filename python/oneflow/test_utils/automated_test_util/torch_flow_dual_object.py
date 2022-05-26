@@ -895,7 +895,10 @@ class DualObject:
                 oneflow_attr is None
             ), f"pytorch value is None for attr {key}, but oneflow is not."
             return None
-        new_name = f"{self.name}.{key}"
+        if self.name == "":
+            new_name = key
+        else:
+            new_name = f"{self.name}.{key}"
         global call_pytorch
         call_pytorch = self.pytorch
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
@@ -1249,5 +1252,5 @@ def choice_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
-torch = GetDualObject("torch", torch_original, flow)
+torch = GetDualObject("", torch_original, flow)
 __all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]
