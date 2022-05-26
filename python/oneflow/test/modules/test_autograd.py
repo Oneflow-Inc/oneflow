@@ -111,9 +111,7 @@ class TestAutograd(flow.unittest.TestCase):
 
     @autotest(n=1, auto_backward=False, check_graph=False)
     def test_out_grad_with_different_dtype(test_case):
-        device = random_device()
         x = random_tensor(ndim=2, requires_grad=True)
-        x = x.to(device)
         y = x.sum()
         y.backward(torch.tensor(False))
         return x.grad
