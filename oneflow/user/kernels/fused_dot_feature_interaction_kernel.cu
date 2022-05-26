@@ -317,47 +317,59 @@ __global__ void DotFeatureInteractionTensorCore(
 }
 
 template<typename T, int N, int32_t pack_size>
-bool LaunchDotFeatureInteractionKernel(ep::Stream* stream, int64_t batch_size,
-                                       int concated_padded_dim, int vector_size, int out_num_cols,
-                                       bool self_interaction, int output_padding,
-                                       const DotFwdParam<T, N>& param) {
-  const int block_size = 128;
-  const int block_dim_x = 32;
-  const int block_dim_y = block_size / block_dim_x;
-  const int num_blocks = batch_size;
-  const int TILE_DIM = 16;
-  const int64_t padded_vector_size = GetPaddedDim(vector_size);
-  const int M_BLOCKS = concated_padded_dim / TILE_DIM;
-  const int K_BLOCKS = padded_vector_size / TILE_DIM;
-  const int skew_half = 8;
-  const int skew_acc = 8;  // consider adjust this
-  const int in_shared_mem_num_cols = padded_vector_size + skew_half;
-  const int acc_shared_mem_num_cols = concated_padded_dim + skew_acc;
-  const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(T);
-  using ComputeType = typename DefaultComputeType<T>::type;
-  const size_t acc_shared_mem_bytes =
-      concated_padded_dim * acc_shared_mem_num_cols * sizeof(ComputeType);
-  const size_t total_shared_mem_bytes = in_shared_mem_bytes + acc_shared_mem_bytes;
-  const int32_t offset = self_interaction ? 1 : 0;
-  const int out_num_cols_num_pack = out_num_cols / pack_size;
-  const int vector_num_pack = vector_size / pack_size;
-  const int padded_vector_num_pack = padded_vector_size / pack_size;
-  const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
-  const int acc_shared_mem_cols_num_pack = acc_shared_mem_num_cols / pack_size;
-  int max_active_blocks;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks, DotFeatureInteractionTensorCore<T, ComputeType, N, pack_size, TILE_DIM>,
-      block_size, total_shared_mem_bytes));
-  if (max_active_blocks <= 0) { return false; }
-  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-  DotFeatureInteractionTensorCore<T, ComputeType, N, pack_size, TILE_DIM>
-      <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
-          M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
-          padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
-          in_shared_mem_cols_num_pack, acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack,
-          offset, output_padding, param);
-  return true;
-}
+struct DotFeatureInteractionKernel {
+  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
+                     int vector_size, int out_num_cols, bool self_interaction, int output_padding,
+                     const DotFwdParam<T, N>& param) {
+    UNIMPLEMENTED();
+    return false;
+  }
+};
+
+template<int N, int32_t pack_size>
+struct DotFeatureInteractionKernel<half, N, pack_size> {
+  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
+                     int vector_size, int out_num_cols, bool self_interaction, int output_padding,
+                     const DotFwdParam<half, N>& param) {
+    const int block_size = 128;
+    const int block_dim_x = 32;
+    const int block_dim_y = block_size / block_dim_x;
+    const int num_blocks = batch_size;
+    const int TILE_DIM = 16;
+    const int64_t padded_vector_size = GetPaddedDim(vector_size);
+    const int M_BLOCKS = concated_padded_dim / TILE_DIM;
+    const int K_BLOCKS = padded_vector_size / TILE_DIM;
+    const int skew_half = 8;
+    const int skew_acc = 8;  // consider adjust this
+    const int in_shared_mem_num_cols = padded_vector_size + skew_half;
+    const int acc_shared_mem_num_cols = concated_padded_dim + skew_acc;
+    const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(half);
+    using ComputeType = typename DefaultComputeType<half>::type;
+    const size_t acc_shared_mem_bytes =
+        concated_padded_dim * acc_shared_mem_num_cols * sizeof(ComputeType);
+    const size_t total_shared_mem_bytes = in_shared_mem_bytes + acc_shared_mem_bytes;
+    const int32_t offset = self_interaction ? 1 : 0;
+    const int out_num_cols_num_pack = out_num_cols / pack_size;
+    const int vector_num_pack = vector_size / pack_size;
+    const int padded_vector_num_pack = padded_vector_size / pack_size;
+    const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
+    const int acc_shared_mem_cols_num_pack = acc_shared_mem_num_cols / pack_size;
+    int max_active_blocks;
+    OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks,
+        DotFeatureInteractionTensorCore<half, ComputeType, N, pack_size, TILE_DIM>, block_size,
+        total_shared_mem_bytes));
+    if (max_active_blocks <= 0) { return false; }
+    cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+    DotFeatureInteractionTensorCore<half, ComputeType, N, pack_size, TILE_DIM>
+        <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
+            M_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
+            padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
+            in_shared_mem_cols_num_pack, acc_shared_mem_num_cols, acc_shared_mem_cols_num_pack,
+            offset, output_padding, param);
+    return true;
+  }
+};
 
 template<typename T, int32_t N>
 struct DotBwdParam {
@@ -519,52 +531,63 @@ __global__ void DotFeatureInteractionBackwardTensorCore(
 }
 
 template<typename T, int N, int32_t pack_size>
-bool LaunchDotFeatureInteractionBackwardKernel(ep::Stream* stream, int64_t batch_size,
-                                               int concated_padded_dim, int vector_size,
-                                               int out_num_cols, bool self_interaction,
-                                               const DotBwdParam<T, N>& param) {
-  const int block_size = 256;
-  const int block_dim_x = 32;
-  const int block_dim_y = block_size / block_dim_x;
-  const int num_blocks = batch_size;
-  const int TILE_DIM = 16;
-  const int64_t padded_vector_size = GetPaddedDim(vector_size);
-  const int M_BLOCKS = concated_padded_dim / TILE_DIM;
-  const int K_BLOCKS = concated_padded_dim / TILE_DIM;
-  const int N_BLOCKS = padded_vector_size / TILE_DIM;
-  const int skew_half = 8;
-  const int in_shared_mem_num_cols = padded_vector_size + skew_half;
-  const int matrix_dy_shared_mem_cols = concated_padded_dim + skew_half;
-  const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(T);
-  const size_t matrix_dy_shared_mem_bytes =
-      concated_padded_dim * matrix_dy_shared_mem_cols * sizeof(T);
-  using ComputeType = typename DefaultComputeType<T>::type;
-  const size_t in_grad_shared_mem_bytes =
-      concated_padded_dim * in_shared_mem_num_cols * sizeof(ComputeType);
-  const size_t total_shared_mem_bytes =
-      in_shared_mem_bytes + matrix_dy_shared_mem_bytes + in_grad_shared_mem_bytes;
-  const int32_t offset = self_interaction ? 1 : 0;
-  const int out_num_cols_num_pack = out_num_cols / pack_size;
-  const int vector_num_pack = vector_size / pack_size;
-  const int padded_vector_num_pack = padded_vector_size / pack_size;
-  const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
-  const int matrix_dy_shared_mem_cols_num_pack = matrix_dy_shared_mem_cols / pack_size;
-  int max_active_blocks;
-  OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-      &max_active_blocks,
-      DotFeatureInteractionBackwardTensorCore<T, ComputeType, N, pack_size, TILE_DIM>, block_size,
-      total_shared_mem_bytes));
-  if (max_active_blocks <= 0) { return false; }
-  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-  DotFeatureInteractionBackwardTensorCore<T, ComputeType, N, pack_size, TILE_DIM>
-      <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
-          M_BLOCKS, N_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
-          padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
-          in_shared_mem_cols_num_pack, matrix_dy_shared_mem_cols,
-          matrix_dy_shared_mem_cols_num_pack, offset, param);
+struct DotFeatureInteractionBackwardKernel {
+  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
+                     int vector_size, int out_num_cols, bool self_interaction,
+                     const DotBwdParam<T, N>& param) {
+    UNIMPLEMENTED();
+    return false;
+  }
+};
 
-  return true;
-}
+template<int N, int32_t pack_size>
+struct DotFeatureInteractionBackwardKernel<half, N, pack_size> {
+  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
+                     int vector_size, int out_num_cols, bool self_interaction,
+                     const DotBwdParam<half, N>& param) {
+    const int block_size = 256;
+    const int block_dim_x = 32;
+    const int block_dim_y = block_size / block_dim_x;
+    const int num_blocks = batch_size;
+    const int TILE_DIM = 16;
+    const int64_t padded_vector_size = GetPaddedDim(vector_size);
+    const int M_BLOCKS = concated_padded_dim / TILE_DIM;
+    const int K_BLOCKS = concated_padded_dim / TILE_DIM;
+    const int N_BLOCKS = padded_vector_size / TILE_DIM;
+    const int skew_half = 8;
+    const int in_shared_mem_num_cols = padded_vector_size + skew_half;
+    const int matrix_dy_shared_mem_cols = concated_padded_dim + skew_half;
+    const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(half);
+    const size_t matrix_dy_shared_mem_bytes =
+        concated_padded_dim * matrix_dy_shared_mem_cols * sizeof(half);
+    using ComputeType = typename DefaultComputeType<half>::type;
+    const size_t in_grad_shared_mem_bytes =
+        concated_padded_dim * in_shared_mem_num_cols * sizeof(ComputeType);
+    const size_t total_shared_mem_bytes =
+        in_shared_mem_bytes + matrix_dy_shared_mem_bytes + in_grad_shared_mem_bytes;
+    const int32_t offset = self_interaction ? 1 : 0;
+    const int out_num_cols_num_pack = out_num_cols / pack_size;
+    const int vector_num_pack = vector_size / pack_size;
+    const int padded_vector_num_pack = padded_vector_size / pack_size;
+    const int in_shared_mem_cols_num_pack = in_shared_mem_num_cols / pack_size;
+    const int matrix_dy_shared_mem_cols_num_pack = matrix_dy_shared_mem_cols / pack_size;
+    int max_active_blocks;
+    OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks,
+        DotFeatureInteractionBackwardTensorCore<half, ComputeType, N, pack_size, TILE_DIM>,
+        block_size, total_shared_mem_bytes));
+    if (max_active_blocks <= 0) { return false; }
+    cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+    DotFeatureInteractionBackwardTensorCore<half, ComputeType, N, pack_size, TILE_DIM>
+        <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
+            M_BLOCKS, N_BLOCKS, K_BLOCKS, batch_size, concated_padded_dim, vector_num_pack,
+            padded_vector_num_pack, out_num_cols, out_num_cols_num_pack, in_shared_mem_num_cols,
+            in_shared_mem_cols_num_pack, matrix_dy_shared_mem_cols,
+            matrix_dy_shared_mem_cols_num_pack, offset, param);
+
+    return true;
+  }
+};
 
 template<typename T, int N>
 bool DispatchFeatureInteractionDotPackSize(user_op::KernelComputeContext* ctx,
@@ -597,15 +620,15 @@ bool DispatchFeatureInteractionDotPackSize(user_op::KernelComputeContext* ctx,
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
   const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
   if (vector_size % 4 == 0 && out_num_cols % 4 == 0) {
-    return LaunchDotFeatureInteractionKernel<T, N, 4>(
+    return DotFeatureInteractionKernel<T, N, 4>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         output_padding, param);
   } else if (vector_size % 2 == 0 && out_num_cols % 2 == 0) {
-    return LaunchDotFeatureInteractionKernel<T, N, 2>(
+    return DotFeatureInteractionKernel<T, N, 2>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         output_padding, param);
   } else {
-    return LaunchDotFeatureInteractionKernel<T, N, 1>(
+    return DotFeatureInteractionKernel<T, N, 1>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         output_padding, param);
   }
@@ -642,15 +665,15 @@ bool DispatchFeatureInteractionDotBackwardPackSize(user_op::KernelComputeContext
   }
   const bool self_interaction = ctx->Attr<bool>("self_interaction");
   if (vector_size % 4 == 0 && out_num_cols % 4 == 0) {
-    return LaunchDotFeatureInteractionBackwardKernel<T, N, 4>(
+    return DotFeatureInteractionBackwardKernel<T, N, 4>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         param);
   } else if (vector_size % 2 == 0 && out_num_cols % 2 == 0) {
-    return LaunchDotFeatureInteractionBackwardKernel<T, N, 2>(
+    return DotFeatureInteractionBackwardKernel<T, N, 2>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         param);
   } else {
-    return LaunchDotFeatureInteractionBackwardKernel<T, N, 1>(
+    return DotFeatureInteractionBackwardKernel<T, N, 1>::Launch(
         ctx->stream(), batch_size, concated_padded_dim, vector_size, out_num_cols, self_interaction,
         param);
   }
@@ -865,43 +888,31 @@ REGISTER_FUSED_DOT_FEATURE_INTERACTION_POOLING_SUM_KERNEL(half)
 
 template<typename T>
 bool TryLaunchTensorCoreDotKernel(user_op::KernelComputeContext* ctx) {
-  UNIMPLEMENTED();
-  return false;
-}
-
-template<>
-bool TryLaunchTensorCoreDotKernel<half>(user_op::KernelComputeContext* ctx) {
   const int input_size = ctx->input_size("features");
   if (input_size == 1) {
-    return DispatchFeatureInteractionDotPackSize<half, 1>(ctx, input_size);
+    return DispatchFeatureInteractionDotPackSize<T, 1>(ctx, input_size);
   } else if (input_size == 2) {
-    return DispatchFeatureInteractionDotPackSize<half, 2>(ctx, input_size);
+    return DispatchFeatureInteractionDotPackSize<T, 2>(ctx, input_size);
   } else if (input_size <= 8) {
-    return DispatchFeatureInteractionDotPackSize<half, 8>(ctx, input_size);
+    return DispatchFeatureInteractionDotPackSize<T, 8>(ctx, input_size);
   } else {
     CHECK_LE(input_size, 128) << "input_size must not greater than 128. ";
-    return DispatchFeatureInteractionDotPackSize<half, 128>(ctx, input_size);
+    return DispatchFeatureInteractionDotPackSize<T, 128>(ctx, input_size);
   }
 }
 
 template<typename T>
 bool TryLaunchTensorCoreDotBackwardKernel(user_op::KernelComputeContext* ctx) {
-  UNIMPLEMENTED();
-  return false;
-}
-
-template<>
-bool TryLaunchTensorCoreDotBackwardKernel<half>(user_op::KernelComputeContext* ctx) {
   const int input_size = ctx->input_size("features");
   if (input_size == 1) {
-    return DispatchFeatureInteractionDotBackwardPackSize<half, 1>(ctx, input_size);
+    return DispatchFeatureInteractionDotBackwardPackSize<T, 1>(ctx, input_size);
   } else if (input_size == 2) {
-    return DispatchFeatureInteractionDotBackwardPackSize<half, 2>(ctx, input_size);
+    return DispatchFeatureInteractionDotBackwardPackSize<T, 2>(ctx, input_size);
   } else if (input_size <= 8) {
-    return DispatchFeatureInteractionDotBackwardPackSize<half, 8>(ctx, input_size);
+    return DispatchFeatureInteractionDotBackwardPackSize<T, 8>(ctx, input_size);
   } else {
     CHECK_LE(input_size, 128) << "input_size must not greater than 128. ";
-    return DispatchFeatureInteractionDotBackwardPackSize<half, 128>(ctx, input_size);
+    return DispatchFeatureInteractionDotBackwardPackSize<T, 128>(ctx, input_size);
   }
 }
 template<typename T>
