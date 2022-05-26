@@ -103,12 +103,27 @@ static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  int dim0 = 0;
+  int dim1 = 0;
+  static const char* keywords[3] = {"dim0", "dim1", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|i:transpose", const_cast<char**>(keywords),
+                                   &dim0, &dim1)) {
+    return NULL;
+  }
+  return PyTensor_New(ASSERT_PTR(functional::Transpose2dim(tensor, dim0, dim1)));
+  END_HANDLE_ERRORS
+}
+
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", PyTensorObject_view, METH_VARARGS, NULL},
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"permute", PyTensorObject_permute, METH_VARARGS, NULL},
+    {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 

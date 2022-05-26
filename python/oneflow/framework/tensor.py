@@ -158,10 +158,6 @@ def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
     return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
 
 
-def _transpose(self, dim0, dim1):
-    return flow._C.transpose(self, dim0, dim1)
-
-
 def is_nonzero(input):
     r"""
     is_nonzero(input) -> (bool)
@@ -1301,7 +1297,6 @@ def RegisterMethods():
     Tensor.triu = _triu
     Tensor.where = _where
     Tensor.norm = _norm
-    Tensor.transpose = _transpose
     Tensor.local_to_global = _local_to_global
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
