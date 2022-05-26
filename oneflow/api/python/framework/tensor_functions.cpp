@@ -99,18 +99,12 @@ static PyObject* PyTensorObject_invert(PyObject* self) {
     END_HANDLE_ERRORS                                                          \
   }
 
-// TODO: still have bug here
-// NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_add, functional::add, "add");
+// inplace operators
+NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_add, functional::add);
 NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_sub, functional::sub);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_mul, functional::mul);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_fmod, functional::fmod);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_and, functional::logical_and);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_xor, functional::logical_xor);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_or, functional::logical_or);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_floor_div, functional::floor_divide);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_true_div, functional::div);
-// TODO: inplace matmul not supported yet
-// INPLACE_BINARY_FUNC(PyTensorObject_inplace_matrix_multiply, functional::matmul, "matmul");
+// The interface of inplace mul not mul(*, inplace=True) but mul_
+NB_BINARY_FUNC(PyTensorObject_inplace_mul, functional::mul_);
+NB_BINARY_FUNC(PyTensorObject_inplace_true_div, functional::div_);
 
 PyObject* PyTensorObject_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
@@ -144,21 +138,21 @@ PyNumberMethods PyTensorObject_as_number = {
     NULL,                     // nb_reserved
     NULL,                     // nb_float
 
-    NULL,                         // nb_inplace_add
-    PyTensorObject_inplace_sub,   // nb_inplace_sub
-    PyTensorObject_inplace_mul,   // nb_inplace_mul
-    PyTensorObject_inplace_fmod,  // nb_inplace_remainder
-    NULL,                         // nb_inplace_pow
-    NULL,                         // nb_inplace_lshift
-    NULL,                         // nb_inplace_rshift
-    PyTensorObject_inplace_and,   // nb_inplace_and
-    PyTensorObject_inplace_xor,   // nb_inplace_xor
-    PyTensorObject_inplace_or,    // nb_inplace_or
+    PyTensorObject_inplace_add,  // nb_inplace_add
+    PyTensorObject_inplace_sub,  // nb_inplace_sub
+    PyTensorObject_inplace_mul,  // nb_inplace_mul
+    NULL,                        // nb_inplace_remainder
+    NULL,                        // nb_inplace_pow
+    NULL,                        // nb_inplace_lshift
+    NULL,                        // nb_inplace_rshift
+    NULL,                        // nb_inplace_and
+    NULL,                        // nb_inplace_xor
+    NULL,                        // nb_inplace_or
 
-    PyTensorObject_floor_div,          // nb_floor_div
-    PyTensorObject_true_div,           // nb_true_div
-    PyTensorObject_inplace_floor_div,  // nb_inplace_floor_div
-    PyTensorObject_inplace_true_div,   // nb_inplace_true_div
+    PyTensorObject_floor_div,         // nb_floor_div
+    PyTensorObject_true_div,          // nb_true_div
+    NULL,                             // nb_inplace_floor_div
+    PyTensorObject_inplace_true_div,  // nb_inplace_true_div
 
     NULL,                            // nb_index
     PyTensorObject_matrix_multiply,  // nb_matrix_multiply
