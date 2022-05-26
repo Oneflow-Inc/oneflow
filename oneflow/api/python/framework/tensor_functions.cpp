@@ -38,8 +38,8 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
     new_shape = args;
   }
   PyObject* tuple = PyTuple_Pack(2, self, new_shape);
-  return functional::reshape(NULL, tuple, NULL);
   Py_DECREF(new_shape);
+  return functional::reshape(NULL, tuple, NULL);
   Py_DECREF(tuple);
   END_HANDLE_ERRORS
 }
@@ -49,13 +49,13 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
   auto tensor = PyTensor_Unpack(self);
   PyObject* other = NULL;
   static const char* keywords[2] = {"other", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:other", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:reshape_as", const_cast<char**>(keywords),
                                    &other)) {
     return NULL;
   }
   auto result = ASSERT_PTR(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape()));
-  return PyTensor_New(result);
   Py_DECREF(other);
+  return PyTensor_New(result);
   END_HANDLE_ERRORS
 }
 
