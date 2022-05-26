@@ -82,12 +82,25 @@ def _get_user_op_io_repr(user_op_conf, bn2nd_sbp, lbn2blob_desc):
     output_sig_str = ", ".join(_get_args_repr(user_op_conf.output_order, user_op_conf.output, bn2nd_sbp, lbn2blob_desc))
     return input_sig_str, output_sig_str
 
-def _get_var_op_io_repr(var_op_conf, bn2nd_sbp):
+def _get_var_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     input_sig_str = ""
-    #output_sig_str = op.name + "/" + var_op_conf.out
+    var_op_conf = op_conf.variable_conf
+    output_lbn = op_conf.name + "/" + var_op_conf.out
     output_sig_str = var_op_conf.out
     nd_sbp = bn2nd_sbp[var_op_conf.out]
-    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)
+    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+    return input_sig_str, output_sig_str
+
+def _get_iden_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
+    iden_op_conf = op_conf.identity_conf
+    input_lbn = getattr(iden_op_conf, "in")
+    input_sig_str = input_lbn + ":" + _nd_sbp2repr(bn2nd_sbp["in"])  + ", " + _blob_desc_repr(lbn2blob_desc[input_lbn])
+
+    output_lbn = op_conf.name + "/" + iden_op_conf.out
+    output_sig_str = iden_op_conf.out
+    nd_sbp = bn2nd_sbp[iden_op_conf.out]
+    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+
     return input_sig_str, output_sig_str
 
 
@@ -110,19 +123,26 @@ def operators_repr(ops, graph_proto):
         if op.HasField("user_conf"):
             input_sig_str, output_sig_str = _get_user_op_io_repr(op.user_conf, bn2nd_sbp, lbn2blob_desc)
         elif op.HasField("variable_conf"):
-            input_sig_str, output_sig_str = _get_var_op_io_repr(op.variable_conf, bn2nd_sbp)
+            input_sig_str, output_sig_str = _get_var_op_io_repr(op.variable_conf, bn2nd_sbp, lbn2blob_desc)
+        elif op.HasField("identity_conf"):
+            input_sig_str, output_sig_str = _get_iden_op_io_repr(op, bn2nd_sbp, lbn2blob_desc)
+        else:
+            return False, ""
 
-        return signature_template.substitute(input=input_sig_str, output=output_sig_str)
+        op_str = "(OPERATOR: "
+        op_str += signature_template.substitute(input=input_sig_str, output=output_sig_str)
+        op_str += ")"
+
+        return True, op_str
 
     ops_strs = []
     for op in ops:
         assert op in op_confs
         op_conf = op_confs[op]
         assert isinstance(op_conf, op_conf_util.OperatorConf)
-        op_str = "(OPERATOR: "
-        op_str += _op_signature(op_conf)
-        op_str += ")"
-        ops_strs.append(op_str)
+        got_repr, op_str = _op_signature(op_conf)
+        if got_repr:
+            ops_strs.append(op_str)
     return ops_strs
 
 def add_indent(in_s, num_spaces):
