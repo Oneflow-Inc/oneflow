@@ -361,4 +361,3 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
 
 #undef ASSERT
 #undef ASSERT_PTR
-
