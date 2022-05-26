@@ -363,7 +363,7 @@ if(BUILD_PYTHON)
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core"
             "${ONEFLOW_PYTHON_DIR}/oneflow/core"
     COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py
-            ${gen_pip_args} --src=${PROJECT_SOURCE_DIR}
+            ${gen_pip_args} --src=${PROJECT_SOURCE_DIR} --cmake_project_binary_dir=${PROJECT_BINARY_DIR}
             --out=${ONEFLOW_PYTHON_DIR}/oneflow/version.py)
 
   # source this file to add oneflow in PYTHONPATH
