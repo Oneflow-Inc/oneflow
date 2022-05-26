@@ -231,8 +231,9 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
       for(int i = 0; i < kVecSize; i++){
         int32_t thread_bitmask = 0;
         int32_t cur_col = col + i*kWarpSize; 
+        int32_t cur_linear_index = linear_index + i*kWarpSize; 
         if(cur_col < cols){
-          T x_val = x[linear_index + i*kWarpSize];
+          T x_val = x[cur_linear_index];
           const uint32_t rand_uniform_val = rand_uniform_pack4.elem[i];
           bool relu_mask = true;
           if (relu) {
@@ -245,12 +246,13 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
           bool combined_mask = relu_mask && mask_val;
           // thread_bitmask |= combined_mask << i;
           thread_bitmask = combined_mask;
-          T y_val = y[linear_index + i*kWarpSize];
+          T y_val = y[cur_linear_index];
           T t_combined_mask = static_cast<T>(combined_mask);
           y_val = x_val * t_combined_mask * t_scale;
-          y[linear_index + i*kWarpSize] = y_val;
+          y[cur_linear_index] = y_val;
         }
-        SetCublasBitMask<1, IndexType>(fast_div, aux_ld, row, col+i*kWarpSize, thread_bitmask, mask);
+        int32_t warp_mask = __ballot_sync(__activemask(), thread_bitmask);
+        if (lane_id == 0) { mask[fast_div.divides(row * aux_ld + cur_col)] = warp_mask; }
       }
     }
   }
@@ -264,7 +266,7 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
   }
 }
 
-template<class Func>
+template<typename Func>
 unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int32_t block_size) {
   auto* cuda_stream = stream->As<ep::CudaStream>();
   const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
