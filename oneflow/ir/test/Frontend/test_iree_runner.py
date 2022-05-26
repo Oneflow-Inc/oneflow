@@ -43,24 +43,23 @@ class GraphModule(flow.nn.Graph):
 def _test_check_iree_runner(test_case):
     func = Runner(GraphModule).cuda()
     # run on iree cuda backend
-    input = flow.Tensor([-1., 1.])
+    input = flow.Tensor([-1.0, 1.0])
     output = func(input)
-    test_case.assertTrue((output == np.array([0., 1.])).all())
+    test_case.assertTrue((output == np.array([0.0, 1.0])).all())
     # change input shape
-    input = flow.Tensor([-1., 1., -1])
+    input = flow.Tensor([-1.0, 1.0, -1])
     output = func(input)
-    test_case.assertTrue((output == np.array([0., 1., 0.])).all())
-    assert (output == np.array([0., 1., 0.])).all()
+    test_case.assertTrue((output == np.array([0.0, 1.0, 0.0])).all())
+    assert (output == np.array([0.0, 1.0, 0.0])).all()
     # change on iree cpu backend
     func = func.cpu()
-    input = flow.Tensor([-1., 0., 1.])
+    input = flow.Tensor([-1.0, 0.0, 1.0])
     output = func(input)
-    test_case.assertTrue((output == np.array([0., 0., 1.])).all())
+    test_case.assertTrue((output == np.array([0.0, 0.0, 1.0])).all())
     # change input shape
-    input = flow.Tensor([-1, 1.])
+    input = flow.Tensor([-1, 1.0])
     output = func(input)
-    test_case.assertTrue((output == np.array([0., 1.])).all())
-
+    test_case.assertTrue((output == np.array([0.0, 1.0])).all())
 
 
 @flow.unittest.skip_unless_1n1d()
