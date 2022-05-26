@@ -79,11 +79,11 @@ def _setitem(self, key, value):
                 value,
                 dtype=self.dtype,
                 placement=self.placement,
-                sbp=[flow.sbp.broadcast for _ in self.sbp],
+                sbp=[flow.sbp.broadcast,] * len(self.sbp),
             )
         else:
             value = value.to_global(
-                self.placement, sbp=[flow.sbp.broadcast for _ in self.sbp]
+                self.placement, sbp=[flow.sbp.broadcast,] * len(self.sbp)
             )
     else:
         if isinstance(value, (int, float)):

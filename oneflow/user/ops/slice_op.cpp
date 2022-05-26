@@ -155,14 +155,13 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 
 /*static*/ Maybe<void> LogicalSliceAssignOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("ref", 0);
-  // TODO(wyg): split only support full slice dims
-  // FOR_RANGE(int64_t, axis, 0, ref_desc.shape().NumAxes()) {
-  //   ctx->NewBuilder()
-  //       .Split(user_op::OpArg("ref", 0), axis)
-  //       .Broadcast(user_op::OpArg("value", 0))
-  //       .Split(user_op::OpArg("y", 0), axis)
-  //       .Build();
-  // }
+  FOR_RANGE(int64_t, axis, 0, ref_desc.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("ref", 0), axis)
+        .Broadcast(user_op::OpArg("value", 0))
+        .Split(user_op::OpArg("y", 0), axis)
+        .Build();
+  }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("ref", 0))
       .PartialSum(user_op::OpArg("value", 0))

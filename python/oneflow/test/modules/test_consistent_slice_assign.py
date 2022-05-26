@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
@@ -68,8 +67,7 @@ class TestGlobalLogicalSliceAssign(flow.unittest.TestCase):
     @globaltest
     def test_logical_slice_assign(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2, except_split=True):
-                # logical slice assign only support broadcast and partial_sum currently
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_logical_slice_assign(test_case, placement, sbp)
                 _test_graph_logical_slice_assign(test_case, placement, sbp)
 
