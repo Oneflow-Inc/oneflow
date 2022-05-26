@@ -2973,8 +2973,9 @@ class RepeatInterLeaveIntFunctor {
       std::shared_ptr<one::Tensor> repeat_expand = JUST(Expand(
           JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
           Shape{input->shape()->At(0)}));
-
-      res = JUST(IndexSelect(flatten_input, 0, repeat_expand));
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeat_expand, 0, DType::Int32()));
+      res = JUST(
+          IndexSelect(flatten_input, 0, JUST(RepeatInterLeaveIndex(repeat_expand, cumsum, 0))));
     } else {
       int32_t dim_ = JUST(dim);
       const auto input_shape = input->shape();
@@ -2986,7 +2987,9 @@ class RepeatInterLeaveIntFunctor {
       std::shared_ptr<one::Tensor> repeat_expand = JUST(Expand(
           JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
           Shape{input->shape()->At(dim_)}));
-      res = JUST(IndexSelect(input, dim_, repeat_expand));
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeat_expand, dim_, DType::Int32()));
+      res =
+          JUST(IndexSelect(input, dim_, JUST(RepeatInterLeaveIndex(repeat_expand, cumsum, dim_))));
     }
     return res;
   }

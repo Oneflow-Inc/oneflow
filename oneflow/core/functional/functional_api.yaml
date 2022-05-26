@@ -886,7 +886,7 @@
   signature: [
     "Tensor (Tensor input, Int32 repeats, Int32 dim=None) => RepeatInterLeaveInt",
   ]
-  bind_python: False
+  bind_python: True
 
 - name: "tile"
   signature: "Tensor (Tensor input, Shape dims) => Tile"
