@@ -1040,20 +1040,6 @@ def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
 
-def _view(self, *shape):
-    if len(shape) == 1:
-        new_shape = shape[0]
-        if isinstance(new_shape, int):
-            new_shape = (new_shape,)
-    else:
-        new_shape = shape
-    return flow._C.view(self, new_shape)
-
-
-def _view_as(self, other):
-    return _view(self, *other.size())
-
-
 def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
 
@@ -1367,8 +1353,6 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
-    Tensor.view = _view
-    Tensor.view_as = _view_as
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist

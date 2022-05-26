@@ -59,9 +59,40 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_view(PyObject* self, PyObject* args) {
+  HANDLE_ERRORS
+  PyObject* shape = args;
+  if (PyTuple_Size(args) == 1) {
+    PyObject* item = PyTuple_GetItem(args, 0);
+    if (!PyLong_Check(item)) { shape = item; }
+  }
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(shape))
+      << Error::TypeError() << "view(): argument 'shape' must be tuple of ints, but found "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape)));
+  const auto& dims = functional::PyUnpackLongSequence<int64_t>(shape);
+  DimVector dim(dims.begin(), dims.end());
+  return PyTensor_New(ASSERT_PTR(functional::View(PyTensor_Unpack(self), Shape(dim))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:view_as", const_cast<char**>(keywords),
+                                   &other)) {
+    return NULL;
+  }
+  return PyTensor_New(ASSERT_PTR(functional::View(tensor, *PyTensor_Unpack(other)->shape())));
+  END_HANDLE_ERRORS
+}
+
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"view", PyTensorObject_view, METH_VARARGS, NULL},
+    {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 
