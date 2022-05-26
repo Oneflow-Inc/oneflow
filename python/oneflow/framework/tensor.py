@@ -1138,7 +1138,6 @@ def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
 
 
-
 def RegisterMethods():
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.ndim = property(_ndim)
