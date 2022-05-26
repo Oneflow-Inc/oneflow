@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/graph/straighten_nodes.h"
 
 namespace oneflow {
 
@@ -450,7 +451,11 @@ TaskGraph::TaskGraph() {
     }
   });
 
-  SetOrderInGraphForEachNode();
+  if (ParseBooleanFromEnv("ONEFLOW_RANDOM_STRAIGHTEN_NODES", false)) {
+    SetOrderInGraphForEachNode();
+  } else {
+    StraightenNodes(this, ordered_task_nodes_);
+  }
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }
 

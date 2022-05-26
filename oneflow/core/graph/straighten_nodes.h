@@ -16,8 +16,7 @@ limitations under the License.
 #ifndef STRAIGHTEN_NODES_H_
 #define STRAIGHTEN_NODES_H_
 
-#include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
 
@@ -53,6 +52,8 @@ class TopoStruct {
 };
 
 void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
+
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>& ordered_task_nodes);
 
 }  // namespace oneflow
 
