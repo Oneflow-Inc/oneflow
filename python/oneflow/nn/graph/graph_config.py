@@ -70,7 +70,7 @@ class GraphConfig(object):
 
         """
         assert type(mode) is bool
-        self.proto.set_enable_auto_mixed_precision(mode)
+        self.proto.enable_auto_mixed_precision = mode
 
     def enable_zero(
         self,
@@ -110,7 +110,7 @@ class GraphConfig(object):
             parameter_consumer_limit_level (int): limit consumer to comsume sharded parameter with Broadcast, level 2 is hard limit, level 1 is soft limit, level 0 is no limit. Note that this paremeter is at pre-alpha stage and is not stable.
         """
         if not mode:
-            self.proto.set_optimizer_placement_optimization_mode("none")
+            self.proto.optimizer_placement_optimization_mode = "none"
             return
         assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
         assert (
@@ -118,11 +118,9 @@ class GraphConfig(object):
         ), "ZeRO min size of a sharded optimizer state must > 0."
         assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
         if stage >= 1:
-            self.proto.set_optimizer_placement_optimization_mode("distributed_split")
-            self.proto.set_optimizer_placement_optimization_threshold(min_shard_size)
-            self.proto.set_optimizer_placement_optimization_comsumer_limit_level(
-                parameter_consumer_limit_level
-            )
+            self.proto.optimizer_placement_optimization_mode = "distributed_split"
+            self.proto.optimizer_placement_optimization_threshold = min_shard_size
+            self.proto.optimizer_placement_optimization_comsumer_limit_level = parameter_consumer_limit_level
         if stage >= 2:
             oneflow.boxing.nccl.enable_use_compute_stream(True)
         if stage >= 3:

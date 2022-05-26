@@ -198,7 +198,7 @@ void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const 
             CHECK_JUST(builder->MutOpTransactionMut(out_node->op().op_conf()));
           }
           OperatorConf& mut_consumer_op =
-              *CHECK_JUST(builder->MutOpTransactionGet(out_node->op().op_name()));
+              CHECK_JUST(builder->MutOpTransactionGet(out_node->op().op_name()));
           const auto& old_lbn = ReplaceInputLbnInOpCustomizedConf(&mut_consumer_op, ibn, out_lbn);
           CHECK_EQ(old_lbn, GenLogicalBlobName(lbi));
         }
