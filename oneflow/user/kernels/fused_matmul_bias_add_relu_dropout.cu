@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/ep/include/primitive/fast_integer_math.h"
-#include "oneflow/core/cuda/random_generator.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11060
 
@@ -85,9 +84,8 @@ __global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
                                                  const uint32_t rate, float scale, const T* x,
                                                  int32_t* mask, T* y) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  oneflow::cuda::fast_rand::RandState state;
-  oneflow::cuda::fast_rand::FastRandInit(
-      seed, cuda_gen_state->dev_offset + global_thread_id * inc_offset, &state);
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, kVecSize>;
   using LoadPack = cuda::elementwise::Pack<T, kVecSize>;
 
@@ -102,7 +100,7 @@ __global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
     const IndexType col = linear_index - row * cols;
     int32_t thread_bitmask = 0;
 
-    rand_uniform_pack4.storage = oneflow::cuda::fast_rand::FastRand4(&state);
+    rand_uniform_pack4.storage = curand4(&state);
 
     const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
     LoadPack x_vec;
@@ -130,9 +128,8 @@ __global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
   if (threadIdx.x == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;  // reset counter to zero
-      cuda_gen_state->dev_offset +=
-          inc_offset * gridDim.x * blockDim.x;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;           // reset counter to zero
+      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
@@ -143,11 +140,8 @@ __global__ void FusedPaddedVectorizedReluDropoutKernel(
     const IndexType aligned32_elem_cnt, const int32_t aux_ld, const IndexType aligned32_cols,
     const IndexType cols, const uint32_t rate, float scale, const T* x, int32_t* mask, T* y) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  oneflow::cuda::fast_rand::RandState state;
-  oneflow::cuda::fast_rand::FastRandInit(seed,
-                                         cuda_gen_state->dev_offset + global_thread_id * inc_offset,
-                                         &state);  // maybe fix the offset value.
-
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, kVecSize>;
   using LoadPack = cuda::elementwise::Pack<T, kVecSize>;
 
@@ -164,7 +158,7 @@ __global__ void FusedPaddedVectorizedReluDropoutKernel(
 
     if (col < cols) {
       const IndexType actual_index = row * cols + col;
-      rand_uniform_pack4.storage = oneflow::cuda::fast_rand::FastRand4(&state);
+      rand_uniform_pack4.storage = curand4(&state);
 
       const LoadType* x_load = reinterpret_cast<const LoadType*>(x + actual_index);
       LoadPack x_vec;
@@ -193,9 +187,8 @@ __global__ void FusedPaddedVectorizedReluDropoutKernel(
   if (threadIdx.x == 0 && threadIdx.y == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;  // reset counter to zero
-      cuda_gen_state->dev_offset +=
-          inc_offset * gridDim.x * blockDim.x;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;           // reset counter to zero
+      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
@@ -211,10 +204,8 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
   const IndexType step = gridDim.x * blockDim.y;
   const IndexType global_thread_id = global_warp_id * kWarpSize + lane_id;
 
-  oneflow::cuda::fast_rand::RandState state;
-  oneflow::cuda::fast_rand::FastRandInit(seed,
-                                         cuda_gen_state->dev_offset + global_thread_id * inc_offset,
-                                         &state);  // maybe fix the offset value.
+  curandStatePhilox4_32_10_t state;
+  curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
 
   T t_scale = static_cast<T>(scale);
   T zero_val = static_cast<T>(0.0);
@@ -224,7 +215,7 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
   for (IndexType row = global_warp_id; row < rows; row += step) {
     for (IndexType col = lane_id; col < cols; col += kWarpSize * kVecSize) {
       const IndexType linear_index = row * cols + col;
-      rand_uniform_pack4.storage = oneflow::cuda::fast_rand::FastRand4(&state);
+      rand_uniform_pack4.storage = curand4(&state);
 #pragma unroll
       for (int i = 0; i < kVecSize; i++) {
         int32_t thread_bitmask = 0;
@@ -258,9 +249,8 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
   if (threadIdx.x == 0 && threadIdx.y == 0) {
     int32_t new_counter = cuda::atomic::Add(&cuda_gen_state->dev_counter, 1) + 1;
     if (new_counter == gridDim.x) {
-      cuda_gen_state->dev_counter = 0;  // reset counter to zero
-      cuda_gen_state->dev_offset += inc_offset * gridDim.x * blockDim.x
-                                    * blockDim.y;  // maintain the state of generator's dev_offset
+      cuda_gen_state->dev_counter = 0;           // reset counter to zero
+      cuda_gen_state->dev_offset += inc_offset;  // maintain the state of generator's dev_offset
     }
   }
 }
