@@ -28,6 +28,37 @@ bool IsTransferNode(int32_t task_type) {
   return task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64);
 }
 
+// The same order in the set
+// It is only run in the following situation because there are too many implicit conditions.
+bool should_run_simultaneously(TopoStruct* a, TopoStruct* b) {
+  // Normal node would have the same name
+  if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
+  // Otherwise they must have the same parameters with different machine ids and the closest node
+  // id. We only use Min Layer here, since Tributary Layer might be different due to asymmetry of
+  // graph.
+  return true;
+};
+
+// move the head from source to target
+void move_front_between_maps(std::map<int32_t, TopoStruct*>& source,
+                             std::map<int32_t, TopoStruct*>& target) {
+  if (!source.empty()) {
+    const auto& front = source.begin();
+    target[front->first] = front->second;
+    source.erase(front);
+  }
+};
+
+// Classifier for the set according to the task type
+int32_t set_classifier(const TaskNode* node) {
+  // Check task.pb.h for detail
+  int32_t task_type = node->GetTaskType();
+  if (task_type == 1) { return 1; }
+  if (task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64)) { return 0; }
+  if (task_type == 47) { return 2; }
+  return 3;
+};
+
 }  // anonymous namespace
 
 // Drop down the maximum layer with the minimum layer form consumer
@@ -135,31 +166,10 @@ void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
   }
 }
 
-void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>& ordered_task_nodes) {
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
   // The function for settle the order in the graph
   int64_t order_in_graph = 0;
   HashMap<int32_t, int32_t> task_type_map;
-
-  // The same order in the set
-  // It is only run in the following situation because there are too many implicit conditions.
-  auto should_run_simultaneously = [](TopoStruct* a, TopoStruct* b) -> bool {
-    // Normal node would have the same name
-    if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
-    // Otherwise they must have the same parameters with different machine ids and the closest node
-    // id. We only use Min Layer here, since Tributary Layer might be different due to asymmetry of
-    // graph.
-    return true;
-  };
-
-  // move the head from source to target
-  auto move_front_between_maps = [](std::map<int32_t, TopoStruct*>& source,
-                                    std::map<int32_t, TopoStruct*>& target) {
-    if (!source.empty()) {
-      const auto& front = source.begin();
-      target[front->first] = front->second;
-      source.erase(front);
-    }
-  };
 
   // Generate topological data structure for each task node
   HashMap<TaskNode*, TopoStruct> task_node2topo_struct;
@@ -233,11 +243,10 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>& ordered_task
   FindMainstem(task_node2topo_struct);
 
   // test debug
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "Straightening order type: " << ParseIntegerFromEnv("Parameter0", 0) << ", "
-              << ParseIntegerFromEnv("Parameter1", 1) << ", "
-              << ParseIntegerFromEnv("Parameter2", 2) << std::endl;
-  }
+  std::cout << "Straightening order type: " << ParseIntegerFromEnv("Parameter0", 0) << ", "
+            << ParseIntegerFromEnv("Parameter1", 1) << ", " << ParseIntegerFromEnv("Parameter2", 2)
+            << std::endl;
+
   // Order in the waiting sets
   // Decide which node should run first
   struct comp {
@@ -253,13 +262,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>& ordered_task
         }
       }
       return a->node->node_id() < b->node->node_id();
-      // auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
-      // if (comp_str == 0) {
-      //   // the order does not matter right now, but we need a strict order
-      //   return a < b;
-      // } else {
-      //   return comp_str < 0;
-      // };
 
       // if (a->TributaryLayer == b->TributaryLayer) {
       //   if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
@@ -294,16 +296,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>& ordered_task
 
   std::vector<int32_t> remain_task_nums(4, 0);
 
-  // Classifier for the set according to the task type
-  auto set_classifier = [&](TaskNode* node) {
-    // Check task.pb.h for detail
-    int32_t task_type = node->GetTaskType();
-    if (task_type == 1) { return 1; }
-    if (task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64)) { return 0; }
-    if (task_type == 47) { return 2; }
-    return 3;
-  };
-
   auto SetOrderInGraph = [&](TaskNode* task_node) {
     if (GlobalProcessCtx::Rank() == 0) {
       auto& topo_struct = task_node2topo_struct[task_node];
@@ -322,7 +314,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>& ordered_task
       task_type_map[task_node->GetTaskType()]++;
     }
     task_node->set_order_in_graph(order_in_graph);
-    ordered_task_nodes.emplace_back(task_node);
+    ordered_task_nodes->emplace_back(task_node);
     ++order_in_graph;
   };
 

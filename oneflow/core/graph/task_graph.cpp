@@ -454,7 +454,7 @@ TaskGraph::TaskGraph() {
   if (ParseBooleanFromEnv("ONEFLOW_RANDOM_STRAIGHTEN_NODES", false)) {
     SetOrderInGraphForEachNode();
   } else {
-    StraightenNodes(this, ordered_task_nodes_);
+    StraightenNodes(this, &ordered_task_nodes_);
   }
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) { ToDotWithAutoFilePath(); }
 }

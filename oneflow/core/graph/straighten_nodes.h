@@ -53,7 +53,7 @@ class TopoStruct {
 
 void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
 
-void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>& ordered_task_nodes);
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes);
 
 }  // namespace oneflow
 
