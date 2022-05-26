@@ -26,7 +26,6 @@ from google.protobuf import text_format
 import oneflow
 import oneflow._oneflow_internal
 import oneflow.core.job.job_pb2 as job_pb
-import oneflow.core.job.plan_pb2 as plan_pb
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx

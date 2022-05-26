@@ -27,12 +27,9 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
-
 import oneflow._oneflow_internal._C as _C
-from oneflow.nn.graph.block import ModuleBlock
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
-
 
 @contextmanager
 def graph_build_context(config_proto, session):

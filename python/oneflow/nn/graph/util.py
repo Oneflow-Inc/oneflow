@@ -16,8 +16,11 @@ limitations under the License.
 import sys
 from collections import OrderedDict
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.job_pb2 as job_pb
 from oneflow.framework.tensor import Tensor
 from string import Template
+import google.protobuf as protobuf
+from typing import List, Tuple
 
 def _nd_sbp2repr(nd_sbp):
     dim_len = len(nd_sbp.sbp_parallel)
@@ -105,7 +108,10 @@ def _get_iden_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     return input_sig_str, output_sig_str
 
 
-def operators_repr(ops, graph_proto):
+def operators_repr(
+    ops: protobuf.pyext._message.RepeatedCompositeContainer,
+    graph_proto: job_pb.Job
+) -> List[str]:
     r"""Generate operators' string representation of this module
     """
     if len(ops) > 0:
@@ -113,7 +119,7 @@ def operators_repr(ops, graph_proto):
         for op_conf in graph_proto.net.op:
             op_confs[op_conf.name] = op_conf
 
-    def _op_signature(op):
+    def _op_signature(op: op_conf_util.OperatorConf) -> Tuple[bool, str]:
         bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[op.name].bn_in_op2nd_sbp
         lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
         signature_template = Template(op.name + "($input) -> ($output)")
