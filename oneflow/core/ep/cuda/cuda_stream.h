@@ -98,8 +98,8 @@ class CudaStream : public Stream {
   const cudaDeviceProp& device_properties() const;
   int cuda_arch() const;
 
-  template<typename T>
-  void InitLaunchConfigWithWaves(CudaLaunchConfig* config, T func, size_t elem_cnt,
+  template<typename Func>
+  void InitLaunchConfigWithWaves(CudaLaunchConfig* config, Func func, size_t elem_cnt,
                                  size_t block_size, size_t dynamic_smem_size,
                                  size_t max_waves) const {
     int max_active_blocks = 0;
