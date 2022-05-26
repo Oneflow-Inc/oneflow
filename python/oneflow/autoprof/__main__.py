@@ -18,6 +18,9 @@ import csv
 import unittest
 import os
 
+import prettytable
+from prettytable import PrettyTable
+
 import oneflow.test_utils.automated_test_util.profiler as auto_profiler
 
 
@@ -79,6 +82,31 @@ def get_oneflow_cpu_end_to_end_time(prof):
     return round(total.time / prof.num, 1)
 
 
+def print_summary_from_csv():
+    print("----------------------------------------------------------------------")
+    print('Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time"):')
+    with open(csv_filename, "r") as f:
+        table: PrettyTable = prettytable.from_csv(f)
+        table.field_names = [
+            "OP",
+            "Args",
+            "Lib",
+            "KT(GPU)",
+            "KT(1 CPU)",
+            "ET(1 CPU)",
+            "KT(32 CPU)",
+            "ET(32 CPU)",
+            "Desc",
+        ]
+        for row in table.rows:
+            row[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row[2]]
+        table.del_column("Desc")
+        print(table)
+
+
+# all functions registered are called in last in, first out order
+atexit.register(print_summary_from_csv)
+
 csv_filename = os.getenv("ONEFLOW_PROFILE_CSV", "op_prof")
 
 if csv_filename[:-4] != ".csv":
@@ -91,22 +119,18 @@ writer.writerow(
     [
         "OP",
         "Args",
-        "Description",
         "Library",
         "Kernel Time (us, GPU)",
-        "Kernel Time (us, CPU N=1)",
-        "Total Time (us, CPU N=1)",
-        "Kernel Time (us, CPU N=8)",
-        "Total Time (us, CPU N=8)",
-        "Kernel Time (us, CPU N=32)",
-        "Total Time (us, CPU N=32)",
+        "Kernel Time (us, 1 CPU)",
+        "End-to-end Time (us, 1 CPU)",
+        "Kernel Time (us, 32 CPUs)",
+        "End-to-end Time (us, 32 CPUs)",
+        "Description",
     ]
 )
 
 
-auto_profiler.set_hardware_info_list(
-    [("cuda", None), ("cpu", 1), ("cpu", 8), ("cpu", 32)]
-)
+auto_profiler.set_hardware_info_list([("cuda", None), ("cpu", 1), ("cpu", 32)])
 
 
 def add_row(profs):
@@ -119,30 +143,26 @@ def add_row(profs):
         [
             op_name,
             args_description,
-            additional_description,
             "OneFlow",
             get_oneflow_gpu_kernel_time(profs[0]),
             get_oneflow_cpu_kernel_time(profs[1]),
             get_oneflow_cpu_end_to_end_time(profs[1]),
             get_oneflow_cpu_kernel_time(profs[2]),
             get_oneflow_cpu_end_to_end_time(profs[2]),
-            get_oneflow_cpu_kernel_time(profs[3]),
-            get_oneflow_cpu_end_to_end_time(profs[3]),
+            additional_description,
         ]
     )
     writer.writerow(
         [
             op_name,
             args_description,
-            additional_description,
             "PyTorch",
-            get_pytorch_gpu_kernel_time(profs[4]),
+            get_pytorch_gpu_kernel_time(profs[3]),
+            get_pytorch_cpu_kernel_time(profs[4]),
+            get_pytorch_cpu_end_to_end_time(profs[4]),
             get_pytorch_cpu_kernel_time(profs[5]),
             get_pytorch_cpu_end_to_end_time(profs[5]),
-            get_pytorch_cpu_kernel_time(profs[6]),
-            get_pytorch_cpu_end_to_end_time(profs[6]),
-            get_pytorch_cpu_kernel_time(profs[7]),
-            get_pytorch_cpu_end_to_end_time(profs[7]),
+            additional_description,
         ]
     )
     f.flush()
