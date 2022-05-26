@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
-#include "oneflow/core/functional/functional.h"
+
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
@@ -333,6 +333,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"floor_divide", PyTensorObject_div, METH_O, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
+
     {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
@@ -361,3 +362,4 @@ PyObject* PyTensorObject_richcompare(PyObject* self, PyObject* other, int op) {
 
 #undef ASSERT
 #undef ASSERT_PTR
+
