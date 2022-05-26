@@ -98,6 +98,23 @@ class CudaStream : public Stream {
   const cudaDeviceProp& device_properties() const;
   int cuda_arch() const;
 
+  template<typename T>
+  void InitLaunchConfigWithWaves(CudaLaunchConfig* config, T func, size_t elem_cnt,
+                                 size_t block_size, size_t dynamic_smem_size,
+                                 size_t max_waves) const {
+    int max_active_blocks = 0;
+    cudaError_t err = cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, func,
+                                                                    block_size, dynamic_smem_size);
+    if (err != cudaSuccess) { LOG(FATAL) << cudaGetErrorString(err); }
+    const uint32_t max_grid_size =
+        max_waves * device_properties().multiProcessorCount * max_active_blocks;
+    const uint32_t grid_size =
+        std::min<uint32_t>(max_grid_size, (elem_cnt + block_size - 1) / block_size);
+    config->grid_dim = dim3(grid_size);
+    config->block_dim = dim3(block_size);
+    config->shared_mem_size = dynamic_smem_size;
+  }
+
   void InitLaunchConfigWithWaves(CudaLaunchConfig* config, size_t elem_cnt, size_t block_size,
                                  size_t max_waves) const {
     const uint32_t max_grid_size = max_waves * device_properties().multiProcessorCount
@@ -121,7 +138,7 @@ class CudaStream : public Stream {
   void LaunchKernel(void (*kernel)(Params...), size_t elem_cnt, size_t max_waves, Args... args) {
     constexpr uint32_t block_size = kDefaultBlockSize;
     CudaLaunchConfig config{};
-    InitLaunchConfigWithWaves(&config, elem_cnt, block_size, max_waves);
+    InitLaunchConfigWithWaves(&config, kernel, elem_cnt, block_size, 0, max_waves);
     LaunchKernel(kernel, config, args...);
   }
 
