@@ -1012,7 +1012,7 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = x.reshape(-1)
-        z = y.reshape_as(x)
+        z = y.reshape_as(other=x)
         return z
 
     @autotest(check_graph=True)

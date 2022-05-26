@@ -44,18 +44,24 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args) {
+static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
-  PyObject* other = PyTuple_GetItem(args, 0);
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:other", const_cast<char**>(keywords),
+                                   &other)) {
+    return NULL;
+  }
   auto result = ASSERT_PTR(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape()));
   return PyTensor_New(result);
+  Py_DECREF(other);
   END_HANDLE_ERRORS
 }
 
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
-    {"reshape_as", PyTensorObject_reshape_as, METH_VARARGS, NULL},
+    {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 
