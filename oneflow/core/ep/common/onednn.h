@@ -13,25 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_
-#define ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_
+#ifndef ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
+#define ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
+
+#ifdef WITH_ONEDNN
+
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_ONEDNN_OPTS, true);
 
 namespace ep {
 namespace primitive {
 
-enum class UnaryOp {
-  kRelu,
-  kGelu,
-  kLeakyRelu,
-  kTanh,
-  kLogicalNot,
-};
+inline bool OneDnnIsEnabled() { return EnvBool<ONEFLOW_ENABLE_ONEDNN_OPTS>(); }
 
-}
+}  // namespace primitive
 }  // namespace ep
-
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EP_PRIMITIVE_UNARY_OP_H_
+#endif  // WITH_ONEDNN
+
+#endif  // ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
