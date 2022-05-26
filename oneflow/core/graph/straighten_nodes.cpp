@@ -169,7 +169,6 @@ void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
   // The function for settle the order in the graph
   int64_t order_in_graph = 0;
-  HashMap<int32_t, int32_t> task_type_map;
 
   // Generate topological data structure for each task node
   HashMap<TaskNode*, TopoStruct> task_node2topo_struct;
@@ -190,7 +189,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
       });
       topo_struct.MinLayer = max_min_layer + 1;
       // Deal with all the nodes with MinLayer=previous_MinLayer
-      std::cout << "Min Layer: " << topo_struct.MinLayer << std::endl;
       if (max_min_layer >= previous_MinLayer) {
         // Using "7" to represent "and"
         // a7b means a pair (a, b)
@@ -297,22 +295,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   std::vector<int32_t> remain_task_nums(4, 0);
 
   auto SetOrderInGraph = [&](TaskNode* task_node) {
-    if (GlobalProcessCtx::Rank() == 0) {
-      auto& topo_struct = task_node2topo_struct[task_node];
-      std::cout << "Execution order: " << order_in_graph << ": " << task_node->VisualStr()
-                << ", node id: " << task_node->node_id() << std::endl;
-      std::cout << ": task type: " << task_node->GetTaskType() << ", "
-                << (task_node->parallel_ctx() == 0) << ", MinLayer: " << topo_struct.MinLayer
-                << ", TributaryLayer: " << topo_struct.TributaryLayer
-                << ", MinDist2Transfer: " << topo_struct.MinDistance2Transfer
-                << ", machine id: " << task_node->machine_id()
-                << ", thread id: " << task_node->thrd_id() << std::endl;
-
-      if (task_type_map.find(task_node->GetTaskType()) == task_type_map.end()) {
-        task_type_map[task_node->GetTaskType()] = 0;
-      }
-      task_type_map[task_node->GetTaskType()]++;
-    }
     task_node->set_order_in_graph(order_in_graph);
     ordered_task_nodes->emplace_back(task_node);
     ++order_in_graph;
@@ -340,32 +322,13 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     }
   };
 
-  std::map<int32_t, std::map<int32_t, int32_t>> task_type2node_id2machine_id;
   // initialization
   task_graph->ForEachNode([&](TaskNode* node) {
     int32_t count = node->in_edges().size();
     task_node2topo_struct[node].counter = count;
     if (count == 0) { wait(node); }
     remain_task_nums[set_classifier(node)]++;
-    task_type2node_id2machine_id[node->GetTaskType()][node->node_id()] = node->machine_id();
   });
-
-  for (auto& task_type_group : task_type2node_id2machine_id) {
-    std::cout << "task type: " << task_type_group.first << std::endl;
-    int32_t pre_machine_id = -1;
-    for (auto& pair : task_type_group.second) {
-      std::cout << "node id: " << pair.first << ", machine id: " << pair.second << ", ? "
-                << (pair.second == 0 || pair.second > pre_machine_id) << std::endl;
-      pre_machine_id = pair.second;
-    }
-  }
-
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "Total task nums:" << std::endl;
-    std::cout << "Transfers: " << remain_task_nums[0] << ", Computation: " << remain_task_nums[1]
-              << ", Run Asap: " << remain_task_nums[2] << ", Run Alap: " << remain_task_nums[3]
-              << std::endl;
-  }
 
   // Finish execution
   auto finish_execution = [&](TaskNode* node) {
@@ -398,13 +361,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   auto execute = [&](int32_t list_classifier, int32_t n, bool if_reverse = false) {
     // n>=1
     if (n <= 0) { return; }
-    if (GlobalProcessCtx::Rank() == 0) {
-      std::cout << "Total task nums:" << std::endl;
-      std::cout << "Transfers: " << waiting_lists[0].size()
-                << ", Computation: " << waiting_lists[1].size()
-                << ", Run Asap: " << waiting_lists[2].size()
-                << ", Run Alap: " << waiting_lists[3].size() << std::endl;
-    }
     auto& waiting_list = waiting_lists[list_classifier];
     std::vector<TaskNode*> execution_list;
     int32_t count = 0;
@@ -422,15 +378,12 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     }
   };
 
-  // int32_t max_overlap_computation_num = ParseIntegerFromEnv("MAX_OVERLAP_NUM", 40);
-
   // straightening
   while (true) {
     if (waiting_lists[2].empty()) {
       if (waiting_lists[0].empty()) {
         if (waiting_lists[1].empty()) {
           if (waiting_lists[3].empty()) {
-            if (GlobalProcessCtx::Rank() == 0) { std::cout << "Execution done" << std::endl; }
             break;
           } else {
             execute(3, waiting_lists[3].size());
@@ -455,14 +408,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
       }
     } else {
       execute(2, waiting_lists[2].size());
-    }
-  }
-
-  // test debug
-  if (GlobalProcessCtx::Rank() == 0) {
-    std::cout << "Print all task type: " << std::endl;
-    for (auto& pair : task_type_map) {
-      std::cout << "task type: " << pair.first << ", " << pair.second << std::endl;
     }
   }
 }
