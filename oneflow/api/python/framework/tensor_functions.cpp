@@ -49,7 +49,7 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
   auto tensor = PyTensor_Unpack(self);
   PyObject* other = NULL;
   static const char* keywords[2] = {"other", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:other", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:reshape_as", const_cast<char**>(keywords),
                                    &other)) {
     return NULL;
   }
