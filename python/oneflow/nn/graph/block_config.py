@@ -24,7 +24,7 @@ class BlockConfig(object):
     def __init__(self):
         self._is_null = True
         self._stage_id = None
-        self._placement = None
+        self.__stage_placement = None
         self._activation_checkpointing = None
 
     # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the stage_id function.
