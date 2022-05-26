@@ -30,7 +30,11 @@ class FusedMLP(Module):
 
         hidden_features: A tuple of each Linear layer hidden size
 
+        hidden_dropout_rate: A tuple of each hidden layer's dropout rate
+
         out_features: The final Linear layer hidden size
+
+        out_dropout_rate: The final Linear layer's dropout rate
 
     Shape:
         - Input: :math:`(N, *, H_{in})` where :math:`*` means any number of
@@ -62,7 +66,9 @@ class FusedMLP(Module):
         self,
         in_features: int,
         hidden_features: Tuple[int],
+        hidden_dropout_rate: Tuple[float],
         out_features: int,
+        out_dropout_rate: int,
         skip_final_activation=False,
     ) -> None:
         super().__init__()
@@ -72,9 +78,14 @@ class FusedMLP(Module):
         # TODO(zzk): Add more activation support.
         self.skip_final_activation = skip_final_activation
         self.hidden_layer_num = len(hidden_features)
-
+        self.dropout_rate_list = hidden_dropout_rate + [out_dropout_rate]
         self.add_parameters()
         self.reset_parameters()
+        self.use_dropout = False
+        for i in range(self.hidden_num + 1):
+            if self.dropout_rate_list[i] != 0.0:
+                self.use_dropout = True
+                break
 
     def add_parameters(self) -> None:
         """Register parameter in FusedMLP module. 
@@ -166,10 +177,18 @@ class FusedMLP(Module):
             flow.nn.init.uniform_(self.bias(layer_idx), -bound, bound)
 
     def forward(self, x):
-        res = flow._C.fused_mlp(
-            x, self.weights(), self.biases(), self.skip_final_activation
-        )
-        return res
+        if self.use_dropout:
+            return flow._C.fused_matmul_bias_add_relu_dropout(
+                x,
+                self.weights(),
+                self.biases(),
+                self.skip_final_activation,
+                self.dropout_rate_list,
+            )
+        else:
+            return flow._C.fused_mlp(
+                x, self.weights(), self.biases(), self.skip_final_activation
+            )
 
     def extra_repr(self) -> str:
         return "in_features={}, hidden_features={}, out_features={}, skip_final_activation={}".format(
