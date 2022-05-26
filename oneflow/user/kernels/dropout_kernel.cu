@@ -345,7 +345,7 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
       cuda_stream->device_properties().maxThreadsPerMultiProcessor;
   const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
   unsigned int blocks_per_sm = max_threads_multi_process / block_size;
-  unsigned int pack_num = elem_cnt / pack_size; 
+  unsigned int pack_num = elem_cnt / pack_size;
   unsigned int grid_size = ((pack_num + block_size - 1) / block_size);
   grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
   return grid_size;
