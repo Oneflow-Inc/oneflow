@@ -25,6 +25,8 @@ from google.protobuf import text_format
 
 import oneflow
 import oneflow._oneflow_internal
+import oneflow.core.job.job_pb2 as job_pb
+import oneflow.core.job.plan_pb2 as plan_pb
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.graph_build_util as graph_build_util
 import oneflow.framework.session_context as session_ctx
@@ -126,6 +128,8 @@ class Graph(object):
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
         self._full_job_proto = None
+        # completed graph job proto
+        self._compiled_job_proto = None
         self._job_id = None
         self._args_repr = []
         self._outs_repr = []
@@ -212,6 +216,10 @@ class Graph(object):
         """
         if not self._is_compiled:
             self._compile(*args, **kwargs)
+            self.__print(
+                0,
+                2,
+                f"{self.name} with operators:\n" + self.__repr__())
 
         return self.__run(*args, **kwargs)
 
@@ -514,6 +522,9 @@ class Graph(object):
                 output_str = add_indent(out_str, 2)
                 child_lines.append(output_str)
 
+        for op_str in self._ops_repr():
+            child_lines.append(add_indent(op_str, 2))
+
         main_str = self._shallow_repr() + ": ("
         if len(child_lines) > 0:
             main_str += "\n  " + "\n  ".join(child_lines) + "\n"
@@ -525,14 +536,16 @@ class Graph(object):
         return shallow_repr
 
     def _ops_repr(self):
-        r"""Generate this graph's operators' string representation 
+        r"""Generate operators' string representation of this graph 
         """
-        if self._is_compiled:
-            conf = self._graph_proto.module_name2module_conf[
-                self._config_proto.job_name
+        if self._is_compiled and self._compiled_graph_proto is not None:
+            module_conf = self._compiled_graph_proto.module_name2module_conf[
+                self.name
             ]
-            return operators_repr(conf.ops)
+            return operators_repr(module_conf.ops, self._compiled_graph_proto)
+
         return []
+
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level."""
@@ -580,6 +593,17 @@ class Graph(object):
         ), "nn.Graph's full graph proto can only be set before the first compilation."
         self._full_job_proto = full_job_proto
         self._c_nn_graph.job = full_job_proto.SerializeToString()
+
+    @property
+    def _compiled_graph_proto(self):
+        if not self._is_compiled:
+            self.__print(
+                2,
+                0,
+                f"[ERROR]{self._shallow_repr()} has not been compiled, so it's compiled graph proto is None."
+                " You can call the graph to trigger it's compilation.",
+            )
+        return self._compiled_job_proto
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -782,6 +806,11 @@ class Graph(object):
                 self._debug_max_py_stack_depth,
             ):
                 self._c_nn_graph.complie_and_init_runtime()
+            # Get compiled job
+            compiled_job_str = self._c_nn_graph.get_compiled_job_str()
+            self._compiled_job_proto = job_pb.Job()
+            self._compiled_job_proto.ParseFromString(compiled_job_str)
+
             compile_and_init_end = time.perf_counter()
             self.__print(
                 0,

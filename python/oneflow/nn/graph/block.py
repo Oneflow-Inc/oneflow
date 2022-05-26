@@ -76,6 +76,7 @@ class Block(object):
         self._origin = None
         self._scope = None
         self._prev_scope = None
+        assert belonged_graph is None or isinstance(belonged_graph, weakref.ProxyTypes)
         self._belonged_graph = belonged_graph
         self.config = BlockConfig()
 
@@ -555,11 +556,11 @@ class ModuleBlock(Block):
         )
 
         if self._belonged_graph.is_compiled:
-            module_conf = self._belonged_graph._graph_proto.module_name2module_conf[
-                self.name_prefix + self.name
-            ]
-
-            return operators_repr(module_conf.ops)
+            if self._belonged_graph._compiled_graph_proto is not None:
+                module_conf = self._belonged_graph._compiled_graph_proto.module_name2module_conf[
+                    self.name_prefix + self.name
+                ]
+                return operators_repr(module_conf.ops, self._belonged_graph._compiled_graph_proto)
 
         return []
 

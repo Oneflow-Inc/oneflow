@@ -29,6 +29,7 @@ import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
 
 import oneflow._oneflow_internal._C as _C
+from oneflow.nn.graph.block import ModuleBlock
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
@@ -42,9 +43,11 @@ def graph_build_context(config_proto, session):
         config_proto_str, oneflow.placement("cpu", [0]), False,  # is_mirrored
     )
 
+    graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name())
+    
     with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
-            with BlockScopeContext(prev_scope, new_scope):
+            with BlockScopeContext(prev_scope, graph_scope):
                 yield
 
 
@@ -117,6 +120,34 @@ class DebugScopeContext(object):
             self._prev_max_py_stack_depth
         )
 
+def _make_new_scope(prev_scope, scope_proto_str_setter):
+    new_scope = None
+
+    def build_scope(builder):
+        nonlocal new_scope
+        new_scope = builder.BuildScopeByProtoStrSetter(
+            prev_scope, scope_proto_str_setter
+        )
+        assert new_scope is not None
+
+    oneflow._oneflow_internal.deprecated.PhysicalRun(build_scope)
+    oneflow._oneflow_internal.eager.Sync()
+    return new_scope
+
+
+def _make_new_graph_scope(prev_scope, graph_name):
+    assert prev_scope is not None
+    attr_dict = dict()
+    name2default = session_context.GetDefaultSession().scope_attr_name2default_val
+
+    def scope_proto_setter(serialized_scope_proto: str):
+        scope_proto = text_format.Parse(
+            serialized_scope_proto, scope_pb2_util.ScopeProto()
+        )
+        scope_proto.module_name = graph_name
+        return str(text_format.MessageToString(scope_proto))
+    
+    return _make_new_scope(prev_scope, scope_proto_str_setter)
 
 def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
@@ -147,21 +178,9 @@ def make_new_block_scope(prev_scope, block):
         # set module name
         if isinstance(block, oneflow.nn.graph.block.ModuleBlock):
             scope_proto.module_name = block.name_prefix + block.name
-
         return str(text_format.MessageToString(scope_proto))
 
-    new_scope = None
-
-    def build_scope(builder):
-        nonlocal new_scope
-        new_scope = builder.BuildScopeByProtoStrSetter(
-            prev_scope, scope_proto_str_setter
-        )
-        assert new_scope is not None
-
-    oneflow._oneflow_internal.deprecated.PhysicalRun(build_scope)
-    oneflow._oneflow_internal.eager.Sync()
-    return new_scope
+    return _make_new_scope(prev_scope, scope_proto_str_setter)
 
 
 def scope_to_proto(scope):
