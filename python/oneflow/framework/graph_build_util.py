@@ -43,7 +43,7 @@ def graph_build_context(config_proto, session):
         config_proto_str, oneflow.placement("cpu", [0]), False,  # is_mirrored
     )
 
-    graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name())
+    graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name)
     
     with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
@@ -140,7 +140,7 @@ def _make_new_graph_scope(prev_scope, graph_name):
     attr_dict = dict()
     name2default = session_context.GetDefaultSession().scope_attr_name2default_val
 
-    def scope_proto_setter(serialized_scope_proto: str):
+    def scope_proto_str_setter(serialized_scope_proto: str):
         scope_proto = text_format.Parse(
             serialized_scope_proto, scope_pb2_util.ScopeProto()
         )
