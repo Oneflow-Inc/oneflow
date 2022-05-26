@@ -98,6 +98,7 @@ struct ReturnOpLowering final : public OpConversionPattern<ReturnOp> {
   }
 };
 
+// TODO: shared memory between oneflow and backend
 struct InputOpLowering final : public OpConversionPattern<InputOp> {
  public:
   using OpConversionPattern<InputOp>::OpConversionPattern;
@@ -108,6 +109,7 @@ struct InputOpLowering final : public OpConversionPattern<InputOp> {
   }
 };
 
+// TODO: shared memory between oneflow and backend
 struct OutputOpLowering final : public OpConversionPattern<OutputOp> {
  public:
   using OpConversionPattern<OutputOp>::OpConversionPattern;

@@ -41,7 +41,7 @@ class GraphModule(flow.nn.Graph):
 
 
 def _test_check_iree_runner(test_case):
-    func = Runner(GraphModule).cuda()
+    func = Runner(GraphModule, return_numpy=True).cuda()
     # run on iree cuda backend
     input = flow.Tensor([-1.0, 1.0])
     output = func(input)
@@ -63,7 +63,7 @@ def _test_check_iree_runner(test_case):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestFuseConvBn(oneflow.unittest.TestCase):
+class TestCheckIreeRunner(oneflow.unittest.TestCase):
     def test_check_iree_runner(test_case):
         _test_check_iree_runner(test_case)
 
