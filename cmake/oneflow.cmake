@@ -228,7 +228,7 @@ include_directories(${PROJECT_SOURCE_DIR}) # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
 # cc obj lib
-oneflow_add_library(oneflow ${of_all_obj_cc})
+oneflow_add_library(oneflow SHARED ${of_all_obj_cc})
 
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_functional_obj)
