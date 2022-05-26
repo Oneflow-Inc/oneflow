@@ -88,11 +88,27 @@ static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args) {
+  HANDLE_ERRORS
+  PyObject* dims = args;
+  if (PyTuple_Size(args) == 1) {
+    PyObject* item = PyTuple_GetItem(args, 0);
+    if (!PyLong_Check(item)) { dims = item; }
+  }
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(dims))
+      << Error::TypeError() << "permute(): argument 'dims' must be tuple of ints, but found "
+      << Py_TYPE(dims)->tp_name;
+  const auto& dims_vec = functional::PyUnpackLongSequence<int32_t>(dims);
+  return PyTensor_New(ASSERT_PTR(functional::Permute(PyTensor_Unpack(self), dims_vec)));
+  END_HANDLE_ERRORS
+}
+
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", PyTensorObject_view, METH_VARARGS, NULL},
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"permute", PyTensorObject_permute, METH_VARARGS, NULL},
     {NULL},
 };
 
