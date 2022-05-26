@@ -13,28 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/cpu/cpu_stream.h"
-
-namespace oneflow {
-
-namespace ep {
-
-DeviceType CpuStream::device_type() const { return DeviceType::kCPU; }
-
-CpuDevice* CpuStream::device() const { return device_; }
-
-Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
-
-void CpuStream::RecordEvent(Event* /*event*/) {}
+#ifndef ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
+#define ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
 
 #ifdef WITH_ONEDNN
 
-const std::unique_ptr<ep::OneDnnExecutor>& CpuStream::onednn_executor() const {
-  return onednn_executor_;
-}
+#include "oneflow/core/common/env_var/env_var.h"
 
-#endif
+namespace oneflow {
 
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_ONEDNN_OPTS, true);
+
+namespace ep {
+namespace primitive {
+
+inline bool OneDnnIsEnabled() { return EnvBool<ONEFLOW_ENABLE_ONEDNN_OPTS>(); }
+
+}  // namespace primitive
 }  // namespace ep
-
 }  // namespace oneflow
+
+#endif  // WITH_ONEDNN
+
+#endif  // ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
