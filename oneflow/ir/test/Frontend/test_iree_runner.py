@@ -43,20 +43,20 @@ class GraphModule(flow.nn.Graph):
 def _test_check_iree_runner(test_case):
     func = Runner(GraphModule).cuda()
     # run on iree cuda backend
-    input = flow.Tensor([-1., 1.])
+    input = flow.Tensor([-1.0, 1.0])
     output = func(input)
     test_case.assertTrue(np.allclose(output, [0., 1.]))
     # change input shape
-    input = flow.Tensor([-1., 1., -1])
+    input = flow.Tensor([-1.0, 1.0, -1])
     output = func(input)
     test_case.assertTrue(np.allclose(output, [0., 1., 0.]))
     # change on iree cpu backend
     func = func.cpu()
-    input = flow.Tensor([-1., 0., 1.])
+    input = flow.Tensor([-1.0, 0.0, 1.0])
     output = func(input)
     test_case.assertTrue(np.allclose(output, [0., 0., 1.]))
     # change input shape
-    input = flow.Tensor([-1, 1.])
+    input = flow.Tensor([-1, 1.0])
     output = func(input)
     test_case.assertTrue(np.allclose(output, [0., 1.]))
 
