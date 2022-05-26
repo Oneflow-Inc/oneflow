@@ -176,6 +176,13 @@ static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_contiguous_(PyObject* self, PyObject* unused) {
+  // NOTE: inplace version of contiguous
+  HANDLE_ERRORS
+  return PyTensor_New(ASSERT_PTR(functional::InplaceToContiguous(PyTensor_Unpack(self))));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(PyTensor_Unpack(self)->pin_memory());
@@ -380,6 +387,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
+    {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
