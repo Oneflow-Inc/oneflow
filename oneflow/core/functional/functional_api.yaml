@@ -671,7 +671,8 @@
 - name: "normalization_add_relu_grad"
   signature:
     "TensorTuple (Tensor x, Tensor dy, Tensor moving_mean, Tensor moving_variance,
-    Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, Float epsilon=1e-5) => NormalizationAddReluGrad"
+    Tensor gamma, Tensor beta, Tensor reserve_space, Tensor y, Int32 axis=1, 
+    Float epsilon=1e-5, Bool has_addend) => NormalizationAddReluGrad"
   bind_python: False
 
 - name: "eye"
@@ -967,6 +968,13 @@
     Double alpha=1.0) => BatchMatMul"
   bind_python: True
 
+- name: "tensordot"
+  signature: [
+    "Tensor (Tensor a, Tensor b, Int32List dims_a, Int32List dims_b) => TensorDot",
+    "Tensor (Tensor a, Tensor b, Int32 dims) => TensorDotIntDims"
+  ]
+  bind_python: True
+
 - name: "l1_loss"
   signature: "Tensor(Tensor input, Tensor target, String reduction) => L1Loss"
   bind_python: True
@@ -1244,6 +1252,10 @@
 
 - name: "contiguous"
   signature: "Tensor (Tensor input) => ToContiguous"
+  bind_python: True
+
+- name: "contiguous_"
+  signature: "Tensor (Tensor input) => InplaceToContiguous"
   bind_python: True
 
 - name: "slice_view_1d_contiguous"
