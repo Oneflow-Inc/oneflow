@@ -26,6 +26,7 @@ class RELU(flow.nn.Module):
     def forward(self, x):
         return self.relu(x)
 
+
 class GraphModule(flow.nn.Graph):
     def __init__(self):
         super().__init__()
@@ -39,22 +40,22 @@ func = Runner(GraphModule).cuda()
 
 
 # CHECK:[0. 1.]
-input = flow.Tensor([-1, 1.])
+input = flow.Tensor([-1, 1.0])
 output = func(input)
 print(output)
 
 # CHECK:[1. 0.]
-input = flow.Tensor([1, -1.])
+input = flow.Tensor([1, -1.0])
 output = func(input)
 print(output)
 
 # CHECK:[0. 1. 0.]
 func = func.cpu()
-input = flow.Tensor([-1, 1., -2])
+input = flow.Tensor([-1, 1.0, -2])
 output = func(input)
 print(output)
 
 # CHECK:[0. 1.]
-input = flow.Tensor([-1, 1.])
+input = flow.Tensor([-1, 1.0])
 output = func(input)
 print(output)
