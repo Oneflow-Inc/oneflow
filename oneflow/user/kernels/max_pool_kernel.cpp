@@ -314,6 +314,19 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
   };
 };
 
+#ifdef WITH_ONEDNN
+
+dnnl::memory::format_tag OneDnnMaxPool2dFormatTag(const std::string& data_format) {
+  if (data_format == "channels_first") {
+    return dnnl::memory::format_tag::nchw;
+  } else if (data_format == "channels_last") {
+    return dnnl::memory::format_tag::nhwc;
+  } else {
+    UNIMPLEMENTED() << "Unsupported data_format";
+  }
+}
+#endif
+
 template<DeviceType device_type, typename T>
 class MaxPool2dKernel final : public user_op::OpKernel {
  public:
@@ -356,21 +369,11 @@ class MaxPool2dKernel final : public user_op::OpKernel {
       dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
       dnnl::memory::dims dilation = {params_3d.dilation_3d()[1] - 1,
                                      params_3d.dilation_3d()[2] - 1};
-      if (data_format == "channels_first") {
-        OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
-            ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            static_cast<void*>(indice_ptr), dnnl::algorithm::pooling_max);
-      } else if (data_format == "channels_last") {
-        OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
-            ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::nhwc,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            static_cast<void*>(indice_ptr), dnnl::algorithm::pooling_max);
-      } else {
-        UNIMPLEMENTED() << "Unsupported data_format";
-      }
+      OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
+          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, OneDnnMaxPool2dFormatTag(data_format),
+          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          static_cast<void*>(indice_ptr), dnnl::algorithm::pooling_max);
     } else {
 #endif
       if (data_format == "channels_first") {
@@ -453,21 +456,11 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
       dnnl::memory::dims dilation = {params_3d.dilation_3d()[1] - 1,
                                      params_3d.dilation_3d()[2] - 1};
 
-      if (data_format == "channels_first") {
-        OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
-            ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
-      } else if (data_format == "channels_last") {
-        OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
-            ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::nhwc,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
-      } else {
-        UNIMPLEMENTED() << "Unsupported data_format";
-      }
+      OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
+          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, OneDnnMaxPool2dFormatTag(data_format),
+          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
     } else {
 #endif
       if (data_format == "channels_first") {

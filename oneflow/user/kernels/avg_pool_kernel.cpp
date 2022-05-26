@@ -145,27 +145,28 @@ class AvgPool1dKernel final : public user_op::OpKernel {
       dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
       dnnl::memory::dims dilation = {0, 0};
 
-
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
-            ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            nullptr, params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding : dnnl::algorithm::pooling_avg);
+          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
+          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          nullptr,
+          params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
+                                        : dnnl::algorithm::pooling_avg);
 
     } else {
 #endif
-    DimVector y_vector(2);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-    y_vector.at(1) = y->shape().At(2);
-    if (elem_num < GetMaxVal<int32_t>()) {
-      NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
-      AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool1dForward(ctx->stream(), index_helper,
-                                                                   elem_num, src, dest, params_3d);
-    } else {
-      NdIndexOffsetHelper<int64_t, 2> index_helper(y_vector.data());
-      AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool1dForward(ctx->stream(), index_helper,
-                                                                   elem_num, src, dest, params_3d);
-    }
+      DimVector y_vector(2);
+      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+      y_vector.at(1) = y->shape().At(2);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool1dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 2> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool1dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
 #ifdef WITH_ONEDNN
     }
 #endif
@@ -212,26 +213,28 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
       dnnl::memory::dims dilation = {0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
-            ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            nullptr, params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding : dnnl::algorithm::pooling_avg);
- 
+          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
+          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          nullptr,
+          params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
+                                        : dnnl::algorithm::pooling_avg);
+
     } else {
 #endif
 
-    DimVector dy_vector(2);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-    dy_vector.at(1) = dy->shape().At(2);
-    if (elem_num < GetMaxVal<int32_t>()) {
-      NdIndexOffsetHelper<int32_t, 2> index_helper(dy_vector.data());
-      AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool1dBackward(ctx->stream(), index_helper,
-                                                                    elem_num, src, dest, params_3d);
-    } else {
-      NdIndexOffsetHelper<int64_t, 2> index_helper(dy_vector.data());
-      AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool1dBackward(ctx->stream(), index_helper,
-                                                                    elem_num, src, dest, params_3d);
-    }
+      DimVector dy_vector(2);
+      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+      dy_vector.at(1) = dy->shape().At(2);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 2> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool1dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 2> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool1dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
 #ifdef WITH_ONEDNN
     }
 #endif
@@ -275,27 +278,28 @@ class AvgPool2dKernel final : public user_op::OpKernel {
       dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
       dnnl::memory::dims dilation = {0, 0};
 
-
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
-            ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            nullptr, params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding : dnnl::algorithm::pooling_avg);
+          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
+          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          nullptr,
+          params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
+                                        : dnnl::algorithm::pooling_avg);
     } else {
-  #endif
-    DimVector y_vector(3);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-    y_vector.at(1) = y->shape().At(2);
-    y_vector.at(2) = y->shape().At(3);
-    if (elem_num < GetMaxVal<int32_t>()) {
-      NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
-      AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool2dForward(ctx->stream(), index_helper,
-                                                                   elem_num, src, dest, params_3d);
-    } else {
-      NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
-      AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool2dForward(ctx->stream(), index_helper,
-                                                                   elem_num, src, dest, params_3d);
-    }
+#endif
+      DimVector y_vector(3);
+      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+      y_vector.at(1) = y->shape().At(2);
+      y_vector.at(2) = y->shape().At(3);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool2dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool2dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
 #ifdef WITH_ONEDNN
     }
 #endif
@@ -344,26 +348,28 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
       dnnl::memory::dims dilation = {0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
-            ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            nullptr, params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding : dnnl::algorithm::pooling_avg);
+          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
+          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          nullptr,
+          params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
+                                        : dnnl::algorithm::pooling_avg);
 
     } else {
 #endif
-    DimVector dy_vector(3);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-    dy_vector.at(1) = dy->shape().At(2);
-    dy_vector.at(2) = dy->shape().At(3);
-    if (elem_num < GetMaxVal<int32_t>()) {
-      NdIndexOffsetHelper<int32_t, 3> index_helper(dy_vector.data());
-      AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool2dBackward(ctx->stream(), index_helper,
-                                                                    elem_num, src, dest, params_3d);
-    } else {
-      NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
-      AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool2dBackward(ctx->stream(), index_helper,
-                                                                    elem_num, src, dest, params_3d);
-    }
+      DimVector dy_vector(3);
+      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+      dy_vector.at(1) = dy->shape().At(2);
+      dy_vector.at(2) = dy->shape().At(3);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 3> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool2dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool2dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
 #ifdef WITH_ONEDNN
     }
 #endif
@@ -411,29 +417,30 @@ class AvgPool3dKernel final : public user_op::OpKernel {
                                            params_3d.padding()[2]};
       dnnl::memory::dims dilation = {0, 0, 0};
 
-
-        OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
-            ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            nullptr, params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding : dnnl::algorithm::pooling_avg);
+      OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
+          ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw,
+          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          nullptr,
+          params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
+                                        : dnnl::algorithm::pooling_avg);
 
     } else {
 #endif
-    DimVector y_vector(4);
-    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-    y_vector.at(1) = y->shape().At(2);
-    y_vector.at(2) = y->shape().At(3);
-    y_vector.at(3) = y->shape().At(4);
-    if (elem_num < GetMaxVal<int32_t>()) {
-      NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
-      AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool3dForward(ctx->stream(), index_helper,
-                                                                   elem_num, src, dest, params_3d);
-    } else {
-      NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-      AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool3dForward(ctx->stream(), index_helper,
-                                                                   elem_num, src, dest, params_3d);
-    }
+      DimVector y_vector(4);
+      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+      y_vector.at(1) = y->shape().At(2);
+      y_vector.at(2) = y->shape().At(3);
+      y_vector.at(3) = y->shape().At(4);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool3dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool3dForward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
 #ifdef WITH_ONEDNN
     }
 #endif
@@ -484,28 +491,30 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
                                            params_3d.padding()[2]};
       dnnl::memory::dims dilation = {0, 0, 0};
 
-        OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
-            ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-            padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw,
-            static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-            nullptr, params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding : dnnl::algorithm::pooling_avg);
+      OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
+          ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
+          padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw,
+          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          nullptr,
+          params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
+                                        : dnnl::algorithm::pooling_avg);
 
     } else {
 #endif
-    DimVector dy_vector(4);
-    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-    dy_vector.at(1) = dy->shape().At(2);
-    dy_vector.at(2) = dy->shape().At(3);
-    dy_vector.at(3) = dy->shape().At(4);
-    if (elem_num < GetMaxVal<int32_t>()) {
-      NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
-      AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool3dBackward(ctx->stream(), index_helper,
-                                                                    elem_num, src, dest, params_3d);
-    } else {
-      NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
-      AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool3dBackward(ctx->stream(), index_helper,
-                                                                    elem_num, src, dest, params_3d);
-    }
+      DimVector dy_vector(4);
+      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+      dy_vector.at(1) = dy->shape().At(2);
+      dy_vector.at(2) = dy->shape().At(3);
+      dy_vector.at(3) = dy->shape().At(4);
+      if (elem_num < GetMaxVal<int32_t>()) {
+        NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int32_t>::Avgpool3dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      } else {
+        NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
+        AvgPoolKernelUtil<device_type, T, int64_t>::Avgpool3dBackward(
+            ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+      }
 #ifdef WITH_ONEDNN
     }
 #endif
