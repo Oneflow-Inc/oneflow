@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
-
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
@@ -53,6 +52,8 @@ using functional::PyObjectPtr;
 
 NB_UNARY_FUNC(PyTensorObject_absolute, functional::abs);
 NB_UNARY_FUNC(PyTensorObject_negative, functional::negative);
+// TODO: not implemented yet
+// NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
 
 NB_BINARY_FUNC(PyTensorObject_add, functional::add);
 NB_BINARY_FUNC(PyTensorObject_sub, functional::sub);
@@ -65,8 +66,7 @@ NB_BINARY_FUNC(PyTensorObject_or, functional::logical_or);
 NB_BINARY_FUNC(PyTensorObject_floor_div, functional::floor_divide);
 NB_BINARY_FUNC(PyTensorObject_true_div, functional::div);
 NB_BINARY_FUNC(PyTensorObject_matrix_multiply, functional::matmul);
-// TODO: not implemented yet
-// NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
+
 PyObject* PyTensorObject_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
@@ -333,7 +333,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"floor_divide", PyTensorObject_div, METH_O, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
-
     {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
