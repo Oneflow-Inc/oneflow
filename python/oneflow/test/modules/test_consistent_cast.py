@@ -438,7 +438,7 @@ class TestConsistentCastModule_1n1d(flow.unittest.TestCase):
         y = x.to_global(placement=placement, sbp=sbp)
         test_case.assertEqual(y.sbp, sbp)
         test_case.assertEqual(y.placement, placement)
-        test_case.assertEqual(tuple(y.shape), (16, 16))
+        test_case.assertEqual(tuple(y.shape), (4, 4))
 
 
 def _test_cpu_p2b_with_random_parameter(test_case, device_list):
