@@ -648,6 +648,8 @@ static PyHeapTypeObject* MakeTensorMetaclass() {
   return heap_type;
 }
 
+extern PyNumberMethods PyTensorObject_as_number;
+extern PyObject* PyTensorObject_richcompare(PyObject*, PyObject*, int);
 extern PyMethodDef PyTensorObject_extra_methods[];
 
 static PyHeapTypeObject* TensorMetaclass_Type = MakeTensorMetaclass();
@@ -667,14 +669,16 @@ static PyTypeObject* MakeTensorType() {
   type->tp_init = PyTensorObject_init;
   type->tp_dealloc = PyTensorObject_dealloc;
   type->tp_getset = PyTensorObject_properties;
-  type->tp_as_number = &heap_type->as_number;
 
   static std::vector<PyMethodDef> total_methods =
       concat_method_def(PyTensorObject_methods, PyTensorObject_extra_methods);
   type->tp_methods = total_methods.data();
 
+  type->tp_as_number = &PyTensorObject_as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
+  type->tp_richcompare = PyTensorObject_richcompare;
+  type->tp_hash = (hashfunc)_Py_HashPointer;
 
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
