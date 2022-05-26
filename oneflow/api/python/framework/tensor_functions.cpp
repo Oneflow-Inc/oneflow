@@ -16,12 +16,15 @@ limitations under the License.
 
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
+#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
+
+using functional::PyObjectPtr;
 
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
@@ -46,23 +49,23 @@ namespace one {
     END_HANDLE_ERRORS                                        \
   }
 
-NB_UNARY_FUNC(PyTensorObject_absolute, functional::abs);
-NB_UNARY_FUNC(PyTensorObject_negative, functional::negative);
+NB_UNARY_FUNC(PyTensorObject_nb_absolute, functional::abs);
+NB_UNARY_FUNC(PyTensorObject_nb_negative, functional::negative);
 
-NB_BINARY_FUNC(PyTensorObject_add, functional::add);
-NB_BINARY_FUNC(PyTensorObject_sub, functional::sub);
-NB_BINARY_FUNC(PyTensorObject_mul, functional::mul);
-NB_BINARY_FUNC(PyTensorObject_fmod, functional::fmod);
-NB_BINARY_FUNC(PyTensorObject_div, functional::div);
-NB_BINARY_FUNC(PyTensorObject_and, functional::logical_and);
-NB_BINARY_FUNC(PyTensorObject_xor, functional::logical_xor);
-NB_BINARY_FUNC(PyTensorObject_or, functional::logical_or);
-NB_BINARY_FUNC(PyTensorObject_floor_div, functional::floor_divide);
-NB_BINARY_FUNC(PyTensorObject_true_div, functional::div);
-NB_BINARY_FUNC(PyTensorObject_matrix_multiply, functional::matmul);
+NB_BINARY_FUNC(PyTensorObject_nb_add, functional::add);
+NB_BINARY_FUNC(PyTensorObject_nb_sub, functional::sub);
+NB_BINARY_FUNC(PyTensorObject_nb_mul, functional::mul);
+NB_BINARY_FUNC(PyTensorObject_nb_fmod, functional::fmod);
+NB_BINARY_FUNC(PyTensorObject_nb_div, functional::div);
+NB_BINARY_FUNC(PyTensorObject_nb_and, functional::logical_and);
+NB_BINARY_FUNC(PyTensorObject_nb_xor, functional::logical_xor);
+NB_BINARY_FUNC(PyTensorObject_nb_or, functional::logical_or);
+NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
+NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
+NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 // TODO: not implemented yet
 // NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
-PyObject* PyTensorObject_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObject* tuple = PyTuple_Pack(2, a, b);
   auto* result = functional::pow(NULL, tuple, NULL);
@@ -71,7 +74,7 @@ PyObject* PyTensorObject_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_invert(PyObject* self) {
+static PyObject* PyTensorObject_nb_invert(PyObject* self) {
   HANDLE_ERRORS
   CHECK_OR_THROW(PyTensor_Unpack(self)->dtype()->data_type() == DataType::kBool)
       << "~ (operator.invert) is only implemented on integer and Boolean-type tensors";
@@ -96,18 +99,18 @@ static PyObject* PyTensorObject_invert(PyObject* self) {
 
 // TODO: still have bug here
 // NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_add, functional::add, "add");
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_sub, functional::sub);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_mul, functional::mul);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_fmod, functional::fmod);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_and, functional::logical_and);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_xor, functional::logical_xor);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_or, functional::logical_or);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_floor_div, functional::floor_divide);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_true_div, functional::div);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_sub, functional::sub);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_mul, functional::mul);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_fmod, functional::fmod);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_and, functional::logical_and);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_xor, functional::logical_xor);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_or, functional::logical_or);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_floor_div, functional::floor_divide);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_true_div, functional::div);
 // TODO: inplace matmul not supported yet
 // INPLACE_BINARY_FUNC(PyTensorObject_inplace_matrix_multiply, functional::matmul, "matmul");
 
-PyObject* PyTensorObject_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObject* tuple = PyTuple_Pack(2, a, b);
   PyObject* dict = PyDict_New();
@@ -119,45 +122,45 @@ PyObject* PyTensorObject_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) 
 }
 
 PyNumberMethods PyTensorObject_as_number = {
-    PyTensorObject_add,       // nb_add
-    PyTensorObject_sub,       // nb_subtract
-    PyTensorObject_mul,       // nb_multiply
-    PyTensorObject_fmod,      // nb_remainder
-    NULL,                     // nb_divmod
-    PyTensorObject_pow,       // nb_power
-    PyTensorObject_negative,  // nb_negative
-    NULL,                     // nb_positive
-    PyTensorObject_absolute,  // nb_absolute
-    NULL,                     // nb_bool
-    PyTensorObject_invert,    // nb_invert
-    NULL,                     // nb_lshift
-    NULL,                     // nb_rshift
-    PyTensorObject_and,       // nb_and
-    PyTensorObject_xor,       // nb_xor
-    PyTensorObject_or,        // nb_or
-    NULL,                     // nb_int
-    NULL,                     // nb_reserved
-    NULL,                     // nb_float
+    PyTensorObject_nb_add,       // nb_add
+    PyTensorObject_nb_sub,       // nb_subtract
+    PyTensorObject_nb_mul,       // nb_multiply
+    PyTensorObject_nb_fmod,      // nb_remainder
+    NULL,                        // nb_divmod
+    PyTensorObject_nb_pow,       // nb_power
+    PyTensorObject_nb_negative,  // nb_negative
+    NULL,                        // nb_positive
+    PyTensorObject_nb_absolute,  // nb_absolute
+    NULL,                        // nb_bool
+    PyTensorObject_nb_invert,    // nb_invert
+    NULL,                        // nb_lshift
+    NULL,                        // nb_rshift
+    PyTensorObject_nb_and,       // nb_and
+    PyTensorObject_nb_xor,       // nb_xor
+    PyTensorObject_nb_or,        // nb_or
+    NULL,                        // nb_int
+    NULL,                        // nb_reserved
+    NULL,                        // nb_float
 
-    NULL,                         // nb_inplace_add
-    PyTensorObject_inplace_sub,   // nb_inplace_sub
-    PyTensorObject_inplace_mul,   // nb_inplace_mul
-    PyTensorObject_inplace_fmod,  // nb_inplace_remainder
-    PyTensorObject_inplace_pow,   // nb_inplace_pow
-    NULL,                         // nb_inplace_lshift
-    NULL,                         // nb_inplace_rshift
-    PyTensorObject_inplace_and,   // nb_inplace_and
-    PyTensorObject_inplace_xor,   // nb_inplace_xor
-    PyTensorObject_inplace_or,    // nb_inplace_or
+    NULL,                            // nb_inplace_add
+    PyTensorObject_nb_inplace_sub,   // nb_inplace_sub
+    PyTensorObject_nb_inplace_mul,   // nb_inplace_mul
+    PyTensorObject_nb_inplace_fmod,  // nb_inplace_remainder
+    PyTensorObject_nb_inplace_pow,   // nb_inplace_pow
+    NULL,                            // nb_inplace_lshift
+    NULL,                            // nb_inplace_rshift
+    PyTensorObject_nb_inplace_and,   // nb_inplace_and
+    PyTensorObject_nb_inplace_xor,   // nb_inplace_xor
+    PyTensorObject_nb_inplace_or,    // nb_inplace_or
 
-    PyTensorObject_floor_div,          // nb_floor_div
-    PyTensorObject_true_div,           // nb_true_div
-    PyTensorObject_inplace_floor_div,  // nb_inplace_floor_div
-    PyTensorObject_inplace_true_div,   // nb_inplace_true_div
+    PyTensorObject_nb_floor_div,          // nb_floor_div
+    PyTensorObject_nb_true_div,           // nb_true_div
+    PyTensorObject_nb_inplace_floor_div,  // nb_inplace_floor_div
+    PyTensorObject_nb_inplace_true_div,   // nb_inplace_true_div
 
-    NULL,                            // nb_index
-    PyTensorObject_matrix_multiply,  // nb_matrix_multiply
-    NULL,                            // not implemented yet nb_inplace_matrix_multiply
+    NULL,                               // nb_index
+    PyTensorObject_nb_matrix_multiply,  // nb_matrix_multiply
+    NULL,                               // not implemented yet nb_inplace_matrix_multiply
 
 };
 
@@ -165,6 +168,7 @@ PyNumberMethods PyTensorObject_as_number = {
 #define UNARY_METHOD(func_name, bind_func)                             \
   static PyObject* func_name(PyObject* self, PyObject* unused) {       \
     HANDLE_ERRORS                                                      \
+    std::cout << "cpython" << std::endl;                               \
     return PyTensor_New(ASSERT_PTR(bind_func(PyTensor_Unpack(self)))); \
     END_HANDLE_ERRORS                                                  \
   }
@@ -211,6 +215,43 @@ UNARY_METHOD(PyTensorObject_cosh, functional::Cosh);
 UNARY_METHOD(PyTensorObject_acosh, functional::Acosh);
 UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
+UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
+
+#define BINARY_METHOD(func_name, bind_func, name)                                           \
+  static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) {            \
+    HANDLE_ERRORS                                                                           \
+    std::cout << "cpython" << std::endl;                                                    \
+    PyObject* other = NULL;                                                                 \
+    static const char* keywords[2] = {"other", NULL};                                       \
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:" name, const_cast<char**>(keywords), \
+                                     &other)) {                                             \
+      return NULL;                                                                          \
+    }                                                                                       \
+    PyObjectPtr tuple(PyTuple_Pack(2, self, other));                                        \
+    return bind_func(NULL, tuple.get(), NULL);                                              \
+    END_HANDLE_ERRORS                                                                       \
+  }
+
+BINARY_METHOD(PyTensorObject_floor_divide, functional::floor_divide, "floor_divide");
+BINARY_METHOD(PyTensorObject_atan2, functional::atan2, "atan2");
+BINARY_METHOD(PyTensorObject_gt, functional::greater, "gt");
+BINARY_METHOD(PyTensorObject_ge, functional::greater_equal, "ge");
+BINARY_METHOD(PyTensorObject_div, functional::div, "div");
+BINARY_METHOD(PyTensorObject_div_, functional::div_, "div_");
+BINARY_METHOD(PyTensorObject_mul, functional::mul, "mul");
+BINARY_METHOD(PyTensorObject_mul_, functional::mul_, "mul_");
+BINARY_METHOD(PyTensorObject_sub, functional::sub, "sub");
+// TODO: not implemented yet
+// BINARY_METHOD(PyTensorObject_sub, functional::sub, "sub_");
+BINARY_METHOD(PyTensorObject_fmod, functional::fmod, "fmod");
+BINARY_METHOD(PyTensorObject_matmul, functional::matmul, "matmul");
+BINARY_METHOD(PyTensorObject_logical_and, functional::logical_and, "logical_and");
+BINARY_METHOD(PyTensorObject_logical_or, functional::logical_or, "logical_or");
+BINARY_METHOD(PyTensorObject_logical_xor, functional::logical_xor, "logical_xor");
+BINARY_METHOD(PyTensorObject_bmm, functional::batch_matmul, "bmm");
+BINARY_METHOD(PyTensorObject_ne, functional::not_equal, "ne");
+BINARY_METHOD(PyTensorObject_lt, functional::less, "lt");
+BINARY_METHOD(PyTensorObject_le, functional::less_equal, "le");
 
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
@@ -245,14 +286,311 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython size" << std::endl;
+  PyObject* idx = NULL;
+  static const char* keywords[2] = {"idx", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx)) {
+    return NULL;
+  }
+  Shape shape = *PyTensor_Unpack(self)->shape();
+  PyObject* shape_object = TensorSize_NewFromShape(shape);
+  if (idx == NULL || idx == Py_None) return shape_object;
+  return shape_object->ob_type->tp_as_mapping->mp_subscript(shape_object, idx);
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_argmax(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython argmax" << std::endl;
+  PyObject* dim = Py_None;
+  PyObject* keepdim = Py_None;
+  static const char* keywords[3] = {"dim", "keepdim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:argmax", const_cast<char**>(keywords), &dim,
+                                   &keepdim)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
+  return functional::argmax(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_argmin(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython argmax" << std::endl;
+  PyObject* dim = Py_None;
+  PyObject* keepdim = Py_None;
+  static const char* keywords[3] = {"dim", "keepdim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:argmin", const_cast<char**>(keywords), &dim,
+                                   &keepdim)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
+  return functional::argmin(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_amin(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython amin" << std::endl;
+  PyObject* dim = Py_None;
+  PyObject* keepdim = Py_None;
+  static const char* keywords[3] = {"dim", "keepdim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:amin", const_cast<char**>(keywords), &dim,
+                                   &keepdim)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
+  return functional::amin(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* dtype = NULL;
+  static const char* keywords[2] = {"dtype", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:cast", const_cast<char**>(keywords), &dtype)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(2, self, dtype));
+  return functional::cast(NULL, tuple.get(), NULL);
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_diag(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* diagonal = PyLong_FromLong(0);
+  static const char* keywords[2] = {"diagonal", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:diag", const_cast<char**>(keywords),
+                                   &diagonal)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(2, self, diagonal));
+  return functional::diag(NULL, tuple.get(), NULL);
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* offset = PyLong_FromLong(0);
+  PyObject* dim1 = PyLong_FromLong(0);
+  PyObject* dim2 = PyLong_FromLong(1);
+  static const char* keywords[4] = {"offset", "dim1", "dim2", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:diag", const_cast<char**>(keywords), &offset,
+                                   &dim1, &dim2)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(4, self, offset, dim1, dim2));
+  return functional::diagonal(NULL, tuple.get(), NULL);
+  END_HANDLE_ERRORS
+}
+
+// static PyObject* PyTensorObject_add(PyObject* self, PyObject* args, PyObject* kwargs) {
+//   HANDLE_ERRORS
+//   std::cout << "cpython" << std::endl;
+//   PyObject* other = NULL;
+//   PyObject* alpha = PyFloat_FromDouble(1.0);
+//   static const char* keywords[3] = {"other", "alpha", NULL};
+//   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|$O:add", const_cast<char**>(keywords),
+//   &other, &alpha)) {
+//     return NULL;
+//   }
+//   std::cout << "run1" << std::endl;
+//   if(other == NULL)
+//     std::cout << "other null" << std::endl;
+//   std::cout << "run2" << std::endl;
+//   PyObjectPtr tuple(PyTuple_Pack(3, self, other, alpha));//, other, alpha));
+//   // PyObjectPtr dict(PyDict_New());
+//   PyObject* dict = PyDict_New();
+//   CHECK_OR_THROW(PyDict_SetItemString(dict, "alpha", alpha) > -1);
+//   CHECK_OR_THROW(PyDict_SetItemString(dict, "inplace", Py_False) > -1);
+//   std::cout << "run3" << std::endl;
+//   return functional::add(NULL, tuple.get(), dict);
+//   END_HANDLE_ERRORS
+// }
+
+static PyObject* PyTensorObject_addcmul(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* tensor1 = NULL;
+  PyObject* tensor2 = NULL;
+  PyObject* value = PyFloat_FromDouble(1.0);
+  static const char* keywords[4] = {"tensor1", "tensor2", "value", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|$O:addcmul", const_cast<char**>(keywords),
+                                   &tensor1, &tensor2, &value)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(3, self, tensor1, tensor2));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "value", value) > -1);
+  return functional::addcmul(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_addcmul_(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* tensor1 = NULL;
+  PyObject* tensor2 = NULL;
+  PyObject* value = PyFloat_FromDouble(1.0);
+  static const char* keywords[4] = {"tensor1", "tensor2", "value", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|$O:addcmul_", const_cast<char**>(keywords),
+                                   &tensor1, &tensor2, &value)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(3, self, tensor1, tensor2));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "value", value) > -1);
+  return functional::addcmul_(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(2, self, other));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
+  return functional::sub(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_clamp(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* min = Py_None;
+  PyObject* max = Py_None;
+  static const char* keywords[3] = {"min", "max", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:clamp", const_cast<char**>(keywords), &min,
+                                   &max)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "min", min) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "max", max) > -1);
+  return functional::clamp(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_clamp_(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* min = Py_None;
+  PyObject* max = Py_None;
+  static const char* keywords[3] = {"min", "max", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:clamp_", const_cast<char**>(keywords), &min,
+                                   &max)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "min", min) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "max", max) > -1);
+  return functional::clamp_(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_clip(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* min = Py_None;
+  PyObject* max = Py_None;
+  static const char* keywords[3] = {"min", "max", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:clip", const_cast<char**>(keywords), &min,
+                                   &max)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "min", min) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "max", max) > -1);
+  return functional::clip(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_clip_(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* min = Py_None;
+  PyObject* max = Py_None;
+  static const char* keywords[3] = {"min", "max", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:clip", const_cast<char**>(keywords), &min,
+                                   &max)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "min", min) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "max", max) > -1);
+  return functional::clip_(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"byte", PyTensorObject_byte, METH_NOARGS, NULL},
+    {"size", (PyCFunction)PyTensorObject_size, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"argmax", (PyCFunction)PyTensorObject_argmax, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"argmin", (PyCFunction)PyTensorObject_argmin, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"amin", (PyCFunction)PyTensorObject_amin, METH_VARARGS | METH_KEYWORDS, NULL},
     {"dim", PyTensorObject_dim, METH_NOARGS, NULL},
     {"ndimension", PyTensorObject_dim, METH_NOARGS, NULL},
     {"nelement", PyTensorObject_nelement, METH_NOARGS, NULL},
     {"numel", PyTensorObject_nelement, METH_NOARGS, NULL},
     {"element_size", PyTensorObject_element_size, METH_NOARGS, NULL},
     {"get_device", PyTensorObject_get_device, METH_NOARGS, NULL},
+    {"cast", (PyCFunction)PyTensorObject_cast, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"diag", (PyCFunction)PyTensorObject_diag, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"diagonal", (PyCFunction)PyTensorObject_diagonal, METH_VARARGS | METH_KEYWORDS, NULL},
+    // {"add", (PyCFunction)PyTensorObject_add, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcmul_", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"sub_", (PyCFunction)PyTensorObject_sub_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clamp", (PyCFunction)PyTensorObject_clamp, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clamp_", (PyCFunction)PyTensorObject_clamp_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clip", (PyCFunction)PyTensorObject_clip, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
+
+    // macro BINARY_METHOD
+    {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"atan2", (PyCFunction)PyTensorObject_atan2, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"floor_divide", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mul", (PyCFunction)PyTensorObject_mul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mul_", (PyCFunction)PyTensorObject_mul_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"sub", (PyCFunction)PyTensorObject_sub, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"fmod", (PyCFunction)PyTensorObject_fmod, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logical_and", (PyCFunction)PyTensorObject_logical_and, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logical_or", (PyCFunction)PyTensorObject_logical_or, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logical_xor", (PyCFunction)PyTensorObject_logical_xor, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bmm", (PyCFunction)PyTensorObject_bmm, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"ne", (PyCFunction)PyTensorObject_ne, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"lt", (PyCFunction)PyTensorObject_lt, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"le", (PyCFunction)PyTensorObject_le, METH_VARARGS | METH_KEYWORDS, NULL},
+
+    // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
     {"exp", PyTensorObject_exp, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
@@ -302,9 +640,9 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"sin_", PyTensorObject_sin_, METH_NOARGS, NULL},
     {"isnan", PyTensorObject_isnan, METH_NOARGS, NULL},
     {"isinf", PyTensorObject_isinf, METH_NOARGS, NULL},
-    {"floor_divide", PyTensorObject_div, METH_O, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
+    {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
     {NULL},
 };
 

@@ -321,7 +321,6 @@ static PyObject* PyTensorObject__register_storage_delete_hook(PyObject* self, Py
   END_HANDLE_ERRORS
 }
 
-
 PyMethodDef* concat_method_def(PyMethodDef methods[], PyMethodDef extra_methods[]) {
   int len1 = 0;
   int len2 = 0;
@@ -568,8 +567,7 @@ static PyTypeObject* MakeTensorType() {
   type->tp_init = PyTensorObject_init;
   type->tp_dealloc = PyTensorObject_dealloc;
   type->tp_getset = PyTensorObject_properties;
-  type->tp_methods =
-      concat_method_def(PyTensorObject_methods, PyTensorObject_extra_methods);
+  type->tp_methods = concat_method_def(PyTensorObject_methods, PyTensorObject_extra_methods);
 
   type->tp_as_number = &PyTensorObject_as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
