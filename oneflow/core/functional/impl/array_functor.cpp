@@ -2647,7 +2647,7 @@ class IndexSelectFunctor {
 
     DimVector index_broad_cast(input_num_axes);
     for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
-    index_broad_cast[new_dim] = 1;
+    if (index_broad_cast[new_dim] != 0) { index_broad_cast[new_dim] = 1; }
     Shape expand_shape(index_broad_cast);
     std::shared_ptr<one::Tensor> index_new;
     if (index_num_axes == 1) {
@@ -2972,13 +2972,14 @@ class RepeatInterLeaveIntFunctor {
     std::shared_ptr<one::Tensor> res;
     if (!dim.has_value()) {
       std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
-      std::shared_ptr<one::Tensor> repeats_expand =
-          JUST(Expand(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)),
-                      Shape{flatten_input->shape()->At(0)}));
+      std::shared_ptr<one::Tensor> repeats_expand = JUST(
+          Expand(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), JUST(input->device()))),
+                 Shape{flatten_input->shape()->At(0)}));
       std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
+      int64_t output_size = flatten_input->shape()->At(0);
+      if (repeats > 0) { output_size *= repeats; }
       res = JUST(IndexSelect(flatten_input, 0,
-                             JUST(RepeatInterLeaveIndex(repeats_expand, cumsum,
-                                                        repeats * flatten_input->shape()->At(0)))));
+                             JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, output_size))));
     } else {
       int32_t dim_ = JUST(dim);
       const auto input_shape = input->shape();
@@ -2987,13 +2988,14 @@ class RepeatInterLeaveIntFunctor {
       CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
           << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
-      std::shared_ptr<one::Tensor> repeats_expand =
-          JUST(Expand(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)),
-                      Shape{input->shape()->At(dim_)}));
+      std::shared_ptr<one::Tensor> repeats_expand = JUST(
+          Expand(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), JUST(input->device()))),
+                 Shape{input->shape()->At(dim_)}));
       std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
-      res = JUST(IndexSelect(
-          input, dim_,
-          JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, repeats * input->shape()->At(dim_)))));
+      int64_t output_size = input->shape()->At(dim_);
+      if (repeats > 0) { output_size *= repeats; }
+      res = JUST(IndexSelect(input, dim_,
+                             JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, output_size))));
     }
     return res;
   }
@@ -3003,8 +3005,7 @@ class RepeatInterLeaveTensorFunctor {
  public:
   RepeatInterLeaveTensorFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
-                           const std::shared_ptr<one::Tensor>& repeats,
-                           const Optional<int32_t>& dim,
+                           const std::shared_ptr<one::Tensor>& repeats, const int32_t& dim,
                            const Optional<int32_t>& output_size) const {
     const auto repeats_shape = repeats->shape();
     const int64_t& repeat_num_axes = repeats_shape->NumAxes();
@@ -3013,7 +3014,7 @@ class RepeatInterLeaveTensorFunctor {
     CHECK_OR_RETURN(repeats->dtype() == DType::Int64())
         << Error::RuntimeError << "repeats has to be Long tensor";
 
-    std::vector<int64_t> repeats_value;
+    std::vector<int64_t> repeats_value(repeats_shape->elem_cnt());
     if (!output_size.has_value()) {
       const auto& callback = [&](uint64_t ofblob_ptr) {
         CHECK_JUST(BlobBufferCopyUtil<int64_t>::To(ofblob_ptr, repeats_value.data(),
@@ -3021,41 +3022,35 @@ class RepeatInterLeaveTensorFunctor {
       };
       SyncAccessTensorWithTimeOut(repeats, callback, "const").GetOrThrow();
       for (const auto x : repeats_value) {
-        CHECK_OR_RETURN(x < 0) << Error::RuntimeError << "repeats can not be negative";
+        CHECK_OR_RETURN(x >= 0) << Error::RuntimeError << "repeats can not be negative";
       }
     } else {
       repeats_value.push_back(JUST(output_size));
     }
-
+    int32_t dim_ = dim;
+    CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))
+        << Error::RuntimeError << "repeats must have the same size as input along dim ";
+    const auto input_shape = input->shape();
+    const int64_t num_axes = input_shape->NumAxes();
+    if (dim_ < 0) { dim_ += num_axes; }
+    CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
+        << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+        << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
+    std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, 0, DType::Int32()));
+    int64_t output_size_value = 0;
+    for (const auto x : repeats_value) { output_size_value += x; }
     std::shared_ptr<one::Tensor> res;
-    if (!dim.has_value()) {
-      std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
-
-      std::shared_ptr<one::Tensor> repeats_expand = repeats;
-      if (repeat_num_axes == 0 || (repeat_num_axes == 1 && repeats_shape->At(0) == 1)) {
-        repeats_expand =
-            JUST(Expand(JUST(Constant(Shape{1}, Scalar(repeats_value[0]), DType::Int32(), NullOpt)),
-                        Shape{input->shape()->At(0)}));
-      }
-      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
-      res = JUST(IndexSelect(
-          flatten_input, 0,
-          JUST(RepeatInterLeaveIndex(repeats_expand, cumsum,
-                                     repeats_value[0] * flatten_input->shape()->At(0)))));
-    } else {
-      int32_t dim_ = JUST(dim);
-      CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))
-          << Error::RuntimeError << "repeats must have the same size as input along dim ";
-      const auto input_shape = input->shape();
-      const int64_t num_axes = input_shape->NumAxes();
-      if (dim_ < 0) { dim_ += num_axes; }
-      CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
-          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-          << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
-      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, 0, DType::Int32()));
+    if (output_size_value > 0) {
       res = JUST(IndexSelect(input, dim_,
-                             JUST(RepeatInterLeaveIndex(
-                                 repeats, cumsum, repeats_value[-1] * input->shape()->At(dim_)))));
+                             JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
+    } else {
+      DimVector new_input_shape(num_axes);
+      for (int i = 0; i < num_axes; i++) { new_input_shape[i] = input->shape()->At(i); }
+      new_input_shape[dim_] = 0;
+      std::shared_ptr<one::Tensor> new_input =
+          JUST(Constant(Shape{new_input_shape}, Scalar(0), input->dtype(), JUST(input->device())));
+      res = JUST(IndexSelect(new_input, dim_,
+                             JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
     }
     return res;
   }

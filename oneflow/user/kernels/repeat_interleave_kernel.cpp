@@ -31,7 +31,6 @@ class CpuRepeatInterLeaveKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* cumsum = ctx->Tensor4ArgNameAndIndex("cumsum", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t& repeat_num = ctx->Attr<std::int64_t>("repeat_num");
     const T* in_ptr = in->dptr<T>();
     const T* cumsum_ptr = cumsum->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();

@@ -51,7 +51,7 @@ class GpuRepeatInterLeaveKernel final : public user_op::OpKernel {
     const T* cumsum_ptr = cumsum->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
-    repeat_interleave<T><<<BlocksNum4ThreadsNum(repeat_num), kCudaThreadsNumPerBlock, 0,
+    repeat_interleave<T><<<BlocksNum4ThreadsNum(in->shape().At(0)), kCudaThreadsNumPerBlock, 0,
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           in_ptr, cumsum_ptr, out_ptr, in->shape().At(0));
 
