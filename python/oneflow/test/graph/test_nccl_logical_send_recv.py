@@ -57,17 +57,13 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
 
     # input
     placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
-    in_np = np.arange(4 * 4 * 4).reshape(4, 4, 4)
-    x = flow.tensor(
-        in_np,
-        sbp=src_nd_sbp,
-        placement=placement,
-    )
+    local_np = np.arange(4 * 4 * 4).reshape(4, 4, 4)
+    # NOTE(strint): flow.tensor(numpy, sbp) is not valid when sbp contains partial_sum
+    x = flow.tensor(local_np).to_global(sbp=src_nd_sbp, placement=placement)
 
     # check eager boxing
-    test_case.assertTrue(np.array_equal(x.numpy(), in_np))
     eager_out = x.to_global(sbp=dst_nd_sbp, placement=placement)
-    assert np.array_equal(eager_out.numpy(), in_np)
+    test_case.assertTrue(np.array_equal(eager_out.numpy(), x.numpy()))
     
     # bad case of graph: S with P
     if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(0):
@@ -103,17 +99,27 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
             super().__init__()
 
         def build(self, x):
-            # from src nd sbp to dst nd sbp
             y = x.to_global(sbp=dst_nd_sbp, placement=placement)
             return y
+
     graph = TestNcclLogicalSendRecvGraph()
     y = graph(x)
     out_np = y.numpy()
+    in_np = x.numpy()
     equal = np.array_equal(out_np, in_np)
+    # Debug log
+    if flow.env.get_rank() == 1:
+        if equal:
+            print("test boxing passed form ", src_nd_sbp, " to ", dst_nd_sbp)
+        else:
+            print("graph repr:\n", graph)
+            print("local in data:\n", x.to_local().numpy())
+            print("local out data:\n", y.to_local().numpy())
+            print("global in np:\n", in_np)
+            print("global out np:\n", out_np)
+            print("global diff np:\n", out_np - in_np)
     if not equal:
-        print("graph repr:\n", graph)
-        print("in np:\n", in_np)
-        print("diff np:\n", out_np - in_np)
+        print("error rank: ", flow.env.get_rank())
     test_case.assertTrue(equal)
 
 
