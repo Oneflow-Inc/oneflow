@@ -38,7 +38,7 @@ def get_pytorch_cpu_kernel_time(prof) -> Union[str, float]:
     assert prof.num > 1
     cpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
     if len(cpu_kernel_items) == 0:
-        return '-'
+        return "-"
     kernel_cpu_time = (
         sum(map(lambda x: x.self_cpu_time_total, cpu_kernel_items)) / prof.num
     )
@@ -49,7 +49,7 @@ def get_oneflow_cpu_kernel_time(prof) -> Union[str, float]:
     assert prof.num > 1
     cpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
     if len(cpu_kernel_items) == 0:
-        return '-'
+        return "-"
     kernel_cpu_time = sum(map(lambda x: x.time_total, cpu_kernel_items)) / prof.num
     return round(kernel_cpu_time, 1)
 
@@ -57,7 +57,7 @@ def get_oneflow_cpu_kernel_time(prof) -> Union[str, float]:
 def get_pytorch_gpu_kernel_time(prof) -> Union[str, float]:
     gpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
     if len(gpu_kernel_items) == 0:
-        return '-'
+        return "-"
     kernel_gpu_time = (
         sum(map(lambda x: x.self_cuda_time_total, gpu_kernel_items)) / prof.num
     )
@@ -69,7 +69,7 @@ def get_oneflow_gpu_kernel_time(prof) -> Union[str, float]:
         filter(lambda x: x.event_type == 1 and x.on_gpu, prof.key_averages())
     )
     if len(gpu_kernel_items) == 0:
-        return '-'
+        return "-"
     kernel_gpu_time = sum(map(lambda x: x.time_total, gpu_kernel_items)) / prof.num
     return round(kernel_gpu_time, 1)
 
