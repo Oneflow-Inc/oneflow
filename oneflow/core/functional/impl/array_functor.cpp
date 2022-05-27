@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
@@ -3057,6 +3055,7 @@ class FillFunctor {
  public:
   FillFunctor() { op_ = CHECK_JUST(one::OpBuilder("fill_").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in, const Scalar& value) const {
+    JUST(CheckInplaceValid(in));
     MutableAttrMap attrs;
     if (IsFloatingDataType(in->dtype()->data_type())) {
       JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
@@ -3067,7 +3066,6 @@ class FillFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
-    JUST(CheckInplaceValid(in));
     auto outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = in;
     JUST(OpInterpUtil::Dispatch(*op_, {in}, outputs.get(), attrs));
@@ -3086,6 +3084,7 @@ class FillTensorFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& value) const {
+    JUST(CheckInplaceValid(in));
     MutableAttrMap attrs;
     const int64_t ndim = value->ndim();
     CHECK_EQ_OR_RETURN(ndim, 0)
@@ -3099,7 +3098,6 @@ class FillTensorFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
-    JUST(CheckInplaceValid(in));
     auto outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = in;
     JUST(OpInterpUtil::Dispatch(*op_, {in, value}, outputs.get(), attrs));

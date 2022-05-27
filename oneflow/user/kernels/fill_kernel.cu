@@ -45,16 +45,16 @@ class FillTensorGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FLIP_CUDA_KERNEL(dtype)                               \
+#define REGISTER_FILL_CUDA_KERNEL(dtype)                               \
   REGISTER_USER_KERNEL("fill_tensor_")                                 \
       .SetCreateFn<FillTensorGpuKernel<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
-REGISTER_FLIP_CUDA_KERNEL(float)
-REGISTER_FLIP_CUDA_KERNEL(double)
-REGISTER_FLIP_CUDA_KERNEL(int8_t)
-REGISTER_FLIP_CUDA_KERNEL(int32_t)
-REGISTER_FLIP_CUDA_KERNEL(int64_t)
+REGISTER_FILL_CUDA_KERNEL(float)
+REGISTER_FILL_CUDA_KERNEL(double)
+REGISTER_FILL_CUDA_KERNEL(int8_t)
+REGISTER_FILL_CUDA_KERNEL(int32_t)
+REGISTER_FILL_CUDA_KERNEL(int64_t)
 
 }  // namespace oneflow
