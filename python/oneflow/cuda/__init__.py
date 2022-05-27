@@ -16,6 +16,9 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.cuda.type_tensor import *
+from oneflow.cuda._utils import _get_device_index
+
+from typing import Union, Any
 
 
 def is_available() -> bool:
@@ -68,3 +71,36 @@ def manual_seed(seed: int) -> None:
     seed = int(seed)
     idx = current_device()
     flow._oneflow_internal.manual_seed(seed, "cuda", idx)
+
+
+def set_device(device: Union[flow.device, str, int]) -> None:
+    r"""The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.cuda.set_device.html.
+    
+    Sets the current device.
+    Usage of this function is discouraged in favor of :any:`device`. In most
+    cases it's better to use ``CUDA_VISIBLE_DEVICES`` environmental variable.
+
+    Args:
+        device (flow.device or int): selected device. This function is a no-op
+            if this argument is negative.
+    """
+    device_idx = _get_device_index(device)
+    if device_idx >= 0:
+        flow._oneflow_internal.SetCudaDeviceIndex(device_idx)
+
+
+def synchronize(device: Union[flow.device, str, int, None] = None) -> None:
+    r"""The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.cuda.synchronize.html.
+    
+    Waits for all kernels in all streams on a CUDA device to complete.
+
+    Args:
+        device (flow.device or int, optional): device for which to synchronize.
+            It uses the current device, given by :func:`~oneflow.cuda.current_device`,
+            if :attr:`device` is ``None`` (default).
+    """
+    device_idx = _get_device_index(device, optional=True)
+    if device_idx >= 0:
+        flow._oneflow_internal.CudaSynchronize(device_idx)
