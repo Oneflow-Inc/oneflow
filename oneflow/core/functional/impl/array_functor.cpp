@@ -3080,7 +3080,8 @@ class FillFunctor {
 class FillTensorFunctor {
  public:
   FillTensorFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fill_tensor_").Input("in").Output("out").Build());
+    op_ =
+        CHECK_JUST(one::OpBuilder("fill_tensor_").Input("in").Input("value").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& value) const {
