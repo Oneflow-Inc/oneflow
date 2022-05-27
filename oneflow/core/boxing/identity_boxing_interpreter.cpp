@@ -23,11 +23,12 @@ namespace {
 Maybe<void> RawCheckIdentity(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                              const Shape& logical_shape) {
   if (in->placement()->parallel_num() == 1) {
-    CHECK_OR_RETURN(in->placement()->EqualsIgnoringHierarchy(*out->placement()));
+    CHECK_OR_RETURN(in->placement()->EqualsIgnoringHierarchy(
+        *out->placement()));  // NOLINT(maybe-need-error-msg)
     return Maybe<void>::Ok();
   }
-  CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
+  CHECK_OR_RETURN(in->placement() == out->placement());  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());        // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 

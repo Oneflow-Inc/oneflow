@@ -25,14 +25,16 @@ namespace {
 
 Maybe<void> RawCheckFlattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                      const Shape& logical_shape) {
-  CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);   // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   for (int i = 0; i < in->nd_sbp()->sbp_parallel_size(); ++i) {
     const auto& sbp_parallel = in->nd_sbp()->sbp_parallel(i);
     CHECK_OR_RETURN(sbp_parallel == out->nd_sbp()->sbp_parallel(0)) << "nd_sbp axis: " << i;
   }
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), out->placement()->device_type());
-  CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), out->placement()->parallel_num());
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(),
+                     out->placement()->device_type());  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->placement()->parallel_num(),
+                     out->placement()->parallel_num());  // NOLINT(maybe-need-error-msg)
   ParallelConf flattened_parallel_conf(in->placement()->parallel_conf());
   flattened_parallel_conf.clear_hierarchy();
   const auto& flatten_placement = SymbolOf(ParallelDesc(flattened_parallel_conf));

@@ -25,8 +25,8 @@ namespace {
 
 Maybe<void> RawCheckUnflattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                        const Shape& logical_shape) {
-  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_GT_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);   // NOLINT(maybe-need-error-msg)
+  CHECK_GT_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   for (int i = 0; i < out->nd_sbp()->sbp_parallel_size(); ++i) {
     const auto& sbp_parallel = out->nd_sbp()->sbp_parallel(i);
     CHECK_OR_RETURN(sbp_parallel == out->nd_sbp()->sbp_parallel(0)) << "nd_sbp axis: " << i;
