@@ -15,10 +15,17 @@ limitations under the License.
 */
 
 #include <Python.h>
+#include <dictobject.h>
+#include <longobject.h>
+#include <modsupport.h>
+#include <object.h>
+#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
+#include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -561,14 +568,15 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
   std::cout << "cpython" << std::endl;
   PyObject* device = Py_None;
   static const char* keywords[2] = {"device", NULL};
-  if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:cuda", const_cast<char**>(keywords), &device))
-  {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:cuda", const_cast<char**>(keywords),
+                                   &device)) {
     return NULL;
   }
-  if(device == Py_None)
+  if (device == Py_None)
     device = PyUnicode_FromString("cuda");
-  else if(PyLong_Check(device)) {
-    device = PyUnicode_Concat(PyUnicode_FromString("cuda:"), PyUnicode_FromFormat("%d", PyLong_AsLong(device)));
+  else if (PyLong_Check(device)) {
+    device = PyUnicode_Concat(PyUnicode_FromString("cuda:"),
+                              PyUnicode_FromFormat("%d", PyLong_AsLong(device)));
   }
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device) > -1);
@@ -576,6 +584,161 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
   return functional::to(NULL, tuple.get(), dict.get());
   END_HANDLE_ERRORS
 }
+
+static PyObject* PyTensorObject_in_top_k(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* predictions = NULL;
+  PyObject* k = NULL;
+  static const char* keywords[3] = {"predictions", "k", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO:in_top_k", const_cast<char**>(keywords),
+                                   &predictions, &k)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(3, self, predictions, k));
+  return functional::in_top_k(NULL, tuple.get(), NULL);
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_index_select(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* dim = NULL;
+  PyObject* index = NULL;
+  static const char* keywords[3] = {"dim", "index", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO:index_select", const_cast<char**>(keywords),
+                                   &dim, &index)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(3, self, dim, index));
+  return functional::index_select(NULL, tuple.get(), NULL);
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_minimum(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* y = NULL;
+  static const char* keywords[2] = {"y", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:minimum", const_cast<char**>(keywords), &y)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(PyTensor_Check(y))
+      << Error::TypeError() << "minimum(): argument 'other' must be tensor, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(y)));
+  return PyTensor_New(ASSERT_PTR(functional::Minimum(PyTensor_Unpack(self), PyTensor_Unpack(y))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_maximum(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* y = NULL;
+  static const char* keywords[2] = {"y", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:maximum", const_cast<char**>(keywords), &y)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(PyTensor_Check(y))
+      << Error::TypeError() << "minimum(): argument 'other' must be tensor, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(y)));
+  return PyTensor_New(ASSERT_PTR(functional::Minimum(PyTensor_Unpack(self), PyTensor_Unpack(y))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_pow(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* b = NULL;
+  static const char* keywords[2] = {"b", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:pow", const_cast<char**>(keywords), &b)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(2, self, b));
+  return functional::pow(NULL, tuple.get(), NULL);
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_var(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* dim = Py_None;
+  PyObject* unbiased = Py_True;
+  PyObject* keepdim = Py_False;
+  static const char* keywords[4] = {"dim", "unbiased", "keepdim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:var", const_cast<char**>(keywords), &dim,
+                                   &unbiased, &keepdim)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  PyDict_SetItemString(dict.get(), "dim", dim);
+  PyDict_SetItemString(dict.get(), "unbiased", unbiased);
+  PyDict_SetItemString(dict.get(), "keepdim", keepdim);
+  return functional::var(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_std(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* dim = Py_None;
+  PyObject* unbiased = Py_True;
+  PyObject* keepdim = Py_False;
+  static const char* keywords[4] = {"dim", "unbiased", "keepdim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:std", const_cast<char**>(keywords), &dim,
+                                   &unbiased, &keepdim)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObjectPtr dict(PyDict_New());
+  PyDict_SetItemString(dict.get(), "dim", dim);
+  PyDict_SetItemString(dict.get(), "unbiased", unbiased);
+  PyDict_SetItemString(dict.get(), "keepdim", keepdim);
+  return functional::std(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_tril(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* diagonal = PyLong_FromLong(0);
+  static const char* keywords[4] = {"diagonal", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:tril", const_cast<char**>(keywords), &diagonal)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(PyLong_Check(diagonal))
+      << Error::TypeError() << "tril(): argument 'diagonal' must be int64, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(diagonal)));
+  return PyTensor_New(ASSERT_PTR(functional::Tril(PyTensor_Unpack(self), PyLong_AsLong(diagonal))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_triu(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  std::cout << "cpython" << std::endl;
+  PyObject* diagonal = PyLong_FromLong(0);
+  static const char* keywords[4] = {"diagonal", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:triu", const_cast<char**>(keywords), &diagonal)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(PyLong_Check(diagonal))
+      << Error::TypeError() << "triu(): argument 'diagonal' must be int64, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(diagonal)));
+  return PyTensor_New(ASSERT_PTR(functional::Triu(PyTensor_Unpack(self), PyLong_AsLong(diagonal))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_norm(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* p = Py_None;
+  PyObject* dim = Py_None;
+  PyObject* keepdim= Py_False;
+  PyObject* dtype = Py_None;
+  static const char* keywords[5] = {"p", "dim", "keepdim", "dtype" ,NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOOO:norm", const_cast<char**>(keywords), &p, &dim,&keepdim, &dtype)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(4, self, p, dim, keepdim));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dtype", dtype) > -1);
+  return functional::norm(NULL, tuple.get(), dict.get());
+  END_HANDLE_ERRORS
+}
+
+
 
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"byte", PyTensorObject_byte, METH_NOARGS, NULL},
@@ -602,6 +765,16 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cpu", PyTensorObject_cpu, METH_NOARGS, NULL},
     {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"in_top_k", (PyCFunction)PyTensorObject_in_top_k, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"index_select", (PyCFunction)PyTensorObject_index_select, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"minimum", (PyCFunction)PyTensorObject_minimum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"maximum", (PyCFunction)PyTensorObject_maximum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"pow", (PyCFunction)PyTensorObject_pow, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"var", (PyCFunction)PyTensorObject_var, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"std", (PyCFunction)PyTensorObject_std, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"tril", (PyCFunction)PyTensorObject_tril, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"triu", (PyCFunction)PyTensorObject_triu, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"norm", (PyCFunction)PyTensorObject_norm, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro BINARY_METHOD
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
