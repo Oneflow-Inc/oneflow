@@ -17,10 +17,8 @@ limitations under the License.
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
-#include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
-#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
@@ -125,41 +123,41 @@ PyNumberMethods PyTensorObject_as_number = {
     PyTensorObject_nb_sub,       // nb_subtract
     PyTensorObject_nb_mul,       // nb_multiply
     PyTensorObject_nb_fmod,      // nb_remainder
-    NULL,                     // nb_divmod
+    NULL,                        // nb_divmod
     PyTensorObject_nb_pow,       // nb_power
     PyTensorObject_nb_negative,  // nb_negative
-    NULL,                     // nb_positive
+    NULL,                        // nb_positive
     PyTensorObject_nb_absolute,  // nb_absolute
-    NULL,                     // nb_bool
+    NULL,                        // nb_bool
     PyTensorObject_nb_invert,    // nb_invert
-    NULL,                     // nb_lshift
-    NULL,                     // nb_rshift
+    NULL,                        // nb_lshift
+    NULL,                        // nb_rshift
     PyTensorObject_nb_and,       // nb_and
     PyTensorObject_nb_xor,       // nb_xor
     PyTensorObject_nb_or,        // nb_or
-    NULL,                     // nb_int
-    NULL,                     // nb_reserved
-    NULL,                     // nb_float
+    NULL,                        // nb_int
+    NULL,                        // nb_reserved
+    NULL,                        // nb_float
 
     PyTensorObject_nb_inplace_add,  // nb_inplace_add
     PyTensorObject_nb_inplace_sub,  // nb_inplace_sub
     PyTensorObject_nb_inplace_mul,  // nb_inplace_mul
-    NULL,                        // nb_inplace_remainder
-    NULL,                        // nb_inplace_pow
-    NULL,                        // nb_inplace_lshift
-    NULL,                        // nb_inplace_rshift
-    NULL,                        // nb_inplace_and
-    NULL,                        // nb_inplace_xor
-    NULL,                        // nb_inplace_or
+    NULL,                           // nb_inplace_remainder
+    NULL,                           // nb_inplace_pow
+    NULL,                           // nb_inplace_lshift
+    NULL,                           // nb_inplace_rshift
+    NULL,                           // nb_inplace_and
+    NULL,                           // nb_inplace_xor
+    NULL,                           // nb_inplace_or
 
     PyTensorObject_nb_floor_div,         // nb_floor_div
     PyTensorObject_nb_true_div,          // nb_true_div
-    NULL,                             // nb_inplace_floor_div
+    NULL,                                // nb_inplace_floor_div
     PyTensorObject_nb_inplace_true_div,  // nb_inplace_true_div
 
-    NULL,                            // nb_index
+    NULL,                               // nb_index
     PyTensorObject_nb_matrix_multiply,  // nb_matrix_multiply
-    NULL,                            // not implemented yet nb_inplace_matrix_multiply
+    NULL,                               // not implemented yet nb_inplace_matrix_multiply
 
 };
 
@@ -388,8 +386,8 @@ static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObjec
   PyObject* dim1 = PyLong_FromLong(0);
   PyObject* dim2 = PyLong_FromLong(1);
   static const char* keywords[4] = {"offset", "dim1", "dim2", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:diagonal", const_cast<char**>(keywords), &offset,
-                                   &dim1, &dim2)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:diagonal", const_cast<char**>(keywords),
+                                   &offset, &dim1, &dim2)) {
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(4, self, offset, dim1, dim2));
@@ -688,7 +686,8 @@ static PyObject* PyTensorObject_tril(PyObject* self, PyObject* args, PyObject* k
   std::cout << "cpython" << std::endl;
   PyObject* diagonal = PyLong_FromLong(0);
   static const char* keywords[4] = {"diagonal", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:tril", const_cast<char**>(keywords), &diagonal)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:tril", const_cast<char**>(keywords),
+                                   &diagonal)) {
     return NULL;
   }
   CHECK_OR_THROW(PyLong_Check(diagonal))
@@ -703,7 +702,8 @@ static PyObject* PyTensorObject_triu(PyObject* self, PyObject* args, PyObject* k
   std::cout << "cpython" << std::endl;
   PyObject* diagonal = PyLong_FromLong(0);
   static const char* keywords[4] = {"diagonal", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:triu", const_cast<char**>(keywords), &diagonal)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:triu", const_cast<char**>(keywords),
+                                   &diagonal)) {
     return NULL;
   }
   CHECK_OR_THROW(PyLong_Check(diagonal))
@@ -717,10 +717,11 @@ static PyObject* PyTensorObject_norm(PyObject* self, PyObject* args, PyObject* k
   HANDLE_ERRORS
   PyObject* p = Py_None;
   PyObject* dim = Py_None;
-  PyObject* keepdim= Py_False;
+  PyObject* keepdim = Py_False;
   PyObject* dtype = Py_None;
-  static const char* keywords[5] = {"p", "dim", "keepdim", "dtype" ,NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOOO:norm", const_cast<char**>(keywords), &p, &dim,&keepdim, &dtype)) {
+  static const char* keywords[5] = {"p", "dim", "keepdim", "dtype", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOOO:norm", const_cast<char**>(keywords), &p,
+                                   &dim, &keepdim, &dtype)) {
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(4, self, p, dim, keepdim));
@@ -782,9 +783,9 @@ static PyObject* PyTensorObject_softmax(PyObject* self, PyObject* args, PyObject
                                    &dim)) {
     return NULL;
   }
-  if(dim == Py_None)
-    return PyTensor_New(ASSERT_PTR(functional::Softmax(tensor, NullOpt)));
-  CHECK_OR_THROW(PyLong_Check(dim)) << Error::TypeError() << "softmax(): argument 'dim' must be int64, not "
+  if (dim == Py_None) return PyTensor_New(ASSERT_PTR(functional::Softmax(tensor, NullOpt)));
+  CHECK_OR_THROW(PyLong_Check(dim))
+      << Error::TypeError() << "softmax(): argument 'dim' must be int64, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim)));
   return PyTensor_New(ASSERT_PTR(functional::Softmax(tensor, PyLong_AsLong(dim))));
   END_HANDLE_ERRORS
@@ -799,9 +800,9 @@ static PyObject* PyTensorObject_log_softmax(PyObject* self, PyObject* args, PyOb
                                    &dim)) {
     return NULL;
   }
-  if(dim == Py_None)
-    return PyTensor_New(ASSERT_PTR(functional::LogSoftmax(tensor, NullOpt)));
-  CHECK_OR_THROW(PyLong_Check(dim)) << Error::TypeError() << "log_softmax(): argument 'dim' must be int64, not "
+  if (dim == Py_None) return PyTensor_New(ASSERT_PTR(functional::LogSoftmax(tensor, NullOpt)));
+  CHECK_OR_THROW(PyLong_Check(dim))
+      << Error::TypeError() << "log_softmax(): argument 'dim' must be int64, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim)));
   return PyTensor_New(ASSERT_PTR(functional::LogSoftmax(tensor, PyLong_AsLong(dim))));
   END_HANDLE_ERRORS
@@ -812,8 +813,8 @@ static PyObject* PyTensorObject_roll(PyObject* self, PyObject* args, PyObject* k
   PyObject* shifts = NULL;
   PyObject* dims = Py_None;
   static const char* keywords[3] = {"shifts", "dims", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O:roll", const_cast<char**>(keywords),
-                                   &shifts, &dims)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O:roll", const_cast<char**>(keywords), &shifts,
+                                   &dims)) {
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(3, self, shifts, dims));
@@ -826,8 +827,8 @@ static PyObject* PyTensorObject_chunk(PyObject* self, PyObject* args, PyObject* 
   PyObject* chunks = Py_None;
   PyObject* dim = Py_None;
   static const char* keywords[3] = {"chunks", "dim", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:chunk", const_cast<char**>(keywords),
-                                   &chunks, &dim)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:chunk", const_cast<char**>(keywords), &chunks,
+                                   &dim)) {
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(3, self, chunks, dim));
@@ -835,12 +836,12 @@ static PyObject* PyTensorObject_chunk(PyObject* self, PyObject* args, PyObject* 
   END_HANDLE_ERRORS
 }
 
-#define DATATYPE_FUNC(func_name, dtype) \
-  static PyObject* func_name(PyObject* self, PyObject* unused) { \
-    HANDLE_ERRORS \
-    auto tensor = PyTensor_Unpack(self); \
+#define DATATYPE_FUNC(func_name, dtype)                                    \
+  static PyObject* func_name(PyObject* self, PyObject* unused) {           \
+    HANDLE_ERRORS                                                          \
+    auto tensor = PyTensor_Unpack(self);                                   \
     return PyTensor_New(ASSERT_PTR(functional::To(tensor, dtype, false))); \
-    END_HANDLE_ERRORS \
+    END_HANDLE_ERRORS                                                      \
   }
 
 DATATYPE_FUNC(PyTensorObject_int, DType::Int32());
