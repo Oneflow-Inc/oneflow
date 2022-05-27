@@ -54,8 +54,22 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     # in this case, use 1d boxing
     if src_nd_sbp[0] == src_nd_sbp[1] and dst_nd_sbp[0] == dst_nd_sbp[1]:
         return
+
+    # input
+    placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
+    in_np = np.arange(4 * 4 * 4).reshape(4, 4, 4)
+    x = flow.tensor(
+        in_np,
+        sbp=src_nd_sbp,
+        placement=placement,
+    )
+
+    # check eager boxing
+    test_case.assertTrue(np.array_equal(x.numpy(), in_np))
+    eager_out = x.to_global(sbp=dst_nd_sbp, placement=placement)
+    assert np.array_equal(eager_out.numpy(), in_np)
     
-    # bad case: S with P
+    # bad case of graph: S with P
     if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(0):
         return
     if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(1):
@@ -68,7 +82,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
         return
     if src_nd_sbp[0] == flow.sbp.split(2) and src_nd_sbp[1] == flow.sbp.partial_sum:
         return
-    # bad case: diff S
+    # bad case of graph: diff S
     if src_nd_sbp[0] == flow.sbp.split(0) and src_nd_sbp[1] == flow.sbp.split(1):
         return
     if src_nd_sbp[0] == flow.sbp.split(0) and src_nd_sbp[1] == flow.sbp.split(2):
@@ -82,8 +96,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     if src_nd_sbp[0] == flow.sbp.split(2) and src_nd_sbp[1] == flow.sbp.split(1):
         return
 
-    placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
-
+	# check graph boxing
     flow.boxing.nccl.enable_use_compute_stream(True)
     class TestNcclLogicalSendRecvGraph(flow.nn.Graph):
         def __init__(self):
@@ -93,14 +106,6 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
             # from src nd sbp to dst nd sbp
             y = x.to_global(sbp=dst_nd_sbp, placement=placement)
             return y
-
-    in_np = np.arange(4 * 4 * 4).reshape(4, 4, 4)
-    x = flow.tensor(
-        in_np,
-        sbp=src_nd_sbp,
-        placement=placement,
-    )
-
     graph = TestNcclLogicalSendRecvGraph()
     y = graph(x)
     out_np = y.numpy()
