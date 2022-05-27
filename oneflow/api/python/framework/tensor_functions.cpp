@@ -340,7 +340,7 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
   int dim0 = 0;
   int dim1 = 0;
   static const char* keywords[3] = {"dim0", "dim1", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|i:transpose", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii:transpose", const_cast<char**>(keywords),
                                    &dim0, &dim1)) {
     return NULL;
   }
