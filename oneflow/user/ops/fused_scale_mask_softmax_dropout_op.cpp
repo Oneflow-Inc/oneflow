@@ -22,7 +22,10 @@ namespace oneflow {
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-  CHECK_OR_RETURN(x_desc.shape() == mask_desc.shape());
+  const auto x_shape = x_desc.shape();
+  const auto mask_shape = mask_desc.shape();
+  CHECK_OR_RETURN(x_desc.shape().At(x_shape.NumAxes() - 1)
+                  == mask_desc.shape().At(mask_shape.NumAxes() - 1));
   *ctx->OutputShape("y", 0) = x_desc.shape();
   *ctx->OutputIsDynamic("y", 0) = x_desc.is_dynamic();
   *ctx->OutputShape("softmax_y", 0) = x_desc.shape();
@@ -74,7 +77,8 @@ namespace oneflow {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
   CHECK_EQ_OR_RETURN(dy_desc.shape(), softmax_y_desc.shape());
-  CHECK_OR_RETURN(dy_desc.shape() == mask_desc.shape());
+  CHECK_OR_RETURN(dy_desc.shape().At(dy_desc.shape().NumAxes() - 1)
+                  == mask_desc.shape().At(mask_desc.shape().NumAxes() - 1));
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = dy_desc.shape();
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
