@@ -244,13 +244,22 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
+static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* shape = args;
-  if (PyTuple_Size(args) == 1) {
+  if(PyTuple_Size(args)==0){
+    // keyword parameter
+    static const char* keywords[2] = {"shape", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:reshape", const_cast<char**>(keywords),
+                                    &shape)) {
+      return NULL;
+    }
+  } else if (PyTuple_Size(args) == 1) {
+    // positional parameter
     PyObject* item = PyTuple_GetItem(args, 0);
     if (!PyLong_Check(item)) { shape = item; }
   }
+
   CHECK_OR_THROW(functional::PyLongSequenceCheck(shape))
       << Error::TypeError() << "reshape(): argument 'shape' must be tuple of ints, but found "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape)));
@@ -281,8 +290,8 @@ static PyObject* PyTensorObject_view(PyObject* self, PyObject* args) {
     if (!PyLong_Check(item)) { shape = item; }
   }
   CHECK_OR_THROW(functional::PyLongSequenceCheck(shape))
-      << Error::TypeError() << "view(): argument 'shape' must be tuple of ints, but found "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape)));
+      << Error::TypeError() << "view() received an invalid combination of arguments - got (" << Py_TYPE(shape)->tp_name << "), but expected tuple of ints size.";
+
   const auto& dims = functional::PyUnpackLongSequence<int64_t>(shape);
   DimVector dim(dims.begin(), dims.end());
   return PyTensor_New(ASSERT_PTR(functional::View(PyTensor_Unpack(self), Shape(dim))));
@@ -302,10 +311,18 @@ static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args) {
+static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* dims = args;
-  if (PyTuple_Size(args) == 1) {
+  if(PyTuple_Size(args)==0){
+    // keyword parameter
+    static const char* keywords[2] = {"dims", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:permute", const_cast<char**>(keywords),
+                                    &dims)) {
+      return NULL;
+    }
+  } else if (PyTuple_Size(args) == 1) {
+    // positional parameter
     PyObject* item = PyTuple_GetItem(args, 0);
     if (!PyLong_Check(item)) { dims = item; }
   }
@@ -391,11 +408,11 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"floor_divide", PyTensorObject_div, METH_O, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
-    {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
+    {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view", PyTensorObject_view, METH_VARARGS, NULL},
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"permute", PyTensorObject_permute, METH_VARARGS, NULL},
+    {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
