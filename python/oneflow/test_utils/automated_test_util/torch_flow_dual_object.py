@@ -849,9 +849,7 @@ class DualObject:
                             if isinstance(t, flow.nn.Parameter):
                                 new = flow.nn.Parameter(new)
                             setattr(
-                                oneflow,
-                                k,
-                                new,
+                                oneflow, k, new,
                             )
                 else:
                     oneflow = oneflow.to_global(
