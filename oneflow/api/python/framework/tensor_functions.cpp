@@ -55,6 +55,8 @@ using functional::PyObjectPtr;
 
 NB_UNARY_FUNC(PyTensorObject_nb_absolute, functional::abs);
 NB_UNARY_FUNC(PyTensorObject_nb_negative, functional::negative);
+// TODO: not implemented yet
+// NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
 
 NB_BINARY_FUNC(PyTensorObject_nb_add, functional::add);
 NB_BINARY_FUNC(PyTensorObject_nb_sub, functional::sub);
@@ -67,8 +69,6 @@ NB_BINARY_FUNC(PyTensorObject_nb_or, functional::logical_or);
 NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
 NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
 NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
-// TODO: not implemented yet
-// NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
 PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
@@ -287,14 +287,14 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   std::cout << "cpython size" << std::endl;
-  PyObject* idx = NULL;
+  PyObject* idx = Py_None;
   static const char* keywords[2] = {"idx", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx)) {
     return NULL;
   }
   Shape shape = *PyTensor_Unpack(self)->shape();
   PyObject* shape_object = TensorSize_NewFromShape(shape);
-  if (idx == NULL || idx == Py_None) return shape_object;
+  if (idx == Py_None) return shape_object;
   return shape_object->ob_type->tp_as_mapping->mp_subscript(shape_object, idx);
   END_HANDLE_ERRORS
 }
