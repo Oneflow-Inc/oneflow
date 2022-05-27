@@ -410,7 +410,7 @@ struct DotFeatureInteractionKernel<float, max_in, pack_size> {
 
 template<typename T, int32_t max_in>
 struct DotBwdParam {
-  const T* dy;
+  const T* out_grad;
   const T* in[max_in];
   T* in_grad[max_in];
   T* output_concat_grad;
@@ -426,7 +426,7 @@ template<typename T, typename ComputeType, int32_t max_in, int32_t pack_size, in
 __global__ void DotFeatureInteractionBackwardWmmaImpl(
     int m_num_tiles, int n_num_tiles, int k_num_tiles, int64_t batch_size, int padded_num_rows,
     int vector_num_pack, int padded_vector_num_pack, int out_num_cols, int in_shared_mem_cols,
-    int in_shared_mem_cols_num_pack, int matrix_dy_shared_mem_cols, int offset,
+    int in_shared_mem_cols_num_pack, int matrix_out_grad_shared_mem_cols, int offset,
     DotBwdParam<T, max_in> param) {
 #if __CUDA_ARCH__ >= 700
   using PrecisionType = typename Precision<T>::type;
@@ -435,46 +435,46 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
   int warp_id = threadIdx.y;
   T* in_buf = reinterpret_cast<T*>(shared_buf);
   Pack<T, pack_size>* in_buf_pack = reinterpret_cast<Pack<T, pack_size>*>(shared_buf);
-  T* matrix_dy_buf = in_buf + padded_num_rows * in_shared_mem_cols;
-  ComputeType* in_grad_buf =
-      reinterpret_cast<ComputeType*>(matrix_dy_buf + padded_num_rows * matrix_dy_shared_mem_cols);
+  T* matrix_out_grad_buf = in_buf + padded_num_rows * in_shared_mem_cols;
+  ComputeType* in_grad_buf = reinterpret_cast<ComputeType*>(
+      matrix_out_grad_buf + padded_num_rows * matrix_out_grad_shared_mem_cols);
   Pack<ComputeType, pack_size>* in_grad_buf_pack =
       reinterpret_cast<Pack<ComputeType, pack_size>*>(in_grad_buf);
 
   int batch_idx = blockIdx.x;
-  const T* batch_dy = param.dy + batch_idx * out_num_cols;
+  const T* batch_out_grad = param.out_grad + batch_idx * out_num_cols;
   const int output_concat_size = param.output_concat_size;
   T* batch_output_concat_grad = (param.output_concat_grad)
                                     ? (param.output_concat_grad + batch_idx * output_concat_size)
                                     : nullptr;
   int features_dim = param.features_dim;
-  // 1.split dy to concat_out_grad and matrix_dy buf
+  // 1.split out_grad to concat_out_grad and matrix_out_grad buf
   int thread_id = threadIdx.x + threadIdx.y * blockDim.x;
   for (int i = thread_id; i < output_concat_size; i += blockDim.x * blockDim.y) {
-    batch_output_concat_grad[i] = batch_dy[i];
+    batch_output_concat_grad[i] = batch_out_grad[i];
   }
-  const T* batch_interaction_dy = batch_dy + output_concat_size;
+  const T* batch_interaction_out_grad = batch_out_grad + output_concat_size;
   for (int matrix_row = threadIdx.y; matrix_row < padded_num_rows; matrix_row += blockDim.y) {
     for (int matrix_col = threadIdx.x; matrix_col < padded_num_rows; matrix_col += blockDim.x) {
-      const int64_t i = matrix_row * matrix_dy_shared_mem_cols + matrix_col;
+      const int64_t i = matrix_row * matrix_out_grad_shared_mem_cols + matrix_col;
       T grad_val = 0;
       if (matrix_row < features_dim && matrix_col < features_dim) {
         if (matrix_col < matrix_row) {
-          int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
-          grad_val = batch_interaction_dy[dy_col_idx];
+          int32_t out_grad_col = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
+          grad_val = batch_interaction_out_grad[out_grad_col];
         } else if (matrix_row < matrix_col) {
           // transpose add
           int32_t trans_row_id = matrix_col;
           int32_t trans_col_id = matrix_row;
-          int32_t dy_col_idx =
+          int32_t out_grad_col =
               trans_row_id * (offset + trans_row_id - 1 + offset) / 2 + trans_col_id;
-          grad_val = batch_interaction_dy[dy_col_idx];
+          grad_val = batch_interaction_out_grad[out_grad_col];
         } else if ((matrix_row == matrix_col) && (offset == 1)) {
-          int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
-          grad_val = batch_interaction_dy[dy_col_idx] * static_cast<T>(2);
+          int32_t out_grad_col = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
+          grad_val = batch_interaction_out_grad[out_grad_col] * static_cast<T>(2);
         }
       }
-      matrix_dy_buf[i] = precision.Convert(grad_val);
+      matrix_out_grad_buf[i] = precision.Convert(grad_val);
     }
   }
 
@@ -532,10 +532,11 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
     for (int step = 0; step < k_num_tiles; ++step) {
       // blocks_row is a row_id, step is a col_id. blocks_col is b col_id,
       // step is b row_id.
-      T* tile_a_ptr =
-          matrix_dy_buf + blocks_row * mn_tile_dim * matrix_dy_shared_mem_cols + step * k_tile_dim;
+      T* tile_a_ptr = matrix_out_grad_buf
+                      + blocks_row * mn_tile_dim * matrix_out_grad_shared_mem_cols
+                      + step * k_tile_dim;
       T* tile_b_ptr = in_buf + step * k_tile_dim * in_shared_mem_cols + blocks_col * mn_tile_dim;
-      nvcuda::wmma::load_matrix_sync(a, tile_a_ptr, matrix_dy_shared_mem_cols);
+      nvcuda::wmma::load_matrix_sync(a, tile_a_ptr, matrix_out_grad_shared_mem_cols);
       nvcuda::wmma::load_matrix_sync(b, tile_b_ptr, in_shared_mem_cols);
       nvcuda::wmma::mma_sync(acc, a, b, acc);
     }
@@ -592,15 +593,15 @@ struct DotFeatureInteractionBackwardKernel {
     const int n_num_tiles = padded_vector_size / mn_tile_dim;
     const int skew_in = 8;
     const int in_shared_mem_num_cols = padded_vector_size + skew_in;
-    const int matrix_dy_shared_mem_cols = concated_padded_dim + skew_in;
+    const int matrix_out_grad_shared_mem_cols = concated_padded_dim + skew_in;
     const size_t in_shared_mem_bytes = concated_padded_dim * in_shared_mem_num_cols * sizeof(T);
-    const size_t matrix_dy_shared_mem_bytes =
-        concated_padded_dim * matrix_dy_shared_mem_cols * sizeof(T);
+    const size_t matrix_out_grad_shared_mem_bytes =
+        concated_padded_dim * matrix_out_grad_shared_mem_cols * sizeof(T);
     using ComputeType = typename DefaultComputeType<T>::type;
     const size_t in_grad_shared_mem_bytes =
         concated_padded_dim * in_shared_mem_num_cols * sizeof(ComputeType);
     const size_t total_shared_mem_bytes =
-        in_shared_mem_bytes + matrix_dy_shared_mem_bytes + in_grad_shared_mem_bytes;
+        in_shared_mem_bytes + matrix_out_grad_shared_mem_bytes + in_grad_shared_mem_bytes;
     const int32_t offset = self_interaction ? 1 : 0;
     const int vector_num_pack = vector_size / pack_size;
     const int padded_vector_num_pack = padded_vector_size / pack_size;
@@ -618,7 +619,7 @@ struct DotFeatureInteractionBackwardKernel {
         <<<num_blocks, dim3(block_dim_x, block_dim_y), total_shared_mem_bytes, cuda_stream>>>(
             m_num_tiles, n_num_tiles, k_num_tiles, batch_size, concated_padded_dim, vector_num_pack,
             padded_vector_num_pack, out_num_cols, in_shared_mem_num_cols,
-            in_shared_mem_cols_num_pack, matrix_dy_shared_mem_cols, offset, param);
+            in_shared_mem_cols_num_pack, matrix_out_grad_shared_mem_cols, offset, param);
 
     return true;
   }
@@ -691,7 +692,7 @@ bool DispatchFeatureInteractionDotBackwardPackSize(user_op::KernelComputeContext
   const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features", 0)->shape().At(2);
   DotBwdParam<T, max_in> param;
   param.num_in = input_size;
-  param.dy = dy->dptr<T>();
+  param.out_grad = dy->dptr<T>();
   int64_t features_concated_dim = 0;
   for (int i = 0; i < input_size; ++i) {
     param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
@@ -779,7 +780,7 @@ __global__ void FeatureInteractionSum(int64_t batch_size, int64_t vector_num_pac
 
 template<typename T, int32_t max_in>
 struct GradParam {
-  const T* dy;
+  const T* out_grad;
   const T* in[max_in];
   int32_t in_feature_dim[max_in];
   T* in_grad[max_in];
@@ -792,7 +793,7 @@ __global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t vector_siz
   using ComputeType = typename DefaultComputeType<T>::type;
   for (int batch_idx = blockIdx.x * blockDim.y + threadIdx.y; batch_idx < batch_size;
        batch_idx += gridDim.x * blockDim.y) {
-    const T* batch_dy = param.dy + batch_idx * vector_size;
+    const T* batch_out_grad = param.out_grad + batch_idx * vector_size;
     for (int col_id = threadIdx.x; col_id < vector_size; col_id += blockDim.x) {
       ComputeType sum = 0;
       for (int i = 0; i < max_in; ++i) {
@@ -810,7 +811,7 @@ __global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t vector_siz
         for (int j = 0; j < param.in_feature_dim[i]; ++j) {
           const int64_t offset = j * vector_size + col_id;
           batch_in_grad[offset] =
-              static_cast<T>(static_cast<ComputeType>(batch_dy[col_id])
+              static_cast<T>(static_cast<ComputeType>(batch_out_grad[col_id])
                              * (sum - static_cast<ComputeType>(batch_in[offset])));
         }
       }
@@ -886,7 +887,7 @@ void DispatchFeatureInteractionSumGradInputSize(user_op::KernelComputeContext* c
   dim3 block_dims = dim3(block_dim_x, block_dim_y);
   GradParam<T, max_in> param;
   param.num_in = input_size;
-  param.dy = dy->dptr<T>();
+  param.out_grad = dy->dptr<T>();
   for (int i = 0; i < input_size; ++i) {
     param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
     param.in_grad[i] = ctx->Tensor4ArgNameAndIndex("features_grad", i)->mut_dptr<T>();
