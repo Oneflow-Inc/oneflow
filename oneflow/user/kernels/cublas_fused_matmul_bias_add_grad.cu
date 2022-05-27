@@ -52,10 +52,19 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
+    OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+    OF_CUDA_CHECK(cudaGetLastError());
+
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* w_grad = ctx->Tensor4ArgNameAndIndex("w_grad", 0);
     user_op::Tensor* b_grad = ctx->Tensor4ArgNameAndIndex("b_grad", 0);
+    
+    printf("Dy shape is: %ld, %ld. \n", dy->shape().At(0), dy->shape().At(1)); 
+    printf("x shape is: %ld, %ld. \n", x->shape().At(0), x->shape().At(1)); 
+    printf("wgrad shape is: %ld, %ld. \n", w_grad->shape().At(0), w_grad->shape().At(1)); 
+    printf("bgrad shape is: %ld\n", b_grad->shape().At(0)); 
+
 
     const auto* matmul_grad_cache =
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
@@ -65,8 +74,7 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
     const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
-    int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
-
+    int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;              
     const double alpha = 1.0;
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const double beta = 0.0;
@@ -83,7 +91,11 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
                          /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+    printf("Cublas m is: %zu \n", cublas_m); 
+    printf("Cublas n is: %zu \n", cublas_n);             
+    printf("Cublas k is: %zu \n", cublas_k); 
     if (cublas_k != 1) {
+      printf("Enter here cublas. \n"); 
       SetCublasAttr(
           matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
           /*transpose_a=*/ep::primitive::BlasTransposeType::T,
@@ -115,12 +127,13 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
               ctx->stream()->device_type(), ep::primitive::MemcpyKind::kDtoD);
       CHECK(memcpy_primitive);
       memcpy_primitive->Launch(ctx->stream(), b_grad->mut_dptr(), dy->dptr(), cublas_n * sizeof(T));
-
       OF_CUBLAS_CHECK(cublasGemmEx(
           cuda_stream->cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, cublas_m, cublas_n, cublas_k,
           &sp_alpha, x->dptr(), cuda_data_type, cublas_lda, dy->dptr(), cuda_data_type, cublas_ldb,
           &sp_beta, w_grad->mut_dptr(), cuda_data_type, cublas_ldc, gemm_compute_type, algo));
     }
+    OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+    OF_CUDA_CHECK(cudaGetLastError());
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

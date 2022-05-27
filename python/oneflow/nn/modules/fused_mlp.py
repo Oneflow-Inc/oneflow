@@ -82,6 +82,7 @@ class FusedMLP(Module):
         self.add_parameters()
         self.reset_parameters()
         self.use_dropout = False
+        print("hidden + 1 is: ", self.hidden_layer_num + 1)
         for i in range(self.hidden_layer_num + 1):
             if self.dropout_rate_list[i] != 0.0:
                 self.use_dropout = True
@@ -189,6 +190,7 @@ class FusedMLP(Module):
                 self.dropout_rate_list,
             )
         else:
+            print("Use this????=----=-==-=-=-=-=-=")
             return flow._C.fused_mlp(
                 x, self.weights(), self.biases(), self.skip_final_activation
             )
