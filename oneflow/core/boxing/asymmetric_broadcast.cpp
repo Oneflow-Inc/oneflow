@@ -65,11 +65,15 @@ Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
     }
     if (machine_and_device_id_inited) { break; }
   }
+  // Always true, if check failed, there is a bug in oneflow needed to be resolved.
   CHECK_OR_RETURN(machine_id != -1 && device_id != -1)
-      << Error::RuntimeError() << "Cannot find root rank of the Broadcast operation"
-      << ", src_placement: " << *JUST(PlacementToString(src_parallel_desc))
-      << ", dst_placement: " << *JUST(PlacementToString(dst_parallel_desc))
-      << "! Please make sure src_placement and dst_placement has at least one same device.";
+      << Error::RuntimeError()
+      << "Calculate the intersection of placements "
+         "failed during execution of asymmetric broadcast,"
+      << ", placement_a: " << *JUST(PlacementToString(src_parallel_desc))
+      << ", placement_b: " << *JUST(PlacementToString(dst_parallel_desc))
+      << "! Please submit an issue in `https://github.com/Oneflow-Inc/oneflow/issues` "
+         "and we will fix it as soon as possible";
   return machine_id;
 }
 
