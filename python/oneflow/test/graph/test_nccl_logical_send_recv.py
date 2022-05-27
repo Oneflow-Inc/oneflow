@@ -34,12 +34,15 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     # can not process p in dst
     if flow.sbp.partial_sum() in dst_nd_sbp:
         return
+
     # skip src == dst
     if src_nd_sbp == dst_nd_sbp:
         return
+
     # in this case, use intra group boxing
     if src_nd_sbp[0] == dst_nd_sbp[0]:
         return
+
     # in this case, use inter group boxing
     if (
         src_nd_sbp[1] == dst_nd_sbp[1]
@@ -47,9 +50,38 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
         and src_nd_sbp[0] != src_nd_sbp[1]
     ):
         return
+
     # in this case, use 1d boxing
     if src_nd_sbp[0] == src_nd_sbp[1] and dst_nd_sbp[0] == dst_nd_sbp[1]:
         return
+    
+    # bad case: S with P
+    if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(0):
+        return
+    if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(1):
+        return
+    if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(2):
+        return
+    if src_nd_sbp[0] == flow.sbp.split(0) and src_nd_sbp[1] == flow.sbp.partial_sum:
+        return
+    if src_nd_sbp[0] == flow.sbp.split(1) and src_nd_sbp[1] == flow.sbp.partial_sum:
+        return
+    if src_nd_sbp[0] == flow.sbp.split(2) and src_nd_sbp[1] == flow.sbp.partial_sum:
+        return
+    # bad case: diff S
+    if src_nd_sbp[0] == flow.sbp.split(0) and src_nd_sbp[1] == flow.sbp.split(1):
+        return
+    if src_nd_sbp[0] == flow.sbp.split(0) and src_nd_sbp[1] == flow.sbp.split(2):
+        return
+    if src_nd_sbp[0] == flow.sbp.split(1) and src_nd_sbp[1] == flow.sbp.split(2):
+        return
+    if src_nd_sbp[0] == flow.sbp.split(1) and src_nd_sbp[1] == flow.sbp.split(0):
+        return
+    if src_nd_sbp[0] == flow.sbp.split(2) and src_nd_sbp[1] == flow.sbp.split(0):
+        return
+    if src_nd_sbp[0] == flow.sbp.split(2) and src_nd_sbp[1] == flow.sbp.split(1):
+        return
+
     placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
 
     flow.boxing.nccl.enable_use_compute_stream(True)
@@ -58,19 +90,27 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
             super().__init__()
 
         def build(self, x):
+            # from src nd sbp to dst nd sbp
             y = x.to_global(sbp=dst_nd_sbp, placement=placement)
             return y
 
+    in_np = np.arange(4 * 4 * 4).reshape(4, 4, 4)
     x = flow.tensor(
-        np.arange(12 * 16 * 16).reshape(12, 16, 16),
+        in_np,
         sbp=src_nd_sbp,
         placement=placement,
     )
+
     graph = TestNcclLogicalSendRecvGraph()
     y = graph(x)
-    graph.debug(3)
-    print("graph repr:\n", graph)
-    test_case.assertTrue(np.array_equal(y.numpy(), x.numpy()))
+    out_np = y.numpy()
+    equal = np.array_equal(out_np, in_np)
+    if not equal:
+        print("graph repr:\n", graph)
+        print("in np:\n", in_np)
+        print("diff np:\n", out_np - in_np)
+    test_case.assertTrue(equal)
+
 
 
 def gen_nd_sbp():
