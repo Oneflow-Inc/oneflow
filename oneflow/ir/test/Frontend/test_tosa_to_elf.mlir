@@ -1,9 +1,9 @@
-// RUN: oneflow-opt -lower-oneflow-to-tosa \
+// RUN: oneflow-opt %s \
 // RUN: -pass-pipeline="func.func(tosa-to-linalg)" -cse \
 // RUN: --linalg-fuse-elementwise-ops -linalg-bufferize \
 // RUN: -tensor-bufferize -func-bufferize -buffer-results-to-out-params \
 // RUN: -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm \
-// RUN: -convert-func-to-llvm -convert-memref-to-llvm -reconcile-unrealized-casts --print-after-all %s \
+// RUN: -convert-func-to-llvm -convert-memref-to-llvm -reconcile-unrealized-casts --print-after-all \
 // RUN: | oneflow-translate -mlir-to-llvmir | clang -x ir - -c -o test.o
 
 builtin.module {

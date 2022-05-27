@@ -104,7 +104,7 @@ struct InputOpLowering final : public OpConversionPattern<InputOp> {
   using OpConversionPattern<InputOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(InputOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    rewriter.replaceOpWithNewOp<tosa::CastOp>(op, op.input().getType(), op.input());
+    rewriter.replaceOp(op, op.input());
     return success();
   }
 };
@@ -115,7 +115,7 @@ struct OutputOpLowering final : public OpConversionPattern<OutputOp> {
   using OpConversionPattern<OutputOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(OutputOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    rewriter.replaceOpWithNewOp<tosa::CastOp>(op, op.input().getType(), op.input());
+    rewriter.replaceOp(op, op.input());
     return success();
   }
 };
