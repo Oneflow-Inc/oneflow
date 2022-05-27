@@ -3040,7 +3040,9 @@ class RepeatInterLeaveTensorFunctor {
       }
       std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
       res = JUST(IndexSelect(
-          flatten_input, 0, JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, repeats_value[0]))));
+          flatten_input, 0,
+          JUST(RepeatInterLeaveIndex(repeats_expand, cumsum,
+                                     repeats_value[0] * flatten_input->shape()->At(0)))));
     } else {
       int32_t dim_ = JUST(dim);
       CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))
@@ -3052,7 +3054,9 @@ class RepeatInterLeaveTensorFunctor {
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
           << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
       std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, dim_, DType::Int32()));
-      res = JUST(IndexSelect(input, dim_, JUST(RepeatInterLeaveIndex(repeats, cumsum, dim_))));
+      res = JUST(IndexSelect(input, dim_,
+                             JUST(RepeatInterLeaveIndex(
+                                 repeats, cumsum, repeats_value[-1] * input->shape()->At(dim_)))));
     }
     return res;
   }
