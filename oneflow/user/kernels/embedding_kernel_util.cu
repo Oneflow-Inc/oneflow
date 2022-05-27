@@ -37,7 +37,7 @@ template<typename T, typename IndexType>
 __global__ void embedding_kernel(const T* weight_buf, const IndexType* indices_buf, T* out_buf,
                                  const int64_t num_indices, const int64_t emb_size,
                                  const int64_t emb_dim) {
-  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_indices * emb_dim) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_indices * emb_dim) {
     IndexType indices_index = i / emb_dim;
     IndexType emb_dim_index = i - indices_index * emb_dim;
     IndexType emb_size_index = indices_buf[indices_index];
@@ -51,7 +51,7 @@ template<typename T, typename IndexType>
 __global__ void embedding_grad_kernel(const T* dy_buf, const IndexType* indices_buf, T* dx_buf,
                                       const int64_t padding_idx, const int64_t num_indices,
                                       const int64_t emb_dim) {
-  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_indices * emb_dim) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_indices * emb_dim) {
     IndexType indices_index = i / emb_dim;
     IndexType emb_dim_index = i - indices_index * emb_dim;
     IndexType emb_size_index = indices_buf[indices_index];
@@ -63,18 +63,8 @@ __global__ void embedding_grad_kernel(const T* dy_buf, const IndexType* indices_
 }
 
 template<typename IndexType>
-__global__ void renorm_indices_freq_kernel(const IndexType* indices_buf, const int64_t num_indices,
-                                           int32_t* indices_freq, const int64_t emb_size) {
-  CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_indices) {
-    IndexType index = indices_buf[i];
-    assert(index >= 0 && index < emb_size);
-    cuda::atomic::Add(indices_freq + index, 1);
-  }
-}
-
-template<typename IndexType>
-__global__ void grad_indices_freq_kernel(const IndexType* indices_buf, const int64_t num_indices,
-                                         int32_t* indices_freq, const int64_t emb_size) {
+__global__ void indices_freq_kernel(const IndexType* indices_buf, const int64_t num_indices,
+                                    int32_t* indices_freq, const int64_t emb_size) {
   CUDA_1D_KERNEL_LOOP_T(IndexType, i, num_indices) {
     IndexType index = indices_buf[i];
     assert(index >= 0 && index < emb_size);
@@ -85,7 +75,7 @@ __global__ void grad_indices_freq_kernel(const IndexType* indices_buf, const int
 template<typename T, typename IndexType>
 __global__ void emb_scale_kernel(T* dx_buf, const int64_t emb_size, const int64_t emb_dim,
                                  int32_t* indices_freq) {
-  CUDA_1D_KERNEL_LOOP_T(IndexType, i, emb_size * emb_dim) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, emb_size * emb_dim) {
     IndexType emb_size_index = i / emb_dim;
     if (indices_freq[emb_size_index] > 1) {
       dx_buf[i] /= static_cast<T>(indices_freq[emb_size_index]);
@@ -132,10 +122,9 @@ struct EmbeddingReNormFunctor<DeviceType::kCUDA, T, IndexType> final {
   void operator()(ep::Stream* stream, const T* in_buf, const IndexType* indices_buf, T* out_buf,
                   const double max_norm, const double norm_type, const int64_t num_indices,
                   const int64_t emb_size, const int64_t emb_dim, int32_t* tmp_buf) {
-    renorm_indices_freq_kernel<IndexType>
-        <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
-           stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf,
-                                                          emb_size);
+    indices_freq_kernel<IndexType><<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
+                                     stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        indices_buf, num_indices, tmp_buf, emb_size);
 
     using AccumType = typename AccumulateType<T>::type;
     embedding_renorm_kernel<T, IndexType, AccumType>
@@ -168,10 +157,9 @@ struct EmbeddingGradFunctor<DeviceType::kCUDA, T, IndexType> final {
            stream->As<ep::CudaStream>()->cuda_stream()>>>(dy_buf, indices_buf, dx_buf, padding_idx,
                                                           num_indices, emb_dim);
     if (scale_grad_by_freq) {
-      grad_indices_freq_kernel<IndexType>
-          <<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
-             stream->As<ep::CudaStream>()->cuda_stream()>>>(indices_buf, num_indices, tmp_buf,
-                                                            emb_size);
+      indices_freq_kernel<IndexType><<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock,
+                                       0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          indices_buf, num_indices, tmp_buf, emb_size);
       emb_scale_kernel<T, IndexType>
           <<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(dx_buf, emb_size, emb_dim, tmp_buf);
