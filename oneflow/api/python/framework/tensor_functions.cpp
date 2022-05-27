@@ -244,7 +244,6 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* shape = args;
