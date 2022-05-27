@@ -125,6 +125,10 @@ class TestModule(flow.unittest.TestCase):
         y = torch.reshape(x, shape=(-1,))
         return y
 
+    @profile(torch.reshape)
+    def profile_reshape(test_case):
+        torch.reshape(torch.ones(50, 20), (20, 50))
+
 
 if __name__ == "__main__":
     unittest.main()
