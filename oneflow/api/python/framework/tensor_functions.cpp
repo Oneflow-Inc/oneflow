@@ -249,7 +249,6 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject
   HANDLE_ERRORS
   PyObject* shape = args;
   if (kwargs != NULL) {
-    CHECK_OR_THROW(PyTuple_Size(args)==0) << Error::TypeError() << "reshape() got multiple values for argument 'shape'";
     // keyword parameter
     static const char* keywords[2] = {"shape", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:reshape", const_cast<char**>(keywords),
@@ -317,14 +316,14 @@ static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject
 static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* dims = args;
-  if (PyTuple_Size(args) == 0) {
+  if (kwargs != NULL) {
     // keyword parameter
     static const char* keywords[2] = {"dims", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:permute", const_cast<char**>(keywords),
                                      &dims)) {
       return NULL;
     }
-  } else if (PyTuple_Size(args) == 1) {
+  } else {
     // positional parameter
     PyObject* item = PyTuple_GetItem(args, 0);
     if (!PyLong_Check(item)) { dims = item; }
