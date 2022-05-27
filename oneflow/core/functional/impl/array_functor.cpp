@@ -2327,16 +2327,11 @@ class SplitFunctor {
         << Error::RuntimeError() << "split expects split_size be non-negative, but got split_size="
         << split_size_or_sections;
     int64_t dim_size = x->shape()->At(axis);
-    int64_t num_splits =
+    int64_t chunks =
         std::max<int64_t>((dim_size + split_size_or_sections - 1) / split_size_or_sections, 1);
-    TensorTuple splits(num_splits);
-    int64_t last_split_size =
-        split_size_or_sections - (split_size_or_sections * num_splits - dim_size);
-    for (int i = 0; i < num_splits; ++i) {
-      int64_t length = i < num_splits - 1 ? split_size_or_sections : last_split_size;
-      splits[i] = JUST(Narrow(x, axis, i * split_size_or_sections, length));
-    }
-    return splits;
+    std::vector<int64_t> split_sizes(chunks, split_size_or_sections);
+    split_sizes[chunks - 1] = split_size_or_sections - (split_size_or_sections * chunks - dim_size);
+    return functional::SplitWithSize(x, split_sizes, axis);
   }
 };
 
@@ -2375,13 +2370,9 @@ class ChunkFunctor {
 
     const auto dim_size = x->shape()->At(infferd_dim);
     int64_t split_size = (dim_size + chunks - 1) / chunks;
-    if (split_size == 0 && dim_size == 0) {
-      std::vector<int64_t> split_sizes(chunks, split_size);
-      split_sizes[chunks - 1] = split_size - (split_size * chunks - dim_size);
-      return functional::SplitWithSize(x, split_sizes, infferd_dim);
-    } else {
-      return functional::Split(x, split_size, infferd_dim);
-    }
+    std::vector<int64_t> split_sizes(chunks, split_size);
+    split_sizes[chunks - 1] = split_size - (split_size * chunks - dim_size);
+    return functional::SplitWithSize(x, split_sizes, infferd_dim);
   }
 };
 
@@ -2418,7 +2409,15 @@ class SplitLikeFunctor {
 
 class SplitWithSizeFunctor {
  public:
-  SplitWithSizeFunctor() {}
+  SplitWithSizeFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("split")
+                               .Input("x")
+                               .Output("out", n + 1)
+                               .Build());
+    }
+  }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                                 const std::vector<int64_t>& split_size_or_sections,
                                 const int64_t& dim) const {
@@ -2437,15 +2436,22 @@ class SplitWithSizeFunctor {
                                     << "split_with_sizes expects split_sizes have only "
                                        "non-negative entries, but split_sizes["
                                     << i << "] = " << length;
-      splits[i] = JUST(Narrow(x, axis, start_idx, length));
       start_idx += length;
     }
     CHECK_EQ_OR_RETURN(start_idx, dim_size)
         << Error::RuntimeError() << "split_with_sizes expects split_sizes to sum exactly to "
         << dim_size << " (input tensor's size at dimension " << axis << "), "
         << "but got sum(split_sizes)=" << start_idx;
-    return splits;
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("dim", axis));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("sections", split_size_or_sections));
+
+    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(num_splits - 1), {x}, attrs);
   }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
 class BatchGatherFunctor {

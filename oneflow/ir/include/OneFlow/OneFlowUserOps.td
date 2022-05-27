@@ -4962,6 +4962,24 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, NoGrad, DeclareOpInte
   let has_device_and_stream_infer_fn = 1;
 }
 
+def OneFlow_SplitOp : OneFlow_BaseOp<"split", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    Variadic<OneFlow_Tensor>:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$dim,
+    SI64ArrayAttr:$sections // split_size_or_sections
+  );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
