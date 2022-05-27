@@ -56,7 +56,7 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
 
   bool has_independent_stream_;
   std::string stream_name_;
-  ParallelDesc parallel_desc_;
+  std::unique_ptr<ParallelDesc> parallel_desc_;
   mutable std::unique_ptr<Comm> comm_;
   bool src_nd_sbp_no_partial_parallel_;
   std::vector<std::shared_ptr<TensorSliceCopier>> in_tensor_slice_copier_vec_;
@@ -65,30 +65,30 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
   std::vector<int64_t> recv_elem_cnts_;
 };
 
-NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx) :
-parallel_desc_(ctx->parallel_desc()){
+NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx) {
   has_independent_stream_ = ctx->op_conf().has_stream_name_hint();
   if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
-  NdSbp src_nd_sbp;
-  NdSbp dst_nd_sbp;
-  CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_nd_sbp", &src_nd_sbp));
-  CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_nd_sbp", &dst_nd_sbp));
-  src_nd_sbp_no_partial_parallel_ = !NdSbpHasPartialParallel(src_nd_sbp);
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-  const auto& parallel_hierarchy = parallel_desc_.hierarchy();
+  parallel_desc_ = std::make_unique<ParallelDesc>(ctx->parallel_desc());
+  NdSbp src_nd_sbp;
+  CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_nd_sbp", &src_nd_sbp));
+  NdSbp dst_nd_sbp;
+  CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_nd_sbp", &dst_nd_sbp));
+  const auto& parallel_hierarchy = parallel_desc_->hierarchy();
+  src_nd_sbp_no_partial_parallel_ = !NdSbpHasPartialParallel(src_nd_sbp);
   CHECK_EQ(src_nd_sbp.sbp_parallel_size(), parallel_hierarchy->NumAxes());
   CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), parallel_hierarchy->NumAxes());
   const user_op::TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
-
+  const DataType data_type = in_logical_desc->data_type();
   const Shape& logical_shape = Shape(in_logical_desc->shape());
+  const DeviceType device_type = parallel_desc_->device_type();
+  const int64_t parallel_num = parallel_desc_->parallel_num();
+
   std::vector<TensorSliceView> src_send_intersections;
   std::vector<TensorSliceView> dst_recv_intersections;
-  GetSendRecvIntersection(parallel_id, parallel_desc_.hierarchy(), src_nd_sbp, dst_nd_sbp,
+  GetSendRecvIntersection(parallel_id, parallel_desc_->hierarchy(), src_nd_sbp, dst_nd_sbp,
                           logical_shape, &src_send_intersections, &dst_recv_intersections);
 
-  const DataType data_type = in_logical_desc->data_type();
-  const DeviceType device_type = parallel_desc_.device_type();
-  const int64_t parallel_num = parallel_desc_.parallel_num();
   CHECK_EQ(src_send_intersections.size(), parallel_num);
   send_elem_cnts_.resize(parallel_num);
   in_tensor_slice_copier_vec_.resize(parallel_num);
@@ -120,9 +120,9 @@ parallel_desc_(ctx->parallel_desc()){
 
 void NcclLogicalSendRecvState::InitComm() const {
   std::set<std::pair<int64_t, int64_t>> device_set;
-  for (int64_t parallel_id = 0; parallel_id < parallel_desc_.parallel_num(); ++parallel_id) {
-    int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-    int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
+  for (int64_t parallel_id = 0; parallel_id < parallel_desc_->parallel_num(); ++parallel_id) {
+    int64_t machine_id = CHECK_JUST(parallel_desc_->MachineId4ParallelId(parallel_id));
+    int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
     device_set.emplace(std::make_pair(machine_id, device_id));
   }
   EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
