@@ -356,18 +356,6 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-    const SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
-    if (ctx->parallel_ctx().parallel_num() > 1) {
-      if (x_sbp.has_split_parallel()) {
-        CHECK(y_sbp.has_partial_sum_parallel());
-      } else if (x_sbp.has_broadcast_parallel()) {
-        CHECK(y_sbp.has_broadcast_parallel());
-      } else {
-        CHECK(x_sbp.has_partial_sum_parallel());
-        CHECK(y_sbp.has_partial_sum_parallel());
-      }
-    }
     return CreateSliceCache(ctx, "x");
   }
 
