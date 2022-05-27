@@ -68,10 +68,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedGruCellGradOp ::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& grad_hy_shape = ctx->InputShape("grad_hy", 0);
-  std::vector<int32_t> gates_shape;
-  gates_shape.push_back(grad_hy_shape.At(0));
-  gates_shape.push_back(grad_hy_shape.At(1) * 3);
-  DimVector dim_vec(gates_shape.begin(), gates_shape.end());
+  DimVector dim_vec({grad_hy_shape.At(0), grad_hy_shape.At(1) * 3});
   *ctx->OutputShape("grad_input_gates", 0) = Shape(dim_vec);
   *ctx->OutputShape("grad_hidden_gates", 0) = Shape(dim_vec);
 
