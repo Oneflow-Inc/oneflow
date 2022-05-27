@@ -36,7 +36,6 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/tensor_index.h"
-#include "oneflow/api/python/framework/tensor_functions.h"
 
 namespace py = pybind11;
 
