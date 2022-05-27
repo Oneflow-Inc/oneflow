@@ -43,8 +43,35 @@ bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_c
   return item_check(item);
 }
 
+size_t PySequenceSize(PyObject* obj){
+  bool is_tuple = PyTuple_Check(obj);
+  if (!is_tuple && !PyList_Check(obj)){
+    THROW(RuntimeError) << "The object is not list or tuple, but is " << Py_TYPE(obj)->tp_name;
+  }
+  size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);
+  return size;
+}
+
+int PySequenceCheckIndex(PyObject* obj, const std::function<bool(PyObject*)>& item_check) {
+  int index = 0;
+  size_t size = PySequenceSize(obj);
+  bool is_tuple = PyTuple_Check(obj);
+  if (size == 0) { return index; }
+  for(size_t i=0; i < size; ++i){
+    PyObject* item = is_tuple ? PyTuple_GET_ITEM(obj, i) : PyList_GET_ITEM(obj, i);
+    if(item_check(item)){
+      index++;
+    }
+  }
+  return index;
+}
+
 bool PyLongSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyLong_Check(item); });
+}
+
+int PyLongSequenceCheckIndex(PyObject* obj) {
+  return PySequenceCheckIndex(obj, [](PyObject* item) { return PyLong_Check(item); });
 }
 
 bool PyFloatSquenceCheck(PyObject* obj) {

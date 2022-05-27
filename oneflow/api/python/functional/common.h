@@ -83,6 +83,8 @@ inline std::vector<T> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item
 // Integer/Float list
 bool PyLongSequenceCheck(PyObject* obj);
 bool PyFloatSquenceCheck(PyObject* obj);
+int PyLongSequenceCheckIndex(PyObject* obj);
+size_t PySequenceSize(PyObject* obj);
 
 template<typename T>
 inline std::vector<T> PyUnpackLongSequence(PyObject* obj) {
