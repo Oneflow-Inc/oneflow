@@ -1,5 +1,20 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -21,16 +36,15 @@ namespace {
 
 template<typename SRC, typename DST>
 struct DropoutLoad {
-  DropoutLoad(const SRC* src, const int8_t* mask, int64_t row_size, SRC scale)
+  DropoutLoad(const SRC* src, const bool* mask, int64_t row_size, SRC scale)
       : src(src), mask(mask), row_size(row_size), scale(scale) {}
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::softmax::Pack<SRC, N> pack;
     const int64_t offset = (row * row_size + col) / N;
     pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
-    cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage =
-        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
+    cuda::softmax::Pack<bool, N> mask_pack;
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<bool, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       dst[i] = static_cast<DST>(pack.elem[i]) * static_cast<DST>(mask_pack.elem[i])
@@ -38,23 +52,22 @@ struct DropoutLoad {
     }
   }
   const SRC* src;
-  const int8_t* mask;
+  const bool* mask;
   int64_t row_size;
   SRC scale;
 };
 
 template<typename SRC, typename DST>
 struct DropoutStore {
-  DropoutStore(DST* dst, DST* softmax_y, const int8_t* mask, int64_t row_size, DST scale)
+  DropoutStore(DST* dst, DST* softmax_y, const bool* mask, int64_t row_size, DST scale)
       : dst(dst), softmax_y(softmax_y), mask(mask), row_size(row_size), scale(scale) {}
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> softmax_y_pack;
     cuda::softmax::Pack<DST, N> dst_pack;
     const int64_t offset = (row * row_size + col) / N;
-    cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage =
-        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
+    cuda::softmax::Pack<bool, N> mask_pack;
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<bool, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       softmax_y_pack.elem[i] = static_cast<DST>(src[i]);
@@ -67,54 +80,38 @@ struct DropoutStore {
   }
   DST* dst;
   DST* softmax_y;
-  const int8_t* mask;
+  const bool* mask;
   int64_t row_size;
   DST scale;
 };
 
 template<typename T, typename ComputeType, typename MASK, int num_dims>
 void LaunchBroadcastForwardKernel(cudaStream_t stream, const T* x, T* y, T* softmax_y,
-                                  const MASK* mask, const int8_t* dropout_mask,
+                                  const MASK* mask, const bool* dropout_mask,
                                   const int64_t elem_cnt, const int64_t rows, const int64_t cols,
                                   const float fill, const float scale, const float dropout_scale,
                                   const int64_t* input_dims, const int64_t* mask_dims) {
   DropoutStore<ComputeType, T> store(y, softmax_y, dropout_mask, cols, dropout_scale);
-  if (elem_cnt < GetMaxVal<int32_t>()) {
-    NdIndexOffsetHelper<int32_t, num_dims> input_index_helper(input_dims);
-    NdIndexOffsetHelper<int32_t, num_dims> mask_index_helper(mask_dims);
-    fused_scale_mask_softmax::BroadcastMaskSoftmaxParams<num_dims, int32_t> params;
-    params.src_index_helper = input_index_helper;
-    params.mask_index_helper = mask_index_helper;
-    params.mask_dims = mask_dims;
-    params.row_size = cols;
-    params.fill = fill;
-    params.scale = scale;
-    fused_scale_mask_softmax::BroadcastScaleMaskLoad<T, ComputeType, MASK, num_dims, int32_t> load(
-        x, mask, params);
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        stream, load, store, rows, cols)));
-  } else {
-    NdIndexOffsetHelper<int64_t, num_dims> input_index_helper(input_dims, num_dims);
-    NdIndexOffsetHelper<int64_t, num_dims> mask_index_helper(mask_dims, num_dims);
-    fused_scale_mask_softmax::BroadcastMaskSoftmaxParams<num_dims, int64_t> params;
-    params.src_index_helper = input_index_helper;
-    params.mask_index_helper = mask_index_helper;
-    params.mask_dims = mask_dims;
-    params.row_size = cols;
-    params.fill = fill;
-    params.scale = scale;
-    fused_scale_mask_softmax::BroadcastScaleMaskLoad<T, ComputeType, MASK, num_dims, int64_t> load(
-        x, mask, params);
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        stream, load, store, rows, cols)));
-  }
+  NdIndexOffsetHelper<int32_t, num_dims> input_index_helper(input_dims);
+  NdIndexOffsetHelper<int32_t, num_dims> mask_index_helper(mask_dims);
+  fused_scale_mask_softmax::BroadcastMaskSoftmaxParams<num_dims, int32_t> params;
+  params.src_index_helper = input_index_helper;
+  params.mask_index_helper = mask_index_helper;
+  params.mask_dims = mask_dims;
+  params.row_size = cols;
+  params.fill = fill;
+  params.scale = scale;
+  fused_scale_mask_softmax::BroadcastScaleMaskLoad<T, ComputeType, MASK, num_dims, int32_t> load(
+      x, mask, params);
+  OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+      stream, load, store, rows, cols)));
 }
 
 template<typename T, typename ComputeType, typename MASK>
 void LaunchElementwiseForwardKernel(cudaStream_t stream, const T* x, T* y, T* softmax_y,
-                                    const MASK* mask, const int8_t* dropout_mask,
-                                    const int64_t rows, const int64_t cols, const float fill,
-                                    const float scale, const float dropout_scale) {
+                                    const MASK* mask, const bool* dropout_mask, const int64_t rows,
+                                    const int64_t cols, const float fill, const float scale,
+                                    const float dropout_scale) {
   fused_scale_mask_softmax::ElementwiseMaskSoftmaxParams params;
   params.row_size = cols;
   params.fill = fill;
@@ -127,51 +124,33 @@ void LaunchElementwiseForwardKernel(cudaStream_t stream, const T* x, T* y, T* so
 
 template<typename T, typename ComputeType, typename MASK, int num_dims>
 void LaunchBroadcastBackwardKernel(cudaStream_t stream, const T* softmax_y, const T* dy, T* dx,
-                                   const MASK* mask, const int8_t* dropout_mask,
+                                   const MASK* mask, const bool* dropout_mask,
                                    const int64_t elem_cnt, const int64_t rows, const int64_t cols,
                                    const float fill, const float scale, const float dropout_scale,
                                    const int64_t* input_dims, const int64_t* mask_dims) {
   DropoutLoad<T, ComputeType> load_dy(dy, dropout_mask, cols, dropout_scale);
-  if (elem_cnt < GetMaxVal<int32_t>()) {
-    NdIndexOffsetHelper<int32_t, num_dims> input_index_helper(input_dims, num_dims);
-    NdIndexOffsetHelper<int32_t, num_dims> mask_index_helper(mask_dims, num_dims);
-    fused_scale_mask_softmax::BroadcastMaskSoftmaxParams<num_dims, int32_t> params;
-    params.src_index_helper = input_index_helper;
-    params.mask_index_helper = mask_index_helper;
-    params.mask_dims = mask_dims;
-    params.row_size = cols;
-    params.fill = fill;
-    params.scale = scale;
-    cuda::softmax::DirectLoad<T, ComputeType> load_softmax_y(softmax_y, cols);
-    fused_scale_mask_softmax::BroadcastScaleMaskStore<ComputeType, T, MASK, num_dims, int32_t>
-        store(dx, mask, params);
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy),
-                                                      decltype(store), ComputeType>(
-        stream, load_softmax_y, load_dy, store, rows, cols)));
-  } else {
-    NdIndexOffsetHelper<int64_t, num_dims> input_index_helper(input_dims, num_dims);
-    NdIndexOffsetHelper<int64_t, num_dims> mask_index_helper(mask_dims, num_dims);
-    fused_scale_mask_softmax::BroadcastMaskSoftmaxParams<num_dims, int64_t> params;
-    params.src_index_helper = input_index_helper;
-    params.mask_index_helper = mask_index_helper;
-    params.mask_dims = mask_dims;
-    params.row_size = cols;
-    params.fill = fill;
-    params.scale = scale;
-    cuda::softmax::DirectLoad<T, ComputeType> load_softmax_y(softmax_y, cols);
-    fused_scale_mask_softmax::BroadcastScaleMaskStore<ComputeType, T, MASK, num_dims, int64_t>
-        store(dx, mask, params);
-    OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy),
-                                                      decltype(store), ComputeType>(
-        stream, load_softmax_y, load_dy, store, rows, cols)));
-  }
+  NdIndexOffsetHelper<int32_t, num_dims> input_index_helper(input_dims, num_dims);
+  NdIndexOffsetHelper<int32_t, num_dims> mask_index_helper(mask_dims, num_dims);
+  fused_scale_mask_softmax::BroadcastMaskSoftmaxParams<num_dims, int32_t> params;
+  params.src_index_helper = input_index_helper;
+  params.mask_index_helper = mask_index_helper;
+  params.mask_dims = mask_dims;
+  params.row_size = cols;
+  params.fill = fill;
+  params.scale = scale;
+  cuda::softmax::DirectLoad<T, ComputeType> load_softmax_y(softmax_y, cols);
+  fused_scale_mask_softmax::BroadcastScaleMaskStore<ComputeType, T, MASK, num_dims, int32_t> store(
+      dx, mask, params);
+  OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy),
+                                                    decltype(store), ComputeType>(
+      stream, load_softmax_y, load_dy, store, rows, cols)));
 }
 
 template<typename T, typename ComputeType, typename MASK>
 void LaunchElementwiseBackwardKernel(cudaStream_t stream, const T* softmax_y, const T* dy, T* dx,
-                                     const MASK* mask, const int8_t* dropout_mask,
-                                     const int64_t rows, const int64_t cols, const float fill,
-                                     const float scale, const float dropout_scale) {
+                                     const MASK* mask, const bool* dropout_mask, const int64_t rows,
+                                     const int64_t cols, const float fill, const float scale,
+                                     const float dropout_scale) {
   fused_scale_mask_softmax::ElementwiseMaskSoftmaxParams params;
   params.row_size = cols;
   params.fill = fill;
@@ -184,7 +163,7 @@ void LaunchElementwiseBackwardKernel(cudaStream_t stream, const T* softmax_y, co
       stream, load_softmax_y, load_dy, store, rows, cols)));
 }
 
-constexpr int32_t kMaxNumDims = 6;
+constexpr int32_t kMaxNumDims = 5;
 
 template<typename T, typename MASK>
 class FusedScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel {
@@ -224,22 +203,20 @@ class FusedScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel {
     if (simplified_num_dims == 1) {
       LaunchElementwiseForwardKernel<T, ComputeType, MASK>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x->dptr<T>(), y->mut_dptr<T>(),
-          softmax_y->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), rows, cols,
+          softmax_y->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<bool>(), rows, cols,
           mask_fill_value, scale_value, dropout_scale_value);
     }
 
-#define DEFINE_ONE_ELIF(dims)                                                                 \
-  else if (simplified_num_dims == dims) {                                                     \
-    LaunchBroadcastForwardKernel<T, ComputeType, MASK, dims>(                                 \
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x->dptr<T>(), y->mut_dptr<T>(),   \
-        softmax_y->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), elem_cnt, \
-        rows, cols, mask_fill_value, scale_value, dropout_scale_value, simplified_input_dims, \
-        simplified_mask_dims);                                                                \
+#define DEFINE_ONE_ELIF(dims)                                                                     \
+  else if (simplified_num_dims == dims) {                                                         \
+    LaunchBroadcastForwardKernel<T, ComputeType, MASK, dims>(                                     \
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), x->dptr<T>(), y->mut_dptr<T>(),       \
+        softmax_y->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<bool>(), elem_cnt, rows, \
+        cols, mask_fill_value, scale_value, dropout_scale_value, simplified_input_dims,           \
+        simplified_mask_dims);                                                                    \
   }
-    DEFINE_ONE_ELIF(2)
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
-    DEFINE_ONE_ELIF(5)
 #undef DEFINE_ONE_ELIF
     else {
       UNIMPLEMENTED();
@@ -288,21 +265,19 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
     if (simplified_num_dims == 1) {
       LaunchElementwiseBackwardKernel<T, ComputeType, MASK>(
           ctx->stream()->As<ep::CudaStream>()->cuda_stream(), softmax_y->dptr<T>(), dy->dptr<T>(),
-          dx->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), rows, cols,
+          dx->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<bool>(), rows, cols,
           mask_fill_value, scale_value, dropout_scale_value);
     }
-#define DEFINE_ONE_ELIF(dims)                                                                      \
-  else if (simplified_num_dims == dims) {                                                          \
-    LaunchBroadcastBackwardKernel<T, ComputeType, MASK, dims>(                                     \
-        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), softmax_y->dptr<T>(), dy->dptr<T>(),   \
-        dx->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<int8_t>(), elem_cnt, rows, cols, \
-        static_cast<float>(0.0), ctx->Attr<float>("scale_value"),                                  \
-        ctx->Attr<float>("dropout_scale_value"), simplified_input_dims, simplified_mask_dims);     \
+#define DEFINE_ONE_ELIF(dims)                                                                    \
+  else if (simplified_num_dims == dims) {                                                        \
+    LaunchBroadcastBackwardKernel<T, ComputeType, MASK, dims>(                                   \
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), softmax_y->dptr<T>(), dy->dptr<T>(), \
+        dx->mut_dptr<T>(), mask->dptr<MASK>(), dropout_mask->dptr<bool>(), elem_cnt, rows, cols, \
+        static_cast<float>(0.0), ctx->Attr<float>("scale_value"),                                \
+        ctx->Attr<float>("dropout_scale_value"), simplified_input_dims, simplified_mask_dims);   \
   }
-    DEFINE_ONE_ELIF(2)
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
-    DEFINE_ONE_ELIF(5)
 #undef DEFINE_ONE_ELIF
     else {
       UNIMPLEMENTED();
@@ -320,8 +295,8 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("mask", 0) == GetDataType<mask_dtype>::value));
 
-REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(half, int8_t)
-REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(float, int8_t)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(half, bool)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(float, bool)
 #undef REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL
 
 #define REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(dtype, mask_dtype)       \
@@ -331,8 +306,8 @@ REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_CUDA_KERNEL(float, int8_t)
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("mask", 0) == GetDataType<mask_dtype>::value));
 
-REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(half, int8_t)
-REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(float, int8_t)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(half, bool)
+REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL(float, bool)
 #undef REGISTER_FUSED_SCALE_MASK_SOFTMAX_DROPOUT_GRAD_KERNEL
 
 }  // namespace oneflow

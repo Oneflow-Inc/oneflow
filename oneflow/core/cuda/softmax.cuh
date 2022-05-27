@@ -712,7 +712,7 @@ template<typename LOAD, typename STORE, typename ComputeType>
 inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
 DispatchSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                 const int64_t cols) {
-  if (cols <= 1024) {
+  if (cols < 1024) {
     return DispatchSoftmaxWarpImpl<LOAD, STORE, ComputeType, Algorithm::kSoftmax>(
         stream, load, store, rows, cols);
   } else {
@@ -1288,7 +1288,7 @@ template<typename LOAD_Y, typename LOAD_DY, typename STORE, typename ComputeType
 inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
 DispatchSoftmaxGrad(cudaStream_t stream, LOAD_Y load_y, LOAD_DY load_dy, STORE store,
                     const int64_t rows, const int64_t cols) {
-  if (cols <= 1024) {
+  if (cols < 1024) {
     return DispatchSoftmaxGradWarpImpl<LOAD_Y, LOAD_DY, STORE, ComputeType, Algorithm::kSoftmax>(
         stream, load_y, load_dy, store, rows, cols);
   } else {

@@ -70,7 +70,6 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(dy_desc.shape(), y_desc.shape());
   CHECK_OR_RETURN(y_desc.shape().At(y_desc.shape().NumAxes() - 1)
                   == mask_desc.shape().At(mask_desc.shape().NumAxes() - 1));
-  CHECK_OR_RETURN(y_desc.shape() == mask_desc.shape());
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_shape() = dy_desc.shape();
   *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
