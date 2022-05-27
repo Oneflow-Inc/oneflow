@@ -247,11 +247,11 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* shape = args;
-  if(PyTuple_Size(args)==0){
+  if (PyTuple_Size(args) == 0) {
     // keyword parameter
     static const char* keywords[2] = {"shape", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:reshape", const_cast<char**>(keywords),
-                                    &shape)) {
+                                     &shape)) {
       return NULL;
     }
   } else if (PyTuple_Size(args) == 1) {
@@ -290,7 +290,8 @@ static PyObject* PyTensorObject_view(PyObject* self, PyObject* args) {
     if (!PyLong_Check(item)) { shape = item; }
   }
   CHECK_OR_THROW(functional::PyLongSequenceCheck(shape))
-      << Error::TypeError() << "view() received an invalid combination of arguments - got (" << Py_TYPE(shape)->tp_name << "), but expected tuple of ints size.";
+      << Error::TypeError() << "view() received an invalid combination of arguments - got ("
+      << Py_TYPE(shape)->tp_name << "), but expected tuple of ints size.";
 
   const auto& dims = functional::PyUnpackLongSequence<int64_t>(shape);
   DimVector dim(dims.begin(), dims.end());
@@ -314,11 +315,11 @@ static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject
 static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* dims = args;
-  if(PyTuple_Size(args)==0){
+  if (PyTuple_Size(args) == 0) {
     // keyword parameter
     static const char* keywords[2] = {"dims", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:permute", const_cast<char**>(keywords),
-                                    &dims)) {
+                                     &dims)) {
       return NULL;
     }
   } else if (PyTuple_Size(args) == 1) {
