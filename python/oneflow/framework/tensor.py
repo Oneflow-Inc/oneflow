@@ -862,22 +862,44 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
+    # Possibility 1: self and other are tensors on the same device/placement and have the same sbp.
+    if isinstance(other, Tensor):
+        if self.is_global:
+            assert (
+                other.is_global
+            ), "Only global tensor can be assigned to global tensor."
+            if self.placement == other.placement and self.sbp == other.sbp:
+                flow._C.assign_local_tensor(self.to_local(), other.to_local())
+                return
+        else:
+            assert (
+                not other.is_global
+            ), "Only local tensor can be assigned to local tensor."
+            if self.device == other.device:
+                flow._C.assign_local_tensor(self, other)
+                return
+
+    # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
+    # In this case, we run boxing through cpu to avoid extra gpu memory usage.
     if self.is_global:
-        if not isinstance(other, Tensor):
-            assert isinstance(other, np.ndarray)
-            other = flow.tensor(
-                other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
+        self_cpu_placement = flow.placement("cpu", self.placement.ranks)
+        if isinstance(other, Tensor):
+            other_cpu_placement = flow.placement("cpu", other.placement.ranks)
+            other = other.to_global(placement=other_cpu_placement).to_global(
+                placement=self_cpu_placement, sbp=self.sbp
             )
         else:
-            assert other.is_global
-            other = other.to_global(placement=self.placement, sbp=self.sbp)
-        flow._C.assign_local_tensor(self.to_local(), other.to_local())
+            other = flow.tensor(
+                other, dtype=self.dtype, placement=self_cpu_placement, sbp=self.sbp
+            )
+        _copy_from_numpy_to_eager_local_tensor(
+            self.to_local(), other.to_local().numpy()
+        )
     else:
-        if not isinstance(other, (Tensor)):
-            assert isinstance(other, np.ndarray)
-            _copy_from_numpy_to_eager_local_tensor(self, other)
-        else:
-            flow._C.assign_local_tensor(self, other.to(device=self.device))
+        if isinstance(other, Tensor):
+            other = other.numpy()
+
+        _copy_from_numpy_to_eager_local_tensor(self, other)
 
 
 def _flip(self, dims):
@@ -1016,20 +1038,6 @@ def _masked_fill(self, mask, fill_value):
 
 def _masked_select(self, mask):
     return flow.masked_select(self, mask)
-
-
-def _reshape(self, *shape):
-    if len(shape) == 1:
-        new_shape = shape[0]
-        if isinstance(new_shape, int):
-            new_shape = (new_shape,)
-    else:
-        new_shape = shape
-    return flow._C.reshape(self, new_shape)
-
-
-def _reshape_as(self, other):
-    return _reshape(self, other.size())
 
 
 def _view(self, *shape):
@@ -1280,8 +1288,6 @@ def RegisterMethods():
     # Tensor.lt = _lt
     # Tensor.le = _le
     Tensor.to_local = _to_local
-    Tensor.reshape = _reshape
-    Tensor.reshape_as = _reshape_as
     Tensor.view = _view
     Tensor.view_as = _view_as
     Tensor.sort = _sort
