@@ -91,7 +91,7 @@ class Blob final {
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
-
+  // shape
   const Shape& static_shape() const { return blob_desc_->shape(); }
   const ShapeView& shape_view() const { return *shape_view_; }
   const ShapeView& shape() const { return *shape_view_; }
@@ -99,8 +99,9 @@ class Blob final {
     this->blob_access_checker()->CheckHeaderMutable();
     return mut_shape_view_.get();
   }
-
   MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
+  // stride
+  const Stride& stride() const { return blob_desc_->stride(); }
 
   void reset_dptr(char* dptr) { dptr_ = dptr; }
 

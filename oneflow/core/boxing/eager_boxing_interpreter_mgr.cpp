@@ -32,22 +32,20 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 namespace {
 
 Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_boxing_expr) {
-  return JUST(BoxingExpr(
-      JUST(ReplaceInDeviceType(DeviceType::kCUDA)), JUST(OptionalBoxing("cuda-copy-h2d")),
-      JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCUDA)), core_boxing_expr,
-                      JUST(OptionalBoxing("cuda-copy-d2h"))))));
+  return JUST(BoxingExpr(JUST(ReplaceInDeviceType(DeviceType::kCUDA)),
+                         JUST(OptionalBoxing("copy-h2d")),
+                         JUST(BoxingExpr(JUST(ReplaceOutDeviceType(DeviceType::kCUDA)),
+                                         core_boxing_expr, JUST(OptionalBoxing("copy-d2h"))))));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimSxToBBoxingExpr() {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)),
-                         JUST(OptionalBoxing("nccl-s-to-s")) | JUST(OptionalBoxing("ccl-s-to-s")),
-                         JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))));
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(OptionalBoxing("ccl-s-to-s")),
+                         JUST(BoxingExpr("ccl-s-to-b"))));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimPToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)),
-                         JUST(BoxingExpr("nccl-p-to-s")) | JUST(BoxingExpr("ccl-p-to-s")),
-                         JUST(OptionalBoxing("nccl-s-to-s")) | JUST(OptionalBoxing("ccl-s-to-s"))));
+  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("ccl-p-to-s")),
+                         JUST(OptionalBoxing("ccl-s-to-s"))));
 }
 
 Maybe<BoxingExprIf> SymmetricCyclicNDimToNDimBoxingExpr() {
@@ -77,8 +75,7 @@ Maybe<BoxingExprIf> SymmetricNDimToOneDimBoxingExpr() {
 
 Maybe<BoxingExprIf> NToOneBoxingExpr() {
   return JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
-                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("nccl-p-to-b"))
-                             | JUST(BoxingExpr("ccl-p-to-b"))
+                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-p-to-b"))
                              | JUST(SymmetricOneDimSxToBBoxingExpr())
                              | JUST(BoxingExpr("naive-p-to-b")) | JUST(BoxingExpr("naive-s-to-b"))
                              | JUST(SymmetricNDimToNDimBoxingExpr())
@@ -88,8 +85,7 @@ Maybe<BoxingExprIf> NToOneBoxingExpr() {
 
 Maybe<BoxingExprIf> OneToNBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
-                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("nccl-p-to-b"))
-                             | JUST(BoxingExpr("ccl-p-to-b"))
+                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-p-to-b"))
                              | JUST(SymmetricOneDimPToSxBoxingExpr())
                              | JUST(BoxingExpr("naive-p-to-b")) | JUST(BoxingExpr("naive-p-to-s"))
                              | JUST(SymmetricNDimToNDimBoxingExpr())
@@ -97,11 +93,10 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimXToBBoxingExpr() {
-  return JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+  return JUST(BoxingExpr("ccl-p-to-b"))
          | JUST(BoxingExpr(JUST(InPlacementAndSplit(0)),
-                           JUST(BoxingExpr("identity")) | JUST(BoxingExpr("nccl-s-to-s"))
-                               | JUST(BoxingExpr("ccl-s-to-s")),
-                           JUST(BoxingExpr("nccl-s-to-b")) | JUST(BoxingExpr("ccl-s-to-b"))));
+                           JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-s-to-s")),
+                           JUST(BoxingExpr("ccl-s-to-b"))));
 }
 
 Maybe<BoxingExprIf> ASymmetricOneDimXToBBoxingExpr() {
@@ -130,11 +125,9 @@ Maybe<BoxingExprIf> GenericBoxingExpr() {
 Maybe<BoxingExprIf> RawMainBoxingExpr() {
   // clang-format off
   const auto& core = JUST(BoxingExpr("identity"))
-                     | JUST(BoxingExpr("cuda-copy-h2d"))
-                     | JUST(BoxingExpr("cuda-copy-d2h"))
-                     | JUST(BoxingExpr("nccl-p-to-b"))
+                     | JUST(BoxingExpr("copy-h2d"))
+                     | JUST(BoxingExpr("copy-d2h"))
                      | JUST(BoxingExpr("ccl-p-to-b"))
-                     | JUST(BoxingExpr("nccl-s-to-s"))
                      | JUST(BoxingExpr("ccl-s-to-s"))
                      | JUST(SymmetricOneDimSxToBBoxingExpr())
                      | JUST(SymmetricOneDimPToSxBoxingExpr())
