@@ -63,18 +63,6 @@ def get_cuda_version() -> int:
     return oneflow._oneflow_internal.flags.cuda_version()
 
 
-def with_xla() -> bool:
-    return oneflow._oneflow_internal.flags.with_xla()
-
-
-def with_openvino() -> bool:
-    return oneflow._oneflow_internal.flags.with_openvino()
-
-
-def with_tensorrt() -> bool:
-    return oneflow._oneflow_internal.flags.with_tensorrt()
-
-
 def has_rpc_backend_grpc() -> bool:
     return oneflow._oneflow_internal.flags.has_rpc_backend_grpc()
 

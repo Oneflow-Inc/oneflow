@@ -32,32 +32,39 @@ class CpuMedianWithIndicesKernel final : public user_op::OpKernel {
     const int64_t size = in->shape().elem_cnt();
     if (size == 0) return;
     const int64_t stride = in->shape().At(num_axes - 1);
+    const int64_t instance_num = size / stride;
     user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
     user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     Memcpy<DeviceType::kCPU>(ctx->stream(), tmp_buffer->mut_dptr<void>(), in->dptr<void>(),
                              size * sizeof(T));
-    size_t thread_num = Global<ThreadPool>::Get()->thread_num();
-    BalancedSplitter bs(size / stride, thread_num);
-    MultiThreadLoop(thread_num, [&](size_t thread_idx) {
-      size_t end = bs.At(thread_idx).end();
-      for (size_t i = bs.At(thread_idx).begin(); i < end; ++i) {
-        T* in_ptr = tmp_buffer->mut_dptr<T>() + i * stride;
-        T* val_ptr = values->mut_dptr<T>() + i;
-        int64_t* ind_ptr = indices->mut_dptr<int64_t>() + i;
-        std::vector<int64_t> idx(stride);
-        auto first = idx.begin();
-        auto last = idx.end();
-        std::iota(first, last, 0);
-        auto nth = first;
-        nth += (stride - 1) / 2;
-        std::nth_element(first, nth, last, [&in_ptr](int64_t i, int64_t j) {
-          return in_ptr[i] < in_ptr[j] || (in_ptr[i] == in_ptr[j] && i < j);
-        });
-        *val_ptr = in_ptr[*nth];
-        *ind_ptr = *nth;
-      }
-    });
+    const int64_t thread_num =
+        std::min(instance_num, (int64_t)Global<ThreadPool>::Get()->thread_num());
+    const BalancedSplitter bs(instance_num, thread_num);
+    BlockingCounter bc(thread_num);
+    FOR_RANGE(int64_t, thread_id, 0, thread_num) {
+      const Range range = bs.At(thread_id);
+      Global<ThreadPool>::Get()->AddWork([=, &bc]() {
+        FOR_RANGE(int64_t, i, range.begin(), range.end()) {
+          T* in_ptr = tmp_buffer->mut_dptr<T>() + i * stride;
+          T* val_ptr = values->mut_dptr<T>() + i;
+          int64_t* ind_ptr = indices->mut_dptr<int64_t>() + i;
+          std::vector<int64_t> idx(stride);
+          auto first = idx.begin();
+          auto last = idx.end();
+          std::iota(first, last, 0);
+          auto nth = first;
+          nth += (stride - 1) / 2;
+          std::nth_element(first, nth, last, [&in_ptr](int64_t i, int64_t j) {
+            return in_ptr[i] < in_ptr[j] || (in_ptr[i] == in_ptr[j] && i < j);
+          });
+          *val_ptr = in_ptr[*nth];
+          *ind_ptr = *nth;
+        }
+        bc.Decrease();
+      });
+    }
+    bc.WaitForeverUntilCntEqualZero();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
