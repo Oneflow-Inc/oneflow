@@ -76,10 +76,7 @@ namespace oneflow {
   if (ctx->has_output("grad_cx", 0)) { *ctx->OutputShape("grad_cx", 0) = ctx->InputShape("cx", 0); }
 
   if (ctx->has_output("grad_bias", 0)) {
-    std::vector<int32_t> bias_shape;
-    bias_shape.push_back(ctx->InputShape("workspace", 0).At(1));
-    DimVector dim_vec(bias_shape.begin(), bias_shape.end());
-    *ctx->OutputShape("grad_bias", 0) = Shape(dim_vec);
+    *ctx->OutputShape("grad_bias", 0) = Shape({ctx->InputShape("workspace", 0).At(1)});
   }
 
   return Maybe<void>::Ok();
