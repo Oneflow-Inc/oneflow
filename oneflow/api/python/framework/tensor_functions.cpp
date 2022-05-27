@@ -69,6 +69,7 @@ NB_BINARY_FUNC(PyTensorObject_nb_or, functional::logical_or);
 NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
 NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
 NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
+
 PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
@@ -294,7 +295,7 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
   }
   Shape shape = *PyTensor_Unpack(self)->shape();
   PyObject* shape_object = TensorSize_NewFromShape(shape);
-  if (idx == Py_None) return shape_object;
+  if (idx == NULL || idx == Py_None) return shape_object;
   return shape_object->ob_type->tp_as_mapping->mp_subscript(shape_object, idx);
   END_HANDLE_ERRORS
 }
@@ -387,7 +388,7 @@ static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObjec
   PyObject* dim1 = PyLong_FromLong(0);
   PyObject* dim2 = PyLong_FromLong(1);
   static const char* keywords[4] = {"offset", "dim1", "dim2", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:diag", const_cast<char**>(keywords), &offset,
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:diagonal", const_cast<char**>(keywords), &offset,
                                    &dim1, &dim2)) {
     return NULL;
   }
