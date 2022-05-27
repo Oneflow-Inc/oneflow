@@ -59,9 +59,9 @@ int PySequenceCheckIndex(PyObject* obj, const std::function<bool(PyObject*)>& it
   if (size == 0) { return index; }
   for (size_t i = 0; i < size; ++i) {
     PyObject* item = is_tuple ? PyTuple_GET_ITEM(obj, i) : PyList_GET_ITEM(obj, i);
-    if(item_check(item)){
+    if (item_check(item)) {
       index++;
-    }else{
+    } else {
       break;
     }
   }
