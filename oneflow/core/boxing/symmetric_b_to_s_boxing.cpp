@@ -36,18 +36,18 @@ bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                  const Shape& logical_shape) {
-  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);      // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);     // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(                                               // NOLINT(maybe-need-error-msg)
-      IsBroadcastSbp(SymbolOf(in->nd_sbp()->sbp_parallel(0))));  // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(                                               // NOLINT(maybe-need-error-msg)
-      IsSplitSbp(SymbolOf(out->nd_sbp()->sbp_parallel(0))));     // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_OR_RETURN(IsBroadcastSbp(SymbolOf(in->nd_sbp()->sbp_parallel(0))));
+  CHECK_OR_RETURN(IsSplitSbp(SymbolOf(out->nd_sbp()->sbp_parallel(0))));
 
-  CHECK_OR_RETURN(in->placement() == out->placement());  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(in->placement() == out->placement());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckSymmetricB2S =
     DECORATE(&RawCheckSymmetricB2S, ThreadLocalCachedCopiable);

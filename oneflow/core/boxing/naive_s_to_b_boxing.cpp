@@ -34,16 +34,17 @@ bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
 
 static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocalCached);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckNaiveSToB(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
-  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);         // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);        // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));       // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(IsBroadcastSbp(out->nd_sbp()->sbp_parallel(0)));  // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->placement()->device_tag(),                 // NOLINT(maybe-need-error-msg)
-                     out->placement()->device_tag());               // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_OR_RETURN(IsSplitSbp(in->nd_sbp()->sbp_parallel(0)));
+  CHECK_OR_RETURN(IsBroadcastSbp(out->nd_sbp()->sbp_parallel(0)));
+  CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckNaiveSToB = DECORATE(&RawCheckNaiveSToB, ThreadLocalCachedCopiable);
 

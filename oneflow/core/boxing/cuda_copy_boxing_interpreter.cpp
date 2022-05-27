@@ -30,29 +30,27 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 
 }  // namespace
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> CheckCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                          const Shape& logical_shape) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
-  CHECK_OR_RETURN(equal);                              // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(),   // NOLINT(maybe-need-error-msg)
-                     DeviceType::kCPU);                // NOLINT(maybe-need-error-msg)
-  CHECK_NE_OR_RETURN(out->placement()->device_type(),  // NOLINT(maybe-need-error-msg)
-                     DeviceType::kCPU);                // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());      // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(equal);
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  CHECK_NE_OR_RETURN(out->placement()->device_type(), DeviceType::kCPU);
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CheckCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                          const Shape& logical_shape) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
-  CHECK_OR_RETURN(equal);                              // NOLINT(maybe-need-error-msg)
-  CHECK_NE_OR_RETURN(in->placement()->device_type(),   // NOLINT(maybe-need-error-msg)
-                     DeviceType::kCPU);                // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(out->placement()->device_type(),  // NOLINT(maybe-need-error-msg)
-                     DeviceType::kCPU);                // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());      // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(equal);
+  CHECK_NE_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  CHECK_EQ_OR_RETURN(out->placement()->device_type(), DeviceType::kCPU);
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 Maybe<one::Tensor> CopyBoxingFunction(const std::shared_ptr<one::Tensor>& tensor,
                                       Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {

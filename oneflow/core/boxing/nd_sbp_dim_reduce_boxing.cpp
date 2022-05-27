@@ -44,12 +44,11 @@ Maybe<std::tuple<Symbol<PlacedNdSbp>, Symbol<PlacedNdSbp>>> RawInOutPlacedNdSbpD
 constexpr auto* InOutPlacedNdSbpDimReduce =
     DECORATE(&RawInOutPlacedNdSbpDimReduce, ThreadLocalCached);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                       const Shape& logical_shape) {
-  CHECK_OR_RETURN(in->nd_sbp()->sbp_parallel_size() > 1        // NOLINT(maybe-need-error-msg)
-                  || out->nd_sbp()->sbp_parallel_size() > 1);  // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->placement()->device_tag(),            // NOLINT(maybe-need-error-msg)
-                     out->placement()->device_tag());          // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(in->nd_sbp()->sbp_parallel_size() > 1 || out->nd_sbp()->sbp_parallel_size() > 1);
+  CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   Symbol<PlacedNdSbp> reduced_in;
   Symbol<PlacedNdSbp> reduced_out;
   std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out));
@@ -60,8 +59,7 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
         JUST(GetPhysicalShape(logical_shape, *in->nd_sbp(), *in->placement(), in_parallel_id));
     const auto& reduce_in_physical_shape = JUST(GetPhysicalShape(
         logical_shape, *reduced_in->nd_sbp(), *reduced_in->placement(), in_parallel_id));
-    CHECK_EQ_OR_RETURN(*in_physical_shape,          // NOLINT(maybe-need-error-msg)
-                       *reduce_in_physical_shape);  // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(*in_physical_shape, *reduce_in_physical_shape);
   }
 
   for (int64_t out_parallel_id = 0; out_parallel_id < out->placement()->parallel_num();
@@ -70,8 +68,7 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
         JUST(GetPhysicalShape(logical_shape, *out->nd_sbp(), *out->placement(), out_parallel_id));
     const auto& reduce_out_physical_shape = JUST(GetPhysicalShape(
         logical_shape, *reduced_out->nd_sbp(), *reduced_out->placement(), out_parallel_id));
-    CHECK_EQ_OR_RETURN(*out_physical_shape,          // NOLINT(maybe-need-error-msg)
-                       *reduce_out_physical_shape);  // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(*out_physical_shape, *reduce_out_physical_shape);
   }
 
   if (reduced_in->nd_sbp()->sbp_parallel_size() == 1
@@ -82,8 +79,9 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
       && reduced_in->placement() == reduced_out->placement()) {
     return Maybe<void>::Ok();
   }
-  return Error::CheckFailedError();  // NOLINT(maybe-need-error-msg)
+  return Error::CheckFailedError();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckParallelDimReduce =
     DECORATE(&RawCheckParallelDimReduce, ThreadLocalCachedCopiable);

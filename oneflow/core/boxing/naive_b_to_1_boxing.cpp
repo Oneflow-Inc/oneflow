@@ -31,13 +31,15 @@ bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
   return true;
 }
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckNaiveBTo1(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
-  CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);      // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));           // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(out->placement()->parallel_num(), 1);
+  CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));
+  CHECK_OR_RETURN(in->placement()->Bigger(*out->placement()));
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocalCachedCopiable);
 

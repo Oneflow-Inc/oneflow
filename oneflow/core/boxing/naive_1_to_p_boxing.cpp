@@ -31,13 +31,15 @@ bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
   return true;
 }
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckNaive1ToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
-  CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);       // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(IsAllPartialSumNdSbp(out->nd_sbp()));         // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()));  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
+  CHECK_OR_RETURN(IsAllPartialSumNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()));
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckNaive1ToP = DECORATE(&RawCheckNaive1ToP, ThreadLocalCachedCopiable);
 

@@ -34,17 +34,18 @@ bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
-  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);   // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
 
-  CHECK_OR_RETURN(IsPartialSumSbp(in->nd_sbp()->sbp_parallel(0)));  // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0)));      // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->placement()->device_tag(),                 // NOLINT(maybe-need-error-msg)
-                     out->placement()->device_tag());               // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(IsPartialSumSbp(in->nd_sbp()->sbp_parallel(0)));
+  CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0)));
+  CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckNaivePToS = DECORATE(&RawCheckNaivePToS, ThreadLocalCachedCopiable);
 
