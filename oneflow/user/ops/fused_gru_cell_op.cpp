@@ -22,11 +22,7 @@ namespace oneflow {
 /* static */ Maybe<void> FusedGruCellOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& hx_shape = ctx->InputShape("hx", 0);
   *ctx->OutputShape("hy", 0) = hx_shape;
-  std::vector<int32_t> workspace_shape;
-  workspace_shape.push_back(hx_shape.At(0));
-  workspace_shape.push_back(hx_shape.At(1) * 5);
-  DimVector dim_vec(workspace_shape.begin(), workspace_shape.end());
-  *ctx->OutputShape("workspace", 0) = Shape(dim_vec);
+  *ctx->OutputShape("workspace", 0) = Shape({hx_shape.At(0), hx_shape.At(1) * 5});
   return Maybe<void>::Ok();
 }
 
