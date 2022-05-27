@@ -41,8 +41,8 @@ Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
 
   CHECK_OR_RETURN(IsPartialSumSbp(in->nd_sbp()->sbp_parallel(0)));  // NOLINT(maybe-need-error-msg)
   CHECK_OR_RETURN(IsSplitSbp(out->nd_sbp()->sbp_parallel(0)));      // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->placement()->device_tag(),
-                     out->placement()->device_tag());  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->placement()->device_tag(),                 // NOLINT(maybe-need-error-msg)
+                     out->placement()->device_tag());               // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 

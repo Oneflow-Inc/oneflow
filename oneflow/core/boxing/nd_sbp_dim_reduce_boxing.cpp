@@ -46,10 +46,10 @@ constexpr auto* InOutPlacedNdSbpDimReduce =
 
 Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                       const Shape& logical_shape) {
-  CHECK_OR_RETURN(in->nd_sbp()->sbp_parallel_size() > 1
+  CHECK_OR_RETURN(in->nd_sbp()->sbp_parallel_size() > 1        // NOLINT(maybe-need-error-msg)
                   || out->nd_sbp()->sbp_parallel_size() > 1);  // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->placement()->device_tag(),
-                     out->placement()->device_tag());  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->placement()->device_tag(),            // NOLINT(maybe-need-error-msg)
+                     out->placement()->device_tag());          // NOLINT(maybe-need-error-msg)
   Symbol<PlacedNdSbp> reduced_in;
   Symbol<PlacedNdSbp> reduced_out;
   std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out));

@@ -33,24 +33,24 @@ Maybe<bool> IgnoringDeviceTypeEqual(Symbol<ParallelDesc> lhs, Symbol<ParallelDes
 Maybe<void> CheckCopyH2D(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                          const Shape& logical_shape) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
-  CHECK_OR_RETURN(equal);  // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(),
-                     DeviceType::kCPU);  // NOLINT(maybe-need-error-msg)
-  CHECK_NE_OR_RETURN(out->placement()->device_type(),
-                     DeviceType::kCPU);            // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(equal);                              // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->placement()->device_type(),   // NOLINT(maybe-need-error-msg)
+                     DeviceType::kCPU);                // NOLINT(maybe-need-error-msg)
+  CHECK_NE_OR_RETURN(out->placement()->device_type(),  // NOLINT(maybe-need-error-msg)
+                     DeviceType::kCPU);                // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());      // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CheckCopyD2H(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                          const Shape& logical_shape) {
   bool equal = JUST(IgnoringDeviceTypeEqual(in->placement(), out->placement()));
-  CHECK_OR_RETURN(equal);  // NOLINT(maybe-need-error-msg)
-  CHECK_NE_OR_RETURN(in->placement()->device_type(),
-                     DeviceType::kCPU);  // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(out->placement()->device_type(),
-                     DeviceType::kCPU);            // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(equal);                              // NOLINT(maybe-need-error-msg)
+  CHECK_NE_OR_RETURN(in->placement()->device_type(),   // NOLINT(maybe-need-error-msg)
+                     DeviceType::kCPU);                // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(out->placement()->device_type(),  // NOLINT(maybe-need-error-msg)
+                     DeviceType::kCPU);                // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());      // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
