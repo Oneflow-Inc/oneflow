@@ -257,16 +257,15 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject
   } else if (PyTuple_Size(args) == 1) {
     // positional parameter
     PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { 
-      shape = item; 
-    }
+    if (!PyLong_Check(item)) { shape = item; }
   }
 
-  int index = functional::PyLongSequenceCheckIndex(shape); 
-  auto type_name = PyTuple_Check(shape) ? Py_TYPE(PyTuple_GET_ITEM(shape, index))->tp_name : Py_TYPE(PyList_GET_ITEM(shape, index))->tp_name;
+  int index = functional::PyLongSequenceCheckIndex(shape);
+  auto type_name = PyTuple_Check(shape) ? Py_TYPE(PyTuple_GET_ITEM(shape, index))->tp_name
+                                        : Py_TYPE(PyList_GET_ITEM(shape, index))->tp_name;
   CHECK_OR_THROW(functional::PySequenceSize(shape) == index)
-      << Error::TypeError() << "reshape(): argument 'shape' (position " << index << ") must be tuple of ints, not "
-      << type_name;
+      << Error::TypeError() << "reshape(): argument 'shape' (position " << index
+      << ") must be tuple of ints, not " << type_name;
   const auto& dims = functional::PyUnpackLongSequence<int64_t>(shape);
   DimVector dim(dims.begin(), dims.end());
   return PyTensor_New(ASSERT_PTR(functional::Reshape(PyTensor_Unpack(self), Shape(dim))));
