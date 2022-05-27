@@ -91,6 +91,7 @@ from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import repeat
+from oneflow._C import repeat_interleave
 from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh

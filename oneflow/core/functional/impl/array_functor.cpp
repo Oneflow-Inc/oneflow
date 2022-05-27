@@ -2972,12 +2972,13 @@ class RepeatInterLeaveIntFunctor {
     std::shared_ptr<one::Tensor> res;
     if (!dim.has_value()) {
       std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
-      std::shared_ptr<one::Tensor> repeats_expand = JUST(Expand(
-          JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
-          Shape{input->shape()->At(0)}));
+      std::shared_ptr<one::Tensor> repeats_expand =
+          JUST(Expand(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)),
+                      Shape{flatten_input->shape()->At(0)}));
       std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
-      res = JUST(
-          IndexSelect(flatten_input, 0, JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, 0))));
+      res = JUST(IndexSelect(flatten_input, 0,
+                             JUST(RepeatInterLeaveIndex(repeats_expand, cumsum,
+                                                        repeats * flatten_input->shape()->At(0)))));
     } else {
       int32_t dim_ = JUST(dim);
       const auto input_shape = input->shape();
@@ -2990,8 +2991,9 @@ class RepeatInterLeaveIntFunctor {
           JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
           Shape{input->shape()->At(dim_)}));
       std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, dim_, DType::Int32()));
-      res =
-          JUST(IndexSelect(input, dim_, JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, dim_))));
+      res = JUST(IndexSelect(
+          input, dim_,
+          JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, repeats * input->shape()->At(dim_)))));
     }
     return res;
   }
@@ -3037,8 +3039,8 @@ class RepeatInterLeaveTensorFunctor {
             Shape{input->shape()->At(0)}));
       }
       std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
-      res = JUST(
-          IndexSelect(flatten_input, 0, JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, 0))));
+      res = JUST(IndexSelect(
+          flatten_input, 0, JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, repeats_value[0]))));
     } else {
       int32_t dim_ = JUST(dim);
       CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))

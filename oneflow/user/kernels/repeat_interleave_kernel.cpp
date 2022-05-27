@@ -52,6 +52,7 @@ class CpuRepeatInterLeaveKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
+REGISTER_REPEAT_INTER_LEAVE_KERNEL(int32_t);
 REGISTER_REPEAT_INTER_LEAVE_KERNEL(int64_t);
 
 }  // namespace oneflow
