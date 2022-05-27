@@ -2202,6 +2202,3 @@
     ]
   bind_python: True
 
-- name: "fill_grad"
-  signature: "Tensor (Tensor in) => FillGrad"
-  bind_python: False

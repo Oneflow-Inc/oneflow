@@ -73,24 +73,6 @@ class FillTensorKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-class FillGradKernel final : public user_op::OpKernel {
- public:
-  FillGradKernel() = default;
-  ~FillGradKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int32_t elem_cnt = in->shape().elem_cnt();
-    const Scalar value = Scalar(0);
-    std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
-    CHECK(fill);
-    fill->Launch(ctx->stream(), out->mut_dptr(), value, elem_cnt);
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
 auto FillPrimitiveExists() {
   return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
     return NewFillPrimitive(&ctx).operator bool();
@@ -103,8 +85,5 @@ REGISTER_USER_KERNEL("fill_tensor_")
     .SetCreateFn<FillTensorKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
                      && (FillPrimitiveExists() == true));
-REGISTER_USER_KERNEL("fill_grad")
-    .SetCreateFn<FillGradKernel>()
-    .SetIsMatchedHob(FillPrimitiveExists() == true);
 
 }  // namespace oneflow
