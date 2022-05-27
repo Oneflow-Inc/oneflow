@@ -2987,10 +2987,10 @@ class RepeatInterLeaveIntFunctor {
       CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
           << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
-      std::shared_ptr<one::Tensor> repeats_expand = JUST(Expand(
-          JUST(Unsqueeze(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)), 0)),
-          Shape{input->shape()->At(dim_)}));
-      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, dim_, DType::Int32()));
+      std::shared_ptr<one::Tensor> repeats_expand =
+          JUST(Expand(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), NullOpt)),
+                      Shape{input->shape()->At(dim_)}));
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
       res = JUST(IndexSelect(
           input, dim_,
           JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, repeats * input->shape()->At(dim_)))));
@@ -3033,10 +3033,9 @@ class RepeatInterLeaveTensorFunctor {
 
       std::shared_ptr<one::Tensor> repeats_expand = repeats;
       if (repeat_num_axes == 0 || (repeat_num_axes == 1 && repeats_shape->At(0) == 1)) {
-        repeats_expand = JUST(Expand(
-            JUST(Unsqueeze(
-                JUST(Constant(Shape{1}, Scalar(repeats_value[0]), DType::Int32(), NullOpt)), 0)),
-            Shape{input->shape()->At(0)}));
+        repeats_expand =
+            JUST(Expand(JUST(Constant(Shape{1}, Scalar(repeats_value[0]), DType::Int32(), NullOpt)),
+                        Shape{input->shape()->At(0)}));
       }
       std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
       res = JUST(IndexSelect(
@@ -3053,7 +3052,7 @@ class RepeatInterLeaveTensorFunctor {
       CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
           << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
-      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, dim_, DType::Int32()));
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, 0, DType::Int32()));
       res = JUST(IndexSelect(input, dim_,
                              JUST(RepeatInterLeaveIndex(
                                  repeats, cumsum, repeats_value[-1] * input->shape()->At(dim_)))));

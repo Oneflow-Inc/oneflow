@@ -29,7 +29,7 @@ __global__ void repeat_interleave(const T* in_ptr, const T* cumsum_ptr, T* out_p
     T end = cumsum_ptr[i];
     T size = in_ptr[i];
     T start = end - size;
-    for (int64_t j = start; j < end; j++) { out_ptr[j] = i; }
+    for (T j = start; j < end; j++) { out_ptr[j] = i; }
   }
 }
 
@@ -53,7 +53,7 @@ class GpuRepeatInterLeaveKernel final : public user_op::OpKernel {
 
     repeat_interleave<T><<<BlocksNum4ThreadsNum(repeat_num), kCudaThreadsNumPerBlock, 0,
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          in_ptr, cumsum_ptr, out_ptr, repeat_num);
+          in_ptr, cumsum_ptr, out_ptr, in->shape().At(0));
 
   }
 

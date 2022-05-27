@@ -24,9 +24,16 @@ from oneflow.test_utils.automated_test_util import *
 @flow.unittest.skip_unless_1n1d()
 class TestRepeatInterLeave(flow.unittest.TestCase):
     @autotest(check_graph=True)
-    def test_flow_tensor_repeat_interleave_with_random_data(test_case):
+    def test_flow_tensor_repeat_interleave_dim_none(test_case):
         x = random_tensor(ndim=2, dim0=1, dim1=2)
         y = torch.repeat_interleave(x, 2)
+        return y
+
+    @autotest(check_graph=True)
+    def test_flow_tensor_repeat_interleave_with_dim(test_case):
+        x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
+        dim = random(low=0, high=2).to(int)
+        y = torch.repeat_interleave(x, 2, dim)
         return y
 
 
