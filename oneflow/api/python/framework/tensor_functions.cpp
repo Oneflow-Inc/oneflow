@@ -729,8 +729,6 @@ static PyObject* PyTensorObject_norm(PyObject* self, PyObject* args, PyObject* k
   END_HANDLE_ERRORS
 }
 
-
-
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
   HANDLE_ERRORS
   PyObject* shape = args;
@@ -759,6 +757,95 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
   return PyTensor_New(ASSERT_PTR(functional::Reshape(tensor, *PyTensor_Unpack(other)->shape())));
   END_HANDLE_ERRORS
 }
+
+static PyObject* PyTensorObject_relu(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  return PyTensor_New(ASSERT_PTR(functional::Relu(tensor, false)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_relu_(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  return PyTensor_New(ASSERT_PTR(functional::Relu(tensor, true)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_softmax(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  PyObject* dim = Py_None;
+  static const char* keywords[2] = {"dim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:softmax", const_cast<char**>(keywords),
+                                   &dim)) {
+    return NULL;
+  }
+  if(dim == Py_None)
+    return PyTensor_New(ASSERT_PTR(functional::Softmax(tensor, NullOpt)));
+  CHECK_OR_THROW(PyLong_Check(dim)) << Error::TypeError() << "softmax(): argument 'dim' must be int64, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim)));
+  return PyTensor_New(ASSERT_PTR(functional::Softmax(tensor, PyLong_AsLong(dim))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_log_softmax(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  PyObject* dim = Py_None;
+  static const char* keywords[2] = {"dim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:log_softmax", const_cast<char**>(keywords),
+                                   &dim)) {
+    return NULL;
+  }
+  if(dim == Py_None)
+    return PyTensor_New(ASSERT_PTR(functional::LogSoftmax(tensor, NullOpt)));
+  CHECK_OR_THROW(PyLong_Check(dim)) << Error::TypeError() << "log_softmax(): argument 'dim' must be int64, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim)));
+  return PyTensor_New(ASSERT_PTR(functional::LogSoftmax(tensor, PyLong_AsLong(dim))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_roll(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* shifts = NULL;
+  PyObject* dims = Py_None;
+  static const char* keywords[3] = {"shifts", "dims", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O:roll", const_cast<char**>(keywords),
+                                   &shifts, &dims)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(3, self, shifts, dims));
+  return functional::roll(NULL, tuple.get(), NULL);
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_chunk(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* chunks = Py_None;
+  PyObject* dim = Py_None;
+  static const char* keywords[3] = {"chunks", "dim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:chunk", const_cast<char**>(keywords),
+                                   &chunks, &dim)) {
+    return NULL;
+  }
+  PyObjectPtr tuple(PyTuple_Pack(3, self, chunks, dim));
+  return functional::chunk(NULL, tuple.get(), NULL);
+  END_HANDLE_ERRORS
+}
+
+#define DATATYPE_FUNC(func_name, dtype) \
+  static PyObject* func_name(PyObject* self, PyObject* unused) { \
+    HANDLE_ERRORS \
+    auto tensor = PyTensor_Unpack(self); \
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, dtype, false))); \
+    END_HANDLE_ERRORS \
+  }
+
+DATATYPE_FUNC(PyTensorObject_int, DType::Int32());
+DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
+DATATYPE_FUNC(PyTensorObject_float, DType::Float());
+DATATYPE_FUNC(PyTensorObject_double, DType::Double());
 
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"byte", PyTensorObject_byte, METH_NOARGS, NULL},
@@ -797,6 +884,16 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"norm", (PyCFunction)PyTensorObject_norm, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"relu", PyTensorObject_relu, METH_NOARGS, NULL},
+    {"relu_", PyTensorObject_relu_, METH_NOARGS, NULL},
+    {"softmax", (PyCFunction)PyTensorObject_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"log_softmax", (PyCFunction)PyTensorObject_log_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"roll", (PyCFunction)PyTensorObject_roll, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"int", PyTensorObject_int, METH_NOARGS, NULL},
+    {"long", PyTensorObject_long, METH_NOARGS, NULL},
+    {"float", PyTensorObject_float, METH_NOARGS, NULL},
+    {"double", PyTensorObject_double, METH_NOARGS, NULL},
 
     // macro BINARY_METHOD
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -804,7 +901,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"floor_divide", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
+    // {"floor_divide", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul", (PyCFunction)PyTensorObject_mul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul_", (PyCFunction)PyTensorObject_mul_, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -870,7 +967,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"isnan", PyTensorObject_isnan, METH_NOARGS, NULL},
     {"isinf", PyTensorObject_isinf, METH_NOARGS, NULL},
     {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
-    {"floor_divide", PyTensorObject_div, METH_O, NULL},
+    // {"floor_divide", PyTensorObject_div, METH_O, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
     {NULL},
