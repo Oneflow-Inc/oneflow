@@ -244,12 +244,12 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* shape = args;
   if (kwargs != NULL) {
-    CHECK_OR_THROW(PyTuple_Size(args)==0) << Error::TypeError() << "reshape() got multiple values for argument 'shape'";
+    CHECK_OR_THROW(PyTuple_Size(args) == 0)
+        << Error::TypeError() << "reshape() got multiple values for argument 'shape'";
     // keyword parameter
     static const char* keywords[2] = {"shape", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:reshape", const_cast<char**>(keywords),
