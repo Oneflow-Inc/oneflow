@@ -29,19 +29,21 @@ def _test_fill_(test_case, ndim, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=False, auto_backward=False)
 def _test_fill_tensor_(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+    value = torch.tensor(1, requires_grad=False).to_global(
+        placement=placement, sbp=flow.sbp.broadcast
+    )
     y = x + 1
-    value = random().to(float)
-    y.fill_(value)
+    torch.Tensor.fill_(y, value)
     return y
 
 
 class TestAddModule(flow.unittest.TestCase):
     @globaltest
-    def test_fill_with_alpha(test_case):
+    def test_fill_(test_case):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
