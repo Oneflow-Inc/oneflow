@@ -43,6 +43,12 @@ class TestRepeatInterLeave(flow.unittest.TestCase):
         z = torch.repeat_interleave(x, y, 1)
         return z
 
+    @autotest()
+    def test_flow_tensor_repeat_interleave_dim_with_output_size(test_case):
+        x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
+        y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
+        z = torch.repeat_interleave(x, y, 1, output_size=2)
+        return z
     
 
 if __name__ == "__main__":
