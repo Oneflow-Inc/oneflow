@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,24 +12,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow
-from oneflow.framework.sysconfig import (
-    cmake_build_type,
-    get_compile_flags,
-    get_include,
-    get_lib,
-    get_link_flags,
-    get_liboneflow_link_flags,
-    has_rpc_backend_grpc,
-    has_rpc_backend_local,
-    with_cuda,
-    get_cuda_version,
-    with_rdma,
-)
+*/
+#ifndef ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
+#define ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
 
+#ifdef WITH_ONEDNN
 
-from oneflow._oneflow_internal.flags import (
-    with_mlir,
-    with_mlir_cuda_codegen,
-)
+#include "oneflow/core/common/env_var/env_var.h"
+
+namespace oneflow {
+
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_ONEDNN_OPTS, true);
+
+namespace ep {
+namespace primitive {
+
+inline bool OneDnnIsEnabled() { return EnvBool<ONEFLOW_ENABLE_ONEDNN_OPTS>(); }
+
+}  // namespace primitive
+}  // namespace ep
+}  // namespace oneflow
+
+#endif  // WITH_ONEDNN
+
+#endif  // ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
