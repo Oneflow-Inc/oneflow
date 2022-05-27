@@ -18,7 +18,8 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.chunk,
-    """Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be bigger if the tensor size along the given dimension dim is not divisible by chunks.
+    """chunk(input, chunks, dim)
+    Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be bigger if the tensor size along the given dimension dim is not divisible by chunks.
 
     Args:
         input (oneflow.Tensor): The tensor to split.

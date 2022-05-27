@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.clamp,
-    """
+    """clamp(input, min, max, out)
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
     a resulting tensor:
 
@@ -68,7 +68,7 @@ add_docstr(
 
 add_docstr(
     oneflow.clip,
-    """
+    """clip(input, min, max, out)
     Alias for :func:`oneflow.clamp`. 
     """,
 )

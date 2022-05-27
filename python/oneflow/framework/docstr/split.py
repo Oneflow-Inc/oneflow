@@ -18,7 +18,8 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.split,
-    """Splits the tensor into chunks.
+    """split(x, split_size_or_sections, dim)
+    Splits the tensor into chunks.
 
     If `split_size_or_sections` is an integer type, then x will be split into equally sized chunks (if possible).
     Last chunk will be smaller if the tensor size along the given dimension `dim` is not divisible by split_size.

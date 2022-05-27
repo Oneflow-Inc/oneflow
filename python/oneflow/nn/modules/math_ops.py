@@ -161,7 +161,7 @@ def arctan_op(input):
 
 def fmod_op(input, other):
     """
-    fmod(input, other, *, out=None) -> Tensor
+    fmod(input, other) -> Tensor
 
     Computes the element-wise remainder of division.
 
