@@ -272,20 +272,18 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_view(PyObject* self, PyObject* args) {
+static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* shape = args;
   if (PyTuple_Size(args) == 1) {
-    PyObject* item = PyTuple_GetItem(args, 0);
-    if (!PyLong_Check(item)) { shape = item; }
-  }
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(shape))
-      << Error::TypeError() << "view() received an invalid combination of arguments - got ("
-      << Py_TYPE(shape)->tp_name << "), but expected tuple of ints size.";
+    shape = PyTuple_GetItem(args, 0);
+    if (PyLong_Check(shape)) shape = PyTuple_Pack(1, shape);
+  } 
 
-  const auto& dims = functional::PyUnpackLongSequence<int64_t>(shape);
-  DimVector dim(dims.begin(), dims.end());
-  return PyTensor_New(ASSERT_PTR(functional::View(PyTensor_Unpack(self), Shape(dim))));
+  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
+  PyObject* result = functional::view(NULL, _args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -394,7 +392,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"view", PyTensorObject_view, METH_VARARGS, NULL},
+    {"view", (PyCFunction)PyTensorObject_view, METH_VARARGS | METH_KEYWORDS, NULL},
     {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
     {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
