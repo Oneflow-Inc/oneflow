@@ -250,7 +250,7 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject
   if (PyTuple_Size(args) == 1) {
     shape = PyTuple_GetItem(args, 0);
     if (PyLong_Check(shape)) shape = PyTuple_Pack(1, shape);
-  } 
+  }
 
   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
   PyObject* result = functional::reshape(NULL, _args.get(), kwargs);
@@ -306,7 +306,7 @@ static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject
   if (PyTuple_Size(args) == 1) {
     dims = PyTuple_GetItem(args, 0);
     if (PyLong_Check(dims)) dims = PyTuple_Pack(1, dims);
-  } 
+  }
 
   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
   PyObject* result = functional::permute(NULL, _args.get(), kwargs);
