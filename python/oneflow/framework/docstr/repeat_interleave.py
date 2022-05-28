@@ -66,6 +66,57 @@ add_docstr(
         tensor([[1, 2],
                 [3, 4],
                 [3, 4]], dtype=oneflow.int64)
+    
+    ..
+        Feature Stage of Operator [repeat_interleave].
+        - Maintainer List [@BBuf]
+        - Current Stage [ ]
+        - Alpha Stage Check List [ ]
+          - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[Yes]
+          - Doc(API Doc must be provided and showed normally on the web page.)[Yes]
+          - Functionality and its' Test [ ]
+            - Functionality is highly compatiable with PyTorch 1.11. [Yes]
+            - eager local [Yes] [@QiangX-man, @hjchen2]
+              - forward [Yes]
+              - backward [Yes]
+              - gpu [Yes]
+              - cpu [Yes]
+            - graph local [ ] [@BBuf, @strint, @hjchen2]
+              - forward [Yes]
+              - backward [ ]
+              - gpu [Yes]
+              - cpu [Yes]
+          - Exception Handling
+            - Exception Message and Hint must be provided [ ]
+        - Beta Stage Check List [ ]
+          - API(High compatibility with PyTorch 1.11, shouldn't have anything incompatible for a naive reason.)[Yes]
+          - Doc(Same standard as Alpha Stage)[ ]
+          - Functionality and its' Test [ ]
+            - eager global [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+            - graph gloal [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+            - CUDA kernel [ ]
+            - CPU kernel [ ]
+            - N nodes M devices [ ]
+          - Exception Handling [ ]
+            - Exception Message and Hint must be provided [ ]
+            - Try you best to do Exception Recovery [ ]
+        - Stable Stage Check List [ ]
+          - API(Same standard as Beta Stage)[ ]
+          - Doc(Same standard as Beta Stage)[ ]
+          - Functionality and its' Test [ ]
+            - fp16 and AMP [ ]
+            - NHWC [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+          - Exception Handling [ ]
     """,
 )
 
