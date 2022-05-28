@@ -48,11 +48,11 @@ Maybe<void> Split::Init(const OpExpr& op) {
 
 Maybe<void> Split::Capture(SplitCaptureState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), outputs.size() + 1);
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
+  ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("dim"));
   for (int i = 0; i < outputs.size(); ++i) { ctx->SaveTensorForBackward(outputs.at(i)); }
   return Maybe<void>::Ok();
 }
