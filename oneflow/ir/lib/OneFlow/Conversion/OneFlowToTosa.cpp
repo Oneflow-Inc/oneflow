@@ -38,7 +38,6 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
-#include "oneflow/ir/llvm_monorepo-src/llvm/lib/Target/NVPTX/NVPTX.h"
 
 #include <limits>
 
@@ -150,7 +149,6 @@ struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
   }
 };
 
-
 struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
  public:
   using OpConversionPattern<Conv2DOp>::OpConversionPattern;
@@ -161,25 +159,29 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
      * dilation); */
 
     auto get_pair_int64_from_array = [](ArrayAttr arr) -> std::pair<int64_t, int64_t> {
-      return { arr.getValue()[0].cast<IntegerAttr>().getSInt(), arr.getValue()[1].cast<IntegerAttr>().getSInt() };
+      return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
+              arr.getValue()[1].cast<IntegerAttr>().getSInt()};
     };
 
-    auto pad_pair = get_pair_int64_from_array(op.padding_beforeAttr());
-    auto pad_values = llvm::ArrayRef<int64_t>({pad_pair.first, pad_pair.second, pad_pair.first, pad_pair.second});
-    auto pad = rewriter.getI64ArrayAttr(pad_values);
+    auto stride = get_pair_int64_from_array(op.strides());
+    auto pad = get_pair_int64_from_array(op.padding_beforeAttr());
+    auto dilation = get_pair_int64_from_array(op.dilation_rate());
 
-    auto stride_pair = get_pair_int64_from_array(op.strides());
-    auto stride_values = llvm::ArrayRef<int64_t>({stride_pair.first, stride_pair.second});
-    auto stride = rewriter.getI64ArrayAttr(stride_values);
-
-    auto dilation_pair = get_pair_int64_from_array(op.dilation_rate());
-    auto dilation_values = llvm::ArrayRef<int64_t>({dilation_pair.first, dilation_pair.second});
-    auto dilation = rewriter.getI64ArrayAttr(dilation_values);
-
-
-
-    rewriter.replaceOpWithNewOp<tosa::Conv2DOp>(op, op.out().getType(), op.in(), op.weight(),
-                                                op.bias(), pad, stride, dilation);
+    auto bias = op.bias();
+    if (!bias) {
+      auto output_shape = op.out().getType().cast<ShapedType>();
+      auto output_channels = output_shape.getDimSize(1);
+      auto bias_elem_type = output_shape.getElementType();
+      auto type = RankedTensorType::get(output_channels, bias_elem_type);
+      bias = rewriter.create<tosa::ConstOp>(
+          op.getLoc(), type, DenseElementsAttr::get(type, rewriter.getZeroAttr(bias_elem_type)));
+    }
+    rewriter.replaceOpWithNewOp<tosa::Conv2DOp>(
+        op, op.out().getType(), op.in(), op.weight(), bias,
+        /* pad */
+        rewriter.getI64ArrayAttr({pad.first, pad.second, pad.first, pad.second}),
+        /*  stride  */ rewriter.getI64ArrayAttr({stride.first, stride.second}),
+        /* dilation */ rewriter.getI64ArrayAttr({dilation.first, dilation.second}));
     return success();
   }
 };
