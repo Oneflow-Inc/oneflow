@@ -956,7 +956,7 @@
 - name: "cublas_matmul_bias_add_grad"
   signature:
     "TensorTuple (Tensor dy, Tensor x) => CublasMatmulBiasAddGrad"
-  bind_python: False
+  bind_python: True
 
 - name: "broadcast_matmul_grad_b"
   signature: "Tensor (Tensor a, Tensor b, Double alpha=1.0) => BroadcastMatmulGradB"

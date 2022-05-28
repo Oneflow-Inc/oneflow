@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/cuda/cuda_device.h"
 // CUBLASLT_EPILOGUE_BGRADB only support in cuda11.4.2 or higher version.
-#if CUDA_VERSION >= 11060
+#if CUDA_VERSION >= 11040
 
 namespace oneflow {
 
@@ -50,6 +50,8 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
+    OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+    OF_CUDA_CHECK(cudaGetLastError());
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* w_grad = ctx->Tensor4ArgNameAndIndex("w_grad", 0);
@@ -75,29 +77,72 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
     dy->shape().ToDimVector(&dy_shape);
     DimVector x_shape(2);
     x->shape().ToDimVector(&x_shape);
-    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BGRADB;
+    // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BGRADB;
+    // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BGRADA;
 
-    InferMatmulCublasMNK(dy_shape, x_shape,
+    InferMatmulCublasMNK(dy_shape, x_shape, 
                          /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+    printf("Cublas m : %zu \n", cublas_m);
+    printf("Cublas n : %zu \n", cublas_n);
+    printf("Cublas k : %zu \n", cublas_k);
+    printf("Cublas lda : %ld \n", cublas_lda);
+    printf("Cublas ldb : %ld \n", cublas_ldb);
+    printf("Cublas ldc : %ld \n", cublas_ldc);
+    
     if (cublas_k != 1) {
-      SetCublasAttr(
-          matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
-          /*transpose_a=*/ep::primitive::BlasTransposeType::T,
-          /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, b_grad->mut_dptr(),
-          /*aux_ptr=*/nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+      // SetCublasAttr(
+      //     matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
+      //     /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+      //     /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, b_grad->mut_dptr(),
+      //     /*aux_ptr=*/nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+      
+      // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+      //   matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
+      //   sizeof(cublas_compute_dtype)));
 
-      /*
-      a = dy, b = x
-      cublas_a=x, cublas_b=dy
-      */
+      cublasLtMatmulDescInit(matmul_grad_cache->operation_desc, CUBLAS_COMPUTE_32F, CUDA_R_32F);
+      printf("1 \n"); 
+      cublasOperation_t transa = CUBLAS_OP_N; 
+      cublasOperation_t transb = CUBLAS_OP_T; 
+      OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+        matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_TRANSA, &transa, sizeof(transa)));
+      printf("2 \n"); 
+      
+      OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+        matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_TRANSB, &transb, sizeof(transb)));   
+      printf("3 \n"); 
+        
+      cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
+      OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+          matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+          printf("4 \n"); 
+      
+      const void* bias_ptr = b_grad->mut_dptr();      
+      OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_BIAS_POINTER, &(bias_ptr), sizeof(bias_ptr)));
+      cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BGRADB;
+      printf("5 \n"); 
+        
+      OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
+      printf("6 \n"); 
+      
+      OF_CUBLAS_CHECK(cublasLtMatrixLayoutInit(
+        matmul_grad_cache->cublas_a_desc, CUDA_R_32F, transa == CUBLAS_OP_N ? cublas_m : cublas_k, transa == CUBLAS_OP_N ? cublas_k : cublas_m, cublas_lda));
+        printf("7 \n"); 
+      
+      OF_CUBLAS_CHECK(cublasLtMatrixLayoutInit(
+        matmul_grad_cache->cublas_b_desc, CUDA_R_32F, transb == CUBLAS_OP_N ? cublas_k : cublas_n, transb == CUBLAS_OP_N ? cublas_n : cublas_k, cublas_ldb));
+        printf("8 \n"); 
+      
+      OF_CUBLAS_CHECK(cublasLtMatrixLayoutInit(matmul_grad_cache->cublas_c_desc, CUDA_R_32F, cublas_m, cublas_n, cublas_ldc));
+
       OF_CUBLAS_CHECK(cublasLtMatmul(
-          cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha, x->dptr(),
-          matmul_grad_cache->cublas_a_desc, dy->dptr(), matmul_grad_cache->cublas_b_desc, &sp_beta,
-          w_grad->mut_dptr(), matmul_grad_cache->cublas_c_desc, w_grad->mut_dptr(),
-          matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
-          cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+        cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha, x->dptr(), 
+        matmul_grad_cache->cublas_a_desc, dy->dptr(), matmul_grad_cache->cublas_b_desc, &sp_beta,
+        w_grad->mut_dptr(), matmul_grad_cache->cublas_c_desc, w_grad->mut_dptr(),
+        matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
+        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
     } else {
 // Cause cublasLtmatmul get wrong bias grad in cublas_k == 1.
 #if CUDA_VERSION >= 11000
@@ -119,6 +164,8 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
           &sp_alpha, x->dptr(), cuda_data_type, cublas_lda, dy->dptr(), cuda_data_type, cublas_ldb,
           &sp_beta, w_grad->mut_dptr(), cuda_data_type, cublas_ldc, gemm_compute_type, algo));
     }
+    OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+    OF_CUDA_CHECK(cudaGetLastError());
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
