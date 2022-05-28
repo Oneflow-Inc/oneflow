@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OneFlowOps.h"
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
@@ -36,6 +38,7 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+#include "oneflow/ir/llvm_monorepo-src/llvm/lib/Target/NVPTX/NVPTX.h"
 
 #include <limits>
 
@@ -147,6 +150,40 @@ struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
   }
 };
 
+
+struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
+ public:
+  using OpConversionPattern<Conv2DOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(Conv2DOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    /* static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, Type
+     * outputType, Value input, Value weight, Value bias, ArrayAttr pad, ArrayAttr stride, ArrayAttr
+     * dilation); */
+
+    auto get_pair_int64_from_array = [](ArrayAttr arr) -> std::pair<int64_t, int64_t> {
+      return { arr.getValue()[0].cast<IntegerAttr>().getSInt(), arr.getValue()[1].cast<IntegerAttr>().getSInt() };
+    };
+
+    auto pad_pair = get_pair_int64_from_array(op.padding_beforeAttr());
+    auto pad_values = llvm::ArrayRef<int64_t>({pad_pair.first, pad_pair.second, pad_pair.first, pad_pair.second});
+    auto pad = rewriter.getI64ArrayAttr(pad_values);
+
+    auto stride_pair = get_pair_int64_from_array(op.strides());
+    auto stride_values = llvm::ArrayRef<int64_t>({stride_pair.first, stride_pair.second});
+    auto stride = rewriter.getI64ArrayAttr(stride_values);
+
+    auto dilation_pair = get_pair_int64_from_array(op.dilation_rate());
+    auto dilation_values = llvm::ArrayRef<int64_t>({dilation_pair.first, dilation_pair.second});
+    auto dilation = rewriter.getI64ArrayAttr(dilation_values);
+
+
+
+    rewriter.replaceOpWithNewOp<tosa::Conv2DOp>(op, op.out().getType(), op.in(), op.weight(),
+                                                op.bias(), pad, stride, dilation);
+    return success();
+  }
+};
+
 namespace {
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
@@ -163,9 +200,10 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
-  patterns.insert<ReluOpLowering>(&getContext());
+  patterns.insert<ReluOpLowering, Conv2DOpLowering>(&getContext());
   patterns.insert<JobLowering, ReturnOpLowering>(&getContext());
   patterns.insert<InputOpLowering, OutputOpLowering>(&getContext());
+
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
