@@ -278,7 +278,7 @@ static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* k
   if (PyTuple_Size(args) == 1) {
     shape = PyTuple_GetItem(args, 0);
     if (PyLong_Check(shape)) shape = PyTuple_Pack(1, shape);
-  } 
+  }
 
   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
   PyObject* result = functional::view(NULL, _args.get(), kwargs);
