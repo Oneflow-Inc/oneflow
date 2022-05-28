@@ -43,6 +43,23 @@ bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_c
   return item_check(item);
 }
 
+const char* PySequenceItemType(PyObject* obj, size_t index) {
+  bool is_tuple = PyTuple_Check(obj);
+  if (!is_tuple && !PyList_Check(obj)) {
+    THROW(RuntimeError) << "The object is not list or tuple, but is " << Py_TYPE(obj)->tp_name;
+  }
+  size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);
+  if (size <= index) {
+    THROW(RuntimeError) << "The index is out of range, object size is " << size << " but got index "
+                        << index;
+  }
+  if (is_tuple) {
+    return Py_TYPE(PyTuple_GET_ITEM(obj, index))->tp_name;
+  } else {
+    return Py_TYPE(PyList_GET_ITEM(obj, index))->tp_name;
+  }
+}
+
 size_t PySequenceSize(PyObject* obj) {
   bool is_tuple = PyTuple_Check(obj);
   if (!is_tuple && !PyList_Check(obj)) {
@@ -52,7 +69,7 @@ size_t PySequenceSize(PyObject* obj) {
   return size;
 }
 
-int PySequenceCheckIndex(PyObject* obj, const std::function<bool(PyObject*)>& item_check) {
+size_t PySequenceCheckIndex(PyObject* obj, const std::function<bool(PyObject*)>& item_check) {
   int index = 0;
   size_t size = PySequenceSize(obj);
   bool is_tuple = PyTuple_Check(obj);
@@ -72,7 +89,7 @@ bool PyLongSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyLong_Check(item); });
 }
 
-int PyLongSequenceCheckIndex(PyObject* obj) {
+size_t PyLongSequenceCheckIndex(PyObject* obj) {
   return PySequenceCheckIndex(obj, [](PyObject* item) { return PyLong_Check(item); });
 }
 

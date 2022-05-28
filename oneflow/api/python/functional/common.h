@@ -65,6 +65,7 @@ using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
 
 bool PySequenceCheck(PyObject* obj);
 bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_check);
+size_t PySequenceCheckIndex(PyObject* obj, const std::function<bool(PyObject*)>& item_check);
 
 template<typename T, typename UnpackItemFunc>
 inline std::vector<T> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item) {
@@ -83,8 +84,9 @@ inline std::vector<T> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item
 // Integer/Float list
 bool PyLongSequenceCheck(PyObject* obj);
 bool PyFloatSquenceCheck(PyObject* obj);
-int PyLongSequenceCheckIndex(PyObject* obj);
 size_t PySequenceSize(PyObject* obj);
+size_t PyLongSequenceCheckIndex(PyObject* obj);
+const char* PySequenceItemType(PyObject* obj, size_t index);
 
 template<typename T>
 inline std::vector<T> PyUnpackLongSequence(PyObject* obj) {
