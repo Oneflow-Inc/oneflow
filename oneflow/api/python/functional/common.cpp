@@ -54,9 +54,9 @@ const char* PySequenceItemType(PyObject* obj, size_t index) {
                         << index;
   }
   if (is_tuple) {
-    return Py_TYPE(PyTuple_GET_ITEM(obj, index))->tp_name;
+    return PyTuple_GET_ITEM(obj, index)->ob_type->tp_name;
   } else {
-    return Py_TYPE(PyList_GET_ITEM(obj, index))->tp_name;
+    return PyList_GET_ITEM(obj, index)->ob_type->tp_name;
   }
 }
 
