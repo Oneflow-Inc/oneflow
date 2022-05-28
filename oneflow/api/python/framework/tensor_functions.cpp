@@ -246,31 +246,16 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* shape = NULL;
-  if (kwargs != NULL) {
-    // keyword parameter
-    static const char* keywords[2] = {"shape", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:reshape", const_cast<char**>(keywords),
-                                     &shape)) {
-      return NULL;
-    }
-  } else if (PyTuple_Size(args) == 1) {
+  PyObject* shape = args;
+  if (PyTuple_Size(args) == 1) {
     shape = PyTuple_GetItem(args, 0);
     if (PyLong_Check(shape)) shape = PyTuple_Pack(1, shape);
-  } else {
-    shape = args;
-  }
+  } 
 
-  const size_t index = functional::PyLongSequenceCheckIndex(shape);
-  if (index < functional::PySequenceSize(shape)) {
-    THROW(TypeError) << "reshape(): argument 'shape' (position " << index
-                     << ") must be tuple of ints, not "
-                     << functional::PySequenceItemType(shape, index);
-  }
-  PyObject* tuple = PyTuple_Pack(2, self, shape);
-  return functional::reshape(NULL, tuple, NULL);
-  Py_DECREF(shape);
-  Py_DECREF(tuple);
+  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
+  PyObject* result = functional::reshape(NULL, _args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -319,31 +304,17 @@ static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject
 
 static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* dims = NULL;
-  if (kwargs != NULL) {
-    // keyword parameter
-    static const char* keywords[2] = {"dims", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:permute", const_cast<char**>(keywords),
-                                     &dims)) {
-      return NULL;
-    }
-  } else if (PyTuple_Size(args) == 1) {
-    // positional parameter
+  PyObject* dims = args;
+  if (PyTuple_Size(args) == 1) {
     dims = PyTuple_GetItem(args, 0);
     if (PyLong_Check(dims)) dims = PyTuple_Pack(1, dims);
-  } else {
-    dims = args;
-  }
-  const size_t index = functional::PyLongSequenceCheckIndex(dims);
-  if (index < functional::PySequenceSize(dims)) {
-    THROW(TypeError) << "permute(): argument 'shape' (position " << index
-                     << ") must be tuple of ints, not "
-                     << functional::PySequenceItemType(dims, index);
-  }
-  PyObject* tuple = PyTuple_Pack(2, self, dims);
-  return functional::permute(NULL, tuple, NULL);
-  Py_DECREF(dims);
-  Py_DECREF(tuple);
+  } 
+
+  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
+  PyObject* result = functional::permute(NULL, _args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+
   END_HANDLE_ERRORS
 }
 
