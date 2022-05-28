@@ -45,7 +45,7 @@ namespace oneflow {
   FOR_RANGE(int32_t, i, 0, sections.size()) {
     user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
     DimVector out_i_dim_vec = in_desc.shape().dim_vec();
-    out_i_dim_vec[i] = sections[axis];
+    out_i_dim_vec[axis] = sections[i];
     *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
     out_i_desc->set_is_dynamic(in_desc.is_dynamic());
   }
