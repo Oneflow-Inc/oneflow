@@ -955,6 +955,8 @@ def _repeat(self, *sizes):
         new_sizes = sizes
     return flow._C.repeat(self, new_sizes)
 
+def _repeat_interleave(self, repeats, dim=None, *, output_size=None):
+    return flow._C.repeat_interleave(self, repeats, dim=dim, output_size=output_size)
 
 def _tile(self, *dims):
     if len(dims) == 1:
@@ -1334,6 +1336,7 @@ def RegisterMethods():
     Tensor.bmm = _bmm
     Tensor.chunk = _chunk
     Tensor.repeat = _repeat
+    Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
     Tensor.split = _split
     Tensor.unbind = _unbind
