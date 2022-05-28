@@ -50,7 +50,7 @@ class SplitKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const auto axis = ctx->Attr<int64_t>("dim");
     const int64_t in_cols = in_tensor->shape().Count(axis);
     const int64_t rows = in_tensor->shape().elem_cnt() / in_cols;
