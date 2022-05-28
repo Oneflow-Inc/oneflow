@@ -21,6 +21,8 @@ add_docstr(
     """
     repeat_interleave(input, repeats, dim=None, *, output_size=None) -> Tensor
 
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.repeat_interleave.html#torch.repeat_interleave.html
+
     Repeat elements of a tensor.
 
     .. warning::
@@ -28,7 +30,7 @@ add_docstr(
         This is different from :meth:`oneflow.Tensor.repeat` but similar to ``numpy.repeat``.
 
     Args:
-        {input}
+        input (oneflow.Tensor): the input Tensor.
         repeats (Tensor or int): The number of repetitions for each element.
             repeats is broadcasted to fit the shape of the given axis.
         dim (int, optional): The dimension along which to repeat values.
@@ -41,7 +43,8 @@ add_docstr(
             needed to calculate output shape of the tensor.
 
     Returns:
-        Tensor: Repeated tensor which has the same shape as input, except along the given axis.
+        oneflow.Tensor: Repeated tensor which has the same shape as input, except along the given axis.
+    
     For example:
 
     .. code-block:: python

@@ -955,8 +955,8 @@ def _repeat(self, *sizes):
         new_sizes = sizes
     return flow._C.repeat(self, new_sizes)
 
-def _repeat_interleave(self, repeats, dim=None, *, output_size=None):
-    return flow._C.repeat_interleave(self, repeats, dim=dim, output_size=output_size)
+def _repeat_interleave(self, *args, **kwargs):
+    return flow._C.repeat_interleave(self, *args, **kwargs)
 
 def _tile(self, *dims):
     if len(dims) == 1:
