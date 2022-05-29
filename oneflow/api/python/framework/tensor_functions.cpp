@@ -248,8 +248,8 @@ static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject
   HANDLE_ERRORS
   PyObject* shape = args;
   if (PyTuple_Size(args) == 1) {
-    shape = PyTuple_GetItem(args, 0);
-    if (PyLong_Check(shape)) shape = PyTuple_Pack(1, shape);
+    PyObject* item = PyTuple_GetItem(args, 0);
+    if (!PyLong_Check(item)) { shape = item; }
   }
 
   PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
