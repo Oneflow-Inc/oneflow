@@ -19,20 +19,16 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<void> SplitOp::GetSbp(user_op::SbpContext* ctx) {
-  const int64_t in_num_axes =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
+  const int64_t in_num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape().NumAxes();
   int64_t axis = ctx->Attr<int64_t>("dim");
   if (axis < 0) { axis += in_num_axes; }
   CHECK_OR_RETURN(axis >= 0 && axis < in_num_axes);
-  
+
   FOR_RANGE(int64_t, i, 0, in_num_axes) {
     if (i == axis) { continue; }
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
-  ctx->NewBuilder()
-      .PartialSum(user_op::OpArg("x", 0))
-      .PartialSum(ctx->outputs())
-      .Build();
+  ctx->NewBuilder().PartialSum(user_op::OpArg("x", 0)).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SplitOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -64,7 +60,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> SplitOp::CheckAttr(const user_op::UserOpDefWrapper&,
-                                              const user_op::UserOpConfWrapper& op_conf) {
+                                          const user_op::UserOpConfWrapper& op_conf) {
   CHECK_OR_RETURN(op_conf.output_size("out") >= 1);
   return Maybe<void>::Ok();
 }

@@ -90,8 +90,7 @@ auto CopyNdPrimitiveExists() {
 
 }  // namespace
 
-REGISTER_USER_KERNEL("split")
-    .SetCreateFn<SplitKernel>()
-    .SetIsMatchedHob(CopyNdPrimitiveExists() == true);
+REGISTER_USER_KERNEL("split").SetCreateFn<SplitKernel>().SetIsMatchedHob(CopyNdPrimitiveExists()
+                                                                         == true);
 
 }  // namespace oneflow

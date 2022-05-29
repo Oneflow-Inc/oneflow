@@ -30,8 +30,8 @@ struct SplitCaptureState : public AutoGradCaptureState {
 class Split : public OpExprGradFunction<SplitCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(SplitCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Capture(SplitCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override;
   Maybe<void> Apply(const SplitCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -47,7 +47,7 @@ Maybe<void> Split::Init(const OpExpr& op) {
 }
 
 Maybe<void> Split::Capture(SplitCaptureState* ctx, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const AttrMap& attrs) const {
+                           const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -58,7 +58,7 @@ Maybe<void> Split::Capture(SplitCaptureState* ctx, const TensorTuple& inputs,
 }
 
 Maybe<void> Split::Apply(const SplitCaptureState* ctx, const TensorTuple& out_grads,
-                             TensorTuple* in_grads) const {
+                         TensorTuple* in_grads) const {
   in_grads->resize(out_grads.size() + 1);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
