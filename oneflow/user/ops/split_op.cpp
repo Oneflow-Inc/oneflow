@@ -67,7 +67,6 @@ namespace oneflow {
 
 namespace {
 
-// Todo: use concat
 Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   const int64_t axis = op.attr<int64_t>("dim");
   const int32_t out_size = op.output_size("out");

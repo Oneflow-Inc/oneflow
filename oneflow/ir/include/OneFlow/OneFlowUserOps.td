@@ -4971,7 +4971,7 @@ def OneFlow_SplitOp : OneFlow_BaseOp<"split", [NoSideEffect, DeclareOpInterfaceM
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$dim,
-    SI64ArrayAttr:$sections // split_size_or_sections
+    SI64ArrayAttr:$sections
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
