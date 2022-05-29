@@ -3091,6 +3091,9 @@ class FillTensorFunctor {
         << Error::RuntimeError()
         << "fill_ only supports 0-dimension value tensor but got tensor with " << ndim
         << " dimensions.";
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({in, value}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (IsFloatingDataType(in->dtype()->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
     } else if (IsIntegralDataType(in->dtype()->data_type())) {
@@ -3100,7 +3103,7 @@ class FillTensorFunctor {
     }
     auto outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = in;
-    JUST(OpInterpUtil::Dispatch(*op_, {in, value}, outputs.get(), attrs));
+    JUST(OpInterpUtil::Dispatch(*op_, {input_tuple[0], input_tuple[1]}, outputs.get(), attrs));
     return outputs->at(0);
   }
 

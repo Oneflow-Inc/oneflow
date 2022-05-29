@@ -34,10 +34,10 @@ def _test_fill_tensor_(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     value = torch.tensor(1, requires_grad=False).to_global(
-        placement=placement, sbp=flow.sbp.broadcast
+        placement=placement, sbp=[flow.sbp.broadcast for _ in sbp]
     )
     y = x + 1
-    torch.Tensor.fill_(y, value)
+    y.fill_(value)
     return y
 
 
