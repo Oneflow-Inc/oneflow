@@ -48,7 +48,7 @@ class OptDict(object):
             self._lr_scheduler = opt_dict["lr_sch"]
 
     def generate_optimizer_and_variable_configs(self, job_conf, vars_conf):
-        train_conf = job_conf.mutable_train_conf()
+        train_conf = job_conf.train_conf
 
         if self._optimizer is None:
             return
@@ -66,9 +66,7 @@ class OptDict(object):
             return
 
         for opt_conf in opt_confs:
-            self._lr_scheduler._generate_conf_for_graph(
-                opt_conf.mutable_learning_rate_decay()
-            )
+            self._lr_scheduler._generate_conf_for_graph(opt_conf.learning_rate_decay)
 
 
 class VariableConfig(object):
