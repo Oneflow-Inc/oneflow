@@ -31,23 +31,16 @@ class FusedLstmCellGrad : public OpExprGradFunction<FusedLstmCellGradCaptureStat
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "FusedLstmCellGrad::Init forward op expr is null.";
-    ;
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(FusedLstmCellGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    if (inputs.size() == 3) {
-      ctx->has_bias = false;
-    } else {
-      CHECK_EQ_OR_RETURN(inputs.size(), 5) << "FusedLstmCellGrad::Capture input size should be 5.";
-      ctx->has_bias = true;
-    }
-    if (inputs[2]->requires_grad()) {
-      ctx->need_grad_cx = true;
-    } else {
-      ctx->need_grad_cx = false;
-    }
+    const size_t in_size = inputs.size();
+    CHECK_OR_RETURN(in_size == 3 || in_size == 5)
+        << "FusedLstmCellGrad::Capture(): input tensor size must be 3 or 5";
+    ctx->has_bias = in_size == 5;
+    ctx->need_grad_cx = inputs[2]->requires_grad();
     ctx->SaveTensorForBackward(inputs[2]);   // cx
     ctx->SaveTensorForBackward(outputs[1]);  // cy
     ctx->SaveTensorForBackward(outputs[2]);  // workspace

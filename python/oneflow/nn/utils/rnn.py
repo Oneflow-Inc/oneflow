@@ -72,10 +72,10 @@ class PackedSequence(object):
 
     .. note::
         :attr:`data` can be on arbitrary device and of arbitrary dtype.
-        :attr:`sorted_indices` and :attr:`unsorted_indices` must be ``torch.int64``
+        :attr:`sorted_indices` and :attr:`unsorted_indices` must be ``oneflow.int64``
         tensors on the same device as :attr:`data`.
 
-        However, :attr:`batch_sizes` should always be a CPU ``torch.int64`` tensor.
+        However, :attr:`batch_sizes` should always be a CPU ``oneflow.int64`` tensor.
 
         This invariant is maintained throughout :class:`PackedSequence` class,
         and all functions that construct a `:class:PackedSequence` in PyTorch
@@ -162,14 +162,14 @@ class PackedSequence(object):
     def to(self, *args, **kwargs):
         """Performs dtype and/or device conversion on `self.data`.
 
-        It has similar signature as :meth:`torch.Tensor.to`, except optional
+        It has similar signature as :meth:`oneflow.Tensor.to`, except optional
         arguments like `non_blocking` and `copy` should be passed as kwargs,
         not args, or they will not apply to the index tensors.
 
         .. note::
 
-            If the ``self.data`` Tensor already has the correct :class:`torch.dtype`
-            and :class:`torch.device`, then ``self`` is returned.
+            If the ``self.data`` Tensor already has the correct :class:`oneflow.dtype`
+            and :class:`oneflow.device`, then ``self`` is returned.
             Otherwise, returns a copy with the desired configuration.
         """
         data = self.data.to(*args, **kwargs)
@@ -277,7 +277,7 @@ def pad_packed_sequence(
     .. note::
         :attr:`total_length` is useful to implement the
         ``pack sequence -> recurrent network -> unpack sequence`` pattern in a
-        :class:`~torch.nn.Module` wrapped in :class:`~torch.nn.DataParallel`.
+        :class:`~oneflow.nn.Module` wrapped in :class:`~oneflow.nn.DataParallel`.
         See :ref:`this FAQ section <pack-rnn-unpack-with-data-parallelism>` for
         details.
 

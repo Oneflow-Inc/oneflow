@@ -37,8 +37,9 @@ class FusedGruCellGrad : public OpExprGradFunction<FusedGruCellGradCaptureState>
   Maybe<void> Capture(FusedGruCellGradCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     const size_t in_size = inputs.size();
-    CHECK_OR_RETURN(in_size == 3 || in_size == 5) << "FusedGruCellGrad input's size must be 3 or 5";
-    ctx->has_bias = inputs.size() == 5;
+    CHECK_OR_RETURN(in_size == 3 || in_size == 5)
+        << "FusedGruCellGrad::Capture(): input tensor size must be 3 or 5";
+    ctx->has_bias = in_size == 5;
     ctx->hx_needs_grad = inputs[2]->requires_grad();
     ctx->SaveTensorForBackward(outputs[1]);  // workspace
     return Maybe<void>::Ok();
