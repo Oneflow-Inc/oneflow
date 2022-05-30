@@ -2379,8 +2379,12 @@ class UnbindFunctor {
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
         << "," << ndim - 1 << "], but got " << dim << ")";
     int32_t dim_size = x->shape()->At(axis);
+    std::shared_ptr<TensorTuple> chunk_res = JUST(functional::Chunk(x, dim_size, axis));
     TensorTuple unbinds(dim_size);
-    for (int i = 0; i < dim_size; ++i) { unbinds[i] = JUST(Select(x, axis, i)); }
+    std::vector<int32_t> dims = {axis};
+    for (int i = 0; i < dim_size; ++i) {
+      unbinds[i] = JUST(functional::Squeeze((*chunk_res)[i], dims));
+    }
     return unbinds;
   }
 };
