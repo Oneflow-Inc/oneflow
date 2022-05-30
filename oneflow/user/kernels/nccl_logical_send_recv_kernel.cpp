@@ -86,7 +86,7 @@ NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* c
 
   std::vector<TensorSliceView> src_send_intersections;
   std::vector<TensorSliceView> dst_recv_intersections;
-  GetSendRecvIntersection(parallel_id, parallel_desc_->hierarchy(), src_nd_sbp, dst_nd_sbp,
+  GetRankSendRecvIntersection(parallel_id, parallel_desc_->hierarchy(), src_nd_sbp, dst_nd_sbp,
                           logical_shape, &src_send_intersections, &dst_recv_intersections);
 
   CHECK_EQ(src_send_intersections.size(), parallel_num);
@@ -262,7 +262,7 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
 
   std::vector<TensorSliceView> src_send_intersections;
   std::vector<TensorSliceView> dst_recv_intersections;
-  GetSendRecvIntersection(parallel_id, ctx->parallel_desc().hierarchy(), src_nd_sbp, dst_nd_sbp,
+  GetRankSendRecvIntersection(parallel_id, ctx->parallel_desc().hierarchy(), src_nd_sbp, dst_nd_sbp,
                           logical_shape, &src_send_intersections, &dst_recv_intersections);
   int64_t buf_count = 0;
   CHECK_EQ(src_send_intersections.size(), parallel_num);

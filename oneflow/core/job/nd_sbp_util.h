@@ -35,11 +35,12 @@ TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
 
 bool NdSbpHasPartialParallel(const NdSbp& nd_sbp);
 
-void GetSendRecvIntersection(int64_t parallel_id, const std::shared_ptr<Shape> parallel_hierarchy,
+
+void GetRankSendRecvIntersection(int64_t parallel_id, const std::shared_ptr<Shape>& parallel_hierarchy,
                              const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp,
                              const Shape& logical_shape,
-                             std::vector<TensorSliceView>* src_send_intersections,
-                             std::vector<TensorSliceView>* dst_recv_intersections);
+                             std::vector<TensorSliceView>* send_intersections,
+                             std::vector<TensorSliceView>* recv_intersections);
 
 }  // namespace oneflow
 
