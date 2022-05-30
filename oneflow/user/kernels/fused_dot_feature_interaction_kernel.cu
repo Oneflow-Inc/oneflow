@@ -217,6 +217,7 @@ struct DotFwdParam {
   int32_t num_in;
 };
 
+#if __CUDA_ARCH__ >= 700
 template<typename T, typename AccType, int m, int n, int k, class ALayout, class BLayout>
 class Wmma {
  public:
@@ -265,6 +266,7 @@ class Wmma<float, AccType, m, n, k, ALayout, BLayout> {
   nvcuda::wmma::fragment<nvcuda::wmma::accumulator, m, n, k, AccType> acc_;
 #endif
 };
+#endif  //__CUDA_ARCH__ >= 700
 
 constexpr int kUnrollDim = 2;
 template<typename T, typename ComputeType, int32_t max_in, int32_t pack_size, int mn_tile_dim,
