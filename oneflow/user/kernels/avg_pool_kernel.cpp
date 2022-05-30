@@ -137,13 +137,13 @@ class AvgPool1dKernel final : public user_op::OpKernel {
 #ifdef WITH_ONEDNN
     if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
         && params_3d.divisor_override() == 0) {
-      dnnl::memory::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
-      dnnl::memory::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
-      dnnl::memory::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
-      dnnl::memory::dims strides_dims = {1, params_3d.stride_3d()[2]};
-      dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
-      dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
-      dnnl::memory::dims dilation = {0, 0};
+      DnnlDims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
+      DnnlDims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
+      DnnlDims kernel_dims = {1, params_3d.pool_size_3d()[2]};
+      DnnlDims strides_dims = {1, params_3d.stride_3d()[2]};
+      DnnlDims padding_dims_l = {0, params_3d.padding()[2]};
+      DnnlDims padding_dims_r = {0, params_3d.padding()[2]};
+      DnnlDims dilation = {0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
@@ -202,15 +202,13 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
 #ifdef WITH_ONEDNN
     if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
         && params_3d.divisor_override() == 0) {
-      dnnl::memory::dims diff_dst_dims = {1, 1, dy->shape().At(0) * dy->shape().At(1),
-                                          dy->shape().At(2)};
-      dnnl::memory::dims diff_src_dims = {1, 1, dx->shape().At(0) * dx->shape().At(1),
-                                          dx->shape().At(2)};
-      dnnl::memory::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
-      dnnl::memory::dims strides_dims = {1, params_3d.stride_3d()[2]};
-      dnnl::memory::dims padding_dims_l = {0, params_3d.padding()[2]};
-      dnnl::memory::dims padding_dims_r = {0, params_3d.padding()[2]};
-      dnnl::memory::dims dilation = {0, 0};
+      DnnlDims diff_dst_dims = {1, 1, dy->shape().At(0) * dy->shape().At(1), dy->shape().At(2)};
+      DnnlDims diff_src_dims = {1, 1, dx->shape().At(0) * dx->shape().At(1), dx->shape().At(2)};
+      DnnlDims kernel_dims = {1, params_3d.pool_size_3d()[2]};
+      DnnlDims strides_dims = {1, params_3d.stride_3d()[2]};
+      DnnlDims padding_dims_l = {0, params_3d.padding()[2]};
+      DnnlDims padding_dims_r = {0, params_3d.padding()[2]};
+      DnnlDims dilation = {0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
@@ -268,15 +266,13 @@ class AvgPool2dKernel final : public user_op::OpKernel {
 #ifdef WITH_ONEDNN
     if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && params_3d.divisor_override() == 0
         && device_type == DeviceType::kCPU && params_3d.divisor_override() == 0) {
-      dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
-                                     x->shape().At(3)};
-      dnnl::memory::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2),
-                                     y->shape().At(3)};
-      dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
-      dnnl::memory::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
-      dnnl::memory::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
-      dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
-      dnnl::memory::dims dilation = {0, 0};
+      DnnlDims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2), x->shape().At(3)};
+      DnnlDims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2), y->shape().At(3)};
+      DnnlDims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
+      DnnlDims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
+      DnnlDims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
+      DnnlDims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
+      DnnlDims dilation = {0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
@@ -337,15 +333,15 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 #ifdef WITH_ONEDNN
     if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
         && params_3d.divisor_override() == 0) {
-      dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
-                                          dy->shape().At(3)};
-      dnnl::memory::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
-                                          dx->shape().At(3)};
-      dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
-      dnnl::memory::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
-      dnnl::memory::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
-      dnnl::memory::dims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
-      dnnl::memory::dims dilation = {0, 0};
+      DnnlDims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
+                                dy->shape().At(3)};
+      DnnlDims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
+                                dx->shape().At(3)};
+      DnnlDims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
+      DnnlDims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
+      DnnlDims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
+      DnnlDims padding_dims_r = {params_3d.padding()[1], params_3d.padding()[2]};
+      DnnlDims dilation = {0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
@@ -403,19 +399,19 @@ class AvgPool3dKernel final : public user_op::OpKernel {
 #ifdef WITH_ONEDNN
     if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
         && params_3d.divisor_override() == 0) {
-      dnnl::memory::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2),
-                                     x->shape().At(3), x->shape().At(4)};
-      dnnl::memory::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2),
-                                     y->shape().At(3), y->shape().At(4)};
-      dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
-                                        params_3d.pool_size_3d()[2]};
-      dnnl::memory::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
-                                         params_3d.stride_3d()[2]};
-      dnnl::memory::dims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1],
-                                           params_3d.padding()[2]};
-      dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
-                                           params_3d.padding()[2]};
-      dnnl::memory::dims dilation = {0, 0, 0};
+      DnnlDims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2), x->shape().At(3),
+                           x->shape().At(4)};
+      DnnlDims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2), y->shape().At(3),
+                           y->shape().At(4)};
+      DnnlDims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
+                              params_3d.pool_size_3d()[2]};
+      DnnlDims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+                               params_3d.stride_3d()[2]};
+      DnnlDims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1],
+                                 params_3d.padding()[2]};
+      DnnlDims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
+                                 params_3d.padding()[2]};
+      DnnlDims dilation = {0, 0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
@@ -477,19 +473,19 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
 #ifdef WITH_ONEDNN
     if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
         && params_3d.divisor_override() == 0) {
-      dnnl::memory::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
-                                          dy->shape().At(3), dy->shape().At(4)};
-      dnnl::memory::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
-                                          dx->shape().At(3), dx->shape().At(4)};
-      dnnl::memory::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
-                                        params_3d.pool_size_3d()[2]};
-      dnnl::memory::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
-                                         params_3d.stride_3d()[2]};
-      dnnl::memory::dims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1],
-                                           params_3d.padding()[2]};
-      dnnl::memory::dims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
-                                           params_3d.padding()[2]};
-      dnnl::memory::dims dilation = {0, 0, 0};
+      DnnlDims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
+                                dy->shape().At(3), dy->shape().At(4)};
+      DnnlDims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
+                                dx->shape().At(3), dx->shape().At(4)};
+      DnnlDims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
+                              params_3d.pool_size_3d()[2]};
+      DnnlDims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
+                               params_3d.stride_3d()[2]};
+      DnnlDims padding_dims_l = {params_3d.padding()[0], params_3d.padding()[1],
+                                 params_3d.padding()[2]};
+      DnnlDims padding_dims_r = {params_3d.padding()[0], params_3d.padding()[1],
+                                 params_3d.padding()[2]};
+      DnnlDims dilation = {0, 0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,

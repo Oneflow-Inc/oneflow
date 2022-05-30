@@ -27,9 +27,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include <half.hpp>
-#ifdef WITH_ONEDNN
-#include <oneapi/dnnl/dnnl.hpp>
-#endif
 namespace oneflow {
 
 typedef half_float::half float16;
@@ -254,11 +251,6 @@ void CheckDataType(DataType data_type) {
                  && data_type != DataType::kChar && data_type != GetDataType<T>::value))
       << data_type << " " << GetDataType<T>::value;
 }
-
-#ifdef WITH_ONEDNN
-template<typename T>
-dnnl::memory::data_type CppTypeToOneDnnDtype();
-#endif
 
 }  // namespace oneflow
 

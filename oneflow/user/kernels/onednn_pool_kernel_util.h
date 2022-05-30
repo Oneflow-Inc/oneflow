@@ -19,7 +19,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
-#include "oneflow/core/common/data_type.h"
+#include "oneflow/user/kernels/onednn_util.h"
 
 namespace oneflow {
 
@@ -30,12 +30,12 @@ bool OneDnnPoolIsSupportDtype() {
 
 template<typename T>
 struct OneDnnPoolKernelUtil {
-  static void OneDnnPoolForwardCompute(
-      ep::Stream* stream, const dnnl::memory::dims src_dims, const dnnl::memory::dims dst_dims,
-      const dnnl::memory::dims kernel_dims, const dnnl::memory::dims strides_dims,
-      const dnnl::memory::dims padding_dims_l, const dnnl::memory::dims padding_dims_r,
-      const dnnl::memory::dims dilation, dnnl::memory::format_tag format, void* src, void* dest,
-      void* indice_ptr, dnnl::algorithm algorithm) {
+  static void OneDnnPoolForwardCompute(ep::Stream* stream, const DnnlDims& src_dims,
+                                       const DnnlDims& dst_dims, const DnnlDims& kernel_dims,
+                                       const DnnlDims& strides_dims, const DnnlDims& padding_dims_l,
+                                       const DnnlDims& padding_dims_r, const DnnlDims& dilation,
+                                       dnnl::memory::format_tag format, void* src, void* dest,
+                                       void* indice_ptr, dnnl::algorithm algorithm) {
     stream->As<ep::CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
                                                                dnnl::stream* onednn_stream) {
       auto data_type = CppTypeToOneDnnDtype<T>();
@@ -60,12 +60,10 @@ struct OneDnnPoolKernelUtil {
   }
 
   static void OneDnnpoolBackwardCompute(
-      ep::Stream* stream, const dnnl::memory::dims diff_dst_dims,
-      const dnnl::memory::dims diff_src_dims, const dnnl::memory::dims kernel_dims,
-      const dnnl::memory::dims strides_dims, const dnnl::memory::dims padding_dims_l,
-      const dnnl::memory::dims padding_dims_r, const dnnl::memory::dims dilation,
-      dnnl::memory::format_tag format, void* diff_dst, void* diff_src, void* workspace,
-      dnnl::algorithm algorithm) {
+      ep::Stream* stream, const DnnlDims& diff_dst_dims, const DnnlDims& diff_src_dims,
+      const DnnlDims& kernel_dims, const DnnlDims& strides_dims, const DnnlDims& padding_dims_l,
+      const DnnlDims& padding_dims_r, const DnnlDims& dilation, dnnl::memory::format_tag format,
+      void* diff_dst, void* diff_src, void* workspace, dnnl::algorithm algorithm) {
     stream->As<ep::CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
                                                                dnnl::stream* onednn_stream) {
       auto data_type = CppTypeToOneDnnDtype<T>();
