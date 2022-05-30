@@ -713,11 +713,11 @@
   bind_python: True
 
 - name: "argmax"
-  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
+  signature: "Tensor (Tensor x, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
   bind_python: True
 
 - name: "argmin"
-  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
+  signature: "Tensor (Tensor x, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
   bind_python: True
 
 - name: "argwhere"
