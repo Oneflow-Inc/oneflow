@@ -182,7 +182,7 @@ endforeach()
 
 relative_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROJECT_SOURCE_DIR} ${of_all_rel_protos})
 
-oneflow_add_library(of_protoobj STATIC ${PROTO_SRCS} ${PROTO_HDRS})
+oneflow_add_library(of_protoobj SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj make_pyproto_dir protobuf)
 
 if(BUILD_SHARED_LIBS)
@@ -317,7 +317,7 @@ endif()
 if(BUILD_PYTHON)
 
   # py ext lib
-  oneflow_add_library(of_pyext_obj STATIC ${of_pyext_obj_cc})
+  oneflow_add_library(of_pyext_obj SHARED ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                   ${Python_NumPy_INCLUDE_DIRS})
   target_link_libraries(of_pyext_obj oneflow pybind11::headers)
