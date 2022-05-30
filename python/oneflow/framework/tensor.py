@@ -158,20 +158,6 @@ def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
     return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
 
 
-def _transpose(self, dim0, dim1):
-    return flow._C.transpose(self, dim0, dim1)
-
-
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, new_dims)
-
-
 def is_nonzero(input):
     r"""
     is_nonzero(input) -> (bool)
@@ -1040,20 +1026,6 @@ def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
 
-def _view(self, *shape):
-    if len(shape) == 1:
-        new_shape = shape[0]
-        if isinstance(new_shape, int):
-            new_shape = (new_shape,)
-    else:
-        new_shape = shape
-    return flow._C.view(self, new_shape)
-
-
-def _view_as(self, other):
-    return _view(self, *other.size())
-
-
 def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
 
@@ -1166,10 +1138,6 @@ def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
 
 
-def inplace_contiguous_(self):
-    return flow._C.contiguous_(self)
-
-
 def RegisterMethods():
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.ndim = property(_ndim)
@@ -1247,8 +1215,6 @@ def RegisterMethods():
     Tensor.triu = _triu
     Tensor.where = _where
     Tensor.norm = _norm
-    Tensor.transpose = _transpose
-    Tensor.permute = _permute
     Tensor.local_to_global = _local_to_global
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
@@ -1288,8 +1254,6 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
-    Tensor.view = _view
-    Tensor.view_as = _view_as
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
@@ -1312,7 +1276,6 @@ def RegisterMethods():
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
-    Tensor.contiguous_ = inplace_contiguous_
 
 
 def register_tensor_op(op_name):
