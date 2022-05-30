@@ -159,6 +159,10 @@ int GetCudaDeviceIndex();
 
 int GetCudaDeviceCount();
 
+void SetCudaDeviceIndex(int device_id);
+
+void CudaSynchronize(int device_id);
+
 void InitCudaContextOnce(int device_id);
 
 cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
