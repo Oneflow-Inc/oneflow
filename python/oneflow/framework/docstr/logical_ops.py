@@ -18,7 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 
 add_docstr(
-    oneflow._C.logical_and,
+    oneflow.logical_and,
     """
     Computes the element-wise logical AND of the given input tensors.
     Zeros are treated as False and nonzeros are treated as True.
@@ -49,7 +49,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.logical_or,
+    oneflow.logical_or,
     """
     Computes the element-wise logical OR of the given input tensors. 
     Zeros are treated as False and nonzeros are treated as True.
@@ -80,7 +80,7 @@ add_docstr(
 
 
 add_docstr(
-    oneflow._C.logical_xor,
+    oneflow.logical_xor,
     """
     Computes the element-wise logical XOR of the given input tensors. 
     Zeros are treated as False and nonzeros are treated as True.
@@ -104,6 +104,32 @@ add_docstr(
         >>> out = flow.logical_xor(input1, input2)
         >>> out
         tensor([False, False,  True], dtype=oneflow.bool)
+
+    """,
+)
+
+add_docstr(
+    oneflow.logical_not,
+    r"""
+    Computes the element-wise logical NOT of the given input tensors.
+    Zeros are treated as False and nonzeros are treated as True.
+    Args:
+        input (oneflow.Tensor): The input Tensor
+        other (oneflow.Tensor): The Tensor to compute NOT with
+
+    Returns:
+        oneflow.Tensor: The output Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
+        >>> out = flow.logical_not(input)
+        >>> out
+        tensor([False,  True, False], dtype=oneflow.bool)
 
     """,
 )

@@ -314,7 +314,11 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
             res = self.test_module(*args)
             forward_res = res
             if global_backward and graph_train_parameters_len:
-                if isinstance(res, (list, tuple)):
+                if isinstance(self.test_module.origin, flow.nn.LSTMCell):
+                    res = res[0] + res[1]
+                elif isinstance(self.test_module.origin, flow.nn.LSTM):
+                    res = res[0].sum() + res[1][0].sum() + res[1][1].sum()
+                elif isinstance(res, (tuple, list)):
                     res = res[0]
                 res = res.sum()
                 res.backward()
