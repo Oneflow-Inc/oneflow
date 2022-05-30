@@ -19,7 +19,8 @@ limitations under the License.
 namespace oneflow {
 
 /*static*/ Maybe<void> SplitOp::GetSbp(user_op::SbpContext* ctx) {
-  const int64_t in_num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
+  const int64_t in_num_axes =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
   int64_t axis = ctx->Attr<int64_t>("dim");
   if (axis < 0) { axis += in_num_axes; }
   CHECK_OR_RETURN(axis >= 0 && axis < in_num_axes);
@@ -35,16 +36,23 @@ namespace oneflow {
   const auto axis = ctx->Attr<int64_t>("dim");
   const auto& sections = ctx->Attr<std::vector<int64_t>>("sections");
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
-  const int64_t in_num_axes = ctx->InputTensorDesc("in", 0).shape().NumAxes();
+  const int64_t in_num_axes = in_desc.shape().NumAxes();
+  const int64_t dim_size = in_desc.shape().dim_vec()[axis];
   CHECK_LT_OR_RETURN(axis, in_num_axes);
 
+  int64_t start_idx = 0;
   FOR_RANGE(int32_t, i, 0, sections.size()) {
+    start_idx += sections[i];
     user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
     DimVector out_i_dim_vec = in_desc.shape().dim_vec();
     out_i_dim_vec[axis] = sections[i];
     *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
     out_i_desc->set_is_dynamic(in_desc.is_dynamic());
   }
+  CHECK_EQ_OR_RETURN(start_idx, dim_size)
+      << Error::RuntimeError() << "split expects split_sizes to sum exactly to " << dim_size
+      << " (input tensor's size at dimension " << axis << "), "
+      << "but got sum(split_sizes)=" << start_idx;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SplitOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
