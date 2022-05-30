@@ -206,6 +206,31 @@ endif()
 
 list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${RE2_INCLUDE_DIR})
 
+if(BUILD_CUDA)
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+    if(CMAKE_CXX_STANDARD LESS 14)
+      add_definitions(-DTHRUST_IGNORE_DEPRECATED_CPP_DIALECT)
+      add_definitions(-DCUB_IGNORE_DEPRECATED_CPP11)
+    endif()
+    if(CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
+      add_definitions(-DCUB_IGNORE_DEPRECATED_COMPILER)
+    endif()
+  else()
+    include(cub)
+    list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
+  endif()
+  include(nccl)
+
+  list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
+
+  list(APPEND oneflow_third_party_dependencies nccl)
+
+  list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUDNN_INCLUDE_DIRS} ${CUB_INCLUDE_DIR}
+       ${NCCL_INCLUDE_DIR})
+endif()
+
 if(BUILD_RDMA)
   if(UNIX)
     include(CheckIncludeFiles)
