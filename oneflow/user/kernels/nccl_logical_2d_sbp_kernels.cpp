@@ -140,9 +140,10 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     VLOG(3) << "[NcclLogical2D][SameDim0AllReduce] " << nccl_comm->stream_name() << " "
             << ctx->op_name() << std::endl;
+    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
+    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
-                                nccl_comm->comm(),
+                                GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -468,9 +469,10 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     VLOG(3) << "[NcclLogical2D][SameDim1AllReduce] " << nccl_comm->stream_name() << " "
             << ctx->op_name() << std::endl;
+    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
+    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
-                                GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
-                                nccl_comm->comm(),
+                                GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -495,6 +497,7 @@ REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather")
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize);
 
+REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(bool)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int8_t)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int32_t)
 REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(int64_t)
@@ -510,6 +513,7 @@ REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0All2AllKernelTmpBufferSize);
 
+REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(bool)
 REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(int8_t)
 REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(int32_t)
 REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(int64_t)
