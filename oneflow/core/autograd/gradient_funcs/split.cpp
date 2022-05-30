@@ -53,26 +53,18 @@ Maybe<void> Split::Capture(SplitCaptureState* ctx, const TensorTuple& inputs,
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("dim"));
-  for (int i = 0; i < outputs.size(); ++i) { ctx->SaveTensorForBackward(outputs.at(i)); }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Split::Apply(const SplitCaptureState* ctx, const TensorTuple& out_grads,
                          TensorTuple* in_grads) const {
-  in_grads->resize(out_grads.size() + 1);
+  in_grads->resize(1);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-
-  const auto& saved_tensors = ctx->SavedTensors();
   TensorTuple inputs;
   inputs.reserve(out_grads.size());
   for (int i = 0; i < out_grads.size(); ++i) {
     const auto& out_grad_i = out_grads.at(i);
-    if (out_grad_i.get()) {
-      inputs.emplace_back(out_grad_i);
-    } else {
-      const auto& zero_grad = JUST(functional::ZerosLike(saved_tensors.at(i)));
-      inputs.emplace_back(zero_grad);
-    }
+    inputs.emplace_back(out_grad_i);
   }
   in_grads->at(0) = JUST(functional::Concat(inputs, ctx->axis));
   return Maybe<void>::Ok();

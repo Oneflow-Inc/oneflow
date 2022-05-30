@@ -2444,7 +2444,7 @@ class SplitWithSizeFunctor {
   SplitWithSizeFunctor() {
     ops_.resize(kMaxInputCount);
     for (int n = 1; n < ops_.size(); ++n) {
-      ops_[n] = CHECK_JUST(one::OpBuilder("split").Input("x").Output("out", n + 1).Build());
+      ops_[n] = CHECK_JUST(one::OpBuilder("split").Input("x").Output("out", n).Build());
     }
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -2476,7 +2476,7 @@ class SplitWithSizeFunctor {
     JUST(attrs.SetAttr<int64_t>("dim", axis));
     JUST(attrs.SetAttr<std::vector<int64_t>>("sections", split_size_or_sections));
 
-    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(num_splits - 1), {x}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(num_splits), {x}, attrs);
   }
 
  private:
