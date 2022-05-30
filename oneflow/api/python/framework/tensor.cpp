@@ -176,6 +176,13 @@ static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_contiguous_(PyObject* self, PyObject* unused) {
+  // NOTE: inplace version of contiguous
+  HANDLE_ERRORS
+  return PyTensor_New(ASSERT_PTR(functional::InplaceToContiguous(PyTensor_Unpack(self))));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(PyTensor_Unpack(self)->pin_memory());
@@ -380,6 +387,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
+    {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
@@ -587,6 +595,8 @@ static PyHeapTypeObject* MakeTensorMetaclass() {
   return heap_type;
 }
 
+extern PyNumberMethods PyTensorObject_as_number;
+extern PyObject* PyTensorObject_richcompare(PyObject*, PyObject*, int);
 extern PyMethodDef PyTensorObject_extra_methods[];
 
 static PyHeapTypeObject* TensorMetaclass_Type = MakeTensorMetaclass();
@@ -606,14 +616,16 @@ static PyTypeObject* MakeTensorType() {
   type->tp_init = PyTensorObject_init;
   type->tp_dealloc = PyTensorObject_dealloc;
   type->tp_getset = PyTensorObject_properties;
-  type->tp_as_number = &heap_type->as_number;
 
   static std::vector<PyMethodDef> total_methods =
       concat_method_def(PyTensorObject_methods, PyTensorObject_extra_methods);
   type->tp_methods = total_methods.data();
 
+  type->tp_as_number = &PyTensorObject_as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
+  type->tp_richcompare = PyTensorObject_richcompare;
+  type->tp_hash = (hashfunc)_Py_HashPointer;
 
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
