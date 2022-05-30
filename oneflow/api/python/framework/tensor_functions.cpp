@@ -15,11 +15,15 @@ limitations under the License.
 */
 
 #include <Python.h>
+#include <abstract.h>
+#include <object.h>
+#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
 
@@ -30,6 +34,13 @@ namespace one {
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
 using functional::PyObjectPtr;
+
+static PyObject* concat_self(PyObject* self, PyObject* args) {
+  PyObjectPtr self_tuple(PyTuple_Pack(1, self));
+  PyObject* tuple = PySequence_Concat(self_tuple.get(), args);
+  CHECK_OR_THROW(tuple != NULL);
+  return tuple;
+}
 
 #define NB_UNARY_FUNC(func_name, bind_func)                  \
   static PyObject* func_name(PyObject* self) {               \
@@ -68,7 +79,7 @@ NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
 NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
 NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 
-PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   auto* result = functional::pow(NULL, tuple.get(), NULL);
@@ -217,7 +228,6 @@ UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 #define BINARY_METHOD(func_name, bind_func, name)                                           \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) {            \
     HANDLE_ERRORS                                                                           \
-    std::cout << "cpython" << std::endl;                                                    \
     PyObject* other = NULL;                                                                 \
     static const char* keywords[2] = {"other", NULL};                                       \
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:" name, const_cast<char**>(keywords), \
@@ -285,7 +295,6 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  std::cout << "cpython size" << std::endl;
   PyObject* idx = Py_None;
   static const char* keywords[2] = {"idx", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx)) {
@@ -300,19 +309,8 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
 
 static PyObject* PyTensorObject_argmax(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  std::cout << "cpython argmax" << std::endl;
-  PyObject* dim = Py_None;
-  PyObject* keepdim = Py_None;
-  static const char* keywords[3] = {"dim", "keepdim", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:argmax", const_cast<char**>(keywords), &dim,
-                                   &keepdim)) {
-    return NULL;
-  }
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
-  PyObject* result = functional::argmax(NULL, tuple.get(), dict.get());
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::argmax(NULL, concat_args.get(), kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -320,19 +318,8 @@ static PyObject* PyTensorObject_argmax(PyObject* self, PyObject* args, PyObject*
 
 static PyObject* PyTensorObject_argmin(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  std::cout << "cpython argmax" << std::endl;
-  PyObject* dim = Py_None;
-  PyObject* keepdim = Py_None;
-  static const char* keywords[3] = {"dim", "keepdim", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:argmin", const_cast<char**>(keywords), &dim,
-                                   &keepdim)) {
-    return NULL;
-  }
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
-  PyObject* result = functional::argmin(NULL, tuple.get(), dict.get());
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::argmin(NULL, concat_args.get(), kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -341,18 +328,8 @@ static PyObject* PyTensorObject_argmin(PyObject* self, PyObject* args, PyObject*
 static PyObject* PyTensorObject_amin(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   std::cout << "cpython amin" << std::endl;
-  PyObject* dim = Py_None;
-  PyObject* keepdim = Py_None;
-  static const char* keywords[3] = {"dim", "keepdim", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:amin", const_cast<char**>(keywords), &dim,
-                                   &keepdim)) {
-    return NULL;
-  }
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
-  PyObject* result = functional::amin(NULL, tuple.get(), dict.get());
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::amin(NULL, concat_args.get(), kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -360,14 +337,8 @@ static PyObject* PyTensorObject_amin(PyObject* self, PyObject* args, PyObject* k
 
 static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  std::cout << "cpython" << std::endl;
-  PyObject* dtype = NULL;
-  static const char* keywords[2] = {"dtype", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:cast", const_cast<char**>(keywords), &dtype)) {
-    return NULL;
-  }
-  PyObjectPtr tuple(PyTuple_Pack(2, self, dtype));
-  PyObject* result = functional::cast(NULL, tuple.get(), NULL);
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::cast(NULL, concat_args.get(), kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -404,18 +375,8 @@ static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObjec
 static PyObject* PyTensorObject_addcmul(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   std::cout << "cpython" << std::endl;
-  PyObject* tensor1 = NULL;
-  PyObject* tensor2 = NULL;
-  PyObject* value = PyFloat_FromDouble(1.0);
-  static const char* keywords[4] = {"tensor1", "tensor2", "value", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|$O:addcmul", const_cast<char**>(keywords),
-                                   &tensor1, &tensor2, &value)) {
-    return NULL;
-  }
-  PyObjectPtr tuple(PyTuple_Pack(3, self, tensor1, tensor2));
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "value", value) > -1);
-  PyObject* result = functional::addcmul(NULL, tuple.get(), dict.get());
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::addcmul(NULL, concat_args.get(), kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -424,18 +385,8 @@ static PyObject* PyTensorObject_addcmul(PyObject* self, PyObject* args, PyObject
 static PyObject* PyTensorObject_addcmul_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   std::cout << "cpython" << std::endl;
-  PyObject* tensor1 = NULL;
-  PyObject* tensor2 = NULL;
-  PyObject* value = PyFloat_FromDouble(1.0);
-  static const char* keywords[4] = {"tensor1", "tensor2", "value", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO|$O:addcmul_", const_cast<char**>(keywords),
-                                   &tensor1, &tensor2, &value)) {
-    return NULL;
-  }
-  PyObjectPtr tuple(PyTuple_Pack(3, self, tensor1, tensor2));
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "value", value) > -1);
-  PyObject* result = functional::addcmul_(NULL, tuple.get(), dict.get());
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::addcmul_(NULL, concat_args.get(), kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -444,15 +395,9 @@ static PyObject* PyTensorObject_addcmul_(PyObject* self, PyObject* args, PyObjec
 static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   std::cout << "cpython" << std::endl;
-  PyObject* other = NULL;
-  static const char* keywords[2] = {"other", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other)) {
-    return NULL;
-  }
-  PyObjectPtr tuple(PyTuple_Pack(2, self, other));
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
-  PyObject* result = functional::sub(NULL, tuple.get(), dict.get());
+  if (kwargs != NULL) { CHECK_OR_THROW(PyDict_SetItemString(kwargs, "inplace", Py_True) > -1); }
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::sub(NULL, concat_args.get(), kwargs);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
