@@ -34,7 +34,6 @@ void NpuOptionalEventRecordStatusQuerier::SetLaunched(DeviceCtx* device_ctx) {
   // No lock needed. This function will be called only one time.
   // In most cases, errors will be successfully detected by CHECK
   // even though run in different threads.
-  std::cout<<"NpuOptionalEventRecordStatusQuerier::SetLaunched()"<<std::endl;
   CHECK(!launched_);
   if (npu_event_) {
     aclrtSetDevice(npu_event_->device_id());

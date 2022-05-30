@@ -32,5 +32,7 @@ REGISTER_FLATTEN_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_FLATTEN_KERNEL(DeviceType::kCUDA)
 #endif
-
+#ifdef WITH_NPU
+REGISTER_FLATTEN_KERNEL(DeviceType::kNPU)
+#endif
 }  // namespace oneflow

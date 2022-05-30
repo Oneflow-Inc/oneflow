@@ -29,7 +29,6 @@ NpuDeviceManager::~NpuDeviceManager() = default;
 DeviceManagerRegistry* NpuDeviceManager::registry() const { return registry_; }
 
 std::shared_ptr<Device> NpuDeviceManager::GetDevice(size_t device_index) {
-  std::cout<<"NpuDeviceManager::GetDevice(size_t)"<<std::endl;
   std::lock_guard<std::mutex> lock(devices_mutex_);
   if (device_index < devices_.size() && devices_.at(device_index)) {
     return devices_.at(device_index);

@@ -157,7 +157,6 @@ void NpuAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
 }
 
 bool NpuAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
-  std::cout<<"NpuAllocator::AllocateBlockToExtendTotalMem()"<<std::endl;
   CHECK(IsAlignedSize(aligned_size));
 
   aclrtSetDevice(device_id_);
@@ -263,7 +262,6 @@ bool NpuAllocator::DeallocateFreeBlockForGarbageCollection() {
 }
 
 void NpuAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  std::cout<<"NpuAllocator::~Allocate()"<<std::endl;
   if (size == 0) {
     *mem_ptr = nullptr;
     return;

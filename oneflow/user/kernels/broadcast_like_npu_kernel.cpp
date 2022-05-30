@@ -29,41 +29,44 @@ class BroadcastLikeNpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+
     user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
-    std::vector<int32_t> shape;
-    for(size_t i = 0;i<in_tensor->shape().NumAxes();++i)
+    std::vector<int32_t> x_shape;
+    std::vector<int32_t> like_shape;
+    for(size_t i = 0;i<like_tensor->shape().NumAxes();++i)
     {
-        shape.push_back(in_tensor->shape().ptr()[i]);
+        x_shape.push_back(like_tensor->shape().ptr()[i]);
+        like_shape.push_back(like_tensor->shape().ptr()[i]);
     }
     for(auto& ax: axis)
     {
-        shape[ax] = like_tensor->shape().ptr()[ax];
+        x_shape[ax] = 1;
     }
-    VECTOR_PRINT(shape);
     void* tensor_ptr = nullptr;
     std::vector<int64_t> shape_desc;
-    shape_desc.push_back(shape.size());
+    shape_desc.push_back(like_shape.size());
     AclTensorWrapper wrap(tensor_ptr,
                           ACL_INT32,
                           shape_desc.size(),
                           shape_desc.data(),
                           ACL_FORMAT_ND,
                           mulVector(shape_desc)*sizeof(int32_t),
-                          shape.data());
+                          like_shape.data(),
+                          /*isConst*/true);
     NpuCommand npu_command;
     npu_command.OpName("BroadcastTo")
-               .Input(in_tensor,"channel_nd")
+               .Input(in_tensor,"channels_nd")
                .Input(wrap)
-               .Output(out_tensor,"channel_nd")
+               .Output(out_tensor,"channels_nd")
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(out_tensor);
-    std::cout<<"Execute Over"<<std::endl; 
+    //PrintResult(out_tensor);
+    //std::cout<<"BroadcastLikeNpuKernel Execute Over"<<std::endl; 
 
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

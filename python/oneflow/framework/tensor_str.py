@@ -346,12 +346,10 @@ def get_summarized_data(self):
 
 
 def _gen_tensor_str_template(tensor, is_meta):
-    print("111111111111111111111111111111111111111")
     is_meta = is_meta or tensor.is_lazy
     prefix = "tensor("
     indent = len(prefix)
     suffixes = []
-    print("22222222222222222222222222222222222")
     # tensor is local or global
     if tensor.is_global:
         suffixes.append(f"placement={str(tensor.placement)}")
@@ -364,29 +362,23 @@ def _gen_tensor_str_template(tensor, is_meta):
         raise RunTimeError("unknow device type")
     if tensor.is_lazy:
         suffixes.append("is_lazy='True'")
-    print("333333333333333333333333333333333333333")
     # tensor is empty, meta or normal
     if tensor.numel() == 0:
-        print("3.1")
         # Explicitly print the shape if it is not (0,), to match NumPy behavior
         if tensor.dim() != 1:
             suffixes.append("size=" + str(tuple(tensor.shape)))
         tensor_str = "[]"
     elif is_meta:
-        print("3.2")
         tensor_str = "..."
         suffixes.append("size=" + str(tuple(tensor.shape)))
     else:
-        print("3.3")
         tensor_str = _tensor_str(tensor, indent)
-    print("4444444444444444444444444444444444")
     suffixes.append("dtype=" + str(tensor.dtype))
     if tensor.grad_fn is not None:
         name = tensor.grad_fn.name()
         suffixes.append("grad_fn=<{}>".format(name))
     elif tensor.requires_grad:
         suffixes.append("requires_grad=True")
-    print("55555555555555555555555555555555")
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
 
 

@@ -22,6 +22,20 @@ namespace oneflow {
 
 namespace {
 
+int64_t CeilDiv(int64_t value, int64_t factor) {
+  int64_t value_num = 0;
+  if (factor == 0) {
+    return value_num;
+  }
+  if (value % factor == 0) {
+    value_num = value / factor;
+  } else {
+    value_num = value / factor + 1;
+  }
+
+  return value_num;
+}
+
 typedef std::function<Maybe<void>(user_op::InferContext* ctx)> TensorDescInferFn;
 typedef std::function<Maybe<void>(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp)>
     GenBackwardOpConfFn;
@@ -57,6 +71,16 @@ TensorDescInferFn MaxPoolMakeForwardTensorDescInferFn(const int32_t dim) {
     *indice_desc->mut_shape() = *y_desc->mut_shape();
     DataType* dtype = indice_desc->mut_data_type();
     *dtype = kInt64;
+    if(ctx->device_tag()=="npu")
+    {
+      Shape* indice_shape = indice_desc->mut_shape();
+      const int64_t BLOCKSIZE = 16;
+      int64_t maskH = kernel_size[0] * kernel_size[1];
+      int64_t maskW = (CeilDiv(indice_shape->At(2) * indice_shape->At(3), BLOCKSIZE) + 1);
+      DimVector indice_dim = {indice_shape->At(0), indice_shape->At(1), maskH, maskW, BLOCKSIZE};
+      Shape new_shape(indice_dim);
+      *indice_desc->mut_shape() = new_shape;
+    }//dck_caution_here
     return Maybe<void>::Ok();
   };
 }

@@ -98,10 +98,12 @@ class LogSoftmaxGradKernel final : public user_op::OpKernel, public user_op::Cud
 
 REGISTER_USER_KERNEL("log_softmax")
     .SetCreateFn<LogSoftmaxKernel>()
-    .SetIsMatchedHob(LogSoftmaxPrimitiveExists() == true);
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
+                      && LogSoftmaxPrimitiveExists() == true);
 
 REGISTER_USER_KERNEL("log_softmax_grad")
     .SetCreateFn<LogSoftmaxGradKernel>()
-    .SetIsMatchedHob(LogSoftmaxBackwardPrimitiveExists() == true);
+    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
+                      && LogSoftmaxBackwardPrimitiveExists() == true);
 
 }  // namespace oneflow

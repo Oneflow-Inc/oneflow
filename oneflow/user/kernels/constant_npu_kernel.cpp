@@ -13,48 +13,49 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
-
 namespace user_op {
 
 namespace {
 
-
-class OnesLikeNpuKernel final : public user_op::OpKernel {
+class ConstantNpuKernel final : public OpKernel {
  public:
-  OnesLikeNpuKernel() = default;
-  ~OnesLikeNpuKernel() = default;
+  ConstantNpuKernel() = default;
+  ~ConstantNpuKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("like", 0);
-    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    NpuCommand npu_command;
-    npu_command.OpName("OnesLike")
-               .Input(in,"channels_nd")
-               .Output(out,"channels_nd")
-               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
-               .Check();
-    npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    //PrintResult(out);
-    //std::cout<<"Oneslike Execute Over"<<std::endl; 
+    Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    bool is_floating_value = ctx->Attr<bool>("is_floating_value");
+    const int64_t elem_cnt = out_tensor->shape().elem_cnt();
+    const int64_t len = elem_cnt * sizeof(int64_t);
+    CHECK_GE(elem_cnt, 0);
+    if (elem_cnt == 0) { return; }
+    if(is_floating_value)
+    {
+        double value = ctx->Attr<double>("floating_value");
+        std::vector<double> values(elem_cnt,value);
+        OF_NPU_CHECK(aclrtMemcpy(out_tensor->mut_dptr(), len, values.data(), len, ACL_MEMCPY_HOST_TO_DEVICE));
+    }
+    else
+    {
+        int64_t value = ctx->Attr<int64_t>("integer_value");
+        std::vector<int64_t> values(elem_cnt, value);
+        OF_NPU_CHECK(aclrtMemcpy(out_tensor->mut_dptr(), len, values.data(), len, ACL_MEMCPY_HOST_TO_DEVICE));        
+    }
+    std::cout<<"ConstantNpuKernel Over"<<std::endl;
   }
-
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-
-REGISTER_USER_KERNEL("ones_like")
-    .SetCreateFn<OnesLikeNpuKernel>()
+REGISTER_USER_KERNEL("constant")
+    .SetCreateFn<ConstantNpuKernel>()
     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 
 }  // namespace
 
 }  // namespace user_op
-
 }  // namespace oneflow

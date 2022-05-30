@@ -53,21 +53,15 @@ class ConvNpuKernel final : public user_op::OpKernel {
     std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding_before");
     std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
     std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
-
+    std::string data_format = ctx->Attr<std::string>("data_format");
     std::vector<int64_t> strides_64 = {1, 1, stride[0], stride[1]};
     std::vector<int64_t> paddings_64 = { padding[0], padding[0], padding[1], padding[1]};
     std::vector<int64_t> dilations_64 = {1, 1, dilation[0], dilation[1]};
-    VECTOR_PRINT(strides_64);
-    VECTOR_PRINT(paddings_64);
-    VECTOR_PRINT(dilations_64);    
     NpuCommand npu_command;
     npu_command.OpName("Conv2D")
-              .Input(in, "channel_last")
-              .Input(weight, "channel_first")
-              .Output(out, "channel_last")
-              //.InputDesc(in_tensor_desc, "channel_last")
-              //.InputDesc(weight_tensor_desc, "channel_first")
-              //.OutputDesc(out_tensor_desc, "channel_last")
+              .Input(in, data_format)
+              .Input(weight, data_format)
+              .Output(out, data_format)
               .Attr("strides", strides_64)
               .Attr("pads", paddings_64)
               .Attr("dilations", dilations_64)
@@ -75,8 +69,8 @@ class ConvNpuKernel final : public user_op::OpKernel {
               .Check();
     npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(out);
-    std::cout<<"Execute Over"<<std::endl; 
+    //PrintResult(out);
+    //std::cout<<"Conv Execute Over"<<std::endl; 
   };
 };
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                                \
@@ -114,22 +108,50 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     //user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding_before");
+    std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
+    std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    std::string data_format = ctx->Attr<std::string>("data_format");
 
-    Memset<DeviceType::kNPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
-                             dx->shape().elem_cnt() * sizeof(T));
+    std::vector<int64_t> strides_64 = {1, 1, stride[0], stride[1]};
+    std::vector<int64_t> paddings_64 = { padding[0], padding[0], padding[1], padding[1]};
+    std::vector<int64_t> dilations_64 = {1, 1, dilation[0], dilation[1]};
+    
+    std::vector<int32_t> x_shape;
+    for(size_t i=0; i<dx->shape().NumAxes();++i)
+    {
+      x_shape.push_back(dx->shape().ptr()[i]);
+    }    
+    void* tensor_ptr = nullptr;
+    std::vector<int64_t> shape_desc;
+    shape_desc.push_back(x_shape.size());
+    AclTensorWrapper wrap(tensor_ptr,
+                      ACL_INT32,
+                      shape_desc.size(),
+                      shape_desc.data(),
+                      ACL_FORMAT_ND,
+                      mulVector(shape_desc)*sizeof(int32_t),
+                      x_shape.data(),
+                      /*isConst*/true);
+    int64_t groups = 1;
+    NpuCommand npu_command;
+    npu_command.OpName("Conv2DBackpropInput")
+               .Input(wrap)
+               .Input(filter, data_format, "filter")
+               .Input(dy, data_format, "out_backprop")
+               .Output(dx, data_format, "y")
+               .Attr("strides", strides_64)
+               .Attr("pads", paddings_64)
+               .Attr("dilations", dilations_64)
+               .Attr("groups", groups)
+               .Attr("data_format", data_format)
+               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+               .Check();
+    npu_command.Run();
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    PrintResult(dx);
+    std::cout<<"ConvDataGrad Execute Over"<<std::endl; 
 
-    std::cout<<"ConvNpuDataGradCpuKernel"<<std::endl;
-    // if (ctx->has_input("_add_to_output", 0)) {
-    //   const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-    //   CHECK_EQ(add_to_output->data_type(), dx->data_type());
-    //   CHECK_EQ(add_to_output->shape(), dx->shape());
-    //   std::unique_ptr<ep::primitive::Add> primitive =
-    //       ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
-    //                                                              add_to_output->data_type());
-    //   CHECK(primitive);
-    //   primitive->Launch(ctx->stream(), dx->dptr<T>(), add_to_output->dptr<T>(), dx->mut_dptr<T>(),
-    //                     add_to_output->shape().elem_cnt());
-    // }
   }
 };
 
@@ -152,6 +174,90 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
 
 REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, float);
 REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, float16);
+
+template<typename T>
+class ConvFilterGradNpuKernel final : public user_op::OpKernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradNpuKernel);
+  ConvFilterGradNpuKernel() = default;
+  ~ConvFilterGradNpuKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {           
+    user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
+    
+    //user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding_before");
+    std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
+    std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    std::string data_format = ctx->Attr<std::string>("data_format");
+
+    std::vector<int64_t> strides_64 = {1, 1, stride[0], stride[1]};
+    std::vector<int64_t> paddings_64 = { padding[0], padding[0], padding[1], padding[1]};
+    std::vector<int64_t> dilations_64 = {1, 1, dilation[0], dilation[1]};
+    std::vector<int32_t> filter_shape;
+    for(size_t i=0; i<filter_diff->shape().NumAxes();++i)
+    {
+      filter_shape.push_back(filter_diff->shape().ptr()[i]);
+    }
+    void* tensor_ptr = nullptr;
+    std::vector<int64_t> shape_desc;
+    shape_desc.push_back(filter_shape.size());
+    AclTensorWrapper wrap(tensor_ptr,
+                      ACL_INT32,
+                      shape_desc.size(),
+                      shape_desc.data(),
+                      ACL_FORMAT_ND,
+                      mulVector(shape_desc)*sizeof(int32_t),
+                      filter_shape.data(),
+                      /*isConst*/true);
+    int64_t groups = 1;
+
+    NpuCommand npu_command;
+    npu_command.OpName("Conv2DBackpropFilter")
+               .Input(x, data_format, "x")
+               .Input(wrap)
+               .Input(dy, data_format, "out_backprop")
+               .Output(filter_diff, data_format, "y")
+               .Attr("strides", strides_64)
+               .Attr("pads", paddings_64)
+               .Attr("dilations", dilations_64)
+               .Attr("groups", groups)
+               .Attr("data_format", data_format)
+               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+               .Check();
+    npu_command.Run();
+    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    PrintResult(filter_diff);
+    std::cout<<"ConvFilterGrad Execute Over"<<std::endl; 
+  }
+};
+#define REGISTER_CONV_FILTER_GRAD_KERNEL(op_name, dtype)                                        \
+  REGISTER_USER_KERNEL(#op_name)                                                                \
+      .SetCreateFn<ConvFilterGradNpuKernel<dtype>>()                                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                           \
+                       && (user_op::HobAttr<int32_t>("groups") == 1)                            \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
+      // .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
+      //   size_t tmp_buffer_size = 0;                                                             \
+      //   const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                     \
+      //   const auto& weight_diff_shape = ctx->OutputTensorDesc("filter_diff", 0)->shape();       \
+      //                                                                                           \
+      //   int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                  \
+      //   tmp_buffer_size +=                                                                      \
+      //       CalcElemNumOfColBuf(out_diff_shape, weight_diff_shape, idx_offset) * sizeof(dtype); \
+      //   return tmp_buffer_size;                                                                 \
+      // })
+
+REGISTER_CONV_FILTER_GRAD_KERNEL(conv_filter_grad, float);
+REGISTER_CONV_FILTER_GRAD_KERNEL(conv_filter_grad, double);
+REGISTER_CONV_FILTER_GRAD_KERNEL(conv_filter_grad, float16);
 } // namespace
 } // namespace oneflow
 

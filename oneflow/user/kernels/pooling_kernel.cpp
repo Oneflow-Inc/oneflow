@@ -350,7 +350,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-
+    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const auto* pooling_cache = dynamic_cast<const PoolingOpKernelCache*>(cache);
     const MaxPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 

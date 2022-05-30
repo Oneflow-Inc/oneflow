@@ -28,7 +28,6 @@ constexpr size_t kDefaultConstBufElementCount = 1024 * 1024;
 
 template<typename T>
 void CreateConstBuffer(void** buf, T value, size_t n) {
-  std::cout<<"CreateConstBuffer"<<std::endl;
   OF_NPU_CHECK(aclrtMalloc(buf, n * sizeof(T), ACL_MEM_MALLOC_HUGE_FIRST));
   std::vector<T> host(n, value);
   OF_NPU_CHECK(aclrtMemcpy(*buf, n * sizeof(T), host.data(), n * sizeof(T), ACL_MEMCPY_HOST_TO_DEVICE));

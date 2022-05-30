@@ -68,7 +68,6 @@ class MathBinaryBroadcastEpKernel final : public user_op::OpKernel,
         num_src1_dims = 1;
         src1_dims = &zero_dim;
       }
-
       primitive->Launch(ctx->stream(), num_src0_dims, src0_dims, x->dptr(), num_src1_dims,
                         src1_dims, y->dptr(), z->mut_dptr());
     } else {
@@ -91,7 +90,8 @@ auto MathBinaryBroadcastPrimitiveExists() {
 #define REGISTER_BINARY_BROADCAST_EP_KERNEL(math_type_pair, binary_op) \
   REGISTER_USER_KERNEL(math_type_pair)                                 \
       .SetCreateFn<MathBinaryBroadcastEpKernel<binary_op>>()           \
-      .SetIsMatchedHob(MathBinaryBroadcastPrimitiveExists<binary_op>() == true);
+      .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU) \
+                      && MathBinaryBroadcastPrimitiveExists<binary_op>() == true);
 
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_add", ep::primitive::BinaryOp::kAdd)
 REGISTER_BINARY_BROADCAST_EP_KERNEL("broadcast_sub", ep::primitive::BinaryOp::kSub)

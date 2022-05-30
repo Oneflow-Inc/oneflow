@@ -37,16 +37,14 @@ class ReluNpuKernel final : public user_op::OpKernel {
     if (elem_cnt != 0) {
       NpuCommand npu_command;
       npu_command.OpName("Relu")
-                 .Input(x, "channel_nd")
-                 .Output(y, "channel_nd")
-                 //.InputDesc(x_desc, "channel_nd")
-                 //.OutputDesc(y_desc, "channel_nd")
+                 .Input(x, "channels_nd")
+                 .Output(y, "channels_nd")
                  .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                  .Check();
       npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(y);
-    std::cout<<"Execute Over"<<std::endl;       
+    //PrintResult(y);
+    //std::cout<<"Relu Execute Over"<<std::endl;       
     } else {
       // For 0-d Tensor
       return;
@@ -56,5 +54,41 @@ class ReluNpuKernel final : public user_op::OpKernel {
 };
 
 REGISTER_USER_KERNEL("relu").SetCreateFn<ReluNpuKernel>().SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
+
+
+class ReluGradNpuKernel final : public user_op::OpKernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ReluGradNpuKernel);
+  ReluGradNpuKernel() = default;
+  ~ReluGradNpuKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+
+    user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const int64_t elem_cnt = y->shape().elem_cnt();
+    if (elem_cnt != 0) {
+      NpuCommand npu_command;
+      npu_command.OpName("ReluGrad")
+                 .Input(dy, "channel_nd")
+                 .Input(y, "channel_nd")
+                 .Output(dx, "channel_nd")
+                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+                 .Check();
+      npu_command.Run();
+      OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+      //PrintResult(dx);
+      //std::cout<<"Execute Over"<<std::endl;       
+    } else {
+      // For 0-d Tensor
+      return;
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+REGISTER_USER_KERNEL("relu_grad").SetCreateFn<ReluGradNpuKernel>().SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 
 }  // namespace oneflow

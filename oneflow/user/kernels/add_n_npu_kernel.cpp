@@ -44,19 +44,17 @@ class AddNNpuKernel : public OpKernel {
       user_op::Tensor* in_i = ctx->Tensor4ArgNameAndIndex("in", i);
       CHECK_EQ(in_i->shape().elem_cnt(), count);
       CHECK_EQ(in_i->data_type(), data_type);
-      npu_command.Input(in_i, "channel_last");
-      std::cout<<"in_i "<<i<<std::endl;
-      PrintResult(in_i); 
+      npu_command.Input(in_i, "channels_nd");
     }
     npu_command.OpName("AddV2")
                //.Attr("N", (int64_t)in_num)
-               .Output(out, "channel_last")
+               .Output(out, "channels_nd")
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(out);
-    std::cout<<"Execute Over"<<std::endl; 
+    //PrintResult(out);
+    //std::cout<<"AddN Execute Over"<<std::endl; 
   }
 };
 

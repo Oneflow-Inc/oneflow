@@ -36,7 +36,6 @@ constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
 
 NpuStream::NpuStream(NpuDevice* device)
     : device_index_(device->device_index()), device_(device) {
-  std::cout<<"NpuStream::NpuStream(NpuDevice* device)"<<std::endl;
   NpuCurrentDeviceGuard guard(device_index_);
   // npu_stream
   OF_NPU_CHECK(aclrtCreateStream(&npu_stream_));

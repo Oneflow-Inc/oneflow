@@ -44,6 +44,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 
+#include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 namespace one {
 namespace functional {

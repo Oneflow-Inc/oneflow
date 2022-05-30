@@ -15,8 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/core/ep/include/primitive/permute.h"
+#include "oneflow/user/ops/npu_command.h"
 namespace oneflow {
 
 namespace user_op {
@@ -30,26 +29,19 @@ bool IsIdentity(const std::vector<int32_t>& perm) {
 }
 }  // namespace
 
-template<typename Context>
-std::unique_ptr<ep::primitive::Permute> NewPermutePrimitive(Context* ctx) {
-  const int64_t num_dims = ctx->TensorDesc4ArgNameAndIndex("output", 0)->shape().NumAxes();
-  return ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(ctx->device_type(), num_dims);
-}
-
-class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport {
+class TransposeNpuKernel final : public OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(TransposeKernel);
-  TransposeKernel() = default;
-  ~TransposeKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(TransposeNpuKernel);
+  TransposeNpuKernel() = default;
+  ~TransposeNpuKernel() override = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    auto primitive = NewPermutePrimitive(ctx);
-    CHECK(primitive);
 
-    const Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("input", 0);
+
+    Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("input", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("output", 0);
-    const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
+    std::vector<int32_t> perm = ctx->Attr<std::vector<int32_t>>("perm");
     const ShapeView& in_shape = tensor_in->shape();
     DataType dtype = tensor_out->data_type();
     size_t num_dims = tensor_in->shape().NumAxes();
@@ -63,9 +55,22 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
         AutoMemcpy(ctx->stream(), tensor_out->mut_dptr(), tensor_in->dptr(),
                    elem_cnt * GetSizeOfDataType(dtype), tensor_out->mem_case(),
                    tensor_in->mem_case());
+        //std::cout<<"Transpose aclrtMemcpy over"<<std::endl;
       } else {
-        primitive->Launch(ctx->stream(), dtype, num_dims, src_dims, tensor_in->dptr(), perm.data(),
-                          tensor_out->mut_dptr());
+          std::vector<int64_t> shape_desc = {static_cast<int64_t>(perm.size())};
+          AclTensorWrapper wrap(nullptr, ACL_INT32, shape_desc.size(), shape_desc.data(), ACL_FORMAT_ND,
+                                  mulVector(perm)*sizeof(int32_t), perm.data());
+          NpuCommand npu_command;
+          npu_command.OpName("Transpose")
+                    .Input(tensor_in)
+                    .Input(wrap)
+                    .Output(tensor_out)
+                    .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+                    .Check();
+          npu_command.Run();
+          OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
+          //PrintResult(tensor_out);
+          //std::cout<<"TransposeNpuKernel Execute Over"<<std::endl;  
       }
 
     } else {
@@ -76,16 +81,10 @@ class TransposeKernel final : public OpKernel, public user_op::CudaGraphSupport 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-auto PermutePrimitiveExists() {
-  return hob::make_custom("PermutePrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-    return NewPermutePrimitive(&ctx).operator bool();
-  });
-}
 
 REGISTER_USER_KERNEL("transpose")
-    .SetCreateFn<TransposeKernel>()
-    .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kNPU)
-                        && PermutePrimitiveExists() == true);
+    .SetCreateFn<TransposeNpuKernel>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
 
 }  // namespace user_op
 }  // namespace oneflow

@@ -41,15 +41,15 @@ class CastNpuKernel final : public OpKernel{
     }
     NpuCommand npu_command;
     npu_command.OpName("Cast")
-               .Input(input_tensor, "channel_nd")
-               .Output(output_tensor, "channel_nd")
+               .Input(input_tensor, "channels_nd")
+               .Output(output_tensor, "channels_nd")
                .Attr("dst_type", (int64_t)dataTypeMap(output_tensor->data_type()))
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(output_tensor);
-    std::cout<<"Execute Over"<<std::endl;       
+    //PrintResult(output_tensor);
+    //std::cout<<"Cast Execute Over"<<std::endl;       
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

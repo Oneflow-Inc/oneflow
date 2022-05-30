@@ -47,9 +47,9 @@ class MatmulNpuKernel final : public user_op::OpKernel {
     int64_t offset_x = 0;
     NpuCommand npu_command;
     npu_command.OpName("MatMulV2")
-               .Input(a, "channel_nd")
-               .Input(b, "channel_nd")
-               .Output(out, "channel_nd")
+               .Input(a, "channels_nd")
+               .Input(b, "channels_nd")
+               .Output(out, "channels_nd")
                .Attr("transpose_x1", trans_a)
                .Attr("transpose_x2", trans_b)
                .Attr("offset_x", offset_x)
@@ -57,8 +57,8 @@ class MatmulNpuKernel final : public user_op::OpKernel {
                .Check();
     npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(out);
-    std::cout<<"Execute Over"<<std::endl; 
+    //PrintResult(out);
+    //std::cout<<"Matmul Execute Over"<<std::endl; 
   }
 };
 

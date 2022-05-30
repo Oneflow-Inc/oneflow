@@ -48,7 +48,6 @@ bool NpuCopyH2DStreamType::QueryInstructionStatusDone(
 
 void NpuCopyH2DStreamType::Compute(Instruction* instruction) const {
   
-  std::cout<<"NpuCopyH2DStreamType::Compute"<<std::endl;
   auto* stream = instruction->mut_stream();
   aclrtSetDevice(stream->device_id());
   {

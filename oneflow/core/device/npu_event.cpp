@@ -21,13 +21,11 @@ namespace oneflow {
 #ifdef WITH_NPU
 
 NpuEvent::NpuEvent(int device_id, unsigned int flags) : device_id_(device_id) {
-  std::cout<<"NpuEvent::NpuEvent"<<std::endl;
   NpuCurrentDeviceGuard guard(device_id_);
   OF_NPU_CHECK(aclrtCreateEventWithFlag(&event_, flags));
 }
 
 NpuEvent::~NpuEvent() {
-  std::cout<<"NpuEvent::~NpuEvent"<<std::endl;
   NpuCurrentDeviceGuard guard(device_id_);
   OF_NPU_CHECK(aclrtDestroyEvent(event_));
 }

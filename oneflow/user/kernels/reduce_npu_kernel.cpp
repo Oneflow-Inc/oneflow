@@ -38,9 +38,6 @@ class ReduceSumNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     //user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-    std::cout<<"ReduceSum "<<std::endl; 
-    for(auto& i:axis) std::cout<<i<<" ";
-    std::cout<<std::endl;
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
         Memset<DeviceType::kNPU>(
@@ -51,8 +48,8 @@ class ReduceSumNpuKernel final : public user_op::OpKernel {
     }
     NpuCommand npu_command;
     npu_command.OpName("Reduction")
-               .Input(input_tensor,"channel_last")
-               .Output(output_tensor,"channel_last")
+               .Input(input_tensor,"channels_nd")
+               .Output(output_tensor,"channels_nd")
                .Attr("operation",(int64_t)1)
                .Attr("axis",(int64_t)0)
                .Attr("coeff",(float)1.0)
@@ -60,8 +57,8 @@ class ReduceSumNpuKernel final : public user_op::OpKernel {
                .Check();
     npu_command.Run();
     OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(output_tensor);
-    std::cout<<"Execute Over"<<std::endl; 
+    //PrintResult(output_tensor);
+    //std::cout<<"ReduceSum Execute Over"<<std::endl; 
                
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

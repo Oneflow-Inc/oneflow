@@ -29,7 +29,8 @@ class LocalCallOpKernelInstructionType : public vm::InstructionType {
   void Compute(vm::Instruction* instruction) const override;
   void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
 
-  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
+  InstructionFuseType fuse_type() const override {  return kDisableInstructionFuse; }//dck_caution_here
+                                                    //return kEnableInstructionFuseAtAnyPosition; }
 
   std::string DebugOpTypeName(const vm::InstructionMsg& instr_msg) const override;
 

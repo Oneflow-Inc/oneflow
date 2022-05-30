@@ -41,18 +41,10 @@ class MemcpyImpl : public Memcpy {
     {
       aclRule = ACL_MEMCPY_DEVICE_TO_HOST;
     } 
-    std::cout<<"MemcpyImpl aclrtMemcpyAsync src "<<src
-                                                 <<" dst "<<dst
-                                                 <<" count "<<count
-                                                 <<" kind "<<kind
-                                                 <<" aclRule "<<aclRule
-                                                 <<std::endl;
-    // OF_NPU_CHECK(aclrtMemcpyAsync(dst, 
-    //                               count, 
-    //                               src, 
-    //                               count, 
-    //                               aclRule,
-    //                               npu_stream->npu_stream()));
+    else if(kind == MemcpyKind::kDtoD)
+    {
+      aclRule = ACL_MEMCPY_DEVICE_TO_DEVICE;
+    }
     OF_NPU_CHECK(aclrtMemcpy(dst, 
                                   count, 
                                   src, 

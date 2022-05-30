@@ -373,7 +373,6 @@ class NormalizationTrainCpuKernel final : public user_op::OpKernel {
     const auto* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
     auto* mean = ctx->Tensor4ArgNameAndIndex("mean", 0);
     auto* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
-
     user_op::Tensor* moving_mean = nullptr;
     user_op::Tensor* moving_variance = nullptr;
     if (ctx->has_input("moving_mean", 0)) {
@@ -569,7 +568,6 @@ class NormalizationGradCpuKernel final : public user_op::OpKernel {
         gamma_diff_ptr[channel] = dotp * inv_variance_c;
         beta_diff_ptr[channel] = sum_dy_out;
       }
-
     } else {  // TODO(Liang Depeng): NHWC format
     }
   }

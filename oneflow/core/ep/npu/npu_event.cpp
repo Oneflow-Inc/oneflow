@@ -26,7 +26,7 @@ NpuEvent::NpuEvent(unsigned int flags) : npu_event_{} {
   OF_NPU_CHECK(aclrtCreateEventWithFlag(&npu_event_, flags));
 }
 
-NpuEvent::~NpuEvent() { std::cout<<"NpuEvent::~NpuEvent()"<<std::endl;OF_NPU_CHECK(aclrtDestroyEvent(npu_event_)); }
+NpuEvent::~NpuEvent() { OF_NPU_CHECK(aclrtDestroyEvent(npu_event_)); }
 
 Maybe<bool> NpuEvent::QueryDone() {
   std::cout<<"NpuEvent::QueryDone()"<<std::endl;

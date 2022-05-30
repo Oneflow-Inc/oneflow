@@ -50,9 +50,10 @@ void WithHostBlobAndStreamSynchronizeEnv(ep::Stream* stream, Blob* blob,
 template<>
 void Memcpy<DeviceType::kNPU>(ep::Stream* stream, void* dst, const void* src, size_t sz) {
   if (dst == src) { return; }
-  std::cout<<"Memcpy aclrtMemcpyAsync src"<<src<<" dst "<<dst<<" sz "<<sz<<std::endl;
-  OF_NPU_CHECK(aclrtMemcpyAsync(dst, sz, src, sz, ACL_MEMCPY_HOST_TO_DEVICE,
-                                stream->As<ep::NpuStream>()->npu_stream()));//dck_caution_here 
+  std::cout<<"Memcpy aclrtMemcpy src"<<src<<" dst "<<dst<<" sz "<<sz<<std::endl;
+  // OF_NPU_CHECK(aclrtMemcpyAsync(dst, sz, src, sz, ACL_MEMCPY_HOST_TO_DEVICE,
+  //                               stream->As<ep::NpuStream>()->npu_stream()));//dck_caution_here 
+  OF_NPU_CHECK(aclrtMemcpy(dst, sz, src, sz, ACL_MEMCPY_HOST_TO_DEVICE));
                                 //ep::Stream : /home/HDD/dck/oneflow/python/oneflow/include/oneflow/core/ep/include/stream.h
 }
 
