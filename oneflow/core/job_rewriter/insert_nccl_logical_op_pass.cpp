@@ -422,7 +422,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                                                  logical_blob_desc);
       }
     }
-    if (!got_nccl && ParseBooleanFromEnv("LOGICAL_SR", false)) {
+    if (!got_nccl) {
       got_nccl = TryBuildNcclBy2DHierarchyOthers(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
                                                src_reduced_hierarchy, lbn, scope_symbol_id,
                                                logical_blob_desc);

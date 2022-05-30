@@ -27,7 +27,6 @@ import time
 import os
 
 os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
-os.environ["LOGICAL_SR"] = "1"
 
 
 def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
@@ -78,6 +77,9 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     y = graph(x)
     out_np = y.numpy()
     in_np = x.numpy()
+    #if flow.env.get_rank() == 0:
+    #    print("src sbp ", src_nd_sbp, ", dst sbp ", dst_nd_sbp)
+
     test_case.assertTrue(np.array_equal(out_np, in_np))
 
 

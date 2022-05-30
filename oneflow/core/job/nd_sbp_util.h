@@ -34,6 +34,7 @@ TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy, c
 TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
 
 bool NdSbpHasPartialParallel(const NdSbp& nd_sbp);
+bool NdSbpHasBroadcastParallel(const NdSbp& nd_sbp);
 
 
 void GetRankSendRecvIntersection(int64_t parallel_id, const std::shared_ptr<Shape>& parallel_hierarchy,

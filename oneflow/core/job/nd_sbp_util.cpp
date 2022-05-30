@@ -130,6 +130,15 @@ bool NdSbpHasPartialParallel(const NdSbp& nd_sbp) {
   return false;
 }
 
+bool NdSbpHasBroadcastParallel(const NdSbp& nd_sbp) {
+  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
+  FOR_RANGE(int64_t, i, 0, nd_sbp.sbp_parallel_size()) {
+    if (nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { return true; }
+  }
+  return false;
+}
+
+
 namespace {
 // Go through all the ranks while transfer between two nd sbps with no PartialSum under the same
 // placement.
