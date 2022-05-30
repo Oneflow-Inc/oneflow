@@ -66,7 +66,7 @@ Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
 Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
                                   const std::shared_ptr<Tensor>& x_cast) {
   CHECK_OR_RETURN(*x->dtype() == *x_cast->dtype())
-      << "RuntimeError: result type " << x_cast->dtype()->name()
+      << Error::RuntimeError() << "result type " << x_cast->dtype()->name()
       << " can't be cast to the desired output type " << x->dtype()->name();
   return Maybe<void>::Ok();
 }
@@ -90,7 +90,8 @@ bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
 
 Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
   CHECK_OR_RETURN(IsShapeCanExpandTo(shape, expand_shape))
-      << "Can not expand shape " << shape.ToString() << " to " << expand_shape.ToString();
+      << Error::RuntimeError() << "Can not expand shape " << shape.ToString() << " to "
+      << expand_shape.ToString();
   return Maybe<void>::Ok();
 }
 
@@ -162,13 +163,13 @@ Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shap
   Shape infered_shape = shape;
   if (need_infer_axis == -1) {
     CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-        << "\n Shape " << shape.ToString() << " is invalid for input shape "
-        << x->shape()->ToString();
+        << Error::RuntimeError() << "shape '" << shape.ToString()
+        << "' is invalid for input of size " << x->nelement();
   } else {
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-        << "\n Shape " << shape.ToString() << " is invalid for input shape "
-        << x->shape()->ToString();
+        << Error::RuntimeError() << "shape '" << shape.ToString()
+        << "' is invalid for input of size " << x->nelement();
   }
   return infered_shape;
 }

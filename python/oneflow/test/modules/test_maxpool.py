@@ -219,6 +219,29 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
         else:
             return y
 
+    @profile(torch.nn.functional.max_pool2d)
+    def profile_maxpool2d(test_case):
+        torch.nn.functional.max_pool2d(
+            torch.ones(1, 128, 28, 28), kernel_size=3, padding=1
+        )
+        torch.nn.functional.max_pool2d(
+            torch.ones(1, 128, 28, 28), kernel_size=3, stride=2, padding=1
+        )
+        torch.nn.functional.max_pool2d(
+            torch.ones(16, 128, 28, 28), kernel_size=3, padding=1
+        )
+        torch.nn.functional.max_pool2d(
+            torch.ones(16, 128, 28, 28), kernel_size=3, stride=2, padding=1
+        )
+        torch.nn.functional.max_pool2d(
+            torch.ones(16, 128, 28, 28),
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            ceil_mode=True,
+        )
+        # torch.nn.functional.max_pool2d(torch.ones(16, 128, 28, 28), kernel_size=3, dilation=2, padding=2)
+
 
 if __name__ == "__main__":
     unittest.main()

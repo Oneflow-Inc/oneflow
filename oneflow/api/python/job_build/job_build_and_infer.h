@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/record/record.pb.h"
 
@@ -37,6 +36,10 @@ inline Maybe<void> JobBuildAndInferCtx_Open(const std::string& job_name) {
 inline Maybe<std::string> JobBuildAndInferCtx_GetCurrentJobName() {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   return mgr->GetCurrentJobName();
+}
+
+inline Maybe<int64_t> JobBuildAndInferCtx_GetCurrentJobId() {
+  return JUST(GetCurInferCtx())->job_id();
 }
 
 inline Maybe<void> JobBuildAndInferCtx_Close() {

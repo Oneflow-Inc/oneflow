@@ -51,75 +51,29 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> PadGradOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-  const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-  FOR_RANGE(int64_t, i, 0, dy_tensor.shape().NumAxes()) {
-    if (padding_before[i] == 0 && padding_after[i] == 0) {
-      ctx->NewBuilder().Split(user_op::OpArg("dx", 0), i).Split(user_op::OpArg("dy", 0), i).Build();
-    }
-  }
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> PadGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& dy_shape = ctx->InputShape("dy", 0);
-  const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-  const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
-  CHECK_EQ_OR_RETURN(padding_before.size(), dy_shape.NumAxes());
-  CHECK_EQ_OR_RETURN(padding_after.size(), dy_shape.NumAxes());
-  DimVector dx_dim_vec(dy_shape.NumAxes());
-  FOR_RANGE(int64_t, i, 0, dy_shape.NumAxes()) {
-    dx_dim_vec[i] = dy_shape.At(i) - padding_before[i] - padding_after[i];
-  }
-  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> PadGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return PadGradOp::InferLogicalTensorDesc(ctx);
-}
-/*static*/ Maybe<void> PadGradOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-  return Maybe<void>::Ok();
-}
-
 REGISTER_USER_OP_GRAD("pad").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("x", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+    std::vector<int64_t> padding_before = op.attr<std::vector<int64_t>>("padding_before");
+    std::vector<int64_t> padding_after = op.attr<std::vector<int64_t>>("padding_after");
+    for (int i = 0; i < padding_before.size(); i++) {
+      padding_before[i] = -padding_before[i];
+      padding_after[i] = -padding_after[i];
+    }
     user_op::UserOpConfWrapper grad_op =
-        builder.Op("pad_grad")
-            .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-            .Output("dx")
-            .Attr("floating_constant_value", op.attr<double>("floating_constant_value"))
-            .Attr("integral_constant_value", op.attr<int64_t>("integral_constant_value"))
-            .Attr("padding_before", op.attr<std::vector<int64_t>>("padding_before"))
-            .Attr("padding_after", op.attr<std::vector<int64_t>>("padding_after"))
+        builder.Op("pad")
+            .Input("x", op.GetGradTensorWithOpOutput("y", 0))
+            .Output("y")
+            .Attr("floating_constant_value", static_cast<double>(0.0))
+            .Attr("integral_constant_value", static_cast<int64_t>(0))
+            .Attr("padding_before", padding_before)
+            .Attr("padding_after", padding_after)
             .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+    op.BindGradTensorWithOpInput(grad_op.output("y", 0), "x", 0);
     AddOp(grad_op);
   }
   return Maybe<void>::Ok();
 });
-
-REGISTER_USER_OP_GRAD("pad_grad")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("dy", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op =
-            builder.Op("pad")
-                .Input("x", op.GetGradTensorWithOpOutput("dx", 0))
-                .Output("y")
-                .Attr("floating_constant_value", op.attr<double>("floating_constant_value"))
-                .Attr("integral_constant_value", op.attr<int64_t>("integral_constant_value"))
-                .Attr("padding_before", op.attr<std::vector<int64_t>>("padding_before"))
-                .Attr("padding_after", op.attr<std::vector<int64_t>>("padding_after"))
-                .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("y", 0), "dy", 0);
-        AddOp(grad_op);
-      }
-      return Maybe<void>::Ok();
-    });
 
 }  // namespace oneflow
