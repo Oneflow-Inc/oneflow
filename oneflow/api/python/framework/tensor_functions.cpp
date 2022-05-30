@@ -296,8 +296,8 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx)) {
     return NULL;
   }
-  Shape shape = *PyTensor_Unpack(self)->shape();
-  PyObject* shape_object = TensorSize_NewFromShape(shape);
+  auto shape = PyTensor_Unpack(self)->shape();
+  PyObject* shape_object = TensorSize_NewFromShape(*shape);
   if (idx == NULL || idx == Py_None) return shape_object;
   return shape_object->ob_type->tp_as_mapping->mp_subscript(shape_object, idx);
   END_HANDLE_ERRORS
@@ -528,7 +528,7 @@ static PyObject* PyTensorObject_clip_(PyObject* self, PyObject* args, PyObject* 
   PyObject* min = Py_None;
   PyObject* max = Py_None;
   static const char* keywords[3] = {"min", "max", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:clip", const_cast<char**>(keywords), &min,
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO:clip_", const_cast<char**>(keywords), &min,
                                    &max)) {
     return NULL;
   }
