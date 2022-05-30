@@ -217,19 +217,54 @@ struct DotFwdParam {
   int32_t num_in;
 };
 
-template<typename T>
-struct Precision {
-  using type = T;
+template<typename T, typename AccType, int m, int n, int k, class ALayout, class BLayout>
+class Wmma {
+ public:
+  __device__ void LoadA(const T* ptr, int ldm) { nvcuda::wmma::load_matrix_sync(a_, ptr, ldm); }
+  __device__ void LoadB(const T* ptr, int ldm) { nvcuda::wmma::load_matrix_sync(b_, ptr, ldm); }
+  __device__ void Store(AccType* ptr, int ldm) {
+    nvcuda::wmma::store_matrix_sync(ptr, acc_, ldm, nvcuda::wmma::mem_row_major);
+  }
+  __device__ void Mma() { nvcuda::wmma::mma_sync(acc_, a_, b_, acc_); }
+  __device__ void InitAcc() { nvcuda::wmma::fill_fragment(acc_, 0.0f); }
   __device__ __forceinline__ T Convert(T src) { return src; }
+
+ private:
+  nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, m, n, k, T, ALayout> a_;
+  nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, m, n, k, T, BLayout> b_;
+  nvcuda::wmma::fragment<nvcuda::wmma::accumulator, m, n, k, AccType> acc_;
 };
 
+template<typename AccType, int m, int n, int k, class ALayout, class BLayout>
+class Wmma<float, AccType, m, n, k, ALayout, BLayout> {
+ public:
 #if __CUDA_ARCH__ >= 800
-template<>
-struct Precision<float> {
-  using type = nvcuda::wmma::precision::tf32;
-  __device__ float Convert(float src) { return nvcuda::wmma::__float_to_tf32(src); }
-};
+  __device__ void LoadA(const float* ptr, int ldm) { nvcuda::wmma::load_matrix_sync(a_, ptr, ldm); }
+  __device__ void LoadB(const float* ptr, int ldm) { nvcuda::wmma::load_matrix_sync(b_, ptr, ldm); }
+  __device__ void Mma() { nvcuda::wmma::mma_sync(acc_, a_, b_, acc_); }
+  __device__ __forceinline__ float Convert(float src) { return nvcuda::wmma::__float_to_tf32(src); }
+  __device__ void Store(AccType* ptr, int ldm) {
+    nvcuda::wmma::store_matrix_sync(ptr, acc_, ldm, nvcuda::wmma::mem_row_major);
+  }
+  __device__ void InitAcc() { nvcuda::wmma::fill_fragment(acc_, 0.0f); }
+#else
+  __device__ void LoadA(const float* ptr, int ldm) { __trap(); }
+  __device__ void LoadB(const float* ptr, int ldm) { __trap(); }
+  __device__ void Mma() { __trap(); }
+  __device__ __forceinline__ float Convert(float src) { return src; }
+  __device__ void Store(AccType* ptr, int ldm) { __trap(); }
+  __device__ void InitAcc() { __trap(); }
 #endif
+
+ private:
+#if __CUDA_ARCH__ >= 800
+  nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, m, n, k, nvcuda::wmma::precision::tf32, ALayout>
+      a_;
+  nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, m, n, k, nvcuda::wmma::precision::tf32, BLayout>
+      b_;
+  nvcuda::wmma::fragment<nvcuda::wmma::accumulator, m, n, k, AccType> acc_;
+#endif
+};
 
 constexpr int kUnrollDim = 2;
 template<typename T, typename ComputeType, int32_t max_in, int32_t pack_size, int mn_tile_dim,
@@ -240,8 +275,9 @@ __global__ void DotFeatureInteractionWmmaImpl(
     int in_shared_mem_cols_num_pack, int acc_shared_mem_cols, int acc_shared_mem_cols_num_pack,
     int offset, int output_padding, DotFwdParam<T, max_in> param) {
 #if __CUDA_ARCH__ >= 700
-  using PrecisionType = typename Precision<T>::type;
-  Precision<T> precision;
+  Wmma<T, ComputeType, mn_tile_dim, mn_tile_dim, k_tile_dim, nvcuda::wmma::row_major,
+       nvcuda::wmma::col_major>
+      wmma;
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
   T* buf = reinterpret_cast<T*>(shared_buf);
@@ -270,7 +306,7 @@ __global__ void DotFeatureInteractionWmmaImpl(
           int buf_row = param.dim_start_offset[i] + in_row;
           Pack<T, pack_size> pack_in_val = batch_in[in_row * vector_num_pack + col];
           for (int t = 0; t < pack_size; ++t) {
-            pack_in_val.elem[t] = precision.Convert(pack_in_val.elem[t]);
+            pack_in_val.elem[t] = wmma.Convert(pack_in_val.elem[t]);
           }
           buf_pack[buf_row * in_shared_mem_cols_num_pack + col] = pack_in_val;
         }
@@ -278,7 +314,7 @@ __global__ void DotFeatureInteractionWmmaImpl(
     }
   }
   Pack<T, pack_size> zero;
-  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = precision.Convert(0); }
+  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = wmma.Convert(0); }
   for (int row = threadIdx.y; row < param.features_dim; row += blockDim.y) {
     for (int col = vector_num_pack + threadIdx.x; col < padded_vector_num_pack; col += blockDim.x) {
       buf_pack[row * in_shared_mem_cols_num_pack + col] = zero;
@@ -289,27 +325,17 @@ __global__ void DotFeatureInteractionWmmaImpl(
     int blocks_row = blocks_id / m_num_tiles;
     int blocks_col = blocks_id - blocks_row * m_num_tiles;
     if (blocks_row >= blocks_col) {
-      nvcuda::wmma::fragment<nvcuda::wmma::accumulator, mn_tile_dim, mn_tile_dim, k_tile_dim,
-                             ComputeType>
-          acc;
-      nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, mn_tile_dim, mn_tile_dim, k_tile_dim,
-                             PrecisionType, nvcuda::wmma::row_major>
-          a;
-      nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, mn_tile_dim, mn_tile_dim, k_tile_dim,
-                             PrecisionType, nvcuda::wmma::col_major>
-          b;
-      nvcuda::wmma::fill_fragment(acc, 0.0f);
+      wmma.InitAcc();
       for (int step = 0; step < k_num_tiles; ++step) {
         T* tile_a_ptr = buf + blocks_row * mn_tile_dim * in_shared_mem_cols + step * k_tile_dim;
         T* tile_b_ptr = buf + blocks_col * mn_tile_dim * in_shared_mem_cols + step * k_tile_dim;
-        nvcuda::wmma::load_matrix_sync(a, tile_a_ptr, in_shared_mem_cols);
-        nvcuda::wmma::load_matrix_sync(b, tile_b_ptr, in_shared_mem_cols);
-        nvcuda::wmma::mma_sync(acc, a, b, acc);
+        wmma.LoadA(tile_a_ptr, in_shared_mem_cols);
+        wmma.LoadB(tile_b_ptr, in_shared_mem_cols);
+        wmma.Mma();
       }
       ComputeType* tile_ptr =
           acc_buf + blocks_row * mn_tile_dim * acc_shared_mem_cols + blocks_col * mn_tile_dim;
-      nvcuda::wmma::store_matrix_sync(tile_ptr, acc, acc_shared_mem_cols,
-                                      nvcuda::wmma::mem_row_major);
+      wmma.Store(tile_ptr, acc_shared_mem_cols);
     }
   }
   __syncthreads();
@@ -396,18 +422,6 @@ struct DotFeatureInteractionKernel {
   }
 };
 
-#if __CUDA_ARCH__ < 800
-template<int max_in, int32_t pack_size>
-struct DotFeatureInteractionKernel<float, max_in, pack_size> {
-  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
-                     int vector_size, int out_num_cols, bool self_interaction, int output_padding,
-                     const DotFwdParam<float, max_in>& param) {
-    UNIMPLEMENTED();
-    return false;
-  }
-};
-#endif
-
 template<typename T, int32_t max_in>
 struct DotBwdParam {
   const T* out_grad;
@@ -429,8 +443,9 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
     int in_shared_mem_cols_num_pack, int matrix_out_grad_shared_mem_cols, int offset,
     DotBwdParam<T, max_in> param) {
 #if __CUDA_ARCH__ >= 700
-  using PrecisionType = typename Precision<T>::type;
-  Precision<T> precision;
+  Wmma<T, ComputeType, mn_tile_dim, mn_tile_dim, k_tile_dim, nvcuda::wmma::row_major,
+       nvcuda::wmma::row_major>
+      wmma;
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   int warp_id = threadIdx.y;
   T* in_buf = reinterpret_cast<T*>(shared_buf);
@@ -474,7 +489,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
           grad_val = batch_interaction_out_grad[out_grad_col] * static_cast<T>(2);
         }
       }
-      matrix_out_grad_buf[i] = precision.Convert(grad_val);
+      matrix_out_grad_buf[i] = wmma.Convert(grad_val);
     }
   }
 
@@ -494,7 +509,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
           int buf_row = param.dim_start_offset[i] + in_row;
           Pack<T, pack_size> pack_in_val = batch_in[in_row * vector_num_pack + col];
           for (int t = 0; t < pack_size; ++t) {
-            pack_in_val.elem[t] = precision.Convert(pack_in_val.elem[t]);
+            pack_in_val.elem[t] = wmma.Convert(pack_in_val.elem[t]);
           }
           in_buf_pack[buf_row * in_shared_mem_cols_num_pack + col] = pack_in_val;
         }
@@ -502,7 +517,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
     }
   }
   Pack<T, pack_size> zero;
-  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = precision.Convert(0); }
+  for (int k = 0; k < pack_size; ++k) { zero.elem[k] = wmma.Convert(0); }
 #pragma unroll
   for (int row = features_dim + threadIdx.y; row < padded_num_rows; row += blockDim.y) {
     for (int col = threadIdx.x; col < padded_vector_num_pack; col += blockDim.x) {
@@ -519,16 +534,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
   for (int blocks_id = warp_id; blocks_id < m_num_tiles * n_num_tiles; blocks_id += blockDim.y) {
     int blocks_row = blocks_id / n_num_tiles;
     int blocks_col = blocks_id - blocks_row * n_num_tiles;
-    nvcuda::wmma::fragment<nvcuda::wmma::accumulator, mn_tile_dim, mn_tile_dim, k_tile_dim,
-                           ComputeType>
-        acc;
-    nvcuda::wmma::fragment<nvcuda::wmma::matrix_a, mn_tile_dim, mn_tile_dim, k_tile_dim,
-                           PrecisionType, nvcuda::wmma::row_major>
-        a;
-    nvcuda::wmma::fragment<nvcuda::wmma::matrix_b, mn_tile_dim, mn_tile_dim, k_tile_dim,
-                           PrecisionType, nvcuda::wmma::row_major>
-        b;
-    nvcuda::wmma::fill_fragment(acc, 0.0f);
+    wmma.InitAcc();
     for (int step = 0; step < k_num_tiles; ++step) {
       // blocks_row is a row_id, step is a col_id. blocks_col is b col_id,
       // step is b row_id.
@@ -536,13 +542,13 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
                       + blocks_row * mn_tile_dim * matrix_out_grad_shared_mem_cols
                       + step * k_tile_dim;
       T* tile_b_ptr = in_buf + step * k_tile_dim * in_shared_mem_cols + blocks_col * mn_tile_dim;
-      nvcuda::wmma::load_matrix_sync(a, tile_a_ptr, matrix_out_grad_shared_mem_cols);
-      nvcuda::wmma::load_matrix_sync(b, tile_b_ptr, in_shared_mem_cols);
-      nvcuda::wmma::mma_sync(acc, a, b, acc);
+      wmma.LoadA(tile_a_ptr, matrix_out_grad_shared_mem_cols);
+      wmma.LoadB(tile_b_ptr, in_shared_mem_cols);
+      wmma.Mma();
     }
     ComputeType* tile_ptr =
         in_grad_buf + blocks_row * mn_tile_dim * in_shared_mem_cols + blocks_col * mn_tile_dim;
-    nvcuda::wmma::store_matrix_sync(tile_ptr, acc, in_shared_mem_cols, nvcuda::wmma::mem_row_major);
+    wmma.Store(tile_ptr, in_shared_mem_cols);
   }
   __syncthreads();
 
@@ -624,18 +630,6 @@ struct DotFeatureInteractionBackwardKernel {
     return true;
   }
 };
-
-#if __CUDA_ARCH__ < 800
-template<int max_in, int32_t pack_size>
-struct DotFeatureInteractionBackwardKernel<float, max_in, pack_size> {
-  static bool Launch(ep::Stream* stream, int64_t batch_size, int concated_padded_dim,
-                     int vector_size, int out_num_cols, bool self_interaction,
-                     const DotBwdParam<float, max_in>& param) {
-    UNIMPLEMENTED();
-    return false;
-  }
-};
-#endif
 
 template<typename T, int max_in>
 bool DispatchFeatureInteractionDotPackSize(user_op::KernelComputeContext* ctx,
