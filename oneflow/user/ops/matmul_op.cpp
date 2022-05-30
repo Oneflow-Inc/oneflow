@@ -26,12 +26,22 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);
   const user_op::TensorDesc& b = ctx->InputTensorDesc("b", 0);
-  CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
-  CHECK_GE_OR_RETURN(a.shape().NumAxes(), 2);
+  CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes())
+      << Error::RuntimeError()
+      << "inconsistent number of axes, expected the two tensors to have the same number of axes, "
+      << "but got " << a.shape().NumAxes() << " and " << b.shape().NumAxes() << "axes repectively";
+  CHECK_GE_OR_RETURN(a.shape().NumAxes(), 2)
+      << Error::RuntimeError()
+      << "the input tensors need to have more than 2 axes";
   size_t num_axes = a.shape().NumAxes();
 
   if (num_axes > 2) {
-    for (int i = 0; i < num_axes - 2; ++i) { CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i)); }
+    for (int i = 0; i < num_axes - 2; ++i) { 
+      CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i))
+        << Error::RuntimeError()
+        << "inconsistent shape at axis " << i << ", expected the two tensors to have the same shape, "
+        << "but got " << a.shape().At(i) << " and " << b.shape().At(i) << " repectively";
+    }
   }
 
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
@@ -65,7 +75,10 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   const DataType& dtype = ctx->InputDType("a", 0);
-  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("b", 0), dtype)
+    << Error::RuntimeError()
+    << "inconsistent dtype, expected the two tensors to have the same shape, "
+    << "but got " << dtype << " and " << ctx->InputDType("b", 0) << " repectively.";
   if (ctx->has_input("_add_to_output", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputDType("_add_to_output", 0), dtype);
   }
@@ -242,8 +255,15 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
 
   // NOTE: support broadcast b to a for now
   // TODO(zwx): support broadcast a to b
-  CHECK_GT_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
-  CHECK_EQ_OR_RETURN(b.shape().NumAxes(), 2);
+  CHECK_GT_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes())
+      << Error::RuntimeError()
+      << "unqualified number of axes, expected the number of the first tensor to be greater than "
+      << "the second one, but got " << a.shape().NumAxes() << " and " << b.shape().NumAxes()
+      << "axes repectively";
+  CHECK_EQ_OR_RETURN(b.shape().NumAxes(), 2)
+      << Error::RuntimeError()
+      << "inconsistent number of axes, expected the second tesnot to have two axes, "
+      << "but got " << b.shape().NumAxes();
   // NOTE: don't support transpose_a for now
   CHECK_OR_RETURN(!transpose_a);
 
@@ -345,7 +365,10 @@ void GenBackwardOpConf4Matmul(const std::string& op_type_name, const user_op::Us
 
   CHECK_EQ_OR_RETURN(a.shape().NumAxes(), b.shape().NumAxes());
   for (int i = 0; i < a.shape().NumAxes() - 1; ++i) {
-    CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i));
+    CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i))
+        << Error::RuntimeError()
+        << "inconsistent shape at axis " << i << ", expected the two tensors to have the same shape, "
+        << "but got " << a.shape().At(i) << " and " << b.shape().At(i) << " repectively";
   }
 
   *out->mut_shape() =
