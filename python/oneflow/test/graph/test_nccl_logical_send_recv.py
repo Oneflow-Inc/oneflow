@@ -74,6 +74,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
             return y
 
     graph = TestNcclLogicalSendRecvGraph()
+    #graph.debug()
     y = graph(x)
     out_np = y.numpy()
     in_np = x.numpy()

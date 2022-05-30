@@ -499,15 +499,16 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   // If compute_cost==false + 2D sbp + same placment + nccl logical + not (p->b),
   // Use nccl logical send recv instead of middle node.
   // Note that in op sbp inference, cost of middle nodes is still used for the moment.
+#ifdef WITH_CUDA
   if (compute_cost == false &&
       producer_parallel_desc.hierarchy()->NumAxes() == 2 &&
       producer_parallel_desc == consumer_parallel_desc &&
-      //!(NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) &&
       Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
-    VLOG(3) << "Middle node insertion is skipped when src sbp is " << NdSbpToString(sbp_producer) << " dst sbp is"
-      << NdSbpToString(sbp_consumer);
+    VLOG(3) << "Middle node insertion is skipped when src sbp is " << NdSbpToString(sbp_producer) << " dst sbp is "
+            << NdSbpToString(sbp_consumer) << ", because nccl logical send/recv can handle this.";
     return Maybe<void>::Ok();
   }
+#endif  // WITH_CUDA
 
   // Dealing with 1D sbp to 1D sbp
   // Specifically, S -> P.
