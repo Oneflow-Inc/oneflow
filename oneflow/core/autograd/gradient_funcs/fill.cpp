@@ -23,7 +23,6 @@ namespace oneflow {
 namespace one {
 
 struct FillCaptureState : public AutoGradCaptureState {
-  bool requires_grad = false;
   bool in_requires_grad = false;
   bool value_requires_grad = false;
 };
@@ -49,7 +48,7 @@ Maybe<void> Fill::Init(const OpExpr& op) {
 
 Maybe<void> Fill::Capture(FillCaptureState* ctx, const TensorTuple& inputs,
                           const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->requires_grad = inputs.at(0)->requires_grad();
+  ctx->in_requires_grad = inputs.at(0)->requires_grad();
   return Maybe<void>::Ok();
 }
 
@@ -57,7 +56,7 @@ Maybe<void> Fill::Apply(const FillCaptureState* ctx, const TensorTuple& out_grad
                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  if (ctx->requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads.at(0), 0)); }
+  if (ctx->in_requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads.at(0), 0)); }
   return Maybe<void>::Ok();
 }
 
