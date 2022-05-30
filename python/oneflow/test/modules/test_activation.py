@@ -61,8 +61,8 @@ class TestReLUModule(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.relu)
     def profile_relu(test_case):
-        torch.nn.functional.relu(torch.ones(1, 32, 64, 64))
-        torch.nn.functional.relu(torch.ones(16, 32, 64, 64))
+        torch.nn.functional.relu(torch.ones(1, 128, 28, 28))
+        torch.nn.functional.relu(torch.ones(16, 128, 28, 28))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -99,8 +99,8 @@ class TestReLU6Module(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.relu6)
     def profile_relu6(test_case):
-        torch.nn.functional.relu6(torch.ones(1, 32, 64, 64))
-        torch.nn.functional.relu6(torch.ones(16, 32, 64, 64))
+        torch.nn.functional.relu6(torch.ones(1, 128, 28, 28))
+        torch.nn.functional.relu6(torch.ones(16, 128, 28, 28))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -158,8 +158,8 @@ class TestTanh(flow.unittest.TestCase):
 
     @profile(torch.tanh)
     def profile_tanh(test_case):
-        torch.tanh(torch.ones(1, 32, 64, 64))
-        torch.tanh(torch.ones(16, 32, 64, 64))
+        torch.tanh(torch.ones(1, 128, 28, 28))
+        torch.tanh(torch.ones(16, 128, 28, 28))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -313,8 +313,8 @@ class TestSigmoidModule(flow.unittest.TestCase):
 
     @profile(torch.sigmoid)
     def profile_sigmoid(test_case):
-        torch.sigmoid(torch.ones(1, 32, 64, 64))
-        torch.sigmoid(torch.ones(16, 32, 64, 64))
+        torch.sigmoid(torch.ones(1, 128, 28, 28))
+        torch.sigmoid(torch.ones(16, 128, 28, 28))
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -429,8 +429,8 @@ class TestSoftmax(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.softmax)
     def profile_softmax(test_case):
-        torch.nn.functional.softmax(torch.ones(1, 32, 64, 64))
-        torch.nn.functional.softmax(torch.ones(16, 32, 64, 64))
+        torch.nn.functional.softmax(torch.ones(1, 128, 28, 28))
+        torch.nn.functional.softmax(torch.ones(16, 128, 28, 28))
 
 
 @flow.unittest.skip_unless_1n1d()

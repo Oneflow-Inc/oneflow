@@ -93,7 +93,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
 // NOTE: if this op not support stride, then need to tensor->contiguous()
 #define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
   TensorTuple tmp_inputs;                                                                   \
-  if (!JUST(op_expr.SupportNonContiguous())) {                                              \
+  if (!LazyMode::is_enabled() && !JUST(op_expr.SupportNonContiguous())) {                   \
     tmp_inputs.resize(inputs.size());                                                       \
     for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
     tensor_tuple_ptr = &tmp_inputs;                                                         \
