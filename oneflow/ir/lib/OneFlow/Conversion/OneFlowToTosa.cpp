@@ -149,15 +149,31 @@ struct ReluOpLowering final : public OpConversionPattern<ReluOp> {
   }
 };
 
+struct BroadcastAddOpLowering final : public OpConversionPattern<BroadcastAddOp> {
+ public:
+  using OpConversionPattern<BroadcastAddOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(BroadcastAddOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<tosa::AddOp>(op, op.z().getType(), op.x(), op.y());
+    return success();
+  }
+};
+
+struct Add2OpLowering final : public OpConversionPattern<Add2Op> {
+ public:
+  using OpConversionPattern<Add2Op>::OpConversionPattern;
+  LogicalResult matchAndRewrite(Add2Op op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    rewriter.replaceOpWithNewOp<tosa::AddOp>(op, op.out().getType(), op.in0(), op.in1());
+    return success();
+  }
+};
+
 struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
  public:
   using OpConversionPattern<Conv2DOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(Conv2DOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    /* static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, Type
-     * outputType, Value input, Value weight, Value bias, ArrayAttr pad, ArrayAttr stride, ArrayAttr
-     * dilation); */
-
     auto get_pair_int64_from_array = [](ArrayAttr arr) -> std::pair<int64_t, int64_t> {
       return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
@@ -203,6 +219,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
   patterns.insert<ReluOpLowering, Conv2DOpLowering>(&getContext());
+  patterns.insert<Add2OpLowering, BroadcastAddOpLowering>(&getContext());
   patterns.insert<JobLowering, ReturnOpLowering>(&getContext());
   patterns.insert<InputOpLowering, OutputOpLowering>(&getContext());
 

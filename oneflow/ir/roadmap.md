@@ -14,9 +14,9 @@
         - tosa::Conv2DOp
     - [简单][未做] FlattenOp
         - tosa::ReshapeOp
-    - [简单][未做] Add2Op
+    - [简单][已做] Add2Op
         - tosa::AddOp
-    - [简单][未做] BroadcastAddOp
+    - [简单][已做] BroadcastAddOp
         - tosa::AddOp
     - [简单][未做] MaxPool2DOp
         - MaxPool2DOp
