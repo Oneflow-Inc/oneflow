@@ -59,8 +59,8 @@ class ProfResult:
 
 WARMUP_NUM = int(os.getenv("ONEFLOW_PROFILE_WARMUP_NUM", 10))
 RUN_NUM = int(os.getenv("ONEFLOW_PROFILE_RUN_NUM", 1000))
-PRINT_PROF_RESULT = flow.support.env_var_util.parse_boolean_from_env(
-    "ONEFLOW_PROFILE_PRINT_RESULT", True
+PROF_VERBOSE = flow.support.env_var_util.parse_boolean_from_env(
+    "ONEFLOW_PROFILE_VERBOSE", False
 )
 END_TO_END = "end-to-end"
 
@@ -93,7 +93,7 @@ def run_torch(
     for _ in range(WARMUP_NUM):
         op(*args, **kwargs)
 
-    if PRINT_PROF_RESULT:
+    if PROF_VERBOSE:
         print(
             f'PyTorch ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):'
         )
@@ -102,7 +102,7 @@ def run_torch(
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
-    if PRINT_PROF_RESULT:
+    if PROF_VERBOSE:
         print(prof.key_averages().table(row_limit=10))
     return ProfResult(
         prof,
@@ -144,7 +144,7 @@ def run_flow(
     for _ in range(WARMUP_NUM):
         op(*args, **kwargs)
 
-    if PRINT_PROF_RESULT:
+    if PROF_VERBOSE:
         print(
             f'OneFlow ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):'
         )
@@ -153,7 +153,7 @@ def run_flow(
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
 
-    if PRINT_PROF_RESULT:
+    if PROF_VERBOSE:
         print(prof.key_averages())
     return ProfResult(
         prof,
