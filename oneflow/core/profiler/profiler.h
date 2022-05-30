@@ -22,11 +22,17 @@ namespace oneflow {
 
 namespace profiler {
 
-void NameThisHostThread(const std::string& name);
-
 void RangePush(const std::string& name);
 
 void RangePop();
+
+uint64_t RangeStart(const std::string& name);
+
+void RangeEnd(uint64_t id);
+
+void Mark(const std::string& name);
+
+void NameThisHostThread(const std::string& name);
 
 void LogHostMemoryUsage(const std::string& name);
 

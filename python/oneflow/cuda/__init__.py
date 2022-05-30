@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.cuda.type_tensor import *
+from oneflow.cuda.nvtx import *
 
 
 def is_available() -> bool:
