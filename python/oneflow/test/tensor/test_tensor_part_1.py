@@ -1039,12 +1039,20 @@ class TestTensor(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
-        y = x.reshape(-1,)
+        y = x.reshape(-1)
         return y
+
+    @autotest(n=5)
+    def test_reshape_as_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device)
+        y = x.reshape(-1)
+        z = y.reshape_as(other=x)
+        return z
 
     @autotest(check_graph=True)
     def test_tensor_squeeze_with_random_data(test_case):

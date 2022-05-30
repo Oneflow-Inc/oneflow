@@ -5,6 +5,7 @@ from datetime import date
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--cuda", type=str, required=False)
+parser.add_argument("--cmake_project_binary_dir", type=str, required=False)
 parser.add_argument("--src", type=str, required=False)
 parser.add_argument("--out", type=str, required=False)
 args = parser.parse_args()
@@ -16,13 +17,17 @@ version = f"0.8.0"
 assert (
     os.getenv("ONEFLOW_RELEASE_VERSION") != ""
 ), "ONEFLOW_RELEASE_VERSION should be either None or a valid string"
+is_release = False
+is_nightly = False
 if os.getenv("ONEFLOW_RELEASE_VERSION"):
     release_version = os.getenv("ONEFLOW_RELEASE_VERSION")
     version = f"{release_version}"
+    is_release = True
 elif os.getenv("ONEFLOW_RELEASE_NIGHTLY"):
     today = date.today()
     date_str = today.strftime("%Y%m%d")
     version += f".dev{date_str}"
+    is_nightly = True
 
 # append compute_platform
 compute_platform = ""
@@ -58,3 +63,5 @@ assert args.out
 with open(args.out, "w+") as f:
     f.write(f'__version__ = "{version}"\n')
     f.write(f'__git_commit__ = "{git_hash}"\n')
+    if not (is_nightly or is_release):
+        f.write(f'__cmake_project_binary_dir__ = "{args.cmake_project_binary_dir}"\n')
