@@ -60,7 +60,11 @@ namespace oneflow {
 /* static */ Maybe<void> FillTensorOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-    ctx->NewBuilder().Split(user_op::OpArg("in", 0), i).Split(user_op::OpArg("out", 0), i).Build();
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("in", 0), i)
+        .Broadcast(user_op::OpArg("value", 0))
+        .Split(user_op::OpArg("out", 0), i)
+        .Build();
   }
   return Maybe<void>::Ok();
 }
@@ -78,6 +82,7 @@ REGISTER_USER_OP_GRAD("fill_").SetGenBackwardOpConfFn([](const user_op::UserOpWr
                                              .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                                              .Output("out")
                                              .Attr<double>("floating_value", 0.)
+                                             .Attr<bool>("is_floating_value", true)
                                              .Build();
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
     AddOp(grad_op);
@@ -95,6 +100,7 @@ REGISTER_USER_OP_GRAD("fill_tensor_")
                 .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("out")
                 .Attr<double>("floating_value", 0.)
+                .Attr<bool>("is_floating_value", true)
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
         AddOp(grad_op);
