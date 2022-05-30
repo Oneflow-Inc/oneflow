@@ -131,7 +131,6 @@ void ConstructSliceParamsSmall(const SliceContext& ctx, const std::vector<int64_
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
-  std::memset(slice_param, 0, sizeof(SliceParams));
   slice_param->ndim = ndim;
   FOR_RANGE(int, i, 0, slice_param->ndim) {
     const int64_t start_in_full_large = start_vec.at(i);
