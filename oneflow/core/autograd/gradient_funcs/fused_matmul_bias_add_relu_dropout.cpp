@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11060
 
 namespace oneflow {
 
@@ -202,4 +202,4 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("fused_matmul_bias_add_relu_dropout", FusedMatmul
 }  // namespace one
 
 }  // namespace oneflow
-#endif  // CUDA_VERSION >= 11040
+#endif  // CUDA_VERSION >= 11060
