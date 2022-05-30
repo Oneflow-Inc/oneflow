@@ -1896,9 +1896,9 @@ class TestConv2d(flow.unittest.TestCase):
 
     @profile(torch.nn.functional.conv2d)
     def profile_conv2d(test_case):
-        input = torch.ones(8, 16, 3, 3)
-        weight = torch.ones(16, 16, 3, 3)
-        bias = torch.ones(16)
+        input = torch.ones(8, 128, 28, 28)
+        weight = torch.ones(128, 128, 3, 3)
+        bias = torch.ones(128)
         torch.nn.functional.conv2d(input, weight, padding=1)
         torch.nn.functional.conv2d(input, weight, padding=1, stride=2)
         torch.nn.functional.conv2d(input, weight, bias=bias, padding=1)
