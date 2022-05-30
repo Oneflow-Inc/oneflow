@@ -58,7 +58,7 @@ class _InstanceNorm(_NormBase):
 
 class InstanceNorm1d(_InstanceNorm):
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm1d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.InstanceNorm1d.html.
 
     Applies Instance Normalization over a 3D input (a mini-batch of 1D
     inputs with optional additional channel dimension) as described in the paper
@@ -144,7 +144,7 @@ class InstanceNorm1d(_InstanceNorm):
 
 class InstanceNorm2d(_InstanceNorm):
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm2d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.InstanceNorm2d.html.
 
     Applies Instance Normalization over a 4D input (a mini-batch of 2D inputs
     with additional channel dimension) as described in the paper
@@ -226,7 +226,7 @@ class InstanceNorm2d(_InstanceNorm):
 
 class InstanceNorm3d(_InstanceNorm):
     """The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm3d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.InstanceNorm3d.html.
 
     Applies Instance Normalization over a 5D input (a mini-batch of 3D inputs
     with additional channel dimension) as described in the paper

@@ -66,6 +66,7 @@ from oneflow.nn.modules.conv import (
     ConvTranspose2d,
     ConvTranspose3d,
 )
+from oneflow.nn.modules.distance import CosineSimilarity
 from oneflow.nn.modules.min_max_observer import MinMaxObserver
 from oneflow.nn.modules.moving_average_min_max_observer import (
     MovingAverageMinMaxObserver,
@@ -150,4 +151,11 @@ from . import functional
 
 from . import parallel
 
-from oneflow.nn.modules.rnn import RNN, LSTM, GRU
+from oneflow.nn.modules.rnn import (
+    RNNCell,
+    LSTMCell,
+    GRUCell,
+    RNN,
+    LSTM,
+    GRU,
+)

@@ -13,6 +13,7 @@ def OneFlow_Dialect : Dialect {
     let dependentDialects = [
         "func::FuncDialect"
     ];
+    let hasConstantMaterializer = 1;
 }
 
 #endif // ONEFLOW_DIALECT

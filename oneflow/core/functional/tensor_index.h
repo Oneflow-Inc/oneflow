@@ -47,6 +47,11 @@ class Slice {
   int64_t start() const { return start_; }
   int64_t end() const { return end_; }
   int64_t step() const { return step_; }
+  std::string ToString() const {
+    std::stringstream ss;
+    ss << "[" << start_ << ":" << end_ << ":" << step_ << "]\n";
+    return ss.str();
+  }
 
  private:
   int64_t start_;
@@ -114,6 +119,12 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
 
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices);
+
+Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
+                                  const TensorIndex& index);
+
+Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
+                                               TensorTuple& tensor_indices);
 
 }  // namespace functional
 }  // namespace one

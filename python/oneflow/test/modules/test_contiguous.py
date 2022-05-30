@@ -57,9 +57,9 @@ class TestContiguous(flow.unittest.TestCase):
         shuffle(permute_list)
         x = random_tensor(
             ndim=ndim,
-            dim0=random(1, 32).to(int),
-            dim1=random(1, 59).to(int),
-            dim2=random(1, 65).to(int),
+            dim0=random(1, 7).to(int),
+            dim1=random(1, 15).to(int),
+            dim2=random(1, 9).to(int),
         ).to(device)
         y = x.permute(permute_list)
         z = y.contiguous()
@@ -73,14 +73,43 @@ class TestContiguous(flow.unittest.TestCase):
         shuffle(permute_list)
         x = random_tensor(
             ndim=ndim,
-            dim0=random(1, 32).to(int),
-            dim1=random(1, 59).to(int),
-            dim2=random(1, 65).to(int),
-            dim3=random(1, 127).to(int),
+            dim0=random(1, 7).to(int),
+            dim1=random(1, 15).to(int),
+            dim2=random(1, 9).to(int),
+            dim3=random(1, 19).to(int),
         ).to(device)
         y = x.permute(permute_list)
         z = y.contiguous()
         return z
+
+
+def _tets_inplace_contiguous(test_case, device):
+    arr = np.random.randn(4, 5, 6, 7).astype(np.float32)
+    input = flow.tensor(arr, device=device)
+    x = input.permute(0, 3, 2, 1)  # x is non-contiguous tensor
+    test_case.assertTrue(x.is_contiguous() == False)
+    # y1 is normal version of tensor contiguous
+    y1 = x.contiguous()
+    # y2 is inplace version of tensor contiguous
+    y2 = x.contiguous_()
+    test_case.assertTrue(np.array_equal(y1.cpu().numpy(), y2.cpu().numpy()))
+    test_case.assertTrue(id(x) != id(y1))
+    test_case.assertTrue(id(x) == id(y2))
+    test_case.assertTrue(x.is_contiguous() == True)
+    test_case.assertTrue(y1.is_contiguous() == True)
+    test_case.assertTrue(y2.is_contiguous() == True)
+
+
+@flow.unittest.skip_unless_1n1d()
+class TestInplaceContiguous(flow.unittest.TestCase):
+    def test_inplace_contiguous(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _tets_inplace_contiguous,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":

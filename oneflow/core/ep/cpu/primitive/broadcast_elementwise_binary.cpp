@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
+#include "oneflow/core/ep/common/primitive/util.h"
+#include "oneflow/core/ep/common/onednn.h"
 
 namespace oneflow {
 
@@ -167,7 +169,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
               const void* src1, void* dst) override {
     T scalar_val = GetValue<T>(src0);
     const int64_t src0_dims = 1;
-    Launch(stream, num_src1_dims, src1_dims, src1, 1, &src0_dims, &scalar_val, dst);
+    Launch(stream, 1, &src0_dims, &scalar_val, num_src1_dims, src1_dims, src1, dst);
   }
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               Scalar src1, void* dst) override {
@@ -178,77 +180,72 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    CpuStream* cpu_stream = stream->As<CpuStream>();
-    size_t num_threads = cpu_stream->device()->GetNumThreads();
-    CpuNumThreadsGuard guard(num_threads);
+    stream->As<CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
+                                                           dnnl::stream* onednn_stream) {
+      // onednn do not optimize for 3d tensor in our experiments, so expand it
+      // to 4d if needed.
+      // Note that only onednn "internal" dims will be affected, the shape
+      // of oneflow tensor (including the output tensor) will remain unchanged.
+      size_t num_dims = std::max(std::max(num_src0_dims, num_src1_dims), static_cast<size_t>(4));
+      dnnl::memory::dims src_0_dims(num_dims);
+      dnnl::memory::dims src_1_dims(num_dims);
+      dnnl::memory::dims dst_dims(num_dims);
+      const void* onednn_src0 = nullptr;
+      const void* onednn_src1 = nullptr;
 
-    dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
-    dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-    // onednn do not optimize for 3d tensor in our experiments, so expand it
-    // to 4d if needed.
-    // Note that only onednn "internal" dims will be affected, the shape
-    // of oneflow tensor (including the output tensor) will remain unchanged.
-    size_t num_dims = std::max(std::max(num_src0_dims, num_src1_dims), static_cast<size_t>(4));
-    dnnl::memory::dims src_0_dims(num_dims);
-    dnnl::memory::dims src_1_dims(num_dims);
-    dnnl::memory::dims dst_dims(num_dims);
-    const void* onednn_src0 = nullptr;
-    const void* onednn_src1 = nullptr;
+      // OneDNN inplace operations only support src_0
+      if (src1 == dst) {
+        onednn_src0 = src1;
+        onednn_src1 = src0;
+        OneDnnBroadcastDims(&src_0_dims, num_src1_dims, src1_dims, &src_1_dims, num_src0_dims,
+                            src0_dims, dst_dims);
+      } else {
+        onednn_src0 = src0;
+        onednn_src1 = src1;
+        OneDnnBroadcastDims(&src_0_dims, num_src0_dims, src0_dims, &src_1_dims, num_src1_dims,
+                            src1_dims, dst_dims);
+      }
 
-    // OneDNN inplace operations only support src_0
-    if (src1 == dst) {
-      onednn_src0 = src1;
-      onednn_src1 = src0;
-      OneDnnBroadcastDims(&src_0_dims, num_src1_dims, src1_dims, &src_1_dims, num_src0_dims,
-                          src0_dims, dst_dims);
-    } else {
-      onednn_src0 = src0;
-      onednn_src1 = src1;
-      OneDnnBroadcastDims(&src_0_dims, num_src0_dims, src0_dims, &src_1_dims, num_src1_dims,
-                          src1_dims, dst_dims);
-    }
+      CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1,
+                   dst_dims.data(), dst);
 
-    CheckInplace(num_dims, src_0_dims.data(), onednn_src0, src_1_dims.data(), onednn_src1,
-                 dst_dims.data(), dst);
+      auto src_0_md = dnnl::memory::desc(
+          src_0_dims, src_onednn,
+          static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
+      auto src_1_md = dnnl::memory::desc(
+          src_1_dims, src_onednn,
+          static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
+      auto dst_md = dnnl::memory::desc(
+          dst_dims, dst_onednn,
+          static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
 
-    auto src_0_md =
-        dnnl::memory::desc(src_0_dims, src_onednn,
-                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
-    auto src_1_md =
-        dnnl::memory::desc(src_1_dims, src_onednn,
-                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
-    auto dst_md =
-        dnnl::memory::desc(dst_dims, dst_onednn,
-                           static_cast<dnnl::memory::format_tag>(OnednnFormatTagMap[num_dims - 1]));
+      auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)onednn_src0);
+      auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)onednn_src1);
+      auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst);
 
-    auto src_0_mem = dnnl::memory(src_0_md, *onednn_engine, (void*)onednn_src0);
-    auto src_1_mem = dnnl::memory(src_1_md, *onednn_engine, (void*)onednn_src1);
-    auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst);
+      auto binary_d = dnnl::binary::desc(algorithm, src_0_md, src_1_md, dst_md);
+      auto binary_pd = dnnl::binary::primitive_desc(binary_d, *onednn_engine);
+      auto binary_prim = dnnl::binary(binary_pd);
 
-    auto binary_d = dnnl::binary::desc(algorithm, src_0_md, src_1_md, dst_md);
-    auto binary_pd = dnnl::binary::primitive_desc(binary_d, *onednn_engine);
-    auto binary_prim = dnnl::binary(binary_pd);
-
-    std::unordered_map<int, dnnl::memory> binary_args{
-        {DNNL_ARG_SRC_0, src_0_mem}, {DNNL_ARG_SRC_1, src_1_mem}, {DNNL_ARG_DST, dst_mem}};
-
-    binary_prim.execute(*onednn_stream, binary_args);
-    onednn_stream->wait();
+      binary_prim.execute(
+          *onednn_stream,
+          {{DNNL_ARG_SRC_0, src_0_mem}, {DNNL_ARG_SRC_1, src_1_mem}, {DNNL_ARG_DST, dst_mem}});
+    });
   }
 };
 
-#define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ                                   \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::s8, DataType::kInt8, int8_t)   \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool)     \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kUInt8, uint8_t) \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)  \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f16, DataType::kFloat16, float16)
+#define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ                               \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::u8, DataType::kBool, bool) \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)
 
 // OneDNN binary op does not support s32
 // CPU_PRIMITIVE_ONEDNN_INT32_TYPE_SEQ
 
 #define CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ \
+  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ                           \
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ                            \
+  CPU_PRIMITIVE_INT8_TYPE_SEQ                              \
+  CPU_PRIMITIVE_UINT8_TYPE_SEQ                             \
   CPU_PRIMITIVE_INT32_TYPE_SEQ                             \
   CPU_PRIMITIVE_INT64_TYPE_SEQ
 
@@ -339,38 +336,6 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
        &NdarrayUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(src_data_type_pair)>::OF_PP_CAT(     \
            Broadcast, OF_PP_PAIR_SECOND(binary_op_pair))>},
 
-#ifdef WITH_ONEDNN
-    static const std::map<std::tuple<BinaryOp, DataType, DataType>,
-                          std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
-        new_broadcast_elementwise_binary_handle{
-            // For oneDNN binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY, BINARY_MATH_OP_ONEDNN_PAIR,
-                CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ)
-            // For OneDNN comparasion binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
-                BINARY_LOGICAL_COMPARISION_OP_ONEDNN_PAIR, CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ,
-                CPU_PRIMITIVE_ONEDNN_BOOl_TYPE_SEQ)
-            // OneDNN unimplemented binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                             OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow, Pow),
-                                             NDARRAY_BINARY_TYPE_SEQ)
-            // OneDNN unimplemented comparasion binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
-                BINARY_LOGICAL_COMPARISION_OP_ONEDNN_UNIMPLEMENTED, NDARRAY_BINARY_TYPE_SEQ,
-                CPU_PRIMITIVE_BOOL_TYPE_SEQ)
-            // OneDNN unimplemented data type binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                             BINARY_MATH_OP_NDARRAY_PAIR,
-                                             CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ)
-            // OneDNN unimplemented data type comparasion binary op
-            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-                MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
-                BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR,
-                CPU_PRIMITIVE_BINARY_ONEDNN_UNIMPLEMENTED_TYPE_SEQ, CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
-#else
     static const std::map<std::tuple<BinaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
         new_broadcast_elementwise_binary_handle{
@@ -380,17 +345,36 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
                     MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                     BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR, NDARRAY_BINARY_TYPE_SEQ,
                     CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
-#endif
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
-    const auto it = new_broadcast_elementwise_binary_handle.find(
-        std::make_tuple(binary_op, src_type, dst_type));
-    if (it != new_broadcast_elementwise_binary_handle.end()) {
-      return it->second();
-    } else {
-      return nullptr;
+
+#ifdef WITH_ONEDNN
+    static const std::map<std::tuple<BinaryOp, DataType, DataType>,
+                          std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
+        new_broadcast_elementwise_binary_onednn_handle{
+            // For oneDNN binary op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY, BINARY_MATH_OP_ONEDNN_PAIR,
+                CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ)
+            // For OneDnn comparasion binary op
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
+                BINARY_LOGICAL_COMPARISION_OP_ONEDNN_PAIR, CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ,
+                CPU_PRIMITIVE_ONEDNN_BOOl_TYPE_SEQ)};
+
+#undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
+#undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
+    if (OneDnnIsEnabled()) {
+      auto broadcast_elementwise_binary_primitive =
+          NewPrimitiveFromHandlers(new_broadcast_elementwise_binary_onednn_handle,
+                                   std::make_tuple(binary_op, src_type, dst_type));
+      if (broadcast_elementwise_binary_primitive) { return broadcast_elementwise_binary_primitive; }
     }
+
+#endif
+    return NewPrimitiveFromHandlers(new_broadcast_elementwise_binary_handle,
+                                    std::make_tuple(binary_op, src_type, dst_type));
   }
 };
 

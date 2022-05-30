@@ -148,12 +148,12 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
     return device_and_stream_infer_fn_;
   }
 
-  Maybe<void> InferPhysicalShapeAndDType(
+  Maybe<void> InferPhysicalTensorDesc(
       const AttrMap& attrs, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
 
-  Maybe<void> InferLogicalShapeAndDType(
+  Maybe<void> InferLogicalTensorDesc(
       const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
@@ -169,7 +169,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
              const std::vector<std::string>& indexed_obns);
   Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
   AttrMap base_attrs_;
-  user_op::TensorDescInferFn shape_infer_fn_;
+  user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
   mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulLocalOpKernel>> stream2kernel_;

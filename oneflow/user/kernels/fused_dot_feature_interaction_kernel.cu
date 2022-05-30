@@ -187,7 +187,227 @@ void ConcatFeaturesGrad(user_op::KernelComputeContext* ctx, const int64_t batch_
   }
 }
 
+template<typename T>
+struct DefaultComputeType {
+  using type = T;
+};
+
+template<>
+struct DefaultComputeType<half> {
+  using type = float;
+};
+
+template<typename T, size_t pack_size>
+struct alignas(sizeof(T) * pack_size) Pack {
+  T elem[pack_size];
+};
+
+template<typename T, int32_t N>
+struct Param {
+  const T* in[N];
+  int32_t in_feature_dim[N];
+  T* out;
+  int32_t num_in;
+};
+
+template<typename T, int32_t N, int32_t pack_size>
+__global__ void FeatureInteractionSum(int64_t batch_size, int64_t vector_num_pack,
+                                      Param<T, N> param) {
+  using ComputeType = typename DefaultComputeType<T>::type;
+  Pack<T, pack_size>* dst_pack = reinterpret_cast<Pack<T, pack_size>*>(param.out);
+  for (int batch_idx = blockIdx.x * blockDim.y + threadIdx.y; batch_idx < batch_size;
+       batch_idx += gridDim.x * blockDim.y) {
+    Pack<T, pack_size>* batch_out = dst_pack + batch_idx * vector_num_pack;
+    for (int col_id = threadIdx.x; col_id < vector_num_pack; col_id += blockDim.x) {
+      Pack<ComputeType, pack_size> sum;
+      Pack<ComputeType, pack_size> square_sum;
+#pragma unroll
+      for (int k = 0; k < pack_size; ++k) {
+        sum.elem[k] = static_cast<ComputeType>(0);
+        square_sum.elem[k] = static_cast<ComputeType>(0);
+      }
+      for (int i = 0; i < N; ++i) {
+        if (i >= param.num_in) { break; }
+        const Pack<T, pack_size>* batch_in =
+            reinterpret_cast<const Pack<T, pack_size>*>(param.in[i])
+            + batch_idx * param.in_feature_dim[i] * vector_num_pack;
+#pragma unroll
+        for (int j = 0; j < param.in_feature_dim[i]; ++j) {
+          Pack<T, pack_size> val = batch_in[j * vector_num_pack + col_id];
+#pragma unroll
+          for (int k = 0; k < pack_size; ++k) {
+            const ComputeType compute_val = static_cast<ComputeType>(val.elem[k]);
+            sum.elem[k] += compute_val;
+            square_sum.elem[k] += compute_val * compute_val;
+          }
+        }
+      }
+      Pack<T, pack_size> out;
+#pragma unroll
+      for (int k = 0; k < pack_size; ++k) {
+        out.elem[k] = static_cast<T>((sum.elem[k] * sum.elem[k] - square_sum.elem[k])
+                                     * static_cast<ComputeType>(0.5));
+      }
+      batch_out[col_id] = out;
+    }
+  }
+}
+
+template<typename T, int32_t N>
+struct GradParam {
+  const T* dy;
+  const T* in[N];
+  int32_t in_feature_dim[N];
+  T* in_grad[N];
+  int32_t num_in;
+};
+
+template<typename T, int32_t N>
+__global__ void FeatureInteractionSumGrad(int64_t batch_size, int64_t vector_size,
+                                          GradParam<T, N> param) {
+  using ComputeType = typename DefaultComputeType<T>::type;
+  for (int batch_idx = blockIdx.x * blockDim.y + threadIdx.y; batch_idx < batch_size;
+       batch_idx += gridDim.x * blockDim.y) {
+    const T* batch_dy = param.dy + batch_idx * vector_size;
+    for (int col_id = threadIdx.x; col_id < vector_size; col_id += blockDim.x) {
+      ComputeType sum = 0;
+      for (int i = 0; i < N; ++i) {
+        if (i >= param.num_in) { break; }
+        const T* batch_in = param.in[i] + batch_idx * param.in_feature_dim[i] * vector_size;
+        for (int j = 0; j < param.in_feature_dim[i]; ++j) {
+          sum += static_cast<ComputeType>(batch_in[j * vector_size + col_id]);
+        }
+      }
+      for (int i = 0; i < N; ++i) {
+        if (i >= param.num_in) { break; }
+        const int64_t in_batch_offset = batch_idx * param.in_feature_dim[i] * vector_size;
+        const T* batch_in = param.in[i] + in_batch_offset;
+        T* batch_in_grad = param.in_grad[i] + in_batch_offset;
+        for (int j = 0; j < param.in_feature_dim[i]; ++j) {
+          const int64_t offset = j * vector_size + col_id;
+          batch_in_grad[offset] =
+              static_cast<T>(static_cast<ComputeType>(batch_dy[col_id])
+                             * (sum - static_cast<ComputeType>(batch_in[offset])));
+        }
+      }
+    }
+  }
+}
+
+void GetBlockDims(const int64_t vector_size, int* block_dim_x, int* block_dim_y) {
+  const int block_size = 256;
+  if (vector_size < block_size) {
+    *block_dim_x = std::ceil(static_cast<float>(vector_size) / 8) * 8;
+    *block_dim_y = (block_size + *block_dim_x - 1) / *block_dim_x;
+  } else {
+    *block_dim_x = block_size;
+    *block_dim_y = 1;
+  }
+}
+
+int GetNumBlocks(const int64_t num_instances, const int64_t instance_per_block) {
+  int max_blocks = (num_instances + instance_per_block - 1) / instance_per_block;
+  return std::min(max_blocks, kCudaMaxBlocksNum);
+}
+
+template<typename T, int32_t N>
+void DispatchFeatureInteractionSumPackSize(ep::Stream* stream, const int64_t batch_size,
+                                           const int64_t vector_size, const Param<T, N>& param) {
+  int block_dim_x;
+  int block_dim_y;
+  const int pack_size = (vector_size % 2 == 0) ? 2 : 1;
+  const int64_t vector_num_pack = vector_size / pack_size;
+  GetBlockDims(vector_num_pack, &block_dim_x, &block_dim_y);
+  const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
+  dim3 block_dims = dim3(block_dim_x, block_dim_y);
+  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  if (pack_size == 2) {
+    FeatureInteractionSum<T, N, 2>
+        <<<num_blocks, block_dims, 0, cuda_stream>>>(batch_size, vector_num_pack, param);
+  } else {
+    FeatureInteractionSum<T, N, 1>
+        <<<num_blocks, block_dims, 0, cuda_stream>>>(batch_size, vector_num_pack, param);
+  }
+}
+
+template<typename T, int N>
+void DispatchFeatureInteractionSumInputSize(user_op::KernelComputeContext* ctx,
+                                            const int32_t input_size) {
+  CHECK_LE(input_size, N) << input_size;
+  user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+  const int64_t batch_size = out->shape().At(0);
+  const int64_t vector_size = out->shape().At(1);
+  Param<T, N> param;
+  param.num_in = input_size;
+  param.out = out->mut_dptr<T>();
+  for (int i = 0; i < input_size; ++i) {
+    param.in[i] = ctx->Tensor4ArgNameAndIndex("features", i)->dptr<T>();
+    param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
+  }
+  DispatchFeatureInteractionSumPackSize<T, N>(ctx->stream(), batch_size, vector_size, param);
+}
+
+template<typename T, int N>
+void DispatchFeatureInteractionSumGradInputSize(user_op::KernelComputeContext* ctx,
+                                                const int32_t input_size) {
+  CHECK_LE(input_size, N) << input_size;
+  const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+  const int64_t batch_size = dy->shape().At(0);
+  const int64_t vector_size = dy->shape().At(1);
+  int block_dim_x;
+  int block_dim_y;
+  GetBlockDims(vector_size, &block_dim_x, &block_dim_y);
+  const int num_blocks = GetNumBlocks(batch_size, block_dim_y);
+  dim3 block_dims = dim3(block_dim_x, block_dim_y);
+  GradParam<T, N> param;
+  param.num_in = input_size;
+  param.dy = dy->dptr<T>();
+  for (int i = 0; i < input_size; ++i) {
+    param.in[i] = ctx->Tensor4ArgNameAndIndex("features_grad_like", i)->dptr<T>();
+    param.in_grad[i] = ctx->Tensor4ArgNameAndIndex("features_grad", i)->mut_dptr<T>();
+    param.in_feature_dim[i] = ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
+  }
+  FeatureInteractionSumGrad<T, N>
+      <<<num_blocks, block_dims, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          batch_size, vector_size, param);
+}
+
 }  // namespace
+
+template<typename T>
+class FusedDotFeatureInteractionPoolingSumKernel final : public user_op::OpKernel,
+                                                         public user_op::CudaGraphSupport {
+ public:
+  FusedDotFeatureInteractionPoolingSumKernel() = default;
+  ~FusedDotFeatureInteractionPoolingSumKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const int input_size = ctx->input_size("features");
+    if (input_size == 1) {
+      DispatchFeatureInteractionSumInputSize<T, 1>(ctx, input_size);
+    } else if (input_size == 2) {
+      DispatchFeatureInteractionSumInputSize<T, 2>(ctx, input_size);
+    } else if (input_size <= 8) {
+      DispatchFeatureInteractionSumInputSize<T, 8>(ctx, input_size);
+    } else {
+      CHECK_LE(input_size, 128) << "input_size must not greater than 128. ";
+      DispatchFeatureInteractionSumInputSize<T, 128>(ctx, input_size);
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_FUSED_DOT_FEATURE_INTERACTION_POOLING_SUM_KERNEL(dtype)                \
+  REGISTER_USER_KERNEL("fused_dot_feature_interaction")                                 \
+      .SetCreateFn<FusedDotFeatureInteractionPoolingSumKernel<dtype>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobAttr<std::string>("pooling") == "sum"));
+
+REGISTER_FUSED_DOT_FEATURE_INTERACTION_POOLING_SUM_KERNEL(float)
+REGISTER_FUSED_DOT_FEATURE_INTERACTION_POOLING_SUM_KERNEL(half)
 
 template<typename T>
 class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
@@ -274,11 +494,12 @@ user_op::InferTmpSizeFn GenFusedDotFeatureInteractionInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(dtype)                             \
-  REGISTER_USER_KERNEL("fused_dot_feature_interaction")                                  \
-      .SetCreateFn<FusedDotFeatureInteractionKernel<dtype>>()                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
-                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(dtype)                            \
+  REGISTER_USER_KERNEL("fused_dot_feature_interaction")                                 \
+      .SetCreateFn<FusedDotFeatureInteractionKernel<dtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobAttr<std::string>("pooling") == "none"))         \
       .SetInferTmpSizeFn(GenFusedDotFeatureInteractionInferTmpSizeFn<dtype>());
 
 REGISTER_FUSED_DOT_FEATURE_INTERACTION_KERNEL(float)
@@ -358,14 +579,50 @@ user_op::InferTmpSizeFn GenFusedDotFeatureInteractionGradInferTmpSizeFn() {
   };
 }
 
-#define REGISTER_FUSED_DOT_FEATURE_INTERACTION_GRAD_KERNEL(dtype)                       \
-  REGISTER_USER_KERNEL("fused_dot_feature_interaction_grad")                            \
-      .SetCreateFn<FusedDotFeatureInteractionGradKernel<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)) \
+#define REGISTER_FUSED_DOT_FEATURE_INTERACTION_GRAD_KERNEL(dtype)                      \
+  REGISTER_USER_KERNEL("fused_dot_feature_interaction_grad")                           \
+      .SetCreateFn<FusedDotFeatureInteractionGradKernel<dtype>>()                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobAttr<std::string>("pooling") == "none"))        \
       .SetInferTmpSizeFn(GenFusedDotFeatureInteractionGradInferTmpSizeFn<dtype>());
 
 REGISTER_FUSED_DOT_FEATURE_INTERACTION_GRAD_KERNEL(float)
 REGISTER_FUSED_DOT_FEATURE_INTERACTION_GRAD_KERNEL(half)
+
+template<typename T>
+class FusedDotFeatureInteractionPoolingSumGradKernel final : public user_op::OpKernel,
+                                                             public user_op::CudaGraphSupport {
+ public:
+  FusedDotFeatureInteractionPoolingSumGradKernel() = default;
+  ~FusedDotFeatureInteractionPoolingSumGradKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const int input_size = ctx->input_size("features_grad_like");
+    if (input_size == 1) {
+      DispatchFeatureInteractionSumGradInputSize<T, 1>(ctx, input_size);
+    } else if (input_size == 2) {
+      DispatchFeatureInteractionSumGradInputSize<T, 2>(ctx, input_size);
+    } else if (input_size <= 8) {
+      DispatchFeatureInteractionSumGradInputSize<T, 8>(ctx, input_size);
+    } else {
+      CHECK_LE(input_size, 128) << "input_size must not greater than 128. ";
+      DispatchFeatureInteractionSumGradInputSize<T, 128>(ctx, input_size);
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_FUSED_DOT_FEATURE_INTERACTION_POOLING_SUM_GRAD_KERNEL(dtype)          \
+  REGISTER_USER_KERNEL("fused_dot_feature_interaction_grad")                           \
+      .SetCreateFn<FusedDotFeatureInteractionPoolingSumGradKernel<dtype>>()            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobAttr<std::string>("pooling") == "sum"));
+
+REGISTER_FUSED_DOT_FEATURE_INTERACTION_POOLING_SUM_GRAD_KERNEL(float)
+REGISTER_FUSED_DOT_FEATURE_INTERACTION_POOLING_SUM_GRAD_KERNEL(half)
 
 }  // namespace oneflow

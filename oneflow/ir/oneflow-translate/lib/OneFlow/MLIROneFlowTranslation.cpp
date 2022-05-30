@@ -788,7 +788,15 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
+  // we must do auto nhwc and eliminate redundant transpose op first, avoid insert redundant
+  // transpose op due to fuse pattern like normlazation_add_relu.
+  pm.addPass(oneflow::createAutoNhwcPass());
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
+    pm.addPass(oneflow::createPreConvertInferenceOpPass());
+    pm.addPass(oneflow::createConvertInferenceOpPass());
+    pm.addPass(oneflow::createPostConvertInferenceOpPass());
+  }
   pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
@@ -882,6 +890,10 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<mlir::func::FuncDialect>();
   OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(path, &context);
+  if (!module) {
+    llvm::errs() << "fail to parse file: " << path << "\n";
+    exit(EXIT_FAILURE);
+  }
   JobImporter imp(job_wrapper, &context, module.get());
   if (failed(imp.TryToUpdateJob())) {
     llvm::errs() << "fail to load job from IR";
