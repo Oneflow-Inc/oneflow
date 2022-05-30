@@ -30,12 +30,7 @@ def _test_logical_slice_assign(test_case, placement, sbp):
     x[:, :2] = 3
     x_numpy[:, :2] = 3
 
-    target_sbp = (
-        sbp
-        if placement.ranks.size > 1
-        else (flow.sbp.broadcast,) * placement.ranks.ndim
-    )
-    test_case.assertTrue(x.sbp == target_sbp)
+    test_case.assertTrue(x.sbp == sbp)
     test_case.assertTrue(np.array_equal(x.numpy(), x_numpy))
 
 
@@ -54,12 +49,7 @@ def _test_graph_logical_slice_assign(test_case, placement, sbp):
 
     x_numpy[:, :2] = 3
 
-    target_sbp = (
-        sbp
-        if placement.ranks.size > 1
-        else (flow.sbp.broadcast,) * placement.ranks.ndim
-    )
-    test_case.assertTrue(y.sbp == target_sbp)
+    test_case.assertTrue(y.sbp == sbp)
     test_case.assertTrue(np.array_equal(y.numpy(), x_numpy))
 
 
@@ -67,7 +57,10 @@ class TestGlobalLogicalSliceAssign(flow.unittest.TestCase):
     @globaltest
     def test_logical_slice_assign(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
+            for sbp in all_sbp(placement, max_dim=2, except_split=True):
+                if placement.ranks.size == 1:
+                    continue
+                # logical slice assign only support broadcast and partial_sum currently
                 _test_logical_slice_assign(test_case, placement, sbp)
                 _test_graph_logical_slice_assign(test_case, placement, sbp)
 

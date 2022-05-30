@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import warnings
-
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op, Tensor
 from oneflow.nn.module import Module
@@ -48,12 +46,6 @@ def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True):
         placement, flow.placement
     ), f"Invalid parameter placement with type {type(placement)}"
 
-    if placement.ranks.size == 1:
-        warnings.warn(
-            "There is only one node and one device, so sbp will be broadcast."
-        )
-        sbp = [flow.sbp.broadcast for _ in range(placement.ranks.ndim)]
-
     sbp = _check_sbp(sbp)
     grad_sbp = tuple()
     return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
@@ -69,12 +61,7 @@ def global_to_global_op(
     if placement is None:
         placement = input.placement
 
-    if placement.ranks.size == 1:
-        warnings.warn(
-            "There is only one node and one device, so sbp will be broadcast."
-        )
-        sbp = [flow.sbp.broadcast for _ in range(placement.ranks.ndim)]
-    elif sbp is None:
+    if sbp is None:
         sbp = input.sbp
 
     assert isinstance(

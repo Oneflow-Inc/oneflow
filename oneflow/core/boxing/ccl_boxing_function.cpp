@@ -33,7 +33,8 @@ Maybe<void> RawCheckCclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(IsAllBroadcastNdSbp(*out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
+                  || in->placement()->device_type() == DeviceType::kCUDA);
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -52,7 +53,8 @@ Maybe<void> RawCheckCclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
+                  || in->placement()->device_type() == DeviceType::kCUDA);
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -72,7 +74,8 @@ Maybe<void> RawCheckCclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(logical_shape.At(0) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
+                  || in->placement()->device_type() == DeviceType::kCUDA);
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
@@ -98,7 +101,8 @@ Maybe<void> RawCheckCclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(logical_shape.At(out_split_axis) % in->placement()->parallel_num() == 0);
 
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_EQ_OR_RETURN(in->placement()->device_type(), DeviceType::kCPU);
+  CHECK_OR_RETURN(in->placement()->device_type() == DeviceType::kCPU
+                  || in->placement()->device_type() == DeviceType::kCUDA);
   // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
