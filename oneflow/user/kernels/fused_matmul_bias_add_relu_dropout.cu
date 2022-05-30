@@ -36,16 +36,6 @@ union RandPack4 {
   uint32_t elem[4];  // store curand4 return val.
 };
 
-int32_t AlignReluAuxLd(int32_t aux_ld) {
-  /*
-  ReLu bit-mask matrix leading dimension in elements.
-  Must be divisible by 128 and be no less than the number of rows in the output matrix.
-  */
-  int32_t old_aux_ld = aux_ld;
-  return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
-         * kAuxReluLdAlignRequirement;
-}
-
 template<int32_t pack_size, typename IndexType>
 __device__ void SetCublasBitMask(FastIntegerMath<IndexType> fast_div, const IndexType aux_ld,
                                  const IndexType row, const IndexType col, int32_t thread_bitmask,
