@@ -64,33 +64,6 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     eager_out = x.to_global(sbp=dst_nd_sbp, placement=placement)
     test_case.assertTrue(np.array_equal(eager_out.numpy(), x.numpy()))
     
-    # bad case of graph: S with P
-    if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(0):
-        pass
-    if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(1):
-        return
-    if src_nd_sbp[0] == flow.sbp.partial_sum and src_nd_sbp[1] == flow.sbp.split(2):
-        return
-    if src_nd_sbp[0] == flow.sbp.split(0) and src_nd_sbp[1] == flow.sbp.partial_sum:
-        return
-    if src_nd_sbp[0] == flow.sbp.split(1) and src_nd_sbp[1] == flow.sbp.partial_sum:
-        return
-    if src_nd_sbp[0] == flow.sbp.split(2) and src_nd_sbp[1] == flow.sbp.partial_sum:
-        return
-    # bad case of graph: diff S
-    if src_nd_sbp[0] == flow.sbp.split(0) and src_nd_sbp[1] == flow.sbp.split(1):
-        return
-    if src_nd_sbp[0] == flow.sbp.split(0) and src_nd_sbp[1] == flow.sbp.split(2):
-        return
-    if src_nd_sbp[0] == flow.sbp.split(1) and src_nd_sbp[1] == flow.sbp.split(2):
-        return
-    if src_nd_sbp[0] == flow.sbp.split(1) and src_nd_sbp[1] == flow.sbp.split(0):
-        return
-    if src_nd_sbp[0] == flow.sbp.split(2) and src_nd_sbp[1] == flow.sbp.split(0):
-        return
-    if src_nd_sbp[0] == flow.sbp.split(2) and src_nd_sbp[1] == flow.sbp.split(1):
-        return
-
 	# check graph boxing
     flow.boxing.nccl.enable_use_compute_stream(True)
     class TestNcclLogicalSendRecvGraph(flow.nn.Graph):
@@ -105,21 +78,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     y = graph(x)
     out_np = y.numpy()
     in_np = x.numpy()
-    equal = np.array_equal(out_np, in_np)
-    # Debug log
-    if flow.env.get_rank() == 1:
-        if equal:
-            print("test boxing passed form ", src_nd_sbp, " to ", dst_nd_sbp)
-        else:
-            print("graph repr:\n", graph)
-            print("local in data:\n", x.to_local().numpy())
-            print("local out data:\n", y.to_local().numpy())
-            print("global in np:\n", in_np)
-            print("global out np:\n", out_np)
-            print("global diff np:\n", out_np - in_np)
-    if not equal:
-        print("error rank: ", flow.env.get_rank())
-    test_case.assertTrue(equal)
+    test_case.assertTrue(np.array_equal(out_np, in_np))
 
 
 

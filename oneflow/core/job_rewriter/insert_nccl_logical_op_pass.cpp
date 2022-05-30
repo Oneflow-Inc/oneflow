@@ -489,7 +489,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          LOG(ERROR) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
+          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
                   << ", order=" << src_order
                   << ", sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << "] to [" << dst_op_name
                   << ", order=" << node2subgraph_order.at(dst_node)
