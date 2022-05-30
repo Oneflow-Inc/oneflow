@@ -17,9 +17,8 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/vm/vm_util.h"
-#include <nvtx3/nvToolsExt.h>
-
 #ifdef OF_ENABLE_PROFILER
+#include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
 #include <iostream>
 #include <cuda_profiler_api.h>
@@ -30,16 +29,6 @@ namespace oneflow {
 
 namespace profiler {
 
-void RangePush(const std::string& name) { nvtxRangePushA(name.c_str()); }
-
-void RangePop() { nvtxRangePop(); }
-
-uint64_t RangeStart(const std::string& name) { return nvtxRangeStartA(name.c_str()); }
-
-void RangeEnd(uint64_t id) { nvtxRangeEnd(id); }
-
-void Mark(const std::string& name) { nvtxMarkA(name.c_str()); }
-
 void NameThisHostThread(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
   static thread_local std::unique_ptr<std::string> thread_name_prefix;
@@ -49,6 +38,18 @@ void NameThisHostThread(const std::string& name) {
   }
   const std::string name_with_prefix = *thread_name_prefix + name;
   nvtxNameOsThreadA(syscall(SYS_gettid), name_with_prefix.c_str());
+#endif  // OF_ENABLE_PROFILER
+}
+
+void RangePush(const std::string& name) {
+#ifdef OF_ENABLE_PROFILER
+  nvtxRangePushA(name.c_str());
+#endif  // OF_ENABLE_PROFILER
+}
+
+void RangePop() {
+#ifdef OF_ENABLE_PROFILER
+  nvtxRangePop();
 #endif  // OF_ENABLE_PROFILER
 }
 
