@@ -317,24 +317,25 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
       [](user_op::KernelComputeContext* ctx) { return HardsigmoidGradFunctor<dtype>(); }, "dx", \
       "x", "dy");
 
-#define REGISTER_HARDSHRINK_FORWARD_KERNEL()                                                    \
-  REGISTER_USER_KERNEL("hardshrink")                                                            \
-      .SetCreateFn([]() {                                                                       \
-        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                      \
-            "out", "in", [](user_op::KernelComputeContext* ctx) {                               \
-              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);        \
-              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);       \
-              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(       \
-                  ctx->device_type(), ep::primitive::UnaryOp::kHardShrink, src->data_type(),    \
-                  dst->data_type(), ctx->Attr<double>("lambd"));                                \
-            });                                                                                 \
-      })                                                                                        \
-      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kHardShrink, "out", "in"))  \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_HARDSHRINK_FORWARD_KERNEL()                                                   \
+  REGISTER_USER_KERNEL("hardshrink")                                                           \
+      .SetCreateFn([]() {                                                                      \
+        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                     \
+            "out", "in", [](user_op::KernelComputeContext* ctx) {                              \
+              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);       \
+              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);      \
+              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(      \
+                  ctx->device_type(), ep::primitive::UnaryOp::kHardShrink, src->data_type(),   \
+                  dst->data_type(), ctx->Attr<double>("lambd"));                               \
+            });                                                                                \
+      })                                                                                       \
+      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kHardShrink, "out", "in")) \
+      .SetInplaceProposalFn(                                                                   \
+          [](const user_op::InferContext&,                                                     \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {           \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                  \
+            return Maybe<void>::Ok();                                                          \
+          });
 
 #define REGISTER_HARDSHRINK_BACKWARD_KERNEL(device, dtype)                                       \
   REGISTER_USER_KERNEL("hardshrink_grad")                                                        \
@@ -348,11 +349,12 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
       })                                                                                         \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                         \
-        return Maybe<void>::Ok();                                                                \
-      });
+      .SetInplaceProposalFn(                                                                     \
+          [](const user_op::InferContext&,                                                       \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {             \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                     \
+            return Maybe<void>::Ok();                                                            \
+          });
 
 #define REGISTER_HARDTANH_FORWARD_KERNEL()                                                       \
   REGISTER_USER_KERNEL("hardtanh")                                                               \
@@ -367,30 +369,32 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
             });                                                                                  \
       })                                                                                         \
       .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kHardTanh, "out", "in"))     \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                        \
-        return Maybe<void>::Ok();                                                                \
-      });
+      .SetInplaceProposalFn(                                                                     \
+          [](const user_op::InferContext&,                                                       \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {             \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                    \
+            return Maybe<void>::Ok();                                                            \
+          });
 
-#define REGISTER_HARDTANH_BACKWARD_KERNEL(device, dtype)                                        \
-  REGISTER_USER_KERNEL("hardtanh_grad")                                                         \
-      .SetCreateFn([]() {                                                                       \
-        return user_op::NewOpKernel<                                                            \
-            BinaryElemwiseXpuKernel<device, HardtanhGradFunctor<dtype>, dtype, dtype, dtype>>(  \
-            [](user_op::KernelComputeContext* ctx) {                                            \
-              return HardtanhGradFunctor<dtype>(ctx->Attr<double>("min_val"),                   \
-                                                ctx->Attr<double>("max_val"));                  \
-            },                                                                                  \
-            "dx", "y", "dy");                                                                   \
-      })                                                                                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))         \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                        \
-        return Maybe<void>::Ok();                                                               \
-      });
+#define REGISTER_HARDTANH_BACKWARD_KERNEL(device, dtype)                                       \
+  REGISTER_USER_KERNEL("hardtanh_grad")                                                        \
+      .SetCreateFn([]() {                                                                      \
+        return user_op::NewOpKernel<                                                           \
+            BinaryElemwiseXpuKernel<device, HardtanhGradFunctor<dtype>, dtype, dtype, dtype>>( \
+            [](user_op::KernelComputeContext* ctx) {                                           \
+              return HardtanhGradFunctor<dtype>(ctx->Attr<double>("min_val"),                  \
+                                                ctx->Attr<double>("max_val"));                 \
+            },                                                                                 \
+            "dx", "y", "dy");                                                                  \
+      })                                                                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))        \
+      .SetInplaceProposalFn(                                                                   \
+          [](const user_op::InferContext&,                                                     \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {           \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                   \
+            return Maybe<void>::Ok();                                                          \
+          });
 
 #define REGISTER_TANH_FORWARD_KERNEL()                                                    \
   REGISTER_USER_KERNEL("tanh")                                                            \
