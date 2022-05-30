@@ -345,7 +345,7 @@ if(BUILD_PYTHON)
                                                     "${ONEFLOW_PYTHON_DIR}/oneflow")
   target_link_libraries(
     oneflow_internal
-    PRIVATE $<TARGET_OBJECTS:oneflow>
+    PRIVATE oneflow
             of_protoobj
             of_cfgobj
             of_functional_obj
