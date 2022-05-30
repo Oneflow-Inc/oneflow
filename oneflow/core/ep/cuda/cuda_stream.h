@@ -102,8 +102,8 @@ class CudaStream : public Stream {
                                  size_t max_waves) const {
     const uint32_t max_grid_size = max_waves * device_properties().multiProcessorCount
                                    * (device_properties().maxThreadsPerMultiProcessor / block_size);
-    const uint32_t grid_size =
-        std::max<uint32_t>(1, std::min<uint32_t>(max_grid_size, (elem_cnt + block_size - 1) / block_size));
+    const uint32_t grid_size = std::max<uint32_t>(
+        1, std::min<uint32_t>(max_grid_size, (elem_cnt + block_size - 1) / block_size));
     config->grid_dim = dim3(grid_size);
     config->block_dim = dim3(block_size);
     config->shared_mem_size = 0;

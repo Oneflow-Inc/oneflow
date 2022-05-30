@@ -179,10 +179,10 @@ class TestFusedMatmulBiasAddReluDropout(flow.unittest.TestCase):
         args_dict["batchsize"] = [1, 2, 4]
         args_dict["in_feature"] = [96, 128, 64]
         args_dict["hidden_size_list"] = [[256, 512], [400, 400, 400, 400], [17, 33, 79]]
-        args_dict["out_feature"] = [512, 400, 1024]
-        args_dict["skip_final_activation"] = [True, False]
+        args_dict["out_feature"] = [512, 400, 1024, 1]
+        args_dict["skip_final_activation"] = [False]
         args_dict["dtype"] = [flow.float32]
-        args_dict["device"] = ["cuda", "cpu"]
+        args_dict["device"] = ["cuda"]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
