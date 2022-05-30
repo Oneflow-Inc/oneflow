@@ -10,7 +10,7 @@ Convolution functions
 -------------------------------------------
 
 .. autosummary::
-    
+    :toctree: generated
     :nosignatures:
 
     conv1d
@@ -21,7 +21,7 @@ Pooling functions
 ----------------------------------
 
 .. autosummary::
-    
+    :toctree: generated
     :nosignatures:
 
     adaptive_avg_pool1d
@@ -32,7 +32,7 @@ Non-linear activation functions
 -------------------------------
 
 .. autosummary::
-    
+    :toctree: generated
     :nosignatures:
 
     threshold
@@ -64,7 +64,7 @@ Linear functions
 ----------------
 
 .. autosummary::
-    
+    :toctree: generated
     :nosignatures:
 
     linear
@@ -73,7 +73,7 @@ Dropout functions
 -----------------
 
 .. autosummary::
-    
+    :toctree: generated
     :nosignatures:
 
     dropout
@@ -82,7 +82,7 @@ Sparse functions
 ----------------------------------
 
 .. autosummary::
-    
+    :toctree: generated
     :nosignatures:
 
     embedding
@@ -93,7 +93,7 @@ Loss functions
 --------------
 
 .. autosummary::
-    
+    :toctree: generated
     :nosignatures:
 
     sparse_softmax_cross_entropy
@@ -104,7 +104,7 @@ Vision functions
 ----------------
 
 .. autosummary::
-    
+    :toctree: generated
     :nosignatures:
 
     pad
