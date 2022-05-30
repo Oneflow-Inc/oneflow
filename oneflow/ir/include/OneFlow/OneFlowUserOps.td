@@ -4964,7 +4964,7 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, NoGrad, DeclareOpInte
 
 def OneFlow_SplitOp : OneFlow_BaseOp<"split", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$in
   );
   let output = (outs
     Variadic<OneFlow_Tensor>:$out

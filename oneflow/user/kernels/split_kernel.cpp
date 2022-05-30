@@ -34,7 +34,7 @@ class SplitKernel final : public user_op::OpKernel {
   void InferShape(user_op::KernelInferContext* ctx) const override {
     const auto dim = ctx->Attr<int64_t>("dim");
     const auto sections = ctx->Attr<std::vector<int64_t>>("sections");
-    const ShapeView& in_shape_view = ctx->ShapeView4ArgNameAndIndex("x", 0);
+    const ShapeView& in_shape_view = ctx->ShapeView4ArgNameAndIndex("in", 0);
     int64_t total_dim_size = std::accumulate(sections.begin(), sections.end(), int64_t(0));
     CHECK_EQ(total_dim_size, in_shape_view.At(dim));
 
@@ -50,7 +50,7 @@ class SplitKernel final : public user_op::OpKernel {
   }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto axis = ctx->Attr<int64_t>("dim");
     const int64_t in_cols = in_tensor->shape().Count(axis);
     const int64_t rows = in_tensor->shape().elem_cnt() / in_cols;

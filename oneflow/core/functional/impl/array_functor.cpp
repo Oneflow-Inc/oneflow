@@ -2444,7 +2444,7 @@ class SplitWithSizeFunctor {
   SplitWithSizeFunctor() {
     ops_.resize(kMaxInputCount);
     for (int n = 1; n < ops_.size(); ++n) {
-      ops_[n] = CHECK_JUST(one::OpBuilder("split").Input("x").Output("out", n).Build());
+      ops_[n] = CHECK_JUST(one::OpBuilder("split").Input("in").Output("out", n).Build());
     }
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
