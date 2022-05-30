@@ -33,12 +33,15 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SplitOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const auto axis = ctx->Attr<int64_t>("dim");
+  auto axis = ctx->Attr<int64_t>("dim");
   const auto& sections = ctx->Attr<std::vector<int64_t>>("sections");
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t in_num_axes = in_desc.shape().NumAxes();
+  if (axis < 0) { axis += in_num_axes; }
+  CHECK_OR_RETURN(axis >= 0 && axis < in_num_axes)
+      << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+      << -in_num_axes << ", " << in_num_axes - 1 << "], but got " << axis << ")";
   const int64_t dim_size = in_desc.shape().dim_vec()[axis];
-  CHECK_LT_OR_RETURN(axis, in_num_axes);
 
   int64_t start_idx = 0;
   FOR_RANGE(int32_t, i, 0, sections.size()) {
