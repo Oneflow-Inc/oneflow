@@ -136,24 +136,11 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
                                                          cublas_auxs[weight_num - 1], scale));
   }
 
-  const bool last_layer_weight_requires_grad =
-      JUST(VectorAt(ctx->weights_requires_grad, weight_num - 1));
-  const bool last_layer_bias_requires_grad =
-      JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1));
-
-  // For last layer, we use CublasMatmulBiasAddGrad to get wgrad and b grad.
-  if ((last_layer_weight_requires_grad || last_layer_bias_requires_grad)) {
-    // If there is only 1 layer, we use CublasMatmulBiasAddGrad to calculate first layer's dw.
-    std::shared_ptr<one::Tensor> last_layer_x = x;
-    if (weight_num != 1) { last_layer_x = JUST(VectorAt(hiddens, weight_num - 2)); }
-    const auto& last_layer_wgrad_bgrad =
-        JUST(functional::CublasMatmulBiasAddGrad(last_bias_dy, last_layer_x));
-    if (last_layer_weight_requires_grad) {
-      JUST(VectorAt(*in_grads, weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 0));
-    }
-    if (last_layer_bias_requires_grad) {
-      JUST(VectorAt(*in_grads, 2 * weight_num)) = JUST(VectorAt(*last_layer_wgrad_bgrad, 1));
-    }
+  // step2: use reduce_sum to get last layer's bias grad.
+  std::vector<int32_t> reduce_axes_vec{0};
+  if (JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1))) {
+    JUST(VectorAt(*in_grads, 2 * weight_num)) =
+        JUST(functional::ReduceSum(last_bias_dy, reduce_axes_vec, false));
   }
 
   std::shared_ptr<one::Tensor> cublas_dy = last_bias_dy;
@@ -162,29 +149,27 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
     if (hidden_layer_idx != weight_num - 1) {
       cublas_dy = JUST(VectorAt(dgrad, hidden_layer_idx + 1));
     }
-    /*
-    Here we use cublas to compute bias + relu + dropout + matmul grad.
-    Then use Matmul to compute weight grad.
-    */
     rate = ctx->dropout_rate_list.at(hidden_layer_idx - 1);
     scale = 1.0;
     if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
-    const auto& bias_relu_dropout_matmul_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
+    /*
+    Here we use cublas to compute bias + relu + matmul grad.
+    Then use Matmul to compute weight grad.
+    */
+    const auto& matmul_relu_bias_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
         cublas_dy, JUST(VectorAt(weights, hidden_layer_idx)),
-        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)), /*alpha=*/static_cast<double>(scale)));
+        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)), /*alpha=*/scale));
 
     // dgrad
-    dgrad.at(hidden_layer_idx) = bias_relu_dropout_matmul_bgrad->at(0);  // NOLINT
+    dgrad.at(hidden_layer_idx) = matmul_relu_bias_bgrad->at(0);  // NOLINT
 
     if (JUST(VectorAt(ctx->biases_requires_grad, (hidden_layer_idx - 1)))) {
       // dbias
       JUST(VectorAt(*in_grads, weight_num + hidden_layer_idx)) =
-          bias_relu_dropout_matmul_bgrad->at(1);  // NOLINT
+          matmul_relu_bias_bgrad->at(1);  // NOLINT
     }
-    // dw, need to skip final layer, cause final layer's wgrad has used CublasMatmulBiasAddGrad to
-    // calculate.
-    if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))
-        && hidden_layer_idx != weight_num - 1) {
+    // dw
+    if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))) {
       JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = JUST(functional::MatMul(
           cublas_dy, JUST(VectorAt(hiddens, hidden_layer_idx - 1)), true, false, 1.0));
     }
@@ -203,12 +188,10 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
     JUST(VectorAt(*in_grads, 0)) =
         JUST(functional::MatMul(last_dy, JUST(VectorAt(weights, 0)), false, false, 1.0));
   }
-  if (JUST(VectorAt(ctx->weights_requires_grad, 0)) && weight_num >= 2) {
-    // If weight_num == 1, dw has been calculated by CublasMatmulBiasAddGrad, so we need to skip.
+  if (JUST(VectorAt(ctx->weights_requires_grad, 0))) {
     // dw:
     JUST(VectorAt(*in_grads, 1)) =
-        JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false,
-                                1.0));  // use x instead just vectorat
+        JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false, 1.0));
   }
 
   return Maybe<void>::Ok();

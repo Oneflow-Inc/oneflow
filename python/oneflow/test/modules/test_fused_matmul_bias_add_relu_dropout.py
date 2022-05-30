@@ -143,7 +143,6 @@ def _test_fused_matmul_bias_add_relu_dropout(
     total_out = fused_out.sum() + naive_out.sum()
     total_out.backward()
 
-    # Test output equality
     test_case.assertTrue(
         np.allclose(fused_out.numpy(), naive_out.numpy(), atol=1e-4, rtol=1e-4)
     )

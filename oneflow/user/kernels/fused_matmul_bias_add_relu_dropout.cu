@@ -464,35 +464,13 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
           nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
           cuda_stream->cuda_stream()));
 
-      // if (idx != weight_size - 1 || !skip_final_activation || rate != 0.0f) {
-      //   OF_CUDA_CHECK(cudaMemsetAsync(cublas_aux->mut_dptr<int32_t>(), 0,
-      //                                 cublas_aux->shape().elem_cnt() * sizeof(int32_t),
-      //                                 cuda_stream->cuda_stream()));
-      // }
+      if (idx != weight_size - 1 || !skip_final_activation || rate != 0.0f) {
+        OF_CUDA_CHECK(cudaMemsetAsync(cublas_aux->mut_dptr<int32_t>(), 0,
+                                      cublas_aux->shape().elem_cnt() * sizeof(int32_t),
+                                      cuda_stream->cuda_stream()));
+      }
 
-      // if (idx != weight_size - 1 || !skip_final_activation) {
-      //   // If it's not last layer or it's last layer but need relu.
-      //   OF_CUDA_CHECK((LaunchFusedReluDropoutKernel<T, true>(
-      //       cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, aux_ld, batchsize, out_feature,
-      //       rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-      //       reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()), relu_dropout_out_buf)));
-      //   // Set relu_droput_out ptr as next layer's input.
-      //   in_buf_ptr = relu_dropout_out_buf;
-      //   // Set hidden_layer shape as next layer's input shape.
-      //   in_shape.at(1) = out_feature;
-      // } else {
-      //   if (rate == 0.0f) {
-      //     // It's last layer and dropout_rate is 0.0f, we do not launch FusedReluDropoutKernel.
-      //     break;
-      //   } else {
-      //     // skip_final_activation but need dropout.
-      //     OF_CUDA_CHECK((LaunchFusedReluDropoutKernel<T, false>(
-      //         cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, aux_ld, batchsize,
-      //         out_feature, rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-      //         reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()), relu_dropout_out_buf)));
-      //   }
-      // }
-      if(idx != weight_size - 1){
+      if (idx != weight_size - 1 || !skip_final_activation) {
         // If it's not last layer or it's last layer but need relu.
         OF_CUDA_CHECK((LaunchFusedReluDropoutKernel<T, true>(
             cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, aux_ld, batchsize, out_feature,
@@ -502,20 +480,17 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
         in_buf_ptr = relu_dropout_out_buf;
         // Set hidden_layer shape as next layer's input shape.
         in_shape.at(1) = out_feature;
-      } else if (rate != 0.0f){
-        if(skip_final_activation){
-          OF_CUDA_CHECK((LaunchFusedReluDropoutKernel<T, false>(
-            cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, aux_ld, batchsize, out_feature,
-            rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-            reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()), relu_dropout_out_buf)));
-        } else {
-          OF_CUDA_CHECK((LaunchFusedReluDropoutKernel<T, true>(
-            cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, aux_ld, batchsize, out_feature,
-            rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-            reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()), relu_dropout_out_buf)));
-        }
       } else {
-        break; 
+        if (rate == 0.0f) {
+          // It's last layer and dropout_rate is 0.0f, we do not launch FusedReluDropoutKernel.
+          break;
+        } else {
+          // skip_final_activation but need dropout.
+          OF_CUDA_CHECK((LaunchFusedReluDropoutKernel<T, false>(
+              cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, aux_ld, batchsize,
+              out_feature, rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
+              reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()), relu_dropout_out_buf)));
+        }
       }
     }
   }
