@@ -72,8 +72,8 @@ class MovingAverageMinMaxObserverFunctor {
                                 const std::shared_ptr<one::Tensor>& current_train_step,
                                 const std::shared_ptr<one::Tensor>& moving_max,
                                 const std::shared_ptr<one::Tensor>& moving_min, const bool training,
-                                const std::string quantization_formula,
                                 const int64_t& stop_update_after_iters,
+                                const std::string quantization_formula,
                                 const int32_t& quantization_bit,
                                 const std::string quantization_scheme, const float momentum) const {
     MutableAttrMap attrs;
