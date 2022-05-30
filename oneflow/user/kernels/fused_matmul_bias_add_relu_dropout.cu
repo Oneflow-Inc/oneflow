@@ -29,7 +29,6 @@ namespace {
 constexpr int32_t kVecSize = 4;
 constexpr int32_t kBlockSize = 256;
 constexpr int32_t kWarpSize = 32;
-constexpr int waves = 32;
 
 union RandPack4 {
   uint4 storage;

@@ -164,7 +164,7 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
         last_bias_grad = op.GetGradTensorWithOpOutput("out", 0);
       }
 
-      // step2: use CublasFusedMatmulBiasAddGrad to get last layer's bias grad and weight grad.
+      // step2: Get last layer's bias grad.
       std::vector<int32_t> reduce_axes_vec{0};
       user_op::UserOpConfWrapperBuilder bias_grad_builder(op.op_name() + "_bias_grad");
       user_op::UserOpConfWrapper bias_grad_op = bias_grad_builder.Op("reduce_sum")
@@ -191,7 +191,7 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
                 .Input("dy", cublas_dy)
                 .Input("weight", op.input("weights", hidden_layer_idx))
                 .Input("aux", op.output("cublas_aux", hidden_layer_idx - 1))
-                .Attr<double>("alpha", 1.0)
+                .Attr<double>("alpha", scale)
                 .Output("d_grad")
                 .Output("d_bias")
                 .Build();
