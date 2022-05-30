@@ -305,6 +305,7 @@ __global__ void DotFeatureInteractionWmmaImpl(
           if (in_row >= param.in_feature_dim[i]) { break; }
           int buf_row = param.dim_start_offset[i] + in_row;
           Pack<T, pack_size> pack_in_val = batch_in[in_row * vector_num_pack + col];
+#pragma unroll
           for (int t = 0; t < pack_size; ++t) {
             pack_in_val.elem[t] = wmma.Convert(pack_in_val.elem[t]);
           }
@@ -314,6 +315,7 @@ __global__ void DotFeatureInteractionWmmaImpl(
     }
   }
   Pack<T, pack_size> zero;
+#pragma unroll
   for (int k = 0; k < pack_size; ++k) { zero.elem[k] = wmma.Convert(0); }
   for (int row = threadIdx.y; row < param.features_dim; row += blockDim.y) {
     for (int col = vector_num_pack + threadIdx.x; col < padded_vector_num_pack; col += blockDim.x) {
@@ -508,6 +510,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
           if (in_row >= param.in_feature_dim[i]) { break; }
           int buf_row = param.dim_start_offset[i] + in_row;
           Pack<T, pack_size> pack_in_val = batch_in[in_row * vector_num_pack + col];
+#pragma unroll
           for (int t = 0; t < pack_size; ++t) {
             pack_in_val.elem[t] = wmma.Convert(pack_in_val.elem[t]);
           }
@@ -517,6 +520,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
     }
   }
   Pack<T, pack_size> zero;
+#pragma unroll
   for (int k = 0; k < pack_size; ++k) { zero.elem[k] = wmma.Convert(0); }
 #pragma unroll
   for (int row = features_dim + threadIdx.y; row < padded_num_rows; row += blockDim.y) {
@@ -569,6 +573,7 @@ __global__ void DotFeatureInteractionBackwardWmmaImpl(
           Pack<T, pack_size> grad_val;
           Pack<ComputeType, pack_size> buf_grad_val =
               in_grad_buf_pack[buf_row * in_shared_mem_cols_num_pack + col];
+#pragma unroll
           for (int t = 0; t < pack_size; ++t) {
             grad_val.elem[t] = static_cast<T>(buf_grad_val.elem[t]);
           }
