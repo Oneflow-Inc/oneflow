@@ -9433,9 +9433,6 @@ def OneFlow_FillTensorOp : OneFlow_BaseOp<"fill_tensor_", [NoSideEffect, Support
   let output = (outs
     OneFlow_Tensor:$out
   );
-  let attrs = (ins
-    DefaultValuedAttr<BoolAttr, "false">:$is_floating_value
-  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;

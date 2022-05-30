@@ -1127,6 +1127,8 @@ class TestTensor(flow.unittest.TestCase):
     def profile_fill_(test_case):
         torch.Tensor.fill_(torch.ones(1, 8, 16, 16), 2)
         torch.Tensor.fill_(torch.ones(1000, 1000), 2)
+        torch.Tensor.fill_(torch.ones(1, 8, 16, 16), torch.tensor(2))
+        torch.Tensor.fill_(torch.ones(1000, 1000), torch.tensor(2))
 
 
 if __name__ == "__main__":
