@@ -202,6 +202,46 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
   }
 };
 
+struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
+ public:
+  using OpConversionPattern<MatmulOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    // TODO: more throw for robust in matmul shape rank
+    auto preprocess = [&](Value matrix, bool transpose) -> Value {
+      auto shape_type = matrix.getType().cast<ShapedType>();
+      if (transpose) {
+        auto transpose_perms = rewriter.create<tosa::ConstOp>(
+            op.getLoc(), RankedTensorType::get({6}, rewriter.getI32Type()),
+            rewriter.getI32TensorAttr({0, 1, 2}));
+        matrix = rewriter.create<tosa::TransposeOp>(
+            op->getLoc(),
+            RankedTensorType::get({shape_type.getDimSize(1), shape_type.getDimSize(0)},
+                                  shape_type.getElementType()),
+            matrix, transpose_perms);
+      }
+      shape_type = matrix.getType().cast<ShapedType>();
+      auto reshape_type = RankedTensorType::get(
+          {1, shape_type.getDimSize(0), shape_type.getDimSize(1)}, shape_type.getElementType());
+      return rewriter.create<tosa::ReshapeOp>(
+          op.getLoc(), reshape_type, matrix,
+          rewriter.getI64ArrayAttr({1, shape_type.getDimSize(0), shape_type.getDimSize(1)}));
+    };
+
+    auto a = preprocess(op.a(), op.transpose_a());
+    auto b = preprocess(op.b(), op.transpose_b());
+    auto out_shape_type = op.out().getType().cast<ShapedType>();
+    auto out_reshape_type =
+        RankedTensorType::get({1, out_shape_type.getDimSize(0), out_shape_type.getDimSize(1)},
+                              out_shape_type.getElementType());
+    auto matmul = rewriter.create<tosa::MatMulOp>(op.getLoc(), out_reshape_type, a, b);
+    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
+        op, out_shape_type, matmul,
+        rewriter.getI64ArrayAttr({out_shape_type.getDimSize(0), out_shape_type.getDimSize(1)}));
+    return success();
+  }
+};
+
 namespace {
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
@@ -218,7 +258,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
-  patterns.insert<ReluOpLowering, Conv2DOpLowering>(&getContext());
+  patterns.insert<ReluOpLowering, Conv2DOpLowering, MatmulOpLowering>(&getContext());
   patterns.insert<Add2OpLowering, BroadcastAddOpLowering>(&getContext());
   patterns.insert<JobLowering, ReturnOpLowering>(&getContext());
   patterns.insert<InputOpLowering, OutputOpLowering>(&getContext());
