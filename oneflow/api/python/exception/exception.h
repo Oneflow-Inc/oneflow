@@ -38,6 +38,10 @@ namespace py = pybind11;
     PyErr_SetString(PyExc_IndexError, e.what());          \
     retstmt;                                              \
   }                                                       \
+  catch (const oneflow::TypeException& e) {               \
+    PyErr_SetString(PyExc_TypeError, e.what());           \
+    retstmt;                                              \
+  }                                                       \
   catch (const oneflow::NotImplementedException& e) {     \
     PyErr_SetString(PyExc_NotImplementedError, e.what()); \
     retstmt;                                              \

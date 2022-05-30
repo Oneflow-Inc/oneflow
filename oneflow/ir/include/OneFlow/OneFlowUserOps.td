@@ -2547,20 +2547,20 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
   let has_data_type_infer_fn = 1;
 }
 
-
-def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$features,
     Optional<OneFlow_Tensor>:$output_concat
   );
   let output = (outs
     OneFlow_Tensor:$out,
-    OneFlow_Tensor:$padded_concated_features
+    Optional<OneFlow_Tensor>:$padded_concated_features
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$self_interaction,
     DefaultValuedAttr<BoolAttr, "false">:$has_output_concat,
-    DefaultValuedAttr<SI32Attr, "0">:$output_padding
+    DefaultValuedAttr<SI32Attr, "0">:$output_padding,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$pooling
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -2568,10 +2568,10 @@ def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_int
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    OneFlow_Tensor:$padded_concated_features,
+    Optional<OneFlow_Tensor>:$padded_concated_features,
     Variadic<OneFlow_Tensor>:$features_grad_like
   );
   let output = (outs
@@ -2580,7 +2580,8 @@ def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$self_interaction,
-    DefaultValuedAttr<SI32Attr, "0">:$output_concat_grad_dim
+    DefaultValuedAttr<SI32Attr, "0">:$output_concat_grad_dim,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$pooling
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -5917,8 +5918,8 @@ def OneFlow_FtrlUpdateOp : OneFlow_BaseOp<"ftrl_update", [NoGrad, AttrSizedOpera
 #endif // GET_ONEFLOW_OPTIMIZER_OP_DEFINITIONS
 
 // Group: PADDING
-// pad, pad_grad, reflection_pad2d, reflection_pad2d_grad, replication_pad2d, replication_pad2d_grad, same_padding, same_padding_grad
-// Total: 8
+// pad, reflection_pad2d, reflection_pad2d_grad, replication_pad2d, replication_pad2d_grad, same_padding, same_padding_grad
+// Total: 7
 
 #ifdef GET_ONEFLOW_PADDING_OP_DEFINITIONS
 
@@ -5943,24 +5944,6 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMetho
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_PadGradOp : OneFlow_BaseOp<"pad_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$dy
-  );
-  let output = (outs
-    OneFlow_Tensor:$dx
-  );
-  let attrs = (ins
-    SI64ArrayAttr:$padding_before,
-    SI64ArrayAttr:$padding_after,
-    DefaultValuedAttr<F64Attr, "0.">:$floating_constant_value,
-    DefaultValuedAttr<SI64Attr, "0">:$integral_constant_value
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
 
 def OneFlow_ReflectionPad2DOp : OneFlow_BaseOp<"reflection_pad2d", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -8004,7 +7987,7 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, NoGrad, Cpu
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );
@@ -8807,9 +8790,10 @@ def OneFlow_UpsampleBicubic2DOp : OneFlow_BaseOp<"upsample_bicubic_2d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8827,9 +8811,10 @@ def OneFlow_UpsampleBicubic2DGradOp : OneFlow_BaseOp<"upsample_bicubic_2d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8846,9 +8831,10 @@ def OneFlow_UpsampleBilinear2DOp : OneFlow_BaseOp<"upsample_bilinear_2d", [NoSid
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8866,9 +8852,10 @@ def OneFlow_UpsampleBilinear2DGradOp : OneFlow_BaseOp<"upsample_bilinear_2d_grad
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8885,8 +8872,9 @@ def OneFlow_UpsampleLinear1DOp : OneFlow_BaseOp<"upsample_linear_1d", [NoSideEff
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8904,8 +8892,9 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8922,7 +8911,8 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8940,7 +8930,8 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$scale_factor,
+    DefaultValuedAttr<F64Attr, "0.">:$scale_factor,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8957,8 +8948,9 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8976,8 +8968,9 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -8994,9 +8987,10 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoSideE
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size, 
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9014,9 +9008,10 @@ def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad",
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9033,10 +9028,11 @@ def OneFlow_UpsampleTrilinear3DOp : OneFlow_BaseOp<"upsample_trilinear_3d", [NoS
     OneFlow_Tensor:$y
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9054,10 +9050,11 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F32Attr, "0.">:$depth_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$height_scale,
-    DefaultValuedAttr<F32Attr, "0.">:$width_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$depth_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$height_scale,
+    DefaultValuedAttr<F64Attr, "0.">:$width_scale,
     DefaultValuedAttr<BoolAttr, "false">:$align_corners,
+    SI64ArrayAttr:$output_size,
     StrAttr:$data_format
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9403,6 +9400,92 @@ def OneFlow_RocAucScoreOp : OneFlow_BaseOp<"roc_auc_score", [NoSideEffect, NoGra
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedLstmCellOp : OneFlow_BaseOp<"fused_lstm_cell", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input_gates,
+    OneFlow_Tensor:$hidden_gates,
+    OneFlow_Tensor:$cx,
+    Optional<OneFlow_Tensor>:$input_bias,
+    Optional<OneFlow_Tensor>:$hidden_bias
+  );
+  let output = (outs
+    OneFlow_Tensor:$hy,
+    OneFlow_Tensor:$cy,
+    OneFlow_Tensor:$workspace
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedLstmCellGradOp : OneFlow_BaseOp<"fused_lstm_cell_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$grad_hy,
+    OneFlow_Tensor:$grad_cy,
+    OneFlow_Tensor:$cx,
+    OneFlow_Tensor:$cy,
+    OneFlow_Tensor:$workspace
+  );
+  let output = (outs
+    OneFlow_Tensor:$grad_gates,
+    Optional<OneFlow_Tensor>:$grad_cx,
+    Optional<OneFlow_Tensor>:$grad_bias
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$result_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedGruCellOp : OneFlow_BaseOp<"fused_gru_cell", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input_gates,
+    OneFlow_Tensor:$hidden_gates,
+    OneFlow_Tensor:$hx,
+    Optional<OneFlow_Tensor>:$input_bias,
+    Optional<OneFlow_Tensor>:$hidden_bias
+  );
+  let output = (outs
+    OneFlow_Tensor:$hy,
+    OneFlow_Tensor:$workspace
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$grad_hy,
+    OneFlow_Tensor:$workspace
+  );
+  let output = (outs
+    OneFlow_Tensor:$grad_input_gates,
+    OneFlow_Tensor:$grad_hidden_gates,
+    Optional<OneFlow_Tensor>:$grad_hx,
+    Optional<OneFlow_Tensor>:$grad_input_bias,
+    Optional<OneFlow_Tensor>:$grad_hidden_bias
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$result_segment_sizes
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

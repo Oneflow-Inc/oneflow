@@ -90,6 +90,8 @@ class CUDAEventPair {
 
   double ElapsedTime() const {
     float elapsed_time_ms = 0;
+    OF_CUDA_CHECK(cudaEventSynchronize(cuda_event_start_));
+    OF_CUDA_CHECK(cudaEventSynchronize(cuda_event_finish_));
     OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_time_ms, cuda_event_start_, cuda_event_finish_));
     return elapsed_time_ms * 1000.0;  // convert to us
   }
@@ -125,6 +127,8 @@ class KernelEvent final : public IEvent {
   void InitCudaEventPair(cudaStream_t cuda_stream) {
     cuda_event_pair_ = std::make_shared<CUDAEventPair>(cuda_stream);
   }
+
+  void SetMemorySize(int64_t memory_size) { memory_size_ = memory_size; }
 #endif  // WITH_CUDA
 
  private:
@@ -136,6 +140,7 @@ class KernelEvent final : public IEvent {
 
 #if defined(WITH_CUDA)
   std::shared_ptr<CUDAEventPair> cuda_event_pair_ = nullptr;
+  int64_t memory_size_ = -1;
 #endif  // WITH_CUDA
 
   std::vector<Shape> input_shapes_;
@@ -148,8 +153,11 @@ class ProfileMgr {
  public:
   friend class EventRecorder;
 
-  ProfileMgr(bool use_cpu, bool use_cuda, bool record_shapes)
-      : use_cpu_(use_cpu), use_cuda_(use_cuda), record_shapes_(record_shapes) {}
+  ProfileMgr(bool use_cpu, bool use_cuda, bool record_shapes, bool record_bandwidth)
+      : use_cpu_(use_cpu),
+        use_cuda_(use_cuda),
+        record_shapes_(record_shapes),
+        record_bandwidth_(record_bandwidth) {}
 
   std::string RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,
                                     const std::string& name);
@@ -160,6 +168,8 @@ class ProfileMgr {
   bool use_cpu_;
   bool use_cuda_;
   bool record_shapes_;
+  bool record_bandwidth_;
+
   std::queue<std::shared_ptr<IEvent>> events_;
   std::unordered_map<std::string, std::shared_ptr<EventRecorder>> event_recorders_;
   // To prevent releasing EventRecorders of the same name.
@@ -193,14 +203,13 @@ class EventRecorder {
     }
   }
   static std::shared_ptr<EventRecorder> CreateCustomEventRecorder(const std::string& name);
+
+  static Maybe<EventRecorder> CreateKernelEventRecorder(
+      const std::string& name,
 #if defined(WITH_CUDA)
-  static Maybe<EventRecorder> CreateKernelEventRecorder(const std::string& name,
-                                                        cudaStream_t cuda_stream,
-                                                        const ShapeGetterFuncType& shape_getter);
-#else  // WITH_CUDA
-  static Maybe<EventRecorder> CreateKernelEventRecorder(const std::string& name,
-                                                        const ShapeGetterFuncType& shape_getter);
-#endif  // WITH_CUDA
+      cudaStream_t cuda_stream, const std::function<int64_t()>& memory_size_getter,
+#endif
+      const ShapeGetterFuncType& shape_getter);
 
  private:
   std::shared_ptr<IEvent> event_;
