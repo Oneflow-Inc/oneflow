@@ -53,7 +53,7 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, half, half> {
   OF_DEVICE_FUNC half operator()(half src) const { return __float2half(tanhf(__half2float(src))); }
 };
 
-#define REUSE_FLOAT_FUNCTOR_IN_HALF(op)                                       \
+#define SPECIALIZATION_PSEUDO_HALF_FUNCTOR(op)                                \
   template<>                                                                  \
   struct UnaryFunctor<DeviceType::kCUDA, op, half, half> {                    \
     UnaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {} \
@@ -64,20 +64,20 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, half, half> {
     }                                                                         \
   };
 
-REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kElu);
-REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kCelu);
-REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kGelu);
-REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kMish);
-REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kSelu);
-REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kSilu);
-REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kSoftSign);
-REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kSoftPlus);
+SPECIALIZATION_PSEUDO_HALF_FUNCTOR(UnaryOp::kElu);
+SPECIALIZATION_PSEUDO_HALF_FUNCTOR(UnaryOp::kCelu);
+SPECIALIZATION_PSEUDO_HALF_FUNCTOR(UnaryOp::kGelu);
+SPECIALIZATION_PSEUDO_HALF_FUNCTOR(UnaryOp::kMish);
+SPECIALIZATION_PSEUDO_HALF_FUNCTOR(UnaryOp::kSelu);
+SPECIALIZATION_PSEUDO_HALF_FUNCTOR(UnaryOp::kSilu);
+SPECIALIZATION_PSEUDO_HALF_FUNCTOR(UnaryOp::kSoftSign);
+SPECIALIZATION_PSEUDO_HALF_FUNCTOR(UnaryOp::kSoftPlus);
 
 /*********nv_bfloat16_kernel*******/
 
 #if CUDA_VERSION >= 11000
 
-#define REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(op)                                   \
+#define SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(op)                            \
   template<>                                                                  \
   struct UnaryFunctor<DeviceType::kCUDA, op, nv_bfloat16, nv_bfloat16> {      \
     UnaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {} \
@@ -88,22 +88,22 @@ REUSE_FLOAT_FUNCTOR_IN_HALF(UnaryOp::kSoftPlus);
     }                                                                         \
   };
 
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kElu);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kCelu);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kGelu);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kHardSwish);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kHardSigmoid);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kHardShrink);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kHardTanh);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kLeakyRelu);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kMish);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kSelu);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kSilu);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kSoftShrink);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kSoftSign);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kSoftPlus);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kTanh);
-REUSE_FLOAT_FUNCTOR_IN_BFLOAT16(UnaryOp::kThreshold);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kElu);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kCelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kGelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kHardSwish);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kHardSigmoid);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kHardShrink);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kHardTanh);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kLeakyRelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kMish);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kSelu);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kSilu);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kSoftShrink);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kSoftSign);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kSoftPlus);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kTanh);
+SPECIALIZATION_PSEUDO_BFLOAT16_FUNCTOR(UnaryOp::kThreshold);
 
 #endif
 
