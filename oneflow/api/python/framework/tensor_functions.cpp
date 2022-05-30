@@ -554,18 +554,25 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
   HANDLE_ERRORS
   std::cout << "cpython" << std::endl;
   PyObject* device_obj = Py_None;
-  Optional<std::string> device = "";
   static const char* keywords[2] = {"device", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:cuda", const_cast<char**>(keywords),
                                    &device_obj)) {
     return NULL;
   }
-  if (device_obj == Py_None)
-    device = "cuda";
-  else if (PyLong_Check(device_obj)) {
-    device = "cuda:" + std::to_string(PyLong_AsLong(device_obj));
+  PyObjectPtr dict(PyDict_New());
+  if (device_obj == Py_None) {
+    CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", PyUnicode_FromString("cuda")) > -1);
+  } else if (PyLong_Check(device_obj)) {
+    std::string device = "cuda:" + std::to_string(PyLong_AsLong(device_obj));
+    CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", PyUnicode_FromString(device.data()))
+                   > -1);
+  } else {
+    CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device_obj) > -1);
   }
-  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), device, NullOpt, false)));
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObject* result = functional::to(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -931,7 +938,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"cast", (PyCFunction)PyTensorObject_cast, METH_VARARGS | METH_KEYWORDS, NULL},
     {"diag", (PyCFunction)PyTensorObject_diag, METH_VARARGS | METH_KEYWORDS, NULL},
     {"diagonal", (PyCFunction)PyTensorObject_diagonal, METH_VARARGS | METH_KEYWORDS, NULL},
-    // {"add", (PyCFunction)PyTensorObject_add, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul_", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sub_", (PyCFunction)PyTensorObject_sub_, METH_VARARGS | METH_KEYWORDS, NULL},
