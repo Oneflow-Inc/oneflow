@@ -15,13 +15,10 @@ limitations under the License.
 */
 
 #include <Python.h>
-#include <object.h>
-#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
-#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
@@ -243,8 +240,6 @@ BINARY_METHOD(PyTensorObject_div_, functional::div_, "div_");
 BINARY_METHOD(PyTensorObject_mul, functional::mul, "mul");
 BINARY_METHOD(PyTensorObject_mul_, functional::mul_, "mul_");
 BINARY_METHOD(PyTensorObject_sub, functional::sub, "sub");
-// TODO: not implemented yet
-// BINARY_METHOD(PyTensorObject_sub, functional::sub, "sub_");
 BINARY_METHOD(PyTensorObject_fmod, functional::fmod, "fmod");
 BINARY_METHOD(PyTensorObject_matmul, functional::matmul, "matmul");
 BINARY_METHOD(PyTensorObject_logical_and, functional::logical_and, "logical_and");
