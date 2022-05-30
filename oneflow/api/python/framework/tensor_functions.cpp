@@ -15,10 +15,13 @@ limitations under the License.
 */
 
 #include <Python.h>
+#include <object.h>
+#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
@@ -94,7 +97,7 @@ static PyObject* PyTensorObject_nb_invert(PyObject* self) {
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                  \
     PyObjectPtr dict(PyDict_New());                                            \
     CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1); \
-    const auto& result = bind_func(NULL, tuple.get(), dict.get());             \
+    auto* result = bind_func(NULL, tuple.get(), dict.get());                   \
     if (PyErr_Occurred()) { throw py::error_already_set(); }                   \
     return result;                                                             \
     END_HANDLE_ERRORS                                                          \
@@ -225,7 +228,9 @@ UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
       return NULL;                                                                          \
     }                                                                                       \
     PyObjectPtr tuple(PyTuple_Pack(2, self, other));                                        \
-    return bind_func(NULL, tuple.get(), NULL);                                              \
+    auto* result = bind_func(NULL, tuple.get(), NULL);                                      \
+    if (PyErr_Occurred()) { throw py::error_already_set(); }                                \
+    return result;                                                                          \
     END_HANDLE_ERRORS                                                                       \
   }
 
@@ -276,7 +281,7 @@ static PyObject* PyTensorObject_element_size(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  auto device_type = ASSERT(PyTensor_Unpack(self)->device())->enum_type();
+  DeviceType device_type = ASSERT(PyTensor_Unpack(self)->device())->enum_type();
   CHECK_OR_THROW(device_type == DeviceType::kCUDA)
       << "get_device is only available for GPU tensor.";
   return functional::CastToPyObject(ASSERT(PyTensor_Unpack(self)->device())->device_id());
@@ -312,7 +317,9 @@ static PyObject* PyTensorObject_argmax(PyObject* self, PyObject* args, PyObject*
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
-  return functional::argmax(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::argmax(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -330,7 +337,9 @@ static PyObject* PyTensorObject_argmin(PyObject* self, PyObject* args, PyObject*
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
-  return functional::argmin(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::argmin(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -348,7 +357,9 @@ static PyObject* PyTensorObject_amin(PyObject* self, PyObject* args, PyObject* k
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dim", dim) > -1);
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", keepdim) > -1);
-  return functional::amin(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::amin(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -361,63 +372,39 @@ static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* k
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(2, self, dtype));
-  return functional::cast(NULL, tuple.get(), NULL);
+  PyObject* result = functional::cast(NULL, tuple.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
 static PyObject* PyTensorObject_diag(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   std::cout << "cpython" << std::endl;
-  PyObject* diagonal = PyLong_FromLong(0);
+  int32_t diagonal = 0;
   static const char* keywords[2] = {"diagonal", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:diag", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i:diag", const_cast<char**>(keywords),
                                    &diagonal)) {
     return NULL;
   }
-  PyObjectPtr tuple(PyTuple_Pack(2, self, diagonal));
-  return functional::diag(NULL, tuple.get(), NULL);
+  return PyTensor_New(ASSERT_PTR(functional::Diag(PyTensor_Unpack(self), diagonal)));
   END_HANDLE_ERRORS
 }
 
 static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   std::cout << "cpython" << std::endl;
-  PyObject* offset = PyLong_FromLong(0);
-  PyObject* dim1 = PyLong_FromLong(0);
-  PyObject* dim2 = PyLong_FromLong(1);
+  int32_t offset = 0;
+  int32_t dim1 = 0;
+  int32_t dim2 = 1;
   static const char* keywords[4] = {"offset", "dim1", "dim2", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOO:diagonal", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|iii:diagonal", const_cast<char**>(keywords),
                                    &offset, &dim1, &dim2)) {
     return NULL;
   }
-  PyObjectPtr tuple(PyTuple_Pack(4, self, offset, dim1, dim2));
-  return functional::diagonal(NULL, tuple.get(), NULL);
+  return PyTensor_New(ASSERT_PTR(functional::Diagonal(PyTensor_Unpack(self), offset, dim1, dim2)));
   END_HANDLE_ERRORS
 }
-
-// static PyObject* PyTensorObject_add(PyObject* self, PyObject* args, PyObject* kwargs) {
-//   HANDLE_ERRORS
-//   std::cout << "cpython" << std::endl;
-//   PyObject* other = NULL;
-//   PyObject* alpha = PyFloat_FromDouble(1.0);
-//   static const char* keywords[3] = {"other", "alpha", NULL};
-//   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|$O:add", const_cast<char**>(keywords),
-//   &other, &alpha)) {
-//     return NULL;
-//   }
-//   std::cout << "run1" << std::endl;
-//   if(other == NULL)
-//     std::cout << "other null" << std::endl;
-//   std::cout << "run2" << std::endl;
-//   PyObjectPtr tuple(PyTuple_Pack(3, self, other, alpha));//, other, alpha));
-//   // PyObjectPtr dict(PyDict_New());
-//   PyObject* dict = PyDict_New();
-//   CHECK_OR_THROW(PyDict_SetItemString(dict, "alpha", alpha) > -1);
-//   CHECK_OR_THROW(PyDict_SetItemString(dict, "inplace", Py_False) > -1);
-//   std::cout << "run3" << std::endl;
-//   return functional::add(NULL, tuple.get(), dict);
-//   END_HANDLE_ERRORS
-// }
 
 static PyObject* PyTensorObject_addcmul(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
@@ -433,7 +420,9 @@ static PyObject* PyTensorObject_addcmul(PyObject* self, PyObject* args, PyObject
   PyObjectPtr tuple(PyTuple_Pack(3, self, tensor1, tensor2));
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "value", value) > -1);
-  return functional::addcmul(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::addcmul(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -451,7 +440,9 @@ static PyObject* PyTensorObject_addcmul_(PyObject* self, PyObject* args, PyObjec
   PyObjectPtr tuple(PyTuple_Pack(3, self, tensor1, tensor2));
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "value", value) > -1);
-  return functional::addcmul_(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::addcmul_(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -466,7 +457,9 @@ static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* k
   PyObjectPtr tuple(PyTuple_Pack(2, self, other));
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
-  return functional::sub(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::sub(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -484,7 +477,9 @@ static PyObject* PyTensorObject_clamp(PyObject* self, PyObject* args, PyObject* 
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "min", min) > -1);
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "max", max) > -1);
-  return functional::clamp(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::clamp(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -502,7 +497,10 @@ static PyObject* PyTensorObject_clamp_(PyObject* self, PyObject* args, PyObject*
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "min", min) > -1);
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "max", max) > -1);
-  return functional::clamp_(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::clamp_(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -538,40 +536,36 @@ static PyObject* PyTensorObject_clip_(PyObject* self, PyObject* args, PyObject* 
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "min", min) > -1);
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "max", max) > -1);
-  return functional::clip_(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::clip_(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
 static PyObject* PyTensorObject_cpu(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   std::cout << "cpython" << std::endl;
-  PyObjectPtr dict(PyDict_New());
-  PyObjectPtr device(PyUnicode_FromString("cpu"));
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device.get()) > -1);
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  return functional::to(NULL, tuple.get(), dict.get());
+  Optional<std::string> device = "cpu";
+  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), device, NullOpt, false)));
   END_HANDLE_ERRORS
 }
 
 static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   std::cout << "cpython" << std::endl;
-  PyObject* device = Py_None;
+  PyObject* device_obj = Py_None;
+  Optional<std::string> device = "";
   static const char* keywords[2] = {"device", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:cuda", const_cast<char**>(keywords),
-                                   &device)) {
+                                   &device_obj)) {
     return NULL;
   }
-  if (device == Py_None)
-    device = PyUnicode_FromString("cuda");
-  else if (PyLong_Check(device)) {
-    device = PyUnicode_Concat(PyUnicode_FromString("cuda:"),
-                              PyUnicode_FromFormat("%d", PyLong_AsLong(device)));
+  if (device_obj == Py_None)
+    device = "cuda";
+  else if (PyLong_Check(device_obj)) {
+    device = "cuda:" + std::to_string(PyLong_AsLong(device_obj));
   }
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device) > -1);
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  return functional::to(NULL, tuple.get(), dict.get());
+  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), device, NullOpt, false)));
   END_HANDLE_ERRORS
 }
 
@@ -585,7 +579,9 @@ static PyObject* PyTensorObject_in_top_k(PyObject* self, PyObject* args, PyObjec
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(3, self, predictions, k));
-  return functional::in_top_k(NULL, tuple.get(), NULL);
+  PyObject* result = functional::in_top_k(NULL, tuple.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -599,7 +595,9 @@ static PyObject* PyTensorObject_index_select(PyObject* self, PyObject* args, PyO
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(3, self, dim, index));
-  return functional::index_select(NULL, tuple.get(), NULL);
+  PyObject* result = functional::index_select(NULL, tuple.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -625,9 +623,9 @@ static PyObject* PyTensorObject_maximum(PyObject* self, PyObject* args, PyObject
     return NULL;
   }
   CHECK_OR_THROW(PyTensor_Check(y))
-      << Error::TypeError() << "minimum(): argument 'other' must be tensor, not "
+      << Error::TypeError() << "maximum(): argument 'other' must be tensor, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(y)));
-  return PyTensor_New(ASSERT_PTR(functional::Minimum(PyTensor_Unpack(self), PyTensor_Unpack(y))));
+  return PyTensor_New(ASSERT_PTR(functional::Maximum(PyTensor_Unpack(self), PyTensor_Unpack(y))));
   END_HANDLE_ERRORS
 }
 
@@ -639,7 +637,9 @@ static PyObject* PyTensorObject_pow(PyObject* self, PyObject* args, PyObject* kw
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(2, self, b));
-  return functional::pow(NULL, tuple.get(), NULL);
+  PyObject* result = functional::pow(NULL, tuple.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -658,7 +658,9 @@ static PyObject* PyTensorObject_var(PyObject* self, PyObject* args, PyObject* kw
   PyDict_SetItemString(dict.get(), "dim", dim);
   PyDict_SetItemString(dict.get(), "unbiased", unbiased);
   PyDict_SetItemString(dict.get(), "keepdim", keepdim);
-  return functional::var(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::var(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -677,7 +679,9 @@ static PyObject* PyTensorObject_std(PyObject* self, PyObject* args, PyObject* kw
   PyDict_SetItemString(dict.get(), "dim", dim);
   PyDict_SetItemString(dict.get(), "unbiased", unbiased);
   PyDict_SetItemString(dict.get(), "keepdim", keepdim);
-  return functional::std(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::std(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -727,7 +731,9 @@ static PyObject* PyTensorObject_norm(PyObject* self, PyObject* args, PyObject* k
   PyObjectPtr tuple(PyTuple_Pack(4, self, p, dim, keepdim));
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "dtype", dtype) > -1);
-  return functional::norm(NULL, tuple.get(), dict.get());
+  PyObject* result = functional::norm(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -818,7 +824,9 @@ static PyObject* PyTensorObject_roll(PyObject* self, PyObject* args, PyObject* k
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(3, self, shifts, dims));
-  return functional::roll(NULL, tuple.get(), NULL);
+  PyObject* result = functional::roll(NULL, tuple.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -832,7 +840,9 @@ static PyObject* PyTensorObject_chunk(PyObject* self, PyObject* args, PyObject* 
     return NULL;
   }
   PyObjectPtr tuple(PyTuple_Pack(3, self, chunks, dim));
-  return functional::chunk(NULL, tuple.get(), NULL);
+  PyObject* result = functional::chunk(NULL, tuple.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -884,7 +894,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"tril", (PyCFunction)PyTensorObject_tril, METH_VARARGS | METH_KEYWORDS, NULL},
     {"triu", (PyCFunction)PyTensorObject_triu, METH_VARARGS | METH_KEYWORDS, NULL},
     {"norm", (PyCFunction)PyTensorObject_norm, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
+    {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
     {"relu", PyTensorObject_relu, METH_NOARGS, NULL},
     {"relu_", PyTensorObject_relu_, METH_NOARGS, NULL},
