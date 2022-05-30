@@ -245,11 +245,10 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
  public:
   explicit DataShuffleKernelState(user_op::KernelInitContext* ctx)
       : device_index_(-1),
-        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
-        stream_name_(""),
+        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
         parallel_desc_(ctx->parallel_desc()) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+    if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
     OF_CUDA_CHECK(cudaMallocHost(
         &host_num_unique_matrix_,
         parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
@@ -283,11 +282,7 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     ncclComm_t comm;
-    if (has_independent_stream_) {
-      comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
-    } else {
-      comm = comm_mgr->GetCommForDevice(device_set);
-    }
+    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
     comm_.reset(new Comm(comm));
   }
 
@@ -1517,4 +1512,9 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_UNIQUE_KEY_VALUE_PAIR_KERNEL, ID_DATA_TYPE_SEQ,
                                  ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("id_shuffle");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("embedding_shuffle");
+REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("embedding_gradient_shuffle");
+
 }  // namespace oneflow
