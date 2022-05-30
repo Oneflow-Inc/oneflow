@@ -31,8 +31,9 @@ class OperatorConfSymbol final {
   ~OperatorConfSymbol() = default;
 
   const OperatorConf& op_conf() const { return op_conf_; }
+  // only used for symbol storage
+  const OperatorConf& data() const { return op_conf_; }
   const Optional<int64_t>& symbol_id() const { return symbol_id_; }
-  std::shared_ptr<OperatorConf> data() const { return data_; }
 
  private:
   Optional<int64_t> symbol_id_;
