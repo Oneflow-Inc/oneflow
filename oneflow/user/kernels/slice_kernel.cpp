@@ -58,17 +58,22 @@ class SliceContext final {
 
   Maybe<void> PushSplitInfo(int64_t split_axis, int64_t lower, int64_t upper,
                             int64_t logical_length) {
-    // split_axis can only be push once
-    CHECK_OR_RETURN(!IsAxisPushed(split_axis))
-        << "split_axis " << split_axis << " has been pushed to SliceContext";
+    if (split_axis != SPLIT_AXIS_FOR_NON_SPLIT) {
+      // split_axis can only be push once
+      CHECK_OR_RETURN(!IsAxisPushed(split_axis))
+          << "split_axis " << split_axis << " has been pushed to SliceContext";
+      CHECK_GE_OR_RETURN(split_axis, 0) << "split_axis >= 0 or equal to SPLIT_AXIS_FOR_NON_SPLIT";
 
-    axis_bitset_ |= ((uint32_t)1 << split_axis);
+      axis_bitset_ |= ((uint32_t)1 << split_axis);  // NOLINT
+    }
     split_info_vec_.emplace_back(SplitInfo{split_axis, lower, upper, logical_length});
     return Maybe<void>::Ok();
   }
   const std::vector<SplitInfo>& GetSplitInfo() const { return split_info_vec_; }
   bool IsAxisPushed(int64_t split_axis) const {
-    return (axis_bitset_ & ((uint32_t)1 << split_axis)) != 0;
+    if (split_axis == SPLIT_AXIS_FOR_NON_SPLIT) { return false; }
+    CHECK_GE(split_axis, 0) << "split_axis >= 0 or equal to SPLIT_AXIS_FOR_NON_SPLIT";
+    return (axis_bitset_ & ((uint32_t)1 << split_axis)) != 0;  // NOLINT
   }
 
  private:
