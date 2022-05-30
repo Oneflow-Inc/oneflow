@@ -75,6 +75,7 @@ Shape& Shape::operator=(const Shape& shape) {
 
 Shape& Shape::assign(const DimVector& dim_vec) {
   dim_vec_ = dim_vec;
+  is_initialized_ = true;
   return *this;
 }
 

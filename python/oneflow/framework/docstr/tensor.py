@@ -2064,3 +2064,31 @@ add_docstr(
     Copies the tensor to pinned memory, if it’s not already pinned.
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.type,
+    r"""Returns the type if dtype is not provided, else casts this object to the specified type.
+        If this is already of the correct type, no copy is performed and the original object is returned.
+
+    Args:
+        dtype (oneflow.dtype or oneflow.tensortype or string, optional): The desired type.
+        non_blocking (bool): (**Not Implemented yet**) If True, and the source is in pinned memory
+            and destination is on the GPU or vice versa, the copy is performed asynchronously with respect to the host.
+            Otherwise, the argument has no effect.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([1, 2], dtype=flow.float32)
+        >>> a.type()
+        'oneflow.FloatTensor'
+        >>> a.type(flow.int8)  # dtype input
+        tensor([1, 2], dtype=oneflow.int8)
+        >>> a.type(flow.cuda.DoubleTensor)  # tensortype input
+        tensor([1., 2.], device='cuda:0', dtype=oneflow.float64)
+        >>> a.type("oneflow.HalfTensor")  # string input
+        tensor([1., 2.], dtype=oneflow.float16)
+    """,
+)
