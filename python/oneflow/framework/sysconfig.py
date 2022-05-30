@@ -52,7 +52,12 @@ def get_liboneflow_link_flags() -> List[str]:
         from oneflow.version import __cmake_project_binary_dir__
 
         oneflow_python_libs_path = __cmake_project_binary_dir__
-    return [f"-L{oneflow_python_libs_path}", f"-l:oneflow",f"-l:of_pyext_obj",f"-l:of_protoobj"]
+    return [
+        f"-L{oneflow_python_libs_path}",
+        f"-l:oneflow",
+        f"-l:of_pyext_obj",
+        f"-l:of_protoobj",
+    ]
 
 
 def get_link_flags() -> List[str]:
