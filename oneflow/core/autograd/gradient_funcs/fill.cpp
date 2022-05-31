@@ -56,7 +56,7 @@ Maybe<void> Fill::Apply(const FillCaptureState* ctx, const TensorTuple& out_grad
                         TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(1);
-  if (ctx->in_requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads.at(0), 0)); }
+  if (ctx->in_requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads[0], 0)); }
   return Maybe<void>::Ok();
 }
 
@@ -81,8 +81,8 @@ Maybe<void> FillTensor::Init(const OpExpr& op) {
 
 Maybe<void> FillTensor::Capture(FillCaptureState* ctx, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->in_requires_grad = inputs.at(0)->requires_grad();
-  ctx->value_requires_grad = inputs.at(1)->requires_grad();
+  ctx->in_requires_grad = inputs[0]->requires_grad();
+  ctx->value_requires_grad = inputs[1]->requires_grad();
   return Maybe<void>::Ok();
 }
 
@@ -91,12 +91,12 @@ Maybe<void> FillTensor::Apply(const FillCaptureState* ctx, const TensorTuple& ou
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   in_grads->resize(2);
   if (ctx->value_requires_grad) {
-    int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
+    int32_t num_axes = out_grads[0]->shape()->NumAxes();
     std::vector<int32_t> axes_vec(num_axes);
     std::iota(axes_vec.begin(), axes_vec.end(), 0);
-    (*in_grads)[1] = JUST(functional::ReduceSum(out_grads.at(0), axes_vec, /*keepdims=*/false));
+    (*in_grads)[1] = JUST(functional::ReduceSum(out_grads[0], axes_vec, /*keepdims=*/false));
   }
-  if (ctx->in_requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads.at(0), 0)); }
+  if (ctx->in_requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads[0], 0)); }
   return Maybe<void>::Ok();
 }
 

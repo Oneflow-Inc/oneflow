@@ -74,25 +74,26 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("fill_").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name());
-    user_op::UserOpConfWrapper grad_op = builder.Op("fill_")
-                                             .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-                                             .Output("out")
-                                             .Attr<double>("floating_value", 0.)
-                                             .Attr<bool>("is_floating_value", true)
-                                             .Build();
-    op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
-    AddOp(grad_op);
-  }
-  return Maybe<void>::Ok();
-});
+REGISTER_USER_OP_GRAD("fill_").SetGenBackwardOpConfFn(
+    [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name());
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("fill_")
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("out")
+                .Attr<double>("floating_value", 0.)
+                .Attr<bool>("is_floating_value", true)
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_USER_OP_GRAD("fill_tensor_")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name());
         user_op::UserOpConfWrapper grad_op =
