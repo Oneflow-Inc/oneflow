@@ -117,7 +117,7 @@ class TestEmbedding(flow.unittest.TestCase):
         y = torch.nn.functional.embedding(indices, weight)
         return y
 
-    @autotest(n=5, check_graph=True, auto_backward=False)
+    @autotest(n=5, check_graph=True)
     def test_embedding_scale_grad_by_freq(test_case):
         device = random_device()
         emb_size = random(low=2) * 16

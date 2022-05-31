@@ -67,6 +67,7 @@ Maybe<void> Embedding::Apply(const EmbeddingCaptureState* ctx, const TensorTuple
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
+  in_grads->resize(ctx->SavedTensors().size());
   const auto& weight = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
   const auto& indices = JUST(oneflow::VectorAt(ctx->SavedTensors(), 1));
   int64_t padding_idx = ctx->padding_idx;
