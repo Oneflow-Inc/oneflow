@@ -289,18 +289,20 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   return functional::CastToPyObject(ASSERT(PyTensor_Unpack(self)->device())->device_id());
   END_HANDLE_ERRORS
 }
-
+// ->
 static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* idx = Py_None;
+  PyObject* idx_obj = Py_None;
   static const char* keywords[2] = {"idx", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx_obj)) {
     return NULL;
   }
   auto shape = PyTensor_Unpack(self)->shape();
-  PyObject* shape_object = TensorSize_NewFromShape(*shape);
-  if (idx == NULL || idx == Py_None) return shape_object;
-  return shape_object->ob_type->tp_as_mapping->mp_subscript(shape_object, idx);
+  if (idx_obj == NULL || idx_obj == Py_None) return TensorSize_NewFromShape(*shape);
+  int32_t idx = PyLong_AsLong(idx_obj);
+  CHECK_OR_THROW(idx >= -shape->NumAxes() && idx < shape->NumAxes()) << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -shape->NumAxes() << ", " << shape->NumAxes() - 1 << "], but got "<< idx << ")";
+  idx = idx < 0 ? idx + shape->NumAxes() : idx;
+  return PyLong_FromLong(shape->At(idx));
   END_HANDLE_ERRORS
 }
 
@@ -370,10 +372,8 @@ static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* k
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other)) {
     return NULL;
   }
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
   PyObjectPtr concat_args(PyTuple_Pack(2, self, other));
-  PyObject* result = functional::sub(NULL, concat_args.get(), dict.get());
+  PyObject* result = PyTensorObject_nb_inplace_sub(self, other);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
