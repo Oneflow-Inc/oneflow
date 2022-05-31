@@ -46,7 +46,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     if (
         src_nd_sbp[1] == dst_nd_sbp[1]
         and src_nd_sbp[0] != src_nd_sbp[1]
-        and src_nd_sbp[0] != src_nd_sbp[1]
+        and dst_nd_sbp[0] != dst_nd_sbp[1]
     ):
         return
 
@@ -80,7 +80,10 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     in_np = x.numpy()
     #if flow.env.get_rank() == 0:
     #    print("src sbp ", src_nd_sbp, ", dst sbp ", dst_nd_sbp)
-
+    #    equal = np.array_equal(out_np, in_np)
+    #    if not equal:
+    #        print("in ", in_np)
+    #        print("out ", out_np)
     test_case.assertTrue(np.array_equal(out_np, in_np))
 
 

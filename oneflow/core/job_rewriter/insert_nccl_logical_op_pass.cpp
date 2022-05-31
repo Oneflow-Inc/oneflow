@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/job/nd_sbp_util.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -337,6 +338,13 @@ bool TryBuildNcclBy2DHierarchyOthers(OperatorConf* ret, const NdSbp& src_nd_sbp,
                                        const BlobDesc& logical_blob_desc) {
   CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
   CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
+  // send recv is dealing with same 0-Dim
+  LOG_IF(INFO, src_nd_sbp.sbp_parallel(0) == dst_nd_sbp.sbp_parallel(0)) << "send recv is dealing with same 0-Dim, src sbp " << NdSbpToString(src_nd_sbp) << ", dst sbp " << NdSbpToString(dst_nd_sbp);
+  // send recv is dealing with same 1-Dim, such as (B, S0) -> (S0, S0)
+  LOG_IF(INFO, ((src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1)) &&
+          !(NdSbpAllSameSplitParallel(src_nd_sbp) || NdSbpAllSameSplitParallel(dst_nd_sbp)))) << "send recv is dealing with same 1-Dim,  src sbp " << NdSbpToString(src_nd_sbp) << ", dst sbp " << NdSbpToString(dst_nd_sbp);
+  // send recv can not dealing with P in dst_nd_sbp
+  if (NdSbpHasPartialParallel(dst_nd_sbp)) return false;
   *ret =
       user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(Send)2(Recv)-" + NewUniqueId())
           .Op("_nccl_logical_send_recv")
@@ -411,6 +419,7 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
              && (*src_reduced_hierarchy == *dst_reduced_hierarchy)) {
     bool got_nccl = false;
     if (src_reduced_nd_sbp->sbp_parallel(0) == dst_reduced_nd_sbp->sbp_parallel(0)) {
+      // TODO(): same dim 0 need to deal with (*, P) -> (*, S)
       got_nccl = TryBuildNcclBy2DHierarchySameDim0(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
                                                src_reduced_hierarchy, lbn, scope_symbol_id,
                                                logical_blob_desc);
