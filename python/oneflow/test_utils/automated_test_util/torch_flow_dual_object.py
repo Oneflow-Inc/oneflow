@@ -849,10 +849,11 @@ class DualObject:
                     for (k, v) in oneflow_state_dict.items():
                         if v.is_global:
                             t = getattr(oneflow, k)
+                            new = t.to_global(placement=v.placement, sbp=v.sbp)
+                            if isinstance(t, flow.nn.Parameter):
+                                new = flow.nn.Parameter(new)
                             setattr(
-                                oneflow,
-                                k,
-                                t.to_global(placement=v.placement, sbp=v.sbp),
+                                oneflow, k, new,
                             )
                 else:
                     oneflow = oneflow.to_global(
