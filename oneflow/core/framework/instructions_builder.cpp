@@ -203,9 +203,9 @@ Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(const ParallelCon
       parallel_conf, [&] { return this->CreateSymbolId(); });
 }
 
-Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const ScopeProto& parallel_conf) {
+Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const ScopeProto& scope_proto) {
   return Global<symbol::Storage<Scope>>::Get()->FindOrCreate(
-      parallel_conf, [&] { return this->CreateSymbolId(); });
+      scope_proto, [&] { return this->CreateSymbolId(); });
 }
 
 Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(const OperatorConf& op_conf) {
