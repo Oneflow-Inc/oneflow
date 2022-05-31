@@ -2651,7 +2651,7 @@ class IndexSelectFunctor {
 
     DimVector index_broad_cast(input_num_axes);
     for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
-    if (index_broad_cast[new_dim] != 0) { index_broad_cast[new_dim] = 1; }
+    index_broad_cast[new_dim] = 1;
     Shape expand_shape(index_broad_cast);
     std::shared_ptr<one::Tensor> index_new;
     if (index_num_axes == 1) {
@@ -3045,15 +3045,14 @@ class RepeatInterLeaveTensorFunctor {
     CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))
         << Error::RuntimeError << "repeats must have the same size as input along dim";
     std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, 0, DType::Int32()));
-    int64_t output_size_value = 0;
-    for (const auto x : repeats_value) { output_size_value += x; }
+    const int64_t output_size_value =
+        std::accumulate(repeats_value.begin(), repeats_value.end(), 0);
     std::shared_ptr<one::Tensor> res;
     if (output_size_value > 0) {
       res = JUST(IndexSelect(input, dim_,
                              JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
     } else {
-      DimVector new_input_shape(num_axes);
-      for (int i = 0; i < num_axes; i++) { new_input_shape[i] = input->shape()->At(i); }
+      DimVector new_input_shape(input_shape->dim_vec().begin(), input_shape->dim_vec().end());
       new_input_shape[dim_] = 0;
       std::shared_ptr<one::Tensor> new_input =
           JUST(Constant(Shape{new_input_shape}, Scalar(0), input->dtype(), JUST(input->device())));

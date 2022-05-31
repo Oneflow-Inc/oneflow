@@ -21,7 +21,7 @@ add_docstr(
     """
     repeat_interleave(input, repeats, dim=None, *, output_size=None) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.repeat_interleave.html#torch.repeat_interleave.html
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.repeat_interleave.html
 
     Repeat elements of a tensor.
 
