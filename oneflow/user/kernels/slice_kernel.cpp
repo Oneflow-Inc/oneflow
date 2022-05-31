@@ -276,7 +276,9 @@ void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
       }
     }
     for (const auto& split_info : slice_ctx.GetSplitInfo()) {
-      logical_dims[split_info.split_axis] = split_info.logical_length;
+      if (split_info.split_axis != SPLIT_AXIS_FOR_NON_SPLIT) {
+        logical_dims[split_info.split_axis] = split_info.logical_length;
+      }
     }
   }
   for (int i = 0; i < ndim; i++) {
