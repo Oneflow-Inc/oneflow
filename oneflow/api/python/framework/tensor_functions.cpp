@@ -15,15 +15,12 @@ limitations under the License.
 */
 
 #include <Python.h>
-#include <abstract.h>
 #include <object.h>
-#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/core/common/shape_vec.h"
-#include "oneflow/core/common/throw.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
 
@@ -225,20 +222,15 @@ UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 
-#define BINARY_METHOD(func_name, bind_func, name)                                           \
-  static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) {            \
-    HANDLE_ERRORS                                                                           \
-    PyObject* other = NULL;                                                                 \
-    static const char* keywords[2] = {"other", NULL};                                       \
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:" name, const_cast<char**>(keywords), \
-                                     &other)) {                                             \
-      return NULL;                                                                          \
-    }                                                                                       \
-    PyObjectPtr tuple(PyTuple_Pack(2, self, other));                                        \
-    auto* result = bind_func(NULL, tuple.get(), NULL);                                      \
-    if (PyErr_Occurred()) { throw py::error_already_set(); }                                \
-    return result;                                                                          \
-    END_HANDLE_ERRORS                                                                       \
+#define BINARY_METHOD(func_name, bind_func, name)                                \
+  static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
+    HANDLE_ERRORS                                                                \
+    std::cout << "cpython" << name << std::endl;                                 \
+    PyObjectPtr concat_args(concat_self(self, args));                            \
+    auto* result = bind_func(NULL, concat_args.get(), kwargs);                   \
+    if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
+    return result;                                                               \
+    END_HANDLE_ERRORS                                                            \
   }
 
 BINARY_METHOD(PyTensorObject_floor_divide, functional::floor_divide, "floor_divide");
@@ -255,7 +247,6 @@ BINARY_METHOD(PyTensorObject_matmul, functional::matmul, "matmul");
 BINARY_METHOD(PyTensorObject_logical_and, functional::logical_and, "logical_and");
 BINARY_METHOD(PyTensorObject_logical_or, functional::logical_or, "logical_or");
 BINARY_METHOD(PyTensorObject_logical_xor, functional::logical_xor, "logical_xor");
-BINARY_METHOD(PyTensorObject_bmm, functional::batch_matmul, "bmm");
 BINARY_METHOD(PyTensorObject_ne, functional::not_equal, "ne");
 BINARY_METHOD(PyTensorObject_lt, functional::less, "lt");
 BINARY_METHOD(PyTensorObject_le, functional::less_equal, "le");
@@ -263,6 +254,15 @@ BINARY_METHOD(PyTensorObject_le, functional::less_equal, "le");
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_bmm(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::batch_matmul(NULL, concat_args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -597,7 +597,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"isnan", PyTensorObject_isnan, METH_NOARGS, NULL},
     {"isinf", PyTensorObject_isinf, METH_NOARGS, NULL},
     {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
-    // {"floor_divide", PyTensorObject_div, METH_O, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
     {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
