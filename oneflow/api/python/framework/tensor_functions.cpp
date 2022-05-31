@@ -174,7 +174,6 @@ PyNumberMethods PyTensorObject_as_number = {
 #define UNARY_METHOD(func_name, bind_func)                             \
   static PyObject* func_name(PyObject* self, PyObject* unused) {       \
     HANDLE_ERRORS                                                      \
-    std::cout << "cpython" << std::endl;                               \
     return PyTensor_New(ASSERT_PTR(bind_func(PyTensor_Unpack(self)))); \
     END_HANDLE_ERRORS                                                  \
   }
@@ -227,7 +226,6 @@ UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 #define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
     HANDLE_ERRORS                                                                \
-    std::cout << "cpython" << std::endl;                                         \
     PyObjectPtr concat_args(concat_self(self, args));                            \
     PyObject* result = bind_func(NULL, concat_args.get(), kwargs);               \
     if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
@@ -294,7 +292,6 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  std::cout << "cpython size" << std::endl;
   PyObject* idx = Py_None;
   static const char* keywords[2] = {"idx", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx)) {
@@ -327,7 +324,6 @@ static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* k
 
 static PyObject* PyTensorObject_diag(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  std::cout << "cpython" << std::endl;
   int32_t diagonal = 0;
   static const char* keywords[2] = {"diagonal", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i:diag", const_cast<char**>(keywords),
@@ -340,7 +336,6 @@ static PyObject* PyTensorObject_diag(PyObject* self, PyObject* args, PyObject* k
 
 static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  std::cout << "cpython" << std::endl;
   int32_t offset = 0;
   int32_t dim1 = 0;
   int32_t dim2 = 1;
@@ -375,7 +370,6 @@ static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* k
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other)) {
     return NULL;
   }
-  std::cout << "cpython ?????" << std::endl;
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
   // if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 0) > -1); }
@@ -503,12 +497,13 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul_", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sub_", (PyCFunction)PyTensorObject_sub_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
     {"long", PyTensorObject_long, METH_NOARGS, NULL},
     {"float", PyTensorObject_float, METH_NOARGS, NULL},
     {"double", PyTensorObject_double, METH_NOARGS, NULL},
 
-    // macro BINARY_METHOD
+    // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
     {"atan2", (PyCFunction)PyTensorObject_atan2, METH_VARARGS | METH_KEYWORDS, NULL},
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -519,7 +514,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"mul_", (PyCFunction)PyTensorObject_mul_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sub", (PyCFunction)PyTensorObject_sub, METH_VARARGS | METH_KEYWORDS, NULL},
     {"fmod", (PyCFunction)PyTensorObject_fmod, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_and", (PyCFunction)PyTensorObject_logical_and, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_or", (PyCFunction)PyTensorObject_logical_or, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_xor", (PyCFunction)PyTensorObject_logical_xor, METH_VARARGS | METH_KEYWORDS, NULL},
