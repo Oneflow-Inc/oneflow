@@ -3052,6 +3052,7 @@ class RepeatInterLeaveTensorFunctor {
       res = JUST(IndexSelect(input, dim_,
                              JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
     } else {
+      // Deal with 0-size Tensor.
       DimVector new_input_shape(input_shape->dim_vec().begin(), input_shape->dim_vec().end());
       new_input_shape[dim_] = 0;
       std::shared_ptr<one::Tensor> new_input =
