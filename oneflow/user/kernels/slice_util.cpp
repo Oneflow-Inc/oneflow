@@ -20,7 +20,6 @@ namespace oneflow {
 
 SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params) {
   SliceParams fold_slice_params;
-  std::memset(&fold_slice_params, 0, sizeof(SliceParams));
   bool full_slice_on_prev_axis = false;
   FOR_RANGE(int, i, 0, params.ndim) {
     bool full_slice_on_cur_axis = params.IsFullSlice(i);

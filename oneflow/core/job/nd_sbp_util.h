@@ -33,6 +33,10 @@ TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy, c
                                               const Shape& logical_shape, int64_t parallel_id);
 TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc);
 
+bool IsAllBroadcastNdSbp(const NdSbp& nd_sbp);
+bool IsAllPartialSumNdSbp(const NdSbp& nd_sbp);
+bool IsAllSplitNdSbp(const NdSbp& nd_sbp, int64_t axis);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_SBP_PARALLEL_H_
