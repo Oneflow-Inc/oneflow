@@ -47,7 +47,7 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
 
  private:
   struct Comm {
-    Comm(ncclComm_t comm) : comm(comm) {}
+    explicit Comm(ncclComm_t comm) : comm(comm) {}
     ncclComm_t comm;
   };
   void InitComm() const;
@@ -67,8 +67,7 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
   std::vector<int64_t> recv_elem_cnts_;
 };
 
-NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx) {
-  has_independent_stream_ = ctx->op_conf().has_stream_name_hint();
+NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx) : has_independent_stream_(ctx->op_conf().has_stream_name_hint()){
   if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   parallel_desc_ = std::make_unique<ParallelDesc>(ctx->parallel_desc());

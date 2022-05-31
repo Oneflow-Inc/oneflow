@@ -209,7 +209,7 @@ void GetRankSendRecvIntersection(int64_t parallel_id,
                                  const Shape& logical_shape,
                                  std::vector<TensorSliceView>* send_intersections,
                                  std::vector<TensorSliceView>* recv_intersections) {
-  CHECK(parallel_hierarchy);
+  CHECK(parallel_hierarchy != nullptr);
   const int64_t parallel_num = parallel_hierarchy->elem_cnt();
   CHECK_LT(parallel_id, parallel_num);
 
