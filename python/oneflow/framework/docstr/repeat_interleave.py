@@ -87,7 +87,7 @@ add_docstr(
               - gpu [Yes]
               - cpu [Yes]
           - Exception Handling
-            - Exception Message and Hint must be provided [ ]
+            - Exception Message and Hint must be provided [Yes]
         - Beta Stage Check List [ ]
           - API(High compatibility with PyTorch 1.11, shouldn't have anything incompatible for a naive reason.)[Yes]
           - Doc(Same standard as Alpha Stage)[ ]
