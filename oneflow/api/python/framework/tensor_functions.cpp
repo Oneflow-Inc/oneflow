@@ -289,7 +289,7 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   return functional::CastToPyObject(ASSERT(PyTensor_Unpack(self)->device())->device_id());
   END_HANDLE_ERRORS
 }
-// ->
+
 static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* idx_obj = Py_None;
@@ -496,7 +496,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"diag", (PyCFunction)PyTensorObject_diag, METH_VARARGS | METH_KEYWORDS, NULL},
     {"diagonal", (PyCFunction)PyTensorObject_diagonal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"addcmul_", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcmul_", (PyCFunction)PyTensorObject_addcmul_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sub_", (PyCFunction)PyTensorObject_sub_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
