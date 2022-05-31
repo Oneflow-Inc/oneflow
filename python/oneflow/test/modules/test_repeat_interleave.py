@@ -49,12 +49,6 @@ class TestRepeatInterLeave(flow.unittest.TestCase):
         y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
         z = torch.repeat_interleave(x, y, 1, output_size=2)
         return z
-    
-    # @profile(torch.repeat_interleave)
-    # def profile_repeat_interleave(test_case):
-    #     input = torch.ones(20, 3, 40)
-    #     torch.repeat_interleave(input, 5)
-    #     torch.repeat_interleave(input, 5, dim=1)
 
 if __name__ == "__main__":
     unittest.main()
