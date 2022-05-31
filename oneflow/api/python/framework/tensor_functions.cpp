@@ -15,7 +15,10 @@ limitations under the License.
 */
 
 #include <Python.h>
+#include <dictobject.h>
+#include <modsupport.h>
 #include <object.h>
+#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
@@ -23,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -222,47 +226,44 @@ UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 
-#define BINARY_METHOD(func_name, bind_func, name)                                \
+#define DIRECT_PASS_FUNC(func_name, bind_func, name)                                \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
     HANDLE_ERRORS                                                                \
     std::cout << "cpython" << name << std::endl;                                 \
     PyObjectPtr concat_args(concat_self(self, args));                            \
-    auto* result = bind_func(NULL, concat_args.get(), kwargs);                   \
+    PyObject* result = bind_func(NULL, concat_args.get(), kwargs);                   \
     if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
     return result;                                                               \
     END_HANDLE_ERRORS                                                            \
   }
 
-BINARY_METHOD(PyTensorObject_floor_divide, functional::floor_divide, "floor_divide");
-BINARY_METHOD(PyTensorObject_atan2, functional::atan2, "atan2");
-BINARY_METHOD(PyTensorObject_gt, functional::greater, "gt");
-BINARY_METHOD(PyTensorObject_ge, functional::greater_equal, "ge");
-BINARY_METHOD(PyTensorObject_div, functional::div, "div");
-BINARY_METHOD(PyTensorObject_div_, functional::div_, "div_");
-BINARY_METHOD(PyTensorObject_mul, functional::mul, "mul");
-BINARY_METHOD(PyTensorObject_mul_, functional::mul_, "mul_");
-BINARY_METHOD(PyTensorObject_sub, functional::sub, "sub");
-BINARY_METHOD(PyTensorObject_fmod, functional::fmod, "fmod");
-BINARY_METHOD(PyTensorObject_matmul, functional::matmul, "matmul");
-BINARY_METHOD(PyTensorObject_logical_and, functional::logical_and, "logical_and");
-BINARY_METHOD(PyTensorObject_logical_or, functional::logical_or, "logical_or");
-BINARY_METHOD(PyTensorObject_logical_xor, functional::logical_xor, "logical_xor");
-BINARY_METHOD(PyTensorObject_ne, functional::not_equal, "ne");
-BINARY_METHOD(PyTensorObject_lt, functional::less, "lt");
-BINARY_METHOD(PyTensorObject_le, functional::less_equal, "le");
+DIRECT_PASS_FUNC(PyTensorObject_floor_divide, functional::floor_divide, "floor_divide");
+DIRECT_PASS_FUNC(PyTensorObject_atan2, functional::atan2, "atan2");
+DIRECT_PASS_FUNC(PyTensorObject_gt, functional::greater, "gt");
+DIRECT_PASS_FUNC(PyTensorObject_ge, functional::greater_equal, "ge");
+DIRECT_PASS_FUNC(PyTensorObject_div, functional::div, "div");
+DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_, "div_");
+DIRECT_PASS_FUNC(PyTensorObject_mul, functional::mul, "mul");
+DIRECT_PASS_FUNC(PyTensorObject_mul_, functional::mul_, "mul_");
+DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub, "sub");
+DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod, "fmod");
+DIRECT_PASS_FUNC(PyTensorObject_matmul, functional::matmul, "matmul");
+DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and, "logical_and");
+DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or, "logical_or");
+DIRECT_PASS_FUNC(PyTensorObject_logical_xor, functional::logical_xor, "logical_xor");
+DIRECT_PASS_FUNC(PyTensorObject_ne, functional::not_equal, "ne");
+DIRECT_PASS_FUNC(PyTensorObject_lt, functional::less, "lt");
+DIRECT_PASS_FUNC(PyTensorObject_le, functional::less_equal, "le");
+DIRECT_PASS_FUNC(PyTensorObject_bmm, functional::batch_matmul, "bmm")
+DIRECT_PASS_FUNC(PyTensorObject_argmax, functional::argmax, "argmax")
+DIRECT_PASS_FUNC(PyTensorObject_argmin, functional::argmin, "argmin")
+DIRECT_PASS_FUNC(PyTensorObject_amin, functional::amin, "amin")
+DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul, "addcmul")
+DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_, "addcmul_")
 
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_bmm(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::batch_matmul(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
   END_HANDLE_ERRORS
 }
 
@@ -295,6 +296,7 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
+  std::cout << "cpython size" << std::endl;
   PyObject* idx = Py_None;
   static const char* keywords[2] = {"idx", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx)) {
@@ -307,40 +309,19 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_argmax(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::argmax(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_argmin(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::argmin(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_amin(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  std::cout << "cpython amin" << std::endl;
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::amin(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
 static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::cast(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
+  PyObject* dtype = NULL;
+  PyObject* pin_memory = Py_False;
+  static const char* keywords[3] = {"dtype", "pin_memroy", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O!:cast", const_cast<char**>(keywords),
+                                   &dtype, &PyBool_Type, &pin_memory)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(functional::PyDTypeCheck(dtype)) << Error::TypeError() << "cast(): argument 'dtype' must be data type, but found "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype)));
+  const auto& result = functional::Cast(PyTensor_Unpack(self), functional::PyUnpackDType(dtype), pin_memory == Py_True);
+  return PyTensor_New(ASSERT_PTR(result));
   END_HANDLE_ERRORS
 }
 
@@ -372,32 +353,19 @@ static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObjec
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_addcmul(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  std::cout << "cpython" << std::endl;
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::addcmul(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_addcmul_(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  std::cout << "cpython" << std::endl;
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::addcmul_(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
 static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  std::cout << "cpython" << std::endl;
-  if (kwargs != NULL) { CHECK_OR_THROW(PyDict_SetItemString(kwargs, "inplace", Py_True) > -1); }
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::sub(NULL, concat_args.get(), kwargs);
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other))  {
+    return NULL;
+  }
+  std::cout << "cpython ?????" << std::endl;
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
+  // if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 0) > -1); }
+  PyObjectPtr concat_args(PyTuple_Pack(2, self, other));
+  PyObject* result = functional::sub(NULL, concat_args.get(), dict.get());
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
