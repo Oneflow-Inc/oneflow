@@ -3,7 +3,7 @@
 ## 支持resnet的编译
 ### 1. Op转换添加
     - [困难][未做] variableOp
-    - [困难][未做] NormalizationOp
+    - [困难][已做] NormalizationOp
         - TODO
     - [中等][未做] MatMulOp
         - TransposeOp
