@@ -28,7 +28,7 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   }
   if (need_grad) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    builder = builder.Op("stack_backward");
+    builder = builder.Op("stack_grad");
     FOR_RANGE(int32_t, i, 0, in_size) { builder = builder.Input("like", op.input("in", i)); }
     user_op::UserOpConfWrapper grad_op = builder.Input("in", op.GetGradTensorWithOpOutput("out", 0))
                                              .Output("out", in_size)
@@ -256,6 +256,6 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("Stack").SetGenBackwardOpConfFn(GenGradOp);
+REGISTER_USER_OP_GRAD("stack").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow
