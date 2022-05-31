@@ -163,10 +163,9 @@ class GenericSoftmaxBackwardFactoryImpl : public BackwardFactoryBase {
 #undef MAKE_NEW_SOFTMAX_BACKWARD_ENTRY
 
 #ifdef WITH_ONEDNN
-
-    static std::function<std::unique_ptr<SoftmaxBackwardBase>()> onednn_f32_softmax_backward =
-        NewOneDnnSoftmaxBackward<SoftmaxBackwardBase, algorithm, dnnl::memory::data_type::f32>;
     if (OneDnnIsEnabled() && data_type == DataType::kFloat) {
+      static std::function<std::unique_ptr<SoftmaxBackwardBase>()> onednn_f32_softmax_backward =
+          NewOneDnnSoftmaxBackward<SoftmaxBackwardBase, algorithm, dnnl::memory::data_type::f32>;
       return onednn_f32_softmax_backward();
     }
 #endif

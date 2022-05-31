@@ -148,9 +148,12 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
 #undef MAKE_NEW_SOFTMAX_ENTRY
 
 #ifdef WITH_ONEDNN
-    static std::function<std::unique_ptr<SoftmaxBase>()> onednn_softmax =
-        NewOneDnnSoftmax<SoftmaxBase, algorithm, dnnl::memory::data_type::f32>;
-    if (OneDnnIsEnabled() && data_type == DataType::kFloat) { return onednn_softmax(); }
+
+    if (OneDnnIsEnabled() && data_type == DataType::kFloat) {
+      static std::function<std::unique_ptr<SoftmaxBase>()> onednn_softmax =
+          NewOneDnnSoftmax<SoftmaxBase, algorithm, dnnl::memory::data_type::f32>;
+      return onednn_softmax();
+    }
 
 #endif
     return NewPrimitiveFromHandlers(new_softmax_handle, data_type);
