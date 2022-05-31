@@ -2,7 +2,7 @@
 
 - 'libunwind.h' not found
 
-  - You might adding CMake argument `-DWITH_UNWIND=OFF`, or install libunwind in your system.
+  - You might add CMake argument `-DWITH_UNWIND=OFF`, or install libunwind in your system.
 
 - `CUDNN_STATUS_NOT_INITIALIZED`
 
