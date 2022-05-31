@@ -24,7 +24,7 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
+bool NdSbpIsAllPartialSum(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
   }
@@ -35,7 +35,7 @@ bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
 Maybe<void> RawCheckNaive1ToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
-  CHECK_OR_RETURN(IsAllPartialSumNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(NdSbpIsAllPartialSum(out->nd_sbp()));
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement()));
   return Maybe<void>::Ok();
 }
