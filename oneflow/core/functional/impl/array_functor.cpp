@@ -2141,11 +2141,6 @@ class TensorSetItemFunctor {
           JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
         }
       } else {
-        if (requires_grad) {
-          return Error::RuntimeError() << "Backward is not support for consistent tensor setitem,"
-                                          "please use oneflow.no_grad() to disable autograd "
-                                          "currently. We will fix this problem soon.";
-        }
         JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
       }
     }
