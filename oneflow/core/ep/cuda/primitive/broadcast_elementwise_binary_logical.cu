@@ -24,7 +24,8 @@ namespace broadcast_elementwise_binary {
 #define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY(binary_op, src_data_type_pair, \
                                                                    dst_data_type_pair)            \
   template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<             \
-      binary_op, OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(dst_data_type_pair)>();
+      binary_op, OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(dst_data_type_pair)>(     \
+      Scalar attr0, Scalar attr1);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_LOGICAL_ENTRY,
                                  BINARY_COMPARISION_OP_SEQ BINARY_LOGICAL_OP_SEQ,

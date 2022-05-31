@@ -50,7 +50,7 @@ template<BinaryOp binary_op, typename Src, typename Dst,
 class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseBinaryImpl);
-  BroadcastElementwiseBinaryImpl() = default;
+  BroadcastElementwiseBinaryImpl(Scalar attr0, Scalar attr1) : attr0(attr0), attr1(attr1) {}
   ~BroadcastElementwiseBinaryImpl() override = default;
 
   void Launch(Stream* stream, Scalar src0, size_t num_src1_dims, const int64_t* src1_dims,
@@ -95,14 +95,18 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
         XpuVarNdarray<const Src>(Shape(src1_dim_vec), reinterpret_cast<const Src*>(src1),
                                  num_dims));
   }
+
+ protected:
+  Scalar attr0, attr1;
 };
 
 template<BinaryOp binary_op, typename Src, typename Dst,
          void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<Dst>& z,
                              const XpuVarNdarray<const Src>& x, const XpuVarNdarray<const Src>& y)>
-std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary() {
+std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar attr0,
+                                                                          Scalar attr1) {
   return std::unique_ptr<BroadcastElementwiseBinary>(
-      new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst, binary_func>());
+      new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst, binary_func>(attr0, attr1));
 }
 
 #define BINARY_MATH_OP_NDARRAY_PAIR         \
@@ -162,7 +166,7 @@ template<typename T, dnnl::algorithm algorithm, dnnl::memory::data_type src_oned
 class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OneDnnBroadcastElementwiseBinaryImpl);
-  OneDnnBroadcastElementwiseBinaryImpl(){};
+  OneDnnBroadcastElementwiseBinaryImpl(Scalar attr0, Scalar attr1) : attr0(attr0), attr1(attr1) {}
   ~OneDnnBroadcastElementwiseBinaryImpl() override = default;
 
   void Launch(Stream* stream, Scalar src0, size_t num_src1_dims, const int64_t* src1_dims,
@@ -232,6 +236,9 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
           {{DNNL_ARG_SRC_0, src_0_mem}, {DNNL_ARG_SRC_1, src_1_mem}, {DNNL_ARG_DST, dst_mem}});
     });
   }
+
+ protected:
+  Scalar attr0, attr1;
 };
 
 #define CPU_PRIMITIVE_BINARY_ONEDNN_TYPE_SEQ                               \
@@ -286,9 +293,10 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
 
 template<typename T, dnnl::algorithm algorithm, dnnl::memory::data_type src_onednn,
          dnnl::memory::data_type dst_onednn>
-std::unique_ptr<BroadcastElementwiseBinary> NewOneDnnBroadcastElementwiseBinary() {
+std::unique_ptr<BroadcastElementwiseBinary> NewOneDnnBroadcastElementwiseBinary(Scalar attr0,
+                                                                                Scalar attr1) {
   return std::unique_ptr<BroadcastElementwiseBinary>(
-      new OneDnnBroadcastElementwiseBinaryImpl<T, algorithm, src_onednn, dst_onednn>());
+      new OneDnnBroadcastElementwiseBinaryImpl<T, algorithm, src_onednn, dst_onednn>(attr0, attr1));
 }
 
 #define MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op_pair, data_type_pair) \
@@ -314,8 +322,19 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
   BroadcastElementwiseBinaryFactoryImpl() = default;
   ~BroadcastElementwiseBinaryFactoryImpl() override = default;
 
+  std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp op, DataType src_type, DataType dst_type,
+                                                  size_t max_num_dims) override {
+    return New(op, src_type, dst_type, max_num_dims, Scalar(), Scalar());
+  }
+
+  std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp op, DataType src_type, DataType dst_type,
+                                                  size_t max_num_dims, Scalar attr0) override {
+    return New(op, src_type, dst_type, max_num_dims, attr0, Scalar());
+  }
+
   std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp binary_op, DataType src_type,
-                                                  DataType dst_type, size_t max_num_dims) override {
+                                                  DataType dst_type, size_t max_num_dims,
+                                                  Scalar attr0, Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
 #define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op_pair, data_type_pair) \
   {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(data_type_pair),  \
@@ -336,8 +355,9 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
        &NdarrayUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(src_data_type_pair)>::OF_PP_CAT(     \
            Broadcast, OF_PP_PAIR_SECOND(binary_op_pair))>},
 
-    static const std::map<std::tuple<BinaryOp, DataType, DataType>,
-                          std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
+    static const std::map<
+        std::tuple<BinaryOp, DataType, DataType>,
+        std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
         new_broadcast_elementwise_binary_handle{
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
                                              BINARY_MATH_OP_NDARRAY_PAIR, NDARRAY_BINARY_TYPE_SEQ)
@@ -350,8 +370,9 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
 
 #ifdef WITH_ONEDNN
-    static const std::map<std::tuple<BinaryOp, DataType, DataType>,
-                          std::function<std::unique_ptr<BroadcastElementwiseBinary>()>>
+    static const std::map<
+        std::tuple<BinaryOp, DataType, DataType>,
+        std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
         new_broadcast_elementwise_binary_onednn_handle{
             // For oneDNN binary op
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
@@ -366,15 +387,21 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
 #undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
 #undef MAKE_NEW_ONEDNN_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
     if (OneDnnIsEnabled()) {
-      auto broadcast_elementwise_binary_primitive =
-          NewPrimitiveFromHandlers(new_broadcast_elementwise_binary_onednn_handle,
-                                   std::make_tuple(binary_op, src_type, dst_type));
-      if (broadcast_elementwise_binary_primitive) { return broadcast_elementwise_binary_primitive; }
+      const auto iter = new_broadcast_elementwise_binary_onednn_handle.find(
+          std::make_tuple(binary_op, src_type, dst_type));
+      if (iter != new_broadcast_elementwise_binary_onednn_handle.end()) {
+        return iter->second(attr0, attr1);
+      }
     }
 
 #endif
-    return NewPrimitiveFromHandlers(new_broadcast_elementwise_binary_handle,
-                                    std::make_tuple(binary_op, src_type, dst_type));
+    const auto iter = new_broadcast_elementwise_binary_handle.find(
+        std::make_tuple(binary_op, src_type, dst_type));
+    if (iter != new_broadcast_elementwise_binary_handle.end()) {
+      return iter->second(attr0, attr1);
+    } else {
+      return nullptr;
+    }
   }
 };
 

@@ -16,11 +16,13 @@ limitations under the License.
 #ifndef _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
 #define _ONEFLOW_USER_KERNELS_ELEMENTWISE_XPU_KERNEL_H_
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/ep/include/primitive/unary_op.h"
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
+#include "oneflow/core/ep/include/primitive/binary_op.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
@@ -174,6 +176,54 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
   std::string output_name;
   std::string input_a_name;
   std::string input_b_name;
+};
+
+class BinaryPrimitiveKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BinaryPrimitiveKernel);
+  BinaryPrimitiveKernel() = default;
+  ~BinaryPrimitiveKernel() = default;
+
+  using PrimitiveFactoryFuncType =
+      std::function<std::unique_ptr<ep::primitive::BroadcastElementwiseBinary>(
+          user_op::KernelComputeContext*)>;
+
+  BinaryPrimitiveKernel(const std::string& output_name, const std::string& input_a_name,
+                        const std::string& input_b_name, PrimitiveFactoryFuncType fn)
+      : output_name_(output_name),
+        input_a_name_(input_a_name),
+        input_b_name_(input_b_name),
+        primitive_factory_func_(std::move(fn)) {}
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    auto primitive = primitive_factory_func_(ctx);
+    CHECK(primitive);
+
+    const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name_, 0);
+    const user_op::Tensor* input_b_tensor = ctx->Tensor4ArgNameAndIndex(input_b_name_, 0);
+    user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex(output_name_, 0);
+
+    const ShapeView& input_a_shape = input_a_tensor->shape();
+    const ShapeView& input_b_shape = input_b_tensor->shape();
+    const ShapeView& output_shape = output_tensor->shape();
+    CHECK_EQ(input_a_shape, input_b_shape) << "InputA shape should be equal to InputB shape.";
+    CHECK_EQ(input_a_shape, output_shape) << "Input shape should be equal to Output shape.";
+    const int64_t elem_cnt = input_a_shape.elem_cnt();
+
+    if (elem_cnt != 0) {
+      primitive->Launch(ctx->stream(), input_a_shape.NumAxes(), input_a_shape.ptr(),
+                        input_a_tensor->dptr(), input_b_shape.NumAxes(), input_b_shape.ptr(),
+                        input_b_tensor->dptr(), output_tensor->mut_dptr());
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  std::string output_name_;
+  std::string input_a_name_;
+  std::string input_b_name_;
+  PrimitiveFactoryFuncType primitive_factory_func_;
 };
 
 #define REGISTER_UNARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,       \
