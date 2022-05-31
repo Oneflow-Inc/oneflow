@@ -242,6 +242,52 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
   }
 };
 
+struct NormalizationOpLowering final : public OpConversionPattern<NormalizationOp> {
+ public:
+  using OpConversionPattern<NormalizationOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(NormalizationOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    auto reshape_dim = [&](Type type, Value value) -> Value {
+      RankedTensorType in_type = value.getType().dyn_cast<RankedTensorType>();
+      RankedTensorType out_type = type.cast<RankedTensorType>();
+      SmallVector<int64_t> new_shape = {in_type.getShape()[0]};
+      for (auto i = 2; i < out_type.getRank(); ++i) new_shape.push_back(1);
+      auto new_type = RankedTensorType::get(new_shape, out_type.getElementType());
+      return rewriter.create<tosa::ReshapeOp>(op->getLoc(), new_type, value,
+                                              rewriter.getI64ArrayAttr(new_shape));
+    };
+    auto out_type = op.y().getType();
+    auto epsilon_type = RankedTensorType::get({}, rewriter.getF32Type());
+    auto loc = op->getLoc();
+    // epsilon   = reshape(epsilon, shape_1)
+    auto epsilon = rewriter.create<tosa::ConstOp>(
+        loc, epsilon_type, DenseElementsAttr::get(epsilon_type, op.epsilon()));
+    //  mean = reshape(mean, shape_0)
+    auto mean = reshape_dim(out_type, adaptor.moving_mean());
+    //  variance= reshape(variance, shape_0)
+    auto variance = reshape_dim(out_type, adaptor.moving_variance());
+    // scale = reshape(scale, shape_0)
+    auto gamma = reshape_dim(out_type, adaptor.gamma());
+    // beta = reshape(beta, shape_0)
+    auto beta = reshape_dim(out_type, adaptor.beta());
+    // op1 = sub(input, mean)
+    auto op1 = rewriter.create<tosa::SubOp>(loc, out_type, op.x(), mean);
+    // op2 = add(var, epsilon)
+    auto op2 = rewriter.create<tosa::AddOp>(loc, variance.getType(), variance, epsilon);
+    // op3 = rsqrt(op2)
+    auto op3 = rewriter.create<tosa::RsqrtOp>(loc, variance.getType(), op2);
+    // op4 = mul(op1, op3)
+    auto op4 = rewriter.create<tosa::MulOp>(loc, out_type, op1, op3, 0);
+    // op5 = mul(op4, gamma)
+    auto op5 = rewriter.create<tosa::MulOp>(loc, out_type, op4, gamma, 0);
+    // op6 = add(op5, beta)
+    auto batch_norm = rewriter.create<tosa::AddOp>(loc, out_type, op5, beta);
+    // TODO: computer the true mean and variance
+    rewriter.replaceOp(op, {batch_norm, op.moving_mean(), op.moving_variance()});
+    return success();
+  }
+};
+
 namespace {
 struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLoweringToTosaPass> {
   void runOnOperation() override;
@@ -258,10 +304,11 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
-  patterns.insert<ReluOpLowering, Conv2DOpLowering, MatmulOpLowering>(&getContext());
-  patterns.insert<Add2OpLowering, BroadcastAddOpLowering>(&getContext());
   patterns.insert<JobLowering, ReturnOpLowering>(&getContext());
   patterns.insert<InputOpLowering, OutputOpLowering>(&getContext());
+  patterns.insert<Add2OpLowering, BroadcastAddOpLowering>(&getContext());
+  patterns.insert<ReluOpLowering, Conv2DOpLowering, MatmulOpLowering, NormalizationOpLowering>(
+      &getContext());
 
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
