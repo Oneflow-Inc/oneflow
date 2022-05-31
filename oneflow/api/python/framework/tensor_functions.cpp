@@ -15,10 +15,6 @@ limitations under the License.
 */
 
 #include <Python.h>
-#include <dictobject.h>
-#include <modsupport.h>
-#include <object.h>
-#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
@@ -26,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
