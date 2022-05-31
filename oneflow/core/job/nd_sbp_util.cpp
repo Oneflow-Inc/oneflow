@@ -62,7 +62,6 @@ void DfsTraverse4NdSbp(int64_t recv_id, const std::shared_ptr<Shape>& parallel_h
 }
 }  // namespace
 
-
 std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
                                                 const SbpParallel& sbp_parallel,
                                                 const BlobDesc& blob_desc) {

@@ -343,9 +343,8 @@ bool TryBuildNcclBy2DHierarchyOthers(OperatorConf* ret, const NdSbp& src_nd_sbp,
       << "send recv is dealing with same 0-Dim, src sbp " << NdSbpToString(src_nd_sbp)
       << ", dst sbp " << NdSbpToString(dst_nd_sbp);
   // send recv is dealing with same 1-Dim, such as (B, S0) -> (S0, S0)
-  VLOG_IF(3,
-         ((src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1))
-          && !(NdSbpAllSameSplitParallel(src_nd_sbp) || NdSbpAllSameSplitParallel(dst_nd_sbp))))
+  VLOG_IF(3, ((src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1))
+              && !(NdSbpAllSameSplitParallel(src_nd_sbp) || NdSbpAllSameSplitParallel(dst_nd_sbp))))
       << "send recv is dealing with same 1-Dim,  src sbp " << NdSbpToString(src_nd_sbp)
       << ", dst sbp " << NdSbpToString(dst_nd_sbp);
   // send recv can not dealing with P in dst_nd_sbp
@@ -441,8 +440,9 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                                                  src_reduced_hierarchy, lbn, scope_symbol_id,
                                                  logical_blob_desc);
     }
-    VLOG_IF(3, !got_nccl) << "Cannot get nccl logical op for 2D sbp, src nd sbp " << NdSbpToString(*src_reduced_nd_sbp)
-            << ", dst nd sbp " << NdSbpToString(*dst_reduced_nd_sbp) << ".";
+    VLOG_IF(3, !got_nccl) << "Cannot get nccl logical op for 2D sbp, src nd sbp "
+                          << NdSbpToString(*src_reduced_nd_sbp) << ", dst nd sbp "
+                          << NdSbpToString(*dst_reduced_nd_sbp) << ".";
     return got_nccl;
   }
   return false;
