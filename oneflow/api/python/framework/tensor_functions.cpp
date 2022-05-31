@@ -372,7 +372,6 @@ static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* k
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other)) {
     return NULL;
   }
-  PyObjectPtr concat_args(PyTuple_Pack(2, self, other));
   PyObject* result = PyTensorObject_nb_inplace_sub(self, other);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
