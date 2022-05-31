@@ -229,10 +229,10 @@ UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 
 // functions that directly pass arguments without parsing
-#define DIRECT_PASS_FUNC(func_name, bind_func, name)                             \
+#define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
     HANDLE_ERRORS                                                                \
-    std::cout << "cpython" << name << std::endl;                                 \
+    std::cout << "cpython" << std::endl;                                         \
     PyObjectPtr concat_args(concat_self(self, args));                            \
     PyObject* result = bind_func(NULL, concat_args.get(), kwargs);               \
     if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
@@ -240,29 +240,28 @@ UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
     END_HANDLE_ERRORS                                                            \
   }
 
-DIRECT_PASS_FUNC(PyTensorObject_floor_divide, functional::floor_divide, "floor_divide");
-DIRECT_PASS_FUNC(PyTensorObject_atan2, functional::atan2, "atan2");
-DIRECT_PASS_FUNC(PyTensorObject_gt, functional::greater, "gt");
-DIRECT_PASS_FUNC(PyTensorObject_ge, functional::greater_equal, "ge");
-DIRECT_PASS_FUNC(PyTensorObject_div, functional::div, "div");
-DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_, "div_");
-DIRECT_PASS_FUNC(PyTensorObject_mul, functional::mul, "mul");
-DIRECT_PASS_FUNC(PyTensorObject_mul_, functional::mul_, "mul_");
-DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub, "sub");
-DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod, "fmod");
-DIRECT_PASS_FUNC(PyTensorObject_matmul, functional::matmul, "matmul");
-DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and, "logical_and");
-DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or, "logical_or");
-DIRECT_PASS_FUNC(PyTensorObject_logical_xor, functional::logical_xor, "logical_xor");
-DIRECT_PASS_FUNC(PyTensorObject_ne, functional::not_equal, "ne");
-DIRECT_PASS_FUNC(PyTensorObject_lt, functional::less, "lt");
-DIRECT_PASS_FUNC(PyTensorObject_le, functional::less_equal, "le");
-DIRECT_PASS_FUNC(PyTensorObject_bmm, functional::batch_matmul, "bmm")
-DIRECT_PASS_FUNC(PyTensorObject_argmax, functional::argmax, "argmax")
-DIRECT_PASS_FUNC(PyTensorObject_argmin, functional::argmin, "argmin")
-DIRECT_PASS_FUNC(PyTensorObject_amin, functional::amin, "amin")
-DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul, "addcmul")
-DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_, "addcmul_")
+DIRECT_PASS_FUNC(PyTensorObject_floor_divide, functional::floor_divide)
+DIRECT_PASS_FUNC(PyTensorObject_atan2, functional::atan2)
+DIRECT_PASS_FUNC(PyTensorObject_gt, functional::greater)
+DIRECT_PASS_FUNC(PyTensorObject_ge, functional::greater_equal)
+DIRECT_PASS_FUNC(PyTensorObject_div, functional::div)
+DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
+DIRECT_PASS_FUNC(PyTensorObject_mul, functional::mul)
+DIRECT_PASS_FUNC(PyTensorObject_mul_, functional::mul_)
+DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub)
+DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod)
+DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and)
+DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or)
+DIRECT_PASS_FUNC(PyTensorObject_logical_xor, functional::logical_xor)
+DIRECT_PASS_FUNC(PyTensorObject_ne, functional::not_equal)
+DIRECT_PASS_FUNC(PyTensorObject_lt, functional::less)
+DIRECT_PASS_FUNC(PyTensorObject_le, functional::less_equal)
+DIRECT_PASS_FUNC(PyTensorObject_bmm, functional::batch_matmul)
+DIRECT_PASS_FUNC(PyTensorObject_argmax, functional::argmax)
+DIRECT_PASS_FUNC(PyTensorObject_argmin, functional::argmin)
+DIRECT_PASS_FUNC(PyTensorObject_amin, functional::amin)
+DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
+DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -317,7 +316,7 @@ static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* k
   HANDLE_ERRORS
   PyObject* dtype = NULL;
   PyObject* pin_memory = Py_False;
-  static const char* keywords[3] = {"dtype", "pin_memroy", NULL};
+  static const char* keywords[3] = {"dtype", "pin_memory", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O!:cast", const_cast<char**>(keywords), &dtype,
                                    &PyBool_Type, &pin_memory)) {
     return NULL;
@@ -356,6 +355,21 @@ static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObjec
     return NULL;
   }
   return PyTensor_New(ASSERT_PTR(functional::Diagonal(PyTensor_Unpack(self), offset, dim1, dim2)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_matmul(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:matmul", const_cast<char**>(keywords),
+                                   &other)) {
+    return NULL;
+  }
+  PyObjectPtr concat_args(PyTuple_Pack(2, self, other));
+  PyObject* result = functional::matmul(NULL, concat_args.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -505,7 +519,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
-    // {"floor_divide", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
     {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul", (PyCFunction)PyTensorObject_mul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul_", (PyCFunction)PyTensorObject_mul_, METH_VARARGS | METH_KEYWORDS, NULL},
