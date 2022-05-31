@@ -341,9 +341,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
 )
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
-from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
-from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
@@ -367,6 +364,7 @@ from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
 )
+from oneflow.nn.modules.tensordot import tensordot
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.global_cast import local_to_global_op as local_to_global

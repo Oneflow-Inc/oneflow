@@ -273,8 +273,12 @@ def get_args_copy(args, kwargs):
 def get_fake_program_more_detail(oneflow, mode, func, args=None, kwargs=None):
     print(f"\033[1;33m============= {mode} ================\033[1;33m")
     print(f"\033[1;33mEnter {func} function\033[1;33m")
-    if "__self__" in dir(oneflow) and flow.is_tensor(oneflow.__self__):
-        print(f"\033[1;33m{oneflow.__self__}\033[1;33m")
+    try:
+        if "__self__" in dir(oneflow) and flow.is_tensor(oneflow.__self__):
+            print(f"\033[1;33m{oneflow.__self__}\033[1;33m")
+    except:
+        if flow.is_tensor(oneflow):
+            print(f"\033[1;33m{oneflow}\033[1;33m")
     if args is not None:
         print(f"\033[1;33m{args}\033[1;33m")
     if kwargs is not None:
@@ -310,7 +314,11 @@ def get_module_graph_test(graph_train_oneflow, oneflow, verbose, oneflow_args, *
             res = self.test_module(*args)
             forward_res = res
             if global_backward and graph_train_parameters_len:
-                if isinstance(res, (list, tuple)):
+                if isinstance(self.test_module.origin, flow.nn.LSTMCell):
+                    res = res[0] + res[1]
+                elif isinstance(self.test_module.origin, flow.nn.LSTM):
+                    res = res[0].sum() + res[1][0].sum() + res[1][1].sum()
+                elif isinstance(res, (tuple, list)):
                     res = res[0]
                 res = res.sum()
                 res.backward()
@@ -396,7 +404,11 @@ def get_tensor_graph_res(
 
     if verbose:
         get_fake_program_more_detail(
-            oneflow, "nn.Graph", "get_tensor_graph_res", oneflow_args, oneflow_kwargs
+            oneflow,
+            "nn.Graph",
+            "get_tensor_graph_res",
+            tensor_graph_args,
+            tensor_graph_kwargs,
         )
 
     class TestGraphOfTensorMethod(flow.nn.Graph):
@@ -496,6 +508,17 @@ def oneflow_eager_run_with_graph_check(
             if isinstance(test_g_res, tuple):
                 for _, g_res in enumerate(test_g_res):
                     if not check_eager_graph_tensor(oneflow_res, g_res):
+                        if verbose:
+                            get_fake_program_more_detail(
+                                oneflow,
+                                "Eager + nn.Graph",
+                                "oneflow_eager_run_with_graph_check",
+                                oneflow_args,
+                                oneflow_kwargs,
+                            )
+            else:
+                if not check_eager_graph_tensor(oneflow_res, test_g_res):
+                    if verbose:
                         get_fake_program_more_detail(
                             oneflow,
                             "Eager + nn.Graph",
@@ -503,15 +526,6 @@ def oneflow_eager_run_with_graph_check(
                             oneflow_args,
                             oneflow_kwargs,
                         )
-            else:
-                if not check_eager_graph_tensor(oneflow_res, test_g_res):
-                    get_fake_program_more_detail(
-                        oneflow,
-                        "Eager + nn.Graph",
-                        "oneflow_eager_run_with_graph_check",
-                        oneflow_args,
-                        oneflow_kwargs,
-                    )
     return oneflow_res
 
 
@@ -885,7 +899,10 @@ class DualObject:
                 oneflow_attr is None
             ), f"pytorch value is None for attr {key}, but oneflow is not."
             return None
-        new_name = f"{self.name}.{key}"
+        if self.name == "":
+            new_name = key
+        else:
+            new_name = f"{self.name}.{key}"
         global call_pytorch
         call_pytorch = self.pytorch
         return GetDualObject(new_name, pytorch_attr, oneflow_attr)
@@ -1239,5 +1256,5 @@ def choice_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
-torch = GetDualObject("torch", torch_original, flow)
+torch = GetDualObject("", torch_original, flow)
 __all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]
