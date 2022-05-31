@@ -822,7 +822,7 @@
 - name: "moving_average_min_max_observer"
   signature:
     "TensorTuple (Tensor in, Tensor current_train_step, Tensor moving_max, Tensor moving_min,
-    Bool training, String quantization_formula, Int64 stop_update_after_iters,
+    Bool training, Int64 stop_update_after_iters, String quantization_formula, 
     Int32 quantization_bit, String quantization_scheme, Float momentum) => MovingAverageMinMaxObserver"
   bind_python: True
 

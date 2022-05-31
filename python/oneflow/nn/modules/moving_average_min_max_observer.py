@@ -70,10 +70,13 @@ class MovingAverageMinMaxObserver(Module):
         ``current_train_step`` can be directly assigned to an optimizer(eg.SGD) step.
 
     Args:
+        input(oneflow.Tensor):  the input value(s), in ``oneflow.float32``.
+        current_train_step_tensor(oneflow.Tensor): record train step for quantionzation aware training.
+        stop_update_after_iters(int): stop record train step for quantionzation aware training when train iter greater than stop_update_after_iters.
         training (bool): Is the model in training state. Defaults to False.
+        quantization_formula (str): Support "google" or "cambricon".
         quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
         quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
-        quantization_formula (str): Support "google" or "cambricon".
         momentum (float): Smoothing parameter for exponential moving average operation. Defaults to 0.95.
 
     Returns:
@@ -102,8 +105,8 @@ class MovingAverageMinMaxObserver(Module):
         >>> quantization_scheme = "symmetric"
         >>> quantization_formula = "google"
 
-        >>> moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=True, quantization_formula=quantization_formula, 
-        ...                                                                       stop_update_after_iters=1, quantization_bit=quantization_bit,
+        >>> moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=True, stop_update_after_iters=1,  
+        ...                                                                       quantization_formula=quantization_formula, quantization_bit=quantization_bit,
         ...                                                                       quantization_scheme=quantization_scheme, momentum=momentum,
         ...                                                                       )
 
@@ -117,8 +120,8 @@ class MovingAverageMinMaxObserver(Module):
     def __init__(
         self,
         training: bool = False,
-        quantization_formula: str = "google",
         stop_update_after_iters: int = 0,
+        quantization_formula: str = "google",
         quantization_bit: int = 8,
         quantization_scheme: str = "symmetric",
         momentum: float = 0,
@@ -150,8 +153,8 @@ class MovingAverageMinMaxObserver(Module):
             self.moving_max,
             self.moving_min,
             self.training,
-            self.quantization_formula,
             self.stop_update_after_iters,
+            self.quantization_formula,
             self.quantization_bit,
             self.quantization_scheme,
             self.momentum,
