@@ -43,6 +43,23 @@ def get_compile_flags() -> List[str]:
     return flags
 
 
+def get_liboneflow_link_flags() -> List[str]:
+    oneflow_python_module_path = get_lib()
+    # path in a pip release
+    oneflow_python_libs_path = f"{oneflow_python_module_path}.libs"
+    # path in a cmake build dir
+    if not os.path.exists(oneflow_python_libs_path):
+        from oneflow.version import __cmake_project_binary_dir__
+
+        oneflow_python_libs_path = __cmake_project_binary_dir__
+    return [
+        f"-L{oneflow_python_libs_path}",
+        f"-l:oneflow",
+        f"-l:of_pyext_obj",
+        f"-l:of_protoobj",
+    ]
+
+
 def get_link_flags() -> List[str]:
     flags = []
     flags.append("-L{}".format(get_lib()))
