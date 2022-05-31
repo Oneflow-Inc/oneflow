@@ -152,7 +152,7 @@ class Storage final {
     const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, data));
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
-    CHECK_OR_RETURN(data2symbol_id_.emplace(data, symbol_id).second);
+    data2symbol_id_[data] = symbol_id;
     return Maybe<void>::Ok();
   }
 
@@ -166,7 +166,7 @@ class Storage final {
       return Maybe<void>::Ok();
     }
     CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
-    CHECK_OR_RETURN(data2symbol_id_.emplace(data, symbol_id).second);
+    data2symbol_id_[data] = symbol_id;
     return Maybe<void>::Ok();
   }
 
@@ -177,8 +177,8 @@ class Storage final {
     std::unique_lock<std::mutex> lock(mutex_);
     const auto& iter = data2symbol_id_.find(symbol_data);
     if (iter != data2symbol_id_.end()) { return JUST(MapAt(symbol_id2symbol_, iter->second)); }
-    CHECK_OR_RETURN(data2symbol_id_.emplace(symbol_data, symbol_id).second);
     CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    data2symbol_id_[symbol_data] = symbol_id;
     return JUST(MapAt(symbol_id2symbol_, symbol_id));
   }
 
