@@ -500,17 +500,18 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   // Use nccl logical send recv instead of middle node.
   // Note that in op sbp inference, cost of middle nodes is still used for the moment.
 #ifdef WITH_CUDA
-  if (compute_cost == false &&
-      producer_parallel_desc.hierarchy()->NumAxes() == 2 &&
-      producer_parallel_desc == consumer_parallel_desc &&
-      !(NdSbpHasPartialParallel(sbp_consumer)) &&
-      // TODO(): When same dim 0 finished dealing with (*, P) -> (*, S) in nccl logical pass, open this condition.
-      // When dealing with (P, P) -> (B, S0), middle node will change it to (P, P) -> (P, S0) -> (B, S0),
-      // neither same dim 0 or send recv in nccl logical pass can deal with (P, P) -> (P, S0) at the moment.
+  if (compute_cost == false && producer_parallel_desc.hierarchy()->NumAxes() == 2
+      && producer_parallel_desc == consumer_parallel_desc
+      && !(NdSbpHasPartialParallel(sbp_consumer)) &&
+      // TODO(): When same dim 0 finished dealing with (*, P) -> (*, S) in nccl logical pass, open
+      // this condition. When dealing with (P, P) -> (B, S0), middle node will change it to (P, P)
+      // -> (P, S0) -> (B, S0), neither same dim 0 or send recv in nccl logical pass can deal with
+      // (P, P) -> (P, S0) at the moment.
       // !(NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) &&
       Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
-    VLOG(3) << "Middle node insertion is skipped when src sbp is " << NdSbpToString(sbp_producer) << " dst sbp is "
-            << NdSbpToString(sbp_consumer) << ", because nccl logical send/recv can handle this.";
+    VLOG(3) << "Middle node insertion is skipped when src sbp is " << NdSbpToString(sbp_producer)
+            << " dst sbp is " << NdSbpToString(sbp_consumer)
+            << ", because nccl logical send/recv can handle this.";
     return Maybe<void>::Ok();
   }
 #endif  // WITH_CUDA

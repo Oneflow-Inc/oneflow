@@ -138,7 +138,6 @@ bool NdSbpHasBroadcastParallel(const NdSbp& nd_sbp) {
   return false;
 }
 
-
 namespace {
 // Go through all the ranks while transfer between two nd sbps with no PartialSum under the same
 // placement.
@@ -183,11 +182,12 @@ void DfsTraverse4NdSbp(int64_t recv_id, const std::shared_ptr<Shape>& parallel_h
 
 }  // namespace
 
-void GetRankSendRecvIntersection(int64_t parallel_id, const std::shared_ptr<Shape>& parallel_hierarchy,
-                             const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp,
-                             const Shape& logical_shape,
-                             std::vector<TensorSliceView>* send_intersections,
-                             std::vector<TensorSliceView>* recv_intersections) {
+void GetRankSendRecvIntersection(int64_t parallel_id,
+                                 const std::shared_ptr<Shape>& parallel_hierarchy,
+                                 const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp,
+                                 const Shape& logical_shape,
+                                 std::vector<TensorSliceView>* send_intersections,
+                                 std::vector<TensorSliceView>* recv_intersections) {
   CHECK(parallel_hierarchy);
   const int64_t parallel_num = parallel_hierarchy->elem_cnt();
   CHECK_LT(parallel_id, parallel_num);
