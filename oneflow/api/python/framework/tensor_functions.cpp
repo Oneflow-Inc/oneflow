@@ -294,13 +294,16 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
   HANDLE_ERRORS
   PyObject* idx_obj = Py_None;
   static const char* keywords[2] = {"idx", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx_obj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords),
+                                   &idx_obj)) {
     return NULL;
   }
   auto shape = PyTensor_Unpack(self)->shape();
   if (idx_obj == NULL || idx_obj == Py_None) return TensorSize_NewFromShape(*shape);
   int32_t idx = PyLong_AsLong(idx_obj);
-  CHECK_OR_THROW(idx >= -shape->NumAxes() && idx < shape->NumAxes()) << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -shape->NumAxes() << ", " << shape->NumAxes() - 1 << "], but got "<< idx << ")";
+  CHECK_OR_THROW(idx >= -shape->NumAxes() && idx < shape->NumAxes())
+      << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+      << -shape->NumAxes() << ", " << shape->NumAxes() - 1 << "], but got " << idx << ")";
   idx = idx < 0 ? idx + shape->NumAxes() : idx;
   return PyLong_FromLong(shape->At(idx));
   END_HANDLE_ERRORS
