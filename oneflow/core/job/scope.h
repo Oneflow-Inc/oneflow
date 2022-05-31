@@ -56,7 +56,6 @@ class Scope final {
     return scope_proto_.opt_mirrored_parallel_conf();
   }
   const ScopeProto& scope_proto() const { return scope_proto_; }
-  // only used for symbol storage
   const ScopeProto& data() const { return scope_proto_; }
 
 #define DEFINE_SCOPE_CONFIG_GETTER(T, func_name, field_name) \
