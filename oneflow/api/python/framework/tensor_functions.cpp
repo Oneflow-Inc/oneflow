@@ -372,7 +372,6 @@ static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* k
   }
   PyObjectPtr dict(PyDict_New());
   CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
-  // if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 0) > -1); }
   PyObjectPtr concat_args(PyTuple_Pack(2, self, other));
   PyObject* result = functional::sub(NULL, concat_args.get(), dict.get());
   if (PyErr_Occurred()) { throw py::error_already_set(); }
