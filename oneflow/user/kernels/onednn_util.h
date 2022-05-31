@@ -23,7 +23,7 @@ namespace oneflow {
 using dm = dnnl::memory;
 
 template<typename T>
-dnnl::memory::data_type CppTypeToOneDnnDtype();
+dm::data_type CppTypeToOneDnnDtype();
 
 DEFINE_ENV_BOOL(ONEFLOW_ENABLE_ONEDNN_OPTS, true);
 inline bool OneDnnIsEnabled() { return EnvBool<ONEFLOW_ENABLE_ONEDNN_OPTS>(); }

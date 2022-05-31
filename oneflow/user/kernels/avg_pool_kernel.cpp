@@ -137,17 +137,17 @@ class AvgPool1dKernel final : public user_op::OpKernel {
 #ifdef WITH_ONEDNN
     if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
         && params_3d.divisor_override() == 0) {
-      dm::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
-      dm::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
-      dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
-      dm::dims strides_dims = {1, params_3d.stride_3d()[2]};
-      dm::dims padding_dims_l = {0, params_3d.padding()[2]};
-      dm::dims padding_dims_r = {0, params_3d.padding()[2]};
-      dm::dims dilation = {0, 0};
+      const dm::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
+      const dm::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
+      const dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
+      const dm::dims strides_dims = {1, params_3d.stride_3d()[2]};
+      const dm::dims padding_dims_l = {0, params_3d.padding()[2]};
+      const dm::dims padding_dims_r = {0, params_3d.padding()[2]};
+      const dm::dims dilation = {0, 0};
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
+          padding_dims_r, dilation, dm::format_tag::nchw,
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           nullptr,
           params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
@@ -212,7 +212,7 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
+          padding_dims_r, dilation, dm::format_tag::nchw,
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           nullptr,
           params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
@@ -276,7 +276,7 @@ class AvgPool2dKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
+          padding_dims_r, dilation, dm::format_tag::nchw,
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           nullptr,
           params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
@@ -345,7 +345,7 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::nchw,
+          padding_dims_r, dilation, dm::format_tag::nchw,
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           nullptr,
           params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
@@ -415,7 +415,7 @@ class AvgPool3dKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw,
+          padding_dims_r, dilation, dm::format_tag::ncdhw,
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           nullptr,
           params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding
@@ -489,7 +489,7 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dnnl::memory::format_tag::ncdhw,
+          padding_dims_r, dilation, dm::format_tag::ncdhw,
           static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
           nullptr,
           params_3d.count_include_pad() ? dnnl::algorithm::pooling_avg_include_padding

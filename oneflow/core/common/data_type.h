@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include <half.hpp>
+
 namespace oneflow {
 
 typedef half_float::half float16;

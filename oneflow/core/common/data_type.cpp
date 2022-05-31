@@ -167,4 +167,5 @@ void CheckDataType() {
 COMMAND(CheckDataType());
 
 }  // namespace
+
 }  // namespace oneflow
