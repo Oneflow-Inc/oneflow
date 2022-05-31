@@ -172,19 +172,14 @@ class Storage final {
 
   Maybe<T> FindOrCreate(const typename ConstructArgType4Symbol<T>::type& symbol_data,
                         const std::function<Maybe<int64_t>()>& Create) {
-    {
-      std::unique_lock<std::mutex> lock(mutex_);
-      const auto& iter = data2symbol_id_.find(symbol_data);
-      if (iter != data2symbol_id_.end()) { return JUST(MapAt(symbol_id2symbol_, iter->second)); }
-    }
+    std::unique_lock<std::mutex> lock(mutex_);
+    const auto& iter = data2symbol_id_.find(symbol_data);
+    if (iter != data2symbol_id_.end()) { return JUST(MapAt(symbol_id2symbol_, iter->second)); }
     int64_t symbol_id = JUST(Create());
-    {
-      const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, symbol_data));
-      std::unique_lock<std::mutex> lock(mutex_);
-      CHECK_OR_RETURN(data2symbol_id_.emplace(symbol_data, symbol_id).second);
-      CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
-      return JUST(MapAt(symbol_id2symbol_, symbol_id));
-    }
+    const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, symbol_data));
+    CHECK_OR_RETURN(data2symbol_id_.emplace(symbol_data, symbol_id).second);
+    CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
+    return JUST(MapAt(symbol_id2symbol_, symbol_id));
   }
 
   void Clear(int64_t symbol_id) {
