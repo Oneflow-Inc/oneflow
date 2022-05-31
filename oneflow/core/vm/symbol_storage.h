@@ -181,7 +181,7 @@ class Storage final {
     {
       const auto& ptr = JUST(detail::NewSymbol<T>(symbol_id, symbol_data));
       std::unique_lock<std::mutex> lock(mutex_);
-      CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_data, symbol_id).second);
+      CHECK_OR_RETURN(data2symbol_id_.emplace(symbol_data, symbol_id).second);
       CHECK_OR_RETURN(symbol_id2symbol_.emplace(symbol_id, ptr).second);
       return JUST(MapAt(symbol_id2symbol_, symbol_id));
     }
