@@ -83,7 +83,7 @@ NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
-  auto* result = functional::pow(NULL, tuple.get(), NULL);
+  PyObject* result = functional::pow(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -94,7 +94,7 @@ static PyObject* PyTensorObject_nb_invert(PyObject* self) {
   CHECK_OR_THROW(PyTensor_Unpack(self)->dtype()->data_type() == DataType::kBool)
       << "~ (operator.invert) is only implemented on integer and Boolean-type tensors";
   PyObjectPtr tuple(PyTuple_Pack(1, self));
-  auto* result = functional::logical_not(NULL, tuple.get(), NULL);
+  PyObject* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -106,7 +106,7 @@ static PyObject* PyTensorObject_nb_invert(PyObject* self) {
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                  \
     PyObjectPtr dict(PyDict_New());                                            \
     CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1); \
-    auto* result = bind_func(NULL, tuple.get(), dict.get());                   \
+    PyObject* result = bind_func(NULL, tuple.get(), dict.get());               \
     if (PyErr_Occurred()) { throw py::error_already_set(); }                   \
     return result;                                                             \
     END_HANDLE_ERRORS                                                          \
@@ -226,12 +226,12 @@ UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 
-#define DIRECT_PASS_FUNC(func_name, bind_func, name)                                \
+#define DIRECT_PASS_FUNC(func_name, bind_func, name)                             \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
     HANDLE_ERRORS                                                                \
     std::cout << "cpython" << name << std::endl;                                 \
     PyObjectPtr concat_args(concat_self(self, args));                            \
-    PyObject* result = bind_func(NULL, concat_args.get(), kwargs);                   \
+    PyObject* result = bind_func(NULL, concat_args.get(), kwargs);               \
     if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
     return result;                                                               \
     END_HANDLE_ERRORS                                                            \
@@ -314,13 +314,15 @@ static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* k
   PyObject* dtype = NULL;
   PyObject* pin_memory = Py_False;
   static const char* keywords[3] = {"dtype", "pin_memroy", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O!:cast", const_cast<char**>(keywords),
-                                   &dtype, &PyBool_Type, &pin_memory)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O!:cast", const_cast<char**>(keywords), &dtype,
+                                   &PyBool_Type, &pin_memory)) {
     return NULL;
   }
-  CHECK_OR_THROW(functional::PyDTypeCheck(dtype)) << Error::TypeError() << "cast(): argument 'dtype' must be data type, but found "
+  CHECK_OR_THROW(functional::PyDTypeCheck(dtype))
+      << Error::TypeError() << "cast(): argument 'dtype' must be data type, but found "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype)));
-  const auto& result = functional::Cast(PyTensor_Unpack(self), functional::PyUnpackDType(dtype), pin_memory == Py_True);
+  const auto& result = functional::Cast(PyTensor_Unpack(self), functional::PyUnpackDType(dtype),
+                                        pin_memory == Py_True);
   return PyTensor_New(ASSERT_PTR(result));
   END_HANDLE_ERRORS
 }
@@ -357,7 +359,7 @@ static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* k
   HANDLE_ERRORS
   PyObject* other = NULL;
   static const char* keywords[2] = {"other", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other))  {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other)) {
     return NULL;
   }
   std::cout << "cpython ?????" << std::endl;
