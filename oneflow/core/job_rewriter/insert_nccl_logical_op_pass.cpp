@@ -556,6 +556,8 @@ struct InsertedNcclInfo {
   OperatorConf nccl_op_conf;
   ParallelConf nccl_parallel_conf;
   int64_t order;
+  const OpNode* src_node;
+  const OpNode* dst_node;
   std::string debug_str;
 };
 
@@ -570,12 +572,18 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
   std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
   std::vector<InsertedNcclInfo> nccl_op_infos;
 
+  std::vector<const OpNode*> after_acc_subgraph;
+  // NOTE(chengcheng): bfs for op_edge may create duplicated node.
+  HashSet<const OpNode*> acc_graph_nodes;
+  HashMap<const OpNode*, int64_t> op2subgraph_order;
+
   for (const OpNode* acc : ordered_acc_op_nodes) {
     std::queue<const OpEdge*> queued_edges;
     for (const OpEdge* op_edge : acc->out_edges()) {
       if (IsOpEdgeAllowInsertNccl(op_edge, seed_time_shape)) {
         queued_edges.push(op_edge);
         CHECK(visited.insert(op_edge).second);
+        acc_graph_nodes.insert(op_edge->dst_node());
       }
     }
 
@@ -616,12 +624,16 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         nccl_op_info.nccl_op_conf = nccl_op;
         nccl_op_info.nccl_parallel_conf = src_reduced_parallel_desc.parallel_conf();
         nccl_op_info.order = op_node2global_order.at(src_node);
+        nccl_op_info.src_node = src_node;
+        nccl_op_info.dst_node = dst_node;
         nccl_op_info.debug_str =
             (" After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name + "]("
              + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + ")->[" + dst_op_name + "]("
              + NdSbpToString(dst_node->NdSbp4Lbi(lbi))
              + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
         nccl_op_infos.emplace_back(nccl_op_info);
+
+        // LOG(INFO) << "  ccdebuginfo: " << nccl_op_info.debug_str;
       }
 
       for (const OpEdge* dst_node_out_edge : op_edge->dst_node()->out_edges()) {
@@ -629,15 +641,54 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
             && IsOpEdgeAllowInsertNccl(dst_node_out_edge, seed_time_shape)) {
           CHECK(visited.insert(dst_node_out_edge).second);
           queued_edges.push(dst_node_out_edge);
+          acc_graph_nodes.insert(dst_node_out_edge->dst_node());
         }
       }
     }
   }
 
+  for (const auto* node : acc_graph_nodes) { after_acc_subgraph.push_back(node); }
+
+  CHECK_EQ(acc_graph_nodes.size(), after_acc_subgraph.size());
+
   std::sort(nccl_op_infos.begin(), nccl_op_infos.end(),
             [](const InsertedNcclInfo& lhs, const InsertedNcclInfo& rhs) {
               return lhs.order < rhs.order;
             });
+
+  std::sort(after_acc_subgraph.begin(), after_acc_subgraph.end(),
+            [&](const OpNode* lhs, const OpNode* rhs) {
+              return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
+            });
+
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+
+  for (int64_t i = 0; i < after_acc_subgraph.size(); ++i) {
+    op2subgraph_order.emplace(after_acc_subgraph.at(i), i);
+    /*
+    LOG(INFO) << "ccdebuglog: after acc subgraph i = " << i
+              << " op_name: " << after_acc_subgraph.at(i)->op().op_name()
+              << " global_order = " << op_node2global_order.at(after_acc_subgraph.at(i));
+              */
+  }
+
+  for (int64_t i = 1; i < after_acc_subgraph.size(); ++i) {
+    const OpNode* this_node = after_acc_subgraph.at(i);
+    const OpNode* pre_node = after_acc_subgraph.at(i - 1);
+    const std::string& this_op_name = this_node->op().op_name();
+    const std::string& pre_op_name = pre_node->op().op_name();
+    // build ctrl edge if need.
+    if (!IsReachable(pre_op_name, this_op_name)) {
+      auto it = mut_consumer_name2op->find(this_op_name);
+      if (it == mut_consumer_name2op->end()) {
+        auto ret_pair = mut_consumer_name2op->emplace(this_op_name, this_node->op().op_conf());
+        CHECK(ret_pair.second);
+        it = ret_pair.first;
+      }
+      OperatorConf* mut_op_conf = &(it->second);
+      mut_op_conf->add_ctrl_in_op_name(pre_op_name);
+    }
+  }
 
   for (int64_t i = 0; i < nccl_op_infos.size(); ++i) {
     auto& info = nccl_op_infos.at(i);
@@ -646,9 +697,38 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     } else {
       info.nccl_op_conf.add_ctrl_in_op_name(nccl_op_infos.at(i - 1).nccl_op_conf.name());
     }
+
     nccl_op_confs->emplace_back(info.nccl_op_conf);
     nccl_op_parallel_confs->emplace_back(info.nccl_parallel_conf);
     VLOG(3) << info.debug_str;
+
+    // NOTE(chengcheng): Try add ctrl between nccl and src op next node for strict exec order.
+    auto src_op_it = op2subgraph_order.find(info.src_node);
+    if (src_op_it != op2subgraph_order.end()) {
+      const int64_t src_sub_order = src_op_it->second;
+      const int64_t next_sub_order = src_sub_order + 1;
+      if (next_sub_order < after_acc_subgraph.size()) {
+        const OpNode* next_op = after_acc_subgraph.at(next_sub_order);
+        const std::string& next_op_name = next_op->op().op_name();
+        const std::string& dst_op_name = info.dst_node->op().op_name();
+        if (next_op_name != dst_op_name) {
+          /*
+          LOG(INFO) << "ccdebuglog: AddCtrlEdge between: [" << info.nccl_op_conf.name()
+                    << "] (sub_src_order: " << src_op_it->second << ", g_src_order " << info.order
+                    << ") -> [" << next_op_name << "] (sub_order: " << op2subgraph_order.at(next_op)
+                    << " , g_order: " << op_node2global_order.at(next_op) << ")"
+                    << " and src_sub_order: " << src_sub_order
+                    << " and next_sub_order: " << next_sub_order;
+                    */
+
+          if (mut_consumer_name2op->find(next_op_name) == mut_consumer_name2op->end()) {
+            CHECK(mut_consumer_name2op->emplace(next_op_name, next_op->op().op_conf()).second);
+          }
+          // NOTE(chengcheng): MUST add ctrl edge for strict exec orde
+          mut_consumer_name2op->at(next_op_name).add_ctrl_in_op_name(info.nccl_op_conf.name());
+        }
+      }
+    }
   }
 }
 

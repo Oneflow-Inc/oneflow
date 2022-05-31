@@ -188,6 +188,16 @@ void OpGraph::CheckIsDAG() const {
   auto ForEachOut = [&](OpNode* node, const std::function<void(OpNode*)>& Handler) {
     ForEachDataAndCtrlOutNode(node, Handler);
   };
+  /*
+  auto node_set = FindFirstNontrivialSCC(ForEachIn, ForEachOut);
+  if (node_set && (!node_set->empty())) {
+    int i = 0;
+    for (const auto* node : *node_set) {
+      LOG(INFO) << "ccdebuglog: notrival scc nodes: i =  " << i << " op: " << node->op().op_name();
+      ++i;
+    }
+  }
+  */
   CHECK(!FindFirstNontrivialSCC(ForEachIn, ForEachOut));
 }
 
@@ -247,7 +257,8 @@ void OpGraph::InitEdges() {
       producer_op_name2lbis[lbi.op_name()].insert(lbi);
       (*consumer_lbi2ibns)[lbi].emplace_back(ibn);
       auto producer_it = lbi2producer.find(lbi);
-      CHECK(producer_it != lbi2producer.end()) << "producer not found: " << GenLogicalBlobName(lbi);
+      CHECK(producer_it != lbi2producer.end()) << " producer not found: " << GenLogicalBlobName(lbi)
+                                               << " of consumer op: " << op_node->op().op_name();
       const int32_t output_index = CHECK_JUST(producer_it->second->op().GetOutputIndex(lbi));
       op_node->input_index2producer_and_output_index_.emplace_back(producer_it->second,
                                                                    output_index);

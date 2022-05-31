@@ -267,6 +267,7 @@ class ModuleBlock(Block):
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
         if self.config._stage_placement is not None:
+
             def insert_to_global(t):
                 assert isinstance(t, Tensor)
                 return t.to_global(placement=self.config._stage_placement)

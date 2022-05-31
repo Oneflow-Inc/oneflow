@@ -55,7 +55,7 @@ class BlockConfig(object):
         self._is_null = False
         self._stage_id = value
 
-    def set_stage(self, stage_id: int = None, placement = None):
+    def set_stage(self, stage_id: int = None, placement=None):
         self._is_null = False
         self._stage_id = stage_id
         self._stage_placement = placement
