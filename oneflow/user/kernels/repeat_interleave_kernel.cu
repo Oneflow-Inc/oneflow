@@ -24,7 +24,8 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void repeat_interleave(const T* in_ptr, const T* cumsum_ptr, T* out_ptr, const int64_t num){
+__global__ void repeat_interleave(const T* in_ptr, const T* cumsum_ptr, T* out_ptr,
+                                  const int64_t num) {
   CUDA_1D_KERNEL_LOOP(i, num) {
     T end = cumsum_ptr[i];
     T size = in_ptr[i];
@@ -33,7 +34,7 @@ __global__ void repeat_interleave(const T* in_ptr, const T* cumsum_ptr, T* out_p
   }
 }
 
-} // namespace
+}  // namespace
 
 template<typename T>
 class GpuRepeatInterLeaveKernel final : public user_op::OpKernel {
@@ -52,17 +53,16 @@ class GpuRepeatInterLeaveKernel final : public user_op::OpKernel {
     T* out_ptr = out->mut_dptr<T>();
 
     repeat_interleave<T><<<BlocksNum4ThreadsNum(in->shape().At(0)), kCudaThreadsNumPerBlock, 0,
-                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-          in_ptr, cumsum_ptr, out_ptr, in->shape().At(0));
-
+                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        in_ptr, cumsum_ptr, out_ptr, in->shape().At(0));
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_REPEAT_INTER_LEAVE_KERNEL(dtype)                     \
-  REGISTER_USER_KERNEL("repeat_interleave")                           \
-      .SetCreateFn<GpuRepeatInterLeaveKernel<dtype>>()                \
+#define REGISTER_REPEAT_INTER_LEAVE_KERNEL(dtype)                      \
+  REGISTER_USER_KERNEL("repeat_interleave")                            \
+      .SetCreateFn<GpuRepeatInterLeaveKernel<dtype>>()                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 

@@ -963,8 +963,10 @@ def _repeat(self, *sizes):
         new_sizes = sizes
     return flow._C.repeat(self, new_sizes)
 
+
 def _repeat_interleave(self, *args, **kwargs):
     return flow._C.repeat_interleave(self, *args, **kwargs)
+
 
 def _tile(self, *dims):
     if len(dims) == 1:

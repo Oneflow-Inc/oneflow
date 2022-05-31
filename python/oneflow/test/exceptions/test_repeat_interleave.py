@@ -30,7 +30,7 @@ class TestRepeatInterleave(flow.unittest.TestCase):
             "Dimension out of range (expected to be in range of [-2, 1], but got 4)"
             in str(context.exception)
         )
-    
+
     def test_repeat_interleave_tensor_shape_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor([[1, 2], [3, 4]])
@@ -40,27 +40,21 @@ class TestRepeatInterleave(flow.unittest.TestCase):
             "repeat_interleave only accept 1D vector as repeat"
             in str(context.exception)
         )
-    
+
     def test_repeat_interleave_dtype_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor([[1, 2], [3, 4]])
             r = flow.tensor([1.0, 2.0])
             y = flow.repeat_interleave(x, r, dim=1)
-        test_case.assertTrue(
-            "repeats has to be Long tensor"
-            in str(context.exception)
-        )
-    
+        test_case.assertTrue("repeats has to be Long tensor" in str(context.exception))
+
     def test_repeat_interleave_negative_tensor_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor([[1, 2], [3, 4]])
             r = flow.tensor([1, -2])
             y = flow.repeat_interleave(x, r, dim=1)
-        test_case.assertTrue(
-            "repeats can not be negative"
-            in str(context.exception)
-        )
-    
+        test_case.assertTrue("repeats can not be negative" in str(context.exception))
+
     def test_repeat_interleave_negative_tensor_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor([[1, 2], [3, 4]])
@@ -70,7 +64,7 @@ class TestRepeatInterleave(flow.unittest.TestCase):
             "Dimension out of range (expected to be in range of [-2, 1], but got 2)"
             in str(context.exception)
         )
-    
+
     def test_repeat_interleave_dim_not_match_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor([[1, 2], [3, 4]])
@@ -80,6 +74,7 @@ class TestRepeatInterleave(flow.unittest.TestCase):
             "repeats must have the same size as input along dim"
             in str(context.exception)
         )
+
 
 if __name__ == "__main__":
     unittest.main()

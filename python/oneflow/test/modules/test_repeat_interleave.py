@@ -50,5 +50,6 @@ class TestRepeatInterLeave(flow.unittest.TestCase):
         z = torch.repeat_interleave(x, y, 1, output_size=2)
         return z
 
+
 if __name__ == "__main__":
     unittest.main()

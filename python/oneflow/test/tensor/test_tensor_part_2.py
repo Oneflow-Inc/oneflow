@@ -967,5 +967,6 @@ class TestTensorNumpy(flow.unittest.TestCase):
         z = x.repeat_interleave(y, 1, output_size=2)
         return z
 
+
 if __name__ == "__main__":
     unittest.main()
