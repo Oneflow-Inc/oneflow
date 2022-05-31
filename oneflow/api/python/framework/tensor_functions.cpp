@@ -119,7 +119,7 @@ NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_sub, functional::sub);
 NB_BINARY_FUNC(PyTensorObject_nb_inplace_mul, functional::mul_);
 NB_BINARY_FUNC(PyTensorObject_nb_inplace_true_div, functional::div_);
 
-PyObject* PyTensorObject_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObjectPtr dict(PyDict_New());
@@ -155,7 +155,7 @@ PyNumberMethods PyTensorObject_as_number = {
     PyTensorObject_nb_inplace_sub,  // nb_inplace_sub
     PyTensorObject_nb_inplace_mul,  // nb_inplace_mul
     NULL,                           // nb_inplace_remainder
-    NULL,                           // nb_inplace_pow
+    PyTensorObject_nb_inplace_pow,  // nb_inplace_pow
     NULL,                           // nb_inplace_lshift
     NULL,                           // nb_inplace_rshift
     NULL,                           // nb_inplace_and
@@ -169,11 +169,13 @@ PyNumberMethods PyTensorObject_as_number = {
 
     NULL,                               // nb_index
     PyTensorObject_nb_matrix_multiply,  // nb_matrix_multiply
-    NULL,                               // not implemented yet nb_inplace_matrix_multiply
+    NULL,                               // nb_inplace_matrix_multiply
 
 };
 
 // extra methods
+
+// functions that accept only one Tensor
 #define UNARY_METHOD(func_name, bind_func)                             \
   static PyObject* func_name(PyObject* self, PyObject* unused) {       \
     HANDLE_ERRORS                                                      \
@@ -226,6 +228,7 @@ UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
 UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 
+// functions that directly pass arguments without parsing
 #define DIRECT_PASS_FUNC(func_name, bind_func, name)                             \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
     HANDLE_ERRORS                                                                \
@@ -261,6 +264,7 @@ DIRECT_PASS_FUNC(PyTensorObject_amin, functional::amin, "amin")
 DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul, "addcmul")
 DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_, "addcmul_")
 
+// functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
