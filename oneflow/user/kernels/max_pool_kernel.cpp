@@ -224,9 +224,9 @@ class MaxPool1dKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::nchw,
-          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-          static_cast<void*>(indice_ptr), dnnl::algorithm::pooling_max);
+          padding_dims_r, dilation, dm::format_tag::nchw, static_cast<void*>(const_cast<T*>(src)),
+          static_cast<void*>(const_cast<T*>(dest)), static_cast<void*>(indice_ptr),
+          dnnl::algorithm::pooling_max);
     } else {
 #endif
       DimVector y_vector(2);
@@ -286,8 +286,8 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::nchw,
-          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          padding_dims_r, dilation, dm::format_tag::nchw, static_cast<void*>(const_cast<T*>(src)),
+          static_cast<void*>(const_cast<T*>(dest)),
           static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
     } else {
 #endif
@@ -538,9 +538,9 @@ class MaxPool3dKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::ncdhw,
-          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-          static_cast<void*>(indice_ptr), dnnl::algorithm::pooling_max);
+          padding_dims_r, dilation, dm::format_tag::ncdhw, static_cast<void*>(const_cast<T*>(src)),
+          static_cast<void*>(const_cast<T*>(dest)), static_cast<void*>(indice_ptr),
+          dnnl::algorithm::pooling_max);
     } else {
 #endif
       DimVector y_vector(4);
@@ -610,8 +610,8 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::ncdhw,
-          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
+          padding_dims_r, dilation, dm::format_tag::ncdhw, static_cast<void*>(const_cast<T*>(src)),
+          static_cast<void*>(const_cast<T*>(dest)),
           static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
     } else {
 #endif

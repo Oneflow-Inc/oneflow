@@ -50,8 +50,7 @@ struct OneDnnPoolKernelUtil {
       auto pooling_primitive_desc =
           dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
       auto pooling_primitive = dnnl::pooling_v2_forward(pooling_primitive_desc);
-      auto workspace_mem =
-          dm(pooling_primitive_desc.workspace_desc(), *onednn_engine, indice_ptr);
+      auto workspace_mem = dm(pooling_primitive_desc.workspace_desc(), *onednn_engine, indice_ptr);
 
       pooling_primitive.execute(
           *onednn_stream,
@@ -59,11 +58,13 @@ struct OneDnnPoolKernelUtil {
     });
   }
 
-  static void OneDnnpoolBackwardCompute(
-      ep::Stream* stream, const dm::dims& diff_dst_dims, const dm::dims& diff_src_dims,
-      const dm::dims& kernel_dims, const dm::dims& strides_dims, const dm::dims& padding_dims_l,
-      const dm::dims& padding_dims_r, const dm::dims& dilation, dm::format_tag format,
-      void* diff_dst, void* diff_src, void* workspace, dnnl::algorithm algorithm) {
+  static void OneDnnpoolBackwardCompute(ep::Stream* stream, const dm::dims& diff_dst_dims,
+                                        const dm::dims& diff_src_dims, const dm::dims& kernel_dims,
+                                        const dm::dims& strides_dims,
+                                        const dm::dims& padding_dims_l,
+                                        const dm::dims& padding_dims_r, const dm::dims& dilation,
+                                        dm::format_tag format, void* diff_dst, void* diff_src,
+                                        void* workspace, dnnl::algorithm algorithm) {
     stream->As<ep::CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
                                                                dnnl::stream* onednn_stream) {
       auto data_type = CppTypeToOneDnnDtype<T>();
@@ -81,8 +82,7 @@ struct OneDnnPoolKernelUtil {
           kernel_dims, dilation, padding_dims_l, padding_dims_r);
       auto pooling_primitive_desc =
           dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
-      auto workspace_mem =
-          dm(pooling_primitive_desc.workspace_desc(), *onednn_engine, workspace);
+      auto workspace_mem = dm(pooling_primitive_desc.workspace_desc(), *onednn_engine, workspace);
       // Backward
       auto pooling_back_primitive_desc = dnnl::pooling_v2_backward::primitive_desc(
           pooling_back_desc, *onednn_engine, pooling_primitive_desc);
