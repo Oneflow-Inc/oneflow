@@ -108,10 +108,10 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   std::vector<std::shared_ptr<SubTskGphBuilder>> builders;
   builders.emplace_back(new OneToOneSubTskGphBuilder());
   builders.emplace_back(new B21SubTskGphBuilder());
-  if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
-    builders.emplace_back(new OfCollectiveBoxingSubTskGphBuilder());
-  }
   if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
+      builders.emplace_back(new OfCollectiveBoxingSubTskGphBuilder());
+    }
     builders.emplace_back(new CollectiveBoxingSubTskGphBuilder());
   }
   builders.emplace_back(new SliceBoxingSubTskGphBuilder());
