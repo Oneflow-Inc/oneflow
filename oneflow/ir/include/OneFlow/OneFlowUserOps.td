@@ -8225,6 +8225,38 @@ def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [NoSideEffect, DeclareOpInterfaceMet
   let has_data_type_infer_fn = 1;
 }
 
+// def OneFlow_FusedCrossInteractionOp : OneFlow_BaseOp<"fused_cross_interaction", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+//   let input = (ins
+//     OneFlow_Tensor:$x,
+//     OneFlow_Tensor:$weight,
+//     OneFlow_Tensor:$bias,
+//     OneFlow_Tensor:$x_0
+//   );
+//   let output = (outs
+//     OneFlow_Tensor:$out
+//   );
+//   let has_logical_tensor_desc_infer_fn = 1;
+//   let has_physical_tensor_desc_infer_fn = 1;
+//   let has_get_sbp_fn = 1;
+//   let has_data_type_infer_fn = 1;
+// }
+
+def OneFlow_FusedCrossInteractionOp : OneFlow_BaseOp<"fused_cross_interaction", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$bias,
+    OneFlow_Tensor:$x_0
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_HardsigmoidOp : OneFlow_BaseOp<"hardsigmoid", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in

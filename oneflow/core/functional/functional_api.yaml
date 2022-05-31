@@ -2103,6 +2103,10 @@
   signature: "TensorTuple (Tensor dy, Tensor padded_concated_features=None, TensorTuple features_grad_like, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0, String pooling=\"none\") => FusedDotFeatureInteractionGrad"
   bind_python: False
 
+- name: "fused_cross_interaction"
+  signature: "Tensor (Tensor x, Tensor weight, Tensor x_0, Tensor bias) => FusedCrossInteraction"
+  bind_python: True
+
 - name: "tensor_buffer_to_tensor"
   signature: "Tensor (Tensor input, Shape instance_shape, DataType dtype) => TensorBufferToTensor"
   bind_python: True
