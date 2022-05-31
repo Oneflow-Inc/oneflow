@@ -47,9 +47,9 @@ __global__ void VectorizedReluDropoutBitmaskBackwardKernel(
       const IndexType linear_index = (linear_pack_index + i);
       const IndexType row = linear_index / cols;
       const IndexType col = linear_index - row * cols;
-      const int32_t lane_id = col % kWarpSize;
+      const int32_t col_mod_warpsize = col % kWarpSize;
       const IndexType aux_idx = ((row * aux_ld) + col) / kWarpSize;
-      bool is_positive = mask[aux_idx] & (1 << lane_id);
+      bool is_positive = mask[aux_idx] & (1 << col_mod_warpsize);
       dx_vec.elem[i] = dy_vec.elem[i] * static_cast<T>(is_positive) * static_cast<T>(scale);
     }
     *(reinterpret_cast<LoadStoreType*>(dx + linear_pack_index)) = dx_vec.storage;
@@ -59,9 +59,9 @@ __global__ void VectorizedReluDropoutBitmaskBackwardKernel(
     const IndexType tail_index = tail_offset + global_thread_id;
     const IndexType tail_row = tail_index / cols;
     const IndexType tail_col = tail_index - tail_row * cols;
-    const IndexType tail_lane_id = tail_col % kWarpSize;
+    const IndexType tail_col_mod_warpsize = tail_col % kWarpSize;
     const IndexType tail_aux_idx = ((tail_row * aux_ld) + tail_col) / kWarpSize;
-    bool is_positive = mask[tail_aux_idx] & (1 << tail_lane_id);
+    bool is_positive = mask[tail_aux_idx] & (1 << tail_col_mod_warpsize);
     dx[tail_index] = dy[tail_index] * static_cast<T>(is_positive) * static_cast<T>(scale);
   }
 }

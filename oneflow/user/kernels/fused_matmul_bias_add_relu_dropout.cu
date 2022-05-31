@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 #include "oneflow/user/kernels/dropout_kernel.h"
-#include "oneflow/core/ep/include/primitive/fast_integer_math.h"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11060
 
@@ -34,22 +33,6 @@ union RandPack4 {
   uint4 storage;
   uint32_t elem[4];  // store curand4 return val.
 };
-
-template<int32_t pack_size, typename IndexType>
-__device__ void SetCublasBitMask(FastIntegerMath<IndexType> fast_div, const IndexType aux_ld,
-                                 const IndexType row, const IndexType col, int32_t thread_bitmask,
-                                 int32_t* mask) {
-  IndexType linear_index = row * aux_ld + col;
-  IndexType mask_index;
-  IndexType mask_offset;
-  fast_div.divmod(linear_index, &mask_index, &mask_offset);
-
-  int32_t bitmask = thread_bitmask << mask_offset;
-  for (int stride = kWarpSize / (pack_size * 2); stride > 0; stride /= 2) {
-    bitmask |= __shfl_down_sync(__activemask(), bitmask, stride, kWarpSize);
-  }
-  if (mask_offset == 0) { mask[mask_index] = bitmask; }
-}
 
 template<int32_t pack_size, typename IndexType>
 __device__ void SetCublasBitMask(const IndexType aux_ld, const IndexType row, const IndexType col,
@@ -70,8 +53,8 @@ __global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
                                                  one::CUDAGeneratorState* cuda_gen_state,
                                                  uint64_t inc_offset, const IndexType elem_cnt,
                                                  const int32_t aux_ld, const IndexType cols,
-                                                 const uint32_t rate, float scale, const T* x,
-                                                 int32_t* mask, T* y) {
+                                                 const uint32_t rate, float scale, T* x,
+                                                 int32_t* mask) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
@@ -81,7 +64,6 @@ __global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
   T t_scale = static_cast<T>(scale);
   RandPack4 rand_uniform_pack4;
   T zero_val = static_cast<T>(0.0);
-  FastIntegerMath<IndexType> fast_div(kWarpSize);
   for (IndexType linear_index = global_thread_id * kVecSize,
                  step = gridDim.x * blockDim.x * kVecSize;
        linear_index < elem_cnt; linear_index += step) {
@@ -91,16 +73,16 @@ __global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
 
     rand_uniform_pack4.storage = curand4(&state);
 
-    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+    LoadType* x_load = reinterpret_cast<LoadType*>(x + linear_index);
     LoadPack x_vec;
     x_vec.storage = *x_load;
-    LoadPack y_vec;
+    LoadPack out_vec;
 #pragma unroll
     for (int i = 0; i < kVecSize; i++) {
       bool relu_mask = true;
       if (relu) {
         // Relu
-        relu_mask = x_vec.elem[i] > zero_val;
+        relu_mask = x_vec.elem[i] >= zero_val;
       }
       // dropout
       bool mask_val = rand_uniform_pack4.elem[i] > rate;
@@ -108,10 +90,10 @@ __global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
       bool combined_mask = relu_mask && mask_val;
       T t_combined_mask = static_cast<T>(combined_mask);
       thread_bitmask |= (combined_mask << i);
-      y_vec.elem[i] = x_vec.elem[i] * t_combined_mask * t_scale;
+      out_vec.elem[i] = x_vec.elem[i] * t_combined_mask * t_scale;
     }
-    *(reinterpret_cast<LoadType*>(y + linear_index)) = y_vec.storage;
-    SetCublasBitMask<kVecSize, IndexType>(fast_div, aux_ld, row, col, thread_bitmask, mask);
+    *(reinterpret_cast<LoadType*>(x + linear_index)) = out_vec.storage;
+    SetCublasBitMask<kVecSize, IndexType>(aux_ld, row, col, thread_bitmask, mask);
   }
 
   if (threadIdx.x == 0) {
@@ -127,7 +109,7 @@ template<typename T, bool relu, typename IndexType>
 __global__ void FusedPaddedVectorizedReluDropoutKernel(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
     const IndexType aligned32_elem_cnt, const int32_t aux_ld, const IndexType aligned32_cols,
-    const IndexType cols, const uint32_t rate, float scale, const T* x, int32_t* mask, T* y) {
+    const IndexType cols, const uint32_t rate, float scale, T* x, int32_t* mask) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
@@ -137,7 +119,6 @@ __global__ void FusedPaddedVectorizedReluDropoutKernel(
   T t_scale = static_cast<T>(scale);
   RandPack4 rand_uniform_pack4;
   T zero_val = static_cast<T>(0.0);
-  FastIntegerMath<IndexType> fast_div(kWarpSize);
   for (IndexType linear_index = global_thread_id * kVecSize,
                  step = gridDim.x * blockDim.x * kVecSize;
        linear_index < aligned32_elem_cnt; linear_index += step) {
@@ -149,16 +130,16 @@ __global__ void FusedPaddedVectorizedReluDropoutKernel(
       const IndexType actual_index = row * cols + col;
       rand_uniform_pack4.storage = curand4(&state);
 
-      const LoadType* x_load = reinterpret_cast<const LoadType*>(x + actual_index);
+      LoadType* x_load = reinterpret_cast<LoadType*>(x + actual_index);
       LoadPack x_vec;
       x_vec.storage = *x_load;
-      LoadPack y_vec;
+      LoadPack out_vec;
 #pragma unroll
       for (int i = 0; i < kVecSize; i++) {
         bool relu_mask = true;
         if (relu) {
           // Relu
-          relu_mask = x_vec.elem[i] > zero_val;
+          relu_mask = x_vec.elem[i] >= zero_val;
         }
         // dropout
         bool mask_val = rand_uniform_pack4.elem[i] > rate;
@@ -166,11 +147,11 @@ __global__ void FusedPaddedVectorizedReluDropoutKernel(
         bool combined_mask = relu_mask && mask_val;
         T t_combined_mask = static_cast<T>(combined_mask);
         thread_bitmask |= (combined_mask << i);
-        y_vec.elem[i] = x_vec.elem[i] * t_combined_mask * t_scale;
+        out_vec.elem[i] = x_vec.elem[i] * t_combined_mask * t_scale;
       }
-      *(reinterpret_cast<LoadType*>(y + actual_index)) = y_vec.storage;
+      *(reinterpret_cast<LoadType*>(x + actual_index)) = out_vec.storage;
     }
-    SetCublasBitMask<kVecSize, IndexType>(fast_div, aux_ld, row, col, thread_bitmask, mask);
+    SetCublasBitMask<kVecSize, IndexType>(aux_ld, row, col, thread_bitmask, mask);
   }
 
   if (threadIdx.x == 0 && threadIdx.y == 0) {
@@ -187,7 +168,7 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
                                            uint64_t inc_offset, const IndexType elem_cnt,
                                            const IndexType aux_ld, const IndexType rows,
                                            const IndexType cols, const uint32_t rate, float scale,
-                                           const T* x, int32_t* mask, T* y) {
+                                           T* x, int32_t* mask) {
   const int32_t lane_id = threadIdx.x;
   const IndexType global_warp_id = blockIdx.x * blockDim.y + threadIdx.y;
   const IndexType step = gridDim.x * blockDim.y;
@@ -198,7 +179,6 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
 
   T t_scale = static_cast<T>(scale);
   T zero_val = static_cast<T>(0.0);
-  FastIntegerMath<IndexType> fast_div(kWarpSize);
   RandPack4 rand_uniform_pack4;
 
   for (IndexType row = global_warp_id; row < rows; row += step) {
@@ -216,21 +196,19 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
           bool relu_mask = true;
           if (relu) {
             // relu
-            relu_mask = x_val > zero_val;
+            relu_mask = x_val >= zero_val;
           }
           // dropout
           bool mask_val = rand_uniform_val > rate;
           // Combined relu_mask, dropout_mask together.
           bool combined_mask = relu_mask && mask_val;
-          // thread_bitmask |= combined_mask << i;
           thread_bitmask = combined_mask;
-          T y_val = y[cur_linear_index];
           T t_combined_mask = static_cast<T>(combined_mask);
-          y_val = x_val * t_combined_mask * t_scale;
-          y[cur_linear_index] = y_val;
+          T out_val = x_val * t_combined_mask * t_scale;
+          x[cur_linear_index] = out_val;
         }
         int32_t warp_mask = __ballot_sync(__activemask(), thread_bitmask);
-        if (lane_id == 0) { mask[fast_div.divides(row * aux_ld + cur_col)] = warp_mask; }
+        if (lane_id == 0) { mask[(row * aux_ld + cur_col) / kWarpSize] = warp_mask; }
       }
     }
   }
@@ -245,13 +223,16 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
 }
 
 template<typename Func>
-unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int32_t block_size) {
+unsigned int ComputeGridSize(ep::Stream* stream, Func func, const int64_t elem_cnt,
+                             const int32_t block_size) {
   auto* cuda_stream = stream->As<ep::CudaStream>();
+  const int64_t pack_num = elem_cnt / kVecSize;
+  const int32_t num_blocks = std::max<int64_t>(1, (pack_num + block_size - 1) / block_size);
   const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
   int max_active_blocks = 0;
   OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, func, block_size,
                                                               /*shared_memory*/ 0));
-  return max_active_blocks * multi_processor_count;
+  return std::min(num_blocks, max_active_blocks * multi_processor_count);
 }
 
 uint64_t RoundUp(uint64_t x, uint64_t y) { return (x + y - 1) / y * y; }
@@ -261,28 +242,26 @@ cudaError_t LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
                                          one::CUDAGeneratorState* cuda_gen_state,
                                          const int64_t elem_cnt, const int32_t aux_ld,
                                          const int64_t rows, const int64_t cols, float rate,
-                                         float scale, const T* x, int32_t* mask, T* y) {
+                                         float scale, T* x, int32_t* mask) {
   uint64_t inc_offset = 0;
   const uint32_t uint_rate = UINT_MAX * rate;
   unsigned int grid_size = 0;
   if (cols % 32 == 0) {
     // Launch Elementwise Vectorized Kernel.
     if (elem_cnt < GetMaxVal<int32_t>()) {
-      grid_size =
-          ComputeGridSize(stream, FusedVectorizedReluDropoutKernel<T, relu, int32_t>, kBlockSize);
+      grid_size = ComputeGridSize(stream, FusedVectorizedReluDropoutKernel<T, relu, int32_t>,
+                                  elem_cnt, kBlockSize);
       inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
       FusedVectorizedReluDropoutKernel<T, relu, int32_t>
-          <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
-                                                                elem_cnt, aux_ld, cols, uint_rate,
-                                                                scale, x, mask, y);
+          <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(
+              seed, cuda_gen_state, inc_offset, elem_cnt, aux_ld, cols, uint_rate, scale, x, mask);
     } else {
-      grid_size =
-          ComputeGridSize(stream, FusedVectorizedReluDropoutKernel<T, relu, int64_t>, kBlockSize);
+      grid_size = ComputeGridSize(stream, FusedVectorizedReluDropoutKernel<T, relu, int64_t>,
+                                  elem_cnt, kBlockSize);
       inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
       FusedVectorizedReluDropoutKernel<T, relu, int64_t>
-          <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
-                                                                elem_cnt, aux_ld, cols, uint_rate,
-                                                                scale, x, mask, y);
+          <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(
+              seed, cuda_gen_state, inc_offset, elem_cnt, aux_ld, cols, uint_rate, scale, x, mask);
     }
   } else {
     if (cols % 4 == 0) {
@@ -290,41 +269,43 @@ cudaError_t LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
       const int64_t align32_cols = (cols + 32 - 1) / 32 * 32;
       const int64_t align32_elem_cnt = rows * align32_cols;
       if (align32_elem_cnt < GetMaxVal<int32_t>()) {
-        grid_size = ComputeGridSize(
-            stream, FusedPaddedVectorizedReluDropoutKernel<T, relu, int32_t>, kBlockSize);
+        grid_size =
+            ComputeGridSize(stream, FusedPaddedVectorizedReluDropoutKernel<T, relu, int32_t>,
+                            align32_elem_cnt, kBlockSize);
         inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
         FusedPaddedVectorizedReluDropoutKernel<T, relu, int32_t>
             <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(
                 seed, cuda_gen_state, inc_offset, align32_elem_cnt, aux_ld, align32_cols, cols,
-                uint_rate, scale, x, mask, y);
+                uint_rate, scale, x, mask);
       } else {
-        grid_size = ComputeGridSize(
-            stream, FusedPaddedVectorizedReluDropoutKernel<T, relu, int64_t>, kBlockSize);
+        grid_size =
+            ComputeGridSize(stream, FusedPaddedVectorizedReluDropoutKernel<T, relu, int64_t>,
+                            align32_elem_cnt, kBlockSize);
         inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
         FusedPaddedVectorizedReluDropoutKernel<T, relu, int64_t>
             <<<grid_size, kBlockSize, 0, stream->cuda_stream()>>>(
                 seed, cuda_gen_state, inc_offset, align32_elem_cnt, aux_ld, align32_cols, cols,
-                uint_rate, scale, x, mask, y);
+                uint_rate, scale, x, mask);
       }
     } else {
       // Process a row by using a warp.
       dim3 block_dim(32, 8);
       if (elem_cnt < GetMaxVal<int32_t>()) {
-        grid_size =
-            ComputeGridSize(stream, FusedWarpReluDropoutKernel<T, relu, int32_t>, kBlockSize);
+        grid_size = ComputeGridSize(stream, FusedWarpReluDropoutKernel<T, relu, int32_t>, elem_cnt,
+                                    kBlockSize);
         inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
         FusedWarpReluDropoutKernel<T, relu, int32_t>
             <<<grid_size, block_dim, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
                                                                  elem_cnt, aux_ld, rows, cols,
-                                                                 uint_rate, scale, x, mask, y);
+                                                                 uint_rate, scale, x, mask);
       } else {
-        grid_size =
-            ComputeGridSize(stream, FusedWarpReluDropoutKernel<T, relu, int32_t>, kBlockSize);
+        grid_size = ComputeGridSize(stream, FusedWarpReluDropoutKernel<T, relu, int32_t>, elem_cnt,
+                                    kBlockSize);
         inc_offset = RoundUp((elem_cnt / (kBlockSize * grid_size)), kVecSize);
         FusedWarpReluDropoutKernel<T, relu, int64_t>
             <<<grid_size, block_dim, 0, stream->cuda_stream()>>>(seed, cuda_gen_state, inc_offset,
                                                                  elem_cnt, aux_ld, rows, cols,
-                                                                 uint_rate, scale, x, mask, y);
+                                                                 uint_rate, scale, x, mask);
       }
     }
   }
@@ -369,7 +350,6 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
 
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     bool skip_final_activation = ctx->Attr<bool>("skip_final_activation");
 
     auto* fused_dropout_kernel_state = dynamic_cast<FusedDropoutKernelState*>(state);
@@ -410,7 +390,6 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       const int64_t out_feature = weight->shape().At(0);
       weight->shape().ToDimVector(&weight_shape);
       size_t matmul_out_elem_cnt = batchsize * out_feature;
-      size_t matmul_out_size = GetCudaAlignedSize(matmul_out_elem_cnt * sizeof(T));
 
       InferMatmulCublasMNK(in_shape, weight_shape,
                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,
@@ -418,9 +397,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
                            &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
 
       cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BIAS;
-      T* relu_dropout_out_buf;
-      void* matmul_out_ptr = (void*)(reinterpret_cast<char*>(tmp_buffer->mut_dptr()) + offset);
-      offset += matmul_out_size;
+      void* matmul_out_ptr;
 
       float rate = dropout_rate_list.at(idx);
       float scale = 0.0;
@@ -428,17 +405,9 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
       if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
 
       if (idx == weight_size - 1) {
-        if (skip_final_activation && rate == 0.0f) {
-          matmul_out_ptr = reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr());
-        } else {
-          // If it's last layer and skip_final_activation, dropout_rate is 0.0f, we directly set
-          // output ptr as cuBlasLtmatmul's out.
-          relu_dropout_out_buf =
-              reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr());
-        }
+        matmul_out_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
       } else {
-        relu_dropout_out_buf =
-            reinterpret_cast<T*>(ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr());
+        matmul_out_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
       }
       SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
@@ -464,9 +433,9 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
         OF_CUDA_CHECK((LaunchFusedReluDropoutKernel<T, true>(
             cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, aux_ld, batchsize, out_feature,
             rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-            reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()), relu_dropout_out_buf)));
+            reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()))));
         // Set relu_droput_out ptr as next layer's input.
-        in_buf_ptr = relu_dropout_out_buf;
+        in_buf_ptr = matmul_out_ptr;
         // Set hidden_layer shape as next layer's input shape.
         in_shape.at(1) = out_feature;
       } else {
@@ -478,7 +447,7 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
           OF_CUDA_CHECK((LaunchFusedReluDropoutKernel<T, false>(
               cuda_stream, seed, cuda_gen_state, matmul_out_elem_cnt, aux_ld, batchsize,
               out_feature, rate, scale, reinterpret_cast<T*>(matmul_out_ptr),
-              reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()), relu_dropout_out_buf)));
+              reinterpret_cast<int32_t*>(cublas_aux->mut_dptr()))));
         }
       }
     }
@@ -486,22 +455,11 @@ class FusedMatmulBiasAddReluDropoutKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(cpp_type, data_type)     \
-  REGISTER_USER_KERNEL("fused_matmul_bias_add_relu_dropout")                            \
-      .SetCreateFn<FusedMatmulBiasAddReluDropoutKernel<cpp_type>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
-                       && (user_op::HobDataType("out", 0) == data_type))                \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
-        const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);                    \
-        const int64_t batchsize = x.shape().At(0);                                      \
-        const int32_t weight_size = ctx->input_size("weights");                         \
-        size_t tmp_size = 0;                                                            \
-        for (int i = 0; i < weight_size; i++) {                                         \
-          const int64_t out_feature = ctx->InputTensorDesc("weights", i).shape().At(0); \
-          tmp_size += GetCudaAlignedSize(batchsize * out_feature * sizeof(cpp_type));   \
-        }                                                                               \
-        return tmp_size;                                                                \
-      });
+#define REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(cpp_type, data_type) \
+  REGISTER_USER_KERNEL("fused_matmul_bias_add_relu_dropout")                        \
+      .SetCreateFn<FusedMatmulBiasAddReluDropoutKernel<cpp_type>>()                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)              \
+                       && (user_op::HobDataType("out", 0) == data_type));
 
 REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(float, DataType::kFloat)
 REGISTER_FUSED_MATMUL_BIAS_ADD_RELU_DROPOUT_KERNEL_GPU(half, DataType::kFloat16)

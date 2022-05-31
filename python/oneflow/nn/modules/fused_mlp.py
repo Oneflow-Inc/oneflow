@@ -30,9 +30,9 @@ class FusedMLP(Module):
 
         hidden_features: A tuple of each Linear layer hidden size
 
-        hidden_dropout_rate: A tuple of each hidden layer's dropout rate
-
         out_features: The final Linear layer hidden size
+
+        hidden_dropout_rate: A tuple of each hidden layer's dropout rate
 
         out_dropout_rate: The final Linear layer's dropout rate
 
@@ -66,9 +66,9 @@ class FusedMLP(Module):
         self,
         in_features: int,
         hidden_features: Tuple[int],
-        hidden_dropout_rate: Tuple[float],
         out_features: int,
-        out_dropout_rate: int,
+        hidden_dropout_rate: Tuple[float] = None,
+        out_dropout_rate: float = 0.0,
         skip_final_activation=False,
     ) -> None:
         super().__init__()
@@ -78,7 +78,12 @@ class FusedMLP(Module):
         # TODO(zzk): Add more activation support.
         self.skip_final_activation = skip_final_activation
         self.hidden_layer_num = len(hidden_features)
-        self.dropout_rate_list = hidden_dropout_rate + [out_dropout_rate]
+        self.dropout_rate_list = (
+            hidden_dropout_rate
+            if hidden_dropout_rate
+            else [0.0] * (self.hidden_layer_num)
+        )
+        self.dropout_rate_list += [out_dropout_rate]
         self.add_parameters()
         self.reset_parameters()
         self.use_dropout = False
