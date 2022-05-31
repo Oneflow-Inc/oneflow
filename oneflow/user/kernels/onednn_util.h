@@ -17,14 +17,16 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_ONEDNN_UTIL_H_
 #ifdef WITH_ONEDNN
 #include <oneapi/dnnl/dnnl.hpp>
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
+using dm = dnnl::memory;
 
 template<typename T>
 dnnl::memory::data_type CppTypeToOneDnnDtype();
 
-using DnnlDims = dnnl::memory::dims;
-
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_ONEDNN_OPTS, true);
+inline bool OneDnnIsEnabled() { return EnvBool<ONEFLOW_ENABLE_ONEDNN_OPTS>(); }
 }  // namespace oneflow
 #endif  // WITH_ONEDNN
 #endif  // ONEFLOW_USER_KERNELS_ONEDNN_UTIL_H_

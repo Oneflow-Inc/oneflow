@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/common/primitive/util.h"
-#include "oneflow/core/ep/common/onednn.h"
+#include "oneflow/user/kernels/onednn_util.h"
 
 namespace oneflow {
 

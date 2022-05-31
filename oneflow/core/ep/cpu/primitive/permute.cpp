@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/permute_impl.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
-#include "oneflow/core/ep/common/onednn.h"
+#include "oneflow/user/kernels/onednn_util.h"
 
 namespace oneflow {
 
