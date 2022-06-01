@@ -41,7 +41,7 @@ class Fill : public OpExprGradFunction<FillCaptureState> {
 
 Maybe<void> Fill::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -54,7 +54,7 @@ Maybe<void> Fill::Capture(FillCaptureState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Fill::Apply(const FillCaptureState* ctx, const TensorTuple& out_grads,
                         TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(1);
   if (ctx->in_requires_grad) { (*in_grads)[0] = JUST(functional::Fill(out_grads[0], 0)); }
   return Maybe<void>::Ok();
@@ -74,7 +74,7 @@ class FillTensor : public OpExprGradFunction<FillCaptureState> {
 
 Maybe<void> FillTensor::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);  // NOLINT(maybe-need-error-msg)
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
@@ -88,7 +88,7 @@ Maybe<void> FillTensor::Capture(FillCaptureState* ctx, const TensorTuple& inputs
 
 Maybe<void> FillTensor::Apply(const FillCaptureState* ctx, const TensorTuple& out_grads,
                               TensorTuple* in_grads) const {
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
   in_grads->resize(2);
   if (ctx->value_requires_grad) {
     int32_t num_axes = out_grads[0]->shape()->NumAxes();

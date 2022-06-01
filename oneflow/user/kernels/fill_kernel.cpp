@@ -41,10 +41,10 @@ class FillKernel final : public user_op::OpKernel {
     const Scalar value = is_floating_value ? Scalar(ctx->Attr<double>("floating_value"))
                                            : Scalar(ctx->Attr<int64_t>("integral_value"));
     const int32_t elem_cnt = in->shape().elem_cnt();
-    CHECK_GE(elem_cnt, 0);
+    CHECK_GE(elem_cnt, 0);  // NOLINT(maybe-need-error-msg)
     if (elem_cnt == 0) { return; }
     std::unique_ptr<ep::primitive::Fill> fill = NewFillPrimitive(ctx);
-    CHECK(fill);
+    CHECK(fill);  // NOLINT(maybe-need-error-msg)
     fill->Launch(ctx->stream(), out->mut_dptr(), value, elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
