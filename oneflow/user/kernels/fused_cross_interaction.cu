@@ -75,21 +75,14 @@ auto MatmulPrimitiveExists() {
 }
 
 template<typename T, typename IndexType, int pack_size>
-__global__ void FusedBroadcastMulAddResidualKernel(const T* in, const T* x0, const T* bias, T* out,
-                                                   const IndexType cols, const IndexType elem_cnt) {
+__global__ void FusedBroadcastMulAddResidualKernel(const T* in, const T* x, const T* x0,
+                                                   const T* bias, T* out, const IndexType cols,
+                                                   const IndexType elem_cnt) {
   /*
   in: batch, 1
   x0: batch, hidden,
   bias: hidden
   */
-
-  // CUDA_1D_KERNEL_LOOP_T(IndexType, i, elem_cnt) {
-  //   const int64_t row = i / cols;
-  //   const int64_t col = i - row * cols;
-  //   const T x0_val = x0[i];
-  //   out[i] = in[row] * x0_val + bias[col] + x0_val;
-  // }
-
   const IndexType global_thread_id = blockDim.x * blockIdx.x + threadIdx.x;
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
@@ -103,15 +96,19 @@ __global__ void FusedBroadcastMulAddResidualKernel(const T* in, const T* x0, con
     LoadPack x0_vec;
     x0_vec.storage = *x0_load;
 
+    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+    LoadPack x_vec;
+    x_vec.storage = *x_load;
+
     const LoadType* bias_load = reinterpret_cast<const LoadType*>(bias + col_idx);
     LoadPack bias_vec;
     bias_vec.storage = *bias_load;
 
     LoadPack out_vec;
-
+    T in_val = in[row_idx];
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-      out_vec.elem[i] = in[row_idx] * x0_vec.elem[i] + bias_vec.elem[i] + x0_vec.elem[i];
+      out_vec.elem[i] = in_val * x0_vec.elem[i] + bias_vec.elem[i] + x_vec.elem[i];
     }
     *(reinterpret_cast<LoadType*>(out + linear_index)) = out_vec.storage;
   }
@@ -129,9 +126,9 @@ int GetLaunchPackSize(const int64_t cols) {
 }
 
 template<typename T, typename IndexType>
-void DispatchFusedBroadcastMulAddResidualPackSize(ep::Stream* stream, const T* in, const T* x0,
-                                                  const T* bias, T* out, const IndexType cols,
-                                                  const IndexType elem_cnt) {
+void DispatchFusedBroadcastMulAddResidualPackSize(ep::Stream* stream, const T* in, const T* x,
+                                                  const T* x0, const T* bias, T* out,
+                                                  const IndexType cols, const IndexType elem_cnt) {
   int grid_size;
   const int pack_size = GetLaunchPackSize<T>(cols);
   const int64_t pack_num = elem_cnt / pack_size;
@@ -139,31 +136,31 @@ void DispatchFusedBroadcastMulAddResidualPackSize(ep::Stream* stream, const T* i
   if (pack_size == 8) {
     FusedBroadcastMulAddResidualKernel<T, IndexType, 8>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            in, x0, bias, out, cols, elem_cnt);
+            in, x, x0, bias, out, cols, elem_cnt);
   } else if (pack_size == 4) {
     FusedBroadcastMulAddResidualKernel<T, IndexType, 4>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            in, x0, bias, out, cols, elem_cnt);
+            in, x, x0, bias, out, cols, elem_cnt);
   } else if (pack_size == 2) {
     FusedBroadcastMulAddResidualKernel<T, IndexType, 2>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            in, x0, bias, out, cols, elem_cnt);
+            in, x, x0, bias, out, cols, elem_cnt);
   } else {
     FusedBroadcastMulAddResidualKernel<T, IndexType, 1>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            in, x0, bias, out, cols, elem_cnt);
+            in, x, x0, bias, out, cols, elem_cnt);
   }
 }
 
 template<typename T>
-void DispatchFusedBroadcastMulAddResidualIndexType(ep::Stream* stream, const T* in, const T* x0,
-                                                   const T* bias, T* out, const int64_t cols,
-                                                   const int64_t elem_cnt) {
+void DispatchFusedBroadcastMulAddResidualIndexType(ep::Stream* stream, const T* in, const T* x,
+                                                   const T* x0, const T* bias, T* out,
+                                                   const int64_t cols, const int64_t elem_cnt) {
   if (elem_cnt < GetMaxVal<int32_t>()) {
-    DispatchFusedBroadcastMulAddResidualPackSize<T, int32_t>(stream, in, x0, bias, out, cols,
+    DispatchFusedBroadcastMulAddResidualPackSize<T, int32_t>(stream, in, x, x0, bias, out, cols,
                                                              elem_cnt);
   } else {
-    DispatchFusedBroadcastMulAddResidualPackSize<T, int64_t>(stream, in, x0, bias, out, cols,
+    DispatchFusedBroadcastMulAddResidualPackSize<T, int64_t>(stream, in, x, x0, bias, out, cols,
                                                              elem_cnt);
   }
 }
@@ -193,8 +190,14 @@ class FusedCrossInteractionKernel final : public user_op::OpKernel,
        dmatmul_result1 = dout
        dbias = reduce_sum(dmatmul_result2, axis=0)
 
-    4. matmul_result2 add x0. out -> (B, E) elementwise_add (B, E) -> (B, E)
-       dmatmul_result2 = dout, dx0 = dout.
+    4. matmul_result2 add x. out -> (B, E) elementwise_add (B, E) -> (B, E)
+       dmatmul_result2 = dout, dx = dout.
+
+    Cross Interaction Grad:
+    dw = x matmul dmatmul_result0
+    dx_0 = dmatmul_result1 broadcast_mul matmul_result0
+    dbias = reduce_sum(dmatmul_result2, axis=0)
+    dx = (dmatmul_result0 matmul weight) + dout.
     */
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
@@ -215,7 +218,7 @@ class FusedCrossInteractionKernel final : public user_op::OpKernel,
     const int64_t elem_cnt = out->shape().elem_cnt();
     const int64_t cols = out->shape().At(1);
     DispatchFusedBroadcastMulAddResidualIndexType<T>(ctx->stream(), matmul_result->mut_dptr<T>(),
-                                                     x_0->dptr<T>(), bias->dptr<T>(),
+                                                     x->dptr<T>(), x_0->dptr<T>(), bias->dptr<T>(),
                                                      out->mut_dptr<T>(), cols, elem_cnt);
   }
 };
