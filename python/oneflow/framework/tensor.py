@@ -1133,10 +1133,8 @@ def _cumprod(self, dim, dtype=None):
 
 
 def RegisterMethods():
-    Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
-    Tensor.size = _size
     Tensor.backward = _backward
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
@@ -1160,28 +1158,10 @@ def RegisterMethods():
     Tensor.fill_ = _fill
     Tensor.copy_ = _copy
     Tensor._meta_repr = _meta_repr
-    Tensor.floor_divide = _floor_divide
-    Tensor.argmax = _argmax
-    Tensor.argmin = _argmin
     Tensor.argsort = _argsort
     Tensor.argwhere = _argwhere
-    Tensor.amin = _amin
-    Tensor.atan2 = _atan2
-    Tensor.gt = _gt
-    Tensor.ge = _ge
-    Tensor.cast = _cast
-    Tensor.diag = _diag
-    Tensor.diagonal = _diagonal
     Tensor.add = _add
     Tensor.add_ = _add_inplace
-    Tensor.addcmul = _addcmul
-    Tensor.addcmul_ = _addcmul_
-    Tensor.div = _truediv
-    Tensor.div_ = _truediv_inplace
-    Tensor.mul = _mul
-    Tensor.mul_ = _mul_
-    Tensor.sub = _sub
-    Tensor.sub_ = _sub_inplace
     Tensor.clamp = _clamp
     Tensor.clamp_ = _clamp_
     Tensor.clip = _clip
@@ -1190,7 +1170,6 @@ def RegisterMethods():
     Tensor.cuda = _cuda
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
-    Tensor.fmod = _fmod
     Tensor.flatten = _flatten
     Tensor.flip = _flip
     Tensor.in_top_k = _in_top_k
@@ -1203,7 +1182,6 @@ def RegisterMethods():
     Tensor.pow = _pow
     Tensor.var = _var
     Tensor.std = _std
-    Tensor.matmul = _matmul
     Tensor.softplus = _softplus
     Tensor.tril = _tril
     Tensor.triu = _triu
@@ -1216,12 +1194,7 @@ def RegisterMethods():
     Tensor.relu_ = _relu_inplace
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
-    Tensor.logical_and = _and
-    Tensor.logical_or = _or
-    Tensor.logical_not = _not
-    Tensor.logical_xor = _xor
     Tensor.roll = _roll
-    Tensor.bmm = _bmm
     Tensor.chunk = _chunk
     Tensor.repeat = _repeat
     Tensor.tile = _tile
@@ -1243,18 +1216,11 @@ def RegisterMethods():
     Tensor.masked_fill = _masked_fill
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
-    Tensor.ne = _ne
     Tensor.item = _item
-    Tensor.lt = _lt
-    Tensor.le = _le
     Tensor.to_local = _to_local
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    Tensor.int = _int
-    Tensor.long = _long
-    Tensor.float = _float
-    Tensor.double = _double
     Tensor.is_floating_point = _is_floating_point
     Tensor.topk = _topk
     Tensor.nms = _nms
