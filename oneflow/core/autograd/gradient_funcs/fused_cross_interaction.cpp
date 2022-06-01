@@ -28,10 +28,10 @@ struct FusedCrossInteractionInterpState : public AutoGradCaptureState {
   bool weight_requires_grad = true;
   bool x0_requires_grad = true;
   bool bias_requires_grad = true;
-  size_t x_idx = 0; 
-  size_t weight_idx = 0; 
-  size_t x0_idx = 0; 
-  size_t matmul_result_idx = 0; 
+  size_t x_idx = 0;
+  size_t weight_idx = 0;
+  size_t x0_idx = 0;
+  size_t matmul_result_idx = 0;
 };
 
 class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInterpState> {
@@ -63,24 +63,24 @@ class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInt
     in_grads->resize(4);
     std::shared_ptr<oneflow::one::TensorTuple> grads;
     grads = JUST(functional::FusedCrossInteractionGrad(
-                    JUST(oneflow::VectorAt(out_grads, 0)), 
-                    JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->weight_idx)), 
-                    JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x_idx)), 
-                    JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x0_idx)), 
-                    JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->matmul_result_idx))));
-    if(ctx->x_requires_grad){
-        JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(oneflow::VectorAt(*grads, 0));
+        JUST(oneflow::VectorAt(out_grads, 0)),
+        JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->weight_idx)),
+        JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x_idx)),
+        JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x0_idx)),
+        JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->matmul_result_idx))));
+    if (ctx->x_requires_grad) {
+      JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(oneflow::VectorAt(*grads, 0));
     }
-    if(ctx->weight_requires_grad){
-        JUST(oneflow::VectorAt(*in_grads, 1)) = JUST(oneflow::VectorAt(*grads, 1));
+    if (ctx->weight_requires_grad) {
+      JUST(oneflow::VectorAt(*in_grads, 1)) = JUST(oneflow::VectorAt(*grads, 1));
     }
-    if(ctx->x0_requires_grad){
-        JUST(oneflow::VectorAt(*in_grads, 2)) = JUST(oneflow::VectorAt(*grads, 2));
+    if (ctx->x0_requires_grad) {
+      JUST(oneflow::VectorAt(*in_grads, 2)) = JUST(oneflow::VectorAt(*grads, 2));
     }
-    if(ctx->bias_requires_grad){
-        JUST(oneflow::VectorAt(*in_grads, 3)) = JUST(oneflow::VectorAt(*grads, 3));
+    if (ctx->bias_requires_grad) {
+      JUST(oneflow::VectorAt(*in_grads, 3)) = JUST(oneflow::VectorAt(*grads, 3));
     }
-    
+
     return Maybe<void>::Ok();
   }
 

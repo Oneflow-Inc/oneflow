@@ -174,9 +174,28 @@ class FusedCrossInteractionKernel final : public user_op::OpKernel,
  public:
   FusedCrossInteractionKernel() = default;
   ~FusedCrossInteractionKernel() = default;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    /*
+    Cross Interaction:
+    1. x matmul weight. matmul_result0 -> (B, E) matmul (1, E) -> (B, 1)
+       dx = dmatmul_result0 matmul weight
+       dw = x matmul dmatmul_result0
+
+    2. matmul_result0 broadcast_mul x_0. matmul_result1 -> (B, 1) broadcast_mul (B, E) -> (B, E)
+       dmatmul_result0 = reduce_sum(dmatmul_result1 * x_0, axis=1)
+       dx_0 = dmatmul_result1 broadcast_mul matmul_result0
+
+    3. matmul_result1 broadcast_add bias. matmul_result2 -> (B, E) broadcast_add (1, E) -> (B, E)
+       dmatmul_result1 = dout
+       dbias = reduce_sum(dmatmul_result2, axis=0)
+
+    4. matmul_result2 add x0. out -> (B, E) elementwise_add (B, E) -> (B, E)
+       dmatmul_result2 = dout, dx0 = dout.
+    */
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* x_0 = ctx->Tensor4ArgNameAndIndex("x_0", 0);
@@ -195,12 +214,10 @@ class FusedCrossInteractionKernel final : public user_op::OpKernel,
                    matmul_result->mut_dptr());
     const int64_t elem_cnt = out->shape().elem_cnt();
     const int64_t cols = out->shape().At(1);
-    DispatchFusedBroadcastMulAddResidualIndexType<T>(
-        ctx->stream(), matmul_result->mut_dptr<T>(), x_0->dptr<T>(),
-        bias->dptr<T>(), out->mut_dptr<T>(), cols, elem_cnt);
+    DispatchFusedBroadcastMulAddResidualIndexType<T>(ctx->stream(), matmul_result->mut_dptr<T>(),
+                                                     x_0->dptr<T>(), bias->dptr<T>(),
+                                                     out->mut_dptr<T>(), cols, elem_cnt);
   }
-
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_FUSED_CROSS_INTERACTION_KERNEL(dtype)                                \

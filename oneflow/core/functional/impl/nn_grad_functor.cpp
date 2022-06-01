@@ -1051,17 +1051,16 @@ class FusedCrossInteractionGradFunctor {
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& x_0, 
-                           const std::shared_ptr<one::Tensor>& matmul_result) const {
+                                const std::shared_ptr<one::Tensor>& weight,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& x_0,
+                                const std::shared_ptr<one::Tensor>& matmul_result) const {
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, x, x_0, matmul_result});
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 }  // namespace impl
 
