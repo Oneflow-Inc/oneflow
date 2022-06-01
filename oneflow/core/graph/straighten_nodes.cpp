@@ -240,18 +240,16 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   // Generate other parameters in the topological data structure
   FindMainstem(task_node2topo_struct);
 
-  // test debug
-  std::cout << "Straightening order type: " << ParseIntegerFromEnv("Parameter0", 0) << ", "
-            << ParseIntegerFromEnv("Parameter1", 1) << ", " << ParseIntegerFromEnv("Parameter2", 2)
-            << std::endl;
-
   // Order in the waiting sets
   // Decide which node should run first
   struct comp {
     bool operator()(const TopoStruct* a, const TopoStruct* b) const {
-      static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 0),
-                                                     ParseIntegerFromEnv("Parameter1", 1),
-                                                     ParseIntegerFromEnv("Parameter2", 2)});
+      // NOTE: Leave these code for debugging in the future
+      // static std::vector<int64_t> decide_parameters({ParseIntegerFromEnv("Parameter0", 0),
+      //                                                ParseIntegerFromEnv("Parameter1", 1),
+      //                                                ParseIntegerFromEnv("Parameter2", 2)});
+      // The best parameter set is {5, 3}
+      static std::vector<int64_t> decide_parameters({5, 3});
       for (int32_t decide_parameter : decide_parameters) {
         int32_t decide_parameter_a = a->GetDecidingParameter(decide_parameter);
         int32_t decide_parameter_b = b->GetDecidingParameter(decide_parameter);
@@ -260,28 +258,6 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
         }
       }
       return a->node->node_id() < b->node->node_id();
-
-      // if (a->TributaryLayer == b->TributaryLayer) {
-      //   if (a->MinDistance2Transfer == b->MinDistance2Transfer) {
-      //     if (a->MinLayer == b->MinLayer) {
-      //       // Put the task with the same names together
-      //       auto comp_str = a->node->VisualStr().compare(b->node->VisualStr());
-      //       if (comp_str == 0) {
-      //         // the order does not matter right now, but we need a strict order
-      //         return a < b;
-      //       } else {
-      //         return comp_str < 0;
-      //       }
-      //     } else {
-      //       // the node that shows up first has higher priority
-      //       return a->MinLayer < b->MinLayer;
-      //     }
-      //   } else {
-      //     return a->MinDistance2Transfer < b->MinDistance2Transfer;
-      //   }
-      // } else {
-      //   return a->TributaryLayer < b->TributaryLayer;
-      // }
     }
   };
 
