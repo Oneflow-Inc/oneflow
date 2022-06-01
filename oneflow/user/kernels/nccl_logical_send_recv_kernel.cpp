@@ -47,7 +47,7 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
 
  private:
   struct Comm {
-    Comm(ncclComm_t comm) : comm(comm) {}
+    explicit Comm(ncclComm_t comm) : comm(comm) {}
     ncclComm_t comm;
   };
   void InitComm() const;
@@ -67,8 +67,8 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
   std::vector<int64_t> recv_elem_cnts_;
 };
 
-NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx) {
-  has_independent_stream_ = ctx->op_conf().has_stream_name_hint();
+NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx)
+    : has_independent_stream_(ctx->op_conf().has_stream_name_hint()) {
   if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   parallel_desc_ = std::make_unique<ParallelDesc>(ctx->parallel_desc());
@@ -89,7 +89,7 @@ NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* c
   std::vector<TensorSliceView> src_send_intersections;
   std::vector<TensorSliceView> dst_recv_intersections;
   GetRankSendRecvIntersection(parallel_id, parallel_desc_->hierarchy(), src_nd_sbp, dst_nd_sbp,
-                          logical_shape, &src_send_intersections, &dst_recv_intersections);
+                              logical_shape, &src_send_intersections, &dst_recv_intersections);
 
   CHECK_EQ(src_send_intersections.size(), parallel_num);
   send_elem_cnts_.resize(parallel_num);
@@ -266,7 +266,7 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   std::vector<TensorSliceView> src_send_intersections;
   std::vector<TensorSliceView> dst_recv_intersections;
   GetRankSendRecvIntersection(parallel_id, ctx->parallel_desc().hierarchy(), src_nd_sbp, dst_nd_sbp,
-                          logical_shape, &src_send_intersections, &dst_recv_intersections);
+                              logical_shape, &src_send_intersections, &dst_recv_intersections);
   int64_t buf_count = 0;
   CHECK_EQ(src_send_intersections.size(), parallel_num);
   for (int64_t i = 0; i < parallel_num; ++i) {

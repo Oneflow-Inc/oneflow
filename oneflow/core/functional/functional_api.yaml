@@ -223,9 +223,9 @@
 - name: "floor_divide"
   signature:
     [
-      "Tensor (Tensor x, Tensor y) => FloorDiv",
-      "Tensor (Tensor input, Scalar scalar, *, Bool inplace=False) => ScalarFloorDiv",
-      "Tensor (Tensor input, Scalar scalar) => ScalarFloorDiv",
+      "Tensor (Tensor input, Tensor other) => FloorDiv",
+      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarFloorDiv",
+      "Tensor (Tensor input, Scalar other) => ScalarFloorDiv",
     ]
   bind_python: True
 
@@ -713,11 +713,11 @@
   bind_python: True
 
 - name: "argmax"
-  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
+  signature: "Tensor (Tensor x, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
   bind_python: True
 
 - name: "argmin"
-  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
+  signature: "Tensor (Tensor x, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
   bind_python: True
 
 - name: "argwhere"
@@ -822,7 +822,7 @@
 - name: "moving_average_min_max_observer"
   signature:
     "TensorTuple (Tensor in, Tensor current_train_step, Tensor moving_max, Tensor moving_min,
-    Bool training, String quantization_formula, Int64 stop_update_after_iters,
+    Bool training, Int64 stop_update_after_iters, String quantization_formula, 
     Int32 quantization_bit, String quantization_scheme, Float momentum) => MovingAverageMinMaxObserver"
   bind_python: True
 
@@ -939,7 +939,7 @@
 
 - name: "matmul"
   signature:
-    "Tensor (Tensor a, Tensor b, Bool transpose_a=False, Bool transpose_b=False,
+    "Tensor (Tensor input, Tensor other, Bool transpose_a=False, Bool transpose_b=False,
     Double alpha=1.0) => MatMul"
   bind_python: True
 
@@ -2100,7 +2100,7 @@
   bind_python: True
 
 - name: "fused_dot_feature_interaction_grad"
-  signature: "TensorTuple (Tensor dy, Tensor padded_concated_features=None, TensorTuple features_grad_like, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0, String pooling=\"none\") => FusedDotFeatureInteractionGrad"
+  signature: "TensorTuple (Tensor dy, TensorTuple features, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0, String pooling=\"none\") => FusedDotFeatureInteractionGrad"
   bind_python: False
 
 - name: "tensor_buffer_to_tensor"
@@ -2195,3 +2195,70 @@
   signature: "Tensor (Tensor input) => PinMemory"
   bind_python: True
 
+- name: "rnn_tanh_cell"
+  signature: "Tensor (Tensor input, Tensor hx, Tensor w_ih, Tensor w_hh, Tensor b_ih=None, Tensor b_hh=None) => RnnTanhCell"
+  bind_python: True
+
+- name: "rnn_relu_cell"
+  signature: "Tensor (Tensor input, Tensor hx, Tensor w_ih, Tensor w_hh, Tensor b_ih=None, Tensor b_hh=None) => RnnReluCell"
+  bind_python: True
+
+- name: "lstm_cell"
+  signature: "TensorTuple (Tensor input, TensorTuple hx, Tensor w_ih, Tensor w_hh, Tensor b_ih=None, Tensor b_hh=None) => LstmCell"
+  bind_python: True
+
+- name: "gru_cell"
+  signature: "Tensor (Tensor input, Tensor hx, Tensor w_ih, Tensor w_hh, Tensor b_ih=None, Tensor b_hh=None) => GruCell"
+  bind_python: True
+
+- name: "_fused_gru_cell"
+  signature: "TensorTuple (Tensor igates, Tensor hgates, Tensor hx, Tensor b_ih=None, Tensor b_hh=None) => FusedGruCell"
+  bind_python: False
+
+- name: "_fused_gru_cell_grad"
+  signature: "TensorTuple (Tensor grad_hy, Tensor workspace, Bool has_bias, Bool hx_needs_grad) => FusedGruCellGrad"
+  bind_python: False
+
+- name: "_fused_lstm_cell"
+  signature: "TensorTuple (Tensor igates, Tensor hgates, Tensor cx, Tensor b_ih=None, Tensor b_hh=None) => FusedLstmCell"
+  bind_python: False
+
+- name: "_fused_lstm_cell_grad"
+  signature: "TensorTuple (Tensor grad_hy, Tensor grad_cy, Tensor cx, Tensor cy, Tensor workspace, Bool need_cx_grad, Bool has_bias) => FusedLstmCellGrad"
+  bind_python: False
+
+- name: "rnn_tanh"
+  signature:
+    [
+      "TensorTuple (Tensor input, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => RnnTanhInput",
+      "TensorTuple (Tensor data, Tensor batch_sizes, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional) => RnnTanhData"
+    ]
+  bind_python: True
+
+- name: "rnn_relu"
+  signature:
+    [
+      "TensorTuple (Tensor input, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => RnnReluInput",
+      "TensorTuple (Tensor data, Tensor batch_sizes, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional) => RnnReluData"
+    ]
+  bind_python: True
+
+- name: "lstm"
+  signature:
+    [
+      "TensorTuple (Tensor input, TensorTuple hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => LstmInput",
+      "TensorTuple (Tensor data, Tensor batch_sizes, TensorTuple hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional) => LstmData"
+    ]
+  bind_python: True
+
+- name: "gru"
+  signature:
+    [
+      "TensorTuple (Tensor input, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional, Bool batch_first) => GruInput",
+      "TensorTuple (Tensor data, Tensor batch_sizes, Tensor hx, TensorTuple params, Bool has_biases, Int32 num_layers, Float dropout, Bool train, Bool bidirectional) => GruData"
+    ]
+  bind_python: True
+
+- name: "pack_padded_sequence"
+  signature: "TensorTuple (Tensor input, Tensor lengths, Bool batch_first) => PackPaddedSequence"
+  bind_python: True
