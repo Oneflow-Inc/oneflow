@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <Python.h>
+#include <dictobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
@@ -241,6 +242,7 @@ DIRECT_PASS_FUNC(PyTensorObject_div, functional::div)
 DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
 DIRECT_PASS_FUNC(PyTensorObject_mul, functional::mul)
 DIRECT_PASS_FUNC(PyTensorObject_mul_, functional::mul_)
+DIRECT_PASS_FUNC(PyTensorObject_add, functional::add)
 DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub)
 DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod)
 DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and)
@@ -253,8 +255,32 @@ DIRECT_PASS_FUNC(PyTensorObject_bmm, functional::batch_matmul)
 DIRECT_PASS_FUNC(PyTensorObject_argmax, functional::argmax)
 DIRECT_PASS_FUNC(PyTensorObject_argmin, functional::argmin)
 DIRECT_PASS_FUNC(PyTensorObject_amin, functional::amin)
+DIRECT_PASS_FUNC(PyTensorObject_amax, functional::amax)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
 DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
+DIRECT_PASS_FUNC(PyTensorObject_clip, functional::clip)
+DIRECT_PASS_FUNC(PyTensorObject_clip_, functional::clip_)
+DIRECT_PASS_FUNC(PyTensorObject_clamp, functional::clamp)
+DIRECT_PASS_FUNC(PyTensorObject_clamp_, functional::clamp_)
+DIRECT_PASS_FUNC(PyTensorObject_flatten, functional::flatten)
+DIRECT_PASS_FUNC(PyTensorObject_in_top_k, functional::in_top_k)
+DIRECT_PASS_FUNC(PyTensorObject_index_select, functional::index_select)
+DIRECT_PASS_FUNC(PyTensorObject_maximum, functional::maximum)
+DIRECT_PASS_FUNC(PyTensorObject_minimum, functional::minimum)
+DIRECT_PASS_FUNC(PyTensorObject_tril, functional::tril)
+DIRECT_PASS_FUNC(PyTensorObject_triu, functional::triu)
+DIRECT_PASS_FUNC(PyTensorObject_softmax, functional::softmax)
+DIRECT_PASS_FUNC(PyTensorObject_log_softmax, functional::log_softmax)
+DIRECT_PASS_FUNC(PyTensorObject_roll, functional::roll)
+DIRECT_PASS_FUNC(PyTensorObject_unbind, functional::unbind)
+DIRECT_PASS_FUNC(PyTensorObject_squeeze, functional::squeeze)
+DIRECT_PASS_FUNC(PyTensorObject_swapaxes, functional::swapaxes)
+DIRECT_PASS_FUNC(PyTensorObject_swapdims, functional::swapdims)
+DIRECT_PASS_FUNC(PyTensorObject_unfold, functional::unfold_tensor)
+DIRECT_PASS_FUNC(PyTensorObject_unsqueeze, functional::unsqueeze)
+DIRECT_PASS_FUNC(PyTensorObject_max, functional::max)
+DIRECT_PASS_FUNC(PyTensorObject_min, functional::min)
+DIRECT_PASS_FUNC(PyTensorObject_median, functional::median)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -289,18 +315,21 @@ static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   return functional::CastToPyObject(ASSERT(PyTensor_Unpack(self)->device())->device_id());
   END_HANDLE_ERRORS
 }
-// ->
+
 static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* idx_obj = Py_None;
   static const char* keywords[2] = {"idx", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords), &idx_obj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords),
+                                   &idx_obj)) {
     return NULL;
   }
   auto shape = PyTensor_Unpack(self)->shape();
   if (idx_obj == NULL || idx_obj == Py_None) return TensorSize_NewFromShape(*shape);
   int32_t idx = PyLong_AsLong(idx_obj);
-  CHECK_OR_THROW(idx >= -shape->NumAxes() && idx < shape->NumAxes()) << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -shape->NumAxes() << ", " << shape->NumAxes() - 1 << "], but got "<< idx << ")";
+  CHECK_OR_THROW(idx >= -shape->NumAxes() && idx < shape->NumAxes())
+      << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+      << -shape->NumAxes() << ", " << shape->NumAxes() - 1 << "], but got " << idx << ")";
   idx = idx < 0 ? idx + shape->NumAxes() : idx;
   return PyLong_FromLong(shape->At(idx));
   END_HANDLE_ERRORS
@@ -365,6 +394,18 @@ static PyObject* PyTensorObject_matmul(PyObject* self, PyObject* args, PyObject*
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_add_(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
+  if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 0) > -1); }
+  PyObject* result = functional::add(NULL, concat_args.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* other = NULL;
@@ -416,6 +457,7 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
 
 DATATYPE_FUNC(PyTensorObject_int, DType::Int32());
 DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
+DATATYPE_FUNC(PyTensorObject_half, DType::Float16());
 DATATYPE_FUNC(PyTensorObject_float, DType::Float());
 DATATYPE_FUNC(PyTensorObject_double, DType::Double());
 
@@ -493,11 +535,13 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"diag", (PyCFunction)PyTensorObject_diag, METH_VARARGS | METH_KEYWORDS, NULL},
     {"diagonal", (PyCFunction)PyTensorObject_diagonal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"addcmul_", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcmul_", (PyCFunction)PyTensorObject_addcmul_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"add_", (PyCFunction)PyTensorObject_add_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sub_", (PyCFunction)PyTensorObject_sub_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
     {"long", PyTensorObject_long, METH_NOARGS, NULL},
+    {"half", PyTensorObject_half, METH_NOARGS, NULL},
     {"float", PyTensorObject_float, METH_NOARGS, NULL},
     {"double", PyTensorObject_double, METH_NOARGS, NULL},
 
@@ -510,6 +554,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul", (PyCFunction)PyTensorObject_mul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul_", (PyCFunction)PyTensorObject_mul_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"add", (PyCFunction)PyTensorObject_add, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sub", (PyCFunction)PyTensorObject_sub, METH_VARARGS | METH_KEYWORDS, NULL},
     {"fmod", (PyCFunction)PyTensorObject_fmod, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_and", (PyCFunction)PyTensorObject_logical_and, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -519,6 +564,30 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"ne", (PyCFunction)PyTensorObject_ne, METH_VARARGS | METH_KEYWORDS, NULL},
     {"lt", (PyCFunction)PyTensorObject_lt, METH_VARARGS | METH_KEYWORDS, NULL},
     {"le", (PyCFunction)PyTensorObject_le, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clip", (PyCFunction)PyTensorObject_clip, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clip_", (PyCFunction)PyTensorObject_clip_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clamp", (PyCFunction)PyTensorObject_clamp, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"clamp_", (PyCFunction)PyTensorObject_clamp_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"flatten", (PyCFunction)PyTensorObject_flatten, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"in_top_k", (PyCFunction)PyTensorObject_in_top_k, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"index_select", (PyCFunction)PyTensorObject_index_select, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"maximum", (PyCFunction)PyTensorObject_maximum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"minimum", (PyCFunction)PyTensorObject_minimum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"tril", (PyCFunction)PyTensorObject_tril, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"triu", (PyCFunction)PyTensorObject_triu, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"softmax", (PyCFunction)PyTensorObject_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"log_softmax", (PyCFunction)PyTensorObject_log_softmax, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"roll", (PyCFunction)PyTensorObject_roll, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"unbind", (PyCFunction)PyTensorObject_unbind, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"squeeze", (PyCFunction)PyTensorObject_squeeze, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"swapaxes", (PyCFunction)PyTensorObject_swapaxes, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"amax", (PyCFunction)PyTensorObject_amax, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"swapdims", (PyCFunction)PyTensorObject_swapdims, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"unfold", (PyCFunction)PyTensorObject_unfold, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"unsqueeze", (PyCFunction)PyTensorObject_unsqueeze, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"max", (PyCFunction)PyTensorObject_max, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"min", (PyCFunction)PyTensorObject_min, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"median", (PyCFunction)PyTensorObject_median, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
