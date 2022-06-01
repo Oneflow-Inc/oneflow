@@ -48,7 +48,7 @@ Maybe<void> Fill::Init(const OpExpr& op) {
 
 Maybe<void> Fill::Capture(FillCaptureState* ctx, const TensorTuple& inputs,
                           const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->in_requires_grad = inputs.at(0)->requires_grad();
+  ctx->in_requires_grad = inputs[0]->requires_grad();
   return Maybe<void>::Ok();
 }
 
