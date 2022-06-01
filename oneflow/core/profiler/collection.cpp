@@ -91,7 +91,7 @@ Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
       }
       return std::make_shared<EventRecorder>(event);
     }
-#else   // WITH_CUDA
+#else  // WITH_CUDA
     if (pmgr->use_cpu_) {
       return std::make_shared<EventRecorder>(
           KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr));
