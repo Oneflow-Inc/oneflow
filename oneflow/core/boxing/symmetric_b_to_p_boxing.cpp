@@ -31,8 +31,8 @@ Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   // NOLINTBEGIN(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(IsAllBroadcastNdSbp(*in->nd_sbp()));
-  CHECK_OR_RETURN(IsAllPartialSumNdSbp(*out->nd_sbp()));
+  CHECK_OR_RETURN(NdSbpIsAllBroadcast(*in->nd_sbp()));
+  CHECK_OR_RETURN(NdSbpIsAllPartialSum(*out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
   // NOLINTEND(maybe-need-error-msg)
