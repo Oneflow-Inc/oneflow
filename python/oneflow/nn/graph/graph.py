@@ -1200,11 +1200,11 @@ class Graph(object):
 
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
-        args_tree = ArgsTree((args, kwargs), True, "_" + self.name + "_" + io_type, None)
+        args_tree = ArgsTree((args, kwargs), False)
 
-        for (_, arg) in args_tree.iter_named_nodes():
-            if isinstance(arg.value(), Tensor):
-                flattened_args.append(arg.value())
+        for arg in args_tree.iter_nodes():
+            if isinstance(arg, Tensor):
+                flattened_args.append(arg)
             else:
                 continue
         return flattened_args
