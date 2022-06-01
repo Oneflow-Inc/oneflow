@@ -81,9 +81,17 @@ def _test_lenet(
         events, "conv2d", "[(2,3,32,32), (6,3,5,5)]" if record_shapes else "-"
     )
     test_case.assertIsNotNone(conv_event)
-    test_case.assertGreater(conv_event.time, 0.0)
-    test_case.assertGreater(conv_event.time_total, 0.0)
     test_case.assertEqual(conv_event.on_gpu, True if on_cuda else False)
+
+    if on_cuda:
+        test_case.assertGreater(conv_event.cpu_time, 0.0)
+        test_case.assertGreater(conv_event.cpu_time_total, 0.0)
+        test_case.assertGreater(conv_event.gpu_time, 0.0)
+        test_case.assertGreater(conv_event.gpu_time_total, 0.0)
+    else:
+        test_case.assertGreater(conv_event.cpu_time, 0.0)
+        test_case.assertGreater(conv_event.cpu_time_total, 0.0)
+
     test_case.assertEqual(conv_event.count, 2 if record_shapes else 4)
     if record_bandwidth_for_cuda and on_cuda:
         test_case.assertNotEqual(conv_event.bandwidth, -1)
@@ -92,9 +100,17 @@ def _test_lenet(
         events, "relu_grad", "[(2,6,28,28), (2,6,28,28)]" if record_shapes else "-"
     )
     test_case.assertIsNotNone(relu_grad_event)
-    test_case.assertGreater(relu_grad_event.time, 0.0)
-    test_case.assertGreater(relu_grad_event.time_total, 0.0)
     test_case.assertEqual(conv_event.on_gpu, True if on_cuda else False)
+
+    if on_cuda:
+        test_case.assertGreater(relu_grad_event.cpu_time, 0.0)
+        test_case.assertGreater(relu_grad_event.cpu_time_total, 0.0)
+        test_case.assertGreater(relu_grad_event.gpu_time, 0.0)
+        test_case.assertGreater(relu_grad_event.gpu_time_total, 0.0)
+    else:
+        test_case.assertGreater(relu_grad_event.cpu_time, 0.0)
+        test_case.assertGreater(relu_grad_event.cpu_time_total, 0.0)
+
     test_case.assertEqual(relu_grad_event.count, 1 if record_shapes else 4)
     if record_bandwidth_for_cuda and on_cuda:
         test_case.assertNotEqual(relu_grad_event.bandwidth, -1)

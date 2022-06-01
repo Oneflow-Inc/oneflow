@@ -2657,23 +2657,13 @@ class FusedDotFeatureInteractionFunctor {
                                                  .Input("features", n + 1)
                                                  .Input("output_concat")
                                                  .Output("out")
-                                                 .Output("padded_concated_features")
                                                  .Build());
     }
     for (int n = 0; n < ops_no_output_concat_.size(); ++n) {
       ops_no_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
                                                 .Input("features", n + 1)
                                                 .Output("out")
-                                                .Output("padded_concated_features")
                                                 .Build());
-    }
-    ops_no_padded_concated_features_.resize(kMaxInputCount);
-    for (int n = 0; n < ops_no_padded_concated_features_.size(); ++n) {
-      ops_no_padded_concated_features_[n] =
-          CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
-                         .Input("features", n + 1)
-                         .Output("out")
-                         .Build());
     }
   }
 
@@ -2700,8 +2690,7 @@ class FusedDotFeatureInteractionFunctor {
       CHECK_OR_RETURN(!output_concat) << Error::RuntimeError() << "output_concat should not exist";
       JUST(attrs.SetAttr<bool>("has_output_concat", false));
       const std::shared_ptr<one::Tensor>& bi_interaction = JUST(OpInterpUtil::Dispatch<Tensor>(
-          *JUST(oneflow::VectorAt(ops_no_padded_concated_features_, n_features - 1)), inputs,
-          attrs));
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), inputs, attrs));
       std::vector<int32_t> reduce_axes_vec = {1};
       return functional::ReduceSum(bi_interaction, reduce_axes_vec, true);
     }
@@ -2720,7 +2709,6 @@ class FusedDotFeatureInteractionFunctor {
  private:
   std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
-  std::vector<std::shared_ptr<OpExpr>> ops_no_padded_concated_features_;
 };
 
 class OneEmbeddingIdShuffleFunctor {
