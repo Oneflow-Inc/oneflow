@@ -240,6 +240,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   // Generate other parameters in the topological data structure
   FindMainstem(task_node2topo_struct);
 
+  LOG(INFO) << "Straightening order: " << 5 << ", " << 3;
+
   // Order in the waiting sets
   // Decide which node should run first
   struct comp {
