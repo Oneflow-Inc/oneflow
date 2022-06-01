@@ -211,7 +211,7 @@ message JobConfigProto {
   optional bool enable_gradients_stats_aggregation = 106 [default = true];
   optional string optimizer_placement_optimization_mode = 107;
   optional int64 optimizer_placement_optimization_threshold = 108 [default = 1024];
-  optional int64 optimizer_placement_optimization_comsumer_limit_level = 110 [default = 2];
+  optional int64 optimizer_placement_optimization_shard_restore_level = 110 [default = 2];
 
   optional QatConfig qat_config = 109;
 
