@@ -135,10 +135,10 @@ class ConsistentConstantFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
-      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_value", value.As<int64_t>()));
     } else {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
-      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
     }
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -167,10 +167,10 @@ class ConstantFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
-      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_value", value.As<int64_t>()));
     } else {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
-      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
     }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
@@ -299,17 +299,17 @@ class WhereScalarXFunctor {
                            const std::shared_ptr<one::Tensor>& y) const {
     MutableAttrMap attrs;
     if (scalar.IsBool()) {
-      JUST(attrs.SetAttr<bool>("bool_operand", JUST(scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("bool_operand", scalar.As<bool>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", true));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", scalar.As<double>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
@@ -333,17 +333,17 @@ class WhereScalarYFunctor {
                            const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
     if (scalar.IsBool()) {
-      JUST(attrs.SetAttr<bool>("bool_operand", JUST(scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("bool_operand", scalar.As<bool>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", true));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", scalar.As<double>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
@@ -366,8 +366,8 @@ class WhereScalarXYFunctor {
                            const Scalar& y_scalar) const {
     MutableAttrMap attrs;
     if (x_scalar.IsBool() && y_scalar.IsBool()) {
-      JUST(attrs.SetAttr<bool>("x_bool_operand", JUST(x_scalar.As<bool>())));
-      JUST(attrs.SetAttr<bool>("y_bool_operand", JUST(y_scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("x_bool_operand", x_scalar.As<bool>()));
+      JUST(attrs.SetAttr<bool>("y_bool_operand", y_scalar.As<bool>()));
       JUST(attrs.SetAttr<bool>("has_x_bool_operand", true));
       JUST(attrs.SetAttr<bool>("has_y_bool_operand", true));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
@@ -375,8 +375,8 @@ class WhereScalarXYFunctor {
       JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_int_operand", false));
     } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("x_float_operand", JUST(x_scalar.As<double>())));
-      JUST(attrs.SetAttr<double>("y_float_operand", JUST(y_scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("x_float_operand", x_scalar.As<double>()));
+      JUST(attrs.SetAttr<double>("y_float_operand", y_scalar.As<double>()));
       JUST(attrs.SetAttr<bool>("has_x_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", true));
@@ -384,8 +384,8 @@ class WhereScalarXYFunctor {
       JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_int_operand", false));
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("x_int_operand", JUST(x_scalar.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("y_int_operand", JUST(y_scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("x_int_operand", x_scalar.As<int64_t>()));
+      JUST(attrs.SetAttr<int64_t>("y_int_operand", y_scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_x_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
@@ -902,7 +902,7 @@ class DimScatterUpdateScalarFunctor {
     MutableAttrMap attrs;
     const int32_t ndim = input->shape()->NumAxes();
     JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
-    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
+    JUST(attrs.SetAttr<float>("src_scalar", src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -923,7 +923,7 @@ class DimScatterAddScalarFunctor {
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
+    JUST(attrs.SetAttr<float>("src_scalar", src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -944,7 +944,7 @@ class DimScatterMulScalarFunctor {
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
+    JUST(attrs.SetAttr<float>("src_scalar", src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -1030,10 +1030,10 @@ class SearchSortedScalarFunctor {
     JUST(attrs.SetAttr<bool>("right", right));
     bool is_values_float = values.IsFloatingPoint();
     if (is_values_float) {
-      double_t values_tmp = JUST(values.As<double_t>());
+      double_t values_tmp = values.As<double_t>();
       JUST(attrs.SetAttr<double>("values", values_tmp));
     } else {
-      int64_t values_tmp = JUST(values.As<int64_t>());
+      int64_t values_tmp = values.As<int64_t>();
       JUST(attrs.SetAttr<double>("values", values_tmp));
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence}, attrs);
@@ -2525,17 +2525,17 @@ class MaskedFillFunctor {
                            const std::shared_ptr<one::Tensor>& mask, const Scalar& value) const {
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", value.As<double>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", value.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
     } else if (IsBoolDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<bool>("bool_operand", JUST(value.As<bool>())));
+      JUST(attrs.SetAttr<bool>("bool_operand", value.As<bool>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       JUST(attrs.SetAttr<bool>("has_bool_operand", true));
