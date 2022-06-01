@@ -1018,7 +1018,7 @@ class ArangeFunctor {
         JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
       }
     } else {
-      if (delta.IsIntegral()) {
+      if (start.IsIntegral() && limit.IsIntegral() && delta.IsIntegral()) {
         JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
         JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
         JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
@@ -1070,7 +1070,7 @@ class ConsistentArangeFunctor {
         JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
       }
     } else {
-      if (delta.IsIntegral()) {
+      if (start.IsIntegral() && limit.IsIntegral() && delta.IsIntegral()) {
         JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
         JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
         JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
