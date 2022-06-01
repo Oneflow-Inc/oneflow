@@ -2973,8 +2973,6 @@ class RepeatInterLeaveIntFunctor {
   RepeatInterLeaveIntFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& repeats,
                            const Optional<int32_t>& dim) const {
-    CHECK_OR_RETURN(input->is_local() == true)
-        << Error::RuntimeError << "repeat_interleave only support local tensor now";
     std::shared_ptr<one::Tensor> res;
     if (!dim.has_value()) {
       std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
@@ -3013,8 +3011,6 @@ class RepeatInterLeaveTensorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& repeats, const int32_t& dim,
                            const Optional<int32_t>& output_size) const {
-    CHECK_OR_RETURN(input->is_local() == true)
-        << Error::RuntimeError << "repeat_interleave only support local tensor now";
     const auto repeats_shape = repeats->shape();
     const int64_t& repeat_num_axes = repeats_shape->NumAxes();
     CHECK_OR_RETURN(repeat_num_axes == 1)
