@@ -187,7 +187,7 @@ struct UnaryFunctor<device, UnaryOp::kSoftPlus, Dst, Src> {
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     return static_cast<Dst>(
-        (src * beta) <= threshold ? log(static_cast<Src>(1.0) + exp(src * beta)) / beta : src);
+        (src * beta) > threshold ? src : log(static_cast<Src>(1.0) + exp(src * beta)) / beta);
   }
 
   const Src beta;
