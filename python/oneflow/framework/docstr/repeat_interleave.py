@@ -51,7 +51,6 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> x = flow.tensor([1, 2, 3])
-        tensor([1, 2, 3], dtype=oneflow.int64)
         >>> y = flow.tensor([[1, 2], [3, 4]])
         >>> flow.repeat_interleave(y, 2)
         tensor([1, 1, 2, 2, 3, 3, 4, 4], dtype=oneflow.int64)

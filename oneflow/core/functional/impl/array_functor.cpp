@@ -2988,8 +2988,8 @@ class RepeatInterLeaveIntFunctor {
                              JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, output_size))));
     } else {
       int32_t dim_ = JUST(dim);
-      const auto input_shape = input->shape();
-      const int64_t num_axes = input_shape->NumAxes();
+      const auto& input_shape = input->shape();
+      const int64_t& num_axes = input_shape->NumAxes();
       if (dim_ < 0) { dim_ += num_axes; }
       CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
@@ -3036,8 +3036,8 @@ class RepeatInterLeaveTensorFunctor {
       repeats_value.push_back(JUST(output_size));
     }
     int32_t dim_ = dim;
-    const auto input_shape = input->shape();
-    const int64_t num_axes = input_shape->NumAxes();
+    const auto& input_shape = input->shape();
+    const int64_t& num_axes = input_shape->NumAxes();
     if (dim_ < 0) { dim_ += num_axes; }
     CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
         << Error::IndexError() << "Dimension out of range (expected to be in range of ["
@@ -3045,7 +3045,7 @@ class RepeatInterLeaveTensorFunctor {
     CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))
         << Error::RuntimeError() << "repeats must have the same size as input along dim";
     std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, 0, DType::Int32()));
-    const int64_t output_size_value =
+    const int64_t& output_size_value =
         std::accumulate(repeats_value.begin(), repeats_value.end(), 0);
     std::shared_ptr<one::Tensor> res;
     if (output_size_value > 0) {
