@@ -19,33 +19,25 @@ limitations under the License.
 #include "oneflow/core/common/static_global.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/vm/vm_object.h"
-#include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/framework/stream_mgr.h"
 
 namespace oneflow {
 
 Stream::Stream(Symbol<Device> device, StreamRole stream_role)
-    : device_(device),
-      stream_role_(stream_role),
-      schedule_local_dep_object_(nullptr),
-      transport_local_dep_object_(NullOpt),
-      vm_stream_(nullptr) {}
+    : device_(device), stream_role_(stream_role), unique_stream_id_(-1) {}
 
-Maybe<void> Stream::Init() {
-  auto* vm = JUST(GlobalMaybe<VirtualMachine>());
-  schedule_local_dep_object_ = vm->FindOrCreateScheduleLocalDepObject(device_, stream_role_);
-  if (IsCommNetStream::Visit(stream_role_)) {
-    transport_local_dep_object_ = vm->FindOrCreateTransportLocalDepObject();
-  }
-  vm_stream_ = JUST(vm->CreateStream(device_, stream_role_));
+Maybe<void> Stream::Init(size_t unique_stream_id) {
+  unique_stream_id_ = unique_stream_id;
   return Maybe<void>::Ok();
 }
 
 /*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamRole stream_role) {
-  Stream stream(device, stream_role);
-  JUST(stream.Init());
-  return SymbolOf(stream);
+  std::shared_ptr<Stream> stream(new Stream(device, stream_role));
+  return JUST(GlobalMaybe<StreamMgr>())
+      ->AddStreamSymbol(*stream, [&](size_t unique_stream_id) -> Maybe<Symbol<Stream>> {
+        JUST(stream->Init(unique_stream_id));
+        return SymbolOf(*stream);
+      });
 }
 
 /*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamRole stream_role) {

@@ -49,7 +49,7 @@ template<typename VecT>
 Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec,
                                                                  typename VecT::size_type index) {
   CHECK_LT_OR_RETURN(index, vec.size());
-  return vec[index];
+  return vec.at(index);
 }
 
 template<typename VecT>
@@ -57,7 +57,7 @@ Maybe<typename VecT::value_type&> VectorAt(VecT& vec, typename VecT::size_type i
   static_assert(!std::is_same<typename VecT::value_type, bool>::value,
                 "VectorAt(vector<bool>&, size_t) is not supported.");
   CHECK_LT_OR_RETURN(index, vec.size());
-  return vec[index];
+  return vec.at(index);
 }
 
 template<>

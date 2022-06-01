@@ -23,6 +23,11 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 
 namespace oneflow {
+
+namespace vm {
+class Stream;
+}
+
 namespace one {
 
 class StatefulLocalOpKernel;
@@ -91,12 +96,13 @@ class CallPhyInstrOperand final : public vm::PhyInstrOperand {
 
  private:
   CallPhyInstrOperand(
-      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      vm::Stream* vm_stream, const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx_,
       const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
-      : opkernel_(opkernel),
+      : vm_stream_(vm_stream),
+        opkernel_(opkernel),
         inputs_(inputs),
         outputs_(outputs),
         consistent_tensor_infer_result_(consistent_tensor_infer_result),
@@ -113,6 +119,7 @@ class CallPhyInstrOperand final : public vm::PhyInstrOperand {
   Maybe<void> Init();
   void InitStreamSequentialDependence();
 
+  vm::Stream* vm_stream_;
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;

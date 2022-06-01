@@ -31,11 +31,14 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/stream_on_independent_thread.h"
+#include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var/env_var.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
+#include "oneflow/core/framework/stream_mgr.h"
 
 namespace oneflow {
 
@@ -99,18 +102,21 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 
 void MakeBarrierInstructions(vm::InstructionMsgList* list,
                              const std::function<void()>& BarrierCallback) {
+  auto* vm = Global<VirtualMachine>::Get();
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-        stream->mut_vm_stream(), SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
+        CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::GlobalSyncInstructionType>(),
+        phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
   }
   {
     const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(BarrierCallback);
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-        stream->mut_vm_stream(), SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
+        CHECK_JUST(vm->GetVmStream(stream)), SingletonPtr<vm::BarrierInstructionType>(),
+        phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
   }
 }
@@ -320,27 +326,44 @@ void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
   while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) { vm->Callback(); }
 }
 
-vm::MirroredObject* VirtualMachine::FindOrCreateScheduleLocalDepObject(Symbol<Device> device,
-                                                                       StreamRole stream_role) {
+intrusive::shared_ptr<vm::MirroredObject> VirtualMachine::FindOrCreateScheduleLocalDepObject(
+    Symbol<Device> device, StreamRole stream_role) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   auto key = std::make_pair(device, stream_role);
   intrusive::shared_ptr<vm::MirroredObject>* ptr = &device_stream_role2local_dep_object_[key];
   if (!*ptr) { *ptr = intrusive::make_shared<vm::MirroredObject>(); }
-  return ptr->Mutable();
+  return *ptr;
 }
 
-vm::MirroredObject* VirtualMachine::FindOrCreateTransportLocalDepObject() {
+intrusive::shared_ptr<vm::MirroredObject> VirtualMachine::FindOrCreateTransportLocalDepObject() {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   if (!transport_local_dep_object_) {
     transport_local_dep_object_ = intrusive::make_shared<vm::MirroredObject>();
   }
-  return transport_local_dep_object_.Mutable();
+  return transport_local_dep_object_;
 }
 
 Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Device> device, StreamRole stream_role) {
   std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
   vm::ThreadCtx* thread_ctx = JUST(FindOrCreateThreadCtx(device, stream_role));
   return JUST(CreateStream(thread_ctx, device, stream_role));
+}
+
+Maybe<vm::Stream*> VirtualMachine::GetVmStream(Symbol<Stream> stream) {
+  if (stream->unique_stream_id() >= unique_stream_id2vm_stream_.size()) {
+    std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
+    if (stream->unique_stream_id() >= unique_stream_id2vm_stream_.size()) {
+      auto* stream_mgr = JUST(GlobalMaybe<StreamMgr>());
+      for (int i = unique_stream_id2vm_stream_.size(); i <= stream->unique_stream_id(); ++i) {
+        Symbol<Stream> cur_stream = JUST(stream_mgr->GetStreamSymbol(i));
+        CHECK_EQ_OR_RETURN(cur_stream->unique_stream_id(), i)
+            << "invalid Stream::unique_stream_id()";
+        vm::Stream* vm_stream = JUST(CreateStream(cur_stream->device(), cur_stream->stream_role()));
+        unique_stream_id2vm_stream_.push_back(vm_stream);
+      }
+    }
+  }
+  return JUST(VectorAt(unique_stream_id2vm_stream_, stream->unique_stream_id()));
 }
 
 Maybe<vm::ThreadCtx*> VirtualMachine::FindOrCreateThreadCtx(Symbol<Device> device,
@@ -400,13 +423,21 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   // stream_ptr may be used after timout.
   auto stream_ptr = std::make_shared<vm::Stream*>(nullptr);
   auto bc = std::make_shared<BlockingCounter>(1);
-  vm_->InsertSchedulerProbe(
-      [stream_ptr, thread_ctx, device, stream_role, bc](vm::VirtualMachineEngine* vm) {
-        auto stream = intrusive::make_shared<vm::Stream>(thread_ctx, device, stream_role);
-        thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
-        *stream_ptr = stream.Mutable();
-        bc->Decrease();
-      });
+  intrusive::shared_ptr<vm::MirroredObject> schedule_local_dep_object =
+      FindOrCreateScheduleLocalDepObject(device, stream_role);
+  Optional<intrusive::shared_ptr<vm::MirroredObject>> transport_local_dep_object;
+  if (IsCommNetStream::Visit(stream_role)) {
+    transport_local_dep_object = FindOrCreateTransportLocalDepObject();
+  }
+  vm_->InsertSchedulerProbe([stream_ptr, thread_ctx, device, stream_role, bc,
+                             schedule_local_dep_object,
+                             transport_local_dep_object](vm::VirtualMachineEngine* vm) {
+    auto stream = intrusive::make_shared<vm::Stream>(
+        thread_ctx, device, stream_role, schedule_local_dep_object, transport_local_dep_object);
+    thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
+    *stream_ptr = stream.Mutable();
+    bc->Decrease();
+  });
   JUST(NotifyOrRunScheduler());
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return *stream_ptr;

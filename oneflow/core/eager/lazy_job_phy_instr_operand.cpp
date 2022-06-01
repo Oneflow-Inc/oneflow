@@ -23,34 +23,15 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-namespace {
-
-#ifdef WITH_CUDA
-Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(StreamRole stream_role) {
-  // NOTE(chengcheng):
-  //   Lazy Job instruction need mutual exclusion nccl with Eager nccl. However, when the number of
-  //   processes is more than the number of physical GPUs, the following processes will make an
-  //   error when using local rank to create a EagerNcclLocalDepObject, but we only need an legal
-  //   device so we use device 0.
-  const auto& device = JUST(Device::New("cpu", 0));
-  const auto& stream = JUST(::oneflow::Stream::New(device, stream_role));
-  const auto& local_dep_object = stream->mut_transport_local_dep_object();
-  CHECK_OR_RETURN(local_dep_object.has_value());
-  return JUST(local_dep_object);
-}
-
-static constexpr auto* GetEagerNcclLocalDepObject =
-    DECORATE(&RawGetEagerNcclLocalDepObject, ThreadLocalCopiable);
-#endif  // WITH_CUDA
-
-}  // namespace
+namespace {}  // namespace
 
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
-  DoEach(CHECK_JUST(GlobalMaybe<VirtualMachine>())->FindOrCreateTransportLocalDepObject());
+  DoEach(
+      CHECK_JUST(GlobalMaybe<VirtualMachine>())->FindOrCreateTransportLocalDepObject().Mutable());
 }
 
 }  // namespace vm

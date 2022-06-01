@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
+#include "oneflow/core/vm/stream.h"
 
 namespace oneflow {
 namespace vm {
@@ -37,9 +38,8 @@ void CallPhyInstrOperand::ForEachConstMirroredObject(
 }
 
 void CallPhyInstrOperand::InitStreamSequentialDependence() {
-  const auto& stream = opkernel().stream();
-  auto* device_schedule_dep_object = stream->mut_schedule_local_dep_object();
-  if (IsCommNetStream::Visit(stream->stream_role())) {
+  auto* device_schedule_dep_object = vm_stream_->schedule_local_dep_object().get();
+  if (IsCommNetStream::Visit(vm_stream_->stream_role())) {
     // Sequantialize nccl instructions to avoid deadlock
     stream_sequential_dependence_ = device_schedule_dep_object;
   } else {
@@ -55,9 +55,8 @@ void CallPhyInstrOperand::InitStreamSequentialDependence() {
 
 void CallPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  const auto& stream = opkernel().stream();
-  const auto& opt_transport_dep_object = stream->mut_transport_local_dep_object();
-  if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)); }
+  const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
+  if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {

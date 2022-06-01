@@ -23,12 +23,17 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role) {
+void Stream::__Init__(
+    ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role,
+    const intrusive::shared_ptr<MirroredObject>& schedule_local_dep_object,
+    const Optional<intrusive::shared_ptr<MirroredObject>>& transport_local_dep_object) {
   set_thread_ctx(thread_ctx);
   device_ = device;
   stream_role_ = stream_role;
   stream_type_ = CHECK_JUST(GetStreamType::Visit(stream_role, device->enum_type()));
   stream_type_->InitDeviceCtx(mut_device_ctx(), this);
+  schedule_local_dep_object_ = schedule_local_dep_object;
+  transport_local_dep_object_ = transport_local_dep_object;
 }
 
 int64_t Stream::device_id() const { return device_->device_id(); }

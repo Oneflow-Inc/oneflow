@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/stream_role.h"
+#include "oneflow/core/common/add_and_read_vector.h"
 
 namespace oneflow {
 
@@ -36,10 +37,9 @@ class VirtualMachine final {
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
-  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamRole stream_role);
-  vm::MirroredObject* FindOrCreateScheduleLocalDepObject(Symbol<Device> device,
-                                                         StreamRole stream_role);
-  vm::MirroredObject* FindOrCreateTransportLocalDepObject();
+  intrusive::shared_ptr<vm::MirroredObject> FindOrCreateScheduleLocalDepObject(
+      Symbol<Device> device, StreamRole stream_role);
+  intrusive::shared_ptr<vm::MirroredObject> FindOrCreateTransportLocalDepObject();
 
   bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
   std::string GetBlockingDebugString();
@@ -49,6 +49,8 @@ class VirtualMachine final {
   const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
   Maybe<void> CloseVMThreads();
+
+  Maybe<vm::Stream*> GetVmStream(Symbol<Stream> stream);
 
  private:
   friend class InstructionsBuilder;
@@ -60,6 +62,8 @@ class VirtualMachine final {
   void ControlSync();
   Maybe<vm::ThreadCtx*> FindOrCreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
   Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
+  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamRole stream_role);
+
   Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
                                   StreamRole stream_role);
 
@@ -83,6 +87,7 @@ class VirtualMachine final {
   HashMap<std::pair<Symbol<Device>, StreamRole>, intrusive::shared_ptr<vm::MirroredObject>>
       device_stream_role2local_dep_object_;
   intrusive::shared_ptr<vm::MirroredObject> transport_local_dep_object_;
+  AddAndReadVector<vm::Stream*> unique_stream_id2vm_stream_;
 
   std::thread schedule_thread_;
   Notifier pending_notifier_;
