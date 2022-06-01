@@ -434,10 +434,22 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                                                      src_reduced_hierarchy, lbn, scope_symbol_id,
                                                      logical_blob_desc);
       }
+    }
+    if (!got_nccl) {
+      got_nccl = TryBuildNcclBy2DHierarchyOthers(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
+                                                 src_reduced_hierarchy, lbn, scope_symbol_id,
+                                                 logical_blob_desc);
+    }
+    VLOG_IF(3, !got_nccl) << "Cannot get nccl logical op for 2D sbp, src nd sbp "
+                          << NdSbpToString(*src_reduced_nd_sbp) << ", dst nd sbp "
+                          << NdSbpToString(*dst_reduced_nd_sbp) << ".";
+    return got_nccl;
+  }
   return false;
 }
 
 bool ReverseOrderInsertNcclLogicalOps() {
+  return Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel();
 }
 
 void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
