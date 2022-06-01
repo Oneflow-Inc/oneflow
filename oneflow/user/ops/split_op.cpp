@@ -22,9 +22,10 @@ namespace oneflow {
   const int64_t in_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
   int64_t axis = ctx->Attr<int64_t>("dim");
+  CHECK_OR_RETURN(axis >= -in_num_axes && axis < in_num_axes)
+      << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+      << -in_num_axes << ", " << in_num_axes - 1 << "], but got " << axis << ")";
   if (axis < 0) { axis += in_num_axes; }
-  CHECK_OR_RETURN(axis >= 0 && axis < in_num_axes);
-
   FOR_RANGE(int64_t, i, 0, in_num_axes) {
     if (i == axis) { continue; }
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -33,14 +34,14 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SplitOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  auto axis = ctx->Attr<int64_t>("dim");
   const auto& sections = ctx->Attr<std::vector<int64_t>>("sections");
   const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t in_num_axes = in_desc.shape().NumAxes();
-  if (axis < 0) { axis += in_num_axes; }
-  CHECK_OR_RETURN(axis >= 0 && axis < in_num_axes)
+  auto axis = ctx->Attr<int64_t>("dim");
+  CHECK_OR_RETURN(axis >= -in_num_axes && axis < in_num_axes)
       << Error::IndexError() << "Dimension out of range (expected to be in range of ["
       << -in_num_axes << ", " << in_num_axes - 1 << "], but got " << axis << ")";
+  if (axis < 0) { axis += in_num_axes; }
   const int64_t dim_size = in_desc.shape().dim_vec()[axis];
 
   int64_t start_idx = 0;
@@ -72,7 +73,8 @@ namespace oneflow {
 
 /*static*/ Maybe<void> SplitOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                           const user_op::UserOpConfWrapper& op_conf) {
-  CHECK_OR_RETURN(op_conf.output_size("out") >= 1);
+  CHECK_OR_RETURN(op_conf.output_size("out") >= 1)
+      << Error::RuntimeError() << "The number of splits should be greater than 1. ";
   return Maybe<void>::Ok();
 }
 

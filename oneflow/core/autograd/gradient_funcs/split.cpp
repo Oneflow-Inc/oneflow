@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -41,15 +42,15 @@ class Split : public OpExprGradFunction<SplitCaptureState> {
 
 Maybe<void> Split::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "Forward op must be not null";
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Split::Capture(SplitCaptureState* ctx, const TensorTuple& inputs,
                            const TensorTuple& outputs, const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  ctx->requires_grad = inputs.at(0)->requires_grad();
+  CHECK_EQ_OR_RETURN(inputs.size(), 1) << "Input grad size must be equal 1";
+  ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("dim"));
@@ -63,10 +64,10 @@ Maybe<void> Split::Apply(const SplitCaptureState* ctx, const TensorTuple& out_gr
   TensorTuple inputs;
   inputs.reserve(out_grads.size());
   for (int i = 0; i < out_grads.size(); ++i) {
-    const auto& out_grad_i = out_grads.at(i);
+    const auto& out_grad_i = JUST(VectorAt(out_grads, i));
     inputs.emplace_back(out_grad_i);
   }
-  in_grads->at(0) = JUST(functional::Concat(inputs, ctx->axis));
+  JUST(VectorAt(*in_grads, 0)) = JUST(functional::Concat(inputs, ctx->axis));
   return Maybe<void>::Ok();
 }
 

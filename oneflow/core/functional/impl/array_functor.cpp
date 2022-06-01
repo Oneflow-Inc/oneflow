@@ -2350,7 +2350,7 @@ class SplitFunctor {
     if (axis < 0) { axis += x->ndim(); }
     CHECK_OR_RETURN(axis >= 0 && axis < x->ndim())
         << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-        << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis << ")";
+        << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << dim << ")";
     CHECK_GE_OR_RETURN(split_size_or_sections, 0)
         << Error::RuntimeError() << "split expects split_size be non-negative, but got split_size="
         << split_size_or_sections;
