@@ -100,7 +100,7 @@ class TestGlobalLogicalSliceAssign(flow.unittest.TestCase):
     @globaltest
     def test_logical_slice_assign(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2, except_partial_sum=True):
+            for sbp in all_sbp(placement, max_dim=2):
                 if placement.ranks.size == 1:
                     continue
                 _test_logical_slice_assign(test_case, placement, sbp)

@@ -335,18 +335,19 @@ std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheCon
   if (ctx->parallel_ctx().parallel_num() == 1) {
     // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
     CHECK_JUST(slice_ctx.PushSplitInfo(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0));
-  }
-  const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex(large_tensor_name, 0);
-  const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
-  const Shape& logical_shape =
-      ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0)->shape();
-  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-  const TensorSliceView& slice_view =
-      GetTensorSliceView4ParallelId(parallel_hierarchy, in_nd_sbp, logical_shape, parallel_id);
-  for (int i = 0; i < logical_shape.NumAxes(); ++i) {
-    const Range& range = slice_view.At(i);
-    if (range.begin() != 0 || range.end() != logical_shape.At(i)) {
-      CHECK_JUST(slice_ctx.PushSplitInfo(i, range.begin(), range.end(), logical_shape.At(i)));
+  } else {
+    const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex(large_tensor_name, 0);
+    const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+    const Shape& logical_shape =
+        ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0)->shape();
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    const TensorSliceView& slice_view =
+        GetTensorSliceView4ParallelId(parallel_hierarchy, in_nd_sbp, logical_shape, parallel_id);
+    for (int i = 0; i < logical_shape.NumAxes(); ++i) {
+      const Range& range = slice_view.At(i);
+      if (range.begin() != 0 || range.end() != logical_shape.At(i)) {
+        CHECK_JUST(slice_ctx.PushSplitInfo(i, range.begin(), range.end(), logical_shape.At(i)));
+      }
     }
   }
   return std::make_shared<OpKernelCacheWrapper<SliceContext>>(slice_ctx);

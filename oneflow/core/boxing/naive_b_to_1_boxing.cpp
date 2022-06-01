@@ -42,9 +42,14 @@ static constexpr auto* CheckNaiveBTo1 = DECORATE(&RawCheckNaiveBTo1, ThreadLocal
 Maybe<one::Tensor> NaiveBTo1(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                              Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
+  CHECK_OR_RETURN(tensor_placement == in->placement())
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in->placement())) << ")";
 
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),
