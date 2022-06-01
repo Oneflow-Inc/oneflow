@@ -122,4 +122,27 @@ TensorSliceView GetBroadcastTensorSliceView(const BlobDesc& blob_desc) {
   return TensorSliceView(blob_desc.shape());
 }
 
+bool IsAllBroadcastNdSbp(const NdSbp& nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool IsAllPartialSumNdSbp(const NdSbp& nd_sbp) {
+  for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
+  }
+  return true;
+}
+
+bool IsAllSplitNdSbp(const NdSbp& nd_sbp, int64_t axis) {
+  for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+    if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 }  // namespace oneflow

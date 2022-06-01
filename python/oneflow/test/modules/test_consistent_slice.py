@@ -96,7 +96,6 @@ def _test_logical_slice(test_case, placement, sbp):
     x = x.to_global(placement=placement, sbp=sbp)
     y = flow.logical_slice(x, slice_tup_list=[[0, 1, 1]])
 
-    test_case.assertTrue(y.sbp in [(flow.sbp.partial_sum,), (oneflow.sbp.broadcast,)])
     test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[0:1:1]))
 
 
@@ -107,7 +106,6 @@ def _test_logical_slice_with_bool(test_case, placement, sbp):
     x = x.to_global(placement=placement, sbp=sbp)
     y = flow.logical_slice(x, slice_tup_list=[[0, 1, 1]])
 
-    test_case.assertTrue(y.sbp in [(flow.sbp.partial_sum,), (oneflow.sbp.broadcast,)])
     test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[0:1:1]))
 
 
@@ -128,9 +126,6 @@ class TestLogicalSlice(flow.unittest.TestCase):
     def test_logical_slice(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                # logical slice not support 2d sbp currently
-                if len(sbp) > 1:
-                    continue
                 _test_logical_slice(test_case, placement, sbp)
                 _test_logical_slice_with_bool(test_case, placement, sbp)
 
