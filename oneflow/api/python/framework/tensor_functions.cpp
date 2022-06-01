@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -463,18 +464,18 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
   HANDLE_ERRORS
   PyObject* device_obj = Py_None;
   static const char* keywords[2] = {"device", NULL};
-  if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:cuda", const_cast<char**>(keywords), &device_obj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:cuda", const_cast<char**>(keywords),
+                                   &device_obj)) {
     return NULL;
   }
   PyObjectPtr dict(PyDict_New());
-  if(device_obj == Py_None) {
+  if (device_obj == Py_None) {
     device_obj = PyUnicode_FromString("cuda");
-  }
-  else if(PyLong_Check(device_obj)) {
+  } else if (PyLong_Check(device_obj)) {
     std::string device_str = "cuda:" + std::to_string(PyLong_AsLongLong(device_obj));
     device_obj = PyUnicode_FromString(device_str.c_str());
-  }  
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device_obj) > -1); 
+  }
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device_obj) > -1);
   PyObjectPtr tuple(PyTuple_Pack(1, self));
   PyObject* result = functional::to(NULL, tuple.get(), dict.get());
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -482,14 +483,12 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_var(PyObject* self, PyObject* args, PyObject* kwargs){
+static PyObject* PyTensorObject_var(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "unbiased", Py_True) > -1); 
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", Py_False) > -1); 
-  if(kwargs != NULL) {
-    CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 1) > -1);
-  }
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "unbiased", Py_True) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", Py_False) > -1);
+  if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 1) > -1); }
   PyObjectPtr concat_args(concat_self(self, args));
   PyObject* result = functional::var(NULL, concat_args.get(), dict.get());
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -497,14 +496,12 @@ static PyObject* PyTensorObject_var(PyObject* self, PyObject* args, PyObject* kw
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_std(PyObject* self, PyObject* args, PyObject* kwargs){
+static PyObject* PyTensorObject_std(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "unbiased", Py_True) > -1); 
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", Py_False) > -1); 
-  if(kwargs != NULL) {
-    CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 1) > -1);
-  }
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "unbiased", Py_True) > -1);
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", Py_False) > -1);
+  if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 1) > -1); }
   PyObjectPtr concat_args(concat_self(self, args));
   PyObject* result = functional::std(NULL, concat_args.get(), dict.get());
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -533,28 +530,24 @@ static PyObject* PyTensorObject_relu_(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_all(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  if(args == NULL && kwargs == NULL)
-    return PyTensor_New(ASSERT_PTR(functional::ReduceAllWhole(PyTensor_Unpack(self))));
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::reduce_all(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
+#define REDUCE_FUNC(func_name, bind_func, whole_func)                            \
+  static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
+    HANDLE_ERRORS                                                                \
+    if (args == NULL && kwargs == NULL) {                                        \
+      return PyTensor_New(ASSERT_PTR(whole_func(PyTensor_Unpack(self))));        \
+    }                                                                            \
+    PyObjectPtr concat_args(concat_self(self, args));                            \
+    PyObject* result = bind_func(NULL, concat_args.get(), kwargs);               \
+    if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
+    return result;                                                               \
+    END_HANDLE_ERRORS                                                            \
+  }
 
-static PyObject* PyTensorObject_any(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  if(args == NULL && kwargs == NULL)
-    return PyTensor_New(ASSERT_PTR(functional::ReduceAnyWhole(PyTensor_Unpack(self))));
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::reduce_any(NULL, concat_args.get(), kwargs);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
+REDUCE_FUNC(PyTensorObject_any, functional::reduce_any, functional::ReduceAnyWhole)
+REDUCE_FUNC(PyTensorObject_all, functional::reduce_all, functional::ReduceAllWhole)
+REDUCE_FUNC(PyTensorObject_sum, functional::reduce_sum, functional::ReduceSumWhole)
+REDUCE_FUNC(PyTensorObject_prod, functional::reduce_prod, functional::ReduceProdWhole)
+REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceAnyWhole)
 
 #define DATATYPE_FUNC(func_name, dtype)                                    \
   static PyObject* func_name(PyObject* self, PyObject* unused) {           \
@@ -662,6 +655,9 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"relu_", PyTensorObject_relu_, METH_NOARGS, NULL},
     {"all", (PyCFunction)PyTensorObject_all, METH_VARARGS | METH_KEYWORDS, NULL},
     {"any", (PyCFunction)PyTensorObject_any, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"sum", (PyCFunction)PyTensorObject_sum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mean", (PyCFunction)PyTensorObject_mean, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"prod", (PyCFunction)PyTensorObject_prod, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
