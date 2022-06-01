@@ -191,48 +191,26 @@ Maybe<void> InstructionsBuilder::SoftSyncNNGraphBuffers(
   return Maybe<void>::Ok();
 }
 
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const JobConfigProto& job_conf) {
-  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<JobConfigProto, JobDesc>(symbol_id, job_conf));
-  return symbol_id;
-}
-
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const ParallelConf& parallel_conf) {
-  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<ParallelConf, ParallelDesc>(symbol_id, parallel_conf));
-  return symbol_id;
-}
-
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const ScopeProto& scope_proto) {
-  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<ScopeProto, Scope>(symbol_id, scope_proto));
-  return symbol_id;
-}
-
-Maybe<int64_t> InstructionsBuilder::CreateSymbolId(const OperatorConf& op_conf) {
-  int64_t symbol_id = JUST(id_generator_->NewSymbolId());
-  JUST(AddSymbol<OperatorConf, OperatorConfSymbol>(symbol_id, op_conf));
-  return symbol_id;
-}
+Maybe<int64_t> InstructionsBuilder::CreateSymbolId() { return JUST(id_generator_->NewSymbolId()); }
 
 Maybe<JobDesc> InstructionsBuilder::GetJobConfSymbol(const JobConfigProto& job_conf) {
-  int64_t symbol_id = JUST(FindOrCreateSymbolId(job_conf));
-  return Global<symbol::Storage<JobDesc>>::Get()->MaybeGetPtr(symbol_id);
+  return Global<symbol::Storage<JobDesc>>::Get()->FindOrCreate(
+      job_conf, [&] { return this->CreateSymbolId(); });
 }
 
 Maybe<ParallelDesc> InstructionsBuilder::GetParallelDescSymbol(const ParallelConf& parallel_conf) {
-  int64_t symbol_id = JUST(FindOrCreateSymbolId(parallel_conf));
-  return Global<symbol::Storage<ParallelDesc>>::Get()->MaybeGetPtr(symbol_id);
+  return Global<symbol::Storage<ParallelDesc>>::Get()->FindOrCreate(
+      parallel_conf, [&] { return this->CreateSymbolId(); });
 }
 
 Maybe<Scope> InstructionsBuilder::GetScopeSymbol(const ScopeProto& scope_proto) {
-  int64_t symbol_id = JUST(FindOrCreateSymbolId(scope_proto));
-  return Global<symbol::Storage<Scope>>::Get()->MaybeGetPtr(symbol_id);
+  return Global<symbol::Storage<Scope>>::Get()->FindOrCreate(
+      scope_proto, [&] { return this->CreateSymbolId(); });
 }
 
 Maybe<OperatorConfSymbol> InstructionsBuilder::GetOpConfSymbol(const OperatorConf& op_conf) {
-  int64_t symbol_id = JUST(FindOrCreateSymbolId(op_conf));
-  return Global<symbol::Storage<OperatorConfSymbol>>::Get()->MaybeGetPtr(symbol_id);
+  return Global<symbol::Storage<OperatorConfSymbol>>::Get()->FindOrCreate(
+      op_conf, [&] { return this->CreateSymbolId(); });
 }
 
 Maybe<Scope> InstructionsBuilder::BuildInitialScope(
