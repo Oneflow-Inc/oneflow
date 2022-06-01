@@ -2739,8 +2739,11 @@ class FusedCrossInteractionFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& x_0,
-                           const std::shared_ptr<one::Tensor>& bias) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight, x_0, bias});
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const std::string& interaction_mode) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("interaction_mode", interaction_mode));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight, x_0, bias}, attrs);
   }
 
  private:

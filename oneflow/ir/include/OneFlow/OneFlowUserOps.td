@@ -2600,6 +2600,9 @@ def OneFlow_FusedCrossInteractionOp : OneFlow_BaseOp<"fused_cross_interaction", 
     OneFlow_Tensor:$out, 
     OneFlow_Tensor:$matmul_result
   );
+  let attrs = (ins
+    StrAttr:$interaction_mode
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
