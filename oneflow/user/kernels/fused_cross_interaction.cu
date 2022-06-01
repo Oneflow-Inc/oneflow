@@ -182,7 +182,8 @@ class FusedCrossInteractionKernel final : public user_op::OpKernel,
     const user_op::Tensor* x_0 = ctx->Tensor4ArgNameAndIndex("x_0", 0);
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    user_op::Tensor* matmul_out_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* matmul_result = ctx->Tensor4ArgNameAndIndex("matmul_result", 0);
+
     CHECK_EQ(out->shape().NumAxes(), 2);
     size_t m = 0, n = 0, k = 0;
     InferMatmulMNK(x->shape(), weight->shape(), /*trans_a=*/false, /*trans_b=*/true, &m, &n, &k);
@@ -191,11 +192,11 @@ class FusedCrossInteractionKernel final : public user_op::OpKernel,
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
     matmul->Launch(ctx->stream(), m, n, k, alpha, x->dptr(), weight->dptr(), beta,
-                   matmul_out_buf->mut_dptr());
+                   matmul_result->mut_dptr());
     const int64_t elem_cnt = out->shape().elem_cnt();
     const int64_t cols = out->shape().At(1);
     DispatchFusedBroadcastMulAddResidualIndexType<T>(
-        ctx->stream(), reinterpret_cast<T*>(matmul_out_buf->mut_dptr()), x_0->dptr<T>(),
+        ctx->stream(), matmul_result->mut_dptr<T>(), x_0->dptr<T>(),
         bias->dptr<T>(), out->mut_dptr<T>(), cols, elem_cnt);
   }
 
@@ -207,15 +208,7 @@ class FusedCrossInteractionKernel final : public user_op::OpKernel,
       .SetCreateFn<FusedCrossInteractionKernel<dtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
-                       && MatmulPrimitiveExists())                                    \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        size_t tmp_size = 0;                                                          \
-        const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);                  \
-        const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);        \
-        const int64_t matmul_out_elem_cnt = x.shape().At(0) * weight.shape().At(0);   \
-        tmp_size = GetCudaAlignedSize(matmul_out_elem_cnt * sizeof(dtype));           \
-        return tmp_size;                                                              \
-      });
+                       && MatmulPrimitiveExists());
 
 REGISTER_FUSED_CROSS_INTERACTION_KERNEL(float)
 REGISTER_FUSED_CROSS_INTERACTION_KERNEL(half)

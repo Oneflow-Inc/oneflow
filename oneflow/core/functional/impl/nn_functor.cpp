@@ -2732,6 +2732,7 @@ class FusedCrossInteractionFunctor {
                          .Input("x_0")
                          .Input("bias")
                          .Output("out")
+                         .Output("matmul_result")
                          .Build());
   }
 
@@ -2739,7 +2740,6 @@ class FusedCrossInteractionFunctor {
                            const std::shared_ptr<one::Tensor>& weight,
                            const std::shared_ptr<one::Tensor>& x_0,
                            const std::shared_ptr<one::Tensor>& bias) const {
-    MutableAttrMap attrs;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight, x_0, bias});
   }
 

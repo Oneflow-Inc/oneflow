@@ -1034,6 +1034,35 @@ class FusedDotFeatureInteractionGradFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_padded_concated_features_;
 };
 
+class FusedCrossInteractionGradFunctor {
+ public:
+  FusedCrossInteractionGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_cross_interaction_grad")
+                         .Input("dy")
+                         .Input("weight")
+                         .Input("x")
+                         .Input("x_0")
+                         .Input("matmul_result")
+                         .Output("dx")
+                         .Output("dw")
+                         .Output("dx_0")
+                         .Output("dbias")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& x_0, 
+                           const std::shared_ptr<one::Tensor>& matmul_result) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, x, x_0, matmul_result});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1071,6 +1100,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CublasBiasAddReluMatmulGradFunctor>("CublasBiasAddReluMatmulGrad");
   m.add_functor<impl::CublasMatmulBiasAddGradFunctor>("CublasMatmulBiasAddGrad");
   m.add_functor<impl::FusedDotFeatureInteractionGradFunctor>("FusedDotFeatureInteractionGrad");
+  m.add_functor<impl::FusedCrossInteractionGradFunctor>("FusedCrossInteractionGrad");
 };
 
 }  // namespace functional

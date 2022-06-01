@@ -2589,6 +2589,44 @@ def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedCrossInteractionOp : OneFlow_BaseOp<"fused_cross_interaction", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$bias,
+    OneFlow_Tensor:$x_0
+  );
+  let output = (outs
+    OneFlow_Tensor:$out, 
+    OneFlow_Tensor:$matmul_result
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+
+def OneFlow_FusedCrossInteractionGradOp : OneFlow_BaseOp<"fused_cross_interaction_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, NoGrad]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$x_0, 
+    OneFlow_Tensor:$x, 
+    OneFlow_Tensor:$matmul_result
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx_0, 
+    OneFlow_Tensor:$dw, 
+    OneFlow_Tensor:$dx, 
+    OneFlow_Tensor:$dbias 
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
 // Group: IDEMPOTENT
@@ -8215,38 +8253,6 @@ def OneFlow_FoldOp : OneFlow_BaseOp<"fold", [NoSideEffect, DeclareOpInterfaceMet
 def OneFlow_GeluOp : OneFlow_BaseOp<"gelu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
-  );
-  let output = (outs
-    OneFlow_Tensor:$out
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
-// def OneFlow_FusedCrossInteractionOp : OneFlow_BaseOp<"fused_cross_interaction", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-//   let input = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$weight,
-//     OneFlow_Tensor:$bias,
-//     OneFlow_Tensor:$x_0
-//   );
-//   let output = (outs
-//     OneFlow_Tensor:$out
-//   );
-//   let has_logical_tensor_desc_infer_fn = 1;
-//   let has_physical_tensor_desc_infer_fn = 1;
-//   let has_get_sbp_fn = 1;
-//   let has_data_type_infer_fn = 1;
-// }
-
-def OneFlow_FusedCrossInteractionOp : OneFlow_BaseOp<"fused_cross_interaction", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$x,
-    OneFlow_Tensor:$weight,
-    OneFlow_Tensor:$bias,
-    OneFlow_Tensor:$x_0
   );
   let output = (outs
     OneFlow_Tensor:$out
