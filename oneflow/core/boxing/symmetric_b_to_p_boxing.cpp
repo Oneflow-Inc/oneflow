@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -25,32 +26,18 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
-  }
-  return true;
-}
-
-bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
-  }
-  return true;
-}
-
-// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                   const Shape& logical_shape) {
+  // NOLINTBEGIN(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(IsAllPartialSumNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(NdSbpIsAllBroadcast(*in->nd_sbp()));
+  CHECK_OR_RETURN(NdSbpIsAllPartialSum(*out->nd_sbp()));
 
   CHECK_OR_RETURN(in->placement() == out->placement());
+  // NOLINTEND(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
-// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckSymmetricBToP =
     DECORATE(&RawCheckSymmetricBToP, ThreadLocalCachedCopiable);
