@@ -199,7 +199,7 @@ struct UnaryFunctor<device, UnaryOp::kSoftShrink, Dst, Src> {
   UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
-    if (src <= alpha || src >= -alpha) {
+    if (src <= alpha && src >= -alpha) {
       return static_cast<Dst>(0);
     } else if (src > alpha) {
       return static_cast<Dst>(src - alpha);
