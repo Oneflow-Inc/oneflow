@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SCALAR_H_
 
 #include <type_traits>
+
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 
