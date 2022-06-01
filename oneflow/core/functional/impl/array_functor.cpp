@@ -2973,6 +2973,8 @@ class RepeatInterLeaveIntFunctor {
   RepeatInterLeaveIntFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& repeats,
                            const Optional<int32_t>& dim) const {
+    CHECK_OR_RETURN(input->is_local() == true)
+        << Error::RuntimeError() << "repeat_interleave only support local tensor now";
     std::shared_ptr<one::Tensor> res;
     if (!dim.has_value()) {
       std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
@@ -3011,12 +3013,14 @@ class RepeatInterLeaveTensorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& repeats, const int32_t& dim,
                            const Optional<int32_t>& output_size) const {
+    CHECK_OR_RETURN(input->is_local() == true)
+        << Error::RuntimeError() << "repeat_interleave only support local tensor now";
     const auto repeats_shape = repeats->shape();
     const int64_t& repeat_num_axes = repeats_shape->NumAxes();
     CHECK_OR_RETURN(repeat_num_axes == 1)
-        << Error::RuntimeError << "repeat_interleave only accept 1D vector as repeat";
+        << Error::RuntimeError() << "repeat_interleave only accept 1D vector as repeat";
     CHECK_OR_RETURN(repeats->dtype() == DType::Int64())
-        << Error::RuntimeError << "repeats has to be Long tensor";
+        << Error::RuntimeError() << "repeats has to be Long tensor";
 
     std::vector<int64_t> repeats_value(repeats_shape->elem_cnt());
     if (!output_size.has_value()) {
@@ -3026,7 +3030,7 @@ class RepeatInterLeaveTensorFunctor {
       };
       SyncAccessTensorWithTimeOut(repeats, callback, "const").GetOrThrow();
       for (const auto x : repeats_value) {
-        CHECK_OR_RETURN(x >= 0) << Error::RuntimeError << "repeats can not be negative";
+        CHECK_OR_RETURN(x >= 0) << Error::RuntimeError() << "repeats can not be negative";
       }
     } else {
       repeats_value.push_back(JUST(output_size));
@@ -3039,7 +3043,7 @@ class RepeatInterLeaveTensorFunctor {
         << Error::IndexError() << "Dimension out of range (expected to be in range of ["
         << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
     CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))
-        << Error::RuntimeError << "repeats must have the same size as input along dim";
+        << Error::RuntimeError() << "repeats must have the same size as input along dim";
     std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, 0, DType::Int32()));
     const int64_t output_size_value =
         std::accumulate(repeats_value.begin(), repeats_value.end(), 0);
