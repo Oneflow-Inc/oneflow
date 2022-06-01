@@ -158,7 +158,6 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   FOR_RANGE(int64_t, axis, 0, ref_desc.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("ref", 0), axis)
-        // TODO(jianhao): Support (S(n), S(n)) when axis n is not sliced
         .Broadcast(user_op::OpArg("value", 0))
         .Split(user_op::OpArg("y", 0), axis)
         .Build();
