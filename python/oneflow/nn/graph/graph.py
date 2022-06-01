@@ -38,7 +38,7 @@ from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
 from oneflow.nn.graph.util import (
     add_indent,
-    IOArgs,
+    ArgsTree,
     operators_repr,
     seq_to_func_return,
     sys_exc_error_msg,
@@ -1106,7 +1106,7 @@ class Graph(object):
             self.__print(0, 1, repr_str)
             return build_arg
 
-        io_args = IOArgs((args, kwargs), True, "_" + self.name + "_" + io_type, None)
+        args_tree = ArgsTree((args, kwargs), True, "_" + self.name + "_" + io_type, None)
 
         def leaf_arg_fn(arg):
             name = arg.prefix() + "_" + arg.name()
@@ -1127,7 +1127,7 @@ class Graph(object):
                     arg.value(), None, io_type, name
                 )
 
-        out = io_args.map_leaf(leaf_arg_fn)
+        out = args_tree.map_leaf(leaf_arg_fn)
         build_args = out[0]
         build_kwargs = out[1]
 
@@ -1182,7 +1182,7 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        io_args = IOArgs((args, kwargs), True, "_" + self.name + "_" + io_type, None)
+        args_tree = ArgsTree((args, kwargs), True, "_" + self.name + "_" + io_type, None)
 
         def leaf_arg_fn(arg):
             arg_value = arg.value()
@@ -1193,16 +1193,16 @@ class Graph(object):
                     arg_value, None, io_type, arg.prefix() + "_" + arg.name(),
                 )
 
-        out = io_args.map_leaf(leaf_arg_fn)
+        out = args_tree.map_leaf(leaf_arg_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
 
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
-        io_args = IOArgs((args, kwargs), True, "_" + self.name + "_" + io_type, None)
+        args_tree = ArgsTree((args, kwargs), True, "_" + self.name + "_" + io_type, None)
 
-        for (_, arg) in io_args.flattened_named_args():
+        for (_, arg) in args_tree.iter_named_nodes():
             if isinstance(arg.value(), Tensor):
                 flattened_args.append(arg.value())
             else:
@@ -1352,14 +1352,14 @@ class Graph(object):
         oneflow._oneflow_internal.eager.Sync()
 
     def __ensure_input_tensors_contiguous(self, *args, **kwargs):
-        io_args = IOArgs((args, kwargs), False)
+        args_tree = ArgsTree((args, kwargs), False)
 
         def func(value):
             if isinstance(value, Tensor) and not value.is_contiguous():
                 value.contiguous_()
             return value
 
-        io_args.map_leaf(func)
+        args_tree.map_leaf(func)
 
 if __name__ == "__main__":
     import doctest

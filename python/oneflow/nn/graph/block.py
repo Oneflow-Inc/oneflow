@@ -30,7 +30,7 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
-    IOArgs,
+    ArgsTree,
     operators_repr,
     seq_to_func_return,
 )
@@ -195,11 +195,11 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        io_args = IOArgs(
+        args_tree = ArgsTree(
             (args, kwargs), True, "_" + self.name_prefix + self.name + "_input", None
         )
 
-        for (name, arg) in io_args.flattened_named_args():
+        for (name, arg) in args_tree.iter_named_nodes():
             if arg.is_leaf():
                 arg_value = arg.value()
                 meta_repr_str = (
@@ -238,11 +238,11 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        io_args = IOArgs(
+        args_tree = ArgsTree(
             (outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None
         )
 
-        for (name, arg) in io_args.flattened_named_args():
+        for (name, arg) in args_tree.iter_named_nodes():
             if arg.is_leaf():
                 arg_value = arg.value()
                 meta_repr_str = (
@@ -340,7 +340,7 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_args = IOArgs(
+        args_tree = ArgsTree(
             (args, kwargs),
             True,
             "_" + self.name_prefix + self.name + "_" + io_type,
@@ -366,7 +366,7 @@ class ModuleBlock(Block):
                 )
                 return arg
 
-        out = io_args.map_leaf(leaf_node_fn)
+        out = args_tree.map_leaf(leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
