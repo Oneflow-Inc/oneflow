@@ -3071,9 +3071,9 @@ class FillFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
     }
     auto outputs = std::make_shared<TensorTuple>(1);
-    outputs->at(0) = in;
+    (*outputs)[0] = in;
     JUST(OpInterpUtil::Dispatch(*op_, {in}, outputs.get(), attrs));
-    return outputs->at(0);
+    return (*outputs)[0];
   }
 
  private:
@@ -3099,9 +3099,9 @@ class FillTensorFunctor {
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({in, value}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     auto outputs = std::make_shared<TensorTuple>(1);
-    outputs->at(0) = in;
+    (*outputs)[0] = in;
     JUST(OpInterpUtil::Dispatch(*op_, {input_tuple[0], input_tuple[1]}, outputs.get(), attrs));
-    return outputs->at(0);
+    return (*outputs)[0];
   }
 
  private:
