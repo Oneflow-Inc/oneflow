@@ -124,6 +124,8 @@ struct EmbeddingReNormFunctor<DeviceType::kCUDA, T, IndexType> final {
     indices_freq_kernel<IndexType><<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
         indices_buf, num_indices, tmp_buf, emb_size);
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+    OF_CUDA_CHECK(cudaGetLastError());
 
     using AccumType = typename AccumulateType<T>::type;
     embedding_renorm_kernel<T, IndexType, AccumType>
