@@ -154,13 +154,21 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 }
 
 /*static*/ Maybe<void> LogicalSliceAssignOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& ref_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("ref", 0);
-  FOR_RANGE(int64_t, axis, 0, ref_desc.shape().NumAxes()) {
+  const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("ref", 0).shape();
+  const int64_t ndim = x_shape.NumAxes();
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  FOR_RANGE(int64_t, axis, 0, ndim) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("ref", 0), axis)
         .Broadcast(user_op::OpArg("value", 0))
         .Split(user_op::OpArg("y", 0), axis)
         .Build();
+    // FullSlice support S+S->S
+    if (IsFullSlice(start_vec[axis], stop_vec[axis], step_vec[axis], x_shape.At(axis))) {
+      ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), axis).Build();
+    }
   }
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("ref", 0))
@@ -260,6 +268,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
+
 /*static*/ Maybe<void> SliceUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const auto& x_desc = ctx->InputTensorDesc("x", 0);
   const int64_t ndim = x_desc.shape().NumAxes();

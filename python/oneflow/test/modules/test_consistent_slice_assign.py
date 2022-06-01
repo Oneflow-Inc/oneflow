@@ -23,39 +23,50 @@ from oneflow.test_utils.automated_test_util import *
 
 
 def _test_logical_slice_assign(test_case, placement, sbp):
-    input = random_tensor(2, 4, 4, requires_grad=True).oneflow
-    x_numpy = input.detach().cpu().numpy()
-
+    input = random_tensor(2, 8, 16, requires_grad=True).oneflow
+    value = random_tensor(2, 8, 8, requires_grad=True).oneflow
     x = (input + 0).to_global(
         placement=placement, sbp=sbp
     )  # add 0 to change to non-leaf tensor
-    x[:, :2] = 3
+    y = value.to_global(placement, sbp=sbp)
+    x[:, :8] = y
+
+    ref_np = input.detach().cpu().numpy()
+    value_np = value.detach().cpu().numpy()
 
     # forward
-    x_numpy[:, :2] = 3
+    ref_np[:, :8] = value_np
     test_case.assertTrue(x.sbp == sbp)
-    test_case.assertTrue(np.array_equal(x.numpy(), x_numpy))
+    test_case.assertTrue(np.array_equal(x.numpy(), ref_np))
 
     # backward
     x.sum().backward()
-    input_grad_np = np.ones((4, 4))
-    input_grad_np[:, :2] = 0
-    test_case.assertTrue(np.array_equal(input.grad.numpy(), input_grad_np))
+    # ref grad
+    ref_grad_np = np.ones((8, 16))
+    ref_grad_np[:, :8] = 0
+    test_case.assertTrue(np.array_equal(input.grad.numpy(), ref_grad_np))
+    # value grad
+    value_grad_np = np.ones((8, 8))
+    test_case.assertTrue(np.array_equal(value.grad.numpy(), value_grad_np))
 
 
 def _test_graph_logical_slice_assign(test_case, placement, sbp):
-    x = random_tensor(2, 4, 4, requires_grad=True).oneflow
-    x_numpy = x.detach().cpu().numpy()
+    ref = random_tensor(2, 8, 16, requires_grad=True).oneflow
+    value = random_tensor(2, 8, 8, requires_grad=True).oneflow
+
 
     class LogicalSliceAssignWithGrad(flow.nn.Module):
         def __init__(self):
             super().__init__()
-            self.input_grad = flow.nn.Parameter(flow.zeros(4, 4))
+            self.ref_grad = flow.nn.Parameter(flow.zeros(8, 16))
+            self.value_grad = flow.nn.Parameter(flow.zeros(8, 8))
 
-        def forward(self, input):
-            x = input + self.input_grad
+        def forward(self, ref, value):
+            x = ref + self.ref_grad
+            y = value + self.value_grad
             x = x.to_global(placement, sbp)
-            x[:, :2] = 3
+            y = y.to_global(placement, sbp)
+            x[:, :8] = y
             return x
 
     logical_slice_assign_with_grad = LogicalSliceAssignWithGrad().to_global(
@@ -72,27 +83,38 @@ def _test_graph_logical_slice_assign(test_case, placement, sbp):
             self.module = logical_slice_assign_with_grad
             self.add_optimizer(of_sgd)
 
-        def build(self, x):
-            out = self.module(x)
+        def build(self, x, y):
+            out = self.module(x, y)
             z = out.sum()
             z.backward()
             return out
 
     graph = LogicalSliceAssignTrainGraph()
 
-    input = x.to_global(placement=placement, sbp=sbp)
-    y = graph(input)
+    x = ref.to_global(placement=placement, sbp=sbp)
+    y = value.to_global(placement=placement, sbp=sbp)
+    z = graph(x, y)
 
-    test_case.assertTrue(y.sbp == sbp)
+    test_case.assertTrue(z.sbp == sbp)
 
-    # output
-    x_numpy[:, :2] = 3
-    test_case.assertTrue(np.array_equal(y.numpy(), x_numpy))
-    # input_grad
-    x_grad_np = np.ones((4, 4))
-    x_grad_np[:, :2] = 0
+    ref_np = ref.detach().cpu().numpy()
+    value_np = value.detach().cpu().numpy()
+
+    # forward
+    ref_np[:, :8] = value_np
+    test_case.assertTrue(np.array_equal(z.numpy(), ref_np))
+
+    # backward
+    # ref grad
+    ref_grad = np.ones((8, 16))
+    ref_grad[:, :8] = 0
     test_case.assertTrue(
-        np.array_equal(-graph.module.input_grad.origin.numpy(), x_grad_np)
+        np.array_equal(-graph.module.ref_grad.origin.numpy(), ref_grad)
+    )
+    # value grad
+    value_grad = np.ones((8, 8))
+    test_case.assertTrue(
+        np.array_equal(-graph.module.value_grad.origin.numpy(), value_grad)
     )
 
 
