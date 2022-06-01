@@ -281,6 +281,9 @@ DIRECT_PASS_FUNC(PyTensorObject_unsqueeze, functional::unsqueeze)
 DIRECT_PASS_FUNC(PyTensorObject_max, functional::max)
 DIRECT_PASS_FUNC(PyTensorObject_min, functional::min)
 DIRECT_PASS_FUNC(PyTensorObject_median, functional::median)
+DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
+DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
+DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -447,6 +450,88 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_cpu(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  Optional<std::string> device = "cpu";
+  return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), device, NullOpt, false)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* device_obj = Py_None;
+  static const char* keywords[2] = {"device", NULL};
+  if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:cuda", const_cast<char**>(keywords), &device_obj)) {
+    return NULL;
+  }
+  PyObjectPtr dict(PyDict_New());
+  if(device_obj == Py_None) {
+    device_obj = PyUnicode_FromString("cuda");
+  }
+  else if(PyLong_Check(device_obj)) {
+    std::string device_str = "cuda:" + std::to_string(PyLong_AsLongLong(device_obj));
+    device_obj = PyUnicode_FromString(device_str.c_str());
+  }  
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device_obj) > -1); 
+  PyObjectPtr tuple(PyTuple_Pack(1, self));
+  PyObject* result = functional::to(NULL, tuple.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_var(PyObject* self, PyObject* args, PyObject* kwargs){
+  HANDLE_ERRORS
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "unbiased", Py_True) > -1); 
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", Py_False) > -1); 
+  if(kwargs != NULL) {
+    CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 1) > -1);
+  }
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::var(NULL, concat_args.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_std(PyObject* self, PyObject* args, PyObject* kwargs){
+  HANDLE_ERRORS
+  PyObjectPtr dict(PyDict_New());
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "unbiased", Py_True) > -1); 
+  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", Py_False) > -1); 
+  if(kwargs != NULL) {
+    CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 1) > -1);
+  }
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::std(NULL, concat_args.get(), dict.get());
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_softplus(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  PyObjectPtr concat_args(PyTuple_Pack(1, self));
+  PyObject* result = functional::softplus(NULL, concat_args.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_relu(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return PyTensor_New(ASSERT_PTR(functional::Relu(PyTensor_Unpack(self), false)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_relu_(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return PyTensor_New(ASSERT_PTR(functional::Relu(PyTensor_Unpack(self), true)));
+  END_HANDLE_ERRORS
+}
+
+
 #define DATATYPE_FUNC(func_name, dtype)                                    \
   static PyObject* func_name(PyObject* self, PyObject* unused) {           \
     HANDLE_ERRORS                                                          \
@@ -544,6 +629,13 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"half", PyTensorObject_half, METH_NOARGS, NULL},
     {"float", PyTensorObject_float, METH_NOARGS, NULL},
     {"double", PyTensorObject_double, METH_NOARGS, NULL},
+    {"cpu", PyTensorObject_cpu, METH_NOARGS, NULL},
+    {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"var", (PyCFunction)PyTensorObject_var, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"std", (PyCFunction)PyTensorObject_std, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"softplus", PyTensorObject_softplus, METH_NOARGS, NULL},
+    {"relu", PyTensorObject_relu, METH_NOARGS, NULL},
+    {"relu_", PyTensorObject_relu_, METH_NOARGS, NULL},
 
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -588,6 +680,9 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"max", (PyCFunction)PyTensorObject_max, METH_VARARGS | METH_KEYWORDS, NULL},
     {"min", (PyCFunction)PyTensorObject_min, METH_VARARGS | METH_KEYWORDS, NULL},
     {"median", (PyCFunction)PyTensorObject_median, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"pow", (PyCFunction)PyTensorObject_pow, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
