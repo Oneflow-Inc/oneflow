@@ -284,6 +284,7 @@ DIRECT_PASS_FUNC(PyTensorObject_median, functional::median)
 DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
 DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
+DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
 
 // functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
@@ -531,6 +532,28 @@ static PyObject* PyTensorObject_relu_(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_all(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  if(args == NULL && kwargs == NULL)
+    return PyTensor_New(ASSERT_PTR(functional::ReduceAllWhole(PyTensor_Unpack(self))));
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::reduce_all(NULL, concat_args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_any(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  if(args == NULL && kwargs == NULL)
+    return PyTensor_New(ASSERT_PTR(functional::ReduceAnyWhole(PyTensor_Unpack(self))));
+  PyObjectPtr concat_args(concat_self(self, args));
+  PyObject* result = functional::reduce_any(NULL, concat_args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
 
 #define DATATYPE_FUNC(func_name, dtype)                                    \
   static PyObject* func_name(PyObject* self, PyObject* unused) {           \
@@ -636,6 +659,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"softplus", PyTensorObject_softplus, METH_NOARGS, NULL},
     {"relu", PyTensorObject_relu, METH_NOARGS, NULL},
     {"relu_", PyTensorObject_relu_, METH_NOARGS, NULL},
+    {"all", (PyCFunction)PyTensorObject_all, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"any", (PyCFunction)PyTensorObject_any, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -683,6 +708,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"pow", (PyCFunction)PyTensorObject_pow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"masked_fill", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},

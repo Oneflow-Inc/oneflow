@@ -1216,10 +1216,10 @@ def RegisterMethods():
     Tensor.to = _to
     # Tensor.half = _half
     Tensor.gather = _gather
-    Tensor.all = _all
-    Tensor.any = _any
+    # Tensor.all = _all
+    # Tensor.any = _any
     Tensor.T = property(_T)
-    Tensor.masked_fill = _masked_fill
+    # Tensor.masked_fill = _masked_fill
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.item = _item
