@@ -2553,8 +2553,7 @@ def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_int
     Optional<OneFlow_Tensor>:$output_concat
   );
   let output = (outs
-    OneFlow_Tensor:$out,
-    Optional<OneFlow_Tensor>:$padded_concated_features
+    OneFlow_Tensor:$out
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$self_interaction,
@@ -2568,11 +2567,10 @@ def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_int
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature_interaction_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    Optional<OneFlow_Tensor>:$padded_concated_features,
-    Variadic<OneFlow_Tensor>:$features_grad_like
+    Variadic<OneFlow_Tensor>:$features
   );
   let output = (outs
     Variadic<OneFlow_Tensor>:$features_grad,
@@ -5144,8 +5142,8 @@ def OneFlow_StackGradOp : OneFlow_BaseOp<"stack_grad", [NoSideEffect, NoGrad, De
 #endif // GET_ONEFLOW_MISC_OP_DEFINITIONS
 
 // Group: NCCL
-// _nccl_logical_2D_same_dim0_all2all, _nccl_logical_2D_same_dim0_all_gather, _nccl_logical_2D_same_dim0_all_gather_noncontinuous, _nccl_logical_2D_same_dim0_all_reduce, _nccl_logical_2D_same_dim1_all_reduce, _nccl_logical_all_gather, _nccl_logical_all_gather_noncontinuous, _nccl_logical_all_reduce, _nccl_logical_reduce_scatter, _nccl_logical_s2s
-// Total: 10
+// _nccl_logical_2D_same_dim0_all2all, _nccl_logical_2D_same_dim0_all_gather, _nccl_logical_2D_same_dim0_all_gather_noncontinuous, _nccl_logical_2D_same_dim0_all_reduce, _nccl_logical_2D_same_dim1_all_reduce, _nccl_logical_all_gather, _nccl_logical_all_gather_noncontinuous, _nccl_logical_all_reduce, _nccl_logical_reduce_scatter, _nccl_logical_s2s, _nccl_logical_send_recv
+// Total: 11
 
 #ifdef GET_ONEFLOW_NCCL_OP_DEFINITIONS
 
@@ -5321,6 +5319,24 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
   let attrs = (ins
     StrArrayAttr:$src_reduced_nd_sbp,
     StrArrayAttr:$dst_reduced_nd_sbp
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
+}
+
+def OneFlow__ncclLogicalSendRecvOp : OneFlow_BaseOp<"_nccl_logical_send_recv", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$src_nd_sbp,
+    StrArrayAttr:$dst_nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -7987,7 +8003,7 @@ def OneFlow_BernoulliOp : OneFlow_BaseOp<"bernoulli", [NoSideEffect, NoGrad, Cpu
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", [NoSideEffect, SupportNonContiguous, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );
@@ -9400,6 +9416,92 @@ def OneFlow_RocAucScoreOp : OneFlow_BaseOp<"roc_auc_score", [NoSideEffect, NoGra
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedLstmCellOp : OneFlow_BaseOp<"fused_lstm_cell", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input_gates,
+    OneFlow_Tensor:$hidden_gates,
+    OneFlow_Tensor:$cx,
+    Optional<OneFlow_Tensor>:$input_bias,
+    Optional<OneFlow_Tensor>:$hidden_bias
+  );
+  let output = (outs
+    OneFlow_Tensor:$hy,
+    OneFlow_Tensor:$cy,
+    OneFlow_Tensor:$workspace
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedLstmCellGradOp : OneFlow_BaseOp<"fused_lstm_cell_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$grad_hy,
+    OneFlow_Tensor:$grad_cy,
+    OneFlow_Tensor:$cx,
+    OneFlow_Tensor:$cy,
+    OneFlow_Tensor:$workspace
+  );
+  let output = (outs
+    OneFlow_Tensor:$grad_gates,
+    Optional<OneFlow_Tensor>:$grad_cx,
+    Optional<OneFlow_Tensor>:$grad_bias
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$result_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedGruCellOp : OneFlow_BaseOp<"fused_gru_cell", [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input_gates,
+    OneFlow_Tensor:$hidden_gates,
+    OneFlow_Tensor:$hx,
+    Optional<OneFlow_Tensor>:$input_bias,
+    Optional<OneFlow_Tensor>:$hidden_bias
+  );
+  let output = (outs
+    OneFlow_Tensor:$hy,
+    OneFlow_Tensor:$workspace
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedGruCellGradOp : OneFlow_BaseOp<"fused_gru_cell_grad", [NoSideEffect, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$grad_hy,
+    OneFlow_Tensor:$workspace
+  );
+  let output = (outs
+    OneFlow_Tensor:$grad_input_gates,
+    OneFlow_Tensor:$grad_hidden_gates,
+    Optional<OneFlow_Tensor>:$grad_hx,
+    Optional<OneFlow_Tensor>:$grad_input_bias,
+    Optional<OneFlow_Tensor>:$grad_hidden_bias
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$result_segment_sizes
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

@@ -58,6 +58,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
 #ifdef WITH_CUDA
   m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
+  m.def("SetCudaDeviceIndex", &SetCudaDeviceIndex);
+  m.def("CudaSynchronize", &CudaSynchronize);
 #endif  // WITH_CUDA
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
