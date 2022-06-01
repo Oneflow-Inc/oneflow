@@ -597,6 +597,12 @@ class Graph(object):
             for bu in bu_gen:
                 yield bu
 
+    def __ensure_state_tensors_contiguous(self):
+        for state_block in self._state():
+            state_tensor = state_block.origin
+            if not state_tensor.is_contiguous():
+                state_tensor.contiguous_()
+
     def _filter_states(self):
         state_tensor_set = set()
         state_tensors = []
@@ -708,6 +714,7 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
         _, eager_outputs = self.build_graph(*args, **kwargs)
         self.finish_complie_and_init_runtime()
         return eager_outputs
@@ -801,6 +808,8 @@ class Graph(object):
         self._additional_variable_tobe_loaded.clear()
 
     def __build_graph(self, *args, **kwargs):
+        self.__ensure_state_tensors_contiguous()
+
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
 
@@ -1035,6 +1044,7 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
         try:
             flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
@@ -1340,6 +1350,16 @@ class Graph(object):
             # So it's safe to skip sync here.
             return
         oneflow._oneflow_internal.eager.Sync()
+
+    def __ensure_input_tensors_contiguous(self, *args, **kwargs):
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + "input")
+
+        def leaf_node_fn(node):
+            if isinstance(node._value, Tensor) and not node._value.is_contiguous():
+                node._value.contiguous_()
+            return node
+
+        io_node.map_leaf(leaf_node_fn)
 
 
 if __name__ == "__main__":

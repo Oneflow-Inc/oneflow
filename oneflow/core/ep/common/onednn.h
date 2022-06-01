@@ -13,19 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/symbol_id_cache.h"
-#include "oneflow/core/common/util.h"
+#ifndef ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
+#define ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
+
+#ifdef WITH_ONEDNN
+
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
-namespace symbol {
+DEFINE_ENV_BOOL(ONEFLOW_ENABLE_ONEDNN_OPTS, true);
 
-COMMAND(Global<IdCache<JobConfigProto>>::SetAllocated(new IdCache<JobConfigProto>()));
-COMMAND(Global<IdCache<ParallelConf>>::SetAllocated(new IdCache<ParallelConf>()));
-COMMAND(Global<IdCache<ScopeProto>>::SetAllocated(new IdCache<ScopeProto>()));
-COMMAND(Global<IdCache<std::string>>::SetAllocated(new IdCache<std::string>()));
-COMMAND(Global<IdCache<OperatorConf>>::SetAllocated(new IdCache<OperatorConf>()));
+namespace ep {
+namespace primitive {
 
-}  // namespace symbol
+inline bool OneDnnIsEnabled() { return EnvBool<ONEFLOW_ENABLE_ONEDNN_OPTS>(); }
 
+}  // namespace primitive
+}  // namespace ep
 }  // namespace oneflow
+
+#endif  // WITH_ONEDNN
+
+#endif  // ONEFLOW_CORE_EP_COMMON_ONEDNN_H_
