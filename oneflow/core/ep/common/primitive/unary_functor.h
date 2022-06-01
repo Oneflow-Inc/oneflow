@@ -141,10 +141,10 @@ struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     const Src zero_val = static_cast<Src>(0.0);
-    if (src > zero_val) {
-      return static_cast<Dst>(src);
-    } else {
+    if (src <= zero_val) {
       return static_cast<Dst>(zero_val);
+    } else {
+      return static_cast<Dst>(src);
     }
   }
 };
