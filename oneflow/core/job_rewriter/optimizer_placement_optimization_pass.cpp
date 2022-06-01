@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <cstdint>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/nd_sbp_util.h"
@@ -59,12 +58,11 @@ class DataParallelNodeSequence final {
 
   int64_t len() const { return len_; }
 
-  bool resize(const int64_t size) {
-    if (size > len_) { return false; }
-    if (size <= 1) { return false; }
+  void resize(const int64_t size) {
+    CHECK(size <= len_);
+    CHECK(size > 1);
     nodes_.resize(size);
     len_ = nodes().size();
-    return true;
   }
 
  private:

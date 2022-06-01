@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "glog/logging.h"
-#include "oneflow/api/python/env/env.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"

@@ -17,7 +17,7 @@ import os
 
 from collections import OrderedDict
 
-import oneflow
+import oneflow.boxing.nccl as nccl_config
 from oneflow.nn.graph.optimizer import OptDict
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 
@@ -122,9 +122,9 @@ class GraphConfig(object):
             self.proto.optimizer_placement_optimization_threshold = shard_min_size
             self.proto.optimizer_placement_optimization_shard_restore_level = shard_restore_level
         if stage >= 2:
-            oneflow.boxing.nccl.enable_use_compute_stream(True)
+            nccl_config.enable_use_compute_stream(True)
         if stage >= 3:
-            oneflow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
+            nccl_config.disable_group_boxing_by_dst_parallel(True)
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
