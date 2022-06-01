@@ -31,7 +31,7 @@ class StreamMgr final {
 
   Maybe<Symbol<Stream>> AddStreamSymbol(
       const Stream& stream,
-      std::function<Maybe<Symbol<Stream>>(size_t unique_stream_id)> CreateStreamSymbol);
+      const std::function<Maybe<Symbol<Stream>>(size_t unique_stream_id)>& CreateStreamSymbol);
 
   size_t UniqueStreamSize() const;
 

@@ -22,7 +22,7 @@ namespace oneflow {
 
 Maybe<Symbol<Stream>> StreamMgr::AddStreamSymbol(
     const Stream& stream,
-    std::function<Maybe<Symbol<Stream>>(size_t unique_stream_id)> CreateStreamSymbol) {
+    const std::function<Maybe<Symbol<Stream>>(size_t unique_stream_id)>& CreateStreamSymbol) {
   Symbol<Stream> stream_symbol;
   std::unique_lock<std::mutex> lock(mutex_);
   if (stream2unique_stream_id_.count(stream) > 0) {
