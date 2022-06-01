@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from os import abort
 import sys
 from collections import OrderedDict
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
