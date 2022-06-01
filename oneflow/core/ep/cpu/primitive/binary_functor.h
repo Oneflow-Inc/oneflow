@@ -23,14 +23,14 @@ namespace broadcast_elementwise_binary {
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, Src, Dst> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return std::pow(src0, src1); }
 };
 
 template<>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, float16, float16> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float16 operator()(float16 src0, float16 src1) const {
     return static_cast<float16>(std::pow(static_cast<float>(src0), static_cast<float>(src1)));
@@ -39,7 +39,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, float16, float16> {
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
     return static_cast<Dst>(
@@ -53,7 +53,7 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst>
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
     Src tanh_val = std::tanh(src0);

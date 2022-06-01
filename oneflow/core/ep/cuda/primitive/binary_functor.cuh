@@ -23,14 +23,14 @@ namespace broadcast_elementwise_binary {
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, Src, Dst> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return pow(src0, src1); }
 };
 
 template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, bool, bool> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC bool operator()(bool src0, bool src1) const {
     return static_cast<bool>(pow(static_cast<double>(src0), static_cast<double>(src1)));
@@ -39,7 +39,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, bool, bool> {
 
 template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, half, half> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC half operator()(half src0, half src1) const {
     return static_cast<half>(pow(static_cast<float>(src0), static_cast<float>(src1)));
@@ -48,7 +48,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, half, half> {
 
 template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kGeluBackwardWithDyX, Src, Dst> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
     return static_cast<Src>(0.5)
@@ -61,7 +61,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kGeluBackwardWithDyX, Src, Dst
 
 template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, float, float> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC float operator()(float src0, float src1) const {
     float tanh_val = tanhf(src0);
@@ -71,7 +71,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, float, f
 
 template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, double, double> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC double operator()(double src0, double src1) const {
     double tanh_val = tanh(src0);
@@ -83,7 +83,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, double, 
 
 template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, nv_bfloat16, nv_bfloat16> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC nv_bfloat16 operator()(nv_bfloat16 src0, nv_bfloat16 src1) const {
     return static_cast<nv_bfloat16>(pow(static_cast<float>(src0), static_cast<float>(src1)));
@@ -94,7 +94,7 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kPow, nv_bfloat16, nv_bfloat16
 
 template<>
 struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kReluBackwardWithDyY, half, half> {
-  BinaryFunctor(Scalar attr0, Scalar attr1) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   __device__ half operator()(half src0, half src1) const {
     half zero = __float2half(0.0);
@@ -106,15 +106,15 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kReluBackwardWithDyY, half, ha
   }
 };
 
-#define SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(op)                             \
-  template<>                                                                      \
-  struct BinaryFunctor<DeviceType::kCUDA, op, half, half> {                       \
-    BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {}    \
-                                                                                  \
-    BinaryFunctor<DeviceType::kCUDA, op, float, float> float_functor;             \
-    OF_DEVICE_FUNC half operator()(half src0, half src1) const {                  \
-      return __float2half(float_functor(__half2float(src0), __half2float(src1))); \
-    }                                                                             \
+#define SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(op)                                         \
+  template<>                                                                                  \
+  struct BinaryFunctor<DeviceType::kCUDA, op, half, half> {                                   \
+    OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : float_functor(attr0, attr1) {} \
+                                                                                              \
+    BinaryFunctor<DeviceType::kCUDA, op, float, float> float_functor;                         \
+    OF_DEVICE_FUNC half operator()(half src0, half src1) const {                              \
+      return __float2half(float_functor(__half2float(src0), __half2float(src1)));             \
+    }                                                                                         \
   };
 
 SPECIALIZATION_PSEUDO_HALF_BINARY_FUNCTOR(BinaryOp::kEluBackwardWithDyX);
