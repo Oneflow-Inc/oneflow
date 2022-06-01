@@ -579,7 +579,7 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x = flow.arange(1., 8)
+        >>> x = flow.arange(1, 8)
         >>> x
         tensor([1, 2, 3, 4, 5, 6, 7], dtype=oneflow.int64)
         >>> x.unfold(0, 2, 1)
