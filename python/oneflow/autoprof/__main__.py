@@ -50,7 +50,7 @@ def get_oneflow_cpu_kernel_time(prof) -> Union[str, float]:
     cpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
     if len(cpu_kernel_items) == 0:
         return "-"
-    kernel_cpu_time = sum(map(lambda x: x.time_total, cpu_kernel_items)) / prof.num
+    kernel_cpu_time = sum(map(lambda x: x.cpu_time_total, cpu_kernel_items)) / prof.num
     return round(kernel_cpu_time, 1)
 
 
@@ -70,7 +70,7 @@ def get_oneflow_gpu_kernel_time(prof) -> Union[str, float]:
     )
     if len(gpu_kernel_items) == 0:
         return "-"
-    kernel_gpu_time = sum(map(lambda x: x.time_total, gpu_kernel_items)) / prof.num
+    kernel_gpu_time = sum(map(lambda x: x.gpu_time_total, gpu_kernel_items)) / prof.num
     return round(kernel_gpu_time, 1)
 
 
@@ -87,7 +87,7 @@ def get_oneflow_cpu_end_to_end_time(prof) -> float:
         filter(lambda x: x.name == auto_profiler.END_TO_END, prof.key_averages())
     )[0]
     assert total.count == 1
-    return round(total.time / prof.num, 1)
+    return round(total.cpu_time / prof.num, 1)
 
 
 def print_summary_from_csv() -> None:
