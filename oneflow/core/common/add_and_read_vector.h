@@ -16,11 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_ADD_AND_READ_VECTOR_H_
 #define ONEFLOW_CORE_COMMON_ADD_AND_READ_VECTOR_H_
 
-#include <vector>
-#include <array>
+#include <deque>
+#include <atomic>
 #include <mutex>
-#include <cmath>
-#include <glog/logging.h>
 
 namespace oneflow {
 
@@ -28,51 +26,31 @@ namespace oneflow {
 template<typename T, int N = 20>
 class AddAndReadVector {
  public:
-  AddAndReadVector() : granularity_(0) {}
+  AddAndReadVector() {}
   ~AddAndReadVector() = default;
 
   using value_type = T;
   using size_type = size_t;
 
   // not thread safe.
-  size_t size() const { return granularity2vector_[granularity_].size(); }
+  typename std::deque<T>::size_type size() const { return size_; }
 
   // lock free.
-  const T& at(size_t index) const {
-    CHECK_GE(index, 0);
-    int gran = std::log2(index * 2 + 1);
-    CHECK_LE(gran, granularity_);
-    return granularity2vector_[gran].at(index);
-  }
+  const T& at(size_t index) const { return data_.at(index); }
 
   // lock free.
-  T& at(size_t index) {
-    CHECK_GE(index, 0);
-    int gran = std::log2(index * 2 + 1);
-    CHECK_LE(gran, granularity_);
-    return granularity2vector_[gran].at(index);
-  }
+  T& at(size_t index) { return data_.at(index); }
 
   void push_back(const T& elem) {
     std::unique_lock<std::mutex> lock(mutex_);
-    if (granularity2vector_[granularity_].size() == (1 << granularity_)) {
-      int next_granularity = granularity_ + 1;
-      CHECK_LT(next_granularity, N);
-      granularity2vector_[next_granularity].reserve(1 << next_granularity);
-      granularity2vector_[next_granularity] = granularity2vector_[granularity_];
-      granularity_ = next_granularity;
-    } else if (granularity2vector_[granularity_].size() > (1 << granularity_)) {
-      LOG(FATAL) << "fatal bug in AddAndReadVector::EmplaceBack";
-    } else {
-      // do nothing
-    }
-    granularity2vector_[granularity_].push_back(elem);
+    data_.push_back(elem);
+    size_ = data_.size();
   }
 
  private:
-  std::atomic<int> granularity_;
+  std::atomic<typename std::deque<T>::size_type> size_;
   std::mutex mutex_;
-  std::array<std::vector<T>, N> granularity2vector_;
+  std::deque<T> data_;
 };
 
 }  // namespace oneflow
