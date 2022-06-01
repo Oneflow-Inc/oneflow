@@ -94,20 +94,27 @@ def seq_to_func_return(seq, need_unpack=False):
         return seq[0]
     return seq
 
+
 class IOArgs(object):
-    def __init__(self, io_args: Union[Tuple, List, Dict], gen_name: bool = False, root_prefix:str = "", root_name:str = None) -> None:
+    def __init__(
+        self,
+        io_args: Union[Tuple, List, Dict],
+        gen_name: bool = False,
+        root_prefix: str = "",
+        root_name: str = None,
+    ) -> None:
         assert (
             isinstance(io_args, dict)
             or isinstance(io_args, tuple)
             or isinstance(io_args, list)
         ), "input/output arguments must be one of those types"
 
-        self._io_args = io_args 
+        self._io_args = io_args
         self._gen_name = gen_name
         self._root_prefix = root_prefix
-        self._root_name = root_name 
-        self._named_io_args = None 
-        self._flattened_named_args = None 
+        self._root_name = root_name
+        self._named_io_args = None
+        self._flattened_named_args = None
 
         if self._gen_name:
             self._named_io_args = self._construct_named_io_args()
@@ -124,13 +131,14 @@ class IOArgs(object):
         iuput = [1, {key: "value" }] will be constructed into: 
             input_args = NamedIOArg([NamedIOArg(1), NamedIOArg({key: NamedIOArg("value")})])
         """
-        def __init__(self, prefix = "", name = None, global_index = 0) -> None:
+
+        def __init__(self, prefix="", name=None, global_index=0) -> None:
             self._name = name if name is not None else str(global_index)
             self._prefix = prefix
             self._global_index = global_index
             self._is_value_set = False
             self._value = None
-        
+
         def prefix(self):
             return self._prefix
 
@@ -188,7 +196,7 @@ class IOArgs(object):
                 repr_str += ", value: " + repr(self._value)
             repr_str += ")"
             return repr_str
-        
+
     def _construct_named_io_args(self):
         global_index = 0
         flattended_named_args = []
@@ -196,7 +204,7 @@ class IOArgs(object):
         def construct(value, prefix: str, name: str) -> IOArgs.NamedIOArg:
             nonlocal global_index
             nonlocal flattended_named_args
-    
+
             arg = IOArgs.NamedIOArg(prefix, name, global_index)
             flattended_named_args.append((arg.prefix() + "_" + arg.name(), arg))
             global_index += 1
@@ -240,7 +248,7 @@ class IOArgs(object):
         Map the leaf of the IO arguments into map_function(leaf).
         """
         assert map_function != None, "map function cannot be None"
-        
+
         if self._gen_name:
             args_to_map = self._named_io_args
         else:
@@ -264,4 +272,3 @@ class IOArgs(object):
             return mapped_value
 
         return execute_mapping(args_to_map)
-        

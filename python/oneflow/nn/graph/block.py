@@ -195,13 +195,17 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        io_args = IOArgs((args, kwargs), True, "_" + self.name_prefix + self.name + "_input", None)
-       
+        io_args = IOArgs(
+            (args, kwargs), True, "_" + self.name_prefix + self.name + "_input", None
+        )
+
         for (name, arg) in io_args.flattened_named_args():
             if arg.is_leaf():
                 arg_value = arg.value()
                 meta_repr_str = (
-                    arg_value._meta_repr() if isinstance(arg_value, Tensor) else str(type(arg_value))
+                    arg_value._meta_repr()
+                    if isinstance(arg_value, Tensor)
+                    else str(type(arg_value))
                 )
                 in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg_value, Tensor):
@@ -234,13 +238,17 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        io_args = IOArgs((outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None)
-   
+        io_args = IOArgs(
+            (outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None
+        )
+
         for (name, arg) in io_args.flattened_named_args():
             if arg.is_leaf():
                 arg_value = arg.value()
                 meta_repr_str = (
-                    arg_value._meta_repr() if isinstance(arg_value, Tensor) else str(type(arg_value))
+                    arg_value._meta_repr()
+                    if isinstance(arg_value, Tensor)
+                    else str(type(arg_value))
                 )
                 out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
                 if not isinstance(arg_value, Tensor):
@@ -332,8 +340,13 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_args = IOArgs((args, kwargs), True, "_" + self.name_prefix + self.name + "_" + io_type, None)
-     
+        io_args = IOArgs(
+            (args, kwargs),
+            True,
+            "_" + self.name_prefix + self.name + "_" + io_type,
+            None,
+        )
+
         def leaf_node_fn(leaf_node):
             arg = leaf_node.value()
             name = leaf_node.prefix() + "_" + leaf_node.name()

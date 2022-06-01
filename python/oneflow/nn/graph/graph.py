@@ -1182,7 +1182,7 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        io_args = IOArgs( (args, kwargs), True, "_" + self.name + "_" + io_type, None)
+        io_args = IOArgs((args, kwargs), True, "_" + self.name + "_" + io_type, None)
 
         def leaf_arg_fn(arg):
             arg_value = arg.value()
@@ -1200,8 +1200,8 @@ class Graph(object):
 
     def __flatten_io(self, io_type, *args, **kwargs):
         flattened_args = []
-        io_args = IOArgs( (args, kwargs), True, "_" + self.name + "_" + io_type, None)
-       
+        io_args = IOArgs((args, kwargs), True, "_" + self.name + "_" + io_type, None)
+
         for (_, arg) in io_args.flattened_named_args():
             if isinstance(arg.value(), Tensor):
                 flattened_args.append(arg.value())
@@ -1352,15 +1352,14 @@ class Graph(object):
         oneflow._oneflow_internal.eager.Sync()
 
     def __ensure_input_tensors_contiguous(self, *args, **kwargs):
-        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + "input")
+        io_args = IOArgs((args, kwargs), False)
 
-        def leaf_node_fn(node):
-            if isinstance(node._value, Tensor) and not node._value.is_contiguous():
-                node._value.contiguous_()
-            return node
+        def func(value):
+            if isinstance(value, Tensor) and not value.is_contiguous():
+                value.contiguous_()
+            return value
 
-        io_node.map_leaf(leaf_node_fn)
-
+        io_args.map_leaf(func)
 
 if __name__ == "__main__":
     import doctest
