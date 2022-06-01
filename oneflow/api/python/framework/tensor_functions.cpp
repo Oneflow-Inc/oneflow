@@ -301,10 +301,12 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
   auto shape = PyTensor_Unpack(self)->shape();
   if (idx_obj == NULL || idx_obj == Py_None) return TensorSize_NewFromShape(*shape);
   int64_t idx = PyLong_AsLongLong(idx_obj);
-  CHECK_OR_THROW(idx >= -shape->NumAxes() && idx < shape->NumAxes())
-      << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-      << -shape->NumAxes() << ", " << shape->NumAxes() - 1 << "], but got " << idx << ")";
-  idx = idx < 0 ? idx + shape->NumAxes() : idx;
+  int64_t ndim = shape->NumAxes();
+
+  CHECK_OR_THROW(idx >= -ndim && idx < ndim)
+      << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+      << ", " << ndim - 1 << "], but got " << idx << ")";
+  idx = idx < 0 ? idx + ndim : idx;
   return PyLong_FromLongLong(shape->At(idx));
   END_HANDLE_ERRORS
 }
