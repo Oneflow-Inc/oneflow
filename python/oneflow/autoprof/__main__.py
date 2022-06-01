@@ -17,53 +17,64 @@ import atexit
 import csv
 import unittest
 import os
+from typing import Iterable, Union, TypeVar
+
+import prettytable
+from prettytable import PrettyTable
 
 import oneflow.test_utils.automated_test_util.profiler as auto_profiler
 
 
-def get_sole_value(x):
+T = TypeVar("T")
+
+
+def get_sole_value(x: Iterable[T]) -> T:
     s = set(x)
     assert len(s) == 1
     return list(s)[0]
 
 
-def get_pytorch_cpu_kernel_time(prof):
+def get_pytorch_cpu_kernel_time(prof) -> Union[str, float]:
     assert prof.num > 1
     cpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
-    assert len(cpu_kernel_items) > 0
+    if len(cpu_kernel_items) == 0:
+        return "-"
     kernel_cpu_time = (
         sum(map(lambda x: x.self_cpu_time_total, cpu_kernel_items)) / prof.num
     )
     return round(kernel_cpu_time, 1)
 
 
-def get_oneflow_cpu_kernel_time(prof):
+def get_oneflow_cpu_kernel_time(prof) -> Union[str, float]:
     assert prof.num > 1
     cpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
-    assert len(cpu_kernel_items) > 0
-    kernel_cpu_time = sum(map(lambda x: x.time_total, cpu_kernel_items)) / prof.num
+    if len(cpu_kernel_items) == 0:
+        return "-"
+    kernel_cpu_time = sum(map(lambda x: x.cpu_time_total, cpu_kernel_items)) / prof.num
     return round(kernel_cpu_time, 1)
 
 
-def get_pytorch_gpu_kernel_time(prof):
+def get_pytorch_gpu_kernel_time(prof) -> Union[str, float]:
     gpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
-    assert len(gpu_kernel_items) > 0
+    if len(gpu_kernel_items) == 0:
+        return "-"
     kernel_gpu_time = (
         sum(map(lambda x: x.self_cuda_time_total, gpu_kernel_items)) / prof.num
     )
     return round(kernel_gpu_time, 1)
 
 
-def get_oneflow_gpu_kernel_time(prof):
+def get_oneflow_gpu_kernel_time(prof) -> Union[str, float]:
     gpu_kernel_items = list(
         filter(lambda x: x.event_type == 1 and x.on_gpu, prof.key_averages())
     )
-    assert len(gpu_kernel_items) > 0
-    kernel_gpu_time = sum(map(lambda x: x.time_total, gpu_kernel_items)) / prof.num
+    if len(gpu_kernel_items) == 0:
+        return "-"
+    kernel_gpu_time = sum(map(lambda x: x.gpu_time_total, gpu_kernel_items)) / prof.num
     return round(kernel_gpu_time, 1)
 
 
-def get_pytorch_cpu_end_to_end_time(prof):
+def get_pytorch_cpu_end_to_end_time(prof) -> float:
     total = get_sole_value(
         filter(lambda x: x.key == auto_profiler.END_TO_END, prof.key_averages())
     )
@@ -71,13 +82,38 @@ def get_pytorch_cpu_end_to_end_time(prof):
     return round(total.cpu_time / prof.num, 1)
 
 
-def get_oneflow_cpu_end_to_end_time(prof):
+def get_oneflow_cpu_end_to_end_time(prof) -> float:
     total = list(
         filter(lambda x: x.name == auto_profiler.END_TO_END, prof.key_averages())
     )[0]
     assert total.count == 1
-    return round(total.time / prof.num, 1)
+    return round(total.cpu_time / prof.num, 1)
 
+
+def print_summary_from_csv() -> None:
+    print("----------------------------------------------------------------------")
+    print('Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time"):')
+    with open(csv_filename, "r") as f:
+        table: PrettyTable = prettytable.from_csv(f)
+        table.field_names = [
+            "OP",
+            "Args",
+            "Lib",
+            "KT(GPU)",
+            "KT(1 CPU)",
+            "ET(1 CPU)",
+            "KT(32 CPU)",
+            "ET(32 CPU)",
+            "Desc",
+        ]
+        for row in table.rows:
+            row[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row[2]]
+        table.del_column("Desc")
+        print(table)
+
+
+# all functions registered are called in last in, first out order
+atexit.register(print_summary_from_csv)
 
 csv_filename = os.getenv("ONEFLOW_PROFILE_CSV", "op_prof")
 
@@ -91,22 +127,18 @@ writer.writerow(
     [
         "OP",
         "Args",
-        "Description",
         "Library",
         "Kernel Time (us, GPU)",
-        "Kernel Time (us, CPU N=1)",
-        "Total Time (us, CPU N=1)",
-        "Kernel Time (us, CPU N=8)",
-        "Total Time (us, CPU N=8)",
-        "Kernel Time (us, CPU N=32)",
-        "Total Time (us, CPU N=32)",
+        "Kernel Time (us, 1 CPU)",
+        "End-to-end Time (us, 1 CPU)",
+        "Kernel Time (us, 32 CPUs)",
+        "End-to-end Time (us, 32 CPUs)",
+        "Description",
     ]
 )
 
 
-auto_profiler.set_hardware_info_list(
-    [("cuda", None), ("cpu", 1), ("cpu", 8), ("cpu", 32)]
-)
+auto_profiler.set_hardware_info_list([("cuda", None), ("cpu", 1), ("cpu", 32)])
 
 
 def add_row(profs):
@@ -119,30 +151,26 @@ def add_row(profs):
         [
             op_name,
             args_description,
-            additional_description,
             "OneFlow",
             get_oneflow_gpu_kernel_time(profs[0]),
             get_oneflow_cpu_kernel_time(profs[1]),
             get_oneflow_cpu_end_to_end_time(profs[1]),
             get_oneflow_cpu_kernel_time(profs[2]),
             get_oneflow_cpu_end_to_end_time(profs[2]),
-            get_oneflow_cpu_kernel_time(profs[3]),
-            get_oneflow_cpu_end_to_end_time(profs[3]),
+            additional_description,
         ]
     )
     writer.writerow(
         [
             op_name,
             args_description,
-            additional_description,
             "PyTorch",
-            get_pytorch_gpu_kernel_time(profs[4]),
+            get_pytorch_gpu_kernel_time(profs[3]),
+            get_pytorch_cpu_kernel_time(profs[4]),
+            get_pytorch_cpu_end_to_end_time(profs[4]),
             get_pytorch_cpu_kernel_time(profs[5]),
             get_pytorch_cpu_end_to_end_time(profs[5]),
-            get_pytorch_cpu_kernel_time(profs[6]),
-            get_pytorch_cpu_end_to_end_time(profs[6]),
-            get_pytorch_cpu_kernel_time(profs[7]),
-            get_pytorch_cpu_end_to_end_time(profs[7]),
+            additional_description,
         ]
     )
     f.flush()

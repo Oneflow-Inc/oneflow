@@ -160,6 +160,13 @@ void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
   if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, new_mode_)); }
 }
 
+void CudaSynchronize(int device_id) {
+  CudaCurrentDeviceGuard dev_guard(device_id);
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+}
+
+void SetCudaDeviceIndex(int device_id) { OF_CUDA_CHECK(cudaSetDevice(device_id)); }
+
 int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetCudaDeviceCount() {
