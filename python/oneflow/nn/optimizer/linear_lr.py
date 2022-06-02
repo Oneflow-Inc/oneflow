@@ -80,7 +80,7 @@ class LinearLR(LRScheduler):
                 step / self.total_iters
             )
         else:
-            multiplier = 1
+            multiplier = self.end_factor
 
         return base_lr * multiplier
 
