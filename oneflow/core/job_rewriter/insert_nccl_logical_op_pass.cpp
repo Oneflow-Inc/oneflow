@@ -218,6 +218,18 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                .Build()
                .op_conf();
     return true;
+  } else if (!dst_sbp.has_partial_sum_parallel()) {
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(Send)2(Recv)-"
+                                             + NewUniqueId())
+               .Op("_nccl_logical_send_recv")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<std::vector<std::string>>("src_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_nd_sbp", {SbpToString(dst_sbp)})
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
   }
   return false;
 }
@@ -503,7 +515,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
+          VLOG(2) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
                   << ", order=" << src_order << ", sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi))
                   << "] to [" << dst_op_name << ", order=" << node2subgraph_order.at(dst_node)
                   << ", sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << "] and before ["
@@ -569,7 +581,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
+          VLOG(2) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
                   << ", order=" << node2subgraph_order.at(src_node) << "] to [" << dst_op_name
                   << ", order=" << dst_order << "] and after [" << pre_op_name
                   << ", order=" << dst_order - 1 << "]\n";
