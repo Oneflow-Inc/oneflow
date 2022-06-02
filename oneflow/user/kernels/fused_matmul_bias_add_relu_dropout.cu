@@ -265,8 +265,8 @@ cudaError_t LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
     }
   } else {
     if (cols % 4 == 0) {
-      // Padding cols to align 32.
-      const int64_t align32_cols = (cols + 32 - 1) / 32 * 32;
+      // Padding cols to align kWarpSize.
+      const int64_t align32_cols = (cols + kWarpSize - 1) / kWarpSize * kWarpSize;
       const int64_t align32_elem_cnt = rows * align32_cols;
       if (align32_elem_cnt < GetMaxVal<int32_t>()) {
         grid_size =
@@ -289,7 +289,7 @@ cudaError_t LaunchFusedReluDropoutKernel(ep::CudaStream* stream, uint64_t seed,
       }
     } else {
       // Process a row by using a warp.
-      dim3 block_dim(32, 8);
+      dim3 block_dim(kWarpSize, kBlockSize / kWarpSize);
       if (elem_cnt < GetMaxVal<int32_t>()) {
         grid_size = ComputeGridSize(stream, FusedWarpReluDropoutKernel<T, relu, int32_t>, elem_cnt,
                                     kBlockSize);
