@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
@@ -49,7 +50,6 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedCrossInteractionOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO add check
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("matmul_result", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
@@ -130,12 +130,51 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> FusedCrossInteractionV2GradOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO add check
   *ctx->OutputDType("dx_0", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dw", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dbias", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
+
+REGISTER_USER_OP_GRAD("fused_cross_interaction")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+      if (op.attr<std::string>("interaction_mode") == "vector") {
+        builder.Op("fused_cross_interaction_grad")
+            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+            .Input("weight", op.input("weight", 0))
+            .Input("x", op.input("x", 0))
+            .Input("x_0", op.input("x_0", 0))
+            .Input("matmul_result", op.output("x_0", 0));
+      } else if (op.attr<std::string>("interaction_mode") == "matrix") {
+        builder.Op("fused_cross_interaction_grad")
+            .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+            .Input("weight", op.input("weight", 0))
+            .Input("bias", op.input("bias", 0))
+            .Input("x", op.input("x", 0))
+            .Input("x_0", op.input("x_0", 0))
+            .Input("matmul_result", op.output("x_0", 0));
+      } else {
+        UNIMPLEMENTED();
+      }
+      builder.Output("dx", 0).Output("dw", 0).Output("dx_0", 0).Output("dbias", 0);
+      auto grad_op = builder.Build();
+      AddOp(grad_op);
+      if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
+      }
+      if (op.NeedGenGradTensor4OpInput("weight", 0)) {
+        op.BindGradTensorWithOpInput(grad_op.output("dw", 0), "weight", 0);
+      }
+      if (op.NeedGenGradTensor4OpInput("x_0", 0)) {
+        op.BindGradTensorWithOpInput(grad_op.output("dx_0", 0), "x_0", 0);
+      }
+      if (op.NeedGenGradTensor4OpInput("bias", 0)) {
+        op.BindGradTensorWithOpInput(grad_op.output("dbias", 0), "bias", 0);
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow
