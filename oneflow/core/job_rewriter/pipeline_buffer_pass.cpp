@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
@@ -261,12 +260,13 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
           continue; /* last stage(loss) does NOT need to insert buffer */
         }
         if (src_stage_id != dst_stage_id) {
-          LOG(WARNING) << " Cross diff stage link From: [" << src_node->op().op_conf().DebugString()
-                       << "](stage_id:" << std::to_string(src_stage_id) << ") -> ["
-                       << this_node->op().op_conf().DebugString()
-                       << "](stage_id:" << std::to_string(dst_stage_id)
-                       << "). Make sure to change the tensor's placment before it enter the module "
-                          "of a next pipeline stage.\n";
+          LOG(WARNING)
+              << " Cross diff stage link From: [" << src_node->op().op_conf().DebugString()
+              << "](stage_id:" << std::to_string(src_stage_id) << ") -> ["
+              << this_node->op().op_conf().DebugString()
+              << "](stage_id:" << std::to_string(dst_stage_id)
+              << "). Make sure to change the tensor's placement before it enter the module "
+                 "of a next pipeline stage.\n";
         }
         const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
         TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,

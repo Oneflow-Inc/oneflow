@@ -33,49 +33,48 @@ namespace functional {
 
 namespace detail {
 
-Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step) {
+void PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step) {
   PySliceObject* obj = (PySliceObject*)object;
   if (obj->step == Py_None) {
     *step = 1;
   } else {
-    CHECK_OR_RETURN(_PyEval_SliceIndex(obj->step, step))
-        << "Invalid slice " << *JUST(PyObjectToReprStr(object));
-    CHECK_NE_OR_RETURN(*step, 0) << "slice step cannot be zero.";
+    CHECK_OR_THROW(_PyEval_SliceIndex(obj->step, step))
+        << "Invalid slice " << PyObjectToReprStr(object);
+    CHECK_NE_OR_THROW(*step, 0) << "slice step cannot be zero.";
     if (*step < -PY_SSIZE_T_MAX) *step = -PY_SSIZE_T_MAX;
   }
   if (obj->start == Py_None) {
     *start = *step < 0 ? PY_SSIZE_T_MAX : 0;
   } else {
-    CHECK_OR_RETURN(_PyEval_SliceIndex(obj->start, start))
-        << "Invalid slice " << *JUST(PyObjectToReprStr(object));
+    CHECK_OR_THROW(_PyEval_SliceIndex(obj->start, start))
+        << "Invalid slice " << PyObjectToReprStr(object);
   }
   if (obj->stop == Py_None) {
     *stop = *step < 0 ? PY_SSIZE_T_MIN : PY_SSIZE_T_MAX;
   } else {
-    CHECK_OR_RETURN(_PyEval_SliceIndex(obj->stop, stop))
-        << "Invalid slice " << *JUST(PyObjectToReprStr(object));
+    CHECK_OR_THROW(_PyEval_SliceIndex(obj->stop, stop))
+        << "Invalid slice " << PyObjectToReprStr(object);
   }
-  return Maybe<void>::Ok();
 }
 
-Maybe<DataType> InferScalarType(PyObject* object) {
+DataType InferScalarType(PyObject* object) {
   if (PyBool_Check(object)) {
     return DataType::kBool;
   } else if (PyLong_Check(object)) {
     return DataType::kInt64;
   } else if (PyArray_Check(object)) {
-    return numpy::GetOFDataTypeFromNpArray(reinterpret_cast<PyArrayObject*>(object));
+    return numpy::GetOFDataTypeFromNpArray(reinterpret_cast<PyArrayObject*>(object)).GetOrThrow();
   } else if (PyArray_CheckScalar(object)) {
-    return numpy::NumpyTypeToOFDataType(PyArray_DescrFromScalar(object)->type_num);
+    return numpy::NumpyTypeToOFDataType(PyArray_DescrFromScalar(object)->type_num).GetOrThrow();
   } else if (PySequence_Check(object)) {
     int64_t length = PySequence_Length(object);
-    CHECK_GT_OR_RETURN(length, 0) << "Index should not be empty.";
+    CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
     DataType scalar_type = DataType::kInvalidDataType;
     for (int64_t i = 0; i < length; ++i) {
       PyObjectPtr item(PySequence_GetItem(object, i));
-      const auto& item_scalar_type = JUST(InferScalarType(item.get()));
+      const auto& item_scalar_type = InferScalarType(item.get());
       if (scalar_type != DataType::kInvalidDataType) {
-        CHECK_EQ_OR_RETURN(scalar_type, item_scalar_type)
+        CHECK_EQ_OR_THROW(scalar_type, item_scalar_type)
             << "Different scalar types are not allowed.";
       } else {
         scalar_type = item_scalar_type;
@@ -83,53 +82,51 @@ Maybe<DataType> InferScalarType(PyObject* object) {
     }
     return scalar_type;
   }
-  UNIMPLEMENTED_THEN_RETURN() << "Can't infer scalar type of " << Py_TYPE(object)->tp_name;
+  THROW(TypeError) << "Can't infer scalar type of " << Py_TYPE(object)->tp_name;
+  return DataType::kInvalidDataType;
 }
 
-Maybe<void> ParseScalar(PyObject* object, char* data, const DataType& dtype) {
+void ParseScalar(PyObject* object, char* data, const DataType& dtype) {
   if (dtype == DataType::kInt64) {
-    CHECK_OR_RETURN(PyLong_Check(object) || numpy::PyArrayCheckLongScalar(object))
+    CHECK_OR_THROW(PyLong_Check(object) || numpy::PyArrayCheckLongScalar(object))
         << "Expected a long value.";
     *(reinterpret_cast<int64_t*>(data)) = PyLong_AsLongLong(object);
-    return Maybe<void>::Ok();
   } else if (dtype == DataType::kInt32) {
-    CHECK_OR_RETURN(PyLong_Check(object) || numpy::PyArrayCheckLongScalar(object))
+    CHECK_OR_THROW(PyLong_Check(object) || numpy::PyArrayCheckLongScalar(object))
         << "Expected a long value.";
     *(reinterpret_cast<int32_t*>(data)) = PyLong_AsLongLong(object);
-    return Maybe<void>::Ok();
   } else if (dtype == DataType::kUInt8 || dtype == DataType::kBool) {
-    CHECK_OR_RETURN(PyBool_Check(object) || PyLong_Check(object)
-                    || numpy::PyArrayCheckLongScalar(object))
+    CHECK_OR_THROW(PyBool_Check(object) || PyLong_Check(object)
+                   || numpy::PyArrayCheckLongScalar(object))
         << "Expected a boolean or long value.";
     if (PyBool_Check(object) || numpy::PyArrayCheckBoolScalar(object)) {
       *(reinterpret_cast<bool*>(data)) = (object == Py_True);
     } else {
       int64_t value = PyLong_AsLongLong(object);
-      CHECK_OR_RETURN(value >= 0 && value <= 255) << "Out of range 0-255.";
-      *(reinterpret_cast<uint8_t*>(data)) = value;
+      CHECK_OR_THROW(value >= 0 && value <= 255) << "Out of range 0-255.";
+      *(reinterpret_cast<uint8_t*>(data)) = static_cast<uint8_t>(value);
     }
-    return Maybe<void>::Ok();
+  } else {
+    THROW(TypeError) << "Can't parse scalar with data type " << dtype;
   }
-  UNIMPLEMENTED_THEN_RETURN() << "Can't parse scalar with data type " << dtype;
 }
 
-Maybe<void> RecursiveParseAndAssign(PyObject* object, char* data, const int& ndims, const int& dim,
-                                    const ShapeView& shape, const DimVector& strides,
-                                    const DataType& dtype) {
+void RecursiveParseAndAssign(PyObject* object, char* data, const int& ndims, const int& dim,
+                             const ShapeView& shape, const DimVector& strides,
+                             const DataType& dtype) {
   if (dim == ndims) { return ParseScalar(object, data, dtype); }
   auto seq = PyObjectPtr(PySequence_Fast(object, "Expected a sequence."));
   int64_t size = PySequence_Fast_GET_SIZE(seq.get());
-  CHECK_EQ_OR_RETURN(size, shape.At(dim)) << "Sequence size is " << size << " at dimemsion " << dim
-                                          << ", but expected " << shape.At(dim);
+  CHECK_EQ_OR_THROW(size, shape.At(dim)) << "Sequence size is " << size << " at dimemsion " << dim
+                                         << ", but expected " << shape.At(dim);
   for (int64_t i = 0; i < size; ++i) {
     PyObject* item = PySequence_Fast_GET_ITEM(seq.get(), i);
-    JUST(RecursiveParseAndAssign(item, data, ndims, dim + 1, shape, strides, dtype));
+    RecursiveParseAndAssign(item, data, ndims, dim + 1, shape, strides, dtype);
     data += strides.at(dim) * GetSizeOfDataType(dtype);
   }
-  return Maybe<void>::Ok();
 }
 
-Maybe<void> ParseArrayToBlob(PyObject* object, Blob* blob) {
+void ParseArrayToBlob(PyObject* object, Blob* blob) {
   const DataType dtype = blob->data_type();
   const int ndims = blob->shape().NumAxes();
   DimVector strides(ndims);
@@ -138,30 +135,28 @@ Maybe<void> ParseArrayToBlob(PyObject* object, Blob* blob) {
     strides[i] = size;
     size *= blob->shape().At(i);
   }
-  JUST(RecursiveParseAndAssign(object, blob->mut_dptr<char>(), ndims, 0, blob->shape(), strides,
-                               dtype));
-  return Maybe<void>::Ok();
+  RecursiveParseAndAssign(object, blob->mut_dptr<char>(), ndims, 0, blob->shape(), strides, dtype);
 }
 
-Maybe<Shape> InferArraySizes(PyObject* object) {
+Shape InferArraySizes(PyObject* object) {
   DimVector sizes;
   PyObject* seq = object;
   PyObjectPtr handle;
   while (PySequence_Check(seq)) {
     int64_t length = PySequence_Length(seq);
-    CHECK_GT_OR_RETURN(length, 0) << "Index should not be empty.";
+    CHECK_GT_OR_THROW(length, 0) << "Index should not be empty.";
     sizes.emplace_back(length);
-    CHECK_LE_OR_RETURN(sizes.size(), /*MAX_DIMS=*/128)
+    CHECK_LE_OR_THROW(sizes.size(), /*MAX_DIMS=*/128)
         << "Too many dimensions " << Py_TYPE(seq)->tp_name;
     if (length == 0) break;
     handle = PyObjectPtr(PySequence_GetItem(seq, 0));
     seq = handle.get();
   }
-  return std::make_shared<Shape>(sizes);
+  return Shape(sizes);
 }
 
 Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
-  const DataType dtype = JUST(InferScalarType(object));
+  const DataType dtype = InferScalarType(object);
   const auto& device = JUST(Device::New("cpu"));
 
   // index type must be integers
@@ -170,10 +165,13 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
                                   "(`None`) and integer or boolean arrays are valid indices";
   }
   // In advanced indexing condition, index can be array object, need to handle it specially.
-  if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false); }
+  if (PyArray_Check(object)) {
+    return TensorWithData(object, NullOpt, device, false, /*pin_memory=*/false);
+  }
 
-  const auto& sizes = JUST(InferArraySizes(object));
-  const auto& tensor = JUST(functional::Empty(*sizes, CHECK_JUST(DType::Get(dtype)), device));
+  const auto& sizes = InferArraySizes(object);
+  const auto& tensor =
+      JUST(functional::Empty(sizes, CHECK_JUST(DType::Get(dtype)), device, /*pin_memory=*/false));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));
@@ -184,7 +182,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
           CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-            JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
+            ParseArrayToBlob(handle.get(), of_blob->mut_blob());
             return Maybe<void>::Ok();
           }));
         },
@@ -193,28 +191,28 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   return tensor;
 }
 
-Maybe<IndexItem> UnpackIndexItem(PyObject* object) {
+IndexItem UnpackIndexItem(PyObject* object) {
   if (object == Py_Ellipsis) {
-    return std::make_shared<IndexItem>(EllipsisIndex{});
+    return IndexItem(EllipsisIndex{});
   } else if (PySlice_Check(object)) {
     Py_ssize_t start, end, step;
-    JUST(PySliceUnpack(object, &start, &end, &step));
-    return std::make_shared<IndexItem>(start, end, step);
+    PySliceUnpack(object, &start, &end, &step);
+    return IndexItem(start, end, step);
   } else if (PyLong_Check(object) && object != Py_False && object != Py_True) {
-    return std::make_shared<IndexItem>(static_cast<int64_t>(PyLong_AsLongLong(object)));
+    return IndexItem(static_cast<int64_t>(PyLong_AsLongLong(object)));
   } else if (numpy::PyArrayCheckLongScalar(object)) {
-    return std::make_shared<IndexItem>(static_cast<int64_t>(PyLong_AsLongLong(object)));
+    return IndexItem(static_cast<int64_t>(PyLong_AsLongLong(object)));
   } else if (object == Py_False || object == Py_True) {
-    return std::make_shared<IndexItem>(object == Py_True);
+    return IndexItem(object == Py_True);
   } else if (object == Py_None) {
-    return std::make_shared<IndexItem>(NoneIndex{});
-  } else if (PyTensorCheck(object)) {
-    auto obj = py::reinterpret_borrow<py::object>(object);
-    return std::make_shared<IndexItem>(py::cast<std::shared_ptr<Tensor>>(obj));
+    return IndexItem(NoneIndex{});
+  } else if (PyTensor_Check(object)) {
+    return IndexItem(PyTensor_Unpack(object));
   } else if (PySequence_Check(object)) {
-    return std::make_shared<IndexItem>(JUST(ConvertToIndexingTensor(object)));
+    return IndexItem(ConvertToIndexingTensor(object).GetPtrOrThrow());
   }
-  UNIMPLEMENTED_THEN_RETURN() << "Invalid index of " << Py_TYPE(object)->tp_name;
+  THROW(TypeError) << "Invalid index " << Py_TYPE(object)->tp_name;
+  return IndexItem();
 }
 
 }  // namespace detail

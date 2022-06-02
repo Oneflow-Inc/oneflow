@@ -16,11 +16,11 @@ limitations under the License.
 from google.protobuf import text_format
 
 import oneflow
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.core.common.data_type_pb2 as dtype_util
 import oneflow.core.common.error_pb2 as error_util
 import oneflow.core.job.env_pb2 as env_pb2
 import oneflow.core.job.job_pb2 as job_pb
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.job_set_pb2 as job_set_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 import oneflow.core.job.resource_pb2 as resource_util
@@ -30,6 +30,7 @@ import oneflow.core.record.record_pb2 as record_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
+from oneflow.core.serving.saved_model_pb2 import SavedModel
 
 
 def CurrentResource():
@@ -68,11 +69,15 @@ def JobBuildAndInferCtx_Open(job_name):
 
 
 def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
-    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetJobConf(job_config_proto)
+    assert type(job_config_proto) is job_conf_pb.JobConfigProto, type(job_config_proto)
+    job_config_proto_str = text_format.MessageToString(job_config_proto)
+    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetJobConf(job_config_proto_str)
 
 
-def CurJobBuildAndInferCtx_SetTrainConf(train_config_cfg):
-    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetTrainConf(train_config_cfg)
+def CurJobBuildAndInferCtx_SetTrainConf(train_config):
+    assert type(train_config) is job_conf_pb.TrainConf
+    train_config_str = text_format.MessageToString(train_config)
+    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetTrainConf(train_config_str)
 
 
 def InferOpConf(op_conf_proto, upstream_signature):
@@ -207,13 +212,11 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     GetParallelConf = (
         oneflow._oneflow_internal.JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView
     )
-    parallel_conf = GetParallelConf(job_name, lbn)
-    parallel_conf = text_format.Parse(parallel_conf, placement_pb.ParallelConf())
-    parallel_conf_cfg = placement_cfg.ParallelConf()
-    parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
-    for device_name in parallel_conf.device_name:
-        parallel_conf_cfg.add_device_name(device_name)
-    return parallel_conf_cfg
+    serialized_parallel_conf = GetParallelConf(job_name, lbn)
+    parallel_conf = text_format.Parse(
+        serialized_parallel_conf, placement_pb.ParallelConf()
+    )
+    return parallel_conf
 
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
@@ -251,3 +254,11 @@ def GetCurrentJob():
     ret = job_pb.Job()
     ret.ParseFromString(serialized_job)
     return ret
+
+
+def LoadSavedModel(saved_model_meta_file, is_prototxt_file):
+    serialized_saved_model = oneflow._oneflow_internal.LoadSavedModel(
+        saved_model_meta_file, is_prototxt_file
+    )
+    saved_model = text_format.Parse(serialized_saved_model, SavedModel())
+    return saved_model

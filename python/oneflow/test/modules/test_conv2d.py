@@ -1850,6 +1850,26 @@ class TestConv2d(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest(check_graph=False)
+    def test_conv2d_0size_with_random_data(test_case):
+        channels = random(1, 6)
+        m = torch.nn.Conv2d(
+            in_channels=channels,
+            out_channels=random(1, 20),
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 5) | nothing(),
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=4, dim0=0, dim1=channels).to(device)
+        y = m(x)
+        return y
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(n=30, check_allclose=False)
     def test_conv2d_group_with_random_data(test_case):
@@ -1873,6 +1893,16 @@ class TestConv2d(flow.unittest.TestCase):
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
+
+    @profile(torch.nn.functional.conv2d)
+    def profile_conv2d(test_case):
+        input = torch.ones(8, 128, 28, 28)
+        weight = torch.ones(128, 128, 3, 3)
+        bias = torch.ones(128)
+        torch.nn.functional.conv2d(input, weight, padding=1)
+        torch.nn.functional.conv2d(input, weight, padding=1, stride=2)
+        torch.nn.functional.conv2d(input, weight, bias=bias, padding=1)
+        torch.nn.functional.conv2d(input, weight, bias=bias, padding=1, stride=2)
 
 
 if __name__ == "__main__":
