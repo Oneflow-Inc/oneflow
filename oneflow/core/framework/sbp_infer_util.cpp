@@ -541,7 +541,7 @@ double GetValidMaxCopyCost() {
 double GetTransferCost() {
   // Each transfer would have cost.
   // Except for same parallel description and sbp
-  static const double kTransferCost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e8);
+  static const double kTransferCost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e4);
   return kTransferCost;
 }
 
