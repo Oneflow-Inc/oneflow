@@ -3062,10 +3062,10 @@ class FillFunctor {
     JUST(CheckInplaceValid(in));
     MutableAttrMap attrs;
     if (IsFloatingDataType(in->dtype()->data_type())) {
-      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
     } else if (IsIntegralDataType(in->dtype()->data_type())) {
-      JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integral_value", value.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
