@@ -59,8 +59,8 @@ namespace oneflow {
 /*static*/ auto FusedScaleMaskSoftmaxDropoutOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   const user_op::TensorDesc& mask_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("mask", 0);
-  CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2);
   CHECK_EQ_OR_RETURN(x_tensor.shape().NumAxes(), mask_tensor.shape().NumAxes());
+  CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2);
   FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes() - 2) {
     // NOTE(chengcheng): mask support broadcast, when dim value = 1, sbp = broadcast
     if (mask_tensor.shape().At(axis) == 1) {
@@ -115,15 +115,27 @@ namespace oneflow {
 /*static*/ auto FusedScaleMaskSoftmaxDropoutGradOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
+  const user_op::TensorDesc& mask_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("mask", 0);
+  CHECK_EQ_OR_RETURN(dy_tensor.shape().NumAxes(), mask_tensor.shape().NumAxes());
   CHECK_GE_OR_RETURN(dy_tensor.shape().NumAxes(), 2);
   FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes() - 2) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("softmax_y", 0), axis)
-        .Split(user_op::OpArg("dy", 0), axis)
-        .Split(user_op::OpArg("mask", 0), axis)
-        .Split(user_op::OpArg("dropout_mask", 0), axis)
-        .Split(user_op::OpArg("dx", 0), axis)
-        .Build();
+    if (mask_tensor.shape().At(axis) == 1) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("softmax_y", 0), axis)
+          .Split(user_op::OpArg("dy", 0), axis)
+          .Broadcast(user_op::OpArg("mask", 0))
+          .Split(user_op::OpArg("dropout_mask", 0), axis)
+          .Split(user_op::OpArg("dx", 0), axis)
+          .Build();
+    } else {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("softmax_y", 0), axis)
+          .Split(user_op::OpArg("dy", 0), axis)
+          .Split(user_op::OpArg("mask", 0), axis)
+          .Split(user_op::OpArg("dropout_mask", 0), axis)
+          .Split(user_op::OpArg("dx", 0), axis)
+          .Build();
+    }
   }
   return Maybe<void>::Ok();
 }
