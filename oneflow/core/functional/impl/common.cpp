@@ -163,13 +163,13 @@ Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shap
   Shape infered_shape = shape;
   if (need_infer_axis == -1) {
     CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-        << "\n Shape " << shape.ToString() << " is invalid for input shape "
-        << x->shape()->ToString();
+        << Error::RuntimeError() << "shape '" << shape.ToString()
+        << "' is invalid for input of size " << x->nelement();
   } else {
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-        << "\n Shape " << shape.ToString() << " is invalid for input shape "
-        << x->shape()->ToString();
+        << Error::RuntimeError() << "shape '" << shape.ToString()
+        << "' is invalid for input of size " << x->nelement();
   }
   return infered_shape;
 }

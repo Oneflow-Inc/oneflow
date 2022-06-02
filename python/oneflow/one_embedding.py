@@ -762,14 +762,14 @@ class Ftrl(Optimizer):
     .. code-block:: python 
 
         # Assume net is a custom model. 
-        adam = flow.one_embedding.FTRL(net.parameters(), lr=1e-3)
+        ftrl = flow.one_embedding.FTRL(net.parameters(), lr=1e-3)
 
         for epoch in range(epochs):
             # Read data, Compute the loss and so on. 
             # ...
             loss.backward()
-            adam.step()
-            adam.zero_grad()
+            ftrl.step()
+            ftrl.zero_grad()
 
     Args:
         params (iterable): iterable of parameters to optimize or dicts defining
@@ -907,6 +907,7 @@ def make_persistent_table_reader(
     paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
 ):
     r"""Creates a reader for reading persistent table.
+
     Args:
         paths (list): paths of tables to read
         snapshot_name (str): name of the snapshot to read
@@ -930,6 +931,7 @@ def make_persistent_table_writer(
     paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
 ):
     r"""Creates a writer for writing persistent table.
+
     Args:
         paths (list): paths of tables to write
         snapshot_name (str): name of the snapshot to write
