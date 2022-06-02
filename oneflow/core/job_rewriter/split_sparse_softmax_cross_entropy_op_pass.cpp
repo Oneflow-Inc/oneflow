@@ -192,6 +192,21 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
                                 .Build();
     job_builder->AddOps(node->parallel_desc().parallel_conf(), {broadcast_div_op.op_conf()});
 
+    const int64_t depth = cur_op.attr<int64_t>("depth");
+    UpdateProbConsumerOpConf(broadcast_div_op.output("z", 0), node, job_builder);
+    auto sparse_cross_entropy_ms_op = user_op::UserOpConfWrapperBuilder(op_name)
+                                          .Op("sparse_cross_entropy_ms")
+                                          .Input("prediction", broadcast_div_op.output("z", 0))
+                                          .Input("label", op_label_blob_name)
+                                          .Output("out")
+                                          .Attr("depth", depth)
+                                          .ScopeSymbolId(scope_symbol_id)
+                                          .Build();
+
+    job_builder->MutOpsOnlyOnce({sparse_cross_entropy_ms_op.op_conf()});
+
+    /*
+     * NOTE(chengcheng): revert change for fast test benchmark.
     auto log_op = user_op::UserOpConfWrapperBuilder(op_name + "-log")
                       .Op("log")
                       .Input("x", reduce_sum_op_out)
@@ -247,9 +262,11 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
         }
       }
     }
+  */
   });
-  for (const auto& pair : consumer_op_name2op_confs) { job_builder->MutOpsOnlyOnce({pair.second}); }
-  job_builder->DelOps(to_del_op_names);
+  // for (const auto& pair : consumer_op_name2op_confs) {
+  // job_builder->MutOpsOnlyOnce({pair.second}); } job_builder->DelOps(to_del_op_names);
+
   return Maybe<void>::Ok();
 }
 
