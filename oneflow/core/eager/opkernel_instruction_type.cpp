@@ -37,7 +37,6 @@ limitations under the License.
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
@@ -166,6 +165,19 @@ struct LocalCallOpKernelUtil final {
           compute_ctx->device_type() == DeviceType::kCUDA
               ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
               : nullptr,
+          [compute_ctx]() -> int64_t {
+            const auto cal_memory_size = [compute_ctx](const one::ArgVec& args) -> int64_t {
+              return std::accumulate(
+                  args.begin(), args.end(), static_cast<int64_t>(0),
+                  [compute_ctx](int64_t memory_size, const auto& pair) {
+                    const auto tensor =
+                        compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+                    return memory_size
+                           + tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+                  });
+            };
+            return cal_memory_size(compute_ctx->inputs()) + cal_memory_size(compute_ctx->outputs());
+          },
 #endif
           [compute_ctx]() -> std::vector<Shape> {
             std::vector<Shape> shapes;
