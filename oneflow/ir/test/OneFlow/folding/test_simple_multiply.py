@@ -64,6 +64,7 @@ def _test_fold_multiply(test_case, module, with_cuda, *args):
 
     if with_cuda:
         model.to("cuda")
+    model.eval()
     eager_res = model(*args)
 
     class MultiplyGraph(nn.Graph):
