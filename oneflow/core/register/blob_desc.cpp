@@ -22,30 +22,44 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 }
 
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic)
-    : shape_(std::make_shared<Shape>(shape)), data_type_(dtype), is_dynamic_(is_dynamic) {}
-
-BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype, bool is_dynamic)
-    : shape_(shape), data_type_(dtype), is_dynamic_(is_dynamic) {}
-
-BlobDesc::BlobDesc(const Shape& shape, DataType dtype) : BlobDesc(shape, dtype, false) {}
-BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype)
-    : BlobDesc(shape, dtype, false) {}
-BlobDesc::BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype, false) {}
+    : shape_(std::make_shared<Shape>(shape)),
+      stride_(std::shared_ptr<Stride>(new Stride(shape))),
+      data_type_(dtype),
+      is_dynamic_(is_dynamic) {}
+BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic)
+    : shape_(std::make_shared<Shape>(shape)),
+      stride_(std::shared_ptr<Stride>(new Stride(stride))),
+      data_type_(dtype),
+      is_dynamic_(is_dynamic) {}
+BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
+                   DataType dtype, bool is_dynamic)
+    : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(is_dynamic) {}
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
+    : BlobDesc(shape, Stride(shape), dtype, false) {}
+BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype)
+    : BlobDesc(shape, stride, dtype, false) {}
+BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
+                   DataType dtype)
+    : BlobDesc(shape, stride, dtype, false) {}
+BlobDesc::BlobDesc(DataType dtype) : BlobDesc(Shape(), Stride(), dtype, false) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) {
   shape_ = std::make_shared<Shape>(proto.shape());
+  stride_ = std::make_shared<Stride>(proto.stride());
   data_type_ = proto.data_type();
   is_dynamic_ = proto.is_dynamic();
 }
 
 BlobDesc::BlobDesc(const BlobDesc& other) {
   shape_ = std::make_shared<Shape>(other.shape());
+  stride_ = std::make_shared<Stride>(other.stride());
   data_type_ = other.data_type();
   is_dynamic_ = other.is_dynamic();
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   shape().ToProto(proto->mutable_shape());
+  stride().ToProto(proto->mutable_stride());
   proto->set_data_type(data_type_);
   proto->set_is_dynamic(is_dynamic_);
 }
@@ -57,6 +71,7 @@ BlobDesc& BlobDesc::operator=(const BlobDesc& rhs) {
 
 void BlobDesc::CopyFrom(const BlobDesc& other) {
   set_shape(other.shape());
+  set_stride(other.stride());
   set_data_type(other.data_type());
   set_is_dynamic(other.is_dynamic());
 }
@@ -64,7 +79,7 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
 void BlobDesc::set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return (shape() == rhs.shape()) && (data_type() == rhs.data_type())
+  return (shape() == rhs.shape()) && (stride() == rhs.stride()) && (data_type() == rhs.data_type())
          && (is_dynamic() == rhs.is_dynamic());
 }
 

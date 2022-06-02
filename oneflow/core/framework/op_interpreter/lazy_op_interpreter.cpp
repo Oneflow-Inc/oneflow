@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
@@ -35,12 +34,12 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/eager/foreign_boxing_util.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
-
+#include "oneflow/core/functional/functional.h"
 namespace oneflow {
 
 namespace one {
@@ -57,11 +56,12 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
       << "blob_desc of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
 
   auto shape = std::make_shared<Shape>(blob_desc_it->second.shape());
+  auto stride = std::make_shared<Stride>(shape);
   auto dtype = blob_desc_it->second.data_type();
   if (is_local) {
     const auto& device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
     const auto& tensor =
-        JUST(MirroredTensor::MakeTensor(shape, dtype, device, is_lazy,
+        JUST(MirroredTensor::MakeTensor(shape, stride, dtype, device, is_lazy,
                                         /* requires_grad= */ false, /* is_leaf= */ true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
@@ -104,7 +104,8 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
     NdSbp nd_sbp(nd_sbp_it->second);
     CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
-        << "The input sbp is not valid for an inplace operation, please try to use non-inplace.";
+        << "The input sbp is not valid for an inplace operation, please try to use non-inplace. "
+        << NdSbpToString(JUST(tensor->nd_sbp())) << " vs " << NdSbpToString(nd_sbp);
     CHECK_OR_RETURN(JUST(tensor->parallel_desc()) == SymbolOf(*parallel_desc));
   }
   return Maybe<void>::Ok();
@@ -413,6 +414,12 @@ Maybe<std::string> GradAccTryInsertRepeatAfterFreeVar(const OperatorConf& var_co
 }
 
 Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
+  if (!input_tensor->is_contiguous()) {
+    LazyMode::Guard lazy_mode_disabled_guard(false);
+    JUST(functional::InplaceToContiguous(input_tensor));
+    JUST(vm::CurrentRankSync());
+  }
+
   CHECK_OR_RETURN(input_tensor->is_eager());
   const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(empty_lbn.empty());
@@ -456,7 +463,6 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   //  create a new tensor for repeat op out. We just set repeat lbn as this free eager tensor's lbn.
   TensorNameScope::Global()->Record(input_tensor,
                                     *JUST(GradAccTryInsertRepeatAfterFreeVar(op_conf)));
-
   return Maybe<void>::Ok();
 }
 
@@ -801,11 +807,11 @@ Maybe<void> LazyInterpreterApplyImplForCopyUserOpExpr(const UserOpExpr& op_expr,
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);
   if (input_tensor->is_local()) {
-    (*outputs)[0] =
-        JUST(MirroredTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
-                                        JUST(Device::New(device_type, device_id)),
-                                        /* is_lazy= */ true,
-                                        /*requires_grad=*/false, /*is_leaf=*/true));
+    (*outputs)[0] = JUST(MirroredTensor::MakeTensor(
+        input_tensor->shape(), JUST(input_tensor->stride()), input_tensor->dtype()->data_type(),
+        JUST(Device::New(device_type, device_id)),
+        /* is_lazy= */ true,
+        /*requires_grad=*/false, /*is_leaf=*/true));
   } else {
     ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
     parallel_conf.set_device_tag(device_type);

@@ -20,21 +20,23 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def _test_narrow(test_case, placement, sbp):
-    dim_size = random(2, 6).to(int).value() * 8
-    rand_dim = random(0, 3).to(int).value()
-    x = random_tensor(ndim=3, dim0=dim_size, dim1=dim_size, dim2=dim_size).to_global(
-        placement, sbp
-    )
-    return torch.narrow(x, dim=rand_dim, start=2, length=1)
+def _test_narrow(test_case, ndim, placement, sbp):
+    dims = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
+    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+    dim = random(-ndim, ndim).to(int).value()
+    start = random(0, dims[dim]).to(int).value()
+    length = random(1, dims[dim] - start + 1).to(int).value()
+
+    return torch.narrow(x, dim=dim, start=start, length=length)
 
 
 class TestNarrow(flow.unittest.TestCase):
     @globaltest
     def test_narrow(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=3):
-                _test_narrow(test_case, placement, sbp)
+            ndim = random(1, 4).to(int).value()
+            for sbp in all_sbp(placement, max_dim=min(ndim, 2)):
+                _test_narrow(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":

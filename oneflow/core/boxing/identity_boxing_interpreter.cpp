@@ -20,6 +20,7 @@ namespace oneflow {
 
 namespace {
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckIdentity(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                              const Shape& logical_shape) {
   if (in->placement()->parallel_num() == 1) {
@@ -30,15 +31,21 @@ Maybe<void> RawCheckIdentity(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 }  // namespace
 
 Maybe<one::Tensor> GetIdentity(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                                Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
+  CHECK_OR_RETURN(tensor_placement == in->placement())
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in->placement())) << ")";
   // reset sbp if parallel_num == 1 and reset transport_token
   const auto& local_tensor = JUST(tensor->cur_rank_phy_tensor());
   const auto& sbp_list = JUST(GetSbpList(out->nd_sbp()));
