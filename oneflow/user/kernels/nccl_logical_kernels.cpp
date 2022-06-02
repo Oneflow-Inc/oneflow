@@ -283,7 +283,7 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     auto state = std::make_shared<NcclLogicalReduceScatterNoncontinuousKernelState>(ctx);
     NdSbp dst_nd_sbp;
-    CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_nd_sbp", &dst_nd_sbp));
+    CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_reduced_nd_sbp", &dst_nd_sbp));
     CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 1);
     CHECK(dst_nd_sbp.sbp_parallel(0).has_split_parallel());
     state->set_dst_split_axis(dst_nd_sbp.sbp_parallel(0).split_parallel().axis());
