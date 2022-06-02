@@ -27,11 +27,19 @@ class TestDiagonal(flow.unittest.TestCase):
     def test_flow_diagonal_with_random_data(test_case):
         device = random_device()
         offset = random(-5, 5).to(int)
-        dim1 = random(-4, 4).to(int)
-        dim2 = random(-4, 4).to(int)
+        ndims = 4
+        dim1 = 0
+        dim2 = 0
+        p_dim1 = 0
+        p_dim2 = 0
+        while p_dim1 == p_dim2:
+            dim1 = random(-4, 4).to(int).value()
+            dim2 = random(-4, 4).to(int).value()
+            p_dim1 = dim1 if dim1 >= 0 else dim1 + ndims;
+            p_dim2 = dim2 if dim2 >= 0 else dim2 + ndims;
 
         x = random_tensor(
-            ndim=4,
+            ndim=ndims,
             dim1=random(4, 6),
             dim2=random(4, 6),
             dim3=random(4, 6),
@@ -44,11 +52,19 @@ class TestDiagonal(flow.unittest.TestCase):
     def test_flow_diagonal_with_random_data(test_case):
         device = random_device()
         offset = random(-5, 5).to(int)
-        dim1 = random(-4, 4).to(int)
-        dim2 = random(-4, 4).to(int)
+        ndims = 4
+        dim1 = 0
+        dim2 = 0
+        p_dim1 = 0
+        p_dim2 = 0
+        while p_dim1 == p_dim2:
+            dim1 = random(-4, 4).to(int).value()
+            dim2 = random(-4, 4).to(int).value()
+            p_dim1 = dim1 if dim1 >= 0 else dim1 + ndims;
+            p_dim2 = dim2 if dim2 >= 0 else dim2 + ndims;
 
         x = random_tensor(
-            ndim=4,
+            ndim=ndims,
             dim1=random(4, 6),
             dim2=random(4, 6),
             dim3=random(4, 6),

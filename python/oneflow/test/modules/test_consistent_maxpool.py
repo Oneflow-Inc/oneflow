@@ -80,9 +80,9 @@ def _test_maxpool3d_functional(test_case, placement, sbp):
         ndim=5,
         dim0=dim0,
         dim1=dim1,
-        dim2=random(10, 12),
-        dim3=random(10, 12),
-        dim4=random(10, 12),
+        dim2=random(20, 22),
+        dim3=random(20, 22),
+        dim4=random(20, 22),
     ).to_global(placement, sbp)
     y = torch.nn.functional.max_pool3d(
         x,
@@ -166,9 +166,9 @@ def _test_maxpool3d(test_case, placement, sbp):
         ndim=5,
         dim0=dim0,
         dim1=dim1,
-        dim2=random(10, 12),
-        dim3=random(10, 12),
-        dim4=random(10, 12),
+        dim2=random(20, 22),
+        dim3=random(20, 22),
+        dim4=random(20, 22),
     ).to_global(placement, sbp)
     y = m(x)
 
