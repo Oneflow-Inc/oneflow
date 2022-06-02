@@ -69,6 +69,8 @@ parser.add_argument("iters", type=int)
 parser.add_argument("exp_id", type=str)
 parser.add_argument("--no-dtr", action=NegativeArgAction, env_var_name="OF_DTR")
 parser.add_argument("--no-lr", action=NegativeArgAction, env_var_name="OF_DTR_LR")
+parser.add_argument("--no-fbip", action=NegativeArgAction, env_var_name="ONEFLOW_DTR_FBIP")
+parser.add_argument("--old-immutable", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_OLD_IMMUTABLE")
 parser.add_argument("--no-o-one", action=NegativeArgAction, env_var_name="OF_DTR_O_ONE")
 parser.add_argument("--no-ee", action=NegativeArgAction, env_var_name="OF_DTR_EE")
 parser.add_argument(
@@ -208,6 +210,8 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
             print(f'iter {iter} end, time: {this_time}')
 
     last_time = time.time()
+    if iter == 0:
+        print('iter 0 ok')
     # print(f'iter {iter} end, all pieces:')
     # flow._oneflow_internal.dtr.display_all_pieces()
     flow._oneflow_internal.dtr.set_left(True)
