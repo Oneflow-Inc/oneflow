@@ -2107,8 +2107,12 @@
   signature: "Tensor (Tensor x, Tensor weight, Tensor x_0, Tensor bias, String interaction_mode) => FusedCrossInteraction"
   bind_python: True
 
-- name: "fused_cross_interaction_grad"
-  signature: "TensorTuple (Tensor dy, Tensor weight, Tensor x, Tensor x_0, Tensor matmul_result) => FusedCrossInteractionGrad"
+- name: "fused_cross_interaction_v1_grad"
+  signature: "TensorTuple (Tensor dy, Tensor weight, Tensor x, Tensor x_0, Tensor matmul_result) => FusedCrossInteractionV1Grad"
+  bind_python: False
+
+- name: "fused_cross_interaction_v2_grad"
+  signature: "TensorTuple (Tensor dy, Tensor weight, Tensor bias, Tensor x, Tensor x_0, Tensor matmul_result) => FusedCrossInteractionV2Grad"
   bind_python: False
 
 - name: "tensor_buffer_to_tensor"

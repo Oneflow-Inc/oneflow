@@ -131,6 +131,76 @@ void DispatchBroadcastMulIndexType(ep::Stream* stream, const T* x, const T* y, T
   }
 }
 
+template<typename T, typename IndexType, int pack_size>
+__global__ void BroadcastAddElementwiseMulKernel(const T* x, const T* y, const T* z, T* out,
+                                                 const IndexType cols, const IndexType elem_cnt) {
+  const IndexType global_thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+  using LoadType = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  for (IndexType linear_index = global_thread_id * pack_size,
+                 step = gridDim.x * blockDim.x * pack_size;
+       linear_index < elem_cnt; linear_index += step) {
+    const IndexType row_idx = linear_index / cols;
+    const IndexType col_idx = linear_index - row_idx * cols;
+    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
+    LoadPack x_vec;
+    x_vec.storage = *x_load;
+
+    LoadPack out_vec;
+    // const T y_val = y[col_idx];
+    const LoadType* y_load = reinterpret_cast<const LoadType*>(y + col_idx);
+    LoadPack y_vec;
+    y_vec.storage = *y_load;
+
+    const LoadType* z_load = reinterpret_cast<const LoadType*>(z + linear_index);
+    LoadPack z_vec;
+    z_vec.storage = *z_load;
+#pragma unroll
+    for (int i = 0; i < pack_size; i++) {
+      out_vec.elem[i] = (x_vec.elem[i] + y_vec.elem[i]) * z_vec.elem[i];
+    }
+    *(reinterpret_cast<LoadType*>(out + linear_index)) = out_vec.storage;
+  }
+}
+
+template<typename T, typename IndexType>
+void DispatchBroadcastAddElementwiseMulPackSize(ep::Stream* stream, const T* x, const T* y,
+                                                const T* z, T* out, const IndexType cols,
+                                                const IndexType elem_cnt) {
+  int grid_size;
+  const int pack_size = GetLaunchPackSize<T>(cols);
+  const int64_t pack_num = elem_cnt / pack_size;
+  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+  if (pack_size == 8) {
+    BroadcastAddElementwiseMulKernel<T, IndexType, 8>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(x, y, z, out,
+                                                                                    cols, elem_cnt);
+  } else if (pack_size == 4) {
+    BroadcastAddElementwiseMulKernel<T, IndexType, 4>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(x, y, z, out,
+                                                                                    cols, elem_cnt);
+  } else if (pack_size == 2) {
+    BroadcastAddElementwiseMulKernel<T, IndexType, 2>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(x, y, z, out,
+                                                                                    cols, elem_cnt);
+  } else {
+    BroadcastAddElementwiseMulKernel<T, IndexType, 1>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(x, y, z, out,
+                                                                                    cols, elem_cnt);
+  }
+}
+
+template<typename T>
+void DispatchBroadcastAddElementwiseMulIndexType(ep::Stream* stream, const T* x, const T* y,
+                                                 const T* z, T* out, const int64_t cols,
+                                                 const int64_t elem_cnt) {
+  if (elem_cnt < GetMaxVal<int32_t>()) {
+    DispatchBroadcastAddElementwiseMulPackSize<T, int32_t>(stream, x, y, z, out, cols, elem_cnt);
+  } else {
+    DispatchBroadcastAddElementwiseMulPackSize<T, int64_t>(stream, x, y, z, out, cols, elem_cnt);
+  }
+}
+
 }  // namespace
 
 namespace user_op {
@@ -235,12 +305,13 @@ class FusedCrossInteractionGradKernel final : public OpKernel, public CudaGraphS
     T* dx_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                      + GetCudaAlignedSize(dy_elem_cnt * sizeof(T))
                                      + GetCudaAlignedSize(batch_size * sizeof(T)));
-    DimVector dt_shape(2);
-    dt_shape.at(0) = batch_size;
-    dt_shape.at(1) = 1;
+    DimVector dmatmul_result_shape(2);
+    dmatmul_result_shape.at(0) = batch_size;
+    dmatmul_result_shape.at(1) = 1;  // todo change to hidden size
     DimVector weight_shape(2);
     weight->shape().ToDimVector(&weight_shape);
-    InferMatmulMNK(dt_shape, weight_shape, /*trans_a=*/false, /*trans_b=*/false, &m, &n, &k);
+    InferMatmulMNK(dmatmul_result_shape, weight_shape, /*trans_a=*/false, /*trans_b=*/false, &m, &n,
+                   &k);
     reduce_matmul->Launch(ctx->stream(), m, n, k, 1.0, dmatmul_result0, weight->dptr(), 0.0,
                           reinterpret_cast<void*>(dx_buf));
     OF_CUDA_CHECK(cuda::elementwise::Binary(AddOp<T>(), dy_elem_cnt, dx->mut_dptr<T>(), dx_buf,
@@ -251,15 +322,15 @@ class FusedCrossInteractionGradKernel final : public OpKernel, public CudaGraphS
     DimVector x_shape(2);
     x->shape().ToDimVector(&x_shape);
 
-    InferMatmulMNK(x_shape, dt_shape, /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
+    InferMatmulMNK(dmatmul_result_shape, x_shape, /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
     auto weight_grad_matmul = NewWeightGradMatmulPrimitive(ctx);
     CHECK(weight_grad_matmul);
-    weight_grad_matmul->Launch(ctx->stream(), m, n, k, 1.0, x->dptr(), dmatmul_result0, 0.0,
+    weight_grad_matmul->Launch(ctx->stream(), m, n, k, 1.0, dmatmul_result0, x->dptr(), 0.0,
                                dw->mut_dptr());
 
     // step5: Get dx0.
     DispatchBroadcastMulIndexType<T>(ctx->stream(), dy->dptr<T>(), matmul_result->dptr<T>(),
-                                     dx_0->mut_dptr<T>(), hidden_size, dy->shape().elem_cnt());
+                                     dx_0->mut_dptr<T>(), hidden_size, dy_elem_cnt);
   }
 };
 
@@ -275,14 +346,117 @@ class FusedCrossInteractionGradKernel final : public OpKernel, public CudaGraphS
         const int64_t dy_elem_cnt = dy.shape().elem_cnt();                                    \
         const int64_t batch_size = dy.shape().At(0);                                          \
         size_t dy_mul_x0_size = GetCudaAlignedSize(dy_elem_cnt * sizeof(dtype));              \
-        size_t dt_size = GetCudaAlignedSize(batch_size * sizeof(dtype));                      \
+        size_t dmatmul_result_size = GetCudaAlignedSize(batch_size * sizeof(dtype));          \
         size_t dx_buf_size = dy_mul_x0_size;                                                  \
-        tmp_size = dy_mul_x0_size + dt_size + dx_buf_size;                                    \
+        tmp_size = dy_mul_x0_size + dmatmul_result_size + dx_buf_size;                        \
         return tmp_size;                                                                      \
       });
 
 REGISTER_FUSED_CROSS_INTERACTION_GRAD_KERNEL(float)
 REGISTER_FUSED_CROSS_INTERACTION_GRAD_KERNEL(half)
+
+template<typename T>
+class FusedCrossInteractionV2GradKernel final : public OpKernel, public CudaGraphSupport {
+ public:
+  FusedCrossInteractionV2GradKernel() = default;
+  ~FusedCrossInteractionV2GradKernel() = default;
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(KernelComputeContext* ctx) const override {
+    const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
+    const Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+    const Tensor* x_0 = ctx->Tensor4ArgNameAndIndex("x_0", 0);
+    const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const Tensor* matmul_result = ctx->Tensor4ArgNameAndIndex("matmul_result", 0);
+
+    const int64_t batch_size = dy->shape().At(0);
+    const int64_t in_size = weight->shape().At(1);
+    const int64_t hidden_size = weight->shape().At(0);
+    const int64_t dy_elem_cnt = dy->shape().elem_cnt();
+
+    Tensor* dx_0 = ctx->Tensor4ArgNameAndIndex("dx_0", 0);
+    Tensor* dw = ctx->Tensor4ArgNameAndIndex("dw", 0);
+    Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    Tensor* dbias = ctx->Tensor4ArgNameAndIndex("dbias", 0);
+    Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    // step1: Get dx0.
+    DispatchBroadcastAddElementwiseMulIndexType<T>(ctx->stream(), matmul_result->dptr<T>(),
+                                                   bias->dptr<T>(), dy->dptr<T>(),
+                                                   dx_0->mut_dptr<T>(), hidden_size, dy_elem_cnt);
+
+    // step2: Get dmatmul_result0.
+    T* dmatmul_result0 = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
+    OF_CUDA_CHECK(cuda::elementwise::Binary(MulOp<T>(), dy_elem_cnt, dmatmul_result0, dy->dptr<T>(),
+                                            x_0->dptr<T>(),
+                                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    // step3: Get dx
+    T* dx_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
+                                     + GetCudaAlignedSize(dy_elem_cnt * sizeof(T)));
+    DimVector dmatmul_result_shape(2);
+    dmatmul_result_shape.at(0) = batch_size;
+    dmatmul_result_shape.at(1) = hidden_size;
+    DimVector weight_shape(2);
+    weight->shape().ToDimVector(&weight_shape);
+    size_t m = 0, n = 0, k = 0;
+    InferMatmulMNK(dmatmul_result_shape, weight_shape, /*trans_a=*/false, /*trans_b=*/false, &m, &n,
+                   &k);
+    auto reduce_matmul = NewReduceMatmulPrimitive(ctx);
+    CHECK(reduce_matmul);
+    reduce_matmul->Launch(ctx->stream(), m, n, k, 1.0, dmatmul_result0, weight->dptr(), 0.0,
+                          reinterpret_cast<void*>(dx_buf));
+    OF_CUDA_CHECK(cuda::elementwise::Binary(AddOp<T>(), dy_elem_cnt, dx->mut_dptr<T>(), dx_buf,
+                                            dy->dptr<T>(),
+                                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+
+    // step4: Get dw.
+    DimVector x_shape(2);
+    x->shape().ToDimVector(&x_shape);
+
+    InferMatmulMNK(dmatmul_result_shape, x_shape, /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
+    auto weight_grad_matmul = NewWeightGradMatmulPrimitive(ctx);
+    CHECK(weight_grad_matmul);
+    weight_grad_matmul->Launch(ctx->stream(), m, n, k, 1.0, dmatmul_result0, x->dptr(), 0.0,
+                               dw->mut_dptr());
+
+    // step5: Get dbias.
+    const T* ones = nullptr;
+    auto* cuda_device = dynamic_cast<ep::CudaDevice*>(ctx->stream()->device());
+    if (cuda_device != nullptr) {
+      ones = static_cast<const T*>(cuda_device->GetConstOnes(dy->data_type(), batch_size));
+    }
+    DimVector dy_shape(2);
+    dy->shape().ToDimVector(&dy_shape);
+    DimVector ones_buf_shape(2);
+    ones_buf_shape.at(0) = 1;
+    ones_buf_shape.at(1) = batch_size;
+    InferMatmulMNK(ones_buf_shape, dy_shape, /*trans_a=*/false, /*trans_b=*/false, &m, &n, &k);
+    reduce_matmul->Launch(ctx->stream(), m, n, k, 1.0, ones,
+                          reinterpret_cast<void*>(dmatmul_result0), 0.0, dbias->mut_dptr());
+  }
+};
+
+#define REGISTER_FUSED_CROSS_INTERACTION_V2_GRAD_KERNEL(dtype)                                \
+  REGISTER_USER_KERNEL("fused_cross_interaction_v2_grad")                                     \
+      .SetCreateFn<FusedCrossInteractionV2GradKernel<dtype>>()                                \
+      .SetIsMatchedHob((HobDeviceType() == DeviceType::kCUDA)                                 \
+                       && (HobDataType("dy", 0) == GetDataType<dtype>::value)                 \
+                       && ReduceMatmulPrimitiveExists() && WeightGradMatmulPrimitiveExists()) \
+      .SetInferTmpSizeFn([](InferContext* ctx) {                                              \
+        size_t tmp_size = 0;                                                                  \
+        const TensorDesc& dy = ctx->InputTensorDesc("dy", 0);                                 \
+        const int64_t dy_elem_cnt = dy.shape().elem_cnt();                                    \
+        size_t dmatmul_result_size = GetCudaAlignedSize(dy_elem_cnt * sizeof(dtype));         \
+        size_t dx_buf_size = dmatmul_result_size;                                             \
+        tmp_size = dmatmul_result_size + dx_buf_size;                                         \
+        return tmp_size;                                                                      \
+      });
+
+REGISTER_FUSED_CROSS_INTERACTION_V2_GRAD_KERNEL(float)
+REGISTER_FUSED_CROSS_INTERACTION_V2_GRAD_KERNEL(half)
 
 }  // namespace user_op
 

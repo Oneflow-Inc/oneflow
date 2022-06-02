@@ -96,4 +96,46 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> FusedCrossInteractionV2GradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  const Shape& x0_shape = ctx->InputShape("x_0", 0);
+  const Shape& weight_shape = ctx->InputShape("weight", 0);
+  *ctx->OutputShape("dx_0", 0) = x0_shape;
+  *ctx->OutputShape("dw", 0) = weight_shape;
+  *ctx->OutputShape("dx", 0) = x0_shape;
+  *ctx->OutputShape("dbias", 0) = Shape({x0_shape.At(1)});
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> FusedCrossInteractionV2GradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> FusedCrossInteractionV2GradOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Broadcast(user_op::OpArg("weight", 0))
+      .Broadcast(user_op::OpArg("bias", 0))
+      .Split(user_op::OpArg("x", 0), 0)
+      .Split(user_op::OpArg("x_0", 0), 0)
+      .Split(user_op::OpArg("matmul_result", 0), 0)
+      .Split(user_op::OpArg("dx_0", 0), 0)
+      .Broadcast(user_op::OpArg("dw", 0))
+      .Split(user_op::OpArg("dx", 0), 0)
+      .Broadcast(user_op::OpArg("dbias", 0))
+      .Build();
+
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> FusedCrossInteractionV2GradOp::InferDataType(user_op::InferContext* ctx) {
+  // TODO add check
+  *ctx->OutputDType("dx_0", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("dw", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("dbias", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

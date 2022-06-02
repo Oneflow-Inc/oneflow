@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -29,9 +30,11 @@ struct FusedCrossInteractionInterpState : public AutoGradCaptureState {
   bool x0_requires_grad = true;
   bool bias_requires_grad = true;
   size_t x_idx = 0;
+  size_t bias_idx = 0;
   size_t weight_idx = 0;
   size_t x0_idx = 0;
   size_t matmul_result_idx = 0;
+  std::string interaction_mode;
 };
 
 class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInterpState> {
@@ -46,6 +49,8 @@ class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInt
   Maybe<void> Capture(FusedCrossInteractionInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 4);
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->interaction_mode = JUST(composed_attrs.GetAttr<std::string>("interaction_mode"));
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->weight_requires_grad = inputs.at(1)->requires_grad();
     ctx->x_requires_grad = inputs.at(2)->requires_grad();
@@ -53,21 +58,38 @@ class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInt
     ctx->x_idx = ctx->SaveTensorForBackward(inputs.at(0));
     ctx->weight_idx = ctx->SaveTensorForBackward(inputs.at(1));
     ctx->x0_idx = ctx->SaveTensorForBackward(inputs.at(2));
+    if (ctx->interaction_mode == "matrix") {
+      ctx->bias_idx = ctx->SaveTensorForBackward(inputs.at(3));
+    }
     ctx->matmul_result_idx = ctx->SaveTensorForBackward(outputs.at(1));
+
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const FusedCrossInteractionInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 2);
-    in_grads->resize(4);
     std::shared_ptr<oneflow::one::TensorTuple> grads;
-    grads = JUST(functional::FusedCrossInteractionGrad(
-        JUST(oneflow::VectorAt(out_grads, 0)),
-        JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->weight_idx)),
-        JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x_idx)),
-        JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x0_idx)),
-        JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->matmul_result_idx))));
+    in_grads->resize(4);
+    if (ctx->interaction_mode == "vector") {
+      grads = JUST(functional::FusedCrossInteractionV1Grad(
+          JUST(oneflow::VectorAt(out_grads, 0)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->weight_idx)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x_idx)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x0_idx)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->matmul_result_idx))));
+    } else if (ctx->interaction_mode == "matrix") {
+      grads = JUST(functional::FusedCrossInteractionV2Grad(
+          JUST(oneflow::VectorAt(out_grads, 0)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->weight_idx)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->bias_idx)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x_idx)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x0_idx)),
+          JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->matmul_result_idx))));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Interaction mode only support `vector` and `matrix`. ";
+    }
+
     if (ctx->x_requires_grad) {
       JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(oneflow::VectorAt(*grads, 0));
     }
