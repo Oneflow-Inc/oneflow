@@ -1135,6 +1135,10 @@ def _cumprod(self, dim, dtype=None):
 def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
+    Tensor.add = _add
+    Tensor.add_ = _add_inplace
+    Tensor.sub = _sub
+    Tensor.sub_ = _sub_inplace
     Tensor.backward = _backward
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str

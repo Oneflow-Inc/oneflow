@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -242,8 +241,8 @@ DIRECT_PASS_FUNC(PyTensorObject_div, functional::div)
 DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
 DIRECT_PASS_FUNC(PyTensorObject_mul, functional::mul)
 DIRECT_PASS_FUNC(PyTensorObject_mul_, functional::mul_)
-DIRECT_PASS_FUNC(PyTensorObject_add, functional::add)
-DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub)
+// DIRECT_PASS_FUNC(PyTensorObject_add, functional::add)
+// DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub)
 DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod)
 DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and)
 DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or)
@@ -395,31 +394,6 @@ static PyObject* PyTensorObject_matmul(PyObject* self, PyObject* args, PyObject*
   }
   PyObjectPtr concat_args(PyTuple_Pack(2, self, other));
   PyObject* result = functional::matmul(NULL, concat_args.get(), NULL);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_add_(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1);
-  if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 0) > -1); }
-  PyObject* result = functional::add(NULL, concat_args.get(), dict.get());
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
-  END_HANDLE_ERRORS
-}
-
-static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* other = NULL;
-  static const char* keywords[2] = {"other", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other)) {
-    return NULL;
-  }
-  PyObject* result = PyTensorObject_nb_inplace_sub(self, other);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -638,8 +612,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"diagonal", (PyCFunction)PyTensorObject_diagonal, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"addcmul_", (PyCFunction)PyTensorObject_addcmul_, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"add_", (PyCFunction)PyTensorObject_add_, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"sub_", (PyCFunction)PyTensorObject_sub_, METH_VARARGS | METH_KEYWORDS, NULL},
+    // {"add_", (PyCFunction)PyTensorObject_add_, METH_VARARGS | METH_KEYWORDS, NULL},
+    // {"sub_", (PyCFunction)PyTensorObject_sub_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"int", PyTensorObject_int, METH_NOARGS, NULL},
     {"long", PyTensorObject_long, METH_NOARGS, NULL},
@@ -667,8 +641,8 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul", (PyCFunction)PyTensorObject_mul, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mul_", (PyCFunction)PyTensorObject_mul_, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"add", (PyCFunction)PyTensorObject_add, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"sub", (PyCFunction)PyTensorObject_sub, METH_VARARGS | METH_KEYWORDS, NULL},
+    // {"add", (PyCFunction)PyTensorObject_add, METH_VARARGS | METH_KEYWORDS, NULL},
+    // {"sub", (PyCFunction)PyTensorObject_sub, METH_VARARGS | METH_KEYWORDS, NULL},
     {"fmod", (PyCFunction)PyTensorObject_fmod, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_and", (PyCFunction)PyTensorObject_logical_and, METH_VARARGS | METH_KEYWORDS, NULL},
     {"logical_or", (PyCFunction)PyTensorObject_logical_or, METH_VARARGS | METH_KEYWORDS, NULL},
