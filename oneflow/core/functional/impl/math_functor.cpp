@@ -458,6 +458,7 @@ class ReduceSumWholeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     MutableAttrMap attrs;
     const int32_t naxis = x->ndim();
+    if (naxis == 0) { return x; }  // for 0-dim Tensor
     std::vector<int32_t> axis(naxis);
     std::iota(axis.begin(), axis.end(), 0);
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
