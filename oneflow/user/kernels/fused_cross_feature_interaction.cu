@@ -24,6 +24,8 @@ namespace oneflow {
 
 namespace {
 
+enum InteractionMode { kVector = 0, kMatrix };
+
 constexpr int kBlockSize = 256;
 
 void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, bool transpose_a,
@@ -74,7 +76,7 @@ auto MatmulPrimitiveExists() {
   });
 }
 
-template<typename T, typename IndexType, int pack_size, bool broadcast>
+template<typename T, typename IndexType, int pack_size, InteractionMode mode>
 __global__ void FusedBiasAddMulAddResidualKernel(const T* in, const T* x, const T* x0,
                                                  const T* bias, T* out, const IndexType cols,
                                                  const IndexType elem_cnt) {
@@ -105,13 +107,13 @@ __global__ void FusedBiasAddMulAddResidualKernel(const T* in, const T* x, const 
     bias_vec.storage = *bias_load;
 
     LoadPack out_vec;
-    if (broadcast) {
+    if (mode == InteractionMode::kVector) {
       T in_val = in[row_idx];
 #pragma unroll
       for (int i = 0; i < pack_size; i++) {
         out_vec.elem[i] = x0_vec.elem[i] * in_val + bias_vec.elem[i] + x_vec.elem[i];
       }
-    } else {
+    } else if (mode == InteractionMode::kMatrix) {
       const LoadType* in_load = reinterpret_cast<const LoadType*>(in + linear_index);
       LoadPack in_vec;
       in_vec.storage = *in_load;
@@ -119,6 +121,8 @@ __global__ void FusedBiasAddMulAddResidualKernel(const T* in, const T* x, const 
       for (int i = 0; i < pack_size; i++) {
         out_vec.elem[i] = (in_vec.elem[i] + bias_vec.elem[i]) * x0_vec.elem[i] + x_vec.elem[i];
       }
+    } else {
+      __trap();
     }
     *(reinterpret_cast<LoadType*>(out + linear_index)) = out_vec.storage;
   }
@@ -135,7 +139,7 @@ int GetLaunchPackSize(const int64_t cols) {
   return 1;
 }
 
-template<typename T, typename IndexType, bool broadcast>
+template<typename T, typename IndexType, InteractionMode mode>
 void DispatchFusedBiasAddMulAddResidualPackSize(ep::Stream* stream, const T* in, const T* x,
                                                 const T* x0, const T* bias, T* out,
                                                 const IndexType cols, const IndexType elem_cnt) {
@@ -144,43 +148,43 @@ void DispatchFusedBiasAddMulAddResidualPackSize(ep::Stream* stream, const T* in,
   const int64_t pack_num = elem_cnt / pack_size;
   cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
   if (pack_size == 8) {
-    FusedBiasAddMulAddResidualKernel<T, IndexType, 8, broadcast>
+    FusedBiasAddMulAddResidualKernel<T, IndexType, 8, mode>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             in, x, x0, bias, out, cols, elem_cnt);
   } else if (pack_size == 4) {
-    FusedBiasAddMulAddResidualKernel<T, IndexType, 4, broadcast>
+    FusedBiasAddMulAddResidualKernel<T, IndexType, 4, mode>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             in, x, x0, bias, out, cols, elem_cnt);
   } else if (pack_size == 2) {
-    FusedBiasAddMulAddResidualKernel<T, IndexType, 2, broadcast>
+    FusedBiasAddMulAddResidualKernel<T, IndexType, 2, mode>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             in, x, x0, bias, out, cols, elem_cnt);
   } else {
-    FusedBiasAddMulAddResidualKernel<T, IndexType, 1, broadcast>
+    FusedBiasAddMulAddResidualKernel<T, IndexType, 1, mode>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             in, x, x0, bias, out, cols, elem_cnt);
   }
 }
 
-template<typename T, bool broadcast>
+template<typename T, InteractionMode mode>
 void DispatchFusedBiasAddMulAddResidualIndexType(ep::Stream* stream, const T* in, const T* x,
                                                  const T* x0, const T* bias, T* out,
                                                  const int64_t cols, const int64_t elem_cnt) {
   if (elem_cnt < GetMaxVal<int32_t>()) {
-    DispatchFusedBiasAddMulAddResidualPackSize<T, int32_t, broadcast>(stream, in, x, x0, bias, out,
-                                                                      cols, elem_cnt);
+    DispatchFusedBiasAddMulAddResidualPackSize<T, int32_t, mode>(stream, in, x, x0, bias, out, cols,
+                                                                 elem_cnt);
   } else {
-    DispatchFusedBiasAddMulAddResidualPackSize<T, int64_t, broadcast>(stream, in, x, x0, bias, out,
-                                                                      cols, elem_cnt);
+    DispatchFusedBiasAddMulAddResidualPackSize<T, int64_t, mode>(stream, in, x, x0, bias, out, cols,
+                                                                 elem_cnt);
   }
 }
 
 template<typename T>
-class FusedCrossInteractionKernel final : public user_op::OpKernel,
-                                          public user_op::CudaGraphSupport {
+class FusedCrossFeatureInteractionKernel final : public user_op::OpKernel,
+                                                 public user_op::CudaGraphSupport {
  public:
-  FusedCrossInteractionKernel() = default;
-  ~FusedCrossInteractionKernel() = default;
+  FusedCrossFeatureInteractionKernel() = default;
+  ~FusedCrossFeatureInteractionKernel() = default;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
@@ -228,28 +232,27 @@ class FusedCrossInteractionKernel final : public user_op::OpKernel,
                    matmul_result->mut_dptr());
     const int64_t elem_cnt = out->shape().elem_cnt();
     const int64_t cols = out->shape().At(1);
-    // v1 是broadcast mul
     if (interaction_mode == "vector") {
-      DispatchFusedBiasAddMulAddResidualIndexType<T, true>(
+      DispatchFusedBiasAddMulAddResidualIndexType<T, InteractionMode::kVector>(
           ctx->stream(), matmul_result->mut_dptr<T>(), x->dptr<T>(), x_0->dptr<T>(),
           bias->dptr<T>(), out->mut_dptr<T>(), cols, elem_cnt);
     } else {
-      DispatchFusedBiasAddMulAddResidualIndexType<T, false>(
+      DispatchFusedBiasAddMulAddResidualIndexType<T, InteractionMode::kMatrix>(
           ctx->stream(), matmul_result->mut_dptr<T>(), x->dptr<T>(), x_0->dptr<T>(),
           bias->dptr<T>(), out->mut_dptr<T>(), cols, elem_cnt);
     }
   }
 };
 
-#define REGISTER_FUSED_CROSS_INTERACTION_KERNEL(dtype)                                \
-  REGISTER_USER_KERNEL("fused_cross_interaction")                                     \
-      .SetCreateFn<FusedCrossInteractionKernel<dtype>>()                              \
+#define REGISTER_FUSED_CROSS_FEATURE_INTERACTION_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("fused_cross_feature_interaction")                             \
+      .SetCreateFn<FusedCrossFeatureInteractionKernel<dtype>>()                       \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value) \
                        && MatmulPrimitiveExists());
 
-REGISTER_FUSED_CROSS_INTERACTION_KERNEL(float)
-REGISTER_FUSED_CROSS_INTERACTION_KERNEL(half)
+REGISTER_FUSED_CROSS_FEATURE_INTERACTION_KERNEL(float)
+REGISTER_FUSED_CROSS_FEATURE_INTERACTION_KERNEL(half)
 
 }  // namespace
 

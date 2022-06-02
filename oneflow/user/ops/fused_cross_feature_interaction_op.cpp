@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-/* static */ Maybe<void> FusedCrossInteractionOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> FusedCrossFeatureInteractionOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
@@ -32,12 +32,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossInteractionOp::InferPhysicalTensorDesc(
+/* static */ Maybe<void> FusedCrossFeatureInteractionOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FusedCrossInteractionOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> FusedCrossFeatureInteractionOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), 0)
       .Broadcast(user_op::OpArg("weight", 0))
@@ -49,13 +49,13 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossInteractionOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedCrossFeatureInteractionOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("matmul_result", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossInteractionGradOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& x0_shape = ctx->InputShape("x_0", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
@@ -66,12 +66,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossInteractionGradOp::InferPhysicalTensorDesc(
+/* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FusedCrossInteractionGradOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("dy", 0), 0)
       .Broadcast(user_op::OpArg("weight", 0))
@@ -87,8 +87,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossInteractionGradOp::InferDataType(user_op::InferContext* ctx) {
-  // TODO add check
+/* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferDataType(
+    user_op::InferContext* ctx) {
   *ctx->OutputDType("dx_0", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dw", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
@@ -96,7 +96,7 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossInteractionV2GradOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& x0_shape = ctx->InputShape("x_0", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
@@ -107,12 +107,12 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossInteractionV2GradOp::InferPhysicalTensorDesc(
+/* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FusedCrossInteractionV2GradOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("dy", 0), 0)
       .Broadcast(user_op::OpArg("weight", 0))
@@ -129,7 +129,8 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedCrossInteractionV2GradOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferDataType(
+    user_op::InferContext* ctx) {
   *ctx->OutputDType("dx_0", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dw", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
@@ -137,19 +138,19 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("fused_cross_interaction")
+REGISTER_USER_OP_GRAD("fused_cross_feature_interaction")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       if (op.attr<std::string>("interaction_mode") == "vector") {
-        builder.Op("fused_cross_interaction_grad")
+        builder.Op("fused_cross_feature_interaction_v1_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Input("weight", op.input("weight", 0))
             .Input("x", op.input("x", 0))
             .Input("x_0", op.input("x_0", 0))
             .Input("matmul_result", op.output("x_0", 0));
       } else if (op.attr<std::string>("interaction_mode") == "matrix") {
-        builder.Op("fused_cross_interaction_grad")
+        builder.Op("fused_cross_feature_interaction_v2_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Input("weight", op.input("weight", 0))
             .Input("bias", op.input("bias", 0))

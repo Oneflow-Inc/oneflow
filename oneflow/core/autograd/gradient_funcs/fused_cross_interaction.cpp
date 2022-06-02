@@ -24,7 +24,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct FusedCrossInteractionInterpState : public AutoGradCaptureState {
+struct FusedCrossFeatureInteractionInterpState : public AutoGradCaptureState {
   bool x_requires_grad = true;
   bool weight_requires_grad = true;
   bool x0_requires_grad = true;
@@ -37,7 +37,8 @@ struct FusedCrossInteractionInterpState : public AutoGradCaptureState {
   std::string interaction_mode;
 };
 
-class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInterpState> {
+class FusedCrossFeatureInteraction
+    : public OpExprGradFunction<FusedCrossFeatureInteractionInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -46,7 +47,7 @@ class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInt
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(FusedCrossInteractionInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedCrossFeatureInteractionInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 4);
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -66,20 +67,20 @@ class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInt
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const FusedCrossInteractionInterpState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override {
+  Maybe<void> Apply(const FusedCrossFeatureInteractionInterpState* ctx,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override {
     CHECK_EQ_OR_RETURN(out_grads.size(), 2);
     std::shared_ptr<oneflow::one::TensorTuple> grads;
     in_grads->resize(4);
     if (ctx->interaction_mode == "vector") {
-      grads = JUST(functional::FusedCrossInteractionV1Grad(
+      grads = JUST(functional::FusedCrossFeatureInteractionV1Grad(
           JUST(oneflow::VectorAt(out_grads, 0)),
           JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->weight_idx)),
           JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x_idx)),
           JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->x0_idx)),
           JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->matmul_result_idx))));
     } else if (ctx->interaction_mode == "matrix") {
-      grads = JUST(functional::FusedCrossInteractionV2Grad(
+      grads = JUST(functional::FusedCrossFeatureInteractionV2Grad(
           JUST(oneflow::VectorAt(out_grads, 0)),
           JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->weight_idx)),
           JUST(oneflow::VectorAt(ctx->SavedTensors(), ctx->bias_idx)),
@@ -110,7 +111,7 @@ class FusedCrossInteraction : public OpExprGradFunction<FusedCrossInteractionInt
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_cross_interaction", FusedCrossInteraction);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_cross_feature_interaction", FusedCrossFeatureInteraction);
 
 }  // namespace one
 }  // namespace oneflow

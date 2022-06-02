@@ -147,7 +147,6 @@ __global__ void BroadcastAddElementwiseMulKernel(const T* x, const T* y, const T
     x_vec.storage = *x_load;
 
     LoadPack out_vec;
-    // const T y_val = y[col_idx];
     const LoadType* y_load = reinterpret_cast<const LoadType*>(y + col_idx);
     LoadPack y_vec;
     y_vec.storage = *y_load;
@@ -241,10 +240,10 @@ auto WeightGradMatmulPrimitiveExists() {
 }
 
 template<typename T>
-class FusedCrossInteractionGradKernel final : public OpKernel, public CudaGraphSupport {
+class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public CudaGraphSupport {
  public:
-  FusedCrossInteractionGradKernel() = default;
-  ~FusedCrossInteractionGradKernel() = default;
+  FusedCrossFeatureInteractionGradKernel() = default;
+  ~FusedCrossFeatureInteractionGradKernel() = default;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
@@ -334,9 +333,9 @@ class FusedCrossInteractionGradKernel final : public OpKernel, public CudaGraphS
   }
 };
 
-#define REGISTER_FUSED_CROSS_INTERACTION_GRAD_KERNEL(dtype)                                   \
-  REGISTER_USER_KERNEL("fused_cross_interaction_grad")                                        \
-      .SetCreateFn<FusedCrossInteractionGradKernel<dtype>>()                                  \
+#define REGISTER_FUSED_CROSS_FEATURE_INTERACTION_V1_GRAD_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("fused_cross_feature_interaction_v1_grad")                             \
+      .SetCreateFn<FusedCrossFeatureInteractionGradKernel<dtype>>()                           \
       .SetIsMatchedHob((HobDeviceType() == DeviceType::kCUDA)                                 \
                        && (HobDataType("dy", 0) == GetDataType<dtype>::value)                 \
                        && ReduceMatmulPrimitiveExists() && WeightGradMatmulPrimitiveExists()) \
@@ -352,14 +351,14 @@ class FusedCrossInteractionGradKernel final : public OpKernel, public CudaGraphS
         return tmp_size;                                                                      \
       });
 
-REGISTER_FUSED_CROSS_INTERACTION_GRAD_KERNEL(float)
-REGISTER_FUSED_CROSS_INTERACTION_GRAD_KERNEL(half)
+REGISTER_FUSED_CROSS_FEATURE_INTERACTION_V1_GRAD_KERNEL(float)
+REGISTER_FUSED_CROSS_FEATURE_INTERACTION_V1_GRAD_KERNEL(half)
 
 template<typename T>
-class FusedCrossInteractionV2GradKernel final : public OpKernel, public CudaGraphSupport {
+class FusedCrossFeatureInteractionV2GradKernel final : public OpKernel, public CudaGraphSupport {
  public:
-  FusedCrossInteractionV2GradKernel() = default;
-  ~FusedCrossInteractionV2GradKernel() = default;
+  FusedCrossFeatureInteractionV2GradKernel() = default;
+  ~FusedCrossFeatureInteractionV2GradKernel() = default;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
  private:
@@ -439,9 +438,9 @@ class FusedCrossInteractionV2GradKernel final : public OpKernel, public CudaGrap
   }
 };
 
-#define REGISTER_FUSED_CROSS_INTERACTION_V2_GRAD_KERNEL(dtype)                                \
-  REGISTER_USER_KERNEL("fused_cross_interaction_v2_grad")                                     \
-      .SetCreateFn<FusedCrossInteractionV2GradKernel<dtype>>()                                \
+#define REGISTER_FUSED_CROSS_FEATURE_INTERACTION_V2_GRAD_KERNEL(dtype)                        \
+  REGISTER_USER_KERNEL("fused_cross_feature_interaction_v2_grad")                             \
+      .SetCreateFn<FusedCrossFeatureInteractionV2GradKernel<dtype>>()                         \
       .SetIsMatchedHob((HobDeviceType() == DeviceType::kCUDA)                                 \
                        && (HobDataType("dy", 0) == GetDataType<dtype>::value)                 \
                        && ReduceMatmulPrimitiveExists() && WeightGradMatmulPrimitiveExists()) \
@@ -455,8 +454,8 @@ class FusedCrossInteractionV2GradKernel final : public OpKernel, public CudaGrap
         return tmp_size;                                                                      \
       });
 
-REGISTER_FUSED_CROSS_INTERACTION_V2_GRAD_KERNEL(float)
-REGISTER_FUSED_CROSS_INTERACTION_V2_GRAD_KERNEL(half)
+REGISTER_FUSED_CROSS_FEATURE_INTERACTION_V2_GRAD_KERNEL(float)
+REGISTER_FUSED_CROSS_FEATURE_INTERACTION_V2_GRAD_KERNEL(half)
 
 }  // namespace user_op
 

@@ -2723,10 +2723,10 @@ class FusedDotFeatureInteractionFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_padded_concated_features_;
 };
 
-class FusedCrossInteractionFunctor {
+class FusedCrossFeatureInteractionFunctor {
  public:
-  FusedCrossInteractionFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_cross_interaction")
+  FusedCrossFeatureInteractionFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_cross_feature_interaction")
                          .Input("x")
                          .Input("weight")
                          .Input("x_0")
@@ -2741,6 +2741,10 @@ class FusedCrossInteractionFunctor {
                            const std::shared_ptr<one::Tensor>& x_0,
                            const std::shared_ptr<one::Tensor>& bias,
                            const std::string& interaction_mode) const {
+    if (interaction_mode != "vector" && interaction_mode != "matrix") {
+      UNIMPLEMENTED_THEN_RETURN()
+          << "Fused Cross Interaction mode only support `vector` and `matrix`. ";
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("interaction_mode", interaction_mode));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight, x_0, bias}, attrs);
@@ -3210,7 +3214,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
   m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
-  m.add_functor<impl::FusedCrossInteractionFunctor>("FusedCrossInteraction");
+  m.add_functor<impl::FusedCrossFeatureInteractionFunctor>("FusedCrossFeatureInteraction");
   m.add_functor<impl::OneEmbeddingIdShuffleFunctor>("OneEmbeddingIdShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(

@@ -1034,10 +1034,10 @@ class FusedDotFeatureInteractionGradFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_padded_concated_features_;
 };
 
-class FusedCrossInteractionV1GradFunctor {
+class FusedCrossFeatureInteractionV1GradFunctor {
  public:
-  FusedCrossInteractionV1GradFunctor() {
-    v1_grad_op_ = CHECK_JUST(one::OpBuilder("fused_cross_interaction_grad")
+  FusedCrossFeatureInteractionV1GradFunctor() {
+    v1_grad_op_ = CHECK_JUST(one::OpBuilder("fused_cross_feature_interaction_v1_grad")
                                  .Input("dy")
                                  .Input("weight")
                                  .Input("x")
@@ -1062,10 +1062,10 @@ class FusedCrossInteractionV1GradFunctor {
   std::shared_ptr<OpExpr> v1_grad_op_;
 };
 
-class FusedCrossInteractionV2GradFunctor {
+class FusedCrossFeatureInteractionV2GradFunctor {
  public:
-  FusedCrossInteractionV2GradFunctor() {
-    v2_grad_op_ = CHECK_JUST(one::OpBuilder("fused_cross_interaction_v2_grad")
+  FusedCrossFeatureInteractionV2GradFunctor() {
+    v2_grad_op_ = CHECK_JUST(one::OpBuilder("fused_cross_feature_interaction_v2_grad")
                                  .Input("dy")
                                  .Input("weight")
                                  .Input("bias")
@@ -1130,8 +1130,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CublasBiasAddReluMatmulGradFunctor>("CublasBiasAddReluMatmulGrad");
   m.add_functor<impl::CublasMatmulBiasAddGradFunctor>("CublasMatmulBiasAddGrad");
   m.add_functor<impl::FusedDotFeatureInteractionGradFunctor>("FusedDotFeatureInteractionGrad");
-  m.add_functor<impl::FusedCrossInteractionV1GradFunctor>("FusedCrossInteractionV1Grad");
-  m.add_functor<impl::FusedCrossInteractionV2GradFunctor>("FusedCrossInteractionV2Grad");
+  m.add_functor<impl::FusedCrossFeatureInteractionV1GradFunctor>(
+      "FusedCrossFeatureInteractionV1Grad");
+  m.add_functor<impl::FusedCrossFeatureInteractionV2GradFunctor>(
+      "FusedCrossFeatureInteractionV2Grad");
 };
 
 }  // namespace functional
