@@ -84,7 +84,8 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
 }
 
 Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Job* job) {
-  op_graph.ForEachNode([&](const OpNode* node) -> void {
+  for (auto& op_conf : *job->mutable_net()->mutable_op()) {
+    const OpNode* node = op_graph.OpNode4OpName(op_conf.name());
     SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[node->op().op_name()];
     // Update NdSbpSignature
     (*job->mutable_job_parallel_view_conf()
@@ -101,18 +102,23 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
     }
     // TODO: Specially update sbp conf by using polymorphism function
     // Update sbp for variable op
-    if (node->op().op_conf().has_variable_conf()) {
-      for (auto& op : *job->mutable_net()->mutable_op()) {
-        if (op.name() == node->op().op_name()) {
-          op.mutable_variable_conf()->clear_nd_sbp();
-          const auto nd_sbp = sbp_node->FinalSbpSignature()->bn_in_op2nd_sbp().at("out");
-          for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
-            op.mutable_variable_conf()->mutable_nd_sbp()->Add(SbpParallelToString(sbp_parallel));
-          }
-        }
+    if (op_conf.has_variable_conf()) {
+      op_conf.mutable_variable_conf()->clear_nd_sbp();
+      const auto& nd_sbp = sbp_node->FinalSbpSignature()->bn_in_op2nd_sbp().at("out");
+      for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+        op_conf.mutable_variable_conf()->mutable_nd_sbp()->Add(SbpParallelToString(sbp_parallel));
       }
+    } else if (op_conf.has_user_conf() && op_conf.name().find("uniform") != std::string::npos
+               && /*is_source_op=*/node->op().input_bns().empty()) {
+      const auto& nd_sbp = sbp_node->FinalSbpSignature()->bn_in_op2nd_sbp().at("out_0");
+      std::vector<std::string> nd_sbp_str_list = *JUST(GetNdSbpStrList(nd_sbp));
+      *op_conf.mutable_user_conf()
+           ->mutable_attr()
+           ->at("nd_sbp")
+           .mutable_at_list_string()
+           ->mutable_val() = {nd_sbp_str_list.begin(), nd_sbp_str_list.end()};
     }
-  });
+  }
   return Maybe<void>::Ok();
 }
 
