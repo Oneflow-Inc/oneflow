@@ -1191,7 +1191,7 @@ def RegisterMethods():
     Tensor.nonzero = _nonzero
     # Tensor.sum = _sum
     # Tensor.mean = _mean
-    # Tensor.prod = _prod
+    Tensor.prod = _prod
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
     Tensor.new_tensor = _new_tensor

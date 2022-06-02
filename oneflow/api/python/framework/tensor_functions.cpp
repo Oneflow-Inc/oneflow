@@ -533,7 +533,8 @@ static PyObject* PyTensorObject_relu_(PyObject* self, PyObject* unused) {
 #define REDUCE_FUNC(func_name, bind_func, whole_func)                            \
   static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
     HANDLE_ERRORS                                                                \
-    if (args == NULL && kwargs == NULL) {                                        \
+    if ((args == NULL || PyTuple_Size(args) == 0)                                \
+        && (kwargs == NULL || PyDict_Size(kwargs) == 0)) {                       \
       return PyTensor_New(ASSERT_PTR(whole_func(PyTensor_Unpack(self))));        \
     }                                                                            \
     PyObjectPtr concat_args(concat_self(self, args));                            \
@@ -546,8 +547,7 @@ static PyObject* PyTensorObject_relu_(PyObject* self, PyObject* unused) {
 REDUCE_FUNC(PyTensorObject_any, functional::reduce_any, functional::ReduceAnyWhole)
 REDUCE_FUNC(PyTensorObject_all, functional::reduce_all, functional::ReduceAllWhole)
 REDUCE_FUNC(PyTensorObject_sum, functional::reduce_sum, functional::ReduceSumWhole)
-REDUCE_FUNC(PyTensorObject_prod, functional::reduce_prod, functional::ReduceProdWhole)
-REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceAnyWhole)
+REDUCE_FUNC(PyTensorObject_mean, functional::reduce_mean, functional::ReduceMeanWhole)
 
 #define DATATYPE_FUNC(func_name, dtype)                                    \
   static PyObject* func_name(PyObject* self, PyObject* unused) {           \
@@ -657,7 +657,6 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"any", (PyCFunction)PyTensorObject_any, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sum", (PyCFunction)PyTensorObject_sum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mean", (PyCFunction)PyTensorObject_mean, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"prod", (PyCFunction)PyTensorObject_prod, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
