@@ -1193,8 +1193,6 @@ def RegisterMethods():
     Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
-    # Tensor.sum = _sum
-    # Tensor.mean = _mean
     Tensor.prod = _prod
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
