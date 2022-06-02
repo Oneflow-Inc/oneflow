@@ -681,7 +681,7 @@ def _bmm(self, other):
     return flow.bmm(self, other)
 
 
-def _chunk(self, chunks=None, dim=None):
+def _chunk(self, chunks=None, dim=0):
     return flow._C.chunk(self, chunks, dim)
 
 
