@@ -21,40 +21,40 @@ namespace oneflow {
 
 namespace{
 
-template<typename T>
+template<typename T, typename IndexT>
 __global__ void IndexSelectCompute(const int32_t& outer_nums, const int32_t& input_width, const int32_t& output_width,
-                                   const int32_t& index_size, const int32_t& slice_size, const T* x_ptr, const T* index_ptr, T* y_ptr) {
+                                   const int32_t& index_size, const int32_t& slice_size, const T* x_ptr, const IndexT* index_ptr, T* y_ptr) {
   CUDA_1D_KERNEL_LOOP(i, outer_nums) {
     auto input_start_offset = i * input_width;
     auto output_start_offset = i * output_width;
     for (auto j = 0; j < index_size; j++) {
-    int index_value = index_ptr[j];
-        for (auto k = 0; k < slice_size; k++) {
-            y_ptr[output_start_offset + j * slice_size + k] =
-                x_ptr[input_start_offset + index_value * slice_size + k];
-        }
+      IndexT index_value = index_ptr[j];
+      for (auto k = 0; k < slice_size; k++) {
+          y_ptr[output_start_offset + j * slice_size + k] =
+              x_ptr[input_start_offset + index_value * slice_size + k];
+      }
     }
   }
 }
 
-template<typename T>
+template<typename T, typename IndexT>
 __global__ void IndexSelectGradCompute(const int32_t& outer_nums, const int32_t& input_width, const int32_t& output_width,
-                                   const int32_t& index_size, const int32_t& slice_size, const T* dy_ptr, const T* index_ptr, T* dx_ptr) {
+                                   const int32_t& index_size, const int32_t& slice_size, const T* dy_ptr, const IndexT* index_ptr, T* dx_ptr) {
   CUDA_1D_KERNEL_LOOP(i, outer_nums) {
     auto input_start_offset = i * input_width;
     auto output_start_offset = i * output_width;
     for (auto j = 0; j < index_size; j++) {
-    int index_value = index_ptr[j];
-        for (auto k = 0; k < slice_size; k++) {
-            dx_ptr[output_start_offset + j * slice_size + k] +=
-                dy_ptr[input_start_offset + index_value * slice_size + k];
-        }
+      IndexT index_value = index_ptr[j];
+      for (auto k = 0; k < slice_size; k++) {
+          dx_ptr[output_start_offset + index_value * slice_size + k] +=
+            dy_ptr[input_start_offset + j * slice_size + k];
+      }
     }
   }
 }
 } //namespace
 
-template<typename T>
+template<typename T, typename IndexT>
 class IndexSelectGpuKernel final : public user_op::OpKernel {
  public:
   IndexSelectGpuKernel() = default;
@@ -74,18 +74,17 @@ class IndexSelectGpuKernel final : public user_op::OpKernel {
     auto outer_nums = 1;
     for (auto i = 0; i < dim; i++) { outer_nums *= x_tensor->shape().At(i); }
     auto index_size = index_tensor->shape().At(0);
-
     const auto* x_ptr = x_tensor->dptr<T>();
-    const auto* index_ptr = index_tensor->dptr<T>();
+    const auto* index_ptr = index_tensor->dptr<IndexT>();
     auto* y_ptr = y_tensor->mut_dptr<T>();
 
-    RUN_CUDA_KERNEL((IndexSelectCompute<T>), ctx->stream(), outer_nums, outer_nums,
+    RUN_CUDA_KERNEL((IndexSelectCompute<T, IndexT>), ctx->stream(), outer_nums, outer_nums,
                       input_width, output_width, index_size, slice_size, x_ptr, index_ptr, y_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
+template<typename T, typename IndexT>
 class IndexSelectGradGpuKernel final : public user_op::OpKernel {
  public:
   IndexSelectGradGpuKernel() = default;
@@ -97,7 +96,7 @@ class IndexSelectGradGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     auto* dx_ptr = dx_tensor->mut_dptr<T>();
-    const auto* index_ptr = index_tensor->dptr<T>();
+    const auto* index_ptr = index_tensor->dptr<IndexT>();
     const auto* dy_ptr = dy_tensor->dptr<T>();
 
     const auto& input_dim = dy_tensor->shape();
@@ -117,23 +116,33 @@ class IndexSelectGradGpuKernel final : public user_op::OpKernel {
     for (auto i = 0; i < dim; i++) { outer_nums *= input_dim.At(i); }
     auto index_size = index_tensor->shape().At(0);
 
-    RUN_CUDA_KERNEL((IndexSelectGradCompute<T>), ctx->stream(), outer_nums, outer_nums,
+    RUN_CUDA_KERNEL((IndexSelectGradCompute<T, IndexT>), ctx->stream(), outer_nums, outer_nums,
                       input_width, output_width, index_size, slice_size, dy_ptr, index_ptr, dx_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_INDEX_SELECT_GPU_KERNEL(dtype)                       \
-  REGISTER_USER_KERNEL("index_select")                                \
-      .SetCreateFn<IndexSelectGpuKernel<dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("index_select_grad")                                \
-      .SetCreateFn<IndexSelectGradGpuKernel<dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_INDEX_SELECT_GPU_KERNEL(dtype, index_dtype)                                      \
+  REGISTER_USER_KERNEL("index_select")                                                            \
+      .SetCreateFn<IndexSelectGpuKernel<dtype, index_dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)             \
+                       && (user_op::HobDataType("index", 0) == GetDataType<index_dtype>::value)); \
+  REGISTER_USER_KERNEL("index_select_grad")                                                       \
+      .SetCreateFn<IndexSelectGradGpuKernel<dtype, index_dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)            \
+                       && (user_op::HobDataType("index", 0) == GetDataType<index_dtype>::value));
 
-REGISTER_INDEX_SELECT_GPU_KERNEL(float)
-REGISTER_INDEX_SELECT_GPU_KERNEL(double)
+REGISTER_INDEX_SELECT_GPU_KERNEL(bool, int32_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(float, int32_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(double, int32_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(int32_t, int32_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(int64_t, int32_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(bool, int64_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(float, int64_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(double, int64_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(int32_t, int64_t)
+REGISTER_INDEX_SELECT_GPU_KERNEL(int64_t, int64_t)
 
 }  // namespace oneflow

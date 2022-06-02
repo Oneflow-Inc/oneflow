@@ -35,7 +35,7 @@ namespace oneflow {
   std::vector<int64_t> out_shape(num_axes);
   for (int i = 0; i < num_axes; i++) {
     if (i == dim) {
-      out_shape[i] = index_desc.shape().At(i);
+      out_shape[i] = index_desc.shape().At(0);
     } else {
       out_shape[i] = x_desc.shape().At(i);
     }

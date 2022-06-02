@@ -2631,7 +2631,10 @@ class MeshgridFunctor {
 
 class IndexSelectFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+  IndexSelectFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("index_select").Input("x").Input("index").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index) const {
     const int64_t input_num_axes = input->shape()->NumAxes();
     const int64_t index_num_axes = index->shape()->NumAxes();
@@ -2641,35 +2644,63 @@ class IndexSelectFunctor {
         (index->dtype()->data_type() == kInt32) || (index->dtype()->data_type() == kInt64);
     CHECK_EQ_OR_RETURN(index_dtype_flag, true)
         << Error::RuntimeError() << "index_select(): Expected dtype int32 or int64 for index";
-    int64_t new_dim = dim;
+    int32_t new_dim = dim;
     if (dim < 0) { new_dim += input_num_axes; }
     CHECK_LE_OR_RETURN(new_dim, input_num_axes)
         << Error::IndexError() << "Dimension out of range (expected to be in range of ["
         << -input_num_axes << ", " << input_num_axes - 1 << "], but got " << new_dim << ")";
 
-    DimVector index_broad_cast(input_num_axes);
-    for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
-    index_broad_cast[new_dim] = 1;
-    Shape expand_shape(index_broad_cast);
-    std::shared_ptr<one::Tensor> index_new;
-    if (index_num_axes == 1) {
-      index_new = index;
-    } else {
-      index_new = JUST(Unsqueeze(index, 0));
-    }
-    auto index_gather = JUST(functional::Expand(
-        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/false)),
-        expand_shape));
-    for (int i = 1; i < index->dim(0); i++) {
-      index_gather = JUST(functional::Concat(
-          {index_gather,
-           JUST(functional::Expand(
-               JUST(functional::Slice(index_new, {i}, {i + 1}, {1}, /*enable_view_slice=*/false)),
-               expand_shape))},
-          new_dim));
-    }
-    return JUST(functional::DimGather(input, new_dim, index_gather, false));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", new_dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
+    // DimVector index_broad_cast(input_num_axes);
+    // for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
+    // index_broad_cast[new_dim] = 1;
+    // Shape expand_shape(index_broad_cast);
+    // std::shared_ptr<one::Tensor> index_new;
+    // if (index_num_axes == 1) {
+    //   index_new = index;
+    // } else {
+    //   index_new = JUST(Unsqueeze(index, 0));
+    // }
+    // auto index_gather = JUST(functional::Expand(
+    //     JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/false)),
+    //     expand_shape));
+    // for (int i = 1; i < index->dim(0); i++) {
+    //   index_gather = JUST(functional::Concat(
+    //       {index_gather,
+    //        JUST(functional::Expand(
+    //            JUST(functional::Slice(index_new, {i}, {i + 1}, {1},
+    //            /*enable_view_slice=*/false)), expand_shape))},
+    //       new_dim));
+    // }
+    // return JUST(functional::DimGather(input, new_dim, index_gather, false));
   }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class IndexSelectGradFunctor {
+ public:
+  IndexSelectGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("index_select_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("index")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& index, const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, index}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 namespace {
@@ -3158,6 +3189,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
+  m.add_functor<impl::IndexSelectGradFunctor>("IndexSelectGrad");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");

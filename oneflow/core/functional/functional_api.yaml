@@ -2084,8 +2084,13 @@
 
 - name: "index_select"
   signature:
-    "Tensor (Tensor input, Int64 dim, Tensor index) => IndexSelect"
+    "Tensor (Tensor input, Int32 dim, Tensor index) => IndexSelect"
   bind_python: True
+
+- name: "index_select_grad"
+  signature:
+    "Tensor (Tensor dy, Tensor x, Tensor index, Int32 dim) => IndexSelectGrad"
+  bind_python: False
 
 - name: "decode_onerec"
   signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
