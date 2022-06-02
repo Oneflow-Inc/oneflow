@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
+#include "oneflow/core/ep/common/primitive/util.h"
+#include "oneflow/core/ep/common/onednn.h"
 
 namespace oneflow {
 
@@ -79,24 +81,20 @@ class SoftmaxImpl : public SoftmaxBase {
 
 template<class OneDnnSoftmax, dnnl::memory::data_type data_type>
 void SoftmaxOneDnn(Stream* stream, size_t rows, size_t cols, const void* x, void* y) {
-  CpuStream* cpu_stream = stream->As<CpuStream>();
-  size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();  // NOLINT
-  CpuNumThreadsGuard guard(num_threads);
+  stream->As<CpuStream>()->onednn_executor()->Launch(
+      [&](dnnl::engine* onednn_engine, dnnl::stream* onednn_stream) {
+        dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(rows),
+                                       static_cast<dnnl::memory::dim>(cols)};
 
-  dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
-  dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-  dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(rows),
-                                 static_cast<dnnl::memory::dim>(cols)};
+        auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nc);
+        auto src_mem = dnnl::memory(src_md, *onednn_engine, const_cast<void*>(x));
+        auto dst_mem = dnnl::memory(src_md, *onednn_engine, y);
+        auto softmax_d = typename OneDnnSoftmax::desc(dnnl::prop_kind::forward, src_md, 1);
+        auto softmax_pd = typename OneDnnSoftmax::primitive_desc(softmax_d, *onednn_engine);
+        auto softmax_prim = OneDnnSoftmax(softmax_pd);
 
-  auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nc);
-  auto src_mem = dnnl::memory(src_md, *onednn_engine, const_cast<void*>(x));
-  auto dst_mem = dnnl::memory(src_md, *onednn_engine, y);
-  auto softmax_d = typename OneDnnSoftmax::desc(dnnl::prop_kind::forward, src_md, 1);
-  auto softmax_pd = typename OneDnnSoftmax::primitive_desc(softmax_d, *onednn_engine);
-  auto softmax_prim = OneDnnSoftmax(softmax_pd);
-
-  softmax_prim.execute(*onednn_stream, {{DNNL_ARG_SRC, src_mem}, {DNNL_ARG_DST, dst_mem}});
-  onednn_stream->wait();
+        softmax_prim.execute(*onednn_stream, {{DNNL_ARG_SRC, src_mem}, {DNNL_ARG_DST, dst_mem}});
+      });
 }
 
 template<typename SoftmaxBase, Algorithm algorithm, dnnl::memory::data_type data_type>
@@ -143,30 +141,22 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
 #define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) \
   {type_proto, NewSoftmax<SoftmaxBase, algorithm, type_cpp>},
 
-#ifdef WITH_ONEDNN
-#define MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(type_cpp, type_proto) \
-  {type_proto, NewOneDnnSoftmax<SoftmaxBase, algorithm, type_cpp>},
-
-    static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
-        new_softmax_handle{
-            // oneDNN softmax op
-            MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(dnnl::memory::data_type::f32, DataType::kFloat)
-            // naive softmax op
-            MAKE_NEW_SOFTMAX_ENTRY(double, DataType::kDouble)};
-
-#undef MAKE_NEW_ONEDNN_SOFTMAX_ENTRY
-#else
     static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
         new_softmax_handle{
             OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
-#endif  // WITH_ONEDNN
+
 #undef MAKE_NEW_SOFTMAX_ENTRY
-    const auto it = new_softmax_handle.find(data_type);
-    if (it != new_softmax_handle.end()) {
-      return it->second();
-    } else {
-      return nullptr;
+
+#ifdef WITH_ONEDNN
+
+    if (OneDnnIsEnabled() && data_type == DataType::kFloat) {
+      static std::function<std::unique_ptr<SoftmaxBase>()> onednn_softmax =
+          NewOneDnnSoftmax<SoftmaxBase, algorithm, dnnl::memory::data_type::f32>;
+      return onednn_softmax();
     }
+
+#endif
+    return NewPrimitiveFromHandlers(new_softmax_handle, data_type);
   }
 };
 
