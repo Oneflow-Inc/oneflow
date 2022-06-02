@@ -192,6 +192,22 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGrad"
   bind_python: False
 
+- name: "pow_x_grad_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowXGradXGrad"
+  bind_python: False
+
+- name: "pow_x_grad_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowXGradYGrad"
+  bind_python: False
+
+- name: "pow_y_grad_x_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGradXGrad"
+  bind_python: False
+
+- name: "pow_y_grad_y_grad"
+  signature: "Tensor (Tensor dz, Tensor x, Tensor y) => PowYGradYGrad"
+  bind_python: False
+
 - name: "searchsorted"
   signature:
     [
