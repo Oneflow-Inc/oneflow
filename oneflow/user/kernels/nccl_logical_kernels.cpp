@@ -323,9 +323,12 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
     CHECK(transpose);
     transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                       transpose_in_dim_vec.data(), in->dptr(), perm.data(), tmp_buffer->mut_dptr());
-
+    VLOG(3) << "[NcclLogical][ReduceScatterNoncontinuous] " << kernel_state->stream_name() << " "
+            << ctx->op_name() << std::endl;
+    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
+    if (in->data_type() == kBool) { reduce_type = ncclRedOp_t::ncclMax; }
     OF_NCCL_CHECK(ncclReduceScatter(tmp_buffer->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
-                                    GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
+                                    GetNcclDataType(in->data_type()), reduce_type,
                                     kernel_state->comm(),
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
@@ -519,6 +522,7 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferReduceScatterNoncontinuousKernelTmpBufferSize);
 
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(bool)
 REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(int8_t)
 REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(int32_t)
 REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(int64_t)

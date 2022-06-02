@@ -221,7 +221,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
   } else if (CanSplitAtDim(0)
              && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
              && (dst_sbp.split_parallel().axis() > 0)) {
-    // P->S(0) : ReduceScatter Noncontinuous
+    // P->S(1) : ReduceScatter Noncontinuous
     *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
                .Op("_nccl_logical_reduce_scatter_noncontinuous")
                .Input("in", lbn)
