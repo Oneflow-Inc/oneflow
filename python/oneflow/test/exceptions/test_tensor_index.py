@@ -19,7 +19,7 @@ import oneflow as flow
 
 
 class TestTensorIndexError(flow.unittest.TestCase):
-    def test_ApplyAdvancedIndexing_indices_amount_runtime_error(test_case):
+    def test_PrepareSliceIndices_indices_amount_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.arange(16).reshape(4, 4)
             x[0, 0, 0] = 0
@@ -27,7 +27,7 @@ class TestTensorIndexError(flow.unittest.TestCase):
             "Too many indices for tensor of dimension" in str(context.exception)
         )
 
-    def test_ApplyAdvancedIndexing_slice_step_runtime_error(test_case):
+    def test_PrepareSliceIndices_slice_step_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor([0, 1, 2, 3], dtype=flow.int32)
             s = slice(0, 2, -1)
@@ -38,13 +38,27 @@ class TestTensorIndexError(flow.unittest.TestCase):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor(5, dtype=flow.int32)
             y = x[0]
-        test_case.assertTrue("select() cannot be applied to a 0-dim tensor." in str(context.exception))
+        test_case.assertTrue(
+            "select() cannot be applied to a 0-dim tensor." in str(context.exception)
+        )
 
-    def test_ApplySelectIndexing_index_runtime_error(test_case):
+    def test_ApplySelectIndexing_index_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.ones(2, 3, dtype=flow.int32)
             y = x[3]
-        test_case.assertTrue("Index out of range (expected to be in range of" in str(context.exception))
+        test_case.assertTrue(
+            "Index out of range (expected to be in range of" in str(context.exception)
+        )
+
+    def test_ApplyAdvancedIndexing_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.ones(2, 2, dtype=flow.int32)
+            index = (flow.tensor(1, dtype=flow.int32), flow.tensor(1, dtype=flow.int32), flow.tensor(1, dtype=flow.int32))
+            y = x[index]
+        test_case.assertTrue(
+            "Too many indices for tensor of dimension" in str(context.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
