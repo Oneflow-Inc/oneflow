@@ -2402,10 +2402,14 @@ class ChunkFunctor {
         << ", " << ndim - 1 << "], but got " << dim << ")";
     if (dim < 0) { infferd_dim += ndim; }
 
-    const auto dim_size = x->shape()->At(infferd_dim);
+    const int64_t dim_size = x->shape()->At(infferd_dim);
     int64_t split_size = (dim_size + chunks - 1) / chunks;
-    std::vector<int64_t> split_sizes(chunks, split_size);
-    split_sizes[chunks - 1] = split_size - (split_size * chunks - dim_size);
+    int64_t full_chunks = dim_size / split_size;
+    std::vector<int64_t> split_sizes(full_chunks, split_size);
+    const int64_t tail_chunk_size = dim_size % split_size;
+    if (tail_chunk_size > 0){
+      split_sizes.push_back(tail_chunk_size);
+    }
     return functional::SplitWithSize(x, split_sizes, infferd_dim);
   }
 };
