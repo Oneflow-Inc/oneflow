@@ -38,13 +38,18 @@ class TestTensorIndexError(flow.unittest.TestCase):
         with test_case.assertRaises(Exception) as context:
             x = flow.tensor(5, dtype=flow.int32)
             y = x[0]
-        test_case.assertTrue("select() cannot be applied to a 0-dim tensor." in str(context.exception))
+        test_case.assertTrue(
+            "select() cannot be applied to a 0-dim tensor." in str(context.exception)
+        )
 
     def test_ApplySelectIndexing_index_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.ones(2, 3, dtype=flow.int32)
             y = x[3]
-        test_case.assertTrue("Index out of range (expected to be in range of" in str(context.exception))
+        test_case.assertTrue(
+            "Index out of range (expected to be in range of" in str(context.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
