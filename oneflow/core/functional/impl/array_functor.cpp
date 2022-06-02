@@ -2407,9 +2407,7 @@ class ChunkFunctor {
     int64_t full_chunks = dim_size / split_size;
     std::vector<int64_t> split_sizes(full_chunks, split_size);
     const int64_t tail_chunk_size = dim_size % split_size;
-    if (tail_chunk_size > 0){
-      split_sizes.push_back(tail_chunk_size);
-    }
+    if (tail_chunk_size > 0) { split_sizes.push_back(tail_chunk_size); }
     return functional::SplitWithSize(x, split_sizes, infferd_dim);
   }
 };
@@ -2478,11 +2476,20 @@ class SplitWithSizeFunctor {
         << dim_size << " (input tensor's size at dimension " << axis << "), "
         << "but got sum(split_sizes)=" << start_idx;
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", axis));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("sections", split_size_or_sections));
-
-    return OpInterpUtil::Dispatch<TensorTuple>(*ops_[num_splits], {x}, attrs);
+    if (num_splits < kMaxOutputCount) {
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<int64_t>("dim", axis));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("sections", split_size_or_sections));
+      return OpInterpUtil::Dispatch<TensorTuple>(*ops_[num_splits], {x}, attrs);
+    } else {
+      TensorTuple splits(num_splits);
+      int64_t sum_of_previous_splits = 0;
+      for (int i = 0; i < num_splits; ++i) {
+        splits[i] = JUST(Narrow(x, axis, sum_of_previous_splits, split_size_or_sections[i]));
+        sum_of_previous_splits += split_size_or_sections[i];
+      }
+      return splits;
+    }
   }
 
  private:
