@@ -241,12 +241,12 @@ message JobConfigProto {
   optional bool enable_quantization_aware_training = 603 [default = false];
 
   optional bool enable_auto_parallel = 700 [default = false];
-  optional double auto_parallel_computation_cost_ratio = 701 [default = 1.0];
-  optional double auto_parallel_wait_time = 702 [default = 0.0];
+  optional double auto_parallel_computation_cost_ratio = 701 [default = 0.05];
+  optional double auto_parallel_wait_time = 702 [default = 1.65e4];
   optional double auto_parallel_transfer_cost = 703 [default = 0.0];
-  optional bool enable_auto_parallel_mainstem_algo = 704 [default = false];
+  optional bool enable_auto_parallel_mainstem_algo = 704 [default = true];
   optional bool enable_auto_parallel_sbp_collector = 705 [default = false];
-  optional bool enable_auto_parallel_prune_parallel_cast_ops = 706 [default = true];
+  optional bool enable_auto_parallel_prune_parallel_cast_ops = 706 [default = false];
   
   optional int64 concurrency_width = 1000 [default = 128];
 
