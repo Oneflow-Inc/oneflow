@@ -2360,7 +2360,7 @@ class SplitFunctor {
     int64_t chunks =
         std::max<int64_t>((dim_size + split_size_or_sections - 1) / split_size_or_sections, 1);
     std::vector<int64_t> split_sizes(chunks, split_size_or_sections);
-    split_sizes[chunks - 1] = split_size_or_sections - (split_size_or_sections * chunks - dim_size);
+    split_sizes[chunks - 1] = dim_size - split_size_or_sections * (chunks - 1);
     return functional::SplitWithSize(x, split_sizes, axis);
   }
 };
