@@ -86,6 +86,22 @@ mlir::DenseElementsAttr __TensorToDenseElementsAttr(
 }
 
 template<typename T>
+mlir::DenseElementsAttr __TensorToDenseElementsAttr(
+    const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::IntegerType& int_type) {
+  ::oneflow::LazyMode::Guard guard{false};
+  const auto tensor_ = ::oneflow::one::functional::ToContiguous(tensor).GetPtrOrThrow();
+  auto shape = tensor_->shape();
+  std::vector<int64_t> shape_vec(shape->dim_vec().begin(), shape->dim_vec().end());
+  std::vector<T> data(shape->elem_cnt());
+  const auto& callback = [&](uint64_t ofblob_ptr) {
+    CHECK_JUST(::oneflow::BlobBufferCopyUtil<T>::To(ofblob_ptr, data.data(), data.size()));
+  };
+  ::oneflow::one::SyncAccessTensorWithTimeOut(tensor_, callback, "const").GetOrThrow();
+  return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, int_type),
+                                      llvm::makeArrayRef(data));
+}
+
+template<typename T>
 std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
     const mlir::DenseElementsAttr dense_attr, const mlir::Attribute& device_tag_attr,
     const mlir::Attribute& device_name_attr, const ::oneflow::DataType& dtype) {
@@ -116,6 +132,10 @@ mlir::DenseElementsAttr TensorToDenseElementsAttr(
   const auto dtype = tensor->dtype()->data_type();
   if (dtype == ::oneflow::DataType::kFloat) {
     return __TensorToDenseElementsAttr<float>(tensor, mlir::FloatType::getF32(ctx));
+  } else if (dtype == ::oneflow::DataType::kInt64) {
+    return __TensorToDenseElementsAttr<int64_t>(
+        tensor, mlir::IntegerType::IntegerType::get(
+                    ctx, 64, mlir::IntegerType::SignednessSemantics::Signed));
   }
   llvm::errs() << "Converting oneflow::Tensor to mlir::DenseElementsAttr only support float32 now."
                << "\n";
