@@ -126,6 +126,7 @@ class Graph(object):
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
         self._full_job_proto = None
+        self._job_id = None
         self._args_repr = []
         self._outs_repr = []
         self._debug = False
@@ -138,9 +139,7 @@ class Graph(object):
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
-        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
-            self._name, self._session._session_ctx
-        )
+        self._c_nn_graph = None
         self.env_enable_mlir_inference_opt = None
 
     def build(self, *args, **kwargs):
@@ -212,13 +211,7 @@ class Graph(object):
             Donot override this function.
         """
         if not self._is_compiled:
-            with graph_build_util.DebugScopeContext(
-                self._debug_min_s_level,
-                self._debug_max_v_level,
-                self._debug,
-                self._debug_max_py_stack_depth,
-            ):
-                self._compile(*args, **kwargs)
+            self._compile(*args, **kwargs)
 
         return self.__run(*args, **kwargs)
 
@@ -362,7 +355,7 @@ class Graph(object):
                     additional_tensor = additional_tensor.to_local()
                 destination[additional_var_names[i]] = additional_tensor
         else:
-            # Get form loaded dict.
+            # Get from loaded dict.
             for name, item in self._additional_variable_tobe_loaded.items():
                 destination[name] = item
         return destination
@@ -390,8 +383,6 @@ class Graph(object):
             not self._is_compiled
         ), "nn.Graph's state dict can only be loaded before the first call of a graph."
         # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
-        additional_var_names = list()
-        additional_var_tensors = list()
         for name, item in state_dict.items():
             if name in self._blocks:
                 # 1 load parameter/buffer to Modules
@@ -399,16 +390,7 @@ class Graph(object):
             else:
                 # 2 store other state to CNNGraph, CNNGraph load them after job pass
                 assert isinstance(item, Tensor)
-                additional_var_names.append(name)
-                additional_var_tensors.append(item)
                 self._additional_variable_tobe_loaded[name] = item
-
-        if len(additional_var_names) > 0:
-            self._c_nn_graph.register_additional_variable_names_and_tensors(
-                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
-            )
-        # Sync to make sure states has been loaded.
-        oneflow._oneflow_internal.eager.Sync()
 
     @property
     def name(self):
@@ -582,7 +564,7 @@ class Graph(object):
 
     @property
     def _full_graph_proto(self):
-        if not self._is_compiled:
+        if self._full_job_proto is None:
             self.__print(
                 2,
                 0,
@@ -590,6 +572,14 @@ class Graph(object):
                 " You can call the graph to trigger it's compilation.",
             )
         return self._full_job_proto
+
+    @_full_graph_proto.setter
+    def _full_graph_proto(self, full_job_proto):
+        assert (
+            not self._is_compiled
+        ), "nn.Graph's full graph proto can only be set before the first compilation."
+        self._full_job_proto = full_job_proto
+        self._c_nn_graph.job = full_job_proto.SerializeToString()
 
     def _generate_name(self):
         child_name = self.__class__.__name__
@@ -606,6 +596,12 @@ class Graph(object):
             bu_gen = b.buffers(recurse=True)
             for bu in bu_gen:
                 yield bu
+
+    def __ensure_state_tensors_contiguous(self):
+        for state_block in self._state():
+            state_tensor = state_block.origin
+            if not state_tensor.is_contiguous():
+                state_tensor.contiguous_()
 
     def _filter_states(self):
         state_tensor_set = set()
@@ -718,6 +714,12 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
+        _, eager_outputs = self.build_graph(*args, **kwargs)
+        self.finish_complie_and_init_runtime()
+        return eager_outputs
+
+    def build_graph(self, *args, **kwargs):
         # Build graph
         try:
             self.__print(0, 0, self._shallow_repr() + " start building graph.")
@@ -725,7 +727,13 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            eager_outputs = self.__build_graph(*args, **kwargs)
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug,
+                self._debug_max_py_stack_depth,
+            ):
+                outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
             self.__print(
                 0,
@@ -736,6 +744,7 @@ class Graph(object):
                 + "s."
                 + "\n",
             )
+            return outputs
         except:
             self.__print(
                 2,
@@ -747,13 +756,32 @@ class Graph(object):
             )
             raise
 
+    def finish_complie_and_init_runtime(self):
+        additional_var_names = list()
+        additional_var_tensors = list()
+        for name, tensor in self._additional_variable_tobe_loaded.items():
+            additional_var_names.append(name)
+            additional_var_tensors.append(tensor)
+        if len(additional_var_names) > 0:
+            self._c_nn_graph.register_additional_variable_names_and_tensors(
+                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
+            )
+        # Sync to make sure states has been loaded.
+        oneflow._oneflow_internal.eager.Sync()
+
         # Complie graph to execution plan and init Runtime
         try:
             self.__print(
                 0, 0, self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
-            self._c_nn_graph.complie_and_init_runtime()
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug,
+                self._debug_max_py_stack_depth,
+            ):
+                self._c_nn_graph.complie_and_init_runtime()
             compile_and_init_end = time.perf_counter()
             self.__print(
                 0,
@@ -761,11 +789,6 @@ class Graph(object):
                 self._shallow_repr()
                 + " building plan Done! Cost time: "
                 + str(round(compile_and_init_end - compile_and_init_start, 2))
-                + "s."
-                + "\n"
-                + self._shallow_repr()
-                + "'s total time to build graph and plan : "
-                + str(round(compile_and_init_end - build_graph_start, 2))
                 + "s."
                 + "\n",
             )
@@ -783,9 +806,10 @@ class Graph(object):
         self._is_compiled = True
         # After compile, _additional_variable_tobe_loaded is useless.
         self._additional_variable_tobe_loaded.clear()
-        return eager_outputs
 
     def __build_graph(self, *args, **kwargs):
+        self.__ensure_state_tensors_contiguous()
+
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
 
@@ -882,6 +906,9 @@ class Graph(object):
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
+            self._job_id = (
+                oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobId()
+            )
             self.__print(
                 0, 1, self._shallow_repr() + " end building graph with compile passes."
             )
@@ -900,7 +927,12 @@ class Graph(object):
                 self._shallow_repr()
                 + " end re-building graph outputs for optimizatioin.",
             )
-
+            self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+                self._name,
+                self._full_job_proto.SerializeToString(),
+                self._job_id,
+                self._session._session_ctx,
+            )
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
                 arg_op_names,
@@ -921,7 +953,10 @@ class Graph(object):
             )
 
         # Always pack outputs to remain type of outputs
-        return seq_to_func_return(self._eager_outputs_buffer[0], True)
+        return (
+            self._full_job_proto,
+            seq_to_func_return(self._eager_outputs_buffer[0], True),
+        )
 
     def __rebuild_outputs(self, out2name=None):
         # NOTE(chengcheng):
@@ -1009,6 +1044,7 @@ class Graph(object):
                 )
 
     def __run(self, *args, **kwargs):
+        self.__ensure_input_tensors_contiguous(*args, **kwargs)
         try:
             flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
@@ -1315,6 +1351,16 @@ class Graph(object):
             # So it's safe to skip sync here.
             return
         oneflow._oneflow_internal.eager.Sync()
+
+    def __ensure_input_tensors_contiguous(self, *args, **kwargs):
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + "input")
+
+        def leaf_node_fn(node):
+            if isinstance(node._value, Tensor) and not node._value.is_contiguous():
+                node._value.contiguous_()
+            return node
+
+        io_node.map_leaf(leaf_node_fn)
 
 
 if __name__ == "__main__":

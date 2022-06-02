@@ -161,11 +161,11 @@ jobs:
       - name: Wait for GPU slot
         uses: Oneflow-Inc/get-oneflow/wait-for-gpu@single-matrix-for-efficiency
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 150
+        timeout-minutes: 90
         continue-on-error: true
         with:
           token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
-          timeout-minutes: 5
+          timeout-minutes: 3
           max-try-times: 30
 
   find-build-cache:
@@ -198,7 +198,6 @@ jobs:
             cu102
             cpu
             llvm13
-            openvino
 
   build-oneflow:
     name: "Build OneFlow"
@@ -266,27 +265,6 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
-        name: Build manylinux ${{ matrix.entry }}
-        id: build-openvino
-        if: ${{ matrix.entry =='openvino' && !matrix.cache-hit }}
-        with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/serving/openvino.cmake
-          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
-          oneflow-src: ${{ env.ONEFLOW_SRC }}
-          oneflow-build-env: openvino
-          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
-          clear-wheelhouse-dir: true
-          self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: none
-          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
-          docker-run-use-system-http-proxy: false
-          docker-run-use-lld: true
-          retry-failed-build: true
-          wheel-audit: false
-          clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
-          python-versions: |
-            3.6
       - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
@@ -865,7 +843,7 @@ jobs:
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
       - name: Module API test
-        timeout-minutes: 140
+        timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
@@ -912,8 +890,8 @@ jobs:
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
-          unknown-threshold: 15
-          error-threshold: 20
+          unknown-threshold: 30
+          error-threshold: 40
       - name: Remove automerge
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
@@ -978,9 +956,9 @@ jobs:
       - name: Download OneFlow custom clang-tidy
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
-          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/llvmorg-13.0.0-maybe/clang-tidy-13.AppImage
+          wget https://github.com/Oneflow-Inc/llvm-project/releases/download/maybe-14.0.4/clang-tidy-14.AppImage
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
-          chmod +x clang-tidy-13.AppImage clang-tidy-diff.py
+          chmod +x clang-tidy-14.AppImage clang-tidy-diff.py
       - name: Cache third party dir
         uses: actions/cache@v2
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
@@ -1021,11 +999,11 @@ jobs:
             -DBUILD_TESTING=OFF \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cd ..
-          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-13.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="$(cat ./ci/check/clang_tidy_warnings_as_errors_on_diff)"
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-14.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -warnings-as-errors="$(cat ./ci/check/clang_tidy_warnings_as_errors_on_diff)"
       - name: Check error message absence in changed files
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && contains(github.event.pull_request.labels.*.name, 'need-check-error-message') }}
         run: |
-          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-13.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -checks=-*,maybe-need-error-msg -warnings-as-errors=* -skip-line-filter
+          git diff -U0 ${{ github.event.pull_request.base.sha }} | ./clang-tidy-diff.py -clang-tidy-binary ./clang-tidy-14.AppImage -path build -allow-enabling-alpha-checkers -j $(nproc) -p1 -extra-arg="-Xclang" -extra-arg="-analyzer-config" -extra-arg="-Xclang" -extra-arg="aggressive-binary-operation-simplification=true" -checks=-*,maybe-need-error-msg -warnings-as-errors=* -skip-line-filter
       - name: Remove automerge
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) && failure() && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
