@@ -38,7 +38,6 @@ limitations under the License.
 #include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
-#include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -109,18 +108,11 @@ void SetCpuDeviceManagerNumThreads() {
   cpu_device_manager->SetDeviceNumThreads(num_threads);
 }
 
-void ClearAllSymbolAndIdCache() {
+void ClearAllSymbol() {
   Global<symbol::Storage<Scope>>::Get()->ClearAll();
-  Global<symbol::IdCache<ScopeProto>>::Get()->ClearAll();
-
   Global<symbol::Storage<JobDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<JobConfigProto>>::Get()->ClearAll();
-
   Global<symbol::Storage<ParallelDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<ParallelConf>>::Get()->ClearAll();
-
   Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<OperatorConf>>::Get()->ClearAll();
 }
 
 #if defined(__linux__) && defined(WITH_RDMA)
@@ -277,7 +269,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
-  ClearAllSymbolAndIdCache();
+  ClearAllSymbol();
   if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
     Global<EnvGlobalObjectsScope>::SetAllocated(nullptr);
   }
