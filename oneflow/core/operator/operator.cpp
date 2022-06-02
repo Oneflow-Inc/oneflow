@@ -502,6 +502,14 @@ Maybe<void> Operator::GetValidNdSbpSignatureList(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> Operator::DumpNdSbpSignatureForOpConfIf(OperatorConf* op_conf) const {
+  CHECK_NOTNULL_OR_RETURN(sbp_signature_.get()) << "sbp_signature is null, cannot dump sbp for job";
+  CHECK_NOTNULL_OR_RETURN(nd_sbp_signature_.get())
+      << "nd_sbp_signature is null, cannot dump sbp for job";
+  JUST(DumpNdSbpSignatureForOpConf(op_conf));
+  return Maybe<void>::Ok();
+}
+
 void Operator::ForEachBnInOp(const std::function<void(const std::string&)>& Handler) const {
   for (const std::string& bn_in_op : input_bns()) { Handler(bn_in_op); }
   for (const std::string& bn_in_op : output_bns()) { Handler(bn_in_op); }

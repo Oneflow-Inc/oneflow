@@ -857,6 +857,15 @@ Maybe<double> UserOp::GetComputeComplexity(
   }
 }
 
+Maybe<void> UserOp::DumpNdSbpSignatureForOpConf(OperatorConf* op_conf) const {
+  if (val_->dump_nd_sbp_signature_for_op_conf_fn) {
+    return val_->dump_nd_sbp_signature_for_op_conf_fn(*JUST(nd_sbp_signature()), op_conf);
+  } else {
+    return Operator::DumpNdSbpSignatureForOpConf(op_conf);
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> UserOp::InferOpTimeShape(
     const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
     std::shared_ptr<const Shape>* time_shape) const {

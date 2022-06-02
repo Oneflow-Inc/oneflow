@@ -151,6 +151,7 @@ class Operator {
   Maybe<void> InferNdSbpSignatureIf(
       const NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
       std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn);
+  Maybe<void> DumpNdSbpSignatureForOpConfIf(OperatorConf* op_conf) const;
   // Infer blob's MirroredSignature
   Maybe<void> InferMirroredSignatureIf(
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
@@ -226,6 +227,9 @@ class Operator {
   virtual Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
     OF_UNIMPLEMENTED() << " GetSbpSignatures unimplemented, op name: " << op_name();
   }
+  virtual Maybe<void> DumpNdSbpSignatureForOpConf(OperatorConf* op_conf) const {
+    return Maybe<void>::Ok();
+  };
   virtual Maybe<void> InferMirroredSignature(
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
           MirroredSigInferHint4Ibn,
