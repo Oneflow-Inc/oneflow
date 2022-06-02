@@ -2444,7 +2444,7 @@ class SplitLikeFunctor {
 class SplitWithSizeFunctor {
  public:
   SplitWithSizeFunctor() {
-    ops_.resize(kMaxInputCount);
+    ops_.resize(kMaxOutputCount);
     for (int n = 1; n < ops_.size(); ++n) {
       ops_[n] = CHECK_JUST(one::OpBuilder("split").Input("in").Output("out", n).Build());
     }
@@ -2478,7 +2478,7 @@ class SplitWithSizeFunctor {
     JUST(attrs.SetAttr<int64_t>("dim", axis));
     JUST(attrs.SetAttr<std::vector<int64_t>>("sections", split_size_or_sections));
 
-    return OpInterpUtil::Dispatch<TensorTuple>(*ops_.at(num_splits), {x}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*ops_[num_splits], {x}, attrs);
   }
 
  private:
