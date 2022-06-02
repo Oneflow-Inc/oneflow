@@ -39,11 +39,11 @@ inline int64_t RegulateSliceStop(int64_t stop, int64_t size) {
 constexpr size_t kSliceMaxDims = 8;
 
 struct SliceParams {
-  int64_t ndim;
-  int64_t dims[kSliceMaxDims];
-  int64_t start[kSliceMaxDims];
-  int64_t step[kSliceMaxDims];
-  int64_t size[kSliceMaxDims];
+  int64_t ndim = 0;
+  int64_t dims[kSliceMaxDims]{0};
+  int64_t start[kSliceMaxDims]{0};
+  int64_t step[kSliceMaxDims]{0};
+  int64_t size[kSliceMaxDims]{0};
 
   int64_t elem_cnt() const {
     if (ndim == 0) { return 0; }
