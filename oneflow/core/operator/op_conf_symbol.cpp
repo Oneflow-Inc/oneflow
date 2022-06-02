@@ -18,8 +18,6 @@ limitations under the License.
 namespace oneflow {
 
 OperatorConfSymbol::OperatorConfSymbol(int64_t symbol_id, const OperatorConf& op_conf)
-    : symbol_id_(symbol_id), op_conf_(op_conf) {
-  data_ = std::make_shared<OperatorConf>(op_conf);
-}
+    : symbol_id_(symbol_id), op_conf_(op_conf) {}
 
 }  // namespace oneflow
