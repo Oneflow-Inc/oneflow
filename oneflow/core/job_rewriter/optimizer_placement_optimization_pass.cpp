@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -337,6 +339,26 @@ void ForEachModelSizeBalancedPartition(
   }
 }
 
+bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy, int64_t min_size) {
+  if (shape.NumAxes() < 1 || shape.elem_cnt() < 1) { return false; }
+  CHECK_EQ(nd_sbp.sbp_parallel_size(), hierachy.NumAxes());
+  Shape cur_shape = shape;
+  if (cur_shape.elem_cnt() < min_size) { return false; }
+  FOR_RANGE(int64_t, i, hierachy.NumAxes(), ++i) {
+    const auto& sbp = nd_sbp.sbp_parallel(i);
+    if (sbp.has_split_parallel()) {
+      const int64_t dim = sbp.split_parallel().axis(); 
+      if (dim >= cur_shape.NumAxes()) { return false; }
+      // Evenly split.
+      if (cur_shape.At(dim) % hierachy.At(i) != 0) { return false; }
+      cur_shape.Set(dim, cur_shape.At(dim) / hierachy.At(i));
+      // Larger then min size.
+      if (cur_shape.elem_cnt() < min_size) { return false; }
+    }
+  }
+  return true;
+}
+
 Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder) {
   const int64_t threshold = builder->job().job_conf().optimizer_placement_optimization_threshold();
   const auto IsAllowed = [](const OpNode* n) -> bool {
@@ -355,6 +377,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
       OperatorConf new_var_op_conf = var_node->op().op_conf();
       const std::string& sole_obn = var_node->op().SoleObn();
       const NdSbp& var_nd_sbp = var_node->NdSbp4BnInOp(sole_obn);
+      const Shape& logical_shape = Shape(new_var_op_conf.variable_conf().shape());
       std::string new_split_signature = "";
       int64_t split_dim = 0;
       if (new_var_op_conf.variable_conf().nd_sbp_size() > 0 && NdSbpIsAllBroadcast(var_nd_sbp)) {
@@ -400,13 +423,9 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
         }
         ParseNdSbpFromStringList(nd_sbp_str_vec, &new_nd_sbp);
         // check allowed by min shard size and evenly split
-        const auto slices = GetTensorSliceView(*pd.hierarchy(), new_nd_sbp, Shape(new_var_op_conf.variable_conf().shape()));
-        if (slices.size() < 2) { split_is_allowed = false; }
-        if (split_is_allowed && slices.at(0).shape().elem_cnt() < threshold) { split_is_allowed = false; }
+        LOG(ERROR) << "op " << var_node->op().op_name() << " shape " << new_var_op_conf.variable_conf().shape().DebugString() << " sbp " << NdSbpToString(new_nd_sbp);
         if (split_is_allowed) {
-          FOR_RANGE(int64_t, slice_idx, 1, slices.size()) {
-            if (slices.at(slice_idx).shape() != slices.at(0).shape()) { split_is_allowed = false; break;}
-          }
+          split_is_allowed = IsSplitValid(logical_shape, new_nd_sbp, *pd.hierarchy(), threshold);
         }
         if (split_is_allowed) {
           // resize sequence by new nd sbp limit
