@@ -84,7 +84,7 @@ def _test_functional_avgpool1d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     y = torch.nn.functional.avg_pool1d(
         x,
-        kernel_size=random(1, 6).to(int),
+        kernel_size=random(4, 6).to(int),
         stride=random(1, 3).to(int),
         padding=random(1, 3).to(int),
         ceil_mode=random_bool(),
@@ -100,7 +100,7 @@ def _test_functional_avgpool2d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     y = torch.nn.functional.avg_pool2d(
         x,
-        kernel_size=random(1, 6).to(int),
+        kernel_size=random(4, 6).to(int),
         stride=random(1, 3).to(int),
         padding=random(1, 3).to(int),
         ceil_mode=random_bool(),
@@ -116,7 +116,7 @@ def _test_functional_avgpool3d_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     y = torch.nn.functional.avg_pool3d(
         x,
-        kernel_size=random(1, 6).to(int),
+        kernel_size=random(4, 6).to(int),
         stride=random(1, 3).to(int),
         padding=random(1, 3).to(int),
         ceil_mode=random_bool(),

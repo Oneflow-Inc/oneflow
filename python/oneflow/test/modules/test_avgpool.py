@@ -85,7 +85,7 @@ class TestAvgPoolingFunctional(flow.unittest.TestCase):
         x = random_tensor(ndim=3, dim2=random(20, 22)).to(device)
         y = torch.nn.functional.avg_pool1d(
             x,
-            kernel_size=random(1, 6).to(int),
+            kernel_size=random(4, 6).to(int),
             stride=random(1, 3).to(int) | nothing(),
             padding=random(1, 3).to(int),
             ceil_mode=random_bool(),
@@ -99,7 +99,7 @@ class TestAvgPoolingFunctional(flow.unittest.TestCase):
         x = random_tensor(ndim=4, dim2=random(20, 22), dim3=random(20, 22)).to(device)
         y = torch.nn.functional.avg_pool2d(
             x,
-            kernel_size=random(1, 6).to(int),
+            kernel_size=random(4, 6).to(int),
             stride=random(1, 3).to(int) | nothing(),
             padding=random(1, 3).to(int),
             ceil_mode=random_bool(),
@@ -115,7 +115,7 @@ class TestAvgPoolingFunctional(flow.unittest.TestCase):
         ).to(device)
         y = torch.nn.functional.avg_pool3d(
             x,
-            kernel_size=random(1, 6).to(int),
+            kernel_size=random(4, 6).to(int),
             stride=random(1, 3).to(int) | nothing(),
             padding=random(1, 3).to(int),
             ceil_mode=random_bool(),

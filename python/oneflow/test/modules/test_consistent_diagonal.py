@@ -23,11 +23,19 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _test_diagonal_impl(test_case, placement, sbp):
     offset = random(-5, 5).to(int).value()
-    dim1 = random(-4, 4).to(int).value()
-    dim2 = random(-4, 4).to(int).value()
+    ndims = 4
+    dim1 = 0
+    dim2 = 0
+    p_dim1 = 0
+    p_dim2 = 0
+    while p_dim1 == p_dim2:
+        dim1 = random(-4, 4).to(int).value()
+        dim2 = random(-4, 4).to(int).value()
+        p_dim1 = dim1 if dim1 >= 0 else dim1 + ndims;
+        p_dim2 = dim2 if dim2 >= 0 else dim2 + ndims;
 
     x = random_tensor(
-        ndim=4,
+        ndim=ndims,
         dim0=random(1, 4) * 8,
         dim1=random(1, 4) * 8,
         dim2=random(1, 4) * 8,

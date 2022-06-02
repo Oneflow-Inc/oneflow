@@ -89,9 +89,10 @@ class TestAutograd(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
     def test_accumulate_grad(test_case):
         device = random_device()
-        ndim = random(1, 4).to(int)
-        x = random_tensor(ndim=ndim, requires_grad=True).to(device)
-        y = random_tensor(ndim=ndim, requires_grad=True).to(device)
+        ndim = random(1, 4).to(int).value()
+        shape = [random(low=1, high=4) for i in range(ndim)]
+        x = random_tensor(ndim, *shape, requires_grad=True).to(device)
+        y = random_tensor(ndim, *shape, requires_grad=True).to(device)
         return x / (x + y)
 
     @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
