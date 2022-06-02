@@ -1855,7 +1855,6 @@ class PadFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
     const int64_t ndim = x->shape()->NumAxes();
-    CHECK_LE_OR_RETURN(ndim, 5) << "Dimension of input tensor should less than or equal to 5";
     CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
