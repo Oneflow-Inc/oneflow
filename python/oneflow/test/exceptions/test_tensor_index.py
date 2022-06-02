@@ -53,7 +53,11 @@ class TestTensorIndexError(flow.unittest.TestCase):
     def test_ApplyAdvancedIndexing_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.ones(2, 2, dtype=flow.int32)
-            index = (flow.tensor(1, dtype=flow.int32), flow.tensor(1, dtype=flow.int32), flow.tensor(1, dtype=flow.int32))
+            index = (
+                flow.tensor(1, dtype=flow.int32),
+                flow.tensor(1, dtype=flow.int32),
+                flow.tensor(1, dtype=flow.int32),
+            )
             y = x[index]
         test_case.assertTrue(
             "Too many indices for tensor of dimension" in str(context.exception)
