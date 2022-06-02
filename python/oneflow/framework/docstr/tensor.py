@@ -1544,6 +1544,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.repeat_interleave,
+    """
+    Tensor.repeat_interleave(repeats, dim=None, *, output_size=None) -> Tensor
+
+    See :func:`oneflow.repeat_interleave`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.t,
     """
     Tensor.t() → Tensor
