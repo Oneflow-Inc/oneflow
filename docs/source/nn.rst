@@ -1,106 +1,210 @@
 oneflow.nn
 ===================================
-Operators for neural networks
-----------------------------------
+
+
+These are the basic building blocks for graphs:
+
+.. contents:: oneflow.nn
+    :depth: 2
+    :local:
+    :backlinks: top
+
 .. currentmodule:: oneflow.nn
-.. automodule:: oneflow.nn
-    :members: AdaptiveAvgPool1d,
-        AdaptiveAvgPool2d,
-        AdaptiveAvgPool3d,
-        AvgPool1d,
-        AvgPool2d,
-        AvgPool3d,
-        BCELoss,
-        BCEWithLogitsLoss,
-        BatchNorm1d,
-        BatchNorm2d,
-        BatchNorm3d,
-        COCOReader,
-        CTCLoss,
-        CoinFlip,
-        ConstantPad1d,
-        ConstantPad2d,
-        ConstantPad3d,
-        Conv1d,
-        Conv2d,
-        Conv3d,
-        ConvTranspose1d,
-        ConvTranspose2d,
-        ConvTranspose3d,
-        CosineSimilarity,
-        CombinedMarginLoss,
-        CropMirrorNormalize,
-        CrossEntropyLoss,
-        Dropout,
-        ELU,
-        CELU,
-        Embedding,
-        Flatten,
-        GELU,
-        GLU,
-        GroupNorm,
-        Hardsigmoid,
-        Hardshrink,
-        Hardswish,
-        Hardtanh,
-        Identity,
-        InstanceNorm1d,
-        InstanceNorm2d,
-        InstanceNorm3d,
-        KLDivLoss,
-        L1Loss,
-        LayerNorm,
-        LeakyReLU,
-        Linear,
-        LogSigmoid,
-        LogSoftmax,
-        MSELoss,
-        MarginRankingLoss,
-        TripletMarginLoss,
-        MaxPool1d,
-        MaxPool2d,
-        MaxPool3d,
-        ModuleDict,
-        ModuleList,
-        Mish,
-        NLLLoss,
-        OFRecordImageDecoder,
-        OFRecordImageDecoderRandomCrop,
-        OFRecordRawDecoder,
-        OFRecordReader,
-        OFRecordBytesDecoder,
-        PReLU,
-        Parameter,
-        ParameterDict,
-        ParameterList,
-        PixelShuffle,
-        ReLU,
-        ReLU6,
-        ReflectionPad2d,
-        ReplicationPad2d,
-        Sequential, 
-        SELU, 
-        SiLU, 
-        Sigmoid,
-        SmoothL1Loss,
-        Softmax,
-        Softplus, 
-        Softshrink,
-        Softsign, 
-        Tanh,
-        Threshold,
-        Upsample,
-        UpsamplingBilinear2d,
-        UpsamplingNearest2d,
-        ZeroPad2d,
-        MinMaxObserver,
-        MovingAverageMinMaxObserver,
-        FakeQuantization,
-        Quantization, 
-        FusedBatchNorm1d, 
-        FusedBatchNorm2d, 
-        FusedBatchNorm3d, 
-        FusedMLP, 
+
+Containers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    :template: 
+
+    Module
+    Sequential
+    ModuleList
+    ModuleDict
+    ParameterList
+    ParameterDict
+
+Convolution Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    Conv1d 
+    Conv2d 
+    Conv3d
+    ConvTranspose1d 
+    ConvTranspose2d 
+    ConvTranspose3d
+
+Pooling Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    MaxPool1d 
+    MaxPool2d 
+    MaxPool3d 
+    AdaptiveAvgPool1d 
+    AdaptiveAvgPool2d 
+    AdaptiveAvgPool3d
+    AvgPool1d 
+    AvgPool2d 
+    AvgPool3d
+
+Padding Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    ConstantPad1d 
+    ConstantPad2d 
+    ConstantPad3d
+    ZeroPad2d
+
+Non-linear Activations (weighted sum, nonlinearity)
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    ELU 
+    Hardsigmoid 
+    Hardswish 
+    Hardtanh 
+    LeakyReLU 
+    LogSigmoid 
+    PReLU 
+    ReLU 
+    SELU 
+    CELU 
+    GELU 
+    SiLU 
+    Sigmoid 
+    Mish 
+    Softplus 
+    Softshrink 
+    Softsign 
+    Tanh 
+    Threshold 
+    GLU
+
+Non-linear Activations (other)
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    Softmax
+    LogSoftmax
+
+Normalization Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    BatchNorm1d 
+    BatchNorm2d 
+    BatchNorm3d 
+    FusedBatchNorm1d 
+    FusedBatchNorm2d
+    FusedBatchNorm3d 
+    GroupNorm 
+    InstanceNorm1d 
+    InstanceNorm2d 
+    InstanceNorm3d 
+    LayerNorm
+
+Linear Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    
+    Identity
+    Linear
+
+Dropout Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    Dropout
+
+Sparse Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    Embedding
+
+Loss Functions
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    BCELoss 
+    BCEWithLogitsLoss 
+    CTCLoss 
+    CombinedMarginLoss 
+    CrossEntropyLoss 
+    KLDivLoss 
+    L1Loss 
+    MSELoss 
+    MarginRankingLoss 
+    NLLLoss 
+    SmoothL1Loss 
+    TripletMarginLoss
+
+Vision Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    PixelShuffle 
+    Upsample 
+    UpsamplingBilinear2d 
+    UpsamplingNearest2d
+
+DataParallel Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    DistributedDataParallel
+
+DataParallel Layers
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    
+    utils.clip_grad_norm_ 
+    utils.weight_norm 
+    utils.remove_weight_norm
 
 .. autofunction:: oneflow.nn.modules.pixelshuffle.PixelShufflev2
 

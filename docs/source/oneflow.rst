@@ -3,6 +3,9 @@
 
 oneflow
 ===================================
+The oneflow package contains data structures for multi-dimensional tensors and defines mathematical operations over these tensors. Additionally, it provides many utilities for efficient serializing of Tensors and arbitrary types, and other useful utilities.
+
+It has a CUDA counterpart, that enables you to run your tensor computations on an NVIDIA GPU with compute capability >= 3.0
 
 .. currentmodule:: oneflow
 
@@ -20,8 +23,8 @@ Tensor
     set_printoptions
 
 Creation Ops
--------------------------------------------
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
 .. autosummary::
     :toctree: generated
     :nosignatures:
@@ -64,6 +67,7 @@ Indexing, Slicing, Joining, Mutating Ops
     select
     scatter
     scatter_add
+    oneflow.scatter_nd
     split
     squeeze
     stack
@@ -88,21 +92,12 @@ Random sampling
     manual_seed
     initial_seed
     get_rng_state
-    set_rng_state
-
-oneflow.default_generator Returns the default CPU oneflow.Generator
--------------------------------------------
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
-
     bernoulli
-    normal
     rand
-    randn
     randint
+    randn
     randperm
+    set_rng_state
 
 Serialization
 -------------------------------------------
@@ -121,7 +116,7 @@ Parallelism
     :toctree: generated
     :nosignatures:
 
-    oneflow.set_num_threads
+    set_num_threads
 
 Locally disabling gradient computation
 -------------------------------------------
@@ -138,150 +133,135 @@ Locally disabling gradient computation
 
 Math operations
 -------------------------------------------
+
 Pointwise Ops
--------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
-    abs
+    abs 
     acos 
     acosh 
-    add 
-    addcmul 
-    addmm 
-    all 
-    amin 
-    amax
-    any 
     arccos 
+    add 
+    asin 
+    asinh 
     arcsin 
     arcsinh 
-    arccosh 
+    atan
+    atanh 
     arctan 
     arctanh 
-    argmax 
-    argmin 
-    argsort 
-    asin  
-    asinh 
-    atan 
     atan2 
-    atanh 
-    broadcast_like 
-    batch_gather
-    bmm
-    cast 
     ceil 
     clamp 
     clip 
     cos 
     cosh 
-    diag 
-    diagonal
     div 
-    dot 
-    eq
-    einsum
-    equal 
-    expand   
-    exp 
-    expm1 
     erf 
     erfc 
-    erfinv 
-    flatten 
-    flip 
+    erfin 
+    exp 
+    expm1 
     floor 
-    floor_
-    fmod    
-    gather_nd 
-    gelu 
-    gt 
-    in_top_k 
-    logical_and
-    logical_or
-    logical_not
-    logical_xor
+    floor_ 
+    fmod 
     log 
-    log2
     log1p 
-    lt 
-    le 
-    masked_fill  
-    matmul   
-    max 
-    mean
-    median
-    mish  
-    min 
-    meshgrid
+    log2 
+    logical_and 
+    logical_not 
+    logical_or 
+    logical_slice 
+    logical_xor 
     mul 
     neg 
     negative 
-    new_ones
-    numel 
-    ne 
-    pow
-    prod  
-    repeat 
-    reciprocal
-    roc_auc_score
-    roll
+    pow 
+    reciprocal 
     round 
-    rsqrt
-    scatter_nd 
-    tensor_scatter_nd_update
-    sin 
-    sin_ 
-    sinh 
-    sign 
-    selu 
-    silu 
-    slice 
-    logical_slice  
-    softsign 
-    sort 
-    softplus 
+    rsqrt 
     sigmoid 
-    softmax  
-    std
-    sub 
-    sum 
+    sign 
+    sin 
+    sinh 
+    sin_ 
     sqrt 
-    square  
+    square 
+    sub 
     tan 
-    tanh 
-    tensordot
-    tril 
-    var 
-    is_nonzero
-    is_tensor  
-    is_floating_point
-    set_printoptions
-    decode_onerec
-    cumsum
-    topk
-    nms
-    cumprod
-    HalfTensor
-    FloatTensor
-    DoubleTensor
-    BoolTensor
-    ByteTensor
-    CharTensor
-    IntTensor
-    LongTensor
-    isnan
-    isinf
-    searchsorted
+    tanh
 
-.. automodule:: oneflow
-    :members: adaptive_avg_pool1d, 
-            adaptive_avg_pool2d, 
-            adaptive_avg_pool3d,     
-            tensor_split,
-.. autofunction:: oneflow.relu
+Reduction Ops
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+    
+    argmax  
+    argmin  
+    min  
+    mean  
+    prod
+    prod
+    std  
+    sum  
+    var
+
+
+Comparison Ops
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    argsort 
+    eq 
+    equal 
+    gt 
+    isinf 
+    isnan 
+    le 
+    lt 
+    ne 
+    sort 
+    topk
+
+Other Ops
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    
+    broadcast_like 
+    cumprod 
+    cumsum 
+    diag 
+    diagonal 
+    einsum 
+    flatten 
+    flip 
+    meshgrid 
+    roll 
+    tril
+
+BLAS and LAPACK Operations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    addmm 
+    bmm 
+    dot 
+    matmul
 
 

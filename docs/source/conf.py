@@ -42,12 +42,18 @@ release = u""
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc", 
-    "sphinx.ext.napoleon", 
-    "recommonmark", 
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "recommonmark",
     "sphinx_copybutton",
-    "sphinx.ext.autosummary"
-    ]
+    "sphinx.ext.autosummary",
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.todo',
+    'sphinx.ext.coverage',
+    'sphinx.ext.viewcode',
+    'sphinxcontrib.katex',
+    'sphinx.ext.autosectionlabel',
+        ]
 
 # build the templated autosummary files
 autosummary_generate = True
@@ -90,9 +96,6 @@ pygments_style = None
 # a list of builtin themes.
 #
 html_theme = "furo"
-html_theme_options = {
-    "sidebar_hide_name": True,
-}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -213,18 +216,6 @@ def should_skip_member(app, what, name, obj, skip, options):
     magical = name in ["__weakref__", "__doc__", "__module__", "__dict__"]
     return skip or is_deprecated or magical
 
-from os import path
-
-__version__ = '0.0.24'
-__version_full__ = __version__
-
-
-def get_html_theme_path():
-    """Return list of HTML theme paths."""
-    cur_dir = path.abspath(path.dirname(path.dirname(__file__)))
-    return cur_dir
-
 def setup(app):
     app.connect("autodoc-skip-member", should_skip_member)
-    app.add_html_theme('pytorch_sphinx_theme', path.abspath(path.dirname(__file__)))
 
