@@ -879,12 +879,69 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     }
   }
 
+<<<<<<< Updated upstream
   for (auto pair : rank_device2size) {
     int64_t rank_id = pair.first.first;
     int64_t device_id = pair.first.second;
     double mem_size = pair.second * 1.0 / 1000000.0;
     LOG(INFO) << "Graph name " << plan_name << " needs to allocate [ " << mem_size
               << " MiB ] device memory in Rank: " << rank_id << " , Device: " << device_id << ".";
+=======
+  for (const auto* task : ordered_tasks) {
+    for (const auto& pair : task->produced_regst_desc()) {
+      const auto& regst = pair.second;
+      if (regst.regst_desc_type().has_data_regst_desc()
+          && mem_block_id2info.find(regst.mem_block_id()) != mem_block_id2info.end()) {
+        const auto data_regst = regst.regst_desc_type().data_regst_desc();
+        std::string op_name = data_regst.lbi2blob_desc(0).lbi().op_name();
+        mem_block_id2info.at(regst.mem_block_id()).ordered_op_names.push_back(op_name);
+      }
+    }
+  }
+
+  auto CompMemBlock = [&](int64_t a, int64_t b) {
+    return mem_block_id2info[a].mem_block_mem_size > mem_block_id2info[b].mem_block_mem_size;
+  };
+
+  auto B2MiB = [](int64_t val) { return val * 1.0 / 1000000.0; };
+
+  for (auto& rank_memory_info : rank_device_memory_infos) {
+    std::sort(rank_memory_info.chunk_info.mem_block_ids.begin(),
+              rank_memory_info.chunk_info.mem_block_ids.end(), CompMemBlock);
+    LOG(ERROR) << " Graph name " << plan_name << " in Rank: " << rank_memory_info.rank_id
+              << ", Device: " << rank_memory_info.device_id << " needs to allocate [ "
+              << B2MiB(rank_memory_info.total_mem_size)
+              << " MiB ] device memory. \n In general, Chunk id: "
+              << rank_memory_info.chunk_info.chunk_id << "  memory is [ "
+              << B2MiB(rank_memory_info.chunk_info.chunk_mem_size)
+              << " MiB ]; \n Memory out of Chunk is  [ "
+              << B2MiB(rank_memory_info.not_reused_mem_size)
+              << " MiB ]; and in particular: Eager Variable Tensor total memory is [ "
+              << B2MiB(rank_memory_info.eager_variable_total_mem_size) << " MiB ].";
+  }
+
+  if (IsInDebugMode()) {
+    for (const auto& rank_memory_info : rank_device_memory_infos) {
+      int64_t chunk_id = rank_memory_info.chunk_info.chunk_id;
+      VLOG(2) << " For detail: Chunk id: " << chunk_id << " has "
+              << rank_memory_info.chunk_info.mem_block_ids.size() << " MemBlocks.";
+      for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
+        CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
+        const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
+        VLOG(2) << " In Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id
+                << " has num = " << mem_block_info.ordered_op_names.size()
+                << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size);
+      }
+      for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
+        CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
+        const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
+        for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
+          VLOG(3) << " In MemBlock id: " << mem_block_id << " order: " << i
+                  << " op_name: " << mem_block_info.ordered_op_names.at(i);
+        }
+      }
+    }
+>>>>>>> Stashed changes
   }
 }
 

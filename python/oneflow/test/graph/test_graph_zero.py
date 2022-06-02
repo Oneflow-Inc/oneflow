@@ -122,11 +122,11 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
         def get_mixed_linear():
             linear_dp_mp = flow.nn.Linear(800, 400, bias=False)
             linear_dp_mp = linear_dp_mp.to_global(placement=P, sbp=[B, S0])
-            flow.nn.init.constant_(linear_dp_mp.weight, 2.068758)
+            flow.nn.init.constant_(linear_dp_mp.weight, 1.068758)
 
             linear_mp_dp = flow.nn.Linear(800, 400, bias=False)
             linear_mp_dp = linear_mp_dp.to_global(placement=P, sbp=[S0, B])
-            flow.nn.init.constant_(linear_mp_dp.weight, 2.068758)
+            flow.nn.init.constant_(linear_mp_dp.weight, 1.068758)
 
             class MixedLinear(flow.nn.Module):
                 def __init__(self):
@@ -156,7 +156,7 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
         )
         grad_scaler = flow.amp.StaticGradScaler(200)
 
-        x = flow.randint(1, 100, (6, 800), dtype=flow.float32, placement=P, sbp=[S0, B])
+        x = flow.rand((2, 800), dtype=flow.float32, placement=P, sbp=[S0, B])
 
         class LinearTrainGraph2DWithZeRO(flow.nn.Graph):
             def __init__(self):
@@ -175,14 +175,13 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
                     shard_min_size=1,
                     shard_restore_level=1,
                 )
-                self.debug(1)
 
             def build(self, x):
                 out = self.mixed_linear0(x)
                 out = self.mixed_linear1(out)
-                loss = out.sum()
+                loss = out.mean()
                 loss.backward()
-                return out
+                return loss
 
         class LinearEvalGraph2DWithZeRO(flow.nn.Graph):
             def __init__(self):
@@ -198,14 +197,12 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
                 return out
 
         linear_t_g = LinearTrainGraph2DWithZeRO()
-        linear_t_g.debug(1)
         linear_e_g = LinearEvalGraph2DWithZeRO()
-        linear_e_g.debug(1)
 
         def one_train_iter():
             out = linear_t_g(x)
-            if flow.env.get_rank() == 0:
-                print(linear_t_g)
+            #if flow.env.get_rank() == 0:
+            #    print(linear_t_g)
 
         def one_eval_iter():
             out = linear_e_g(x)
@@ -213,10 +210,8 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
         for i in range(iter_num):
             one_train_iter()
 
-        # After pass rewrite in training graph, parameters' sbp has been
-        # changed from flow.sbp.broadcast to flow.sbp.split(0)
-        # test_case.assertEqual(linear_dp.weight.sbp[0], S0)
-        # test_case.assertEqual(linear_mp.weight.sbp[0], S0)
+        for state in linear_t_g._state():
+            test_case.assertEqual(state.origin.sbp, (oneflow.sbp.split(axis=0), oneflow.sbp.split(axis=0)))
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).
         # But their consumer will consum them as flow.sbp.broadcast.
@@ -242,8 +237,15 @@ class TestLinearTrainGraphWithZeRO(oneflow.unittest.TestCase):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
 class TestLinearTrainGraph2DWithZeRO(oneflow.unittest.TestCase):
-    def test_linear_train_graph_2d_with_zero_1(test_case):
+    def test_linear_train_graph_2d_with_zero_3(test_case):
+        _test_linear_train_graph_2d_with_zero(test_case, 3)
+
+    def test_linear_train_graph_2d_with_zero_2(test_case):
         _test_linear_train_graph_2d_with_zero(test_case, 2)
+
+    def test_linear_train_graph_2d_with_zero_1(test_case):
+        _test_linear_train_graph_2d_with_zero(test_case, 1)
+
 
 
 if __name__ == "__main__":
