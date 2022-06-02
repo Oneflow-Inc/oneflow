@@ -33,21 +33,21 @@ class LogicalSlice : public OpExprGradFunction<LogicalSliceCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "LogicalSlice op_expr is null";
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(LogicalSliceCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1) << "LogicalSlice input size must be 1";
+    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "LogicalSlice output size must be 1";
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
-    ctx->like_shape = *(inputs.at(0)->shape());
+    ctx->like_shape = *(inputs[0]->shape());
     return Maybe<void>::Ok();
   }
 
@@ -55,17 +55,17 @@ class LogicalSlice : public OpExprGradFunction<LogicalSliceCaptureState> {
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
     std::shared_ptr<Tensor> zeros;
-    if (out_grads.at(0)->is_local()) {
-      zeros = JUST(functional::Constant(ctx->like_shape, 0, out_grads.at(0)->dtype(),
-                                        JUST(out_grads.at(0)->device())));
+    if (out_grads[0]->is_local()) {
+      zeros = JUST(functional::Constant(ctx->like_shape, 0, out_grads[0]->dtype(),
+                                        JUST(out_grads[0]->device())));
     } else {
-      const auto& parallel_desc = JUST(out_grads.at(0)->parallel_desc());
-      const auto& nd_sbp = JUST(out_grads.at(0)->nd_sbp());
-      zeros = JUST(functional::ConsistentConstant(ctx->like_shape, 0, out_grads.at(0)->dtype(),
+      const auto& parallel_desc = JUST(out_grads[0]->parallel_desc());
+      const auto& nd_sbp = JUST(out_grads[0]->nd_sbp());
+      zeros = JUST(functional::ConsistentConstant(ctx->like_shape, 0, out_grads[0]->dtype(),
                                                   parallel_desc, *JUST(GetSbpList(nd_sbp))));
     }
-    (*in_grads)[0] = JUST(
-        functional::LogicalSliceAssign(zeros, out_grads.at(0), ctx->start, ctx->stop, ctx->step));
+    (*in_grads)[0] =
+        JUST(functional::LogicalSliceAssign(zeros, out_grads[0], ctx->start, ctx->stop, ctx->step));
     return Maybe<void>::Ok();
   }
 
@@ -86,7 +86,7 @@ class LogicalSliceAssign : public OpExprGradFunction<LogicalSliceAssignCaptureSt
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "LogicalSliceAssign op_expr is null";
 
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
@@ -94,10 +94,10 @@ class LogicalSliceAssign : public OpExprGradFunction<LogicalSliceAssignCaptureSt
 
   Maybe<void> Capture(LogicalSliceAssignCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad_ref = inputs.at(0)->requires_grad();
-    ctx->requires_grad_value = inputs.at(1)->requires_grad();
+    CHECK_EQ_OR_RETURN(inputs.size(), 2) << "LogicalSliceAssign input size must be 2";
+    CHECK_EQ_OR_RETURN(outputs.size(), 1) << "LogicalSliceAssign output size must be 1";
+    ctx->requires_grad_ref = inputs[0]->requires_grad();
+    ctx->requires_grad_value = inputs[1]->requires_grad();
     if (!ctx->requires_grad_ref && !ctx->requires_grad_value) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -105,7 +105,7 @@ class LogicalSliceAssign : public OpExprGradFunction<LogicalSliceAssignCaptureSt
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
 
-    if (ctx->requires_grad_ref) { ctx->value_shape = *(inputs.at(1)->shape()); }
+    if (ctx->requires_grad_ref) { ctx->value_shape = *(inputs[1]->shape()); }
     return Maybe<void>::Ok();
   }
 
@@ -115,13 +115,13 @@ class LogicalSliceAssign : public OpExprGradFunction<LogicalSliceAssignCaptureSt
 
     if (ctx->requires_grad_ref) {
       std::shared_ptr<Tensor> zeros;
-      if (out_grads.at(0)->is_local()) {
-        zeros = JUST(functional::Constant(ctx->value_shape, 0, out_grads.at(0)->dtype(),
-                                          JUST(out_grads.at(0)->device())));
+      if (out_grads[0]->is_local()) {
+        zeros = JUST(functional::Constant(ctx->value_shape, 0, out_grads[0]->dtype(),
+                                          JUST(out_grads[0]->device())));
       } else {
-        const auto& parallel_desc = JUST(out_grads.at(0)->parallel_desc());
-        const auto& nd_sbp = JUST(out_grads.at(0)->nd_sbp());
-        zeros = JUST(functional::ConsistentConstant(ctx->value_shape, 0, out_grads.at(0)->dtype(),
+        const auto& parallel_desc = JUST(out_grads[0]->parallel_desc());
+        const auto& nd_sbp = JUST(out_grads[0]->nd_sbp());
+        zeros = JUST(functional::ConsistentConstant(ctx->value_shape, 0, out_grads[0]->dtype(),
                                                     parallel_desc, *JUST(GetSbpList(nd_sbp))));
       }
       (*in_grads)[0] = JUST(functional::LogicalSliceAssign(
