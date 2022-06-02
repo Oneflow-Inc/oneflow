@@ -881,6 +881,17 @@
   signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
   bind_python: True
 
+- name: "repeat_interleave_index"
+  signature: "Tensor (Tensor input, Tensor cumsum, Int32 dim) => RepeatInterLeaveIndex"
+  bind_python: False
+
+- name: "repeat_interleave"
+  signature: [
+    "Tensor (Tensor input, Int32 repeats, Int32 dim=None) => RepeatInterLeaveInt",
+    "Tensor (Tensor input, Tensor repeats, Int32 dim, Int32 output_size=None) => RepeatInterLeaveTensor",
+  ]
+  bind_python: True
+
 - name: "tile"
   signature: "Tensor (Tensor input, Shape dims) => Tile"
   bind_python: True

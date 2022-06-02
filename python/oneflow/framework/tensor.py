@@ -958,6 +958,10 @@ def _repeat(self, *sizes):
     return flow._C.repeat(self, new_sizes)
 
 
+def _repeat_interleave(self, *args, **kwargs):
+    return flow._C.repeat_interleave(self, *args, **kwargs)
+
+
 def _tile(self, *dims):
     if len(dims) == 1:
         new_dims = dims[0]
@@ -1176,6 +1180,7 @@ def RegisterMethods():
     Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
     Tensor.repeat = _repeat
+    Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
     Tensor.split = _split
     Tensor.narrow = _narrow
