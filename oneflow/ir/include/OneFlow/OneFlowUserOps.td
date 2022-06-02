@@ -5311,6 +5311,24 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   let has_nd_sbp_infer_fn = 1;
 }
 
+def OneFlow__ncclLogicalReduceScatterNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical_reduce_scatter_noncontinuous", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
+  let has_nd_sbp_infer_fn = 1;
+}
+
 def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in

@@ -217,6 +217,20 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                .Build()
                .op_conf();
     return true;
+  } else if (CanSplitAtDim(0)
+             && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
+             && (dst_sbp.split_parallel().axis() > 0)) {
+    // P->S(0) : ReduceScatter Noncontinuous
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
+               .Op("_nccl_logical_reduce_scatter_noncontinuous")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
   }
   return false;
 }
