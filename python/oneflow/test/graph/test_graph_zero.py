@@ -56,8 +56,8 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                 self.config.enable_zero(
                     True,
                     stage=zero_stage,
-                    min_shard_size=1,
-                    parameter_consumer_limit_level=0,
+                    shard_min_size=1,
+                    shard_restore_level=0,
                 )
                 self.debug(2)
 
@@ -162,7 +162,6 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         x = flow.randint(1, 100, (6, 800), dtype=flow.float32, placement=P, sbp=[S0, B])
 
-        #flow.boxing.nccl.enable_use_compute_stream(True)
         class LinearTrainGraph2DWithZeRO(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -177,8 +176,8 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
                 self.config.enable_zero(
                     True,
                     stage=zero_stage,
-                    min_shard_size=1,
-                    parameter_consumer_limit_level=1,
+                    shard_min_size=1,
+                    shard_restore_level=1,
                 )
                 self.debug(1)
 

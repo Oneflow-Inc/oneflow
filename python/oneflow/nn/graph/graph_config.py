@@ -17,7 +17,7 @@ import os
 
 from collections import OrderedDict
 
-import oneflow
+import oneflow.boxing.nccl as nccl_config
 from oneflow.nn.graph.optimizer import OptDict
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 
@@ -77,8 +77,8 @@ class GraphConfig(object):
         mode: bool = True,
         *,
         stage: int = 2,
-        min_shard_size: int = 1024,
-        parameter_consumer_limit_level: int = 2,
+        shard_min_size: int = 1024,
+        shard_restore_level: int = 1,
     ):
         r"""Enable ZeRO redundancy optimizer.
 
@@ -106,25 +106,25 @@ class GraphConfig(object):
         Args:
             mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
             stage (int): optimization stage, range from 1 to 3. 
-            min_shard_size (int): min size of a shard of an optimizer state.
-            parameter_consumer_limit_level (int): limit consumer to comsume sharded parameter with Broadcast, level 2 is hard limit, level 1 is soft limit, level 0 is no limit. Note that this paremeter is at pre-alpha stage and is not stable.
+            shard_min_size (int): min size of a shard of an optimizer state.
+            shard_restore_level (int): level to restore sharded parameter to whole parameter for consumer operators, level 0 is no restore, level 1 is soft restore, level 2 is hard restore. Note that this paremeter is at pre-alpha stage.
         """
         if not mode:
             self.proto.optimizer_placement_optimization_mode = "none"
             return
         assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
         assert (
-            min_shard_size > 0
+            shard_min_size > 0
         ), "ZeRO min size of a sharded optimizer state must > 0."
         assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
         if stage >= 1:
             self.proto.optimizer_placement_optimization_mode = "distributed_split"
-            self.proto.optimizer_placement_optimization_threshold = min_shard_size
-            self.proto.optimizer_placement_optimization_comsumer_limit_level = parameter_consumer_limit_level
+            self.proto.optimizer_placement_optimization_threshold = shard_min_size
+            self.proto.optimizer_placement_optimization_shard_restore_level = shard_restore_level
         if stage >= 2:
-            oneflow.boxing.nccl.enable_use_compute_stream(True)
+            nccl_config.enable_use_compute_stream(True)
         if stage >= 3:
-            oneflow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
+            nccl_config.disable_group_boxing_by_dst_parallel(True)
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.

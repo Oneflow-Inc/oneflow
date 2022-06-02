@@ -27,7 +27,6 @@ import time
 import os
 
 os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
-os.environ["LOGICAL_SR"] = "1"
 
 
 def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
@@ -47,7 +46,7 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     if (
         src_nd_sbp[1] == dst_nd_sbp[1]
         and src_nd_sbp[0] != src_nd_sbp[1]
-        and src_nd_sbp[0] != src_nd_sbp[1]
+        and dst_nd_sbp[0] != dst_nd_sbp[1]
     ):
         return
 
@@ -63,9 +62,10 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     # check eager boxing
     eager_out = x.to_global(sbp=dst_nd_sbp, placement=placement)
     test_case.assertTrue(np.array_equal(eager_out.numpy(), x.numpy()))
-    
-	# check graph boxing
+
+    # check graph boxing
     flow.boxing.nccl.enable_use_compute_stream(True)
+
     class TestNcclLogicalSendRecvGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -75,11 +75,17 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
             return y
 
     graph = TestNcclLogicalSendRecvGraph()
+    # graph.debug()
     y = graph(x)
     out_np = y.numpy()
     in_np = x.numpy()
+    # if flow.env.get_rank() == 0:
+    #    print("src sbp ", src_nd_sbp, ", dst sbp ", dst_nd_sbp)
+    #    equal = np.array_equal(out_np, in_np)
+    #    if not equal:
+    #        print("in ", in_np)
+    #        print("out ", out_np)
     test_case.assertTrue(np.array_equal(out_np, in_np))
-
 
 
 def gen_nd_sbp():
