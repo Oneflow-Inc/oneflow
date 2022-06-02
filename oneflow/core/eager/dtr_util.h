@@ -1,6 +1,7 @@
 #include <memory>
 #include <vector>
 
+#include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {

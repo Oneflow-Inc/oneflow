@@ -210,7 +210,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
       // `ComputeInFuseMode` will be replaced by `Compute` soon.
       instr_msg->mut_instr_type_id()->instruction_type().ComputeInFuseMode(instr_msg);
     }
-  } else if (true) {
+  } else if (unlikely(vm_threads_closed_)) {
     JUST(RunInCurrentThread(instr_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();

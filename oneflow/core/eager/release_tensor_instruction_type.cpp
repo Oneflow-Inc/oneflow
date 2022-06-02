@@ -47,7 +47,7 @@ void EvictDTRTensorInstructionType::Compute(vm::Instruction* instruction) const 
   const auto* ptr =
       dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  if (ParseBooleanFromEnv("OF_DTR_EE", true)) {
+  if (EnvBool<OF_DTR_EE>()) {
     const auto& ebo =
         CHECK_NOTNULL(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object()));
     if (dtr::debug_level() >= 2) {

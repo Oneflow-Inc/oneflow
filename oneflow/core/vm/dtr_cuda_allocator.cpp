@@ -16,6 +16,7 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 
+#include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/tensor_pool.h"
@@ -42,7 +43,6 @@ DtrCudaAllocator::DtrCudaAllocator(int64_t device_id)
   bins_.resize(kBinNumSize);
   for (int i = 0; i < kBinNumSize; ++i) {
     size_t bin_size = BinSize4BinNum(i);
-    bins_.at(i).size = bin_size;
     CHECK_EQ(BinNum4BinSize(bin_size), i);
     CHECK_EQ(BinNum4BinSize(bin_size + kCudaMemAllocAlignSize - 1), i);
     CHECK_EQ(BinNum4BinSize(bin_size * 2 - 1), i);
@@ -70,7 +70,6 @@ void DtrCudaAllocator::InsertPiece2Bin(Piece* piece) {
   int32_t bin_num = BinNum4BinSize(piece->size);
   piece->bin_num = bin_num;
   CHECK(bins_.at(bin_num).pieces.insert(piece).second);
-  piece_ordered_by_ptr.insert(piece);
 }
 
 void DtrCudaAllocator::RemovePieceFromBin(Piece* piece) {
@@ -78,7 +77,6 @@ void DtrCudaAllocator::RemovePieceFromBin(Piece* piece) {
   CHECK_NE(piece->bin_num, kInvalidBinNum);
   CHECK_GT(bins_.at(piece->bin_num).pieces.erase(piece), 0);
   piece->bin_num = kInvalidBinNum;
-  piece_ordered_by_ptr.erase(piece);
 }
 
 DtrCudaAllocator::Piece* DtrCudaAllocator::AllocatePiece() {
@@ -120,7 +118,8 @@ void DtrCudaAllocator::DisplayAllPieces() {
     ss << "piece " << piece << ", " << (void*)piece->ptr << ", " << piece->size << ", ";
     if (piece->tensor) {
       ss << "ebo: " << piece->tensor << ", id: " << piece->tensor->id()
-         << ", pinned: " << piece->tensor->num_pinned() << ", evictable: " << piece->tensor->is_evictable()
+         << ", pinned: " << piece->tensor->num_pinned()
+         << ", evictable: " << piece->tensor->is_evictable()
          << ", compute op: " << piece->tensor->compute_op_type_name();
     } else {
       ss << "no tensor";
@@ -154,12 +153,12 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size));
 
   if (memory_ == nullptr) {
-    const size_t size = dtr::memory_threshold();
-    OF_CUDA_CHECK(cudaMalloc(&memory_, size));
+    size_t size = dtr::memory_threshold();
     if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
       LOG(INFO) << "****"
                 << "BEGINNING-" << size << std::endl;
     }
+    OF_CUDA_CHECK(cudaMalloc(&memory_, size));
     Piece* piece = AllocatePiece();
     piece->size = size;
     piece->ptr = static_cast<char*>(memory_);
@@ -189,7 +188,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
         } else if (piece->size > aligned_size) {
           const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
           const bool choose_left = [&]() {
-            if (ParseBooleanFromEnv("OF_DTR_NLR", false)) {
+            if (EnvBool<OF_DTR_NLR>()) {
               // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
               // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true));
               std::vector<std::string> high_compute_cost_names{"conv2d", "conv_data_grad",
@@ -277,7 +276,7 @@ double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
   const std::string cost_type = "eq_compute_time_and_last_access";
   double cost = CHECK_JUST(ebo->cost(cost_type));
 
-  if (!ParseBooleanFromEnv("OF_DTR_O_ONE", false)) {
+  if (!EnvBool<OF_DTR_O_ONE>()) {
     CHECK(!isinf(cost));
     CHECK(!isnan(cost));
     return cost;
@@ -386,6 +385,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
   for (auto* piece : pieces_to_be_evicted) {
     evict_size += piece->size;
     // NOTE: evict will trigger the merge and deallocation of neighbour free pieces,
+    // e.g. two contiguous pieces relu, no_tensor, after relu evict, no_tensor will be deallocated.
     // currently deallocation only set tensor to nullptr, not real free,
     // so no bug occurs. It is tricky and fragile.
     if (piece->tensor != nullptr) { CHECK_JUST(piece->tensor->evict(false)); }
@@ -397,9 +397,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
               << "END-EvictAndFindPiece" << std::endl;
   }
 
-  if (!pieces_to_be_evicted.empty()) {
-    return CHECK_NOTNULL(FindPiece(required_size));
-  }
+  if (!pieces_to_be_evicted.empty()) { return CHECK_NOTNULL(FindPiece(required_size)); }
   return nullptr;
 }
 
@@ -431,7 +429,7 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
               << "ALLOCATE-" << mem_ptr << "-" << size << std::endl;
   }
 
-  if (ParseBooleanFromEnv("OF_DTR_LR", true)) { left_ = !left_; }
+  if (EnvBool<OF_DTR_LR>()) { left_ = !left_; }
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "aid " << id_ << ", allocate " << (size / 1024. / 1024.)
   //             << "MB, total mem: " << (total_memory_bytes_ / 1024. / 1024.)

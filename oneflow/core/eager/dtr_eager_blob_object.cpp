@@ -18,7 +18,7 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL_OR_RETURN(allocator);
   auto MarkDptrInAllocator = [allocator, this](char* dptr) -> Maybe<void> {
-    if (ParseBooleanFromEnv("OF_DTR_ALLO", true)) {
+    if (EnvBool<OF_DTR_ALLO>()) {
       if (auto* b_allocator = dynamic_cast<vm::ThreadSafeAllocator*>(allocator)) {
         if (auto* dtr_allocator =
                 dynamic_cast<vm::DtrCudaAllocator*>(b_allocator->backend_allocator())) {
@@ -389,10 +389,10 @@ void DTREagerBlobObject::set_compute_time(double val) {
   } else {
     compute_time_ = tensor_storage_->blob_bytes();
   }
-  if (ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true)) {
+  if (EnvBool<OF_DTR_HIGH_ADD_N>()) {
     if (compute_op_type_name() == "add_n") { compute_time_ *= 3; }
   }
-  if (ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true)) {
+  if (EnvBool<OF_DTR_HIGH_CONV>()) {
     if (compute_op_type_name() == "conv2d") { compute_time_ *= 3; }
     if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= 3; }
     if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= 3; }

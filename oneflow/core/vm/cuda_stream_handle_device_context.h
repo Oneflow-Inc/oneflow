@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_DEVICE_CONTEXT_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_DEVICE_CONTEXT_H_
 
+#include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/device/cuda_event.h"
@@ -36,8 +37,8 @@ namespace vm {
 #ifdef WITH_CUDA
 
 inline Allocator* GetAllocator(int64_t device_id) {
-  if (ParseBooleanFromEnv("OF_DTR", false)) {
-    if (ParseBooleanFromEnv("OF_DTR_ALLO", true)) { return Global<DtrCudaAllocator>::Get(); }
+  if (EnvBool<OF_DTR>()) {
+    if (EnvBool<OF_DTR_ALLO>()) { return Global<DtrCudaAllocator>::Get(); }
     return new DtrNaiveCudaAllocator(device_id);
   }
   return new CudaBackendAllocator(device_id);

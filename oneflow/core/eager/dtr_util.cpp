@@ -1,6 +1,7 @@
-#include "oneflow/core/eager/dtr_util.h"
-
 #include <algorithm>
+
+#include "oneflow/core/common/env_var/dtr.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/job/global_for.h"
@@ -23,7 +24,7 @@ int debug_level() {
 
 bool is_check_enabled() {
   if (!is_enabled()) { return false; }
-  return ParseBooleanFromEnv("OF_DTR_CHECK", false);
+  return EnvBool<OF_DTR_CHECK>();
 }
 
 bool is_using_disjoint_set() { return Global<DTRConfig>::Get()->heuristic == "eq"; }

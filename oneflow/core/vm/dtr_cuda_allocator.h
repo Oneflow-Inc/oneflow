@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_DTR_CUDA_ALLOCATOR_H_
 
 #include <cstdint>
+#include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/util.h"
 
@@ -45,6 +46,7 @@ class DtrCudaAllocator final : public Allocator {
 
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
+  static constexpr size_t kSmallPieceThreshold = 10 * 1024;  // 10 KB
 
   // Piece is the basic memory unit of CudaAllocator.
   // A Piece is either is free(is_free = true) or in used(is_free = false).
@@ -122,7 +124,7 @@ class DtrCudaAllocator final : public Allocator {
 
   std::vector<Bin> bins_;
   std::vector<std::unique_ptr<Piece>> pieces_;
-  std::set<Piece*> piece_ordered_by_ptr;
+  // std::map is sorted by key, so we can find contiguous memory by it
   std::map<char*, Piece*> ptr2piece_;
   Piece* recycle_piece_list_;
   size_t total_allocate_bytes_ = 0;
