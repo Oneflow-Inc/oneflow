@@ -39,10 +39,6 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
 class ParallelContext;
 class Device;
 
-namespace cfg {
-class ParallelConf;
-}
-
 class ParallelDesc final {
  public:
   ~ParallelDesc() = default;
@@ -78,6 +74,8 @@ class ParallelDesc final {
   int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
   const ParallelConf& parallel_conf() const { return parallel_conf_; }
 
+  const ParallelConf& data() const { return parallel_conf_; }
+
   Maybe<void> GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,
                                  int64_t device_id) const;
   std::shared_ptr<Shape> hierarchy() const { return hierarchy_; }
@@ -105,7 +103,6 @@ class ParallelDesc final {
   bool Bigger(const ParallelDesc& rhs) const;
   bool ContainingMachineId(int64_t machine_id) const;
 
-  std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf() const { return cfg_parallel_conf_; }
   bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
   Maybe<void> CheckDeviceIdsIsValid() const;
 
@@ -132,9 +129,6 @@ class ParallelDesc final {
   std::vector<int64_t> parallel_id2machine_id_;
   std::vector<int64_t> parallel_id2device_id_;
   HashMap<int64_t, HashMap<int64_t, int64_t>> machine_id2device_id2parallel_id_;
-  // TODO(lixinqi): merge cfg_parallel_conf_ and parallel_conf_ after cfg::ParallelConf taken as the
-  // constructor argument
-  std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf_;
   // cached result of ContainingMachineId(GlobalProcessCtx::Rank()) for performace optimization.
   bool containing_current_rank_;
 };

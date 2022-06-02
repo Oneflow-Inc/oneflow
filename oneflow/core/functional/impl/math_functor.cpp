@@ -89,7 +89,7 @@ class ScalarMathBaseFunctor {
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", scalar.As<double>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
@@ -100,7 +100,7 @@ class ScalarMathBaseFunctor {
         lowest_dtype = x->dtype();
       }
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       // Only promote type to Int64 when tensor is Bool type but scalar is int type.
@@ -176,17 +176,17 @@ class ScalarAdd2Functor {
 
 class ScalarSubFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar,
-                           bool inplace) const {
-    return ScalarAdd(x, Scalar(-1) * scalar, /*alpha=*/1, inplace);
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const Scalar& scalar,
+                           const Scalar& alpha, bool inplace) const {
+    return ScalarAdd(input, Scalar(-1) * scalar, alpha, inplace);
   }
 };
 
 class ScalarSub2Functor {
  public:
-  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& x) const {
-    return ScalarAdd(JUST(ScalarMul(x, Scalar(-1), false)), scalar, /*alpha=*/1,
-                     /*inplace=*/false);
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& input,
+                           const Scalar& alpha) const {
+    return ScalarAdd(scalar, JUST(ScalarMul(input, Scalar(-1), false)), alpha);
   }
 };
 
@@ -249,11 +249,11 @@ class ScalarPowGradFunctor {
     if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", scalar.As<double>()));
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPowGrad should be float or int.";
     }
@@ -284,11 +284,11 @@ class ScalarReversePowGradFunctor {
     if (scalar.IsFloatingPoint()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", scalar.As<double>()));
     } else if (scalar.IsIntegral()) {
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarTensorPowGrad should be float or int.";
     }
@@ -762,7 +762,9 @@ class ReduceProdWholeFunctor {
                            const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
     std::shared_ptr<one::Tensor> tensor = x;
-    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(tensor, JUST(dtype), /*pin_memory=*/false));
+    }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (DType::priority_order[tensor->dtype()->data_type()]
@@ -836,10 +838,8 @@ class MedianWithIndicesFunctor {
     std::shared_ptr<TensorTuple> result;
     result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
     if (keepdim) {
-      *JUST(VectorAt(result.get(), 0)) =
-          JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 0)), axis));
-      *JUST(VectorAt(result.get(), 1)) =
-          JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 1)), axis));
+      JUST(VectorAt(*result, 0)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 0)), axis));
+      JUST(VectorAt(*result, 1)) = JUST(functional::Unsqueeze(JUST(VectorAt(*result, 1)), axis));
     }
     return result;
   }
@@ -858,7 +858,9 @@ class ReduceProdFunctor {
                            const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
     std::shared_ptr<one::Tensor> tensor = x;
-    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
+    if (dtype.has_value() && (dtype != x->dtype())) {
+      tensor = JUST(Cast(tensor, JUST(dtype), /*pin_memory=*/false));
+    }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
     if (DType::priority_order[tensor->dtype()->data_type()]
@@ -1005,26 +1007,26 @@ class ArangeFunctor {
     if (dtype.has_value()) {
       const DataType range_dtype = JUST(dtype)->data_type();
       if (IsIntegralDataType(range_dtype)) {
-        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_start", start.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", limit.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", delta.As<int64_t>()));
         JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
       } else {
-        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<double>("float_start", start.As<double>()));
+        JUST(attrs.SetAttr<double>("float_limit", limit.As<double>()));
+        JUST(attrs.SetAttr<double>("float_delta", delta.As<double>()));
         JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
       }
     } else {
-      if (delta.IsIntegral()) {
-        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+      if (start.IsIntegral() && limit.IsIntegral() && delta.IsIntegral()) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", start.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", limit.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", delta.As<int64_t>()));
         JUST(attrs.SetAttr<DataType>("dtype", DType::Int64()->data_type()));
       } else {
-        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<double>("float_start", start.As<double>()));
+        JUST(attrs.SetAttr<double>("float_limit", limit.As<double>()));
+        JUST(attrs.SetAttr<double>("float_delta", delta.As<double>()));
         JUST(attrs.SetAttr<DataType>("dtype", DType::Float()->data_type()));
       }
     }
@@ -1057,26 +1059,26 @@ class ConsistentArangeFunctor {
     if (dtype.has_value()) {
       const DataType range_dtype = JUST(dtype)->data_type();
       if (IsIntegralDataType(range_dtype)) {
-        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integer_start", start.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", limit.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", delta.As<int64_t>()));
         JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
       } else {
-        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<double>("float_start", start.As<double>()));
+        JUST(attrs.SetAttr<double>("float_limit", limit.As<double>()));
+        JUST(attrs.SetAttr<double>("float_delta", delta.As<double>()));
         JUST(attrs.SetAttr<DataType>("dtype", range_dtype));
       }
     } else {
-      if (delta.IsIntegral()) {
-        JUST(attrs.SetAttr<int64_t>("integer_start", JUST(start.As<int64_t>())));
-        JUST(attrs.SetAttr<int64_t>("integer_limit", JUST(limit.As<int64_t>())));
-        JUST(attrs.SetAttr<int64_t>("integer_delta", JUST(delta.As<int64_t>())));
+      if (start.IsIntegral() && limit.IsIntegral() && delta.IsIntegral()) {
+        JUST(attrs.SetAttr<int64_t>("integer_start", start.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_limit", limit.As<int64_t>()));
+        JUST(attrs.SetAttr<int64_t>("integer_delta", delta.As<int64_t>()));
         JUST(attrs.SetAttr<DataType>("dtype", DType::Int64()->data_type()));
       } else {
-        JUST(attrs.SetAttr<double>("float_start", JUST(start.As<double>())));
-        JUST(attrs.SetAttr<double>("float_limit", JUST(limit.As<double>())));
-        JUST(attrs.SetAttr<double>("float_delta", JUST(delta.As<double>())));
+        JUST(attrs.SetAttr<double>("float_start", start.As<double>()));
+        JUST(attrs.SetAttr<double>("float_limit", limit.As<double>()));
+        JUST(attrs.SetAttr<double>("float_delta", delta.As<double>()));
         JUST(attrs.SetAttr<DataType>("dtype", DType::Float()->data_type()));
       }
     }
@@ -1110,13 +1112,18 @@ class ConsistentArange2Functor {
 class CastFunctor {
  public:
   CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Symbol<DType>& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Symbol<DType>& dtype,
+                           const bool pin_memory) const {
     if (x->dtype() == dtype) { return x; }
-
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    if (x->is_local()) {
+      bool cast_pin_memory = JUST(x->device())->type() == "cuda" ? false : pin_memory;
+      return OpInterpUtil::Dispatch<Tensor>(
+          *op_, {x}, OpExprInterpContext(attrs, JUST(x->device()), /*pin_memory=*/cast_pin_memory));
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:
@@ -1138,24 +1145,24 @@ class ClampBaseFunctor {
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
+        JUST(attrs.SetAttr<double>("floating_min", min_val->As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       }
       if (max.has_value()) {
         const auto& max_val = JUST(max);
-        JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
+        JUST(attrs.SetAttr<double>("floating_max", max_val->As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_max", 0));
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
         JUST(attrs.SetAttr<double>("floating_min", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integral_min", min_val->As<int64_t>()));
       }
       if (max.has_value()) {
         const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integral_max", max_val->As<int64_t>()));
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
@@ -1277,7 +1284,7 @@ class VectorNormFunctor {
       if ((int)dim.size() < x->ndim()) { full_dim_flag = false; }
     }
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
-      double ord_val = JUST(ord.As<double>());
+      double ord_val = ord.As<double>();
       if (ord_val == 0) {
         res = JUST(ReduceSum(JUST(functional::NotEqualZero(x)), dim, keepdim));
       } else if (ord_val == INFINITY) {
@@ -1292,7 +1299,7 @@ class VectorNormFunctor {
             JUST(ScalarPow(JUST(ReduceSum(JUST(ScalarPow(JUST(Abs(x)), ord, false)), dim, keepdim)),
                            Scalar(1.0) / ord, false));
       }
-      res = JUST(Cast(res, dtype_val));
+      res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
       return res;
     } else {
       UNIMPLEMENTED_THEN_RETURN()
@@ -1323,7 +1330,7 @@ class ScalarVectorNormFunctor {
       }
     }
     if (input_dim.IsIntegral()) {
-      std::vector<int32_t> dim(1, JUST(input_dim.As<int>()));
+      std::vector<int32_t> dim(1, input_dim.As<int>());
       return functional::VectorNorm(x, ord, dim, keepdim, dtype);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "linalg.vector_norm(): only support int dim.";
@@ -1373,7 +1380,7 @@ class ScalarMatrixNormFunctor {
       }
     }
     std::vector<int32_t> dim(2);
-    double ord_tmp = JUST(ord.As<double>());
+    double ord_tmp = ord.As<double>();
     if (ord_tmp == INFINITY || ord_tmp == -INFINITY) {
       dim = dim_tmp;
       dim[0] = dim_tmp[1];
@@ -1395,7 +1402,7 @@ class ScalarMatrixNormFunctor {
     } else if (ord_tmp == -INFINITY || ord_tmp == -1) {
       res = JUST(ReduceMin(res, dim_tmp1_vec, keepdim));
     }
-    res = JUST(Cast(res, dtype_val));
+    res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
     return res;
   }
 };
@@ -1442,7 +1449,7 @@ class MatrixNormFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "linalg.matrix_norm(): could not convert string to float:"
                                   << ord;
     }
-    res = JUST(Cast(res, dtype_val));
+    res = JUST(Cast(res, dtype_val, /*pin_memory=*/false));
     return res;
   }
 };
@@ -1473,7 +1480,7 @@ class NormFunctor {
     if (ord.has_value()) {
       auto ord_type = (*JUST(ord)).IsIntegral();
       if (ord_type) {
-        ord_sca = Scalar(JUST((*JUST(ord)).As<double>()));
+        ord_sca = Scalar((*JUST(ord)).As<double>());
       } else {
         ord_sca = *JUST(ord);
       }
@@ -1508,8 +1515,7 @@ class NormFunctor {
           res = JUST(MatrixNorm(x, ord_sca, dim, keepdim, dtype));
         }
       } else {
-        std::vector<int32_t> dim(1, 2);
-        res = JUST(VectorNorm(JUST(Flatten(x, 0, -1)), Scalar(2.0), input_dim, keepdim, dtype));
+        res = JUST(VectorNorm(x, Scalar(2.0), input_dim, keepdim, dtype));
       }
     }
     return res;
@@ -1571,7 +1577,7 @@ class ScalarNormFunctor {
       }
     }
     if (input_dim.IsIntegral()) {
-      std::vector<int32_t> dim(1, JUST(input_dim.As<int>()));
+      std::vector<int32_t> dim(1, input_dim.As<int>());
       return functional::Norm(x, ord, dim, keepdim, dtype);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
@@ -1601,7 +1607,7 @@ class ScalarNorm2Functor {
       }
     }
     if (input_dim.IsIntegral()) {
-      std::vector<int32_t> dim(1, JUST(input_dim.As<int>()));
+      std::vector<int32_t> dim(1, input_dim.As<int>());
       return functional::Norm(x, ord, dim, keepdim, dtype);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "linalg_norm(): only supports int dim.";
@@ -1628,24 +1634,24 @@ class ClampGradFunctor {
     if (IsFloatingDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<double>("floating_min", JUST(min_val->As<double>())));
+        JUST(attrs.SetAttr<double>("floating_min", min_val->As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_min", 0));
       }
       if (max.has_value()) {
         const auto& max_val = JUST(max);
-        JUST(attrs.SetAttr<double>("floating_max", JUST(max_val->As<double>())));
+        JUST(attrs.SetAttr<double>("floating_max", max_val->As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_max", 0));
       }
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
       if (min.has_value()) {
         const auto& min_val = JUST(min);
-        JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min_val->As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integral_min", min_val->As<int64_t>()));
         JUST(attrs.SetAttr<double>("floating_min", 0));
       }
       if (max.has_value()) {
         const auto& max_val = JUST(max);
         JUST(attrs.SetAttr<double>("floating_max", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max_val->As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integral_max", max_val->As<int64_t>()));
       }
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
@@ -1786,7 +1792,7 @@ class ScalarLogicalBaseFunctor {
     Symbol<DType> lowest_dtype;
 
     if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", scalar.As<double>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       // Only promote type to Float32 when tensor is Int type but scalar is float type.
@@ -1797,7 +1803,7 @@ class ScalarLogicalBaseFunctor {
         lowest_dtype = x->dtype();
       }
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       // Only promote type to Int64 when tensor is Bool type but scalar is int type.
@@ -1970,7 +1976,7 @@ class StandardDeviationFunctor {
           Scalar((double)reduce_count)));
       const auto& square = JUST(functional::Square(JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(input, axis, keepdims)), Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
+      const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
       if (unbias) {
         return functional::Sqrt(JUST(functional::ScalarMul(
             sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)));
@@ -1996,21 +2002,22 @@ class StandardDeviationFunctor {
       //  If input tensor's dtype is float32, than cast it to double dtype,
       //  because float dtype has accuracy problem in float dtype, see:
       //  https://github.com/Oneflow-Inc/oneflow/issues/6526
-      const auto& double_input = JUST(functional::Cast(input, DType::Double()));
+      const auto& double_input =
+          JUST(functional::Cast(input, DType::Double(), /*pin_memory=*/false));
       const auto& sum = JUST(functional::ScalarDiv(
           JUST(functional::ReduceSum(JUST(functional::Square(double_input)), axis, keepdims)),
           Scalar((double)reduce_count)));
       const auto& square = JUST(functional::Square(
           JUST(functional::ScalarDiv(JUST(functional::ReduceSum(double_input, axis, keepdims)),
                                      Scalar((double)reduce_count)))));
-      const auto& sub = JUST(functional::Sub(sum, square, /*inplace=*/false));
+      const auto& sub = JUST(functional::Sub(sum, square, /*alpha=*/1.0, /*inplace=*/false));
       if (unbias) {
         return functional::Cast(
             JUST(functional::Sqrt(JUST(functional::ScalarMul(
                 sub, Scalar((double)reduce_count / (double)(reduce_count - 1)), false)))),
-            input->dtype());
+            input->dtype(), /*pin_memory=*/false);
       }
-      return functional::Cast(JUST(functional::Sqrt(sub)), input->dtype());
+      return functional::Cast(JUST(functional::Sqrt(sub)), input->dtype(), /*pin_memory=*/false);
     }
   }
 };
@@ -2161,11 +2168,11 @@ class TensorSplitVecFunctor {
     for (int32_t i = 0; i < num_indices; i++) {
       int32_t end_idx = indices_or_sections[i];
       stop[pos_dim] = end_idx;
-      output[i] = JUST(Slice(input, start, stop, step));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
       start[pos_dim] = end_idx;
     }
     stop[pos_dim] = input->shape()->At(ndim - 1);
-    output[num_indices] = JUST(Slice(input, start, stop, step));
+    output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
 
     return output;
   }
@@ -2198,7 +2205,7 @@ class TensorSplitIntFunctor {
     for (int32_t i = 0; i < indices_or_sections; i++) {
       int64_t split_size = (i < num_splits_one_extra) ? (min_split_size + 1) : min_split_size;
       stop[pos_dim] += split_size;
-      output[i] = JUST(Slice(input, start, stop, step));
+      output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
       start[pos_dim] += split_size;
     }
 
@@ -2340,19 +2347,6 @@ class CumProdFunctor : public CumBaseFunctor {
 class CumGradBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> op_;
-};
-
-class CumsumGradFunctor : public CumGradBaseFunctor {
- public:
-  CumsumGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("cumsum_grad").Input("dy").Output("dx").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    // No need to check dim validation here, while CumsumFunctor handled already
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
-  }
 };
 
 class CumProdGradFunctor : public CumGradBaseFunctor {
@@ -3041,7 +3035,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ErfinvFunctor>("Erfinv");
   m.add_functor<ErfinvInplaceFunctor>("ErfinvInplace");
   m.add_functor<CumsumFunctor>("Cumsum");
-  m.add_functor<CumsumGradFunctor>("CumsumGrad");
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
   m.add_functor<EinSumFunctor>("EinSum");
