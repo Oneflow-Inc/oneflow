@@ -1183,7 +1183,6 @@ def RegisterMethods():
     Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
     Tensor.split = _split
-    Tensor.narrow = _narrow
     Tensor.to = _to
     Tensor.gather = _gather
     Tensor.T = property(_T)
