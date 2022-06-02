@@ -2476,7 +2476,7 @@ class SplitWithSizeFunctor {
         << dim_size << " (input tensor's size at dimension " << axis << "), "
         << "but got sum(split_sizes)=" << start_idx;
 
-    if (num_splits < kMaxOutputCount) {
+    if (num_splits <= kMaxOutputCount) {
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<int64_t>("dim", axis));
       JUST(attrs.SetAttr<std::vector<int64_t>>("sections", split_size_or_sections));
