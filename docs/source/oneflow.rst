@@ -115,6 +115,7 @@ oneflow
             rand,
             randn,
             repeat, 
+            repeat_interleave,
             reshape, 
             randint,
             randperm,
