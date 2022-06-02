@@ -136,193 +136,152 @@ Locally disabling gradient computation
     is_grad_enabled
     inference_mode
 
+Math operations
+-------------------------------------------
+Pointwise Ops
+-------------------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    abs
+    acos 
+    acosh 
+    add 
+    addcmul 
+    addmm 
+    all 
+    amin 
+    amax
+    any 
+    arccos 
+    arcsin 
+    arcsinh 
+    arccosh 
+    arctan 
+    arctanh 
+    argmax 
+    argmin 
+    argsort 
+    asin  
+    asinh 
+    atan 
+    atan2 
+    atanh 
+    broadcast_like 
+    batch_gather
+    bmm
+    cast 
+    ceil 
+    clamp 
+    clip 
+    cos 
+    cosh 
+    diag 
+    diagonal
+    div 
+    dot 
+    eq
+    einsum
+    equal 
+    expand   
+    exp 
+    expm1 
+    erf 
+    erfc 
+    erfinv 
+    flatten 
+    flip 
+    floor 
+    floor_
+    fmod    
+    gather_nd 
+    gelu 
+    gt 
+    in_top_k 
+    logical_and
+    logical_or
+    logical_not
+    logical_xor
+    log 
+    log2
+    log1p 
+    lt 
+    le 
+    masked_fill  
+    matmul   
+    max 
+    mean
+    median
+    mish  
+    min 
+    meshgrid
+    mul 
+    neg 
+    negative 
+    new_ones
+    numel 
+    ne 
+    pow
+    prod  
+    repeat 
+    reciprocal
+    roc_auc_score
+    roll
+    round 
+    rsqrt
+    scatter_nd 
+    tensor_scatter_nd_update
+    sin 
+    sin_ 
+    sinh 
+    sign 
+    selu 
+    silu 
+    slice 
+    logical_slice  
+    softsign 
+    sort 
+    softplus 
+    sigmoid 
+    softmax  
+    std
+    sub 
+    sum 
+    sqrt 
+    square  
+    tan 
+    tanh 
+    tensordot
+    tril 
+    var 
+    is_nonzero
+    is_tensor  
+    is_floating_point
+    set_printoptions
+    decode_onerec
+    cumsum
+    topk
+    nms
+    cumprod
+    HalfTensor
+    FloatTensor
+    DoubleTensor
+    BoolTensor
+    ByteTensor
+    CharTensor
+    IntTensor
+    LongTensor
+    isnan
+    isinf
+    searchsorted
 
 .. automodule:: oneflow
     :members: adaptive_avg_pool1d, 
             adaptive_avg_pool2d, 
-            adaptive_avg_pool3d, 
-            abs, 
-            acos, 
-            acosh, 
-            add, 
-            addcmul, 
-            addmm, 
-            all, 
-            amin, 
-            amax,
-            any, 
-            arccos, 
-            arcsin, 
-            arcsinh, 
-            arccosh, 
-            arctan, 
-            arctanh, 
-            argmax, 
-            argmin, 
-            
-            argsort, 
-            
-            asin,  
-            asinh, 
-            atan, 
-            atan2, 
-            atanh, 
-            
-            broadcast_like, 
-            batch_gather,
-            bmm,
-            
-            cast, 
-            ceil, 
-            
-            clamp, 
-            clip, 
-            cos, 
-            cosh, 
-            diag, 
-            
-            diagonal,
-            
+            adaptive_avg_pool3d,     
             tensor_split,
-
-            
-            div, 
-            dot, 
-            eq,
-            einsum,
-            equal, 
-            expand, 
-            
-            exp, 
-            expm1, 
-            erf, 
-            erfc, 
-            erfinv, 
-            flatten, 
-            flip, 
-            floor, 
-            floor_,
-            fmod,
-            
-             
-            gather_nd, 
-            gelu, 
-            gt, 
-            in_top_k, 
-            
-            
-            logical_and,
-            logical_or,
-            logical_not,
-            logical_xor,
-            
-            log, 
-            log2,
-            log1p, 
-            lt, 
-            le, 
-            masked_fill, 
-            
-            matmul, 
-             
-            max, 
-            mean,
-            median,
-            mish,  
-            min, 
-            meshgrid,
-            mul, 
-            neg, 
-            negative, 
-            new_ones,
-            
-            
-            numel, 
-            ne, 
-            
-            
-            
-            pow,
-            prod,  
-
-            repeat, 
-             
-
-            reciprocal,
-            roc_auc_score,
-            roll,
-            round, 
-            rsqrt,
-     
-            
-            
-            scatter_nd, 
-            tensor_scatter_nd_update,
-            sin, 
-            sin_, 
-            sinh, 
-            sign, 
-            selu, 
-            silu, 
-            slice, 
-            logical_slice,  
-            softsign, 
-            sort, 
-            softplus, 
-            sigmoid, 
-            softmax, 
-           
-            
-            
-            std,
-            sub, 
-            sum, 
-            sqrt, 
-            square,  
-            
-            
-            tan, 
-            tanh, 
-            
-            tensordot,
-             
-            
-            
-            tril, 
-             
-            
-            
-            var, 
-            
-            
-            
-            is_nonzero,
-            is_tensor,
-
-            
-            is_floating_point,
-            set_printoptions,
-            decode_onerec,
-            
-            
-            cumsum,
-            topk,
-            nms,
-            cumprod,
-            HalfTensor,
-            FloatTensor,
-            DoubleTensor,
-            BoolTensor,
-            ByteTensor,
-            CharTensor,
-            IntTensor,
-            LongTensor,
-
-
-            isnan,
-            isinf,
-            searchsorted
-
 .. autofunction:: oneflow.relu
 
 
