@@ -218,7 +218,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                .Build()
                .op_conf();
     return true;
-  } else if (CanSplitAtDim(0)
+  } else if (CanSplitAtDim(dst_sbp.split_parallel().axis())
              && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
              && (dst_sbp.split_parallel().axis() > 0)) {
     // P->S(1) : ReduceScatter Noncontinuous
@@ -410,6 +410,21 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   CHECK_EQ(src_reduced_parallel_desc->parallel_num(), dst_reduced_parallel_desc->parallel_num());
   std::shared_ptr<Shape> src_reduced_hierarchy = src_reduced_parallel_desc->hierarchy();
   std::shared_ptr<Shape> dst_reduced_hierarchy = dst_reduced_parallel_desc->hierarchy();
+
+  /*
+  if (src_node->op().op_name() == "System-ModelDiffScale-ScalarMul-635"
+      && dst_node->op().op_name() == "System-ClipGradient-GlobalNorm-MultiReduceSumPowAbs-652") {
+    LOG(WARNING) << " Why? src_node info: parallel "
+                 << src_node->parallel_desc().parallel_conf().DebugString() << " nd_sbp "
+                 << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << " reduced nd_sbp "
+                 << NdSbpToString(*src_reduced_nd_sbp) << " reduced hierarchy "
+                 << src_reduced_hierarchy->DebugStr() << " \n dst_node info: parallel "
+                 << dst_node->parallel_desc().parallel_conf().DebugString() << " nd_sbp "
+                 << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << " reduced nd_sbp "
+                 << NdSbpToString(*dst_reduced_nd_sbp) << " reduced hierarchy "
+                 << dst_reduced_hierarchy->DebugStr();
+  }
+  */
 
   if ((*src_reduced_hierarchy) == (*dst_reduced_hierarchy)
       && (*src_reduced_nd_sbp) == (*dst_reduced_nd_sbp)) {
@@ -627,6 +642,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
                                   std::vector<ParallelConf>* nccl_op_parallel_confs) {
   HashSet<const OpEdge*> visited;
   std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
+  // LOG(INFO) << "ccdebuglog: after seed time shape: " << seed_time_shape->DebugStr();
   std::vector<InsertedNcclInfo> nccl_op_infos;
 
   std::vector<const OpNode*> after_acc_subgraph;
@@ -637,10 +653,11 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
   for (const OpNode* acc : ordered_acc_op_nodes) {
     std::queue<const OpEdge*> queued_edges;
     for (const OpEdge* op_edge : acc->out_edges()) {
-      if (IsOpEdgeAllowInsertNccl(op_edge, seed_time_shape)) {
+      if (visited.find(op_edge) == visited.end()
+          && IsOpEdgeAllowInsertNccl(op_edge, seed_time_shape)) {
         queued_edges.push(op_edge);
         CHECK(visited.insert(op_edge).second);
-        acc_graph_nodes.insert(op_edge->dst_node());
+        if (!IsAccOpNode(op_edge->dst_node())) { acc_graph_nodes.insert(op_edge->dst_node()); }
       }
     }
 
@@ -650,6 +667,12 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
       queued_edges.pop();
 
       for (const LogicalBlobId& lbi : op_edge->lbis()) {
+        const OpNode* src_node = op_edge->src_node();
+        const OpNode* dst_node = op_edge->dst_node();
+        const std::string& src_op_name = src_node->op().op_name();
+        const std::string& dst_op_name = dst_node->op().op_name();
+        // LOG(INFO) << "ccdebuglog: try insert nccl logical from [" << src_op_name << "] to ["
+        //           << dst_op_name << "]";
         OperatorConf nccl_op;
         ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
         ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
@@ -658,12 +681,10 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         if (!TryBuildNcclLogicalOpConf(&nccl_op, op_edge->src_node(), op_edge->dst_node(), lbi,
                                        &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
                                        &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
+          // LOG(INFO) << "ccdebuglog: no.";
           continue;
         }
-        const OpNode* src_node = op_edge->src_node();
-        const OpNode* dst_node = op_edge->dst_node();
-        const std::string& src_op_name = src_node->op().op_name();
-        const std::string& dst_op_name = dst_node->op().op_name();
+        // LOG(INFO) << "ccdebuglog: Yes!";
         auto it = mut_consumer_name2op->find(dst_op_name);
         if (it == mut_consumer_name2op->end()) {
           auto ret_pair = mut_consumer_name2op->emplace(dst_op_name, dst_node->op().op_conf());
@@ -698,7 +719,42 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
             && IsOpEdgeAllowInsertNccl(dst_node_out_edge, seed_time_shape)) {
           CHECK(visited.insert(dst_node_out_edge).second);
           queued_edges.push(dst_node_out_edge);
-          acc_graph_nodes.insert(dst_node_out_edge->dst_node());
+          if (!IsAccOpNode(dst_node_out_edge->dst_node())) {
+            acc_graph_nodes.insert(dst_node_out_edge->dst_node());
+          }
+        }
+      }
+
+      for (const OpEdge* dst_node_in_edge : op_edge->dst_node()->in_edges()) {
+        if (visited.find(dst_node_in_edge) == visited.end()
+            && IsOpEdgeAllowInsertNccl(dst_node_in_edge, seed_time_shape)) {
+          CHECK(visited.insert(dst_node_in_edge).second);
+          queued_edges.push(dst_node_in_edge);
+          if (!IsAccOpNode(dst_node_in_edge->src_node())) {
+            acc_graph_nodes.insert(dst_node_in_edge->src_node());
+          }
+        }
+      }
+
+      for (const OpEdge* src_node_out_edge : op_edge->src_node()->out_edges()) {
+        if (visited.find(src_node_out_edge) == visited.end()
+            && IsOpEdgeAllowInsertNccl(src_node_out_edge, seed_time_shape)) {
+          CHECK(visited.insert(src_node_out_edge).second);
+          queued_edges.push(src_node_out_edge);
+          if (!IsAccOpNode(src_node_out_edge->dst_node())) {
+            acc_graph_nodes.insert(src_node_out_edge->dst_node());
+          }
+        }
+      }
+
+      for (const OpEdge* src_node_in_edge : op_edge->src_node()->in_edges()) {
+        if (visited.find(src_node_in_edge) == visited.end()
+            && IsOpEdgeAllowInsertNccl(src_node_in_edge, seed_time_shape)) {
+          CHECK(visited.insert(src_node_in_edge).second);
+          queued_edges.push(src_node_in_edge);
+          if (!IsAccOpNode(src_node_in_edge->src_node())) {
+            acc_graph_nodes.insert(src_node_in_edge->src_node());
+          }
         }
       }
     }
