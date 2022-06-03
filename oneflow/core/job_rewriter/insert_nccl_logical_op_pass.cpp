@@ -218,7 +218,7 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                .Build()
                .op_conf();
     return true;
-  } else if (CanSplitAtDim(0)
+  } else if (CanSplitAtDim(dst_sbp.split_parallel().axis())
              && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
              && (dst_sbp.split_parallel().axis() > 0)) {
     // P->S(1) : ReduceScatter Noncontinuous

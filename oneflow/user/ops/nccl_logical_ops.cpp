@@ -205,12 +205,15 @@ namespace oneflow {
   JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", input_nd_sbp));
   JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_reduced_nd_sbp", output_nd_sbp));
   // P->S(0)
-  CHECK_EQ_OR_RETURN(input_nd_sbp->sbp_parallel_size(), 1);
-  CHECK_EQ_OR_RETURN(output_nd_sbp->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(input_nd_sbp->sbp_parallel(0).has_partial_sum_parallel());
-  CHECK_OR_RETURN(output_nd_sbp->sbp_parallel(0).has_split_parallel());
-  CHECK_GE_OR_RETURN(output_nd_sbp->sbp_parallel(0).split_parallel().axis(), 1);
-  CHECK_EQ_OR_RETURN(ctx->parallel_hierarchy().NumAxes(), 1);
+  CHECK_EQ_OR_RETURN(input_nd_sbp->sbp_parallel_size(), 1) << "input_nd_sbp should be 1d.";
+  CHECK_EQ_OR_RETURN(output_nd_sbp->sbp_parallel_size(), 1) << "output_nd_sbp should be 1d.";
+  CHECK_OR_RETURN(input_nd_sbp->sbp_parallel(0).has_partial_sum_parallel())
+      << "input_nd_sbp should be partial_sum_parallel.";
+  CHECK_OR_RETURN(output_nd_sbp->sbp_parallel(0).has_split_parallel())
+      << "output_nd_sbp should be split parallel.";
+  CHECK_GE_OR_RETURN(output_nd_sbp->sbp_parallel(0).split_parallel().axis(), 1)
+      << "output_nd_sbp split axis should greater equal 1.";
+  CHECK_EQ_OR_RETURN(ctx->parallel_hierarchy().NumAxes(), 1) << "parallel_hierarchy should be 1d.";
 
   return Maybe<void>::Ok();
 }
