@@ -44,6 +44,8 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/api/common/ofblob.h"
+#include "oneflow/core/framework/tensor_util.h"
 
 namespace oneflow {
 namespace one {
@@ -135,10 +137,10 @@ class ConsistentConstantFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
-      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_value", value.As<int64_t>()));
     } else {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
-      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
     }
     if (LazyMode::is_enabled()) {
       std::vector<std::string> nd_sbp(sbp_tuple.size());
@@ -167,10 +169,10 @@ class ConstantFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     if (IsIntegralDataType(dtype->data_type())) {
       JUST(attrs.SetAttr<bool>("is_floating_value", false));
-      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_value", value.As<int64_t>()));
     } else {
       JUST(attrs.SetAttr<bool>("is_floating_value", true));
-      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_value", value.As<double>()));
     }
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
@@ -299,17 +301,17 @@ class WhereScalarXFunctor {
                            const std::shared_ptr<one::Tensor>& y) const {
     MutableAttrMap attrs;
     if (scalar.IsBool()) {
-      JUST(attrs.SetAttr<bool>("bool_operand", JUST(scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("bool_operand", scalar.As<bool>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", true));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", scalar.As<double>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
@@ -333,17 +335,17 @@ class WhereScalarYFunctor {
                            const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
     MutableAttrMap attrs;
     if (scalar.IsBool()) {
-      JUST(attrs.SetAttr<bool>("bool_operand", JUST(scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("bool_operand", scalar.As<bool>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", true));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", scalar.As<double>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
     } else if (scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
@@ -366,8 +368,8 @@ class WhereScalarXYFunctor {
                            const Scalar& y_scalar) const {
     MutableAttrMap attrs;
     if (x_scalar.IsBool() && y_scalar.IsBool()) {
-      JUST(attrs.SetAttr<bool>("x_bool_operand", JUST(x_scalar.As<bool>())));
-      JUST(attrs.SetAttr<bool>("y_bool_operand", JUST(y_scalar.As<bool>())));
+      JUST(attrs.SetAttr<bool>("x_bool_operand", x_scalar.As<bool>()));
+      JUST(attrs.SetAttr<bool>("y_bool_operand", y_scalar.As<bool>()));
       JUST(attrs.SetAttr<bool>("has_x_bool_operand", true));
       JUST(attrs.SetAttr<bool>("has_y_bool_operand", true));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
@@ -375,8 +377,8 @@ class WhereScalarXYFunctor {
       JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_int_operand", false));
     } else if (x_scalar.IsFloatingPoint() && y_scalar.IsFloatingPoint()) {
-      JUST(attrs.SetAttr<double>("x_float_operand", JUST(x_scalar.As<double>())));
-      JUST(attrs.SetAttr<double>("y_float_operand", JUST(y_scalar.As<double>())));
+      JUST(attrs.SetAttr<double>("x_float_operand", x_scalar.As<double>()));
+      JUST(attrs.SetAttr<double>("y_float_operand", y_scalar.As<double>()));
       JUST(attrs.SetAttr<bool>("has_x_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", true));
@@ -384,8 +386,8 @@ class WhereScalarXYFunctor {
       JUST(attrs.SetAttr<bool>("has_x_int_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_int_operand", false));
     } else if (x_scalar.IsIntegral() && y_scalar.IsIntegral()) {
-      JUST(attrs.SetAttr<int64_t>("x_int_operand", JUST(x_scalar.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("y_int_operand", JUST(y_scalar.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("x_int_operand", x_scalar.As<int64_t>()));
+      JUST(attrs.SetAttr<int64_t>("y_int_operand", y_scalar.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_x_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_y_bool_operand", false));
       JUST(attrs.SetAttr<bool>("has_x_float_operand", false));
@@ -902,7 +904,7 @@ class DimScatterUpdateScalarFunctor {
     MutableAttrMap attrs;
     const int32_t ndim = input->shape()->NumAxes();
     JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
-    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
+    JUST(attrs.SetAttr<float>("src_scalar", src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -923,7 +925,7 @@ class DimScatterAddScalarFunctor {
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
+    JUST(attrs.SetAttr<float>("src_scalar", src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -944,7 +946,7 @@ class DimScatterMulScalarFunctor {
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
+    JUST(attrs.SetAttr<float>("src_scalar", src.As<float>()));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
 
@@ -1030,10 +1032,10 @@ class SearchSortedScalarFunctor {
     JUST(attrs.SetAttr<bool>("right", right));
     bool is_values_float = values.IsFloatingPoint();
     if (is_values_float) {
-      double_t values_tmp = JUST(values.As<double_t>());
+      double_t values_tmp = values.As<double_t>();
       JUST(attrs.SetAttr<double>("values", values_tmp));
     } else {
-      int64_t values_tmp = JUST(values.As<int64_t>());
+      int64_t values_tmp = values.As<int64_t>();
       JUST(attrs.SetAttr<double>("values", values_tmp));
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence}, attrs);
@@ -2525,17 +2527,17 @@ class MaskedFillFunctor {
                            const std::shared_ptr<one::Tensor>& mask, const Scalar& value) const {
     MutableAttrMap attrs;
     if (IsFloatingDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<double>("float_operand", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<double>("float_operand", value.As<double>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", true));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
     } else if (IsIntegralDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("int_operand", value.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       JUST(attrs.SetAttr<bool>("has_bool_operand", false));
     } else if (IsBoolDataType(x->dtype()->data_type())) {
-      JUST(attrs.SetAttr<bool>("bool_operand", JUST(value.As<bool>())));
+      JUST(attrs.SetAttr<bool>("bool_operand", value.As<bool>()));
       JUST(attrs.SetAttr<bool>("has_float_operand", false));
       JUST(attrs.SetAttr<bool>("has_int_operand", false));
       JUST(attrs.SetAttr<bool>("has_bool_operand", true));
@@ -2647,28 +2649,7 @@ class IndexSelectFunctor {
         << Error::IndexError() << "Dimension out of range (expected to be in range of ["
         << -input_num_axes << ", " << input_num_axes - 1 << "], but got " << new_dim << ")";
 
-    DimVector index_broad_cast(input_num_axes);
-    for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
-    index_broad_cast[new_dim] = 1;
-    Shape expand_shape(index_broad_cast);
-    std::shared_ptr<one::Tensor> index_new;
-    if (index_num_axes == 1) {
-      index_new = index;
-    } else {
-      index_new = JUST(Unsqueeze(index, 0));
-    }
-    auto index_gather = JUST(functional::Expand(
-        JUST(functional::Slice(index_new, {0}, {1}, {1}, /*enable_view_slice=*/false)),
-        expand_shape));
-    for (int i = 1; i < index->dim(0); i++) {
-      index_gather = JUST(functional::Concat(
-          {index_gather,
-           JUST(functional::Expand(
-               JUST(functional::Slice(index_new, {i}, {i + 1}, {1}, /*enable_view_slice=*/false)),
-               expand_shape))},
-          new_dim));
-    }
-    return JUST(functional::DimGather(input, new_dim, index_gather, false));
+    return JUST(functional::Gather(input, index, new_dim));
   }
 };
 
@@ -2949,6 +2930,120 @@ class RepeatFunctor {
   }
 };
 
+class RepeatInterLeaveIndexFunctor {
+ public:
+  RepeatInterLeaveIndexFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("repeat_interleave").Input("in").Input("cumsum").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& cumsum,
+                           const int32_t& repeat_num) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::int64_t>("repeat_num", repeat_num));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, cumsum}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class RepeatInterLeaveIntFunctor {
+ public:
+  RepeatInterLeaveIntFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& repeats,
+                           const Optional<int32_t>& dim) const {
+    CHECK_OR_RETURN(input->is_local() == true)
+        << Error::RuntimeError() << "repeat_interleave only support local tensor now";
+    std::shared_ptr<one::Tensor> res;
+    if (!dim.has_value()) {
+      std::shared_ptr<one::Tensor> flatten_input = JUST(Flatten(input, 0, -1));
+      std::shared_ptr<one::Tensor> repeats_expand = JUST(
+          Expand(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), JUST(input->device()))),
+                 Shape{flatten_input->shape()->At(0)}));
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
+      int64_t output_size = flatten_input->shape()->At(0);
+      if (repeats > 0) { output_size *= repeats; }
+      res = JUST(IndexSelect(flatten_input, 0,
+                             JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, output_size))));
+    } else {
+      int32_t dim_ = JUST(dim);
+      const auto& input_shape = input->shape();
+      const int64_t& num_axes = input_shape->NumAxes();
+      if (dim_ < 0) { dim_ += num_axes; }
+      CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+          << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
+      std::shared_ptr<one::Tensor> repeats_expand = JUST(
+          Expand(JUST(Constant(Shape{1}, Scalar(repeats), DType::Int32(), JUST(input->device()))),
+                 Shape{input->shape()->At(dim_)}));
+      std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats_expand, 0, DType::Int32()));
+      int64_t output_size = input->shape()->At(dim_);
+      if (repeats > 0) { output_size *= repeats; }
+      res = JUST(IndexSelect(input, dim_,
+                             JUST(RepeatInterLeaveIndex(repeats_expand, cumsum, output_size))));
+    }
+    return res;
+  }
+};
+
+class RepeatInterLeaveTensorFunctor {
+ public:
+  RepeatInterLeaveTensorFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& repeats, const int32_t& dim,
+                           const Optional<int32_t>& output_size) const {
+    CHECK_OR_RETURN(input->is_local() == true)
+        << Error::RuntimeError() << "repeat_interleave only support local tensor now";
+    const auto repeats_shape = repeats->shape();
+    const int64_t& repeat_num_axes = repeats_shape->NumAxes();
+    CHECK_OR_RETURN(repeat_num_axes == 1)
+        << Error::RuntimeError() << "repeat_interleave only accept 1D vector as repeat";
+    CHECK_OR_RETURN(repeats->dtype() == DType::Int64())
+        << Error::RuntimeError() << "repeats has to be Long tensor";
+
+    std::vector<int64_t> repeats_value(repeats_shape->elem_cnt());
+    if (!output_size.has_value()) {
+      const auto& callback = [&](uint64_t ofblob_ptr) {
+        CHECK_JUST(BlobBufferCopyUtil<int64_t>::To(ofblob_ptr, repeats_value.data(),
+                                                   repeats_value.size()));
+      };
+      SyncAccessTensorWithTimeOut(repeats, callback, "const").GetOrThrow();
+      for (const auto x : repeats_value) {
+        CHECK_OR_RETURN(x >= 0) << Error::RuntimeError() << "repeats can not be negative";
+      }
+    } else {
+      repeats_value.push_back(JUST(output_size));
+    }
+    int32_t dim_ = dim;
+    const auto& input_shape = input->shape();
+    const int64_t& num_axes = input_shape->NumAxes();
+    if (dim_ < 0) { dim_ += num_axes; }
+    CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
+        << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+        << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
+    CHECK_OR_RETURN(repeats_shape->At(0) == input->shape()->At(dim_))
+        << Error::RuntimeError() << "repeats must have the same size as input along dim";
+    std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, 0, DType::Int32()));
+    const int64_t& output_size_value =
+        std::accumulate(repeats_value.begin(), repeats_value.end(), 0);
+    std::shared_ptr<one::Tensor> res;
+    if (output_size_value > 0) {
+      res = JUST(IndexSelect(input, dim_,
+                             JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
+    } else {
+      // Deal with 0-size Tensor.
+      DimVector new_input_shape(input_shape->dim_vec().begin(), input_shape->dim_vec().end());
+      new_input_shape[dim_] = 0;
+      std::shared_ptr<one::Tensor> new_input =
+          JUST(Constant(Shape{new_input_shape}, Scalar(0), input->dtype(), JUST(input->device())));
+      res = JUST(IndexSelect(new_input, dim_,
+                             JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
+    }
+    return res;
+  }
+};
+
 class TileFunctor {
  public:
   TileFunctor() {}
@@ -3166,6 +3261,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");
   m.add_functor<impl::GenTensorBufferFunctor>("GenTensorBuffer");
   m.add_functor<impl::RepeatFunctor>("Repeat");
+  m.add_functor<impl::RepeatInterLeaveIndexFunctor>("RepeatInterLeaveIndex");
+  m.add_functor<impl::RepeatInterLeaveIntFunctor>("RepeatInterLeaveInt");
+  m.add_functor<impl::RepeatInterLeaveTensorFunctor>("RepeatInterLeaveTensor");
   m.add_functor<impl::TileFunctor>("Tile");
   m.add_functor<impl::TransposeAllDimPropertyFunctor>("TransposeAllDimProperty");
   m.add_functor<impl::TransposeAllDimFunctionFunctor>("TransposeAllDimFunction");
