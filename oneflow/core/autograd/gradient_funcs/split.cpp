@@ -24,8 +24,8 @@ namespace oneflow {
 namespace one {
 
 struct SplitCaptureState : public AutoGradCaptureState {
-  int64_t axis;
-  bool requires_grad;
+  int64_t axis = 0;
+  bool requires_grad = true;
 };
 
 class Split : public OpExprGradFunction<SplitCaptureState> {
