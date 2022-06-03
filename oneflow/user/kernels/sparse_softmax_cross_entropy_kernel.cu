@@ -48,7 +48,7 @@ __global__ void ComputeSparseSoftmaxCrossEntropyResultGpu(const int64_t num_inst
                                                           const int64_t depth,
                                                           const int64_t lower_bound,
                                                           const K* labels, const T* prob, T* out) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;

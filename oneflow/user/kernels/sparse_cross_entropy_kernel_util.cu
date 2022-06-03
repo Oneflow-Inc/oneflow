@@ -27,7 +27,7 @@ template<typename T, typename K>
 __global__ void ComputeEntropyGpu(const int64_t num_instances, const int64_t num_classes,
                                   const int64_t depth, const int64_t lower_bound, const T* x,
                                   const K* labels, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
@@ -40,7 +40,7 @@ __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t
                                       const int64_t depth, const int64_t lower_bound, const half* x,
                                       const K* labels, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
@@ -58,7 +58,7 @@ template<typename T, typename K>
 __global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_classes,
                                const int64_t depth, const int64_t lower_bound, const T* x,
                                const K* labels, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
@@ -73,7 +73,7 @@ __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t nu
                                    const int64_t depth, const int64_t lower_bound, const half* x,
                                    const K* labels, const half* dy, half* dx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
