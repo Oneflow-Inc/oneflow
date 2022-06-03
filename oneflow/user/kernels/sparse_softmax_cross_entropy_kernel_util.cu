@@ -51,31 +51,16 @@ template<typename T, typename K>
 __global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_classes,
                                const int64_t depth, const int64_t lower_bound, const T* prob,
                                const K* labels, const T* dy, T* dx) {
-  if (num_instances >= 2147483647) {
-    CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
-      const int64_t row_id = i / num_classes;
-      const int64_t col_id = i - row_id * num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      if (label == col_id) {
-        dx[i] = dy[row_id] * (Exp(prob[i]) - 1);
-      } else {
-        dx[i] = dy[row_id] * Exp(prob[i]);
-      }
-    }
-  } else {
-    CUDA_1D_KERNEL_LOOP(i, num_instances) {
-      const int32_t row_id = i / num_classes;
-      const int32_t col_id = i - row_id * num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      if (label == col_id) {
-        dx[i] = dy[row_id] * (Exp(prob[i]) - 1);
-      } else {
-        dx[i] = dy[row_id] * Exp(prob[i]);
-      }
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
+    const int64_t row_id = i / num_classes;
+    const int64_t col_id = i - row_id * num_classes;
+    assert(labels[row_id] >= 0);
+    assert(labels[row_id] < depth);
+    K label = labels[row_id] - lower_bound;
+    if (label == col_id) {
+      dx[i] = dy[row_id] * (Exp(prob[i]) - 1);
+    } else {
+      dx[i] = dy[row_id] * Exp(prob[i]);
     }
   }
 }
@@ -84,32 +69,16 @@ template<typename K>
 __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t num_classes,
                                    const int64_t depth, const int64_t lower_bound, const half* prob,
                                    const K* labels, const half* dy, half* dx) {
-  if (num_instances >= 2147483647) {
-    CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
-      const int64_t row_id = i / num_classes;
-      const int64_t col_id = i - row_id * num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      if (label == col_id) {
-        dx[i] = __hmul(dy[row_id], __hsub(Exp(prob[i]), __float2half(1.0)));
-      } else {
-        dx[i] = __hmul(dy[row_id], Exp(prob[i]));
-      }
-    }
-
-  } else {
-    CUDA_1D_KERNEL_LOOP(i, num_instances) {
-      const int32_t row_id = i / num_classes;
-      const int32_t col_id = i - row_id * num_classes;
-      assert(labels[row_id] >= 0);
-      assert(labels[row_id] < depth);
-      K label = labels[row_id] - lower_bound;
-      if (label == col_id) {
-        dx[i] = __hmul(dy[row_id], __hsub(Exp(prob[i]), __float2half(1.0)));
-      } else {
-        dx[i] = __hmul(dy[row_id], Exp(prob[i]));
-      }
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
+    const int64_t row_id = i / num_classes;
+    const int64_t col_id = i - row_id * num_classes;
+    assert(labels[row_id] >= 0);
+    assert(labels[row_id] < depth);
+    K label = labels[row_id] - lower_bound;
+    if (label == col_id) {
+      dx[i] = __hmul(dy[row_id], __hsub(Exp(prob[i]), __float2half(1.0)));
+    } else {
+      dx[i] = __hmul(dy[row_id], Exp(prob[i]));
     }
   }
 }
