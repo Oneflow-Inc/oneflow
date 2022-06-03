@@ -193,7 +193,12 @@ class TestEmbedding(flow.unittest.TestCase):
 
         weight = random_tensor(len(emb_shape), *emb_shape).to(device)
         indices = random_tensor(
-            len(idx_shape), *idx_shape, low=0, high=emb_size, dtype=int, requires_grad=False
+            len(idx_shape),
+            *idx_shape,
+            low=0,
+            high=emb_size,
+            dtype=int,
+            requires_grad=False
         ).to(device)
 
         embedding = torch.nn.Embedding(
