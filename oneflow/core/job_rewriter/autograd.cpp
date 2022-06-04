@@ -21,9 +21,12 @@ limitations under the License.
 #include "oneflow/core/register/op_blob_arg.pb.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
+#include "oneflow/core/framework/scope_util.h"
+#include "oneflow/core/job_rewriter/clip_by_global_norm_job_pass_state.h"
 
 namespace oneflow {
 
@@ -259,12 +262,13 @@ Maybe<void> TryMirroredCastTotalLossInstanceNum(
     const auto& parallel_conf = JUST(job_builder->ParallelConf4Lbi(*total_loss_instance_num_lbi));
     int64_t scope_symbol_id = 0;
     {
-      const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
-          std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
-      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-          std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
-                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, true);
+      const auto& opt_scope_symbol_id = JUST(MakeInitialScope(job_builder->job().job_conf(),
+                                                              SymbolOf(ParallelDesc(parallel_conf)),
+                                                              /* is_mirrored */ false))
+                                            ->symbol_id();
+      CHECK_OR_RETURN(opt_scope_symbol_id.has_value())
+          << Error::RuntimeError() << "symbol_id not initialized";
+      scope_symbol_id = JUST(opt_scope_symbol_id);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -315,12 +319,13 @@ void ScaleModelDiffByDynamicLossInstanceNum(
     parallel_conf.add_device_name("0:0");
     int64_t scope_symbol_id = 0;
     {
-      const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
-          std::make_shared<cfg::JobConfigProto>(job_builder->job().job_conf());
-      const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
-          std::make_shared<cfg::ParallelConf>(parallel_conf);
-      scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
-                            ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+      const auto& opt_scope_symbol_id =
+          CHECK_JUST(MakeInitialScope(job_builder->job().job_conf(),
+                                      SymbolOf(ParallelDesc(parallel_conf)),
+                                      /* is_mirrored */ false))
+              ->symbol_id();
+      if (!opt_scope_symbol_id.has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
+      scope_symbol_id = CHECK_JUST(opt_scope_symbol_id);
     }
     op_conf.set_scope_symbol_id(scope_symbol_id);
     job_builder->AddOps(parallel_conf, {op_conf});
@@ -415,12 +420,12 @@ void ForEachAggregatedParamGroup(
 }
 
 int64_t MakeScopeSymbolId(const JobConfigProto& job_conf, const ParallelConf& parallel_conf) {
-  const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf =
-      std::make_shared<cfg::JobConfigProto>(job_conf);
-  const std::shared_ptr<cfg::ParallelConf> cfg_parallel_conf =
-      std::make_shared<cfg::ParallelConf>(parallel_conf);
-  return (*Global<std::shared_ptr<ForeignCallback>>::Get())
-      ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+  const auto& opt_scope_symbol_id =
+      CHECK_JUST(MakeInitialScope(job_conf, SymbolOf(ParallelDesc(parallel_conf)),
+                                  /* is_mirrored */ false))
+          ->symbol_id();
+  if (!opt_scope_symbol_id.has_value()) { THROW(RuntimeError) << "symbol_id not initialized"; }
+  return CHECK_JUST(opt_scope_symbol_id);
 }
 
 std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbns,
@@ -694,7 +699,7 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   return global_pow_op.output("out", 0);
 }
 
-void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
+void ClipGradientByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
                               const ClipByGlobalNormConf& conf) {
   if (lbi2diff_lbi->empty()) { return; }
@@ -768,6 +773,21 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
     job_builder->AddOps(op_graph.OpNode4OpName(lbi.op_name())->parallel_desc().parallel_conf(),
                         {scalar_mul_op.op_conf()});
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
+  }
+
+  if (!CHECK_JUST(ctx->HasState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"))) {
+    CHECK_JUST(ctx->ResetState("clip_by_global_norm_state",
+                               std::make_unique<ClipByGlobalNormJobPassState>()));
+  }
+  auto state =
+      CHECK_JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
+  const std::shared_ptr<ClipByGlobalNormJobPassState::TotalNormState>& total_norm_state =
+      std::make_shared<ClipByGlobalNormJobPassState::TotalNormState>(
+          total_norm_lbn, coeff_lbn, parallel_conf, scope_symbol_id);
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    const std::string& variable_op_name = lbi.op_name();
+    state->AddTotalNormState(variable_op_name, total_norm_state);
   }
 }
 
@@ -1110,10 +1130,11 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
   }
 }
 
-void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
+void ClipGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                   HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf) {
   if (clip_conf.has_clip_by_global_norm()) {
-    ClipGradientByGlobalNorm(op_graph, job_builder, lbi2diff_lbi, clip_conf.clip_by_global_norm());
+    ClipGradientByGlobalNorm(ctx, op_graph, job_builder, lbi2diff_lbi,
+                             clip_conf.clip_by_global_norm());
   } else {
     UNIMPLEMENTED();
   }

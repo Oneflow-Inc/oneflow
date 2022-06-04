@@ -28,31 +28,45 @@ bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
   return !autograd::GradMode::is_enabled() || !(x->is_leaf() && x->requires_grad());
 }
 
-Maybe<void> CheckAxis(std::vector<int32_t>& axis, const Shape& shape) {
-  int32_t ndim = shape.NumAxes();
-  if (axis.size() == 0) {
-    for (int32_t i = 0; i < axis.size(); ++i) { axis[i] = i; }
+Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const int32_t& ndim) {
+  const int32_t naxis = axis.size();
+
+  if (naxis == 0) {
+    std::vector<int32_t> reduce_axis(ndim);
+    std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+    return reduce_axis;
   } else {
-    for (int i = 0; i < axis.size(); ++i) {
-      CHECK_OR_RETURN((-ndim < axis[i]) || (axis[i] < ndim - 1))
-          << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-          << "], but got " << axis[i];
-      if (axis[i] < 0) { axis[i] += ndim; }
+    std::vector<int32_t> reduce_axis(naxis);
+    std::vector<int32_t> axis_num(ndim);
+    for (int32_t i = 0; i < naxis; i++) {
+      CHECK_OR_RETURN(axis[i] >= -ndim && axis[i] < ndim)
+          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+          << ", " << ndim - 1 << "], but got " << axis[i] << ")";
+      if (axis[i] < 0) {
+        reduce_axis[i] = axis[i] + ndim;
+      } else {
+        reduce_axis[i] = axis[i];
+      }
+      axis_num[reduce_axis[i]]++;
+      CHECK_OR_RETURN(axis_num[reduce_axis[i]] < 2)
+          << Error::RuntimeError() << "dim " << reduce_axis[i]
+          << " appears multiple times in the list of dims";
     }
+    return reduce_axis;
   }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x) {
   CHECK_OR_RETURN(IsInplaceValid(x))
-      << "a leaf Tensor that requires grad is being used in an in-place operation.";
+      << Error::RuntimeError()
+      << "a leaf Tensor that requires grad is being used in an in-place operation";
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
                                   const std::shared_ptr<Tensor>& x_cast) {
   CHECK_OR_RETURN(*x->dtype() == *x_cast->dtype())
-      << "RuntimeError: result type " << x_cast->dtype()->name()
+      << Error::RuntimeError() << "result type " << x_cast->dtype()->name()
       << " can't be cast to the desired output type " << x->dtype()->name();
   return Maybe<void>::Ok();
 }
@@ -76,7 +90,8 @@ bool IsShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
 
 Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape) {
   CHECK_OR_RETURN(IsShapeCanExpandTo(shape, expand_shape))
-      << "Can not expand shape " << shape.ToString() << " to " << expand_shape.ToString();
+      << Error::RuntimeError() << "Can not expand shape " << shape.ToString() << " to "
+      << expand_shape.ToString();
   return Maybe<void>::Ok();
 }
 
@@ -86,7 +101,11 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
    * Description: in some case, view operate is not allowed, so need to check it's validation,
    * the check refers to torch(aten/src/ATen/native/TensorShape.cpp)
    *************************************************/
-  if (stride.NumAxes() == 0) { return NullOpt; }
+  if (stride.NumAxes() == 0) {
+    // for scalar input tensor
+    DimVector newstride(target_shape.NumAxes(), 1);
+    return Stride(newstride);
+  }
   int64_t elem_count = shape.elem_cnt();
   int64_t ndim = shape.NumAxes();
   int64_t tgt_ndim = target_shape.NumAxes();
@@ -144,13 +163,13 @@ Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shap
   Shape infered_shape = shape;
   if (need_infer_axis == -1) {
     CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-        << "\n Shape " << shape.ToString() << " is invalid for input shape "
-        << x->shape()->ToString();
+        << Error::RuntimeError() << "shape '" << shape.ToString()
+        << "' is invalid for input of size " << x->nelement();
   } else {
     infered_shape.Set(need_infer_axis, x_count / count);
     CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-        << "\n Shape " << shape.ToString() << " is invalid for input shape "
-        << x->shape()->ToString();
+        << Error::RuntimeError() << "shape '" << shape.ToString()
+        << "' is invalid for input of size " << x->nelement();
   }
   return infered_shape;
 }

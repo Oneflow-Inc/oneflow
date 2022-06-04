@@ -27,7 +27,6 @@ device = oneflow._oneflow_internal.device
 placement = oneflow._oneflow_internal.placement
 locals()["dtype"] = oneflow._oneflow_internal.dtype
 locals()["bool"] = oneflow._oneflow_internal.bool
-locals()["char"] = oneflow._oneflow_internal.char
 locals()["float16"] = oneflow._oneflow_internal.float16
 locals()["half"] = oneflow._oneflow_internal.float16
 locals()["float32"] = oneflow._oneflow_internal.float32
@@ -69,6 +68,7 @@ from oneflow._C import acos
 from oneflow._C import acos as arccos
 from oneflow._C import acosh
 from oneflow._C import acosh as arccosh
+from oneflow._C import amin
 from oneflow._C import atanh
 from oneflow._C import atanh as arctanh
 from oneflow._C import batch_matmul as bmm
@@ -91,6 +91,7 @@ from oneflow._C import logical_not
 from oneflow._C import gelu
 from oneflow._C import mish
 from oneflow._C import repeat
+from oneflow._C import repeat_interleave
 from oneflow._C import tile
 from oneflow._C import sigmoid
 from oneflow._C import tanh
@@ -140,7 +141,13 @@ from oneflow._C import minimum
 from oneflow._C import maximum
 from oneflow._C import max
 from oneflow._C import min
+from oneflow._C import median
 from oneflow._C import pow
+from oneflow._C import reduce_prod as prod
+from oneflow._C import reduce_sum as sum
+from oneflow._C import reduce_mean as mean
+from oneflow._C import reduce_all as all
+from oneflow._C import reduce_any as any
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
@@ -181,8 +188,10 @@ from oneflow._C import dot
 from oneflow._C import eye
 from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
+from oneflow._C import contiguous
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
+from oneflow._C import amax
 from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
@@ -192,6 +201,7 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
+from oneflow._C import searchsorted
 from oneflow._C import index_select
 from oneflow._C import isnan
 from oneflow._C import isinf
@@ -205,10 +215,8 @@ import atexit
 
 import oneflow.framework.c_api_util
 import oneflow.framework.register_class_method_util as register_class_method_util
-import oneflow.framework.register_python_callback
 
 
-INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 register_class_method_util.RegisterMethod4Class()
 import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
@@ -222,13 +230,12 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-from oneflow.framework import python_callback, register_python_callback
+from oneflow.framework import python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
     python_callback.global_python_callback
 )
 del python_callback
-del register_python_callback
 
 
 class ExitHook:
@@ -326,6 +333,7 @@ from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.constant import new_ones_op as new_ones
 from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
+from oneflow.nn.modules.empty import new_empty_op as new_empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
@@ -334,9 +342,6 @@ from oneflow.nn.modules.distributed_partial_fc_sample import (
 )
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
-from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
-from oneflow.nn.modules.logical_ops import logical_or_op as logical_or
-from oneflow.nn.modules.logical_ops import logical_xor_op as logical_xor
 from oneflow.nn.modules.tensor_ops import is_floating_point
 from oneflow.nn.modules.masked_select import masked_select_op as masked_select
 from oneflow.nn.modules.math_ops import addmm_op as addmm
@@ -345,19 +350,14 @@ from oneflow.nn.modules.nonzero import nonzero_op as nonzero
 from oneflow.nn.modules.nms import nms_op as nms
 from oneflow.nn.modules.numel import numel_op as numel
 from oneflow.nn.modules.meshgrid import meshgrid_op as meshgrid
+from oneflow.nn.modules.random_ops import normal_op as normal
 from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
 from oneflow.nn.modules.random_ops import randperm_op as randperm
-from oneflow.nn.modules.reduce_ops import sum_op as sum
-from oneflow.nn.modules.reduce_ops import mean_op as mean
-from oneflow.nn.modules.reduce_ops import prod_op as prod
-from oneflow.nn.modules.reduce_ops import all_op as all
-from oneflow.nn.modules.reduce_ops import any_op as any
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
-from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
 from oneflow.nn.modules.slice import logical_slice_op as logical_slice
 from oneflow.nn.modules.sort import sort_op as sort
@@ -365,8 +365,11 @@ from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
 )
+from oneflow.nn.modules.tensordot import tensordot
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
+from oneflow.nn.modules.global_cast import local_to_global_op as local_to_global
+from oneflow.nn.modules.global_cast import global_to_global_op as global_to_global
 from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
@@ -407,6 +410,7 @@ import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
 import oneflow.one_embedding
+import oneflow.profiler
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

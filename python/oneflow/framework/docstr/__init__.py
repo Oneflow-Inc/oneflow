@@ -46,8 +46,10 @@ from .split import *
 from .clamp import *
 from .erfinv import *
 from .swapaxes import *
+from .amax import *
 from .unbind import *
 from .repeat import *
+from .repeat_interleave import *
 from .tile import *
 from .tensor_t import *
 from .topk import *
@@ -68,4 +70,8 @@ from .oneflow import *
 from .argsort import *
 from .module import *
 from .util_ops import *
+from .tensordot import *
+from .searchsorted import *
+from .amin import *
 from .deconv import *
+from .logical_ops import *
