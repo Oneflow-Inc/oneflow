@@ -2478,7 +2478,7 @@ class SplitWithSizeFunctor {
 
     if (num_splits == 1) {
       TensorTuple splits(1);
-      splits[0] = JUST(Identity(x));
+      splits[0] = x;
       return splits;
     } else if (num_splits <= kMaxOutputCount) {
       MutableAttrMap attrs;
