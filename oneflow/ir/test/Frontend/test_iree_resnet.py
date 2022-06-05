@@ -31,6 +31,7 @@ os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 model = resnet50(pretrained=True)
 model.eval()
 
+
 class GraphModule(flow.nn.Graph):
     def __init__(self):
         super().__init__()
@@ -38,6 +39,7 @@ class GraphModule(flow.nn.Graph):
 
     def build(self, x):
         return self.model(x)
+
 
 func = Runner(GraphModule, return_numpy=True)
 data = np.ones([1, 3, 224, 224]).astype(np.float32)
