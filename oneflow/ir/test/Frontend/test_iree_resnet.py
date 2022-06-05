@@ -40,9 +40,7 @@ class GraphModule(flow.nn.Graph):
         return self.model(x)
 
 func = Runner(GraphModule, return_numpy=True)
-# run on iree cuda backend
 data = np.ones([1, 3, 224, 224]).astype(np.float32)
 input = flow.tensor(data, requires_grad=False)
 output = func(input)
-tosa = Runner.backend.tosa
-print(tosa)
+print(output)

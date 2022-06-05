@@ -48,6 +48,19 @@ namespace mlir {
 
 namespace oneflow {
 
+Value CreateTranspose(Location& loc, ConversionPatternRewriter& rewriter, Value input,
+                      ArrayRef<int32_t> perms) {
+  const int perms_size = perms.size();
+  auto transpose_perms = rewriter.create<tosa::ConstOp>(
+      loc, RankedTensorType::get({perms_size}, rewriter.getI32Type()),
+      rewriter.getI32TensorAttr(perms));
+  auto shape_type = input.getType().cast<ShapedType>();
+  std::vector<int64_t> ranked_type;
+  for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
+  return rewriter.create<tosa::TransposeOp>(
+      loc, RankedTensorType::get(ranked_type, shape_type.getElementType()), input, transpose_perms);
+};
+
 struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulByTensorOp> {
  public:
   using OpConversionPattern<ScalarMulByTensorOp>::OpConversionPattern;
@@ -181,35 +194,26 @@ struct AvgPool2DOpLowering final : public OpConversionPattern<AvgPool2DOp> {
       return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
     };
+    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
+      std::vector<int64_t> ranked_type;
+      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
+      return RankedTensorType::get(ranked_type, shape_type.getElementType());
+    };
 
     auto stride = get_pair_int64_from_array(op.stride());
     auto pad = get_pair_int64_from_array(op.padding());
     auto kernel = get_pair_int64_from_array(op.kernel_size());
+    auto loc = op.getLoc();
 
-    auto transpose = [&](Value val, ArrayRef<int32_t> perms) -> Value {
-      auto transpose_perms = rewriter.create<tosa::ConstOp>(
-          op.getLoc(), RankedTensorType::get({4}, rewriter.getI32Type()),
-          rewriter.getI32TensorAttr(perms));
-      auto shape_type = val.getType().cast<ShapedType>();
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return rewriter.create<tosa::TransposeOp>(
-          op->getLoc(), RankedTensorType::get(ranked_type, shape_type.getElementType()), val,
-          transpose_perms);
-    };
-    auto in = transpose(op.x(), {0, 2, 3, 1});
+    auto in = CreateTranspose(loc, rewriter, op.x(), {0, 2, 3, 1});
 
-    auto shape_type = op.y().getType().cast<ShapedType>();
     auto avg_pool2d = rewriter.create<tosa::AvgPool2dOp>(
-        op->getLoc(),
-        RankedTensorType::get({shape_type.getDimSize(0), shape_type.getDimSize(2),
-                               shape_type.getDimSize(3), shape_type.getDimSize(1)},
-                              shape_type.getElementType()),
-        in,
+        loc, reshape_type(op.y().getType().cast<ShapedType>(), {0, 2, 3, 1}), in,
         /* kernel */ rewriter.getI64ArrayAttr({kernel.first, kernel.second}),
         /*  stride  */ rewriter.getI64ArrayAttr({stride.first, stride.second}),
         /* pad */ rewriter.getI64ArrayAttr({pad.first, pad.second, pad.first, pad.second}));
-    auto out = transpose(avg_pool2d, {0, 3, 1, 2});
+
+    auto out = CreateTranspose(loc, rewriter, avg_pool2d, {0, 3, 1, 2});
     rewriter.replaceOp(op, {out});
     return success();
   }
@@ -220,11 +224,17 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
   using OpConversionPattern<VariableOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(VariableOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    op->dump();
-    auto tensor_val = support::TensorToDenseElementsAttr(
-        ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
-        rewriter.getContext());
-    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, op.output().getType(), tensor_val);
+    auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
+    if (mgr) {
+      auto tensor = mgr->Get(op.op_name().str());
+      auto tensor_val = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
+      rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, op.output().getType(), tensor_val);
+    } else {
+      auto shape_type = op.output().getType().cast<ShapedType>();
+      rewriter.replaceOpWithNewOp<tosa::ConstOp>(
+          op, shape_type,
+          DenseElementsAttr::get(shape_type, rewriter.getZeroAttr(shape_type.getElementType())));
+    }
     return success();
   }
 };
@@ -238,6 +248,11 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
       return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
     };
+    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
+      std::vector<int64_t> ranked_type;
+      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
+      return RankedTensorType::get(ranked_type, shape_type.getElementType());
+    };
     // TODO: support dilation not equal to [1, 1]
     auto stride = get_pair_int64_from_array(op.stride());
     auto kernel = get_pair_int64_from_array(op.kernel_size());
@@ -245,30 +260,16 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     // TODO: support return indice
     if (op.return_indices()) op->emitError("not support return indices now");
 
-    auto transpose = [&](Value val, ArrayRef<int32_t> perms) -> Value {
-      auto transpose_perms = rewriter.create<tosa::ConstOp>(
-          op.getLoc(), RankedTensorType::get({4}, rewriter.getI32Type()),
-          rewriter.getI32TensorAttr(perms));
-      auto shape_type = val.getType().cast<ShapedType>();
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return rewriter.create<tosa::TransposeOp>(
-          op->getLoc(), RankedTensorType::get(ranked_type, shape_type.getElementType()), val,
-          transpose_perms);
-    };
-
-    auto x = transpose(op.x(), {0, 2, 3, 1});
-    auto shape_type = op.y().getType().cast<ShapedType>();
+    auto loc = op.getLoc();
+    auto x = CreateTranspose(loc, rewriter, op.x(), {0, 2, 3, 1});
     auto max_pool2d = rewriter.create<tosa::MaxPool2dOp>(
-        op.getLoc(), /* output */
-        RankedTensorType::get({shape_type.getDimSize(0), shape_type.getDimSize(2),
-                               shape_type.getDimSize(3), shape_type.getDimSize(1)},
-                              shape_type.getElementType()),
+        loc, /* output */
+        reshape_type(op.y().getType().cast<ShapedType>(), {0, 2, 3, 1}),
         /* input */ x,
         /* kernel */ rewriter.getI64ArrayAttr({kernel.first, kernel.second}),
         /* stride */ rewriter.getI64ArrayAttr({stride.first, stride.second}),
         /* padding */ rewriter.getI64ArrayAttr({pad.first, pad.second, pad.first, pad.second}));
-    auto y = transpose(max_pool2d, {0, 3, 1, 2});
+    auto y = CreateTranspose(loc, rewriter, max_pool2d, {0, 3, 1, 2});
     auto indice = rewriter.create<tosa::ConstOp>(
         op.getLoc(), op.indice().getType(),
         DenseElementsAttr::get(op.indice().getType(), rewriter.getZeroAttr(rewriter.getI64Type())));
@@ -311,18 +312,10 @@ struct MatmulOpLowering final : public OpConversionPattern<MatmulOp> {
   LogicalResult matchAndRewrite(MatmulOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     // TODO: more throw for robust in matmul shape rank
+    auto loc = op.getLoc();
     auto preprocess = [&](Value matrix, bool transpose) -> Value {
       auto shape_type = matrix.getType().cast<ShapedType>();
-      if (transpose) {
-        auto transpose_perms = rewriter.create<tosa::ConstOp>(
-            op.getLoc(), RankedTensorType::get({2}, rewriter.getI32Type()),
-            rewriter.getI32TensorAttr({0, 1}));
-        matrix = rewriter.create<tosa::TransposeOp>(
-            op->getLoc(),
-            RankedTensorType::get({shape_type.getDimSize(1), shape_type.getDimSize(0)},
-                                  shape_type.getElementType()),
-            matrix, transpose_perms);
-      }
+      if (transpose) { matrix = CreateTranspose(loc, rewriter, matrix, {1, 0}); }
       shape_type = matrix.getType().cast<ShapedType>();
       auto reshape_type = RankedTensorType::get(
           {1, shape_type.getDimSize(0), shape_type.getDimSize(1)}, shape_type.getElementType());
@@ -445,12 +438,18 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
       return {arr.getValue()[0].cast<IntegerAttr>().getSInt(),
               arr.getValue()[1].cast<IntegerAttr>().getSInt()};
     };
+    auto reshape_type = [](ShapedType shape_type, ArrayRef<int32_t> perms) -> RankedTensorType {
+      std::vector<int64_t> ranked_type;
+      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
+      return RankedTensorType::get(ranked_type, shape_type.getElementType());
+    };
 
     auto stride = get_pair_int64_from_array(op.strides());
     auto pad = get_pair_int64_from_array(op.padding_beforeAttr());
     auto dilation = get_pair_int64_from_array(op.dilation_rate());
 
     auto bias = op.bias();
+    auto loc = op.getLoc();
     if (!bias) {
       auto output_shape = op.out().getType().cast<ShapedType>();
       auto output_channels = output_shape.getDimSize(1);
@@ -459,32 +458,17 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
       bias = rewriter.create<tosa::ConstOp>(
           op.getLoc(), type, DenseElementsAttr::get(type, rewriter.getZeroAttr(bias_elem_type)));
     }
-    auto transpose = [&](Value val, ArrayRef<int32_t> perms) -> Value {
-      auto transpose_perms = rewriter.create<tosa::ConstOp>(
-          op.getLoc(), RankedTensorType::get({4}, rewriter.getI32Type()),
-          rewriter.getI32TensorAttr(perms));
-      auto shape_type = val.getType().cast<ShapedType>();
-      std::vector<int64_t> ranked_type;
-      for (auto index : perms) ranked_type.push_back(shape_type.getDimSize(index));
-      return rewriter.create<tosa::TransposeOp>(
-          op->getLoc(), RankedTensorType::get(ranked_type, shape_type.getElementType()), val,
-          transpose_perms);
-    };
-    auto in = transpose(op.in(), {0, 2, 3, 1});
-    auto weight = transpose(op.weight(), {0, 2, 3, 1});
-    auto shape_type = op.out().getType().cast<ShapedType>();
+
+    auto in = CreateTranspose(loc, rewriter, op.in(), {0, 2, 3, 1});
+    auto weight = CreateTranspose(loc, rewriter, op.weight(), {0, 2, 3, 1});
     auto conv2d = rewriter.create<tosa::Conv2DOp>(
-        op.getLoc(),
-        RankedTensorType::get({shape_type.getDimSize(0), shape_type.getDimSize(2),
-                               shape_type.getDimSize(3), shape_type.getDimSize(1)},
-                              shape_type.getElementType()),
-        in, weight, bias,
+        loc, reshape_type(op.out().getType().cast<ShapedType>(), {0, 2, 3, 1}), in, weight, bias,
         /* pad */
         rewriter.getI64ArrayAttr({pad.first, pad.second, pad.first, pad.second}),
         /*  stride  */ rewriter.getI64ArrayAttr({stride.first, stride.second}),
         /* dilation */ rewriter.getI64ArrayAttr({dilation.first, dilation.second}));
 
-    auto res = transpose(conv2d, {0, 3, 1, 2});
+    auto res = CreateTranspose(loc, rewriter, conv2d, {0, 3, 1, 2});
     rewriter.replaceOp(op, {res});
     return success();
     getTypeConverter();

@@ -1,5 +1,4 @@
-// RUN: oneflow-opt -lower-oneflow-to-tosa %s | FileCheck %s
-
+// RUN: oneflow-opt -lower-oneflow-to-tosa %s
 module {
   oneflow.job @GraphModule_0() -> tensor<64x3x7x7xf32> {
    %0 = "oneflow.variable"() {data_type = 2 : i32, device_name = ["@0:0"], device_tag = "cpu",

@@ -1,4 +1,4 @@
-// RUN: oneflow-opt -lower-oneflow-to-tosa %s | FileCheck %s
+// RUN: oneflow-opt -lower-oneflow-to-tosa %s | ireec --iree-input-type=tosa --iree-vm-bytecode-module-output-format=flatbuffer-binary -iree-hal-target-backends=dylib-llvm-aot -iree-mlir-to-vm-bytecode-module -
 
 module {
   oneflow.job @GraphModule_1(%arg0: tensor<1x3x224x224xf32>, %arg1: tensor<5x3x1x1xf32>) -> tensor<1x5x224x224xf32> {
