@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cub/cub.cuh>
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -88,6 +89,27 @@ __global__ void CumsumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_
     }
   }
 }
+
+template<typename T, template<typename> class BinaryFunc>
+void TensorCumSum(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_t dim,
+                  const T* in_ptr, T* out_ptr) {
+  // data partition: up_space|space|down_space
+  auto up_space = in_shape.elem_cnt() / in_shape.Count(dim);
+  auto space = in_shape.At(dim);
+  auto down_space = in_shape.Count(dim + 1);
+  auto thread_num = up_space * down_space;
+  if (up_space == 1) {
+    RUN_CUDA_KERNEL((CumsumForwardGpuUpSpaceIs1<T, BinaryFunc>), ep_stream, thread_num, in_ptr,
+                    out_ptr, space, down_space);
+  } else if (down_space == 1) {
+    RUN_CUDA_KERNEL((CumsumForwardGpuDownSpaceIs1<T, BinaryFunc>), ep_stream, thread_num, in_ptr,
+                    out_ptr, up_space, space);
+  } else {
+    RUN_CUDA_KERNEL((CumsumForwardGpu<T, BinaryFunc>), ep_stream, thread_num, in_ptr, out_ptr,
+                    up_space, space, down_space);
+  }
+}
+
 }  // namespace
 
 template<typename T, template<typename> class BinaryFunc>
@@ -99,31 +121,27 @@ class GpuCumKernel : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // judge whether tensor has 0 size dimension first
+    // Judge whether tensor has 0 size dimension first
     const auto* in = ctx->Tensor4ArgNameAndIndex("x", 0);
-    auto elem_cnt = in->shape().elem_cnt();
+    auto* out = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const ShapeView& in_shape = in->shape();
+    const int64_t dim = ctx->Attr<int64_t>("dim");
+    const size_t dim_size = in_shape.At(dim);
+
+    auto elem_cnt = in_shape.elem_cnt();
     if (!elem_cnt) { return; }
 
-    auto* out = ctx->Tensor4ArgNameAndIndex("y", 0);
-    auto dim = ctx->Attr<int64_t>("dim");
     const auto* in_ptr = in->dptr<T>();
     auto* out_ptr = out->mut_dptr<T>();
-
-    // data partition: up_space|space|down_space
-    auto up_space = elem_cnt / in->shape().Count(dim);
-    auto space = in->shape().At(dim);
-    auto down_space = in->shape().Count(dim + 1);
-    auto thread_num = up_space * down_space;
-
-    if (up_space == 1) {
-      RUN_CUDA_KERNEL((CumsumForwardGpuUpSpaceIs1<T, BinaryFunc>), ctx->stream(), thread_num,
-                      in_ptr, out_ptr, space, down_space);
-    } else if (down_space == 1) {
-      RUN_CUDA_KERNEL((CumsumForwardGpuDownSpaceIs1<T, BinaryFunc>), ctx->stream(), thread_num,
-                      in_ptr, out_ptr, up_space, space);
+    if (elem_cnt == dim_size) {
+      auto* temp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+      auto* temp_storage = temp_buffer->mut_dptr<T>();
+      size_t temp_storage_bytes = temp_buffer->shape().elem_cnt();
+      OF_CUDA_CHECK(
+          cub::DeviceScan::InclusiveSum(temp_storage, temp_storage_bytes, in_ptr, out_ptr, elem_cnt,
+                                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     } else {
-      RUN_CUDA_KERNEL((CumsumForwardGpu<T, BinaryFunc>), ctx->stream(), thread_num, in_ptr, out_ptr,
-                      up_space, space, down_space);
+      TensorCumSum<T, BinaryFunc>(ctx->stream(), in_shape, dim, in_ptr, out_ptr);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -135,11 +153,26 @@ class GpuCumSumKernel final : public GpuCumKernel<T, BinaryFuncAdd> {
   GpuCumSumKernel() = default;
   ~GpuCumSumKernel() = default;
 };
+template<typename T>
+size_t InferTmpBufferSize(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("x", 0);
+  const int64_t dim = ctx->Attr<int64_t>("dim");
+  const size_t dim_size = in_shape.At(dim);
+  if (in_shape.elem_cnt() == dim_size) {
+    size_t temp_storage_bytes = 0;
+    OF_CUDA_CHECK(cub::DeviceScan::InclusiveSum(
+        nullptr, temp_storage_bytes, static_cast<T*>(nullptr), static_cast<T*>(nullptr), dim_size));
+    return GetCudaAlignedSize(temp_storage_bytes);
+  }
+  return 0;
+}
 
-#define REGISTER_CUDA_CUMSUM_KERNEL(dtype)                                              \
-  REGISTER_USER_KERNEL("cumsum").SetCreateFn<GpuCumSumKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_CUMSUM_KERNEL(dtype)                                             \
+  REGISTER_USER_KERNEL("cumsum")                                                       \
+      .SetCreateFn<GpuCumSumKernel<dtype>>()                                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferTmpBufferSize<dtype>);
 
 REGISTER_CUDA_CUMSUM_KERNEL(int64_t)
 REGISTER_CUDA_CUMSUM_KERNEL(float)
