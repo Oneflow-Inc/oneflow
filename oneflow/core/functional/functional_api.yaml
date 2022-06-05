@@ -223,9 +223,9 @@
 - name: "floor_divide"
   signature:
     [
-      "Tensor (Tensor x, Tensor y) => FloorDiv",
-      "Tensor (Tensor input, Scalar scalar, *, Bool inplace=False) => ScalarFloorDiv",
-      "Tensor (Tensor input, Scalar scalar) => ScalarFloorDiv",
+      "Tensor (Tensor input, Tensor other) => FloorDiv",
+      "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarFloorDiv",
+      "Tensor (Tensor input, Scalar other) => ScalarFloorDiv",
     ]
   bind_python: True
 
@@ -713,11 +713,11 @@
   bind_python: True
 
 - name: "argmax"
-  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
+  signature: "Tensor (Tensor x, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMax"
   bind_python: True
 
 - name: "argmin"
-  signature: "Tensor (Tensor x, *, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
+  signature: "Tensor (Tensor x, Int32 dim=None, Bool keepdim=None, DataType dtype=None) => ArgMin"
   bind_python: True
 
 - name: "argwhere"
@@ -879,6 +879,17 @@
   signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
   bind_python: True
 
+- name: "repeat_interleave_index"
+  signature: "Tensor (Tensor input, Tensor cumsum, Int32 dim) => RepeatInterLeaveIndex"
+  bind_python: False
+
+- name: "repeat_interleave"
+  signature: [
+    "Tensor (Tensor input, Int32 repeats, Int32 dim=None) => RepeatInterLeaveInt",
+    "Tensor (Tensor input, Tensor repeats, Int32 dim, Int32 output_size=None) => RepeatInterLeaveTensor",
+  ]
+  bind_python: True
+
 - name: "tile"
   signature: "Tensor (Tensor input, Shape dims) => Tile"
   bind_python: True
@@ -939,7 +950,7 @@
 
 - name: "matmul"
   signature:
-    "Tensor (Tensor a, Tensor b, Bool transpose_a=False, Bool transpose_b=False,
+    "Tensor (Tensor input, Tensor other, Bool transpose_a=False, Bool transpose_b=False,
     Double alpha=1.0) => MatMul"
   bind_python: True
 
