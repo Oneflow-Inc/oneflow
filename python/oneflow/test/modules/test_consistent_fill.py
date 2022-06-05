@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_fill_(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
+    dims = [random(1, 4) * 4 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     value = random().to(float)
     y = x + 1
@@ -31,7 +31,7 @@ def _test_fill_(test_case, ndim, placement, sbp):
 
 @autotest(n=1, check_graph=False)
 def _test_fill_tensor_(test_case, ndim, placement, sbp):
-    dims = [random(1, 2) * 8 for i in range(ndim)]
+    dims = [random(1, 4) * 4 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     value = torch.tensor(1.0, requires_grad=True).to_global(
         placement=placement, sbp=[flow.sbp.broadcast for _ in sbp]
