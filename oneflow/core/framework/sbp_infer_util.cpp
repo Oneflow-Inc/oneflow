@@ -126,7 +126,7 @@ double ComputCopyCostBetweenTwoDiffSbpParallel(const SbpParallel& producer_sbp_p
   }
   if (on_same_devices) {
     // B->S, B->P
-    if (producer_sbp_parallel.has_broadcast_parallel()) { return 0; }
+    if (producer_sbp_parallel.has_broadcast_parallel()) { return 1; }
     // has S
     if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel()) {
       if (consumer_sbp_parallel.has_split_parallel()
