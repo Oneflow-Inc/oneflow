@@ -24,6 +24,34 @@ namespace oneflow {
 #ifdef WITH_CUDA
 namespace {
 
+template<typename T>
+struct SumFunctor {
+  CUB_RUNTIME_FUNCTION __device__ __forceinline__ T operator()(const T a, const T b) const {
+    return a + b;
+  }
+};
+template<typename T>
+struct ProdFunctor {
+  CUB_RUNTIME_FUNCTION __device__ __forceinline__ T operator()(const T a, const T b) const {
+    return a * b;
+  }
+};
+
+template<typename T, template<typename> class BinaryFunc>
+size_t InferTmpBufferSize(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("x", 0);
+  const int64_t dim = ctx->Attr<int64_t>("dim");
+  const size_t dim_size = in_shape.At(dim);
+  if (in_shape.elem_cnt() == dim_size) {
+    size_t temp_storage_bytes = 0;
+    OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(nullptr, temp_storage_bytes,
+                                                 static_cast<T*>(nullptr), static_cast<T*>(nullptr),
+                                                 BinaryFunc<T>(), dim_size));
+    return GetCudaAlignedSize(temp_storage_bytes);
+  }
+  return 0;
+}
+
 // total thread number: cs_up_space * cs_down_space
 // in cs_down_space part, use cs_down_space threads
 // to calculate as follows(m=cs_down_space-1, n=cs_space-1, '|' stands for dependency):
@@ -37,8 +65,8 @@ namespace {
 //  |         |    |
 // dmn, ..., d1n, d0n
 template<typename T, template<typename> class BinaryFunc>
-__global__ void CumsumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
-                                 int64_t cs_down_space) {
+__global__ void CumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_space, int64_t cs_space,
+                              int64_t cs_down_space) {
   CUDA_1D_KERNEL_LOOP(i, cs_up_space * cs_down_space) {
     auto cs_up_space_id = i / cs_down_space;
     auto cs_down_space_id = i - (i / cs_down_space) * cs_down_space;
@@ -51,15 +79,14 @@ __global__ void CumsumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_spac
       auto idx = j * cs_down_space;
       out_ptr_base[idx] = in_ptr_base[idx];
       if (j != 0) {
-        out_ptr_base[idx] =
-            BinaryFunc<T>::Invoke(out_ptr_base[idx], out_ptr_base[idx - cs_down_space]);
+        out_ptr_base[idx] = BinaryFunc<T>()(out_ptr_base[idx], out_ptr_base[idx - cs_down_space]);
       }
     }
   }
 }
 template<typename T, template<typename> class BinaryFunc>
-__global__ void CumsumForwardGpuUpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_space,
-                                           int64_t cs_down_space) {
+__global__ void CumForwardGpuUpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_space,
+                                        int64_t cs_down_space) {
   CUDA_1D_KERNEL_LOOP(i, cs_down_space) {
     auto* in_ptr_base = in_ptr + i;
     auto* out_ptr_base = out_ptr + i;
@@ -69,15 +96,14 @@ __global__ void CumsumForwardGpuUpSpaceIs1(const T* in_ptr, T* out_ptr, int64_t 
       auto idx = j * cs_down_space;
       out_ptr_base[idx] = in_ptr_base[idx];
       if (j != 0) {
-        out_ptr_base[idx] =
-            BinaryFunc<T>::Invoke(out_ptr_base[idx], out_ptr_base[idx - cs_down_space]);
+        out_ptr_base[idx] = BinaryFunc<T>()(out_ptr_base[idx], out_ptr_base[idx - cs_down_space]);
       }
     }
   }
 }
 template<typename T, template<typename> class BinaryFunc>
-__global__ void CumsumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_up_space,
-                                             int64_t cs_space) {
+__global__ void CumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t cs_up_space,
+                                          int64_t cs_space) {
   CUDA_1D_KERNEL_LOOP(i, cs_up_space) {
     auto* in_ptr_base = in_ptr + i * cs_space;
     auto* out_ptr_base = out_ptr + i * cs_space;
@@ -85,27 +111,27 @@ __global__ void CumsumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_
     // calculate cs_space data in one thread
     for (auto j = 0; j < cs_space; j++) {
       out_ptr_base[j] = in_ptr_base[j];
-      if (j != 0) { out_ptr_base[j] = BinaryFunc<T>::Invoke(out_ptr_base[j], out_ptr_base[j - 1]); }
+      if (j != 0) { out_ptr_base[j] = BinaryFunc<T>()(out_ptr_base[j], out_ptr_base[j - 1]); }
     }
   }
 }
 
 template<typename T, template<typename> class BinaryFunc>
-void TensorCumSum(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_t dim,
-                  const T* in_ptr, T* out_ptr) {
+void CumForwardStrategy(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_t dim,
+                        const T* in_ptr, T* out_ptr) {
   // data partition: up_space|space|down_space
   auto up_space = in_shape.elem_cnt() / in_shape.Count(dim);
   auto space = in_shape.At(dim);
   auto down_space = in_shape.Count(dim + 1);
   auto thread_num = up_space * down_space;
   if (up_space == 1) {
-    RUN_CUDA_KERNEL((CumsumForwardGpuUpSpaceIs1<T, BinaryFunc>), ep_stream, thread_num, in_ptr,
+    RUN_CUDA_KERNEL((CumForwardGpuUpSpaceIs1<T, BinaryFunc>), ep_stream, thread_num, in_ptr,
                     out_ptr, space, down_space);
   } else if (down_space == 1) {
-    RUN_CUDA_KERNEL((CumsumForwardGpuDownSpaceIs1<T, BinaryFunc>), ep_stream, thread_num, in_ptr,
+    RUN_CUDA_KERNEL((CumForwardGpuDownSpaceIs1<T, BinaryFunc>), ep_stream, thread_num, in_ptr,
                     out_ptr, up_space, space);
   } else {
-    RUN_CUDA_KERNEL((CumsumForwardGpu<T, BinaryFunc>), ep_stream, thread_num, in_ptr, out_ptr,
+    RUN_CUDA_KERNEL((CumForwardGpu<T, BinaryFunc>), ep_stream, thread_num, in_ptr, out_ptr,
                     up_space, space, down_space);
   }
 }
@@ -137,42 +163,29 @@ class GpuCumKernel : public user_op::OpKernel {
       auto* temp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       auto* temp_storage = temp_buffer->mut_dptr<T>();
       size_t temp_storage_bytes = temp_buffer->shape().elem_cnt();
-      OF_CUDA_CHECK(
-          cub::DeviceScan::InclusiveSum(temp_storage, temp_storage_bytes, in_ptr, out_ptr, elem_cnt,
-                                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+      OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(
+          temp_storage, temp_storage_bytes, in_ptr, out_ptr, BinaryFunc<T>(), elem_cnt,
+          ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     } else {
-      TensorCumSum<T, BinaryFunc>(ctx->stream(), in_shape, dim, in_ptr, out_ptr);
+      CumForwardStrategy<T, BinaryFunc>(ctx->stream(), in_shape, dim, in_ptr, out_ptr);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 template<typename T>
-class GpuCumSumKernel final : public GpuCumKernel<T, BinaryFuncAdd> {
+class GpuCumSumKernel final : public GpuCumKernel<T, SumFunctor> {
  public:
   GpuCumSumKernel() = default;
   ~GpuCumSumKernel() = default;
 };
-template<typename T>
-size_t InferTmpBufferSize(user_op::InferContext* ctx) {
-  const Shape& in_shape = ctx->InputShape("x", 0);
-  const int64_t dim = ctx->Attr<int64_t>("dim");
-  const size_t dim_size = in_shape.At(dim);
-  if (in_shape.elem_cnt() == dim_size) {
-    size_t temp_storage_bytes = 0;
-    OF_CUDA_CHECK(cub::DeviceScan::InclusiveSum(
-        nullptr, temp_storage_bytes, static_cast<T*>(nullptr), static_cast<T*>(nullptr), dim_size));
-    return GetCudaAlignedSize(temp_storage_bytes);
-  }
-  return 0;
-}
 
 #define REGISTER_CUDA_CUMSUM_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("cumsum")                                                       \
       .SetCreateFn<GpuCumSumKernel<dtype>>()                                           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferTmpBufferSize<dtype>);
+      .SetInferTmpSizeFn(InferTmpBufferSize<dtype, SumFunctor>);
 
 REGISTER_CUDA_CUMSUM_KERNEL(int64_t)
 REGISTER_CUDA_CUMSUM_KERNEL(float)
@@ -180,16 +193,18 @@ REGISTER_CUDA_CUMSUM_KERNEL(double)
 #undef REGISTER_CUDA_CUMSUM_KERNEL
 
 template<typename T>
-class GpuCumProdKernel final : public GpuCumKernel<T, BinaryFuncMul> {
+class GpuCumProdKernel final : public GpuCumKernel<T, ProdFunctor> {
  public:
   GpuCumProdKernel() = default;
   ~GpuCumProdKernel() = default;
 };
 
-#define REGISTER_CUDA_CUMPROD_KERNEL(dtype)                                               \
-  REGISTER_USER_KERNEL("cumprod").SetCreateFn<GpuCumProdKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_CUDA_CUMPROD_KERNEL(dtype)                                            \
+  REGISTER_USER_KERNEL("cumprod")                                                      \
+      .SetCreateFn<GpuCumProdKernel<dtype>>()                                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferTmpBufferSize<dtype, ProdFunctor>);
 
 REGISTER_CUDA_CUMPROD_KERNEL(int64_t)
 REGISTER_CUDA_CUMPROD_KERNEL(float)
