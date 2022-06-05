@@ -3,12 +3,52 @@ include(python)
 function(oneflow_add_executable)
   add_executable(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
+  get_property(LLVM_INSTALL_DIR GLOBAL PROPERTY LLVM_INSTALL_DIR)
+  find_library(LLVMSupport LLVMSupport PATHS ${LLVM_INSTALL_DIR}/lib REQUIRED)
+  target_link_libraries(${ARGV0} ${LLVMSupport})
+  target_include_directories(${ARGV0} PUBLIC ${LLVM_INCLUDE_DIRS})
 endfunction()
 
 function(oneflow_add_library)
   add_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
+  get_property(LLVM_INSTALL_DIR GLOBAL PROPERTY LLVM_INSTALL_DIR)
+  find_library(LLVMSupport LLVMSupport PATHS ${LLVM_INSTALL_DIR}/lib REQUIRED)
+  target_link_libraries(${ARGV0} ${LLVMSupport})
+  target_include_directories(${ARGV0} PUBLIC ${LLVM_INCLUDE_DIRS})
 endfunction()
+
+set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
+    CACHE STRING "dir to put binary for debugging and development")
+
+# clean cache for last LLVM version
+if("${LLVM_MONO_REPO_URL}" STREQUAL
+   "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/a0595f8c99a253c65f30a151337e7aadc19ee3a1.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
+   OR "${LLVM_MONO_REPO_URL}" STREQUAL
+      "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
+   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03")
+  unset(LLVM_MONO_REPO_URL CACHE)
+  unset(LLVM_MONO_REPO_MD5 CACHE)
+endif()
+set(LLVM_MONO_REPO_URL
+    "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
+    CACHE STRING "")
+use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
+set(LLVM_MONO_REPO_MD5 "241a333828bba1efa35aff4c4fc2ce87" CACHE STRING "")
+set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
+if(WITH_MLIR)
+  set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
+endif()
+
+include(op_schema)
 
 # source_group
 if(WIN32)
@@ -243,38 +283,6 @@ if(USE_CLANG_TIDY)
 endif()
 
 target_compile_definitions(oneflow PRIVATE GOOGLE_LOGGING)
-
-set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
-    CACHE STRING "dir to put binary for debugging and development")
-
-# clean cache for last LLVM version
-if("${LLVM_MONO_REPO_URL}" STREQUAL
-   "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/a0595f8c99a253c65f30a151337e7aadc19ee3a1.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
-   OR "${LLVM_MONO_REPO_URL}" STREQUAL
-      "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"
-   OR "${LLVM_MONO_REPO_MD5}" STREQUAL "075fbfdf06cb3f02373ea44971af7b03")
-  unset(LLVM_MONO_REPO_URL CACHE)
-  unset(LLVM_MONO_REPO_MD5 CACHE)
-endif()
-set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/6a9bbd9f20dcd700e28738788bb63a160c6c088c.zip"
-    CACHE STRING "")
-use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "241a333828bba1efa35aff4c4fc2ce87" CACHE STRING "")
-set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
-add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
-if(WITH_MLIR)
-  set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
-endif()
-
-include(op_schema)
 
 get_property(EXTERNAL_INCLUDE_DIRS GLOBAL PROPERTY EXTERNAL_INCLUDE_DIRS)
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
