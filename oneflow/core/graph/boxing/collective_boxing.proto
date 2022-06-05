@@ -23,6 +23,7 @@ enum ReduceMethod {
 enum Backend {
     kBackendInvalid = 0;
     kBackendNCCL = 1;
+    kBackendOFCCL = 2;
 }
 
 message DeviceDesc {

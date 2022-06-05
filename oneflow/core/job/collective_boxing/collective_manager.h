@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/collective_boxing/runtime_request_info.h"
-#include "oneflow/core/job/collective_boxing/request_store.h"
+#include "oneflow/core/job/collective_boxing/of_request_store.h"
 #include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
@@ -37,7 +37,6 @@ class CollectiveMgr final {
 
   RequestHandle* CreateRequestHandle(const RankDesc& rank_desc);
   void DestroyRequestHandle(RequestHandle*);
-  void Schedule(RequestHandle* handle, std::shared_ptr<const RuntimeRequestInfo> request_info);
   CollectiveMgrPlanToken* AddPlan(const Plan& plan);
   void DeletePlan(CollectiveMgrPlanToken* plan_token);
 

@@ -15,12 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/job/collective_boxing/collective_manager.h"
 #include "oneflow/core/job/collective_boxing/collective_builder.h"
-#include "oneflow/core/job/collective_boxing/request_store.h"
-#include "oneflow/core/job/collective_boxing/coordinator.h"
-#include "oneflow/core/job/collective_boxing/static_group_coordinator.h"
+#include "oneflow/core/job/collective_boxing/of_request_store.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/collective_boxing/nccl_executor_backend.h"
+#include "oneflow/core/job/collective_boxing/collective_backend_ofccl.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -36,17 +34,16 @@ class CollectiveBuilderImpl : public CollectiveBuilder {
   CollectiveBuilderImpl() = default;
   ~CollectiveBuilderImpl() override = default;
 
-  void Init(std::shared_ptr<RequestStore> request_store) override;
+  void Init(std::shared_ptr<OfRequestStore> request_store) override;
   void InitJob(int64_t job_id) override;
   void DeinitJob(int64_t job_id) override;
 
  private:
-  std::vector<std::unique_ptr<ExecutorBackend>> backends_;
-  std::shared_ptr<RequestStore> request_store_;
-  std::vector<RequestId> group_buffer_;
+  std::vector<std::unique_ptr<CollectiveBackend>> backends_;
+  std::shared_ptr<OfRequestStore> request_store_;
 };
 
-void CollectiveBuilderImpl::Init(std::shared_ptr<RequestStore> request_store) {
+void CollectiveBuilderImpl::Init(std::shared_ptr<OfRequestStore> request_store) {
   request_store_ = request_store;
   backends_.resize(Backend_ARRAYSIZE);
 #ifdef WITH_CUDA
@@ -54,36 +51,35 @@ void CollectiveBuilderImpl::Init(std::shared_ptr<RequestStore> request_store) {
   cudaError_t err = cudaGetDeviceCount(&cuda_dev_count);
   if (err != cudaErrorNoDevice && err != cudaErrorInsufficientDriver) { OF_CUDA_CHECK(err); }
   if (cuda_dev_count > 0) {
-    std::unique_ptr<ExecutorBackend> nccl_backend = std::make_unique<NcclExecutorBackend>();
-    nccl_backend->Init(request_store_);
-    // TODO: (Panlichen) define Backend::kBackendOFCCL to get rid of ExecutorBackend and NcclExecutorBackend
-    backends_.at(Backend::kBackendNCCL) = std::move(nccl_backend);
+    std::unique_ptr<CollectiveBackend> ofccl_backend = std::make_unique<CollectiveBackendOfccl>();
+    ofccl_backend->Init(request_store_);
+    backends_.at(Backend::kBackendOFCCL) = std::move(ofccl_backend);
   }
 #endif
 }
 
 void CollectiveBuilderImpl::InitJob(int64_t job_id) {
 #ifdef WITH_CUDA
-  if (backends_.at(Backend::kBackendNCCL)) { backends_.at(Backend::kBackendNCCL)->InitJob(job_id); }
+  if (backends_.at(Backend::kBackendOFCCL)) { backends_.at(Backend::kBackendOFCCL)->InitJob(job_id); }
 #endif
 }
 
 void CollectiveBuilderImpl::DeinitJob(int64_t job_id) {
 #ifdef WITH_CUDA
-  if (backends_.at(Backend::kBackendNCCL)) {
-    backends_.at(Backend::kBackendNCCL)->DeinitJob(job_id);
+  if (backends_.at(Backend::kBackendOFCCL)) {
+    backends_.at(Backend::kBackendOFCCL)->DeinitJob(job_id);
   }
 #endif
 }
 
 struct CollectiveMgr::Impl {
   Impl();
-  std::shared_ptr<RequestStore> request_store;
+  std::shared_ptr<OfRequestStore> request_store;
   std::shared_ptr<CollectiveBuilder> collective_builder;
 };
 
 CollectiveMgr::Impl::Impl() {
-  request_store.reset(new RequestStore());
+  request_store.reset(new OfRequestStore());
   collective_builder.reset(new CollectiveBuilderImpl());
   collective_builder->Init(request_store);
 }

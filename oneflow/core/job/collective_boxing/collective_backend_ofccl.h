@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BUILDER_H_
-#define ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BUILDER_H_
+#ifndef ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BACKEND_OFCCL_H_
+#define ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BACKEND_OFCCL_H_
 
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/job/collective_boxing/collective_backend.h"
+
+#ifdef WITH_CUDA
 
 namespace oneflow {
 
@@ -24,20 +26,21 @@ namespace boxing {
 
 namespace collective {
 
-class OfRequestStore;
-
 struct OfRequestId;
 
-class GroupToken;
-
-class CollectiveBuilder {
+class CollectiveBackendOfccl : public CollectiveBackend {
  public:
-  CollectiveBuilder() = default;
-  virtual ~CollectiveBuilder() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBackendOfccl);
+  CollectiveBackendOfccl();
+  ~CollectiveBackendOfccl() override;
 
-  virtual void Init(std::shared_ptr<OfRequestStore> request_store) = 0;
-  virtual void InitJob(int64_t job_id) = 0;
-  virtual void DeinitJob(int64_t job_id) = 0;
+ private:
+  void Init(std::shared_ptr<OfRequestStore> request_store) override;
+  void InitJob(int64_t job_id) override;
+  void DeinitJob(int64_t job_id) override;
+
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace collective
@@ -46,4 +49,6 @@ class CollectiveBuilder {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BUILDER_H_
+#endif  // WITH_CUDA
+
+#endif  // ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BACKEND_OFCCL_H_

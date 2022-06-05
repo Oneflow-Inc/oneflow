@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BUILDER_H_
-#define ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BUILDER_H_
+#ifndef ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BACKEND_H_
+#define ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BACKEND_H_
 
 #include "oneflow/core/common/util.h"
 
@@ -28,12 +28,11 @@ class OfRequestStore;
 
 struct OfRequestId;
 
-class GroupToken;
-
-class CollectiveBuilder {
+class CollectiveBackend {
  public:
-  CollectiveBuilder() = default;
-  virtual ~CollectiveBuilder() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CollectiveBackend);
+  CollectiveBackend() = default;
+  virtual ~CollectiveBackend() = default;
 
   virtual void Init(std::shared_ptr<OfRequestStore> request_store) = 0;
   virtual void InitJob(int64_t job_id) = 0;
@@ -46,4 +45,4 @@ class CollectiveBuilder {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BUILDER_H_
+#endif  // ONEFLOW_CORE_JOB_COLLECTIVE_BOXING_COLLECTIVE_BACKEND_H_
