@@ -86,16 +86,6 @@ class TestCTCLossError(flow.unittest.TestCase):
 
 
 class TestPadError(flow.unittest.TestCase):
-    def test_pad_ndim_limit_error(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 1, 1, 1, 1, 1), dtype=flow.float32)
-            out = flow._C.pad(x, (1,))
-
-        test_case.assertTrue(
-            "Dimension of input tensor should less than or equal to 5"
-            in str(ctx.exception)
-        )
-
     def test_pad_size_attribute_error(test_case):
         with test_case.assertRaises(Exception) as ctx:
             x = flow.ones((1, 1), dtype=flow.float32)
