@@ -117,7 +117,7 @@ __global__ void CumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t c
 }
 
 template<typename T, template<typename> class BinaryFunc>
-void CumForwardStrategy(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_t dim,
+void CumForwardGeneralStrategy(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_t dim,
                         const T* in_ptr, T* out_ptr) {
   // data partition: up_space|space|down_space
   auto up_space = in_shape.elem_cnt() / in_shape.Count(dim);
@@ -167,7 +167,7 @@ class GpuCumKernel : public user_op::OpKernel {
           temp_storage, temp_storage_bytes, in_ptr, out_ptr, BinaryFunc<T>(), elem_cnt,
           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     } else {
-      CumForwardStrategy<T, BinaryFunc>(ctx->stream(), in_shape, dim, in_ptr, out_ptr);
+      CumForwardGeneralStrategy<T, BinaryFunc>(ctx->stream(), in_shape, dim, in_ptr, out_ptr);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
