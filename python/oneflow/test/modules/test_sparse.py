@@ -181,28 +181,6 @@ class TestEmbedding(flow.unittest.TestCase):
         y = torch.nn.functional.embedding(indices, weight)
         return y
 
-    @autotest(n=5, check_graph=True)
-    def test_embedding_scale_grad_by_freq(test_case):
-        device = random_device()
-        emb_size = 10
-        emb_dim = 3
-        emb_shape = [emb_size, emb_dim]
-
-        idx_ndim = 2
-        idx_shape = [random(low=2, high=4) for i in range(idx_ndim)]
-
-        weight = random_tensor(len(emb_shape), *emb_shape).to(device)
-        indices = random_tensor(
-            len(idx_shape), *idx_shape, low=0, high=emb_size, dtype=int, requires_grad=False
-        ).to(device)
-
-        embedding = torch.nn.Embedding(
-            emb_size, emb_dim, _weight=weight, scale_grad_by_freq=True
-        ).to(device)
-        y = embedding(indices)
-
-        return y
-
     # NOTE(Yao Zihang): Set check_graph=False temporarily
     # Graph mode do not support inplace op with flow.no_grad()
     # See this issue: https://github.com/Oneflow-Inc/OneTeam/issues/1382

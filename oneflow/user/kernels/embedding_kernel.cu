@@ -94,8 +94,6 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    OF_CUDA_CHECK(cudaGetLastError());
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
@@ -120,8 +118,6 @@ class GpuEmbeddingGradKernel final : public user_op::OpKernel {
     EmbeddingGradFunctor<DeviceType::kCUDA, T, IndexType>()(
         ctx->stream(), dy_buf, indices_buf, dx_buf, padding_idx, scale_grad_by_freq, num_indices,
         emb_size, emb_dim, tmp_buf);
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    OF_CUDA_CHECK(cudaGetLastError());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

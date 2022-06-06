@@ -124,8 +124,6 @@ struct EmbeddingReNormFunctor<DeviceType::kCUDA, T, IndexType> final {
     indices_freq_kernel<IndexType><<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock, 0,
                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
         indices_buf, num_indices, tmp_buf, emb_size);
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    OF_CUDA_CHECK(cudaGetLastError());
 
     using AccumType = typename AccumulateType<T>::type;
     embedding_renorm_kernel<T, IndexType, AccumType>
@@ -133,8 +131,6 @@ struct EmbeddingReNormFunctor<DeviceType::kCUDA, T, IndexType> final {
            stream->As<ep::CudaStream>()->cuda_stream()>>>(
             in_buf, out_buf, tmp_buf, static_cast<AccumType>(max_norm),
             static_cast<AccumType>(norm_type), emb_size, emb_dim);
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    OF_CUDA_CHECK(cudaGetLastError());
   }
 };
 
@@ -147,8 +143,6 @@ struct EmbeddingFunctor<DeviceType::kCUDA, T, IndexType> final {
         <<<BlocksNum4ThreadsNum(num_indices * emb_dim), kCudaThreadsNumPerBlock, 0,
            stream->As<ep::CudaStream>()->cuda_stream()>>>(weight_buf, indices_buf, out_buf,
                                                           num_indices, emb_size, emb_dim);
-    OF_CUDA_CHECK(cudaDeviceSynchronize());
-    OF_CUDA_CHECK(cudaGetLastError());
   }
 };
 
@@ -163,18 +157,12 @@ struct EmbeddingGradFunctor<DeviceType::kCUDA, T, IndexType> final {
            stream->As<ep::CudaStream>()->cuda_stream()>>>(dy_buf, indices_buf, dx_buf, padding_idx,
                                                           num_indices, emb_dim);
     if (scale_grad_by_freq) {
-      OF_CUDA_CHECK(cudaDeviceSynchronize());
-      OF_CUDA_CHECK(cudaGetLastError());
       indices_freq_kernel<IndexType><<<BlocksNum4ThreadsNum(num_indices), kCudaThreadsNumPerBlock,
                                        0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           indices_buf, num_indices, tmp_buf, emb_size);
-      OF_CUDA_CHECK(cudaDeviceSynchronize());
-      OF_CUDA_CHECK(cudaGetLastError());
       emb_scale_kernel<T, IndexType>
           <<<BlocksNum4ThreadsNum(emb_size * emb_dim), kCudaThreadsNumPerBlock, 0,
              stream->As<ep::CudaStream>()->cuda_stream()>>>(dx_buf, emb_size, emb_dim, tmp_buf);
-      OF_CUDA_CHECK(cudaDeviceSynchronize());
-      OF_CUDA_CHECK(cudaGetLastError());
     }
   }
 };
