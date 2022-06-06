@@ -160,9 +160,12 @@ class Embedding(Module):
                 flow._C.embedding_renorm_(
                     self.weight, indices, self.max_norm, self.norm_type
                 )
-        return flow._C.embedding(
-            self.weight, indices, self.padding_idx, self.scale_grad_by_freq
-        )
+        if self.padding_idx is None and not self.scale_grad_by_freq:
+            return flow._C.gather(self.weight, indices, axis=0)
+        else:
+            return flow._C.embedding(
+                self.weight, indices, self.padding_idx, self.scale_grad_by_freq
+            )
 
 
 def embedding(
@@ -232,7 +235,10 @@ def embedding(
         with flow.no_grad():
             weight = flow._C.embedding_renorm_(weight, input, max_norm, norm_type)
 
-    return flow._C.embedding(weight, input, padding_idx, scale_grad_by_freq)
+    if padding_idx is None and not scale_grad_by_freq:
+        return flow._C.gather(weight, input, axis=0)
+    else:
+        return flow._C.embedding(weight, input, padding_idx, scale_grad_by_freq)
 
 
 if __name__ == "__main__":
