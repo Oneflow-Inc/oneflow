@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/arg_where_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/common/fixed_vector.h"
+#include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {

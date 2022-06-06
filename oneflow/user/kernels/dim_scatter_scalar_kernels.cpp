@@ -49,7 +49,7 @@ class DimScatterScalarKernel final : public user_op::OpKernel {
     }
 
     const int ndim = out_tensor->shape().NumAxes();
-    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
+    small_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
     auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void {
       std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
                      [](int32_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
