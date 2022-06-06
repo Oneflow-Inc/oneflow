@@ -145,7 +145,6 @@ class SubFunctor : public InplaceableBinaryFunctor {
 class MulFunctor {
  public:
   MulFunctor() {
-    mul_op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
     broadcast_mul_op_ =
         CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
   }
@@ -155,19 +154,16 @@ class MulFunctor {
     JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
-    if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec); }
     return OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, input_vec);
   }
 
  private:
-  std::shared_ptr<OpExpr> mul_op_;
   std::shared_ptr<OpExpr> broadcast_mul_op_;
 };
 
 class InplaceMulFunctor {
  public:
   InplaceMulFunctor() {
-    mul_op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
     broadcast_mul_op_ =
         CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
   }
@@ -189,16 +185,11 @@ class InplaceMulFunctor {
     JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    if (*x_cast->shape() == *y_cast->shape()) {
-      JUST(OpInterpUtil::Dispatch(*mul_op_, input_vec, outputs.get()));
-    } else {
-      JUST(OpInterpUtil::Dispatch(*broadcast_mul_op_, input_vec, outputs.get()));
-    }
+    JUST(OpInterpUtil::Dispatch(*broadcast_mul_op_, input_vec, outputs.get()));
     return outputs->at(0);
   }
 
  private:
-  std::shared_ptr<OpExpr> mul_op_;
   std::shared_ptr<OpExpr> broadcast_mul_op_;
 };
 
