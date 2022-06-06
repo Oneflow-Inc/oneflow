@@ -127,6 +127,8 @@ class Graph::GraphImpl final {
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
 
+  of::Maybe<void> ApplyJobPass(const std::function<std::string(const std::string& job)>& pass_fn);
+
  private:
   of::Maybe<void> CollectInputOutputInfos();
   of::Maybe<void> Compile(const std::vector<Tensor>& inputs);
@@ -168,6 +170,10 @@ InputOutputInfos Graph::GetInputInfos() { return graph_->GetInputInfos(); }
 
 InputOutputInfos Graph::GetOutputInfos() { return graph_->GetOutputInfos(); }
 
+void Graph::ApplyJobPass(const std::function<std::string(const std::string& job)>& pass_fn) {
+  CHECK_JUST(graph_->ApplyJobPass(pass_fn));
+}
+
 IValue Graph::Forward(const IValue& inputs) {
   std::vector<Tensor> input_tensors;
   if (inputs.IsNone()) {
@@ -204,6 +210,7 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) { LOG(ERROR) << job_.DebugString(); }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
+  CHECK_JUST(BuildGraph());
 }
 
 InputOutputInfos Graph::GraphImpl::GetInputInfos() { return input_infos_; }
@@ -234,6 +241,18 @@ of::Maybe<void> Graph::GraphImpl::CollectInputOutputInfos() {
   return of::Maybe<void>::Ok();
 }
 
+of::Maybe<void> Graph::GraphImpl::ApplyJobPass(
+    const std::function<std::string(const std::string& job)>& pass_fn) {
+  CHECK(!is_compiled_) << "job pass should be applied before compile and forward";
+  std::string new_serialized_job = pass_fn(graph_->job().SerializeAsString());
+  of::Job new_job;
+  if (!new_job.ParseFromString(new_serialized_job)) {
+    LOG(FATAL) << "invalid serialized job after xrt pass applied";
+  }
+  graph_->restore_job(new_job);
+  return of::Maybe<void>::Ok();
+}
+
 std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
   if (!is_compiled_) {
     static std::mutex mtx;
@@ -245,7 +264,6 @@ std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs)
 }
 
 of::Maybe<void> Graph::GraphImpl::Compile(const std::vector<Tensor>& inputs) {
-  JUST(BuildGraph());
   JUST(RegisterTensors(inputs));
   JUST(graph_->CompileAndInitRuntime());
   return of::Maybe<void>::Ok();
