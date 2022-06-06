@@ -60,10 +60,9 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
 }
 
 Shape::Shape(const DimVector& dim_vec) : DimVector(dim_vec), is_initialized_(true) {}
-Shape::Shape(DimVector&& dim_vec) : DimVector(dim_vec), is_initialized_(true) {}
-Shape::Shape(const ShapeProto& shape_proto) : is_initialized_(true) {
-  assign(shape_proto.dim().begin(), shape_proto.dim().end());
-}
+Shape::Shape(DimVector&& dim_vec) : DimVector(std::move(dim_vec)), is_initialized_(true) {}
+Shape::Shape(const ShapeProto& shape_proto)
+    : DimVector(shape_proto.dim().begin(), shape_proto.dim().end()), is_initialized_(true) {}
 
 Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
