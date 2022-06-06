@@ -89,11 +89,9 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
       src1_shape.push_back(simplified_src1_dims[i]);
       dst_shape.push_back(simplified_dst_dims[i]);
     }
-    binary_func(
-        stream, XpuVarNdarray<Dst>(dst_shape, reinterpret_cast<Dst*>(dst), num_dims),
-        XpuVarNdarray<const Src>(src0_shape, reinterpret_cast<const Src*>(src0), num_dims),
-        XpuVarNdarray<const Src>(src1_shape, reinterpret_cast<const Src*>(src1),
-                                 num_dims));
+    binary_func(stream, XpuVarNdarray<Dst>(dst_shape, reinterpret_cast<Dst*>(dst), num_dims),
+                XpuVarNdarray<const Src>(src0_shape, reinterpret_cast<const Src*>(src0), num_dims),
+                XpuVarNdarray<const Src>(src1_shape, reinterpret_cast<const Src*>(src1), num_dims));
   }
 };
 

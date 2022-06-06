@@ -276,7 +276,7 @@ function(check_variable_defined variable)
 endfunction()
 
 function(link_oneflow_common_dependencies target)
-  if ("${LLVM_PROVIDER}" STREQUAL "install")
+  if("${LLVM_PROVIDER}" STREQUAL "install")
     get_property(LLVM_INSTALL_DIR GLOBAL PROPERTY LLVM_INSTALL_DIR)
     check_variable_defined(LLVM_INSTALL_DIR)
     find_library(LLVMSupportInInstall LLVMSupport PATHS ${LLVM_INSTALL_DIR}/lib REQUIRED)
