@@ -527,6 +527,8 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
                                    &check_meta)) {
     return NULL;
   };
+
+  // sbp
   CHECK_OR_THROW(sbp_obj == Py_None || functional::PySbpParallelCheck(sbp_obj)
                  || functional::PySbpParallelSequenceCheck(sbp_obj));
   if (functional::PySbpParallelCheck(sbp_obj)) {
@@ -537,17 +539,20 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
     for (int32_t i = 0; i < ASSERT(tensor->nd_sbp())->sbp_parallel_size(); i++)
       sbp.push_back(ASSERT(tensor->nd_sbp())->sbp_parallel(i));
   }
+
+  // placement
+  CHECK_OR_THROW(placement_obj == Py_None || functional::PyParallelDescCheck(placement_obj));
   if (placement_obj == Py_None) { placement = ASSERT(tensor->parallel_desc()); }
-  CHECK_OR_THROW(functional::PyParallelDescCheck(placement_obj));
+  else {placement = functional::PyUnpackParallelDesc(placement_obj);}
+
+  // grad_sbp
   CHECK_OR_THROW(grad_sbp_obj == Py_None || functional::PySbpParallelCheck(grad_sbp_obj)
                  || functional::PySbpParallelSequenceCheck(grad_sbp_obj));
   if (functional::PySbpParallelCheck(grad_sbp_obj)) {
     grad_sbp.push_back(functional::PyUnpackSbpParallel(grad_sbp_obj));
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
-  } else {
-    grad_sbp = {};
-  }
+  };
   return PyTensor_New(
       ASSERT_PTR(functional::ToConsistent(tensor, placement, sbp, grad_sbp, check_meta)));
   END_HANDLE_ERRORS
