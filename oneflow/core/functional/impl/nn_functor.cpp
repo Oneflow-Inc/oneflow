@@ -524,7 +524,7 @@ class FusedMatmulBiasAddReluDropoutFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
                            const TensorTuple& biases, bool skip_final_activation,
-                           std::vector<float>& dropout_rate_list,
+                           const std::vector<float>& dropout_rate_list,
                            const Optional<one::Generator>& generator) const {
     const int64_t weight_size = weights.size();
     const int64_t bias_size = biases.size();
