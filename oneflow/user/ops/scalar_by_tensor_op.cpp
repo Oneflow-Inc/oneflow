@@ -221,17 +221,17 @@ REGISTER_USER_OP_GRAD("scalar_mul_by_tensor")
         int64_t num_axes = op.TensorDesc4ArgNameAndIndex("y", 0).shape().NumAxes();
         user_op::UserOpConfWrapperBuilder builder0(op.op_name() + "scalar_grad_multiply");
         user_op::UserOpConfWrapper scalar_grad_multiply_op =
-            builder0.Op("multiply")
+            builder0.Op("broadcast_mul")
                 .Input("x", op.GetGradTensorWithOpOutput("y", 0))
                 .Input("y", op.input("x", 0))
-                .Output("out")
+                .Output("z")
                 .Build();
         std::vector<int32_t> axes_vec(num_axes);
         std::iota(axes_vec.begin(), axes_vec.end(), 0);
         user_op::UserOpConfWrapperBuilder builder1(op.op_name() + "scalar_grad_reduce_sum");
         user_op::UserOpConfWrapper scalar_grad_reduce_sum_op =
             builder1.Op("reduce_sum")
-                .Input("input_tensor", scalar_grad_multiply_op.output("out", 0))
+                .Input("input_tensor", scalar_grad_multiply_op.output("z", 0))
                 .Output("output_tensor")
                 .Attr("axis", axes_vec)
                 .Attr("keepdims", false)

@@ -74,8 +74,7 @@ Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
   CHECK_GE(NumAxes(), shape_view.NumAxes());
   size_t left_ones_size = NumAxes() - shape_view.NumAxes();
   FOR_RANGE(int, i, 0, left_ones_size) { (*this)[i] = 1LL; }
-  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(),
-            data() + left_ones_size);
+  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), data() + left_ones_size);
   return *this;
 }
 

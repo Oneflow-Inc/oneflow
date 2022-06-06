@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/functional/functional.h"
@@ -28,20 +29,14 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
-  }
-  return true;
-}
 
 Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                         const Shape& logical_shape) {
   // NOLINTBEGIN(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
-  CHECK_OR_RETURN(IsAllBroadcastNdSbp(in->nd_sbp()));
-  CHECK_OR_RETURN(IsAllBroadcastNdSbp(out->nd_sbp()));
+  CHECK_OR_RETURN(NdSbpIsAllBroadcast(*in->nd_sbp()));
+  CHECK_OR_RETURN(NdSbpIsAllBroadcast(*out->nd_sbp()));
   CHECK_OR_RETURN(out->placement()->Bigger(*in->placement())
                   || in->placement()->Bigger(*out->placement()));
   // NOLINTEND(maybe-need-error-msg)
