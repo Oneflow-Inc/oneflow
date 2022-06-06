@@ -1897,8 +1897,6 @@ class TestConv2d(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_conv2d_NHWC_with_random_data(test_case):
-        os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
-
         in_channels = np.random.randint(6, 33)
         out_channels = np.random.randint(32, 66)
         kernel_size = np.random.randint(1, 5)
@@ -1997,6 +1995,7 @@ class TestConv2d(flow.unittest.TestCase):
             )
         )
         os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
+
     @profile(torch.nn.functional.conv2d)
     def profile_conv2d(test_case):
         input = torch.ones(8, 128, 28, 28)

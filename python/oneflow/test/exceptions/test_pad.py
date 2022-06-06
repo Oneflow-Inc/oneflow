@@ -14,32 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-<<<<<<< HEAD
 import oneflow as flow
 import oneflow.unittest
 import oneflow.nn.functional as F
 import torch
 
 
-=======
-
-import oneflow as flow
-import oneflow.unittest
-
-<<<<<<< HEAD:python/oneflow/test/exceptions/test_one_hot.py
-from oneflow.test_utils.automated_test_util import *
-
-
-class TestOnehotError(flow.unittest.TestCase):
-    def test_onehot_error(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((3, 3), dtype=flow.float32)
-            out = flow._C.one_hot(x, 3, 0.9, 0)
-        test_case.assertTrue(
-            "RuntimeError : one_hot is only applicable to index tensor."
-            in str(ctx.exception)
-=======
->>>>>>> master
 @flow.unittest.skip_unless_1n1d()
 class TestPad(flow.unittest.TestCase):
     def test_torch_type(test_case):
@@ -58,59 +38,6 @@ class TestPad(flow.unittest.TestCase):
         test_case.assertTrue(
             "pad(): argument 'x' must be tensor, not <class 'numpy.ndarray'>"
             in str(exp.exception)
-<<<<<<< HEAD
-        )
-
-    def test_pad_ndim_limit_error(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 1, 1, 1, 1, 1), dtype=flow.float32)
-            out = flow._C.pad(x, (1,))
-
-        test_case.assertTrue(
-            "Check failed: (ndim) <= (5) (6 vs 5) Dimension of input tensor should less than or equal to 5"
-            in str(ctx.exception)
-        )
-
-    def test_pad_size_attribute_error(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 1), dtype=flow.float32)
-            out = flow._C.pad(x, (1, 1, 1, 1, 1))
-        test_case.assertTrue(
-            "Check failed: (pad.size()) <= (2 * ndim) (5 vs 4) Pad size should less than or equal to input axes * 2."
-            in str(ctx.exception)
-        )
-
-    def test_pad_size_mod2_error(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 1), dtype=flow.float32)
-            out = flow._C.pad(x, (1, 1, 1,))
-
-        test_case.assertTrue(
-            "Check failed: (pad.size() % 2) == (0) (1 vs 0) Length of pad must be even but instead it equals 3"
-            in str(ctx.exception)
-        )
-
-    def test_reflect_pad_size_error(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((1, 1, 2, 2), dtype=flow.float32)
-            out = flow._C.pad(x, (4, 4, 4, 4), mode="reflect")
-
-        test_case.assertTrue(
-            "Check failed: pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w padding size should be less than the corresponding input dimension!"
-            in str(ctx.exception)
-        )
-
-    def test_pad_mode_error(test_case):
-        with test_case.assertRaises(NotImplementedError) as ctx:
-            x = flow.ones((1, 1, 2, 2), dtype=flow.float32)
-            out = flow._C.pad(x, (4, 4, 4, 4), mode="test")
-
-        test_case.assertTrue(
-            "Pad mode is test, but only constant, reflect and replicate are valid."
-            in str(ctx.exception)
-=======
->>>>>>> master:python/oneflow/test/exceptions/test_pad.py
->>>>>>> master
         )
 
 
