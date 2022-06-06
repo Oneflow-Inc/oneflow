@@ -593,11 +593,13 @@ class FusedMatmulBiasAddReluDropoutFunctor {
                               biases[layer_idx], 1));
       if ((layer_idx != weight_size - 1) || !skip_final_activation) {
         out = JUST(functional::Relu(out, false));
-        out = JUST(functional::Dropout(out, dropout_rate_list.at(layer_idx), /*training=*/true,
+        out = JUST(functional::Dropout(out, JUST(VectorAt(dropout_rate_list, layer_idx)),
+                                       /*training=*/true,
                                        /*inplace=*/false,
                                        /*generator=*/gen, /*addend=*/NullOpt));
       } else {
-        out = JUST(functional::Dropout(out, dropout_rate_list.at(layer_idx), /*training=*/true,
+        out = JUST(functional::Dropout(out, JUST(VectorAt(dropout_rate_list, layer_idx)),
+                                       /*training=*/true,
                                        /*inplace=*/false,
                                        /*generator=*/gen, /*addend=*/NullOpt));
       }

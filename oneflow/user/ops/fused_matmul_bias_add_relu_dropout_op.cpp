@@ -36,7 +36,7 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   int32_t weight_size = ctx->input_size("weights");
   int32_t bias_size = ctx->input_size("biases");
-  CHECK_EQ_OR_RETURN(weight_size, bias_size);
+  CHECK_EQ_OR_RETURN(weight_size, bias_size) << "Weight num should be equal to bias num. ";
   /*
   A: (m, k)
   B: (n, k) need transpose
@@ -50,12 +50,16 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // skip first input weight.
     const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weights", idx);
     const user_op::TensorDesc& bias_desc = ctx->InputTensorDesc("biases", idx);
-    CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1);
+    CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2) << "Weight's ndim should be equal to 2. ";
+    CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1) << "Bias's ndim should be equal to 1. ";
 
     n = weight_desc.shape().At(0);
-    CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
-    CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
+    CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n)
+        << "Bias shape should be equal to N. Assume (M, K) matmul (N, K, transpose_b=True) "
+           "bias_add (N, ). ";
+    CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k)
+        << "Weight shape should be equal to K. Assume (M, K) matmul (N, K, transpose_b=True) "
+           "bias_add (N, ). ";
 
     cublas_aux_ld = n;
     // Set Middle result shape.
@@ -76,7 +80,8 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& in_desc =
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
+    CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type())
+        << "The Input's datatype should be equal. ";
   }
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
@@ -143,7 +148,7 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
       std::string last_bias_grad;
       if (!skip_final_activation || (dropout_rate_list[weight_num - 1] != 0.0f)) {
         // step1: Get last layer's relu+dropout grad.
-        rate = dropout_rate_list.at(weight_num - 1);
+        rate = dropout_rate_list[weight_num - 1];
         if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
         user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name()
                                                             + "fused_relu_dropout_grad");
@@ -177,7 +182,7 @@ REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
       std::string cublas_dy = last_bias_grad;
 
       for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
-        rate = dropout_rate_list.at(hidden_layer_idx - 1);
+        rate = dropout_rate_list[hidden_layer_idx - 1];
         scale = 1.0;
         if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
         user_op::UserOpConfWrapperBuilder cublas_bias_add_relu_matmul_grad_builder(
