@@ -102,6 +102,14 @@ def _test_gather_backward(test_case, device):
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
+def _test_gather_0dim_tensor(test_case, device):
+    input = flow.ones(1).to(device)
+    input.requires_grad = True
+    index = flow.tensor(0).to(device)
+    output = flow.gather(input, 0, index)
+    test_case.assertTrue(np.array_equal(output.numpy(), 1.0))
+    output.sum().backward()
+    test_case.assertTrue(np.array_equal(input.grad.numpy(), [1.0]))
 
 @flow.unittest.skip_unless_1n1d()
 class TestGather(flow.unittest.TestCase):
@@ -112,6 +120,7 @@ class TestGather(flow.unittest.TestCase):
             _test_gather_tensor_function,
             _test_gather_random_array,
             _test_gather_backward,
+            _test_gather_0dim_tensor,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

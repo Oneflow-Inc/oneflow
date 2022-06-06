@@ -31,7 +31,8 @@ namespace oneflow {
   const int32_t dim = ctx->Attr<int32_t>("dim");
   CHECK_GE_OR_RETURN(dim, 0);
   CHECK_LT_OR_RETURN(dim, input_num_axes);
-  CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
+  // For 0-dim Tensor
+  CHECK_GE_OR_RETURN(input_num_axes, index_num_axes);
 
   CHECK_EQ_OR_RETURN(in.is_dynamic(), index.is_dynamic());
 
