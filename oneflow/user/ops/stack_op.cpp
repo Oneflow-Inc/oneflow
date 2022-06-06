@@ -144,8 +144,6 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
 
 /*static*/ Maybe<void> StackGradOp::GetSbp(user_op::SbpContext* ctx) {
   const auto axis = ctx->Attr<int64_t>("axis");
-  const int64_t in_num_axes =
-      ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
   const int64_t like_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
   FOR_RANGE(int64_t, i, 0, like_num_axes) {
