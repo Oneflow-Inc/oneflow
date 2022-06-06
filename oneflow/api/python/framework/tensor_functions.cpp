@@ -537,7 +537,9 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
 
   // sbp
   CHECK_OR_THROW(sbp_obj == Py_None || functional::PySbpParallelCheck(sbp_obj)
-                 || functional::PySbpParallelSequenceCheck(sbp_obj));
+                 || functional::PySbpParallelSequenceCheck(sbp_obj))
+      << Error::TypeError()
+      << "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp";
   if (functional::PySbpParallelCheck(sbp_obj)) {
     sbp.push_back(functional::PyUnpackSbpParallel(sbp_obj));
   } else if (functional::PySbpParallelSequenceCheck(sbp_obj)) {
@@ -548,7 +550,9 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   }
 
   // placement
-  CHECK_OR_THROW(placement_obj == Py_None || functional::PyParallelDescCheck(placement_obj));
+  CHECK_OR_THROW(placement_obj == Py_None || functional::PyParallelDescCheck(placement_obj))
+      << Error::TypeError() << "Invalid parameter placement with type "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(placement_obj)));
   if (placement_obj == Py_None) {
     placement = ASSERT(tensor->parallel_desc());
   } else {
@@ -557,7 +561,9 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
 
   // grad_sbp
   CHECK_OR_THROW(grad_sbp_obj == Py_None || functional::PySbpParallelCheck(grad_sbp_obj)
-                 || functional::PySbpParallelSequenceCheck(grad_sbp_obj));
+                 || functional::PySbpParallelSequenceCheck(grad_sbp_obj))
+      << Error::TypeError()
+      << "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp";
   if (functional::PySbpParallelCheck(grad_sbp_obj)) {
     grad_sbp.push_back(functional::PyUnpackSbpParallel(grad_sbp_obj));
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
@@ -590,6 +596,8 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
   std::shared_ptr<Tensor> value_tensor;
+  CHECK_OR_THROW(functional::PyTensorIndexCheck(item));
+  CHECK_OR_THROW(functional::PyScalarCheck(item) || PyTensor_Check(item));
 
   if (tensor->is_consistent()) {
     Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
@@ -617,7 +625,6 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
     }
   }
-  CHECK_OR_THROW(functional::PyTensorIndexCheck(item));
   functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor);
   return 0;
   END_HANDLE_ERRORS_RET(-1)
