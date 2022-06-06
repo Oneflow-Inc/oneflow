@@ -2594,7 +2594,7 @@ def OneFlow_FusedCrossFeatureInteractionOp : OneFlow_BaseOp<"fused_cross_feature
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$weight,
     OneFlow_Tensor:$bias,
-    OneFlow_Tensor:$x_0
+    OneFlow_Tensor:$x0
   );
   let output = (outs
     OneFlow_Tensor:$out, 
@@ -2614,12 +2614,12 @@ def OneFlow_FusedCrossFeatureInteractionV1GradOp : OneFlow_BaseOp<"fused_cross_f
   let input = (ins
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$weight,
-    OneFlow_Tensor:$x_0, 
+    OneFlow_Tensor:$x0, 
     OneFlow_Tensor:$x, 
     OneFlow_Tensor:$matmul_result
   );
   let output = (outs
-    OneFlow_Tensor:$dx_0, 
+    OneFlow_Tensor:$dx0, 
     OneFlow_Tensor:$dw, 
     OneFlow_Tensor:$dx, 
     OneFlow_Tensor:$dbias 
@@ -2635,12 +2635,12 @@ def OneFlow_FusedCrossFeatureInteractionV2GradOp : OneFlow_BaseOp<"fused_cross_f
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$weight,
     OneFlow_Tensor:$bias,
-    OneFlow_Tensor:$x_0, 
+    OneFlow_Tensor:$x0, 
     OneFlow_Tensor:$x, 
     OneFlow_Tensor:$matmul_result
   );
   let output = (outs
-    OneFlow_Tensor:$dx_0, 
+    OneFlow_Tensor:$dx0, 
     OneFlow_Tensor:$dw, 
     OneFlow_Tensor:$dx, 
     OneFlow_Tensor:$dbias 

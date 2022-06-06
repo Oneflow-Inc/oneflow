@@ -2729,7 +2729,7 @@ class FusedCrossFeatureInteractionFunctor {
     op_ = CHECK_JUST(one::OpBuilder("fused_cross_feature_interaction")
                          .Input("x")
                          .Input("weight")
-                         .Input("x_0")
+                         .Input("x0")
                          .Input("bias")
                          .Output("out")
                          .Output("matmul_result")
@@ -2738,7 +2738,7 @@ class FusedCrossFeatureInteractionFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& x_0,
+                           const std::shared_ptr<one::Tensor>& x0,
                            const std::shared_ptr<one::Tensor>& bias,
                            const std::string& interaction_mode) const {
     if (interaction_mode != "vector" && interaction_mode != "matrix") {
@@ -2747,7 +2747,7 @@ class FusedCrossFeatureInteractionFunctor {
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("interaction_mode", interaction_mode));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight, x_0, bias}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight, x0, bias}, attrs);
   }
 
  private:

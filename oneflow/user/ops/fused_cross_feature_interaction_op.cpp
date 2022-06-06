@@ -25,7 +25,7 @@ namespace oneflow {
   const Shape& weight_shape = ctx->InputShape("weight", 0);
   CHECK_EQ_OR_RETURN(x_shape.At(1), weight_shape.At(1)) << "Matmul K dims should be equal. ";
   *ctx->OutputShape("matmul_result", 0) = Shape({x_shape.At(0), weight_shape.At(0)});
-  const Shape& x0_shape = ctx->InputShape("x_0", 0);
+  const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& bias_shape = ctx->InputShape("bias", 0);
   CHECK_EQ_OR_RETURN(bias_shape.At(0), x0_shape.At(1)) << "Bias dim should be equal to X0 dim1. ";
   *ctx->OutputShape("out", 0) = x0_shape;
@@ -41,7 +41,7 @@ namespace oneflow {
   ctx->NewBuilder()
       .Split(user_op::OpArg("x", 0), 0)
       .Broadcast(user_op::OpArg("weight", 0))
-      .Split(user_op::OpArg("x_0", 0), 0)
+      .Split(user_op::OpArg("x0", 0), 0)
       .Broadcast(user_op::OpArg("bias", 0))
       .Split(user_op::OpArg("matmul_result", 0), 0)
       .Split(user_op::OpArg("out", 0), 0)
@@ -57,9 +57,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  const Shape& x0_shape = ctx->InputShape("x_0", 0);
+  const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
-  *ctx->OutputShape("dx_0", 0) = x0_shape;
+  *ctx->OutputShape("dx0", 0) = x0_shape;
   *ctx->OutputShape("dw", 0) = weight_shape;
   *ctx->OutputShape("dx", 0) = x0_shape;
   *ctx->OutputShape("dbias", 0) = Shape({x0_shape.At(1)});
@@ -76,9 +76,9 @@ namespace oneflow {
       .Split(user_op::OpArg("dy", 0), 0)
       .Broadcast(user_op::OpArg("weight", 0))
       .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("x_0", 0), 0)
+      .Split(user_op::OpArg("x0", 0), 0)
       .Split(user_op::OpArg("matmul_result", 0), 0)
-      .Split(user_op::OpArg("dx_0", 0), 0)
+      .Split(user_op::OpArg("dx0", 0), 0)
       .Broadcast(user_op::OpArg("dw", 0))
       .Split(user_op::OpArg("dx", 0), 0)
       .Broadcast(user_op::OpArg("dbias", 0))
@@ -89,7 +89,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV1GradOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx_0", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("dx0", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dw", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dbias", 0) = ctx->InputDType("x", 0);
@@ -98,9 +98,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  const Shape& x0_shape = ctx->InputShape("x_0", 0);
+  const Shape& x0_shape = ctx->InputShape("x0", 0);
   const Shape& weight_shape = ctx->InputShape("weight", 0);
-  *ctx->OutputShape("dx_0", 0) = x0_shape;
+  *ctx->OutputShape("dx0", 0) = x0_shape;
   *ctx->OutputShape("dw", 0) = weight_shape;
   *ctx->OutputShape("dx", 0) = x0_shape;
   *ctx->OutputShape("dbias", 0) = Shape({x0_shape.At(1)});
@@ -118,9 +118,9 @@ namespace oneflow {
       .Broadcast(user_op::OpArg("weight", 0))
       .Broadcast(user_op::OpArg("bias", 0))
       .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("x_0", 0), 0)
+      .Split(user_op::OpArg("x0", 0), 0)
       .Split(user_op::OpArg("matmul_result", 0), 0)
-      .Split(user_op::OpArg("dx_0", 0), 0)
+      .Split(user_op::OpArg("dx0", 0), 0)
       .Broadcast(user_op::OpArg("dw", 0))
       .Split(user_op::OpArg("dx", 0), 0)
       .Broadcast(user_op::OpArg("dbias", 0))
@@ -131,7 +131,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> FusedCrossFeatureInteractionV2GradOp::InferDataType(
     user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx_0", 0) = ctx->InputDType("x", 0);
+  *ctx->OutputDType("dx0", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dw", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   *ctx->OutputDType("dbias", 0) = ctx->InputDType("x", 0);
@@ -147,20 +147,20 @@ REGISTER_USER_OP_GRAD("fused_cross_feature_interaction")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Input("weight", op.input("weight", 0))
             .Input("x", op.input("x", 0))
-            .Input("x_0", op.input("x_0", 0))
-            .Input("matmul_result", op.output("x_0", 0));
+            .Input("x0", op.input("x0", 0))
+            .Input("matmul_result", op.output("x0", 0));
       } else if (op.attr<std::string>("interaction_mode") == "matrix") {
         builder.Op("fused_cross_feature_interaction_v2_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Input("weight", op.input("weight", 0))
             .Input("bias", op.input("bias", 0))
             .Input("x", op.input("x", 0))
-            .Input("x_0", op.input("x_0", 0))
-            .Input("matmul_result", op.output("x_0", 0));
+            .Input("x0", op.input("x0", 0))
+            .Input("matmul_result", op.output("x0", 0));
       } else {
         UNIMPLEMENTED();
       }
-      builder.Output("dx", 0).Output("dw", 0).Output("dx_0", 0).Output("dbias", 0);
+      builder.Output("dx", 0).Output("dw", 0).Output("dx0", 0).Output("dbias", 0);
       auto grad_op = builder.Build();
       AddOp(grad_op);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -169,8 +169,8 @@ REGISTER_USER_OP_GRAD("fused_cross_feature_interaction")
       if (op.NeedGenGradTensor4OpInput("weight", 0)) {
         op.BindGradTensorWithOpInput(grad_op.output("dw", 0), "weight", 0);
       }
-      if (op.NeedGenGradTensor4OpInput("x_0", 0)) {
-        op.BindGradTensorWithOpInput(grad_op.output("dx_0", 0), "x_0", 0);
+      if (op.NeedGenGradTensor4OpInput("x0", 0)) {
+        op.BindGradTensorWithOpInput(grad_op.output("dx0", 0), "x0", 0);
       }
       if (op.NeedGenGradTensor4OpInput("bias", 0)) {
         op.BindGradTensorWithOpInput(grad_op.output("dbias", 0), "bias", 0);

@@ -1041,11 +1041,11 @@ class FusedCrossFeatureInteractionV1GradFunctor {
                                  .Input("dy")
                                  .Input("weight")
                                  .Input("x")
-                                 .Input("x_0")
+                                 .Input("x0")
                                  .Input("matmul_result")
                                  .Output("dx")
                                  .Output("dw")
-                                 .Output("dx_0")
+                                 .Output("dx0")
                                  .Output("dbias")
                                  .Build());
   }
@@ -1053,9 +1053,9 @@ class FusedCrossFeatureInteractionV1GradFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const std::shared_ptr<one::Tensor>& weight,
                                 const std::shared_ptr<one::Tensor>& x,
-                                const std::shared_ptr<one::Tensor>& x_0,
+                                const std::shared_ptr<one::Tensor>& x0,
                                 const std::shared_ptr<one::Tensor>& matmul_result) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(*v1_grad_op_, {dy, weight, x, x_0, matmul_result});
+    return OpInterpUtil::Dispatch<TensorTuple>(*v1_grad_op_, {dy, weight, x, x0, matmul_result});
   }
 
  private:
@@ -1070,11 +1070,11 @@ class FusedCrossFeatureInteractionV2GradFunctor {
                                  .Input("weight")
                                  .Input("bias")
                                  .Input("x")
-                                 .Input("x_0")
+                                 .Input("x0")
                                  .Input("matmul_result")
                                  .Output("dx")
                                  .Output("dw")
-                                 .Output("dx_0")
+                                 .Output("dx0")
                                  .Output("dbias")
                                  .Build());
   }
@@ -1083,10 +1083,10 @@ class FusedCrossFeatureInteractionV2GradFunctor {
                                 const std::shared_ptr<one::Tensor>& weight,
                                 const std::shared_ptr<one::Tensor>& bias,
                                 const std::shared_ptr<one::Tensor>& x,
-                                const std::shared_ptr<one::Tensor>& x_0,
+                                const std::shared_ptr<one::Tensor>& x0,
                                 const std::shared_ptr<one::Tensor>& matmul_result) const {
     return OpInterpUtil::Dispatch<TensorTuple>(*v2_grad_op_,
-                                               {dy, weight, bias, x, x_0, matmul_result});
+                                               {dy, weight, bias, x, x0, matmul_result});
   }
 
  private:

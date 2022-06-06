@@ -77,21 +77,18 @@ template<typename T, typename IndexType, int pack_size>
 __global__ void BroadcastMulKernel(const T* x, const T* y, T* out, const IndexType cols,
                                    const IndexType elem_cnt) {
   const IndexType global_thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-  using LoadType = cuda::elementwise::PackType<T, pack_size>;
-  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  using LoadPack = cuda::elementwise::Packed<T, pack_size>;
   for (IndexType linear_index = global_thread_id * pack_size,
                  step = gridDim.x * blockDim.x * pack_size;
        linear_index < elem_cnt; linear_index += step) {
     const IndexType row_idx = linear_index / cols;
-    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-    LoadPack x_vec;
-    x_vec.storage = *x_load;
-
-    LoadPack out_vec;
+    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + linear_index);
+    LoadPack x_vec = *x_load;
+    LoadPack out_store;
     const T y_val = y[row_idx];
 #pragma unroll
-    for (int i = 0; i < pack_size; i++) { out_vec.elem[i] = x_vec.elem[i] * y_val; }
-    *(reinterpret_cast<LoadType*>(out + linear_index)) = out_vec.storage;
+    for (int i = 0; i < pack_size; i++) { out_store.elem[i] = x_vec.elem[i] * y_val; }
+    *(reinterpret_cast<LoadPack*>(out + linear_index)) = out_store;
   }
 }
 
@@ -135,30 +132,26 @@ template<typename T, typename IndexType, int pack_size>
 __global__ void BroadcastAddElementwiseMulKernel(const T* x, const T* y, const T* z, T* out,
                                                  const IndexType cols, const IndexType elem_cnt) {
   const IndexType global_thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-  using LoadType = cuda::elementwise::PackType<T, pack_size>;
-  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  using LoadPack = cuda::elementwise::Packed<T, pack_size>;
   for (IndexType linear_index = global_thread_id * pack_size,
                  step = gridDim.x * blockDim.x * pack_size;
        linear_index < elem_cnt; linear_index += step) {
     const IndexType row_idx = linear_index / cols;
     const IndexType col_idx = linear_index - row_idx * cols;
-    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-    LoadPack x_vec;
-    x_vec.storage = *x_load;
+    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + linear_index);
+    const LoadPack* y_load = reinterpret_cast<const LoadPack*>(y + col_idx);
+    const LoadPack* z_load = reinterpret_cast<const LoadPack*>(z + linear_index);
 
-    LoadPack out_vec;
-    const LoadType* y_load = reinterpret_cast<const LoadType*>(y + col_idx);
-    LoadPack y_vec;
-    y_vec.storage = *y_load;
+    LoadPack x_vec = *x_load;
+    LoadPack y_vec = *y_load;
+    LoadPack z_vec = *z_load;
+    LoadPack out_store;
 
-    const LoadType* z_load = reinterpret_cast<const LoadType*>(z + linear_index);
-    LoadPack z_vec;
-    z_vec.storage = *z_load;
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-      out_vec.elem[i] = (x_vec.elem[i] + y_vec.elem[i]) * z_vec.elem[i];
+      out_store.elem[i] = (x_vec.elem[i] + y_vec.elem[i]) * z_vec.elem[i];
     }
-    *(reinterpret_cast<LoadType*>(out + linear_index)) = out_vec.storage;
+    *(reinterpret_cast<LoadPack*>(out + linear_index)) = out_store;
   }
 }
 
@@ -251,7 +244,7 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-    const Tensor* x_0 = ctx->Tensor4ArgNameAndIndex("x_0", 0);
+    const Tensor* x0 = ctx->Tensor4ArgNameAndIndex("x0", 0);
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* matmul_result = ctx->Tensor4ArgNameAndIndex("matmul_result", 0);
 
@@ -260,7 +253,7 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
     const int64_t out_size = weight->shape().At(0);
     const int64_t dy_elem_cnt = dy->shape().elem_cnt();
 
-    Tensor* dx_0 = ctx->Tensor4ArgNameAndIndex("dx_0", 0);
+    Tensor* dx0 = ctx->Tensor4ArgNameAndIndex("dx0", 0);
     Tensor* dw = ctx->Tensor4ArgNameAndIndex("dw", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Tensor* dbias = ctx->Tensor4ArgNameAndIndex("dbias", 0);
@@ -288,7 +281,7 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
     T* dmatmul_result0 = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                               + GetCudaAlignedSize(dy_elem_cnt * sizeof(T)));
     OF_CUDA_CHECK(cuda::elementwise::Binary(MulOp<T>(), dy_elem_cnt, dy_mul_x0, dy->dptr<T>(),
-                                            x_0->dptr<T>(),
+                                            x0->dptr<T>(),
                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 
     ones = static_cast<const T*>(cuda_device->GetConstOnes(dy->data_type(), hidden_size));
@@ -329,7 +322,7 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
 
     // step5: Get dx0.
     DispatchBroadcastMulIndexType<T>(ctx->stream(), dy->dptr<T>(), matmul_result->dptr<T>(),
-                                     dx_0->mut_dptr<T>(), hidden_size, dy_elem_cnt);
+                                     dx0->mut_dptr<T>(), hidden_size, dy_elem_cnt);
   }
 };
 
@@ -367,7 +360,7 @@ class FusedCrossFeatureInteractionV2GradKernel final : public OpKernel, public C
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
-    const Tensor* x_0 = ctx->Tensor4ArgNameAndIndex("x_0", 0);
+    const Tensor* x0 = ctx->Tensor4ArgNameAndIndex("x0", 0);
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* matmul_result = ctx->Tensor4ArgNameAndIndex("matmul_result", 0);
 
@@ -376,7 +369,7 @@ class FusedCrossFeatureInteractionV2GradKernel final : public OpKernel, public C
     const int64_t hidden_size = weight->shape().At(0);
     const int64_t dy_elem_cnt = dy->shape().elem_cnt();
 
-    Tensor* dx_0 = ctx->Tensor4ArgNameAndIndex("dx_0", 0);
+    Tensor* dx0 = ctx->Tensor4ArgNameAndIndex("dx0", 0);
     Tensor* dw = ctx->Tensor4ArgNameAndIndex("dw", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Tensor* dbias = ctx->Tensor4ArgNameAndIndex("dbias", 0);
@@ -385,12 +378,12 @@ class FusedCrossFeatureInteractionV2GradKernel final : public OpKernel, public C
     // step1: Get dx0.
     DispatchBroadcastAddElementwiseMulIndexType<T>(ctx->stream(), matmul_result->dptr<T>(),
                                                    bias->dptr<T>(), dy->dptr<T>(),
-                                                   dx_0->mut_dptr<T>(), hidden_size, dy_elem_cnt);
+                                                   dx0->mut_dptr<T>(), hidden_size, dy_elem_cnt);
 
     // step2: Get dmatmul_result0.
     T* dmatmul_result0 = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
     OF_CUDA_CHECK(cuda::elementwise::Binary(MulOp<T>(), dy_elem_cnt, dmatmul_result0, dy->dptr<T>(),
-                                            x_0->dptr<T>(),
+                                            x0->dptr<T>(),
                                             ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
     // step3: Get dx
     T* dx_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()

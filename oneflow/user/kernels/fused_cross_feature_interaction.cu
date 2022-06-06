@@ -80,51 +80,41 @@ template<typename T, typename IndexType, int pack_size, InteractionMode mode>
 __global__ void FusedBiasAddMulAddResidualKernel(const T* in, const T* x, const T* x0,
                                                  const T* bias, T* out, const IndexType cols,
                                                  const IndexType elem_cnt) {
-  /*
-  in: batch, 1
-  x0: batch, hidden,
-  bias: hidden
-  */
   const IndexType global_thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-  using LoadType = cuda::elementwise::PackType<T, pack_size>;
-  using LoadPack = cuda::elementwise::Pack<T, pack_size>;
+  // using LoadPack = cuda::elementwise::PackType<T, pack_size>;
+  using LoadPack = cuda::elementwise::Packed<T, pack_size>;
   for (IndexType linear_index = global_thread_id * pack_size,
                  step = gridDim.x * blockDim.x * pack_size;
        linear_index < elem_cnt; linear_index += step) {
     const IndexType row_idx = linear_index / cols;
     const IndexType col_idx = linear_index - row_idx * cols;
 
-    const LoadType* x0_load = reinterpret_cast<const LoadType*>(x0 + linear_index);
-    LoadPack x0_vec;
-    x0_vec.storage = *x0_load;
+    const LoadPack* x0_load = reinterpret_cast<const LoadPack*>(x0 + linear_index);
+    const LoadPack* x_load = reinterpret_cast<const LoadPack*>(x + linear_index);
+    const LoadPack* bias_load = reinterpret_cast<const LoadPack*>(bias + col_idx);
 
-    const LoadType* x_load = reinterpret_cast<const LoadType*>(x + linear_index);
-    LoadPack x_vec;
-    x_vec.storage = *x_load;
+    LoadPack x0_vec = *x0_load;
+    LoadPack x_vec = *x_load;
+    LoadPack bias_vec = *bias_load;
 
-    const LoadType* bias_load = reinterpret_cast<const LoadType*>(bias + col_idx);
-    LoadPack bias_vec;
-    bias_vec.storage = *bias_load;
-
-    LoadPack out_vec;
+    LoadPack out_store;
     if (mode == InteractionMode::kVector) {
       T in_val = in[row_idx];
 #pragma unroll
       for (int i = 0; i < pack_size; i++) {
-        out_vec.elem[i] = x0_vec.elem[i] * in_val + bias_vec.elem[i] + x_vec.elem[i];
+        out_store.elem[i] = x0_vec.elem[i] * in_val + bias_vec.elem[i] + x_vec.elem[i];
       }
     } else if (mode == InteractionMode::kMatrix) {
-      const LoadType* in_load = reinterpret_cast<const LoadType*>(in + linear_index);
-      LoadPack in_vec;
-      in_vec.storage = *in_load;
+      const LoadPack* in_load = reinterpret_cast<const LoadPack*>(in + linear_index);
+      LoadPack in_vec = *in_load;
 #pragma unroll
       for (int i = 0; i < pack_size; i++) {
-        out_vec.elem[i] = (in_vec.elem[i] + bias_vec.elem[i]) * x0_vec.elem[i] + x_vec.elem[i];
+        out_store.elem[i] = (in_vec.elem[i] + bias_vec.elem[i]) * x0_vec.elem[i] + x_vec.elem[i];
       }
     } else {
       __trap();
     }
-    *(reinterpret_cast<LoadType*>(out + linear_index)) = out_vec.storage;
+    *(reinterpret_cast<LoadPack*>(out + linear_index)) = out_store;
   }
 }
 
@@ -196,9 +186,9 @@ class FusedCrossFeatureInteractionKernel final : public user_op::OpKernel,
        dx = dmatmul_result0 matmul weight
        dw = x matmul dmatmul_result0
 
-    2. matmul_result0 broadcast_mul x_0. matmul_result1 -> (B, 1) broadcast_mul (B, E) -> (B, E)
-       dmatmul_result0 = reduce_sum(dmatmul_result1 * x_0, axis=1)
-       dx_0 = dmatmul_result1 broadcast_mul matmul_result0
+    2. matmul_result0 broadcast_mul x0. matmul_result1 -> (B, 1) broadcast_mul (B, E) -> (B, E)
+       dmatmul_result0 = reduce_sum(dmatmul_result1 * x0, axis=1)
+       dx0 = dmatmul_result1 broadcast_mul matmul_result0
 
     3. matmul_result1 broadcast_add bias. matmul_result2 -> (B, E) broadcast_add (1, E) -> (B, E)
        dmatmul_result1 = dout
@@ -209,13 +199,23 @@ class FusedCrossFeatureInteractionKernel final : public user_op::OpKernel,
 
     Cross Interaction Grad:
     dw = x matmul dmatmul_result0
-    dx_0 = dmatmul_result1 broadcast_mul matmul_result0
+    dx0 = dmatmul_result1 broadcast_mul matmul_result0
     dbias = reduce_sum(dmatmul_result2, axis=0)
     dx = (dmatmul_result0 matmul weight) + dout.
+
+    Cross Interaction v2:
+    1. x matmul weight. matmul_result0 -> (B, E) matmul (E, E) -> (B, E)
+
+    2. matmul_result0 add bias. matmul_result1 -> (B, E) bias_add (1, E) -> (B, E)
+
+    3. matmul_result1 multiply x0. matmul_result2 -> (B, E) elementwise_mul (B, E) -> (B, E)
+
+    4. matmul_result2 add x. out -> (B, E) elementwise_add (B, E) -> (B, E)
+
     */
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-    const user_op::Tensor* x_0 = ctx->Tensor4ArgNameAndIndex("x_0", 0);
+    const user_op::Tensor* x0 = ctx->Tensor4ArgNameAndIndex("x0", 0);
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* matmul_result = ctx->Tensor4ArgNameAndIndex("matmul_result", 0);
@@ -234,12 +234,12 @@ class FusedCrossFeatureInteractionKernel final : public user_op::OpKernel,
     const int64_t cols = out->shape().At(1);
     if (interaction_mode == "vector") {
       DispatchFusedBiasAddMulAddResidualIndexType<T, InteractionMode::kVector>(
-          ctx->stream(), matmul_result->mut_dptr<T>(), x->dptr<T>(), x_0->dptr<T>(),
-          bias->dptr<T>(), out->mut_dptr<T>(), cols, elem_cnt);
+          ctx->stream(), matmul_result->mut_dptr<T>(), x->dptr<T>(), x0->dptr<T>(), bias->dptr<T>(),
+          out->mut_dptr<T>(), cols, elem_cnt);
     } else {
       DispatchFusedBiasAddMulAddResidualIndexType<T, InteractionMode::kMatrix>(
-          ctx->stream(), matmul_result->mut_dptr<T>(), x->dptr<T>(), x_0->dptr<T>(),
-          bias->dptr<T>(), out->mut_dptr<T>(), cols, elem_cnt);
+          ctx->stream(), matmul_result->mut_dptr<T>(), x->dptr<T>(), x0->dptr<T>(), bias->dptr<T>(),
+          out->mut_dptr<T>(), cols, elem_cnt);
     }
   }
 };
