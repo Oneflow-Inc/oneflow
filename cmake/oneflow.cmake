@@ -290,14 +290,13 @@ elseif(UNIX)
   set(of_libs -Wl,--whole-archive oneflow of_op_schema -Wl,--no-whole-archive -ldl -lrt)
   target_link_libraries(
     oneflow
-    PUBLIC
-    of_protoobj
-    of_functional_obj
-    ${oneflow_third_party_libs}
-    ${EXTERNAL_TARGETS}
-    -Wl,--no-whole-archive
-    -ldl
-    -lrt)
+    PUBLIC of_protoobj
+           of_functional_obj
+           ${oneflow_third_party_libs}
+           ${EXTERNAL_TARGETS}
+           -Wl,--no-whole-archive
+           -ldl
+           -lrt)
   if(BUILD_CUDA)
     target_link_libraries(oneflow PUBLIC CUDA::cudart_static)
   endif()
@@ -401,7 +400,7 @@ if(BUILD_TESTING)
   if(of_all_test_cc)
     oneflow_add_test(oneflow_testexe SRCS ${of_all_test_cc} TEST_NAME oneflow_test)
     target_link_libraries(oneflow_testexe PUBLIC ${of_libs} ${oneflow_third_party_libs} glog::glog
-                          ${oneflow_test_libs})
+                                                 ${oneflow_test_libs})
   endif()
 
   if(BUILD_CPP_API)
@@ -416,7 +415,7 @@ if(BUILD_TESTING)
       ${PROJECT_SOURCE_DIR})
     find_package(Threads REQUIRED)
     target_link_libraries(oneflow_cpp_api_testexe PUBLIC oneflow_cpp ${oneflow_third_party_libs}
-                          ${oneflow_test_libs} Threads::Threads)
+                                                         ${oneflow_test_libs} Threads::Threads)
   endif()
 endif()
 
