@@ -11,6 +11,7 @@ import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
 import "oneflow/core/job/sbp_parallel.proto";
 import "oneflow/core/graph/boxing/collective_boxing.proto";
+import "oneflow/core/graph/boxing/of_collective_boxing.proto";
 import "oneflow/core/job/initializer_conf.proto";
 import "oneflow/core/job/regularizer_conf.proto";
 import "oneflow/core/job/learning_rate_schedule_conf.proto";
@@ -365,7 +366,7 @@ message BoxingIdentityOpConf {
 
 message OfCollectiveBoxingGenericOpConf {
   required LogicalBlobId lbi = 1;
-  required boxing.collective.RankDesc rank_desc = 2;
+  required boxing.of_collective.RankDesc rank_desc = 2;
 }
 
 message CollectiveBoxingPackOpConf {

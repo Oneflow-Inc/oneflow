@@ -69,11 +69,10 @@ Runtime::Runtime(
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
     if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
       collective_boxing_collective_manager_plan_token_ =
-          Global<boxing::collective::CollectiveMgr>::Get()->AddPlan(plan);
-    } else {
-      collective_boxing_scheduler_plan_token_ =
-          Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
+          Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan);
     }
+    collective_boxing_scheduler_plan_token_ =
+          Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());
@@ -117,10 +116,9 @@ Runtime::~Runtime() {
   OF_SESSION_BARRIER();
   Global<ThreadMgr>::Get()->DeleteThreads(independent_thread_ids_);
   if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
-    Global<boxing::collective::CollectiveMgr>::Get()->DeletePlan(collective_boxing_collective_manager_plan_token_);
-  } else {
-    Global<boxing::collective::Scheduler>::Get()->DeletePlan(collective_boxing_scheduler_plan_token_);
+    Global<boxing::of_collective::CollectiveMgr>::Get()->DeletePlan(collective_boxing_collective_manager_plan_token_);
   }
+  Global<boxing::collective::Scheduler>::Get()->DeletePlan(collective_boxing_scheduler_plan_token_);
 }
 
 void Runtime::DumpThreadIdsFromPlan(const Plan& plan) {

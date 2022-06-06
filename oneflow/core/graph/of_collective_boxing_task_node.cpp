@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/of_collective_boxing_task_node.h"
-#include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/graph/boxing/of_collective_boxing_util.h"
 
 namespace oneflow {
 
@@ -27,8 +27,8 @@ void OfCollectiveBoxingGenericTaskNode::Init(int64_t machine_id, int64_t thrd_id
 }
 
 void OfCollectiveBoxingGenericTaskNode::ProduceAllRegstsAndBindEdges() {
-  if (boxing::collective::GenericOpHasOutput(
-          op_conf_.collective_boxing_generic_conf().rank_desc())) {
+  if (boxing::of_collective::GenericOpHasOutput(
+          op_conf_.of_collective_boxing_generic_conf().rank_desc())) {
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out", false, 1, 1);
     this->ForEachOutDataEdge([&](TaskEdge* out_dege) { out_dege->AddRegst("out", out_regst); });
   }

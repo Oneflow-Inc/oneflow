@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/graph/boxing/of_collective_boxing_util.h"
 
 namespace oneflow {
 
-using namespace boxing::collective;
+using namespace boxing::of_collective;
 
 class OfCollectiveBoxingGenericOp : public Operator {
  public:

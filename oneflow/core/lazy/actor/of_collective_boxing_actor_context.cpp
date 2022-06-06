@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/lazy/actor/of_collective_boxing_actor_context.h"
-#include "oneflow/core/job/collective_boxing/scheduler.h"
 
 namespace oneflow {
 

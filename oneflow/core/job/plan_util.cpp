@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
+#include "oneflow/core/graph/boxing/of_collective_boxing_util.h"
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/register/runtime_register_desc.h"
@@ -727,6 +728,36 @@ void GetDeviceDesc(const TaskProto* task_proto, boxing::collective::DeviceDesc* 
   device_desc->set_device_id(device_id.device_index());
 }
 
+const boxing::of_collective::RankDesc& OfGetRankDesc(const OperatorConf& conf) {
+  if (conf.has_of_collective_boxing_generic_conf()) {
+    return conf.of_collective_boxing_generic_conf().rank_desc();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+const boxing::of_collective::RankDesc& OfGetRankDesc(Plan* plan, const TaskProto& task_proto) {
+  CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
+  return OfGetRankDesc(PlanUtil::GetOpAttribute(plan, task_proto.job_id(),
+                                              task_proto.exec_sequence().exec_node(0).kernel_conf())
+                         .op_conf());
+}
+
+struct OfCollectiveBoxingRequestInfo {
+  boxing::of_collective::OpDesc op_desc;
+  std::map<int64_t, const PlanTaskNode*> rank2node;
+  int64_t order;
+  int64_t dependency_depth;
+};
+
+void OfGetDeviceDesc(const TaskProto* task_proto, boxing::of_collective::DeviceDesc* device_desc) {
+  device_desc->set_machine_id(task_proto->machine_id());
+  const StreamId stream_id = PlanUtil::GetStreamId(*task_proto);
+  const DeviceId& device_id = stream_id.device_id();
+  device_desc->set_device_type(device_id.device_type());
+  device_desc->set_device_id(device_id.device_index());
+}
+
 }  // namespace
 
 void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
@@ -836,11 +867,9 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
 }
 
 void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
-  using namespace boxing::collective;
+  using namespace boxing::of_collective;
 
-  // reuse plan.collective_boxing_plan().
-  // TODO: (Panlichen) define OfCollectiveBoxingPlan in plan.proto to get rid of order and dependency info if necessary.
-  RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
+  RequestSet* request_set = &(*plan->mutable_of_collective_boxing_plan()
                                    ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
   const int64_t cb_task_count = std::count_if(
       plan->task().cbegin(), plan->task().cend(),
@@ -897,18 +926,18 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
                                     });
     if (of_collective_boxing_nodes.empty()) { break; }
     // reuse this struct
-    HashMap<std::string, CollectiveBoxingRequestInfo> name2request_info;
+    HashMap<std::string, OfCollectiveBoxingRequestInfo> name2request_info;
     for (const PlanTaskNode* node : of_collective_boxing_nodes) {
       const TaskProto* task_proto = node->task_proto();
-      const RankDesc& rank_desc = GetRankDesc(plan, *task_proto);
+      const RankDesc& rank_desc = OfGetRankDesc(plan, *task_proto);
       CHECK_GE(rank_desc.rank(), 0);
       CHECK_LT(rank_desc.rank(), rank_desc.op_desc().num_ranks());
       const std::string& name = rank_desc.op_desc().name();
-      boxing::collective::DeviceDesc device_desc;
-      GetDeviceDesc(task_proto, &device_desc);
+      boxing::of_collective::DeviceDesc device_desc;
+      OfGetDeviceDesc(task_proto, &device_desc);
       auto it = name2request_info.find(name);
       if (it == name2request_info.end()) {
-        CollectiveBoxingRequestInfo request_info{
+        OfCollectiveBoxingRequestInfo request_info{
             .op_desc = rank_desc.op_desc(),
             .rank2node = {std::make_pair(rank_desc.rank(), node)},
             .order = order,
@@ -923,13 +952,13 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
     }
     int64_t collected = 0;
     for (const auto& name7request_info : name2request_info) {
-      const CollectiveBoxingRequestInfo& info = name7request_info.second;
+      const OfCollectiveBoxingRequestInfo& info = name7request_info.second;
       if (info.rank2node.size() == info.op_desc.num_ranks()) {
         collected += 1;
-        boxing::collective::RequestDesc* request_desc = request_set->mutable_request()->Add();
+        boxing::of_collective::RequestDesc* request_desc = request_set->mutable_request()->Add();
         *request_desc->mutable_op_desc() = info.op_desc;
         for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
-          GetDeviceDesc(info.rank2node.at(i)->task_proto(),
+          OfGetDeviceDesc(info.rank2node.at(i)->task_proto(),
                         request_desc->mutable_device_set()->mutable_device()->Add());
         }
         request_desc->set_order(info.order);

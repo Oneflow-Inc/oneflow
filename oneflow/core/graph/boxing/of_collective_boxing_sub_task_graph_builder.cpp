@@ -28,7 +28,7 @@ limitations under the License.
 
 namespace oneflow {
 
-using namespace boxing::collective;
+using namespace boxing::of_collective;
 
 namespace {
 
@@ -60,7 +60,7 @@ void OfcclInitCollectiveNode(OfCollectiveBoxingGenericTaskNode* node,
     CHECK_EQ(root, -1);
   }
   // TODO: (Panlichen) may need a new backend defination
-  op_desc->set_backend(Backend::kBackendNCCL);
+  op_desc->set_backend(Backend::kBackendOFCCL);
   rank_desc->set_rank(parallel_id);
 
   const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));

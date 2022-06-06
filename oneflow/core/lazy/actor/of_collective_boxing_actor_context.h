@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_LAZY_ACTOR_OF_COLLECTIVE_BOXING_ACTOR_CONTEXT_H_
 
 #include "oneflow/core/lazy/actor/actor_context.h"
-#include "oneflow/core/job/collective_boxing/collective_manager.h"
+#include "oneflow/core/job/of_collective_boxing/collective_manager.h"
 
 namespace oneflow {
 
@@ -29,8 +29,6 @@ class OfCollectiveBoxingActorContext : public ActorContext {
 
   void Init(const TaskProto& task_proto, StreamContext* stream_ctx) override;
   void AddCallback(std::function<void()> callback) override;
-  void Schedule(boxing::collective::RequestHandle* handle, const void* send_buff, void* recv_buff);
-  void SetCompleted(size_t schedule_id);
 
   StreamContext* stream_ctx() const override;
   const TaskProto& task_proto() const override;

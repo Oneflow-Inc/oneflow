@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/job/collective_boxing/scheduler.h"
+#include "oneflow/core/job/of_collective_boxing/collective_manager.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/graph/boxing/collective_boxing_util.h"
-#include "oneflow/core/lazy/actor/collective_boxing_actor_context.h"
+#include "oneflow/core/graph/boxing/of_collective_boxing_util.h"
+#include "oneflow/core/lazy/actor/of_collective_boxing_actor_context.h"
 
 namespace oneflow {
 

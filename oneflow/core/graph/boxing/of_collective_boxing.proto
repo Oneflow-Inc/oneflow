@@ -1,5 +1,5 @@
 syntax = "proto2";
-package oneflow.boxing.collective;
+package oneflow.boxing.of_collective;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
@@ -23,6 +23,7 @@ enum ReduceMethod {
 enum Backend {
     kBackendInvalid = 0;
     kBackendNCCL = 1;
+    kBackendOFCCL = 2;
 }
 
 message DeviceDesc {
