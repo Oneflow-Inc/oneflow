@@ -83,7 +83,7 @@ class Shape final : public DimVector {
   MutShapeView ToMutShapeView() { return MutShapeView(data(), size()); }
 
  private:
-  bool is_initialized_ = true;
+  bool is_initialized_;
 };
 
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
