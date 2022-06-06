@@ -48,8 +48,7 @@ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr, const T* i
       size_t first_zero_index = space;
       // Find index of first zero in input.
       for (size_t k = 0; k < space; k++) {
-        const size_t data_offset = j + k * down_space;
-        if (cumsum_zeros_number_ptr[data_offset] == 1) {
+        if (cumsum_zeros_number_ptr[j + k * down_space] == 1) {
           first_zero_index = k;
           break;
         }
