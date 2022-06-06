@@ -13,10 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CUDA_ELEMENTWISE_H_
-#define ONEFLOW_CORE_CUDA_ELEMENTWISE_H_
+#ifndef ONEFLOW_CORE_HIP_ELEMENTWISE_H_
+#define ONEFLOW_CORE_HIP_ELEMENTWISE_H_
 
-#include <cuda_runtime.h>
+#ifdef WITH_ROCM
+
+#include <hip/hip_runtime.h>
 #include <cstdint>
 #include <algorithm>
 #include <type_traits>
@@ -30,25 +32,25 @@ namespace elementwise {
 constexpr int kBlockSize = 256;
 constexpr int kNumWaves = 32;
 
-inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
+inline hipError_t GetNumBlocks(int64_t n, int* num_blocks) {
   int dev;
   {
-    cudaError_t err = cudaGetDevice(&dev);
-    if (err != cudaSuccess) { return err; }
+    hipError_t err = hipGetDevice(&dev);
+    if (err != hipSuccess) { return err; }
   }
   int sm_count;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-    if (err != cudaSuccess) { return err; }
+    hipError_t err = hipDeviceGetAttribute(&sm_count, hipDeviceAttributeMultiprocessorCount, dev);
+    if (err != hipSuccess) { return err; }
   }
   int tpm;
   {
-    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
-    if (err != cudaSuccess) { return err; }
+    hipError_t err = hipDeviceGetAttribute(&tpm, hipDeviceAttributeMaxThreadsPerMultiProcessor, dev);
+    if (err != hipSuccess) { return err; }
   }
   *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize,
                                                    sm_count * tpm / kBlockSize * kNumWaves));
-  return cudaSuccess;
+  return hipSuccess;
 }
 
 template<typename T, int pack_size>
@@ -152,16 +154,16 @@ struct SimpleFactory {
 
 template<typename FactoryT, typename R, typename... IN>
 struct GenericLauncher {
-  static cudaError_t Launch(FactoryT factory, int64_t n, R* r, const IN*... in,
-                            cudaStream_t stream) {
+  static hipError_t Launch(FactoryT factory, int64_t n, R* r, const IN*... in,
+                            hipStream_t stream) {
     constexpr int pack_size = PackSize<R, IN...>();
     const int64_t n_pack = n / pack_size;
     const int64_t tail_offset = n_pack * pack_size;
     const int64_t n_tail = n - tail_offset;
     int num_blocks;
     {
-      cudaError_t err = GetNumBlocks(n_pack, &num_blocks);
-      if (err != cudaSuccess) { return err; }
+      hipError_t err = GetNumBlocks(n_pack, &num_blocks);
+      if (err != hipSuccess) { return err; }
     }
     auto func = n_tail > 0 ? ApplyGeneric<pack_size, true, FactoryT, R, IN...>
                            : ApplyGeneric<pack_size, false, FactoryT, R, IN...>;
@@ -169,42 +171,42 @@ struct GenericLauncher {
         factory, n_pack, reinterpret_cast<PackType<R, pack_size>*>(r),
         (reinterpret_cast<const PackType<IN, pack_size>*>(in))..., n_tail, r + tail_offset,
         (in + tail_offset)...);
-    return cudaPeekAtLastError();
+    return hipPeekAtLastError();
   }
 };
 
 template<typename FactoryT, typename R, typename A>
-inline cudaError_t UnaryWithFactory(FactoryT factory, int64_t n, R* r, const A* a,
-                                    cudaStream_t stream) {
+inline hipError_t UnaryWithFactory(FactoryT factory, int64_t n, R* r, const A* a,
+                                    hipStream_t stream) {
   return GenericLauncher<FactoryT, R, A>::Launch(factory, n, r, a, stream);
 }
 
 template<typename FunctorT, typename R, typename A>
-inline cudaError_t Unary(FunctorT functor, int64_t n, R* r, const A* a, cudaStream_t stream) {
+inline hipError_t Unary(FunctorT functor, int64_t n, R* r, const A* a, hipStream_t stream) {
   return UnaryWithFactory(SimpleFactory<FunctorT>(functor), n, r, a, stream);
 }
 
 template<typename FactoryT, typename R, typename A, typename B>
-inline cudaError_t BinaryWithFactory(FactoryT factory, int64_t n, R* r, const A* a, const B* b,
-                                     cudaStream_t stream) {
+inline hipError_t BinaryWithFactory(FactoryT factory, int64_t n, R* r, const A* a, const B* b,
+                                     hipStream_t stream) {
   return GenericLauncher<FactoryT, R, A, B>::Launch(factory, n, r, a, b, stream);
 }
 
 template<typename FunctorT, typename R, typename A, typename B>
-inline cudaError_t Binary(FunctorT functor, int64_t n, R* r, const A* a, const B* b,
-                          cudaStream_t stream) {
+inline hipError_t Binary(FunctorT functor, int64_t n, R* r, const A* a, const B* b,
+                          hipStream_t stream) {
   return BinaryWithFactory(SimpleFactory<FunctorT>(functor), n, r, a, b, stream);
 }
 
 template<typename FactoryT, typename R, typename A, typename B, typename C>
-inline cudaError_t TernaryWithFactory(FactoryT factory, int64_t n, R* r, const A* a, const B* b,
-                                      const C* c, cudaStream_t stream) {
+inline hipError_t TernaryWithFactory(FactoryT factory, int64_t n, R* r, const A* a, const B* b,
+                                      const C* c, hipStream_t stream) {
   return GenericLauncher<FactoryT, R, A, B, C>::Launch(factory, n, r, a, b, c, stream);
 }
 
 template<typename FunctorT, typename R, typename A, typename B, typename C>
-inline cudaError_t Ternary(FunctorT functor, int64_t n, R* r, const A* a, const B* b, const C* c,
-                           cudaStream_t stream) {
+inline hipError_t Ternary(FunctorT functor, int64_t n, R* r, const A* a, const B* b, const C* c,
+                           hipStream_t stream) {
   return TernaryWithFactory(SimpleFactory<FunctorT>(functor), n, r, a, b, c, stream);
 }
 
@@ -213,5 +215,7 @@ inline cudaError_t Ternary(FunctorT functor, int64_t n, R* r, const A* a, const 
 }  // namespace cuda
 
 }  // namespace oneflow
+
+#endif  // WITH_ROCM
 
 #endif  // ONEFLOW_CORE_CUDA_ELEMENTWISE_H_

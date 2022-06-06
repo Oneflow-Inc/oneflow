@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/ep/include/primitive/softmax_backward.h"
 #include "oneflow/core/ep/include/primitive/log_softmax_backward.h"
 #include "oneflow/core/ep/hip/primitive/type_seq.h"
-#include "oneflow/core/cuda/softmax.cuh"
+#include "oneflow/core/hip/softmax.hip.h"
 #include "oneflow/core/ep/hip/cuda_stream.h"
 
 namespace oneflow {

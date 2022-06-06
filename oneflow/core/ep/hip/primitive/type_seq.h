@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EP_CUDA_PRIMITIVE_TYPE_SEQ_H_
-#define ONEFLOW_CORE_EP_CUDA_PRIMITIVE_TYPE_SEQ_H_
+#ifndef ONEFLOW_CORE_EP_HIP_PRIMITIVE_TYPE_SEQ_H_
+#define ONEFLOW_CORE_EP_HIP_PRIMITIVE_TYPE_SEQ_H_
 
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/data_type.h"
@@ -42,7 +42,7 @@ limitations under the License.
 // #if CUDA_VERSION >= 11000
 // #define CUDA_PRIMITIVE_BFLOAT16_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(nv_bfloat16, DataType::kBFloat16)
 // #else
-// #define CUDA_PRIMITIVE_BFLOAT16_TYPE_SEQ
+#define CUDA_PRIMITIVE_BFLOAT16_TYPE_SEQ
 // #endif  // CUDA_VERSION >= 11000
 
 #define CUDA_PRIMITIVE_ALL_TYPE_SEQ \

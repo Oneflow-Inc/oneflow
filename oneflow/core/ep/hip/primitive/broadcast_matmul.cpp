@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/ep/hip/cuda_stream.h"
 #include <hip/hip_runtime.h>
-
+#include <hip/hip_fp16.h>
 namespace oneflow {
 
 namespace ep {
@@ -65,7 +65,11 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, hipblasDatatype_t 
     sp.d = scalar.Value<double>();
   } else if (compute_type == HIPBLAS_R_32F) {
     sp.s = scalar.Value<float>();
-  } else {
+  } 
+//    else if (compute_type == HIPBLAS_R_16F) {
+//    sp.s = scalar.Value<__half>();
+//  } 
+    else {
     UNIMPLEMENTED();
   }
   return sp;

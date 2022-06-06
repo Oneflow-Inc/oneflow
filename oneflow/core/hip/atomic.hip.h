@@ -13,18 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_CUDA_ATOMIC_H_
-#define ONEFLOW_CORE_CUDA_ATOMIC_H_
+#ifndef ONEFLOW_CORE_HIP_ATOMIC_H_
+#define ONEFLOW_CORE_HIP_ATOMIC_H_
 
-#if defined(__CUDACC__)
+#if defined(__HIPCC__)
 
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cuda_fp16.h>
+#include <hip/hip_runtime.h>
+#include <hip/hip_fp16.h>
 #include <cstdint>
-#if CUDA_VERSION >= 11000
-#include <cuda_bf16.h>
-#endif  // CUDA_VERSION >= 11000
+// #if CUDA_VERSION >= 11000
+// #include <cuda_bf16.h>
+// #endif  // CUDA_VERSION >= 11000
 namespace oneflow {
 
 namespace cuda {
@@ -57,12 +56,12 @@ __device__ __forceinline__
 template<typename T>
 __device__ __forceinline__ typename std::enable_if<sizeof(T) == sizeof(unsigned short int), T>::type
 CASImpl(T* address, T compare, T val) {
-#if __CUDA_ARCH__ >= 700
-  return CastCASImpl<T, unsigned short int>(address, compare, val);
-#else
-  __trap();
+// #if __CUDA_ARCH__ >= 700
+//   return CastCASImpl<T, unsigned short int>(address, compare, val);
+// #else
+  asm volatile("trap;");
   return 0;
-#endif  // __CUDA_ARCH__ >= 700
+// #endif  // __CUDA_ARCH__ >= 700
 }
 
 __device__ __forceinline__ int CASImpl(int* address, int compare, int val) {
@@ -80,7 +79,7 @@ __device__ __forceinline__ unsigned long long int CASImpl(unsigned long long int
   return atomicCAS(address, compare, val);
 }
 
-#if __CUDA_ARCH__ >= 700
+// #if __CUDA_ARCH__ >= 700
 
 __device__ __forceinline__ unsigned short int CASImpl(unsigned short int* address,
                                                       unsigned short int compare,
@@ -88,7 +87,7 @@ __device__ __forceinline__ unsigned short int CASImpl(unsigned short int* addres
   return atomicCAS(address, compare, val);
 }
 
-#endif  // __CUDA_ARCH__ >= 700
+// #endif  // __CUDA_ARCH__ >= 700
 
 template<typename T>
 struct AddOp {
@@ -132,7 +131,7 @@ __device__ __forceinline__ float AddImpl(float* address, float val) {
   return atomicAdd(address, val);
 }
 
-#if __CUDA_ARCH__ >= 600
+// #if __CUDA_ARCH__ >= 600
 
 __device__ __forceinline__ double AddImpl(double* address, double val) {
   return atomicAdd(address, val);
@@ -142,30 +141,30 @@ __device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
   return atomicAdd(address, val);
 }
 
-#endif  // __CUDA_ARCH__ >= 600
+// #endif  // __CUDA_ARCH__ >= 600
 
-#if __CUDA_ARCH__ >= 700
+// #if __CUDA_ARCH__ >= 700
 
 __device__ __forceinline__ half AddImpl(half* address, half val) { return atomicAdd(address, val); }
 
-#endif  // __CUDA_ARCH__ >= 700
+// #endif  // __CUDA_ARCH__ >= 700
 
-#if __CUDA_ARCH__ >= 800
+// #if __CUDA_ARCH__ >= 800
 
-__device__ __forceinline__ nv_bfloat16 AddImpl(nv_bfloat16* address, nv_bfloat16 val) {
-  return atomicAdd(address, val);
-}
+// __device__ __forceinline__ nv_bfloat16 AddImpl(nv_bfloat16* address, nv_bfloat16 val) {
+//   return atomicAdd(address, val);
+// }
 
-#endif  // __CUDA_ARCH__ >= 800
+// #endif  // __CUDA_ARCH__ >= 800
 
-#if __CUDA_ARCH__ < 530
+// #if __CUDA_ARCH__ < 530
 
-__device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
-  __trap();
-  return val;
-}
+// __device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
+//   asm volatile("trap;");
+//   return val;
+// }
 
-#endif  // __CUDA_ARCH__ < 530
+// #endif  // __CUDA_ARCH__ < 530
 
 }  // namespace internal
 
@@ -218,6 +217,6 @@ __device__ __forceinline__ double Max(double* address, const double val) {
 
 }  // namespace oneflow
 
-#endif  // defined(__CUDACC__)
+#endif  // defined(__HIPCC__)
 
 #endif  // ONEFLOW_CORE_CUDA_ATOMIC_H_

@@ -14,9 +14,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/ep/hip/primitive/type_seq.h"
-#include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/hip/elementwise.hip.h"
 #include "oneflow/core/ep/hip/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 

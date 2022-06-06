@@ -89,10 +89,10 @@ class BatchMatmulFactoryImpl : public BatchMatmulFactory {
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCPU, BatchMatmulFactory,
                            BatchMatmulFactoryImpl<DeviceType::kCPU>);
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_ROCM)
 REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, BatchMatmulFactory,
                            BatchMatmulFactoryImpl<DeviceType::kCUDA>);
-#endif  // WITH_CUDA
+#endif  // WITH_CUDA || WITH_ROCM
 
 }  // namespace
 

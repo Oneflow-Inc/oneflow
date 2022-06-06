@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/ep/hip/primitive/broadcast_elementwise_binary.cuh"
+
+#include "oneflow/core/ep/hip/primitive/broadcast_elementwise_binary.hip.h"
 
 namespace oneflow {
 
@@ -21,12 +22,14 @@ namespace ep {
 namespace primitive {
 namespace broadcast_elementwise_binary {
 
-#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
-  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary<      \
-      binary_op, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(data_type_pair)>();
+#define INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_ENTRY(               \
+    binary_op, src_data_type_pair, dst_data_type_pair)                                \
+  template std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary< \
+      binary_op, OF_PP_PAIR_FIRST(src_data_type_pair), OF_PP_PAIR_FIRST(dst_data_type_pair)>();
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                 BINARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_ENTRY,
+                                 BINARY_COMPARISION_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
+                                 CUDA_PRIMITIVE_BOOL_TYPE_SEQ);
 
 }  // namespace broadcast_elementwise_binary
 }  // namespace primitive
