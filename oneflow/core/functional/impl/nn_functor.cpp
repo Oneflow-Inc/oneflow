@@ -524,7 +524,7 @@ class FusedMatmulBiasAddReluDropoutFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
                            const TensorTuple& biases, bool skip_final_activation,
-                           std::vector<float> dropout_rate_list,
+                           std::vector<float>& dropout_rate_list,
                            const Optional<one::Generator>& generator) const {
     const int64_t weight_size = weights.size();
     const int64_t bias_size = biases.size();
@@ -546,7 +546,7 @@ class FusedMatmulBiasAddReluDropoutFunctor {
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     for (int64_t i = 0; i < weight_size; i++) {
-      CHECK_GE_OR_RETURN(dropout_rate_list.at(i), 0.0f)
+      CHECK_GE_OR_RETURN(dropout_rate_list[i], 0.0f)
           << Error::RuntimeError() << "Dropout rate should be >= 0.0";
 
       const auto& weight_shape = weights[i]->shape();
