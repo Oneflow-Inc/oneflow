@@ -36,7 +36,7 @@ class PolynomialLR(LRScheduler):
 
     .. math::
         \begin{aligned}
-           & decay\_batch = min(decay\_batch, current\_batch) \\
+           & current\_batch = min(decay\_batch, current\_batch) \\
            & learning\_rate = (base\_lr-end\_lr)*(1-\frac{current\_batch}{decay\_batch})^{power}+end\_lr
         \end{aligned}
 
