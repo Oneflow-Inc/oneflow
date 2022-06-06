@@ -106,8 +106,9 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
           int size = shape->At(dim);
           int expanded_size = expanded_shape->At(expanded_dim);
           CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
-              << "The size of tensor a (" << size << ") must match the size of tensor b ("
-              << expanded_size << ") at non-singleton dimension " << i;
+              << Error::RuntimeError() << "The size of tensor a (" << size
+              << ") must match the size of tensor b (" << expanded_size
+              << ") at non-singleton dimension " << i;
           sizes[j] = size == 1 ? expanded_size : size;
         }
       }
@@ -179,6 +180,7 @@ Maybe<Tensor> AdjustSubspace(const std::shared_ptr<Tensor>& input, const TensorT
   if (index_subspace_pos <= 0) { return input; }
   int ndim = input->ndim();
   CHECK_LE_OR_RETURN(index_subspace_pos + index_ndim, ndim)
+      << Error::IndexError()
       << "Failed to adjust subspace since the index is out of bounds for tensor dimension " << ndim;
   std::vector<int> permute;
   permute.reserve(ndim);
@@ -203,7 +205,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   int64_t ndims = shape.NumAxes();
   int64_t specified_ndims = CountSpecifiedDims(index);
   CHECK_LE_OR_RETURN(specified_ndims, ndims)
-      << "Too many indices for tensor of dimension " << ndims;
+      << Error::IndexError() << "Too many indices for tensor of dimension " << ndims;
   bool has_false_index = JUST(HasFalseIndex(index));
   bool has_expand_boolean_dim = false;
   int dim = 0;
@@ -235,10 +237,12 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       dim += unspecified_ndims;
       continue;
     }
-    CHECK_LT_OR_RETURN(dim, ndims) << "Invalid index for tensor of dimension " << ndims;
+    CHECK_LT_OR_RETURN(dim, ndims)
+        << Error::IndexError() << "Invalid index for tensor of dimension " << ndims;
     if (index_item.IsSlice()) {
       const auto& slice = index_item.slice();
-      CHECK_GT_OR_RETURN(slice.step(), 0) << "Step must be greater than zero.";
+      CHECK_GT_OR_RETURN(slice.step(), 0)
+          << Error::RuntimeError() << "Step must be greater than zero.";
       int64_t step = std::min(slice.step(), shape.At(dim));
       int64_t end = std::min(slice.end(), shape.At(dim));
       int64_t start = std::min(slice.start(), shape.At(dim));
@@ -300,8 +304,8 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
   std::vector<int> mask(expand_slices.size(), 0);
   for (const auto& dim : expand_dims) {
     if (dim >= expand_slices.size()) {
-      return Error::RuntimeError()
-             << "Dimension " << dim << " is out of bounds for size " << expand_slices.size();
+      return Error::IndexError() << "Dimension " << dim << " is out of bounds for size "
+                                 << expand_slices.size();
     }
     mask[dim] = 1;
   }
@@ -314,7 +318,7 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices) {
   CHECK_GE_OR_RETURN(input->ndim(), indices.size())
-      << "Too many indices for tensor of dimension " << input->ndim();
+      << Error::IndexError() << "Too many indices for tensor of dimension " << input->ndim();
   const auto& expanded_indices = JUST(ExpandIndices(indices));
   bool is_continuous_subspace = JUST(IsContinuousSubspace(indices));
 
@@ -327,7 +331,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
   int index_ndim = valid_indices.at(0)->ndim();
   auto packed_indices = JUST(Stack(valid_indices, 0));
   int packed_ndim = packed_indices->ndim();
-  CHECK_GT_OR_RETURN(packed_ndim, 0) << "Index array dimension should be greater than 0.";
+  CHECK_GT_OR_RETURN(packed_ndim, 0)
+      << Error::RuntimeError() << "Index array dimension should be greater than 0.";
   std::vector<int> permute(packed_ndim);
   permute[packed_ndim - 1] = 0;
   std::iota(permute.begin(), permute.end() - 1, 1);
@@ -352,8 +357,8 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
 
   int required_ndim = input->ndim() - valid_indices.size() + index_ndim;
   CHECK_EQ_OR_RETURN(result->ndim(), required_ndim)
-      << "The indexing result dimension is " << result->ndim() << ", but shoule be "
-      << required_ndim;
+      << Error::RuntimeError() << "The indexing result dimension is " << result->ndim()
+      << ", but shoule be " << required_ndim;
   if (is_continuous_subspace) { result = JUST(AdjustSubspace(result, indices, index_ndim)); }
   return result;
 }
