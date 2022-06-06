@@ -3,13 +3,11 @@ include(python)
 function(oneflow_add_executable)
   add_executable(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
-  link_oneflow_common_dependencies(${ARGV0})
 endfunction()
 
 function(oneflow_add_library)
   add_library(${ARGV})
   set_compile_options_to_oneflow_target(${ARGV0})
-  link_oneflow_common_dependencies(${ARGV0})
 endfunction()
 
 set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
@@ -41,6 +39,19 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
   set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
 endif()
+
+if("${LLVM_PROVIDER}" STREQUAL "install")
+  get_property(LLVM_INSTALL_DIR GLOBAL PROPERTY LLVM_INSTALL_DIR)
+  check_variable_defined(LLVM_INSTALL_DIR)
+  find_library(LLVMSupportLib LLVMSupport PATHS ${LLVM_INSTALL_DIR}/lib REQUIRED)
+  add_library(LLVMSupport UNKNOWN IMPORTED)
+  set_property(TARGET LLVMSupport PROPERTY
+             IMPORTED_LOCATION ${LLVMSupportLib})
+  check_variable_defined(LLVM_INCLUDE_DIRS)
+  set_property(TARGET LLVMSupport PROPERTY
+    INTERFACE_INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+endif()
+list(APPEND oneflow_third_party_libs LLVMSupport)
 
 include(op_schema)
 
@@ -220,10 +231,10 @@ oneflow_add_library(of_protoobj SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj make_pyproto_dir protobuf)
 
 if(BUILD_SHARED_LIBS)
-  target_link_libraries(of_protoobj PUBLIC protobuf_imported)
+  target_link_libraries(of_protoobj protobuf_imported)
 else()
   # For some unknown reasons, when building static libraries, we have to link of_protoobj with oneflow_third_party_libs
-  target_link_libraries(of_protoobj PUBLIC ${oneflow_third_party_libs})
+  target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 endif()
 
 include(functional)
@@ -231,7 +242,7 @@ generate_functional_api_and_pybind11_cpp(FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GE
                                          FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS}
                     ${FUNCTIONAL_GENERATED_HRCS})
-target_link_libraries(of_functional_obj PUBLIC glog::glog)
+target_link_libraries(of_functional_obj LLVMSupport glog::glog)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
 if(BUILD_PYTHON)
@@ -248,7 +259,7 @@ if(BUILD_PYTHON)
     of_functional_tensor_obj STATIC ${FUNCTIONAL_TENSOR_GENERATED_SRCS}
     ${FUNCTIONAL_TENSOR_GENERATED_HRCS} ${FUNCTIONAL_OPS_GENERATED_SRCS}
     ${FUNCTIONAL_OPS_GENERATED_HRCS})
-  target_link_libraries(of_functional_tensor_obj PUBLIC glog::glog)
+  target_link_libraries(of_functional_tensor_obj LLVMSupport glog::glog)
   add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                               ${Python_NumPy_INCLUDE_DIRS})
@@ -285,12 +296,11 @@ target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
 
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_op_schema)
-  target_link_libraries(oneflow PUBLIC of_protoobj of_functional_obj ${oneflow_third_party_libs})
+  target_link_libraries(oneflow of_protoobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
   set(of_libs -Wl,--whole-archive oneflow of_op_schema -Wl,--no-whole-archive -ldl -lrt)
   target_link_libraries(
     oneflow
-    PUBLIC
     of_protoobj
     of_functional_obj
     ${oneflow_third_party_libs}
@@ -299,7 +309,7 @@ elseif(UNIX)
     -ldl
     -lrt)
   if(BUILD_CUDA)
-    target_link_libraries(oneflow PUBLIC CUDA::cudart_static)
+    target_link_libraries(oneflow CUDA::cudart_static)
   endif()
 elseif(WIN32)
   set(of_libs oneflow of_protoobj of_functional_obj of_op_schema)
@@ -311,9 +321,9 @@ if(BUILD_PYTHON OR BUILD_CPP_API)
   file(GLOB_RECURSE of_api_common_files ${PROJECT_SOURCE_DIR}/oneflow/api/common/*.h
        ${PROJECT_SOURCE_DIR}/oneflow/api/common/*.cpp)
   oneflow_add_library(of_api_common OBJECT ${of_api_common_files})
-  target_link_libraries(of_api_common PUBLIC oneflow)
+  target_link_libraries(of_api_common oneflow)
   if(WITH_MLIR)
-    target_link_libraries(of_api_common PUBLIC ${ONEFLOW_MLIR_LIBS})
+    target_link_libraries(of_api_common ${ONEFLOW_MLIR_LIBS})
   endif()
 endif()
 
@@ -323,9 +333,9 @@ if(BUILD_PYTHON)
   oneflow_add_library(of_pyext_obj SHARED ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                   ${Python_NumPy_INCLUDE_DIRS})
-  target_link_libraries(of_pyext_obj PUBLIC oneflow pybind11::headers)
+  target_link_libraries(of_pyext_obj oneflow pybind11::headers)
   if(BUILD_SHARED_LIBS AND APPLE)
-    target_link_libraries(of_pyext_obj PUBLIC ${Python3_LIBRARIES})
+    target_link_libraries(of_pyext_obj ${Python3_LIBRARIES})
   endif()
   add_dependencies(of_pyext_obj oneflow)
 
@@ -386,7 +396,7 @@ function(oneflow_add_test target_name)
   cmake_parse_arguments(arg "" "TEST_NAME;WORKING_DIRECTORY" "SRCS" ${ARGN})
   oneflow_add_executable(${target_name} ${arg_SRCS})
   if(BUILD_CUDA)
-    target_link_libraries(${target_name} PUBLIC CUDA::cudart_static)
+    target_link_libraries(${target_name} CUDA::cudart_static)
   endif()
   set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
                                                   "${PROJECT_BINARY_DIR}/bin")
@@ -400,7 +410,7 @@ endfunction()
 if(BUILD_TESTING)
   if(of_all_test_cc)
     oneflow_add_test(oneflow_testexe SRCS ${of_all_test_cc} TEST_NAME oneflow_test)
-    target_link_libraries(oneflow_testexe PUBLIC ${of_libs} ${oneflow_third_party_libs} glog::glog
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} glog::glog
                           ${oneflow_test_libs})
   endif()
 
@@ -415,7 +425,7 @@ if(BUILD_TESTING)
       WORKING_DIRECTORY
       ${PROJECT_SOURCE_DIR})
     find_package(Threads REQUIRED)
-    target_link_libraries(oneflow_cpp_api_testexe PUBLIC oneflow_cpp ${oneflow_third_party_libs}
+    target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_third_party_libs}
                           ${oneflow_test_libs} Threads::Threads)
   endif()
 endif()
