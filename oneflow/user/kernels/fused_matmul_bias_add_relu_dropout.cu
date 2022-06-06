@@ -88,7 +88,8 @@ __global__ void FusedVectorizedReluDropoutKernel(uint64_t seed,
       bool mask_val = rand_uniform_pack4.elem[i] > rate;
       // Combined relu_mask, dropout_mask together.
       bool combined_mask = relu_mask && mask_val;
-      T t_combined_mask = static_cast<T>(combined_mask);
+      // Cause half/bfloat16 cannot directily convert from bool, here we cast to float type first
+      T t_combined_mask = static_cast<T>(static_cast<float>(combined_mask));
       thread_bitmask |= (combined_mask << i);
       out_vec.elem[i] = x_vec.elem[i] * t_combined_mask * t_scale;
     }
@@ -145,7 +146,8 @@ __global__ void FusedPaddedVectorizedReluDropoutKernel(
         bool mask_val = rand_uniform_pack4.elem[i] > rate;
         // Combined relu_mask, dropout_mask together.
         bool combined_mask = relu_mask && mask_val;
-        T t_combined_mask = static_cast<T>(combined_mask);
+        // Cause half/bfloat16 cannot directily convert from bool, here we cast to float type first
+        T t_combined_mask = static_cast<T>(static_cast<float>(combined_mask));
         thread_bitmask |= (combined_mask << i);
         out_vec.elem[i] = x_vec.elem[i] * t_combined_mask * t_scale;
       }
@@ -203,7 +205,9 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, one::CUDAGeneratorStat
           // Combined relu_mask, dropout_mask together.
           bool combined_mask = relu_mask && mask_val;
           thread_bitmask = combined_mask;
-          T t_combined_mask = static_cast<T>(combined_mask);
+          // Cause half/bfloat16 cannot directily convert from bool, here we cast to float type
+          // first
+          T t_combined_mask = static_cast<T>(static_cast<float>(combined_mask));
           T out_val = x_val * t_combined_mask * t_scale;
           x[cur_linear_index] = out_val;
         }
