@@ -118,7 +118,7 @@ __global__ void CumForwardGpuDownSpaceIs1(const T* in_ptr, T* out_ptr, int64_t c
 
 template<typename T, template<typename> class BinaryFunc>
 void CumForwardGeneralStrategy(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_t dim,
-                        const T* in_ptr, T* out_ptr) {
+                               const T* in_ptr, T* out_ptr) {
   // data partition: up_space|space|down_space
   auto up_space = in_shape.elem_cnt() / in_shape.Count(dim);
   auto space = in_shape.At(dim);
@@ -152,7 +152,7 @@ class GpuCumKernel : public user_op::OpKernel {
     auto* out = ctx->Tensor4ArgNameAndIndex("y", 0);
     const ShapeView& in_shape = in->shape();
     const int64_t dim = ctx->Attr<int64_t>("dim");
-    const size_t dim_size = in_shape.At(dim);
+    const int64_t dim_size = in_shape.At(dim);
 
     auto elem_cnt = in_shape.elem_cnt();
     if (!elem_cnt) { return; }
