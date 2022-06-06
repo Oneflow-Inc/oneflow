@@ -347,7 +347,7 @@ jobs:
 
   find-test-cache-distributed:
     name: "Find test cache (distributed)"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
     needs: [build-oneflow]
     env:
@@ -414,7 +414,7 @@ jobs:
     needs: [wait_for_gpu_slot, find-test-cache-distributed]
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && ${{ contains(github.event.pull_request.labels.*.name, 'need-test-distributed') }}
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
       cancel-in-progress: false
