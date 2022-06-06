@@ -285,7 +285,8 @@ else()
   target_link_libraries(LLVMSupportWithHeader INTERFACE LLVMSupport)
 endif()
 check_variable_defined(LLVM_INCLUDE_DIRS)
-set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                                                   ${LLVM_INCLUDE_DIRS})
 
 list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
 
