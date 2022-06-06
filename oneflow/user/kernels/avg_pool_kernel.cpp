@@ -110,6 +110,12 @@ struct AvgPoolKernelUtil<DeviceType::kCPU, T, IDX> {
 };
 
 template<DeviceType device_type, typename T>
+bool IsOneDnnApplicable(const AvgPoolParams3D& params_3d) {
+  return !params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
+         && params_3d.divisor_override() == 0 && OneDnnIsEnabled();
+}
+
+template<DeviceType device_type, typename T>
 class AvgPool1dKernel final : public user_op::OpKernel {
  public:
   AvgPool1dKernel() = default;
@@ -135,8 +141,7 @@ class AvgPool1dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
 
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
-        && params_3d.divisor_override() == 0) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       const dm::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
       const dm::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
       const dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
@@ -199,8 +204,7 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
-        && params_3d.divisor_override() == 0) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims diff_dst_dims = {1, 1, dy->shape().At(0) * dy->shape().At(1), dy->shape().At(2)};
       dm::dims diff_src_dims = {1, 1, dx->shape().At(0) * dx->shape().At(1), dx->shape().At(2)};
       dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
@@ -262,8 +266,7 @@ class AvgPool2dKernel final : public user_op::OpKernel {
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && params_3d.divisor_override() == 0
-        && device_type == DeviceType::kCPU && params_3d.divisor_override() == 0) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2), x->shape().At(3)};
       dm::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2), y->shape().At(3)};
       dm::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
@@ -328,8 +331,7 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
-        && params_3d.divisor_override() == 0) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
                                 dy->shape().At(3)};
       dm::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
@@ -393,8 +395,7 @@ class AvgPool3dKernel final : public user_op::OpKernel {
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
-        && params_3d.divisor_override() == 0) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2), x->shape().At(3),
                            x->shape().At(4)};
       dm::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2), y->shape().At(3),
@@ -466,8 +467,7 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
-        && params_3d.divisor_override() == 0) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
                                 dy->shape().At(3), dy->shape().At(4)};
       dm::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),

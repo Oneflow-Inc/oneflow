@@ -94,6 +94,12 @@ void Maxpool2dForwardComputeCLast(const NdIndexOffsetHelper<IDX, 4>& index_helpe
   }
 }
 
+template<DeviceType device_type, typename T>
+bool IsOneDnnApplicable(const MaxPoolParams3D& params_3d) {
+  return !params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>() && device_type == DeviceType::kCPU
+         && OneDnnIsEnabled();
+}
+
 }  // namespace
 
 template<typename T, typename IDX>
@@ -212,8 +218,7 @@ class MaxPool1dKernel final : public user_op::OpKernel {
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>()
-        && device_type == DeviceType::kCPU) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims src_dims = {1, 1, x->shape().At(0) * x->shape().At(1), x->shape().At(2)};
       dm::dims dst_dims = {1, 1, y->shape().At(0) * y->shape().At(1), y->shape().At(2)};
       dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
@@ -274,8 +279,7 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>()
-        && device_type == DeviceType::kCPU) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims diff_dst_dims = {1, 1, dy->shape().At(0) * dy->shape().At(1), dy->shape().At(2)};
       dm::dims diff_src_dims = {1, 1, dx->shape().At(0) * dx->shape().At(1), dx->shape().At(2)};
       dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
@@ -355,8 +359,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
 
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>()
-        && device_type == DeviceType::kCPU) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2), x->shape().At(3)};
       dm::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2), y->shape().At(3)};
       dm::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
@@ -438,8 +441,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
 
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>()
-        && device_type == DeviceType::kCPU) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
                                 dy->shape().At(3)};
       dm::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
@@ -519,8 +521,7 @@ class MaxPool3dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
     int64_t* indice_ptr = indice->mut_dptr<int64_t>();
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>()
-        && device_type == DeviceType::kCPU) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2), x->shape().At(3),
                            x->shape().At(4)};
       dm::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2), y->shape().At(3),
@@ -591,8 +592,7 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
     const int64_t* indice_ptr = indice->dptr<int64_t>();
     T* dest = dx->mut_dptr<T>();
 #ifdef WITH_ONEDNN
-    if (!params_3d.ceil_mode() && OneDnnPoolIsSupportDtype<T>()
-        && device_type == DeviceType::kCPU) {
+    if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       dm::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
                                 dy->shape().At(3), dy->shape().At(4)};
       dm::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
