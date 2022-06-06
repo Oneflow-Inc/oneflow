@@ -1855,7 +1855,6 @@ class PadFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
     const int64_t ndim = x->shape()->NumAxes();
-    CHECK_LE_OR_RETURN(ndim, 5) << "Dimension of input tensor should less than or equal to 5";
     CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
@@ -1865,11 +1864,11 @@ class PadFunctor {
           << "Length of pad must be even but instead it equals " << pad.size();
       if (IsFloatingDataType(x->dtype()->data_type())
           || x->dtype()->data_type() == DataType::kFloat16) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
+        JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
       } else if (IsIntegralDataType(x->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_constant_value", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", JUST(value.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
@@ -2111,16 +2110,16 @@ class OneHotFunctor {
     bool is_off_value_double = off_value.IsFloatingPoint();
     if (is_on_value_double || is_off_value_double) {
       JUST(attrs.SetAttr<DataType>("dtype", kFloat));
-      JUST(attrs.SetAttr<double>("floating_on_value", JUST(on_value.As<double>())));
-      JUST(attrs.SetAttr<double>("floating_off_value", JUST(off_value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_on_value", on_value.As<double>()));
+      JUST(attrs.SetAttr<double>("floating_off_value", off_value.As<double>()));
       JUST(attrs.SetAttr<int64_t>("integer_on_value", 0));
       JUST(attrs.SetAttr<int64_t>("integer_off_value", 0));
     } else {
       JUST(attrs.SetAttr<DataType>("dtype", kInt64));
       JUST(attrs.SetAttr<double>("floating_on_value", 0));
       JUST(attrs.SetAttr<double>("floating_off_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(on_value.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(off_value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_on_value", on_value.As<int64_t>()));
+      JUST(attrs.SetAttr<int64_t>("integer_off_value", off_value.As<int64_t>()));
     }
     return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {input}, attrs);
   }
@@ -2446,22 +2445,22 @@ class FusedScaleTrilFunctor {
     bool is_fill_value_double = fill_value.IsFloatingPoint();
     bool is_scale_double = scale.IsFloatingPoint();
     if (is_fill_value_double) {
-      JUST(attrs.SetAttr<double>("floating_fill_value", JUST(fill_value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_fill_value", fill_value.As<double>()));
       JUST(attrs.SetAttr<int64_t>("integer_fill_value", 0));
       JUST(attrs.SetAttr<bool>("is_floating_fill_value", true));
     } else {
       JUST(attrs.SetAttr<double>("floating_fill_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_fill_value", JUST(fill_value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_fill_value", fill_value.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("is_floating_fill_value", false));
     }
 
     if (is_scale_double) {
-      JUST(attrs.SetAttr<double>("floating_scale_value", JUST(scale.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_scale_value", scale.As<double>()));
       JUST(attrs.SetAttr<int64_t>("integer_scale_value", 0));
       JUST(attrs.SetAttr<bool>("is_floating_scale_value", true));
     } else {
       JUST(attrs.SetAttr<double>("floating_scale_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_scale_value", JUST(scale.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_scale_value", scale.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("is_floating_scale_value", false));
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -2657,23 +2656,13 @@ class FusedDotFeatureInteractionFunctor {
                                                  .Input("features", n + 1)
                                                  .Input("output_concat")
                                                  .Output("out")
-                                                 .Output("padded_concated_features")
                                                  .Build());
     }
     for (int n = 0; n < ops_no_output_concat_.size(); ++n) {
       ops_no_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
                                                 .Input("features", n + 1)
                                                 .Output("out")
-                                                .Output("padded_concated_features")
                                                 .Build());
-    }
-    ops_no_padded_concated_features_.resize(kMaxInputCount);
-    for (int n = 0; n < ops_no_padded_concated_features_.size(); ++n) {
-      ops_no_padded_concated_features_[n] =
-          CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
-                         .Input("features", n + 1)
-                         .Output("out")
-                         .Build());
     }
   }
 
@@ -2700,8 +2689,7 @@ class FusedDotFeatureInteractionFunctor {
       CHECK_OR_RETURN(!output_concat) << Error::RuntimeError() << "output_concat should not exist";
       JUST(attrs.SetAttr<bool>("has_output_concat", false));
       const std::shared_ptr<one::Tensor>& bi_interaction = JUST(OpInterpUtil::Dispatch<Tensor>(
-          *JUST(oneflow::VectorAt(ops_no_padded_concated_features_, n_features - 1)), inputs,
-          attrs));
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), inputs, attrs));
       std::vector<int32_t> reduce_axes_vec = {1};
       return functional::ReduceSum(bi_interaction, reduce_axes_vec, true);
     }
@@ -2720,7 +2708,6 @@ class FusedDotFeatureInteractionFunctor {
  private:
   std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
-  std::vector<std::shared_ptr<OpExpr>> ops_no_padded_concated_features_;
 };
 
 class OneEmbeddingIdShuffleFunctor {
