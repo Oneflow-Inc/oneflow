@@ -28,6 +28,9 @@ bool OneDnnPoolIsSupportDtype() {
   return (std::is_same<T, float>::value || std::is_same<T, int32_t>::value);
 }
 
+// TODO(daquexian): Make OneDnnPoolForwardCompute and OneDnnPoolBackwardCompute
+// accept oneflow-native structs like Shape instead of dm::dims, after Shape refactor
+// finishes.
 template<typename T>
 struct OneDnnPoolKernelUtil {
   static void OneDnnPoolForwardCompute(ep::Stream* stream, const dm::dims& src_dims,
