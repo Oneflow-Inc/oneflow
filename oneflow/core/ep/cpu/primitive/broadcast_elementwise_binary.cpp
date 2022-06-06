@@ -72,9 +72,9 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    DimVector src0_dim_vec;
-    DimVector src1_dim_vec;
-    DimVector dst_dim_vec;
+    Shape src0_shape;
+    Shape src1_shape;
+    Shape dst_shape;
     size_t num_dims = 0;
     int64_t simplified_src0_dims[kMaxNumDims];
     int64_t simplified_src1_dims[kMaxNumDims];
@@ -85,14 +85,14 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     CheckInplace(num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
                  simplified_dst_dims, dst);
     for (int64_t i = 0; i < num_dims; ++i) {
-      src0_dim_vec.push_back(simplified_src0_dims[i]);
-      src1_dim_vec.push_back(simplified_src1_dims[i]);
-      dst_dim_vec.push_back(simplified_dst_dims[i]);
+      src0_shape.push_back(simplified_src0_dims[i]);
+      src1_shape.push_back(simplified_src1_dims[i]);
+      dst_shape.push_back(simplified_dst_dims[i]);
     }
     binary_func(
-        stream, XpuVarNdarray<Dst>(Shape(dst_dim_vec), reinterpret_cast<Dst*>(dst), num_dims),
-        XpuVarNdarray<const Src>(Shape(src0_dim_vec), reinterpret_cast<const Src*>(src0), num_dims),
-        XpuVarNdarray<const Src>(Shape(src1_dim_vec), reinterpret_cast<const Src*>(src1),
+        stream, XpuVarNdarray<Dst>(dst_shape, reinterpret_cast<Dst*>(dst), num_dims),
+        XpuVarNdarray<const Src>(src0_shape, reinterpret_cast<const Src*>(src0), num_dims),
+        XpuVarNdarray<const Src>(src1_shape, reinterpret_cast<const Src*>(src1),
                                  num_dims));
   }
 };

@@ -77,7 +77,7 @@ template<typename DimT>
 void ShapeViewBase<DimT>::ToShape(Shape* shape) const {
   DimVector dim_vec;
   this->ToDimVector(&dim_vec);
-  shape->assign(dim_vec);
+  *shape = Shape(dim_vec);
 }
 
 template class ShapeViewBase<const int64_t>;

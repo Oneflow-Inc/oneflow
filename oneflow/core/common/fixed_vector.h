@@ -25,7 +25,8 @@ class fixed_vector : public llvm::SmallVector<T, N> {
   using Base = llvm::SmallVector<T, N>;
 
  public:
-  using Base::SmallVector;
+  // https://stackoverflow.com/questions/27954940/a-using-statement-compiles-with-g-fails-compilation-with-clang
+  using Base::Base;
 
   typename Base::reference at(typename Base::size_type idx) {
     CHECK_LT(idx, Base::size());
@@ -35,10 +36,16 @@ class fixed_vector : public llvm::SmallVector<T, N> {
     CHECK_LT(idx, Base::size());
     return (*this)[idx];
   }
-  typename Base::const_iterator cbegin() const { return (typename Base::const_iterator)this->BeginX; }
-  typename Base::const_iterator cend() const { return (typename Base::const_iterator)(this->BeginX) + Base::size(); }
+  typename Base::const_iterator cbegin() const {
+    return (typename Base::const_iterator)this->BeginX;
+  }
+  typename Base::const_iterator cend() const {
+    return (typename Base::const_iterator)(this->BeginX) + Base::size();
+  }
   typename Base::const_iterator cbegin() { return (typename Base::const_iterator)this->BeginX; }
-  typename Base::const_iterator cend() { return (typename Base::const_iterator)(this->BeginX) + Base::size(); }
+  typename Base::const_iterator cend() {
+    return (typename Base::const_iterator)(this->BeginX) + Base::size();
+  }
 };
 
 }  // namespace oneflow
