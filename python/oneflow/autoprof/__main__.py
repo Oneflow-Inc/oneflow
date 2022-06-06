@@ -103,7 +103,7 @@ def get_oneflow_cpu_end_to_end_time(prof) -> float:
 
 def print_summary_from_csv() -> None:
     print("----------------------------------------------------------------------")
-    print('Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time", in microseconds):')
+    print('Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time", in microseconds; "BW" means "Bandwidth" in GB/s):')
     with open(csv_filename, "r") as f:
         table: PrettyTable = prettytable.from_csv(f)
         table.field_names = [
@@ -111,14 +111,13 @@ def print_summary_from_csv() -> None:
             "Args",
             "Lib",
             "KT(GPU)",
-            "Bandwidth(GPU)",
+            "BW(GPU)",
             "KT(1 CPU)",
             "ET(1 CPU)",
             "KT(32 CPU)",
             "ET(32 CPU)",
             "Desc",
         ]
-        table.del_column("Bandwidth(GPU)")
         table.del_column("Desc")
         for row in table.rows:
             row[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row[2]]
