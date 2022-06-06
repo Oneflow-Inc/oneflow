@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/kernel/new_kernel_util.h"
-#include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/matmul.h"
 #include "oneflow/core/cuda/elementwise.cuh"
@@ -81,7 +79,6 @@ __global__ void FusedBiasAddMulAddResidualKernel(const T* in, const T* x, const 
                                                  const T* bias, T* out, const IndexType cols,
                                                  const IndexType elem_cnt) {
   const IndexType global_thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-  // using LoadPack = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Packed<T, pack_size>;
   for (IndexType linear_index = global_thread_id * pack_size,
                  step = gridDim.x * blockDim.x * pack_size;

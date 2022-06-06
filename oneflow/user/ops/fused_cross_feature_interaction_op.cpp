@@ -79,9 +79,9 @@ namespace oneflow {
       .Split(user_op::OpArg("x0", 0), 0)
       .Split(user_op::OpArg("matmul_result", 0), 0)
       .Split(user_op::OpArg("dx0", 0), 0)
-      .Broadcast(user_op::OpArg("dw", 0))
+      .PartialSum(user_op::OpArg("dw", 0))
       .Split(user_op::OpArg("dx", 0), 0)
-      .Broadcast(user_op::OpArg("dbias", 0))
+      .PartialSum(user_op::OpArg("dbias", 0))
       .Build();
 
   return Maybe<void>::Ok();
