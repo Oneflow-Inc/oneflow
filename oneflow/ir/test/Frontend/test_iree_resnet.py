@@ -30,19 +30,20 @@ from google.protobuf import text_format
 os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 
 
-
-
 def _test_iree_resnet_cpu(test_case):
     model = resnet50(pretrained=True)
     model.eval()
+
     class GraphModule(flow.nn.Graph):
         def __init__(self):
             super().__init__()
             self.model = model
+
         def build(self, x):
             return self.model(x)
+
     for iter in range(3):
-        print("======== in cpu iter" + str(iter+1))
+        print("======== in cpu iter" + str(iter + 1))
         func = Runner(GraphModule, return_numpy=True)
         data = np.ones([1, 3, 224, 224]).astype(np.float32)
         input = flow.tensor(data, requires_grad=False)
@@ -52,20 +53,25 @@ def _test_iree_resnet_cpu(test_case):
         graph_output = f(input)
         gap = time.time() - start_time
         print("graph cost: " + str(gap))
-        test_case.assertTrue(np.allclose(iree_output, graph_output.cpu().detach().numpy(),rtol=1.e-1))
+        test_case.assertTrue(
+            np.allclose(iree_output, graph_output.cpu().detach().numpy(), rtol=1.0e-1)
+        )
 
 
 def _test_iree_resnet_cuda(test_case):
     model = resnet50(pretrained=True).cuda()
     model.eval()
+
     class GraphModule(flow.nn.Graph):
         def __init__(self):
             super().__init__()
             self.model = model
+
         def build(self, x):
             return self.model(x)
+
     for iter in range(3):
-        print("======== in cuda iter" + str(iter+1))
+        print("======== in cuda iter" + str(iter + 1))
         func = Runner(GraphModule, return_numpy=True).cuda()
         data = np.ones([1, 3, 224, 224]).astype(np.float32)
         input = flow.tensor(data, requires_grad=False).cuda()
@@ -74,12 +80,16 @@ def _test_iree_resnet_cuda(test_case):
         graph_output = GraphModule()(input)
         gap = time.time() - start_time
         print("graph cost: " + str(gap))
-        test_case.assertTrue(np.allclose(iree_output, graph_output.cpu().detach().numpy(),rtol=1.e-1))
+        test_case.assertTrue(
+            np.allclose(iree_output, graph_output.cpu().detach().numpy(), rtol=1.0e-1)
+        )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestIreeResnet(oneflow.unittest.TestCase):
     def test_iree_resnet_cpu(test_case):
         _test_iree_resnet_cpu(test_case)
+
     def test_iree_resnet_cuda(test_case):
         _test_iree_resnet_cuda(test_case)
 
