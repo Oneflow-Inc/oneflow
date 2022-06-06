@@ -31,10 +31,12 @@ os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 def _test_iree_resnet_cpu(test_case):
     model = resnet50(pretrained=True)
     model.eval()
+
     class GraphModule(flow.nn.Graph):
         def __init__(self):
             super().__init__()
             self.model = model
+
         def build(self, x):
             return self.model(x)
 
@@ -59,10 +61,12 @@ def _test_iree_resnet_cpu(test_case):
 def _test_iree_resnet_cuda(test_case):
     model = resnet50(pretrained=True).cuda()
     model.eval()
+
     class GraphModule(flow.nn.Graph):
         def __init__(self):
             super().__init__()
             self.model = model
+
         def build(self, x):
             return self.model(x)
     func = Runner(GraphModule, return_numpy=True).cuda()
@@ -86,6 +90,7 @@ def _test_iree_resnet_cuda(test_case):
 class TestIreeResnet(oneflow.unittest.TestCase):
     def test_iree_resnet_cpu(test_case):
         _test_iree_resnet_cpu(test_case)
+
     def test_iree_resnet_cuda(test_case):
         _test_iree_resnet_cuda(test_case)
 
