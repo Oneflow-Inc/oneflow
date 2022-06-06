@@ -927,7 +927,9 @@ def _local_to_global(self, placement=None, sbp=None, *, check_meta=True):
 def _global_to_global(
     self, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
 ):
-    return flow.global_to_global(self, placement, sbp, grad_sbp=grad_sbp, check_meta=check_meta)
+    return flow.global_to_global(
+        self, placement, sbp, grad_sbp=grad_sbp, check_meta=check_meta
+    )
 
 
 def _to_global(self, placement=None, sbp=None, **kwargs):
