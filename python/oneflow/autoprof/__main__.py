@@ -76,7 +76,9 @@ def get_oneflow_gpu_kernel_time(prof) -> Union[str, float]:
 
 def get_oneflow_gpu_kernel_bandwidth(prof) -> str:
     gpu_kernel_items = list(
-        filter(lambda x: x.event_type == 1 and x.bandwidth_is_recorded, prof.key_averages())
+        filter(
+            lambda x: x.event_type == 1 and x.bandwidth_is_recorded, prof.key_averages()
+        )
     )
     if len(gpu_kernel_items) == 0:
         return "-"
@@ -103,7 +105,9 @@ def get_oneflow_cpu_end_to_end_time(prof) -> float:
 
 def print_summary_from_csv() -> None:
     print("----------------------------------------------------------------------")
-    print('Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time", in microseconds; "BW" means "Bandwidth" in GB/s):')
+    print(
+        'Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time", in microseconds; "BW" means "Bandwidth" in GB/s):'
+    )
     with open(csv_filename, "r") as f:
         table: PrettyTable = prettytable.from_csv(f)
         table.field_names = [
