@@ -27,6 +27,7 @@ struct LogicalSliceCaptureState : public AutoGradCaptureState {
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
   std::vector<int64_t> step;
+  Symbol<NdSbp> in_sbp;
 };
 
 class LogicalSlice : public OpExprGradFunction<LogicalSliceCaptureState> {
@@ -48,6 +49,7 @@ class LogicalSlice : public OpExprGradFunction<LogicalSliceCaptureState> {
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
     ctx->like_shape = *(inputs[0]->shape());
+    ctx->in_sbp = JUST(inputs[0]->nd_sbp());
     return Maybe<void>::Ok();
   }
 
@@ -60,9 +62,8 @@ class LogicalSlice : public OpExprGradFunction<LogicalSliceCaptureState> {
                                         JUST(out_grads[0]->device())));
     } else {
       const auto& parallel_desc = JUST(out_grads[0]->parallel_desc());
-      const auto& nd_sbp = JUST(out_grads[0]->nd_sbp());
       zeros = JUST(functional::ConsistentConstant(ctx->like_shape, 0, out_grads[0]->dtype(),
-                                                  parallel_desc, *JUST(GetSbpList(nd_sbp))));
+                                                  parallel_desc, *JUST(GetSbpList(ctx->in_sbp))));
     }
     (*in_grads)[0] =
         JUST(functional::LogicalSliceAssign(zeros, out_grads[0], ctx->start, ctx->stop, ctx->step));
@@ -80,6 +81,7 @@ struct LogicalSliceAssignCaptureState : public AutoGradCaptureState {
   std::vector<int64_t> stop;
   std::vector<int64_t> step;
   Shape value_shape;  // used to calculate ref gradient
+  Symbol<NdSbp> value_sbp;
 };
 
 class LogicalSliceAssign : public OpExprGradFunction<LogicalSliceAssignCaptureState> {
@@ -105,7 +107,10 @@ class LogicalSliceAssign : public OpExprGradFunction<LogicalSliceAssignCaptureSt
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
 
-    if (ctx->requires_grad_ref) { ctx->value_shape = *(inputs[1]->shape()); }
+    if (ctx->requires_grad_ref) {
+      ctx->value_shape = *(inputs[1]->shape());
+      ctx->value_sbp = JUST(inputs[1]->nd_sbp());
+    }
     return Maybe<void>::Ok();
   }
 
@@ -120,9 +125,9 @@ class LogicalSliceAssign : public OpExprGradFunction<LogicalSliceAssignCaptureSt
                                           JUST(out_grads[0]->device())));
       } else {
         const auto& parallel_desc = JUST(out_grads[0]->parallel_desc());
-        const auto& nd_sbp = JUST(out_grads[0]->nd_sbp());
-        zeros = JUST(functional::ConsistentConstant(ctx->value_shape, 0, out_grads[0]->dtype(),
-                                                    parallel_desc, *JUST(GetSbpList(nd_sbp))));
+        zeros =
+            JUST(functional::ConsistentConstant(ctx->value_shape, 0, out_grads[0]->dtype(),
+                                                parallel_desc, *JUST(GetSbpList(ctx->value_sbp))));
       }
       (*in_grads)[0] = JUST(functional::LogicalSliceAssign(
           JUST(functional::Identity(out_grads[0])), zeros, ctx->start, ctx->stop, ctx->step));
