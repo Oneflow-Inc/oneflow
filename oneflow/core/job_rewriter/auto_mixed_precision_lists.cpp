@@ -28,7 +28,6 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "tf_prelu",
                                "cublas_fused_mlp",
                                "fused_dot_feature_interaction",
-                               "embedding",
                                "embedding_lookup_placeholder"};
   return white_list;
 }
@@ -90,6 +89,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "identity",
                                "flatten",
                                "squeeze",
+                               "embedding",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",
