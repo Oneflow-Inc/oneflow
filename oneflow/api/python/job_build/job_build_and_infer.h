@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job.pb.h"
-#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/record/record.pb.h"
 
@@ -39,6 +38,10 @@ inline Maybe<std::string> JobBuildAndInferCtx_GetCurrentJobName() {
   return mgr->GetCurrentJobName();
 }
 
+inline Maybe<int64_t> JobBuildAndInferCtx_GetCurrentJobId() {
+  return JUST(GetCurInferCtx())->job_id();
+}
+
 inline Maybe<void> JobBuildAndInferCtx_Close() {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   JUST(mgr->CloseCurrentJobBuildAndInferCtx());
@@ -47,15 +50,15 @@ inline Maybe<void> JobBuildAndInferCtx_Close() {
 
 inline Maybe<void> CurJobBuildAndInferCtx_CheckJob() { return JUST(GetCurInferCtx())->CheckJob(); }
 
-inline Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const cfg::JobConfigProto& cfg_job_conf) {
+inline Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& job_conf_str) {
   JobConfigProto job_conf;
-  cfg_job_conf.ToProto(&job_conf);
+  CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf)) << "job conf parse failed";
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
 }
 
-inline Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const cfg::TrainConf& cfg_train_conf) {
+inline Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_conf_str) {
   TrainConf train_conf;
-  cfg_train_conf.ToProto(&train_conf);
+  CHECK_OR_RETURN(TxtString2PbMessage(train_conf_str, &train_conf)) << "train conf parse failed";
   return JUST(GetCurInferCtx())->SetTrainConf(train_conf);
 }
 

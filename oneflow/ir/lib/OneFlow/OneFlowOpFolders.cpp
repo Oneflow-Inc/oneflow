@@ -108,7 +108,7 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, [this](const auto& tensor) {
     std::vector<int64_t> shape_vec;
     for (auto& x : shape().getValue()) {
-      shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getInt());
+      shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getValue().getSExtValue());
     }
     return functional::Reshape(
         tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())));
@@ -140,7 +140,7 @@ OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
   return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> MaybeTensor {
-    return functional::Sub(lhs, rhs, false);
+    return functional::Sub(lhs, rhs, /*alpha=*/1.0, false);
   });
 }
 

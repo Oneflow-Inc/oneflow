@@ -285,9 +285,9 @@ class HardShrinkFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
@@ -415,9 +415,9 @@ class LeakyReluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
@@ -544,9 +544,9 @@ class SoftShrinkFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }

@@ -18,17 +18,24 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 
-from oneflow.test_utils.automated_test_util import *
-
-
-class TestOnehotError(flow.unittest.TestCase):
-    def test_onehot_error(test_case):
-        with test_case.assertRaises(Exception) as ctx:
-            x = flow.ones((3, 3), dtype=flow.float32)
-            out = flow._C.one_hot(x, 3, 0.9, 0)
+@flow.unittest.skip_unless_1n1d()
+class TestPad(flow.unittest.TestCase):
+    def test_torch_type(test_case):
+        with test_case.assertRaises(TypeError) as exp:
+            F.pad(torch.randn(2, 2))
         test_case.assertTrue(
-            "RuntimeError : one_hot is only applicable to index tensor."
-            in str(ctx.exception)
+            "pad(): argument 'x' must be tensor, not <class 'torch.Tensor'>"
+            in str(exp.exception)
+        )
+
+    def test_numpy_type(test_case):
+        import numpy as np
+
+        with test_case.assertRaises(TypeError) as exp:
+            F.pad(np.random.randn(2, 2))
+        test_case.assertTrue(
+            "pad(): argument 'x' must be tensor, not <class 'numpy.ndarray'>"
+            in str(exp.exception)
         )
 
 

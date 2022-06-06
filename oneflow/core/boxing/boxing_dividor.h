@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_BOXING_BOXING_DIVIDOR_H_
 #define ONEFLOW_CORE_BOXING_BOXING_DIVIDOR_H_
 
+#include <functional>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 

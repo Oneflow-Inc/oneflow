@@ -338,7 +338,7 @@ Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
   std::shared_ptr<Scope> new_scope;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     new_scope =
-        JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_desc.cfg_parallel_conf()));
+        JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_desc.parallel_conf()));
     return Maybe<void>::Ok();
   }));
   // NOTE(chengcheng): need sync vm for get scope right now
@@ -746,10 +746,6 @@ void InsertNcclLogicalOpsInSubGraph(
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
-    if (nccl_op_confs.size() == 0 || subgraph_id_in_same_placement_group <= 0) {
-      break;  // NOTE(chengcheng): skip for first subgraph using compute stream(0).
-    }
-
     int64_t nccl_compute_stream_id = *stream_offset;
     if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.

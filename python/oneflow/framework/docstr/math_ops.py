@@ -39,11 +39,23 @@ add_docstr(
 
 add_docstr(
     oneflow.add,
-    r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
-    The formula is:
+    r"""
+    oneflow.add(input, other, *, alpha=1) -> Tensor
+    
+    Adds `other`, scaled by `alpha`, to `input`. Scalar and broadcast promotation are supported.
 
     .. math::
-        out = input + other
+        out = input + alpha \times other
+        
+    Args:
+        input (Union[int, float, oneflow.Tensor]): the input tensor.
+        other (Union[int, float, oneflow.Tensor]): the tensor or number to add to input.
+    
+    Keyword args:
+        alpha (Number, optional): the multiplier for `other`.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
 
     For example:
 
@@ -72,6 +84,14 @@ add_docstr(
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
+        
+        # use alpha
+        >>> x = flow.zeros(2, 3)
+        >>> y = flow.ones(2, 3)
+        >>> out = flow.add(x, y, alpha=10)
+        >>> out
+        tensor([[10., 10., 10.],
+                [10., 10., 10.]], dtype=oneflow.float32)
 
     """,
 )
@@ -1345,31 +1365,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.logical_not,
-    r"""
-    Computes the element-wise logical NOT of the given input tensors.
-    Zeros are treated as False and nonzeros are treated as True.
-    Args:
-        input (oneflow.Tensor): The input Tensor
-        other (oneflow.Tensor): The Tensor to compute NOT with
-
-    Returns:
-        oneflow.Tensor: The output Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-
-        >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
-        >>> out = flow.logical_not(input)
-        >>> out
-        tensor([False,  True, False], dtype=oneflow.bool)
-
-    """,
-)
 
 add_docstr(
     oneflow.dot,

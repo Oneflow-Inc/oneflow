@@ -48,7 +48,7 @@ class TestModule(nn.Module):
         return x
 
 
-class TestGraph(nn.Graph):
+class _TestGraph(nn.Graph):
     def __init__(self, model):
         super().__init__()
         self.model = model
@@ -63,7 +63,7 @@ class TestGraph(nn.Graph):
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination(test_case):
         model = TestModule()
-        graph = TestGraph(model)
+        graph = _TestGraph(model)
 
         x = flow.ones(
             4,
