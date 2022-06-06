@@ -927,7 +927,7 @@ def _local_to_global(self, placement=None, sbp=None, *, check_meta=True):
 def _global_to_global(
     self, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
 ):
-    return flow.global_to_global(self, placement, sbp, grad_sbp, check_meta)
+    return flow.global_to_global(self, placement, sbp, grad_sbp=grad_sbp, check_meta=check_meta)
 
 
 def _to_global(self, placement=None, sbp=None, **kwargs):
@@ -1191,9 +1191,6 @@ def RegisterMethods():
     Tensor.triu = _triu
     Tensor.where = _where
     Tensor.norm = _norm
-    Tensor.local_to_global = _local_to_global
-    Tensor.global_to_global = _global_to_global
-    Tensor.to_global = _to_global
     Tensor.relu = _relu
     Tensor.relu_ = _relu_inplace
     Tensor.softmax = _softmax
