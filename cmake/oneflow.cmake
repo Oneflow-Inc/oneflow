@@ -433,6 +433,9 @@ endif()
 # build include
 add_custom_target(of_include_copy ALL)
 
+install(TARGETS oneflow of_protoobj of_functional_obj EXPORT oneflow DESTINATION lib)
+install(EXPORT oneflow DESTINATION lib/oneflow)
+
 if(BUILD_PYTHON)
 
   add_dependencies(of_include_copy oneflow_internal of_pyscript_copy)
