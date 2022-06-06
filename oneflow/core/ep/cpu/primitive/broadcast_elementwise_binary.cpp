@@ -44,9 +44,67 @@ float16 GetValue<float16>(Scalar value) {
   return static_cast<float16>(GetValue<float>(value));
 }
 
-template<BinaryOp binary_op, typename Src, typename Dst,
-         void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<Dst>& z,
-                             const XpuVarNdarray<const Src>& x, const XpuVarNdarray<const Src>& y)>
+template<BinaryOp binary_op, typename Src, typename Dst>
+struct BinaryLhsScalarFunctor {
+  BinaryLhsScalarFunctor(Src scalar, Scalar attr0, Scalar attr1)
+      : scalar(scalar), functor(attr0, attr1) {}
+  Dst operator()(Src src) const { return functor(scalar, src); }
+  const Src scalar;
+  BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst> functor;
+};
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+struct BinaryRhsScalarFunctor {
+  BinaryRhsScalarFunctor(Src scalar, Scalar attr0, Scalar attr1)
+      : scalar(scalar), functor(attr0, attr1) {}
+  Dst operator()(Src src) const { return functor(src, scalar); }
+  const Src scalar;
+  BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst> functor;
+};
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const Src* src0,
+                    size_t num_src1_dims, const int64_t* src1_dims, const Src* src1, Dst* dst,
+                    Scalar attr0, Scalar attr1) {
+  auto* cpu_stream = stream->As<CpuStream>();
+  size_t simplified_num_dims = 0;
+  int64_t simplified_src0_dims[kMaxNumDims];
+  int64_t simplified_src1_dims[kMaxNumDims];
+  int64_t simplified_dst_dims[kMaxNumDims];
+  SimplifyBroadcastDims<kMaxNumDims>(num_src0_dims, src0_dims, num_src1_dims, src1_dims,
+                                     &simplified_num_dims, simplified_src0_dims,
+                                     simplified_src1_dims, simplified_dst_dims);
+  CheckInplace(simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+               simplified_dst_dims, dst);
+  if (IsDimsEquals(simplified_num_dims, simplified_src0_dims, simplified_num_dims,
+                   simplified_src1_dims)) {
+    const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
+    auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+    cpu_stream->ParallelFor(0, elem_cnt, [functor, src0, src1, dst](int64_t begin, int64_t end) {
+      for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
+    });
+  } else {
+    if (simplified_num_dims == 1 && simplified_src0_dims[0] == 1) {
+      auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(*src0, attr0, attr1);
+      cpu_stream->ParallelFor(0, simplified_src1_dims[0],
+                              [functor, src1, dst](int64_t begin, int64_t end) {
+                                for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
+                              });
+    } else if (simplified_num_dims == 1 && simplified_src1_dims[0] == 1) {
+      auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(*src1, attr0, attr1);
+      cpu_stream->ParallelFor(0, simplified_src0_dims[0],
+                              [functor, src0, dst](int64_t begin, int64_t end) {
+                                for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
+                              });
+    } else {
+      LaunchWithSimplified<binary_op, Src, Dst>(stream, simplified_num_dims, simplified_src0_dims,
+                                                src0, simplified_src1_dims, src1,
+                                                simplified_dst_dims, dst, attr0, attr1);
+    }
+  }
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
 class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BroadcastElementwiseBinaryImpl);
@@ -54,59 +112,44 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
   ~BroadcastElementwiseBinaryImpl() override = default;
 
   void Launch(Stream* stream, Scalar src0, size_t num_src1_dims, const int64_t* src1_dims,
-              const void* src1, void* dst) override {
-    int64_t elem_cnt = GetElementCount(num_src1_dims, src1_dims);
-    Src src0_val = GetValue<Src>(src0);
-    binary_func(stream, XpuVarNdarray<Dst>(Shape({elem_cnt}), reinterpret_cast<Dst*>(dst), 1),
-                XpuVarNdarray<const Src>(Shape({1}), &src0_val, 1),
-                XpuVarNdarray<const Src>(Shape({elem_cnt}), reinterpret_cast<const Src*>(src1), 1));
+              const void* src1_ptr, void* dst_ptr) override {
+    auto* cpu_stream = stream->As<CpuStream>();
+    const size_t elem_cnt = GetElementCount(num_src1_dims, src1_dims);
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src1 = reinterpret_cast<const Src*>(src1_ptr);
+    auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(GetValue<Src>(src0), attr0, attr1);
+    cpu_stream->ParallelFor(0, elem_cnt, [functor, src1, dst](int64_t begin, int64_t end) {
+      for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
+    });
   }
-  void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
-              Scalar src1, void* dst) override {
-    int64_t elem_cnt = GetElementCount(num_src0_dims, src0_dims);
-    Src src1_val = GetValue<Src>(src1);
-    binary_func(stream, XpuVarNdarray<Dst>(Shape({elem_cnt}), reinterpret_cast<Dst*>(dst), 1),
-                XpuVarNdarray<const Src>(Shape({elem_cnt}), reinterpret_cast<const Src*>(src0), 1),
-                XpuVarNdarray<const Src>(Shape({1}), &src1_val, 1));
+  void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0_ptr,
+              Scalar src1, void* dst_ptr) override {
+    auto* cpu_stream = stream->As<CpuStream>();
+    const size_t elem_cnt = GetElementCount(num_src0_dims, src0_dims);
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src0 = reinterpret_cast<const Src*>(src0_ptr);
+    auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(GetValue<Src>(src1), attr0, attr1);
+    cpu_stream->ParallelFor(0, elem_cnt, [functor, src0, dst](int64_t begin, int64_t end) {
+      for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
+    });
   }
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
               void* dst) override {
-    DimVector src0_dim_vec;
-    DimVector src1_dim_vec;
-    DimVector dst_dim_vec;
-    size_t num_dims = 0;
-    int64_t simplified_src0_dims[kMaxNumDims];
-    int64_t simplified_src1_dims[kMaxNumDims];
-    int64_t simplified_dst_dims[kMaxNumDims];
-    SimplifyBroadcastDims<kMaxNumDims>(num_src0_dims, src0_dims, num_src1_dims, src1_dims,
-                                       &num_dims, simplified_src0_dims, simplified_src1_dims,
-                                       simplified_dst_dims);
-    CheckInplace(num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
-                 simplified_dst_dims, dst);
-    for (int64_t i = 0; i < num_dims; ++i) {
-      src0_dim_vec.push_back(simplified_src0_dims[i]);
-      src1_dim_vec.push_back(simplified_src1_dims[i]);
-      dst_dim_vec.push_back(simplified_dst_dims[i]);
-    }
-    binary_func(
-        stream, XpuVarNdarray<Dst>(Shape(dst_dim_vec), reinterpret_cast<Dst*>(dst), num_dims),
-        XpuVarNdarray<const Src>(Shape(src0_dim_vec), reinterpret_cast<const Src*>(src0), num_dims),
-        XpuVarNdarray<const Src>(Shape(src1_dim_vec), reinterpret_cast<const Src*>(src1),
-                                 num_dims));
+    DispatchLaunch<binary_op, Src, Dst>(
+        stream, num_src0_dims, src0_dims, reinterpret_cast<const Src*>(src0), num_src1_dims,
+        src1_dims, reinterpret_cast<const Src*>(src1), reinterpret_cast<Dst*>(dst), attr0, attr1);
   }
 
  protected:
   Scalar attr0, attr1;
 };
 
-template<BinaryOp binary_op, typename Src, typename Dst,
-         void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<Dst>& z,
-                             const XpuVarNdarray<const Src>& x, const XpuVarNdarray<const Src>& y)>
+template<BinaryOp binary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar attr0,
                                                                           Scalar attr1) {
   return std::unique_ptr<BroadcastElementwiseBinary>(
-      new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst, binary_func>(attr0, attr1));
+      new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst>(attr0, attr1));
 }
 
 #define BINARY_MATH_OP_NDARRAY_PAIR         \
