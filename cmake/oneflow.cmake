@@ -45,11 +45,9 @@ if("${LLVM_PROVIDER}" STREQUAL "install")
   check_variable_defined(LLVM_INSTALL_DIR)
   find_library(LLVMSupportLib LLVMSupport PATHS ${LLVM_INSTALL_DIR}/lib REQUIRED)
   add_library(LLVMSupport UNKNOWN IMPORTED)
-  set_property(TARGET LLVMSupport PROPERTY
-             IMPORTED_LOCATION ${LLVMSupportLib})
+  set_property(TARGET LLVMSupport PROPERTY IMPORTED_LOCATION ${LLVMSupportLib})
   check_variable_defined(LLVM_INCLUDE_DIRS)
-  set_property(TARGET LLVMSupport PROPERTY
-    INTERFACE_INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
+  set_property(TARGET LLVMSupport PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${LLVM_INCLUDE_DIRS})
 endif()
 list(APPEND oneflow_third_party_libs LLVMSupport)
 
