@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 namespace one {
@@ -591,7 +590,6 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
   std::shared_ptr<Tensor> value_tensor;
-  std::cout << "cpython setitem" << std::endl;
 
   if (tensor->is_consistent()) {
     Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
