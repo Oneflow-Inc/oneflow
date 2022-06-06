@@ -110,7 +110,6 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
       }
       if (!has_broadcast) { break; }
     }
-    //if (!IsAllowed(cur_node)) { break; }
     if (cur_node->op().output_bns().size() != 1) { break; }
     const std::string& sole_obn = cur_node->op().SoleObn();
     const NdSbp& obn_nd_sbp = cur_node->NdSbp4BnInOp(sole_obn);
@@ -423,7 +422,6 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
         }
         ParseNdSbpFromStringList(nd_sbp_str_vec, &new_nd_sbp);
         // check allowed by min shard size and evenly split
-        LOG(ERROR) << "op " << var_node->op().op_name() << " shape " << new_var_op_conf.variable_conf().shape().DebugString() << " sbp " << NdSbpToString(new_nd_sbp);
         if (split_is_allowed) {
           split_is_allowed = IsSplitValid(logical_shape, new_nd_sbp, *pd.hierarchy(), threshold);
         }
