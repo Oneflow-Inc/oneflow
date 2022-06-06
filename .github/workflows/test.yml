@@ -411,7 +411,7 @@ jobs:
 
   test-distributed:
     name: Distributed test suite
-    needs: [wait_for_gpu_slot, find-test-cache-distributed]
+    needs: [wait_for_gpu_slot, find-test-cache-distributed, test]
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && ${{ contains(github.event.pull_request.labels.*.name, 'need-test-distributed') }}
