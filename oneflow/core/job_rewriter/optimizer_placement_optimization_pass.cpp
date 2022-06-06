@@ -344,7 +344,7 @@ bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy
   CHECK_EQ(nd_sbp.sbp_parallel_size(), hierachy.NumAxes());
   Shape cur_shape = shape;
   if (cur_shape.elem_cnt() < min_size) { return false; }
-  FOR_RANGE(int64_t, i, hierachy.NumAxes(), ++i) {
+  FOR_RANGE(int64_t, i, 0, hierachy.NumAxes()) {
     const auto& sbp = nd_sbp.sbp_parallel(i);
     if (sbp.has_split_parallel()) {
       const int64_t dim = sbp.split_parallel().axis(); 
