@@ -93,6 +93,7 @@ def seq_to_func_return(seq, need_unpack=False):
         return seq[0]
     return seq
 
+
 class NamedArg(object):
     r"""
     The class for wrapping over the input/output argument and associating each input/output argument with a prefix and name.
@@ -133,9 +134,7 @@ class NamedArg(object):
         )
 
     def set_value(self, value):
-        assert not isinstance(
-            value, NamedArg
-        ), "cannot accept value of type NamedArg"
+        assert not isinstance(value, NamedArg), "cannot accept value of type NamedArg"
         self._value = value
         self._is_value_set = True
 
@@ -169,6 +168,7 @@ class NamedArg(object):
         repr_str += ")"
         return repr_str
 
+
 class ArgsTree(object):
     def __init__(
         self,
@@ -191,7 +191,9 @@ class ArgsTree(object):
         self._next_global_index = 0
 
         if self._gen_name:
-            self._named_io_args = self._construct_named_io_args(self._io_args, self._root_prefix, self._root_name)
+            self._named_io_args = self._construct_named_io_args(
+                self._io_args, self._root_prefix, self._root_name
+            )
 
     def gen_name(self):
         return self._gen_name
@@ -202,7 +204,7 @@ class ArgsTree(object):
         The node returned can be of type NamedArg or non-NamedArg depending on whether gen_name is set. 
         If gen_name is set, the node will be NamedArg. 
         """
-    
+
         if self._gen_name:
             args_to_iter = self._named_io_args
         else:
@@ -215,23 +217,23 @@ class ArgsTree(object):
             if isinstance(curr, NamedArg):
                 curr_value = curr.value()
             else:
-                curr_value = curr 
+                curr_value = curr
 
             if isinstance(curr_value, list) or isinstance(curr_value, tuple):
                 children = curr_value
             elif isinstance(curr_value, dict):
                 children = curr_value.values()
             else:
-                children = None 
+                children = None
 
             if children:
                 for child in reversed(children):
                     stack.append(child)
-            
+
             yield curr
 
     def iter_named_nodes(self):
-        assert self._gen_name , "Only use this if gen_name is set!"
+        assert self._gen_name, "Only use this if gen_name is set!"
         for named_node in self.iter_nodes():
             yield (named_node.prefix() + "_" + named_node.name(), named_node)
 
@@ -280,10 +282,15 @@ class ArgsTree(object):
 
     def _execute_mapping(self, value, map_function):
         if isinstance(value, tuple) or isinstance(value, list):
-            mapped_value = value.__class__(map(lambda x: self._execute_mapping(x, map_function), value))
+            mapped_value = value.__class__(
+                map(lambda x: self._execute_mapping(x, map_function), value)
+            )
         elif isinstance(value, dict):
             mapped_value = value.__class__(
-                map(lambda x: (x[0], self._execute_mapping(x[1], map_function)), value.items())
+                map(
+                    lambda x: (x[0], self._execute_mapping(x[1], map_function)),
+                    value.items(),
+                )
             )
         elif isinstance(value, NamedArg):
             if value.is_leaf():  # only map the leaf: TENSOR/NONE/OPAQUE
