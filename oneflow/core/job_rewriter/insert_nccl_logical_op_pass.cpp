@@ -245,7 +245,6 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                .op_conf();
     return true;
   }
-
   return false;
 }
 
