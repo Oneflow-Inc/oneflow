@@ -229,8 +229,7 @@ class MaxPool1dKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::nchw, static_cast<void*>(const_cast<T*>(src)),
-          static_cast<void*>(const_cast<T*>(dest)), static_cast<void*>(indice_ptr),
+          padding_dims_r, dilation, dm::format_tag::nchw, src, dest, indice_ptr,
           dnnl::algorithm::pooling_max);
     } else {
 #endif
@@ -290,9 +289,8 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::nchw, static_cast<void*>(const_cast<T*>(src)),
-          static_cast<void*>(const_cast<T*>(dest)),
-          static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
+          padding_dims_r, dilation, dm::format_tag::nchw, src, dest, indice_ptr,
+          dnnl::algorithm::pooling_max);
     } else {
 #endif
       DimVector dy_vector(2);
@@ -327,6 +325,17 @@ dm::format_tag OneDnnMaxPool2dFormatTag(const std::string& data_format) {
     UNIMPLEMENTED() << "Unsupported data_format";
   }
 }
+
+dm::dims GetOneDnnDims(const ShapeView& shape, dm::format_tag format_tag) {
+  if (format_tag == dm::format_tag::nchw) {
+    return {shape.At(0), shape.At(1), shape.At(2), shape.At(3)};
+  }
+  if (format_tag == dm::format_tag::nhwc) {
+    return {shape.At(0), shape.At(3), shape.At(1), shape.At(2)};
+  }
+  UNIMPLEMENTED() << "Unsupported data_format";
+};
+
 #endif
 
 template<DeviceType device_type, typename T>
@@ -360,8 +369,9 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims src_dims = {x->shape().At(0), x->shape().At(1), x->shape().At(2), x->shape().At(3)};
-      dm::dims dst_dims = {y->shape().At(0), y->shape().At(1), y->shape().At(2), y->shape().At(3)};
+      auto dnn_format_tag = OneDnnMaxPool2dFormatTag(data_format);
+      dm::dims src_dims = GetOneDnnDims(x->shape(), dnn_format_tag);
+      dm::dims dst_dims = GetOneDnnDims(y->shape(), dnn_format_tag);
       dm::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
       dm::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
@@ -369,9 +379,8 @@ class MaxPool2dKernel final : public user_op::OpKernel {
       dm::dims dilation = {params_3d.dilation_3d()[1] - 1, params_3d.dilation_3d()[2] - 1};
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, OneDnnMaxPool2dFormatTag(data_format),
-          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-          static_cast<void*>(indice_ptr), dnnl::algorithm::pooling_max);
+          padding_dims_r, dilation, dnn_format_tag, src, dest, indice_ptr,
+          dnnl::algorithm::pooling_max);
     } else {
 #endif
       if (data_format == "channels_first") {
@@ -442,10 +451,9 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
-                                dy->shape().At(3)};
-      dm::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
-                                dx->shape().At(3)};
+      auto dnn_format_tag = OneDnnMaxPool2dFormatTag(data_format);
+      dm::dims diff_dst_dims = GetOneDnnDims(dy->shape(), dnn_format_tag);
+      dm::dims diff_src_dims = GetOneDnnDims(dx->shape(), dnn_format_tag);
       dm::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
       dm::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
@@ -454,9 +462,8 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, OneDnnMaxPool2dFormatTag(data_format),
-          static_cast<void*>(const_cast<T*>(src)), static_cast<void*>(const_cast<T*>(dest)),
-          static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
+          padding_dims_r, dilation, dnn_format_tag, src, dest, indice_ptr,
+          dnnl::algorithm::pooling_max);
     } else {
 #endif
       if (data_format == "channels_first") {
@@ -539,8 +546,7 @@ class MaxPool3dKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnPoolForwardCompute(
           ctx->stream(), src_dims, dst_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::ncdhw, static_cast<void*>(const_cast<T*>(src)),
-          static_cast<void*>(const_cast<T*>(dest)), static_cast<void*>(indice_ptr),
+          padding_dims_r, dilation, dm::format_tag::ncdhw, src, dest, indice_ptr,
           dnnl::algorithm::pooling_max);
     } else {
 #endif
@@ -610,9 +616,8 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
 
       OneDnnPoolKernelUtil<T>::OneDnnpoolBackwardCompute(
           ctx->stream(), diff_dst_dims, diff_src_dims, kernel_dims, strides_dims, padding_dims_l,
-          padding_dims_r, dilation, dm::format_tag::ncdhw, static_cast<void*>(const_cast<T*>(src)),
-          static_cast<void*>(const_cast<T*>(dest)),
-          static_cast<void*>(const_cast<int64_t*>(indice_ptr)), dnnl::algorithm::pooling_max);
+          padding_dims_r, dilation, dm::format_tag::ncdhw, src, dest, indice_ptr,
+          dnnl::algorithm::pooling_max);
     } else {
 #endif
       DimVector dy_vector(4);

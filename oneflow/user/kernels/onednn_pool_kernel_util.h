@@ -34,14 +34,14 @@ struct OneDnnPoolKernelUtil {
                                        const dm::dims& dst_dims, const dm::dims& kernel_dims,
                                        const dm::dims& strides_dims, const dm::dims& padding_dims_l,
                                        const dm::dims& padding_dims_r, const dm::dims& dilation,
-                                       dm::format_tag format, void* src, void* dest,
+                                       dm::format_tag format, const void* src, void* dest,
                                        void* indice_ptr, dnnl::algorithm algorithm) {
     stream->As<ep::CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
                                                                dnnl::stream* onednn_stream) {
       auto data_type = CppTypeToOneDnnDtype<T>();
       auto src_md = dm::desc(src_dims, data_type, format);
       auto dst_md = dm::desc(dst_dims, data_type, format);
-      auto src_mem = dm(src_md, *onednn_engine, src);
+      auto src_mem = dm(src_md, *onednn_engine, const_cast<void*>(src));
       auto dst_mem = dm(dst_md, *onednn_engine, dest);
 
       auto pooling_desc = dnnl::pooling_v2_forward::desc(
@@ -63,14 +63,14 @@ struct OneDnnPoolKernelUtil {
                                         const dm::dims& strides_dims,
                                         const dm::dims& padding_dims_l,
                                         const dm::dims& padding_dims_r, const dm::dims& dilation,
-                                        dm::format_tag format, void* diff_dst, void* diff_src,
-                                        void* workspace, dnnl::algorithm algorithm) {
+                                        dm::format_tag format, const void* diff_dst, void* diff_src,
+                                        const void* workspace, dnnl::algorithm algorithm) {
     stream->As<ep::CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
                                                                dnnl::stream* onednn_stream) {
       auto data_type = CppTypeToOneDnnDtype<T>();
       auto diff_dst_md = dm::desc(diff_dst_dims, data_type, format);
       auto diff_src_md = dm::desc(diff_src_dims, data_type, format);
-      auto diff_dst_mem = dm(diff_dst_md, *onednn_engine, diff_dst);
+      auto diff_dst_mem = dm(diff_dst_md, *onednn_engine, const_cast<void*>(diff_dst));
       auto diff_src_mem = dm(diff_src_md, *onednn_engine, diff_src);
 
       auto pooling_back_desc =
@@ -82,7 +82,7 @@ struct OneDnnPoolKernelUtil {
           kernel_dims, dilation, padding_dims_l, padding_dims_r);
       auto pooling_primitive_desc =
           dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
-      auto workspace_mem = dm(pooling_primitive_desc.workspace_desc(), *onednn_engine, workspace);
+      auto workspace_mem = dm(pooling_primitive_desc.workspace_desc(), *onednn_engine, const_cast<void*>(workspace));
       // Backward
       auto pooling_back_primitive_desc = dnnl::pooling_v2_backward::primitive_desc(
           pooling_back_desc, *onednn_engine, pooling_primitive_desc);
