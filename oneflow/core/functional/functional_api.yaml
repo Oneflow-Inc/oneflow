@@ -928,6 +928,18 @@
   signature: " Tensor (Tensor input, Int64 dim, Tensor index, Bool sparse_grad=False) => DimGather"
   bind_python: True
 
+- name: "embedding_renorm_"
+  signature: " Tensor (Tensor in, Tensor indices, Double max_norm, Double norm_type) => EmbeddingReNorm"
+  bind_python: True
+
+- name: "embedding"
+  signature: " Tensor (Tensor weight, Tensor indices, Int64 padding_idx=None, Bool scale_grad_by_freq=False) => Embedding"
+  bind_python: True
+
+- name: "embedding_grad"
+  signature: " Tensor (Tensor dy, Tensor weight, Tensor indices, Int64 padding_idx, Bool scale_grad_by_freq=False) => EmbeddingGrad"
+  bind_python: False
+
 - name: "arg_sort"
   signature: "Tensor (Tensor in, String direction) => ArgSort"
   bind_python: True
