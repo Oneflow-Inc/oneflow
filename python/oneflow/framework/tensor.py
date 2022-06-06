@@ -1140,7 +1140,6 @@ def RegisterMethods():
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
     Tensor.backward = _backward
-    Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__bool__ = is_nonzero

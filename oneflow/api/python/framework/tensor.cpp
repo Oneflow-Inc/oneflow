@@ -141,10 +141,11 @@ static PySequenceMethods PyTensorObject_as_sequence = {
     (ssizeargfunc)PyTensorObject_getitem, /*sq_item*/
 };
 
+extern int PyTensorObject_setitem(PyObject*, PyObject*, PyObject*);
 static PyMappingMethods PyTensorObject_as_mapping = {
     (lenfunc)PyTensorObject_length,
     (binaryfunc)PyTensorObject_subscript,
-    (objobjargproc)PyTensorObject_ass_subscript,
+    (objobjargproc)PyTensorObject_setitem,
 };
 
 static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused) {

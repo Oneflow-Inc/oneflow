@@ -490,7 +490,7 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
   PyObject* sbp = Py_None;
   bool check_meta = true;
   static const char* keywords[4] = {"placement", "sbp", "check_meta", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!", const_cast<char**>(keywords), &placement,
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!:local_to_global", const_cast<char**>(keywords), &placement,
                                    &sbp, &PyBool_Type, &check_meta)) {
     return NULL;
   };
@@ -522,7 +522,7 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   std::vector<Symbol<SbpParallel>> grad_sbp;
   bool check_meta = false;
   static const char* keywords[5] = {"placement", "sbp", "grad_sbp", "check_meta", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!:global_to_global", const_cast<char**>(keywords),
                                    &placement_obj, &sbp_obj, &grad_sbp_obj, &PyBool_Type,
                                    &check_meta)) {
     return NULL;
@@ -574,6 +574,43 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   return result;
 
   END_HANDLE_ERRORS
+}
+
+int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  std::shared_ptr<Tensor> value_tensor;
+  std::cout << "cpython setitem" << std::endl;
+  
+  if(tensor->is_consistent()) {
+    Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
+    auto ndsbp = ASSERT(tensor->nd_sbp());
+    std::vector<Symbol<SbpParallel>> sbp(ndsbp->sbp_parallel_size(), ASSERT(MakeBroadcastSbpParallel()));
+    if(functional::PyScalarCheck(value)) {
+      Scalar value_scalar = functional::PyUnpackScalar(value);
+      value_tensor = ASSERT_PTR(functional::ConsistentConstant({1}, value_scalar, tensor->dtype(), placement, sbp));
+    } else {
+      CHECK_OR_THROW(PyTensor_Check(value));
+      value_tensor = PyTensor_Unpack(value);
+      value_tensor = ASSERT_PTR(functional::ToConsistent(value_tensor, placement, sbp, {}, true));
+    }
+  }
+  else {
+    if(functional::PyScalarCheck(value)) {
+      Scalar value_scalar = functional::PyUnpackScalar(value);
+      value_tensor = ASSERT_PTR(functional::Constant({1}, value_scalar, tensor->dtype(), ASSERT(tensor->device())));
+    }
+    else {
+      CHECK_OR_THROW(PyTensor_Check(value));
+      value_tensor = PyTensor_Unpack(value);
+      Optional<Symbol<Device>> device = ASSERT(tensor->device());
+      value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
+    }
+  }
+  CHECK_OR_THROW(functional::PyTensorIndexCheck(item));
+  functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor);
+  return 0;
+  END_HANDLE_ERRORS_RET(-1)
 }
 
 
