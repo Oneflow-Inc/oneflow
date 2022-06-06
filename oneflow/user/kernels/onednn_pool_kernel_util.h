@@ -85,7 +85,8 @@ struct OneDnnPoolKernelUtil {
           kernel_dims, dilation, padding_dims_l, padding_dims_r);
       auto pooling_primitive_desc =
           dnnl::pooling_v2_forward::primitive_desc(pooling_desc, *onednn_engine);
-      auto workspace_mem = dm(pooling_primitive_desc.workspace_desc(), *onednn_engine, const_cast<void*>(workspace));
+      auto workspace_mem =
+          dm(pooling_primitive_desc.workspace_desc(), *onednn_engine, const_cast<void*>(workspace));
       // Backward
       auto pooling_back_primitive_desc = dnnl::pooling_v2_backward::primitive_desc(
           pooling_back_desc, *onednn_engine, pooling_primitive_desc);
