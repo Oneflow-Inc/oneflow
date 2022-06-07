@@ -518,12 +518,15 @@ static PyObject* PyTensorObject_std(PyObject* self, PyObject* args, PyObject* kw
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_softplus(PyObject* self, PyObject* unused) {
+static PyObject* PyTensorObject_softplus(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObjectPtr concat_args(PyTuple_Pack(1, self));
-  PyObject* result = functional::softplus(NULL, concat_args.get(), NULL);
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
+  double beta = 1.0;
+  double threshold = 20.0;
+  static const char* keywords[3] = {"beta", "threshold", NULL};
+  if(!PyArg_ParseTupleAndKeywords(args, kwargs, "dd:softplus", const_cast<char**>(keywords), &beta, &threshold)) {
+    return NULL;
+  }
+  return PyTensor_New(ASSERT_PTR(functional::Softplus(PyTensor_Unpack(self), beta, threshold)));
   END_HANDLE_ERRORS
 }
 
@@ -657,7 +660,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},
     {"var", (PyCFunction)PyTensorObject_var, METH_VARARGS | METH_KEYWORDS, NULL},
     {"std", (PyCFunction)PyTensorObject_std, METH_VARARGS | METH_KEYWORDS, NULL},
-    {"softplus", PyTensorObject_softplus, METH_NOARGS, NULL},
+    {"softplus", (PyCFunction)PyTensorObject_softplus, METH_VARARGS | METH_KEYWORDS, NULL},
     {"relu", PyTensorObject_relu, METH_NOARGS, NULL},
     {"relu_", PyTensorObject_relu_, METH_NOARGS, NULL},
     {"all", (PyCFunction)PyTensorObject_all, METH_VARARGS | METH_KEYWORDS, NULL},
