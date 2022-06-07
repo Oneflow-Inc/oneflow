@@ -776,14 +776,30 @@ class DimGatherFunctor {
         << Error::RuntimeError() << "gather(): Expected dtype int32 or int64 for index";
     CHECK_EQ_OR_RETURN(sparse_grad, false)
         << Error::RuntimeError() << "Only support bool = False for now!";
-    // For 0-dim Tensor, skip this check.
-    if (input->ndim() > 0 && index->ndim() > 0) {
+    if (index->ndim() > 0) {
       CHECK_LT_OR_RETURN(dim, index->ndim())
           << Error::RuntimeError() << "Dimension out of range (expected to be in range of ["
           << -index->ndim() << ", " << index->ndim() - 1 << "], but got " << dim << ")";
+    } else {
+      // For 0-dim Tensor
+      CHECK_LE_OR_RETURN(dim, index->ndim())
+          << Error::RuntimeError()
+          << "Dimension out of range (expected to be in range of [-1, 0], but got " << dim << ")";
+    }
+    if (input->ndim() > 0 && index->ndim() > 0) {
       CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
           << Error::RuntimeError()
           << "Index tensor must have the same number of dimensions as input tensor";
+    } else if (input->ndim() == 0) {
+      CHECK_LE_OR_RETURN(index->ndim(), 1)
+          << Error::RuntimeError()
+          << "Index tensor must have the same number of dimensions as input tensor";
+    } else {
+      CHECK_LE_OR_RETURN(input->ndim(), 1)
+          << Error::RuntimeError()
+          << "Index tensor must have the same number of dimensions as input tensor";
+    }
+    if (input->ndim() > 0 && index->ndim() > 0) {
       FOR_RANGE(int32_t, i, 0, input->ndim()) {
         if (i != dim) {
           CHECK_LE_OR_RETURN(index->shape()->At(i), input->shape()->At(i))
