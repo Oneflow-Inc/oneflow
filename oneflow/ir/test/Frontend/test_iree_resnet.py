@@ -52,15 +52,16 @@ def _test_iree_resnet_cpu(test_case):
         gap = time.time() - start_time
         print("graph cost: " + str(gap))
         graph_output = graph_output.cpu().detach().numpy()
-        rtol = np.abs((graph_output.cpu() - iree_output) / iree_output)
+        rtol = np.abs((graph_output - iree_output) / iree_output)
         np.set_printoptions(threshold=np.inf)
         print(
             np.transpose(
                 np.concatenate((graph_output, iree_output, rtol), axis=0), [1, 0]
             )
         )
+        # the rtol accumulate layer by layer
         test_case.assertTrue(
-            np.allclose(iree_output, graph_output.cpu().detach().numpy(), rtol=1.0e-1)
+            np.allclose(iree_output, graph_output, rtol=1.0e-1)
         )
 
 
@@ -88,15 +89,16 @@ def _test_iree_resnet_cuda(test_case):
         gap = time.time() - start_time
         print("graph cost: " + str(gap))
         graph_output = graph_output.cpu().detach().numpy()
-        rtol = np.abs((graph_output.cpu() - iree_output) / iree_output)
+        rtol = np.abs((graph_output - iree_output) / iree_output)
         np.set_printoptions(threshold=np.inf)
         print(
             np.transpose(
                 np.concatenate((graph_output, iree_output, rtol), axis=0), [1, 0]
             )
         )
+        # the rtol accumulate layer by layer
         test_case.assertTrue(
-            np.allclose(iree_output, graph_output.cpu().detach().numpy(), rtol=1.0e-1)
+            np.allclose(iree_output, graph_output, rtol=1.0e-1)
         )
 
 
