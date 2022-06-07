@@ -440,44 +440,81 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
                                    &device_obj)) {
     return NULL;
   }
-  PyObjectPtr dict(PyDict_New());
-  if (device_obj == Py_None) {
-    device_obj = PyUnicode_FromString("cuda");
-  } else if (PyLong_Check(device_obj)) {
-    std::string device_str = "cuda:" + std::to_string(PyLong_AsLongLong(device_obj));
-    device_obj = PyUnicode_FromString(device_str.c_str());
+  auto tensor = PyTensor_Unpack(self);
+  if (functional::PyDeviceCheck(device_obj)) {
+    Optional<Symbol<Device>> device = functional::PyUnpackDevice(device_obj);
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, device, NullOpt, false)));
   }
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "device", device_obj) > -1);
-  PyObjectPtr tuple(PyTuple_Pack(1, self));
-  PyObject* result = functional::to(NULL, tuple.get(), dict.get());
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
+  Optional<std::string> device_str;
+  if (device_obj == Py_None) {
+    device_str = "cuda";
+  } else if (PyLong_Check(device_obj)) {
+    device_str = "cuda:" + std::to_string(PyLong_AsLongLong(device_obj));
+  }
+  return PyTensor_New(ASSERT_PTR(functional::To(tensor, device_str, tensor->dtype(), false)));
   END_HANDLE_ERRORS
 }
 
 static PyObject* PyTensorObject_var(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "unbiased", Py_True) > -1);
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", Py_False) > -1);
-  if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 1) > -1); }
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::var(NULL, concat_args.get(), dict.get());
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
+  PyObject* dim_obj = Py_None;
+  PyObject* unbiased_obj = Py_True;
+  PyObject* keepdim_obj = Py_False;
+  static const char* keywords[4] = {"dim", "unbiased", "keepdim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO!O!:var", const_cast<char**>(keywords),
+                                   &dim_obj, &PyBool_Type, &unbiased_obj, &PyBool_Type,
+                                   &keepdim_obj)) {
+    return NULL;
+  }
+  bool unbiased = unbiased_obj == Py_True;
+  bool keepdim = keepdim_obj == Py_True;
+  CHECK_OR_THROW(dim_obj == Py_None || PyLong_Check(dim_obj)
+                 || functional::PyLongSequenceCheck(dim_obj))
+      << Error::TypeError() << "var(): argument 'dim' must be int32 list, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
+  auto tensor = PyTensor_Unpack(self);
+  if (dim_obj == Py_None) {
+    return PyTensor_New(ASSERT_PTR(functional::Variance(tensor, NullOpt, unbiased, keepdim)));
+  }
+  std::vector<int32_t> dim;
+  if (PyLong_Check(dim_obj)) {
+    dim.emplace_back(static_cast<int32_t>(PyLong_AsLong(dim_obj)));
+    return PyTensor_New(ASSERT_PTR(functional::Variance(tensor, dim, unbiased, keepdim)));
+  }
+  dim = functional::PyUnpackLongSequence<int32_t>(dim_obj);
+  return PyTensor_New(ASSERT_PTR(functional::Variance(tensor, dim, unbiased, keepdim)));
   END_HANDLE_ERRORS
 }
 
 static PyObject* PyTensorObject_std(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObjectPtr dict(PyDict_New());
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "unbiased", Py_True) > -1);
-  CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "keepdim", Py_False) > -1);
-  if (kwargs != NULL) { CHECK_OR_THROW(PyDict_Merge(dict.get(), kwargs, 1) > -1); }
-  PyObjectPtr concat_args(concat_self(self, args));
-  PyObject* result = functional::std(NULL, concat_args.get(), dict.get());
-  if (PyErr_Occurred()) { throw py::error_already_set(); }
-  return result;
+  PyObject* dim_obj = Py_None;
+  PyObject* unbiased_obj = Py_True;
+  PyObject* keepdim_obj = Py_False;
+  static const char* keywords[4] = {"dim", "unbiased", "keepdim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO!O!:std", const_cast<char**>(keywords),
+                                   &dim_obj, &PyBool_Type, &unbiased_obj, &PyBool_Type,
+                                   &keepdim_obj)) {
+    return NULL;
+  }
+  bool unbiased = unbiased_obj == Py_True;
+  bool keepdim = keepdim_obj == Py_True;
+  CHECK_OR_THROW(dim_obj == Py_None || PyLong_Check(dim_obj)
+                 || functional::PyLongSequenceCheck(dim_obj))
+      << Error::TypeError() << "std(): argument 'dim' must be int32 list, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
+  auto tensor = PyTensor_Unpack(self);
+  if (dim_obj == Py_None) {
+    return PyTensor_New(
+        ASSERT_PTR(functional::StandardDeviation(tensor, NullOpt, unbiased, keepdim)));
+  }
+  std::vector<int32_t> dim;
+  if (PyLong_Check(dim_obj)) {
+    dim.emplace_back(static_cast<int32_t>(PyLong_AsLong(dim_obj)));
+    return PyTensor_New(ASSERT_PTR(functional::StandardDeviation(tensor, dim, unbiased, keepdim)));
+  }
+  dim = functional::PyUnpackLongSequence<int32_t>(dim_obj);
+  return PyTensor_New(ASSERT_PTR(functional::StandardDeviation(tensor, dim, unbiased, keepdim)));
   END_HANDLE_ERRORS
 }
 

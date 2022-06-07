@@ -1954,7 +1954,7 @@ class StandardDeviationFunctor {
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
     std::vector<int32_t> axis;
-    if(!dim) {
+    if (!dim) {
       for (int i = 0; i < input->ndim(); i++) { axis.emplace_back(i); }
     } else {
       axis = *JUST(CheckAxis(*JUST(dim), input->ndim()));
