@@ -50,6 +50,13 @@ struct BinaryFunctor<device, BinaryOp::kMul, Src, Dst> {
   OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const { return static_cast<Dst>(src0 * src1); }
 };
 
+template<DeviceType device>
+struct BinaryFunctor<device, BinaryOp::kMul, bool, bool> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(bool src0, bool src1) const { return src0 && src1; }
+};
+
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kDiv, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
