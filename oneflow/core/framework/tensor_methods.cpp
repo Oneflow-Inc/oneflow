@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/common/wrap_dim_utils.h"
 
 namespace oneflow {
 namespace one {
@@ -401,10 +402,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
       << "permute size should be equal to input tensor's ndim, but got " << permute.size();
   auto positive_perm = permute;
   for (auto i = 0; i < positive_perm.size(); i++) {
-    if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
-    CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
-        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
-        << ndim << " ) but got " << positive_perm[i];
+    JUST(maybe_wrap_dim(positive_perm[i], ndim));
   }
 
   DimVector target_dims(ndim);

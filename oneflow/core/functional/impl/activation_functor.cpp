@@ -330,10 +330,7 @@ class SoftmaxFunctorBase {
     int64_t dim_ = dim ? JUST(dim) : get_dim();
     if (dim_ < 0) { dim_ += num_axes; }
 
-    CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-        << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
-
+    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
     if (dim_ != num_axes - 1) {
       std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
       for (size_t i = 1; i < input_perm.size(); ++i) { input_perm[i] = i; }
