@@ -22,6 +22,7 @@ from oneflow.framework.tensor import Tensor
 from typing import Callable, Dict, Union, List, Tuple
 from string import Template
 import google.protobuf as protobuf
+from google.protobuf import text_format
 from typing import List, Tuple
 
 def _nd_sbp2repr(nd_sbp):
@@ -124,10 +125,16 @@ def operators_repr(
         for op_conf in graph_proto.net.op:
             op_confs[op_conf.name] = op_conf
 
+        op2placement= dict()
+        for group in graph_proto.placement.placement_group:
+            parallel_conf = group.parallel_conf
+            for op_name in group.op_set.op_name:
+                op2placement[op_name] = str(oneflow.placement(proto_str=text_format.MessageToString(parallel_conf)))
+
     def _op_signature(op: op_conf_util.OperatorConf) -> Tuple[bool, str]:
         bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[op.name].bn_in_op2nd_sbp
         lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
-        signature_template = Template(op.name + "($input) -> ($output)")
+        signature_template = Template(op.name + "($input) -> ($output)" + ":placement=("+ op2placement[op.name] + ")")
         input_sig_str = "..."
         output_sig_str = "..."
 
