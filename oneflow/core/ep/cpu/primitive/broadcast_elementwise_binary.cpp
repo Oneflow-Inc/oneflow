@@ -455,16 +455,27 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
    NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(src_data_type_pair), \
                                  OF_PP_PAIR_FIRST(dst_data_type_pair)>},
 
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY(binary_op, data_type_pair) \
+  {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(data_type_pair),                               \
+                   OF_PP_PAIR_SECOND(data_type_pair)),                                         \
+   NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(data_type_pair),                  \
+                                 OF_PP_PAIR_FIRST(data_type_pair)>},
+
     static const std::map<
         std::tuple<BinaryOp, DataType, DataType>,
         std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
         new_broadcast_elementwise_binary_handle{
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
                                              BINARY_MATH_OP_SEQ, NDARRAY_BINARY_TYPE_SEQ)
+
                 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                     MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
                     BINARY_LOGICAL_OP_SEQ BINARY_COMPARISION_OP_SEQ, NDARRAY_BINARY_TYPE_SEQ,
-                    CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
+                    CPU_PRIMITIVE_BOOL_TYPE_SEQ)
+
+                    OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+                        MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_ACTIVATION_GRAD_ENTRY,
+                        BINARY_ACTIVATION_BACKWARD_OP_SEQ, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY
