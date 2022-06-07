@@ -56,7 +56,6 @@ class VirtualMachine final {
   friend class InstructionsBuilder;
 
   void ScheduleLoop(const std::function<void()>& Initializer);
-  void CallbackLoop(const std::function<void()>& Initializer);
 
   vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
@@ -91,8 +90,6 @@ class VirtualMachine final {
 
   std::thread schedule_thread_;
   Notifier pending_notifier_;
-  std::thread callback_thread_;
-  Notifier callback_notifier_;
 };
 
 }  // namespace oneflow

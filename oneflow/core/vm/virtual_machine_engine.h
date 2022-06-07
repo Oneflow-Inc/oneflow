@@ -39,7 +39,6 @@ class ScheduleCtx {
   ScheduleCtx() = default;
   virtual ~ScheduleCtx() = default;
 
-  virtual void OnGarbageMsgPending() const = 0;
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
 };
 
@@ -63,8 +62,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   }
   size_t total_inserted_instruction_cnt() const { return total_inserted_instruction_cnt_; }
   size_t total_erased_instruction_cnt() const { return total_erased_instruction_cnt_; }
-  void InsertCallbackProbe(const std::function<bool(VirtualMachineEngine*)>& ProbeFunction);
-  void InsertSchedulerProbe(const std::function<void(VirtualMachineEngine*)>& ProbeFunction);
+  void InsertProbe(const std::function<bool(VirtualMachineEngine*)>& ProbeFunction);
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
   const LivelyInstructionList& lively_instruction_list() const { return lively_instruction_list_; }
@@ -80,7 +78,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
   InstructionMsgMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
   InstructionMsgList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
-  InstructionMsgMutexedList* mut_garbage_msg_list() { return &garbage_msg_list_; }
 
   // Returns true if old pending_instruction_list is empty
   Maybe<bool> Receive(InstructionMsgList* instr_list);
@@ -90,8 +87,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   void Callback();
   bool SchedulerThreadUnsafeEmpty() const;
   bool SchedulerEmpty() const;
-  bool CallbackEmpty() const;
-  void FlushGarbageInstructions(const ScheduleCtx& schedule_ctx);
   std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
 
  private:
@@ -128,8 +123,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   void LivelyInstructionListPushBack(Instruction* instruction);
   intrusive::shared_ptr<Instruction> LivelyInstructionListErase(Instruction* instruction,
                                                                 const ScheduleCtx& schedule_ctx);
-  void HandleLocalSchedulerProbe();
-  void HandleLocalCallbackProbe();
+  void HandleLocalProbe();
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
@@ -141,20 +135,13 @@ class VirtualMachineEngine final : public intrusive::Base {
         pending_msg_mutex_(),
         pending_msg_list_(&pending_msg_mutex_),
         local_pending_msg_list_(),
-        callback_msg_mutex_(),
-        garbage_msg_list_(&callback_msg_mutex_),
-        local_garbage_msg_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
         total_inserted_instruction_cnt_(0),
-        total_completed_instruction_cnt_(0),
         total_erased_instruction_cnt_(0),
-        scheduler_probe_mutex_(),
-        scheduler_probe_list_(&scheduler_probe_mutex_),
-        local_scheduler_probe_list_(),
-        callback_probe_mutex_(),
-        callback_probe_list_(&callback_probe_mutex_),
-        local_callback_probe_list_(),
+        probe_mutex_(),
+        probe_list_(&probe_mutex_),
+        local_probe_list_(),
         barrier_instruction_list_() {}
   intrusive::Ref intrusive_ref_;
   // lists or maps
@@ -165,24 +152,15 @@ class VirtualMachineEngine final : public intrusive::Base {
   InstructionMsgMutexedList pending_msg_list_;
   // local_pending_msg_list_ should be consider as the cache of pending_msg_list_.
   InstructionMsgList local_pending_msg_list_;
-  std::mutex callback_msg_mutex_;
-  InstructionMsgMutexedList garbage_msg_list_;
-  // local_garbage_msg_list_ should be consider as the cache of garbage_msg_list_.
-  InstructionMsgList local_garbage_msg_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   size_t total_inserted_instruction_cnt_;
-  size_t total_completed_instruction_cnt_;
-  std::atomic<size_t> total_erased_instruction_cnt_;
+  size_t total_erased_instruction_cnt_;
 
-  using SchedulerProbe = Probe<std::function<void(VirtualMachineEngine*)>>;
-  std::mutex scheduler_probe_mutex_;
-  intrusive::MutexedList<INTRUSIVE_FIELD(SchedulerProbe, probe_hook_)> scheduler_probe_list_;
-  intrusive::List<INTRUSIVE_FIELD(SchedulerProbe, probe_hook_)> local_scheduler_probe_list_;
-  using CallbackProbe = Probe<std::function<bool(VirtualMachineEngine*)>>;
-  std::mutex callback_probe_mutex_;
-  intrusive::MutexedList<INTRUSIVE_FIELD(CallbackProbe, probe_hook_)> callback_probe_list_;
-  intrusive::List<INTRUSIVE_FIELD(CallbackProbe, probe_hook_)> local_callback_probe_list_;
+  using VmProbe = Probe<std::function<bool(VirtualMachineEngine*)>>;
+  std::mutex probe_mutex_;
+  intrusive::MutexedList<INTRUSIVE_FIELD(VmProbe, probe_hook_)> probe_list_;
+  intrusive::List<INTRUSIVE_FIELD(VmProbe, probe_hook_)> local_probe_list_;
 
   BarrierInstructionList barrier_instruction_list_;
   DependenceAccess::object_pool_type access_pool_;

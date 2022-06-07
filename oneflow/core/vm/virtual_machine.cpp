@@ -64,10 +64,6 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   };
 }
 
-void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback"); };
-}
-
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
   Initializer(thread_ctx);
   while (thread_ctx->mut_notifier()->WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
@@ -84,9 +80,6 @@ VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped
   // an argument for VirtualMachineEngine's constructor.
   vm_ = intrusive::make_shared<vm::VirtualMachineEngine>();
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
-  std::function<void()> CallbackInitializer;
-  GetCallbackThreadInitializer(&CallbackInitializer);
-  callback_thread_ = std::thread(&VirtualMachine::CallbackLoop, this, CallbackInitializer);
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
@@ -143,10 +136,7 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
 VirtualMachine::~VirtualMachine() {
   if (!disable_vm_threads_) { CHECK_JUST(CloseVMThreads()); }
   CHECK(vm_->SchedulerEmpty());
-  CHECK(vm_->CallbackEmpty());
   vm_.Reset();
-  callback_notifier_.Close();
-  callback_thread_.join();
 }
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
@@ -192,7 +182,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     if (vm_->flying_instruction_cnt() > kHighWaterMark) {
       JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
         auto bc = std::make_shared<BlockingCounter>(1);
-        vm_->InsertCallbackProbe([bc](vm::VirtualMachineEngine* vm) {
+        vm_->InsertProbe([bc](vm::VirtualMachineEngine* vm) {
           const int64_t kLowWaterMark = GetInstructionLowWaterMark();
           if (vm->flying_instruction_cnt() > kLowWaterMark) { return false; }
           bc->Decrease();
@@ -215,30 +205,23 @@ namespace {
 
 class SingleThreadScheduleCtx : public vm::ScheduleCtx {
  public:
-  explicit SingleThreadScheduleCtx(vm::VirtualMachineEngine* vm) : vm_(vm) {}
+  SingleThreadScheduleCtx() = default;
   ~SingleThreadScheduleCtx() = default;
 
-  void OnGarbageMsgPending() const override { vm_->Callback(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     while (thread_ctx->TryReceiveAndRun() > 0) {}
   }
-
- private:
-  vm::VirtualMachineEngine* vm_;
 };
 
 void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
-  do {
-    vm->Schedule(schedule_ctx);
-    vm->FlushGarbageInstructions(schedule_ctx);
-  } while (!(vm->SchedulerEmpty() && vm->CallbackEmpty()));
+  do { vm->Schedule(schedule_ctx); } while (!(vm->SchedulerEmpty()));
 }
 
 }  // namespace
 
 Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
   if (unlikely(pthread_fork::IsForkedSubProcess() || disable_vm_threads_)) {
-    ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
+    ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx());
   } else {
     pending_notifier_.Notify();
   }
@@ -247,11 +230,8 @@ Maybe<void> VirtualMachine::NotifyOrRunScheduler() {
 
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
   CHECK_OR_RETURN(vm_->SchedulerEmpty()) << "vm scheduler not empty. May be a fatal error occured";
-  CHECK_OR_RETURN(vm_->CallbackEmpty())
-      << "vm callback handler not empty. May be a fatal error occured";
-  CHECK_OR_RETURN(scheduler_stopped_) << "vm scheduler stopped.";
   JUST(vm_->Receive(instr_list));
-  ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
+  ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx());
   return Maybe<void>::Ok();
 }
 
@@ -259,23 +239,19 @@ namespace {
 
 class MultiThreadScheduleCtx : public vm::ScheduleCtx {
  public:
-  explicit MultiThreadScheduleCtx(Notifier* cb_notifier) : cb_notifier_(cb_notifier) {}
+  MultiThreadScheduleCtx() = default;
   ~MultiThreadScheduleCtx() = default;
 
-  void OnGarbageMsgPending() const override { cb_notifier_->Notify(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     thread_ctx->mut_notifier()->Notify();
   }
-
- private:
-  Notifier* cb_notifier_;
 };
 
 }  // namespace
 
 void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   Initializer();
-  MultiThreadScheduleCtx schedule_ctx(&callback_notifier_);
+  MultiThreadScheduleCtx schedule_ctx{};
   auto* vm = mut_vm();
   while (pending_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
     OF_PROFILER_RANGE_GUARD("VirtualMachine::ScheduleLoop");
@@ -304,7 +280,6 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
         do { vm->Schedule(schedule_ctx); } while (!vm->SchedulerThreadUnsafeEmpty());
-        vm->FlushGarbageInstructions(schedule_ctx);
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
   }
@@ -318,12 +293,6 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   }
   scheduler_stopped_ = true;
-}
-
-void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
-  Initializer();
-  auto* vm = mut_vm();
-  while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) { vm->Callback(); }
 }
 
 intrusive::shared_ptr<vm::MirroredObject> VirtualMachine::FindOrCreateScheduleLocalDepObject(
@@ -387,11 +356,12 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
   auto thread_ctx_ptr = std::make_shared<vm::ThreadCtx*>(nullptr);
   {
     auto bc = std::make_shared<BlockingCounter>(1);
-    vm_->InsertSchedulerProbe([thread_ctx_ptr, bc](vm::VirtualMachineEngine* vm) {
+    vm_->InsertProbe([thread_ctx_ptr, bc](vm::VirtualMachineEngine* vm) {
       auto thread_ctx = intrusive::make_shared<vm::ThreadCtx>();
       vm->mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
       *thread_ctx_ptr = thread_ctx.Mutable();
       bc->Decrease();
+      return true;
     });
     JUST(NotifyOrRunScheduler());
     JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
@@ -429,14 +399,14 @@ Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbo
   if (IsCommNetStream::Visit(stream_role)) {
     transport_local_dep_object = FindOrCreateTransportLocalDepObject();
   }
-  vm_->InsertSchedulerProbe([stream_ptr, thread_ctx, device, stream_role, bc,
-                             schedule_local_dep_object,
-                             transport_local_dep_object](vm::VirtualMachineEngine* vm) {
+  vm_->InsertProbe([stream_ptr, thread_ctx, device, stream_role, bc, schedule_local_dep_object,
+                    transport_local_dep_object](vm::VirtualMachineEngine* vm) {
     auto stream = intrusive::make_shared<vm::Stream>(
         thread_ctx, device, stream_role, schedule_local_dep_object, transport_local_dep_object);
     thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
     *stream_ptr = stream.Mutable();
     bc->Decrease();
+    return true;
   });
   JUST(NotifyOrRunScheduler());
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
@@ -204,6 +205,56 @@ class DeConv3dFunctor : public DeConvBaseFunctor {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv3d").Input("in").Input("weight").Output("out").Build());
   }
+};
+
+class EmbeddingReNormFunctor {
+ public:
+  EmbeddingReNormFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("embedding_renorm").Input("in").Input("indices").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& indices, const double& max_norm,
+                           const double& norm_type) const {
+    CHECK_EQ_OR_RETURN(in->ndim(), 2)
+        << Error::RuntimeError() << "The dimension of input should be 2.";
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    JUST(oneflow::VectorAt(*outputs, 0)) = in;
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("max_norm", max_norm));
+    JUST(attrs.SetAttr<double>("norm_type", norm_type));
+
+    JUST(OpInterpUtil::Dispatch(*op_, {in, indices}, outputs.get(), attrs));
+    return JUST(oneflow::VectorAt(*outputs, 0));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class EmbeddingFunctor {
+ public:
+  EmbeddingFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("embedding").Input("weight").Input("indices").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const Optional<int64_t>& padding_idx,
+                           const bool& scale_grad_by_freq) const {
+    CHECK_EQ_OR_RETURN(weight->ndim(), 2) << "The dimension of weight should be 2";
+    int64_t new_padding_idx = -1;
+    if (padding_idx.has_value()) { new_padding_idx = JUST(padding_idx); }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("padding_idx", new_padding_idx));
+    JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {weight, indices}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class MatMulFunctor {
@@ -1855,7 +1906,6 @@ class PadFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
     const int64_t ndim = x->shape()->NumAxes();
-    CHECK_LE_OR_RETURN(ndim, 5) << "Dimension of input tensor should less than or equal to 5";
     CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
@@ -3107,6 +3157,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
+  m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
+  m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
