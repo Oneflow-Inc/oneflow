@@ -29,9 +29,10 @@ constexpr int depth_to_max_tensors[5] = {110, 64, 48, 36, 30};
 // constexpr int depth_to_max_tensors[5] = {110, 2, 48, 36, 30};
 // constexpr int depth_to_max_blocks[5] = {320, 320, 320, 320, 320};
 
-template<typename T, int n>
+template<typename T, typename G, int n>
 struct TensorListMetadata {
-  T* addresses[n][depth_to_max_tensors[n - 1]];
+  G* model_diff_addresses[depth_to_max_tensors[n - 1]];
+  T* model_addresses[depth_to_max_tensors[n - 1]];
   int64_t sizes[depth_to_max_tensors[n - 1]];
 };
 
@@ -40,20 +41,17 @@ __global__ void MultiTensorSGDUpdateGpu(T scale, const float l1, const float l2,
                                         const float weight_decay, float learning_rate_val,
                                         const float* learning_rate, const T* scale_by_ptr,
                                         const int64_t* skip_if,
-                                        TensorListMetadata<T, n> meta_data) {
+                                        TensorListMetadata<T, G, n> meta_data) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
-  //   CUDA_1D_KERNEL_LOOP(i, n) {
-  //     SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
-  //                              learning_rate_val);
-  //   }
+
   // assume each block process a tensor.
   const int32_t tensor_idx = blockIdx.x;
   const int64_t tensor_size = meta_data.sizes[tensor_idx];
   for (int64_t i = threadIdx.x, step = blockDim.x; i < tensor_size; i += step) {
-    SGDUpdateFunctor<T, G>()(meta_data.addresses[0][tensor_idx] + i,
-                             meta_data.addresses[1][tensor_idx] + i, scale, l1, l2, weight_decay,
+    SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
+                             meta_data.model_addresses[tensor_idx] + i, scale, l1, l2, weight_decay,
                              learning_rate_val);
   }
 }
@@ -66,6 +64,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
   ~MultiTensorSGDUpdateKernel() override = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const int64_t n_tensor = ctx->input_size("model");
     const double scale = ctx->Attr<double>("scale");
@@ -93,12 +92,12 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
-    TensorListMetadata<T, 2> tensor_list_meta_data{};
+    TensorListMetadata<T, G, 2> tensor_list_meta_data{};
     int32_t count = 0;
     for (int i = 0; i < n_tensor; i++) {
-      tensor_list_meta_data.addresses[0][count] =
+      tensor_list_meta_data.model_diff_addresses[count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", i))->mut_dptr<G>();
-      tensor_list_meta_data.addresses[1][count] =
+      tensor_list_meta_data.model_addresses[count] =
           (ctx->Tensor4ArgNameAndIndex("model", i))->mut_dptr<T>();
       tensor_list_meta_data.sizes[count] =
           (ctx->Tensor4ArgNameAndIndex("model", i))->shape().elem_cnt();
@@ -125,7 +124,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
 
-// REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, half);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 
