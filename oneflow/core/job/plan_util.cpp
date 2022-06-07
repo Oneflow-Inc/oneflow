@@ -861,8 +861,9 @@ namespace {
 struct MemBlockMemoryInfo {
   int64_t mem_block_id;
   int64_t mem_block_mem_size;
+  bool is_reused;
   std::vector<std::string> ordered_op_names;
-  MemBlockMemoryInfo() : mem_block_id(-1), mem_block_mem_size(-1) {}
+  MemBlockMemoryInfo() : mem_block_id(-1), mem_block_mem_size(-1), is_reused(false) {}
 };
 
 struct ChunkMemoryInfo {
@@ -925,7 +926,10 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     if (mem_block.mem_case().has_device_cuda_mem()) {
       if (mem_block.has_chunk_id()) {
         rank_memory_info.chunk_info.mem_block_ids.push_back(mem_block_id);
+        info.is_reused = true;
       } else {
+        rank_memory_info.chunk_info.mem_block_ids.push_back(mem_block_id);
+        info.is_reused = false;
         rank_memory_info.not_reused_mem_size += mem_block.mem_size();
         rank_memory_info.total_mem_size += mem_block.mem_size();
         if (mem_block.has_variable_op_name()) {
@@ -969,25 +973,23 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
               << B2MiB(rank_memory_info.eager_variable_total_mem_size) << " MiB ].";
   }
 
-  if (IsInDebugMode()) {
-    for (const auto& rank_memory_info : rank_device_memory_infos) {
-      int64_t chunk_id = rank_memory_info.chunk_info.chunk_id;
-      VLOG(2) << " For detail: Chunk id: " << chunk_id << " has "
-              << rank_memory_info.chunk_info.mem_block_ids.size() << " MemBlocks.";
-      for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
-        CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
-        const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
-        VLOG(2) << " In Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id
-                << " has num = " << mem_block_info.ordered_op_names.size()
-                << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size);
-      }
-      for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
-        CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
-        const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
-        for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
-          VLOG(3) << " In MemBlock id: " << mem_block_id << " order: " << i
-                  << " op_name: " << mem_block_info.ordered_op_names.at(i);
-        }
+  for (const auto& rank_memory_info : rank_device_memory_infos) {
+    int64_t chunk_id = rank_memory_info.chunk_info.chunk_id;
+    int64_t device_id = rank_memory_info.device_id;
+    int64_t not_reuse_size = rank_memory_info.not_reused_mem_size;
+    VLOG(2) << " For detail: Chunk id: " << chunk_id << " has "
+            << rank_memory_info.chunk_info.mem_block_ids.size() << " MemBlocks"
+            << " not reused size = " << B2MiB(not_reuse_size);
+    for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
+      CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
+      const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
+      VLOG(2) << "     In Device: " << device_id << " Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id
+              << " has num = " << mem_block_info.ordered_op_names.size()
+              << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size)
+              << " is reused " << mem_block_info.is_reused;
+      for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
+        VLOG(3) << "         In Device: " << device_id << " Chunk id: " << chunk_id << " In MemBlock id: " << mem_block_id << " order: " << i
+                << " is reused " << mem_block_info.is_reused << " op_name: " << mem_block_info.ordered_op_names.at(i);
       }
     }
   }
