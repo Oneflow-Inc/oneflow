@@ -16,6 +16,7 @@ limitations under the License.
 
 #include <Python.h>
 #include "oneflow/api/python/exception/exception.h"
+#include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/core/common/shape_vec.h"
@@ -29,6 +30,13 @@ namespace one {
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 
 using functional::PyObjectPtr;
+
+static PyObject* concat_self(PyObject* self, PyObject* args) {
+  PyObjectPtr self_tuple(PyTuple_Pack(1, self));
+  PyObject* tuple = PySequence_Concat(self_tuple.get(), args);
+  CHECK_OR_THROW(tuple != NULL);
+  return tuple;
+}
 
 #define NB_UNARY_FUNC(func_name, bind_func)                  \
   static PyObject* func_name(PyObject* self) {               \
@@ -50,38 +58,38 @@ using functional::PyObjectPtr;
     END_HANDLE_ERRORS                                        \
   }
 
-NB_UNARY_FUNC(PyTensorObject_absolute, functional::abs);
-NB_UNARY_FUNC(PyTensorObject_negative, functional::negative);
+NB_UNARY_FUNC(PyTensorObject_nb_absolute, functional::abs);
+NB_UNARY_FUNC(PyTensorObject_nb_negative, functional::negative);
 // TODO: not implemented yet
 // NB_UNARY_FUNC(PyTensorObject_positive, functional::positive);
 
-NB_BINARY_FUNC(PyTensorObject_add, functional::add);
-NB_BINARY_FUNC(PyTensorObject_sub, functional::sub);
-NB_BINARY_FUNC(PyTensorObject_mul, functional::mul);
-NB_BINARY_FUNC(PyTensorObject_fmod, functional::fmod);
-NB_BINARY_FUNC(PyTensorObject_div, functional::div);
-NB_BINARY_FUNC(PyTensorObject_and, functional::logical_and);
-NB_BINARY_FUNC(PyTensorObject_xor, functional::logical_xor);
-NB_BINARY_FUNC(PyTensorObject_or, functional::logical_or);
-NB_BINARY_FUNC(PyTensorObject_floor_div, functional::floor_divide);
-NB_BINARY_FUNC(PyTensorObject_true_div, functional::div);
-NB_BINARY_FUNC(PyTensorObject_matrix_multiply, functional::matmul);
+NB_BINARY_FUNC(PyTensorObject_nb_add, functional::add);
+NB_BINARY_FUNC(PyTensorObject_nb_sub, functional::sub);
+NB_BINARY_FUNC(PyTensorObject_nb_mul, functional::mul);
+NB_BINARY_FUNC(PyTensorObject_nb_fmod, functional::fmod);
+NB_BINARY_FUNC(PyTensorObject_nb_div, functional::div);
+NB_BINARY_FUNC(PyTensorObject_nb_and, functional::logical_and);
+NB_BINARY_FUNC(PyTensorObject_nb_xor, functional::logical_xor);
+NB_BINARY_FUNC(PyTensorObject_nb_or, functional::logical_or);
+NB_BINARY_FUNC(PyTensorObject_nb_floor_div, functional::floor_divide);
+NB_BINARY_FUNC(PyTensorObject_nb_true_div, functional::div);
+NB_BINARY_FUNC(PyTensorObject_nb_matrix_multiply, functional::matmul);
 
-PyObject* PyTensorObject_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+static PyObject* PyTensorObject_nb_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
-  auto* result = functional::pow(NULL, tuple.get(), NULL);
+  PyObject* result = functional::pow(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_invert(PyObject* self) {
+static PyObject* PyTensorObject_nb_invert(PyObject* self) {
   HANDLE_ERRORS
   CHECK_OR_THROW(PyTensor_Unpack(self)->dtype()->data_type() == DataType::kBool)
       << "~ (operator.invert) is only implemented on integer and Boolean-type tensors";
   PyObjectPtr tuple(PyTuple_Pack(1, self));
-  auto* result = functional::logical_not(NULL, tuple.get(), NULL);
+  PyObject* result = functional::logical_not(NULL, tuple.get(), NULL);
   if (PyErr_Occurred()) { throw py::error_already_set(); }
   return result;
   END_HANDLE_ERRORS
@@ -93,20 +101,20 @@ static PyObject* PyTensorObject_invert(PyObject* self) {
     PyObjectPtr tuple(PyTuple_Pack(2, a, b));                                  \
     PyObjectPtr dict(PyDict_New());                                            \
     CHECK_OR_THROW(PyDict_SetItemString(dict.get(), "inplace", Py_True) > -1); \
-    const auto& result = bind_func(NULL, tuple.get(), dict.get());             \
+    PyObject* result = bind_func(NULL, tuple.get(), dict.get());               \
     if (PyErr_Occurred()) { throw py::error_already_set(); }                   \
     return result;                                                             \
     END_HANDLE_ERRORS                                                          \
   }
 
 // inplace operators
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_add, functional::add);
-NB_INPLACE_BINARY_FUNC(PyTensorObject_inplace_sub, functional::sub);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_add, functional::add);
+NB_INPLACE_BINARY_FUNC(PyTensorObject_nb_inplace_sub, functional::sub);
 // The interface of inplace mul not mul(*, inplace=True) but mul_
-NB_BINARY_FUNC(PyTensorObject_inplace_mul, functional::mul_);
-NB_BINARY_FUNC(PyTensorObject_inplace_true_div, functional::div_);
+NB_BINARY_FUNC(PyTensorObject_nb_inplace_mul, functional::mul_);
+NB_BINARY_FUNC(PyTensorObject_nb_inplace_true_div, functional::div_);
 
-PyObject* PyTensorObject_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
+PyObject* PyTensorObject_nb_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) {
   HANDLE_ERRORS
   PyObjectPtr tuple(PyTuple_Pack(2, a, b));
   PyObjectPtr dict(PyDict_New());
@@ -118,49 +126,51 @@ PyObject* PyTensorObject_inplace_pow(PyObject* a, PyObject* b, PyObject* unsed) 
 }
 
 PyNumberMethods PyTensorObject_as_number = {
-    PyTensorObject_add,       // nb_add
-    PyTensorObject_sub,       // nb_subtract
-    PyTensorObject_mul,       // nb_multiply
-    PyTensorObject_fmod,      // nb_remainder
-    NULL,                     // nb_divmod
-    PyTensorObject_pow,       // nb_power
-    PyTensorObject_negative,  // nb_negative
-    NULL,                     // nb_positive
-    PyTensorObject_absolute,  // nb_absolute
-    NULL,                     // nb_bool
-    PyTensorObject_invert,    // nb_invert
-    NULL,                     // nb_lshift
-    NULL,                     // nb_rshift
-    PyTensorObject_and,       // nb_and
-    PyTensorObject_xor,       // nb_xor
-    PyTensorObject_or,        // nb_or
-    NULL,                     // nb_int
-    NULL,                     // nb_reserved
-    NULL,                     // nb_float
+    PyTensorObject_nb_add,       // nb_add
+    PyTensorObject_nb_sub,       // nb_subtract
+    PyTensorObject_nb_mul,       // nb_multiply
+    PyTensorObject_nb_fmod,      // nb_remainder
+    NULL,                        // nb_divmod
+    PyTensorObject_nb_pow,       // nb_power
+    PyTensorObject_nb_negative,  // nb_negative
+    NULL,                        // nb_positive
+    PyTensorObject_nb_absolute,  // nb_absolute
+    NULL,                        // nb_bool
+    PyTensorObject_nb_invert,    // nb_invert
+    NULL,                        // nb_lshift
+    NULL,                        // nb_rshift
+    PyTensorObject_nb_and,       // nb_and
+    PyTensorObject_nb_xor,       // nb_xor
+    PyTensorObject_nb_or,        // nb_or
+    NULL,                        // nb_int
+    NULL,                        // nb_reserved
+    NULL,                        // nb_float
 
-    PyTensorObject_inplace_add,  // nb_inplace_add
-    PyTensorObject_inplace_sub,  // nb_inplace_sub
-    PyTensorObject_inplace_mul,  // nb_inplace_mul
-    NULL,                        // nb_inplace_remainder
-    NULL,                        // nb_inplace_pow
-    NULL,                        // nb_inplace_lshift
-    NULL,                        // nb_inplace_rshift
-    NULL,                        // nb_inplace_and
-    NULL,                        // nb_inplace_xor
-    NULL,                        // nb_inplace_or
+    PyTensorObject_nb_inplace_add,  // nb_inplace_add
+    PyTensorObject_nb_inplace_sub,  // nb_inplace_sub
+    PyTensorObject_nb_inplace_mul,  // nb_inplace_mul
+    NULL,                           // nb_inplace_remainder
+    PyTensorObject_nb_inplace_pow,  // nb_inplace_pow
+    NULL,                           // nb_inplace_lshift
+    NULL,                           // nb_inplace_rshift
+    NULL,                           // nb_inplace_and
+    NULL,                           // nb_inplace_xor
+    NULL,                           // nb_inplace_or
 
-    PyTensorObject_floor_div,         // nb_floor_div
-    PyTensorObject_true_div,          // nb_true_div
-    NULL,                             // nb_inplace_floor_div
-    PyTensorObject_inplace_true_div,  // nb_inplace_true_div
+    PyTensorObject_nb_floor_div,         // nb_floor_div
+    PyTensorObject_nb_true_div,          // nb_true_div
+    NULL,                                // nb_inplace_floor_div
+    PyTensorObject_nb_inplace_true_div,  // nb_inplace_true_div
 
-    NULL,                            // nb_index
-    PyTensorObject_matrix_multiply,  // nb_matrix_multiply
-    NULL,                            // not implemented yet nb_inplace_matrix_multiply
+    NULL,                               // nb_index
+    PyTensorObject_nb_matrix_multiply,  // nb_matrix_multiply
+    NULL,                               // nb_inplace_matrix_multiply
 
 };
 
 // extra methods
+
+// functions that accept only one Tensor
 #define UNARY_METHOD(func_name, bind_func)                             \
   static PyObject* func_name(PyObject* self, PyObject* unused) {       \
     HANDLE_ERRORS                                                      \
@@ -210,7 +220,43 @@ UNARY_METHOD(PyTensorObject_cosh, functional::Cosh);
 UNARY_METHOD(PyTensorObject_acosh, functional::Acosh);
 UNARY_METHOD(PyTensorObject_tanh, functional::Tanh);
 UNARY_METHOD(PyTensorObject_atanh, functional::Atanh);
+UNARY_METHOD(PyTensorObject_logical_not, functional::LogicalNot);
 
+// functions that directly pass arguments without parsing
+#define DIRECT_PASS_FUNC(func_name, bind_func)                                   \
+  static PyObject* func_name(PyObject* self, PyObject* args, PyObject* kwargs) { \
+    HANDLE_ERRORS                                                                \
+    PyObjectPtr concat_args(concat_self(self, args));                            \
+    PyObject* result = bind_func(NULL, concat_args.get(), kwargs);               \
+    if (PyErr_Occurred()) { throw py::error_already_set(); }                     \
+    return result;                                                               \
+    END_HANDLE_ERRORS                                                            \
+  }
+
+DIRECT_PASS_FUNC(PyTensorObject_floor_divide, functional::floor_divide)
+DIRECT_PASS_FUNC(PyTensorObject_atan2, functional::atan2)
+DIRECT_PASS_FUNC(PyTensorObject_gt, functional::greater)
+DIRECT_PASS_FUNC(PyTensorObject_ge, functional::greater_equal)
+DIRECT_PASS_FUNC(PyTensorObject_div, functional::div)
+DIRECT_PASS_FUNC(PyTensorObject_div_, functional::div_)
+DIRECT_PASS_FUNC(PyTensorObject_mul, functional::mul)
+DIRECT_PASS_FUNC(PyTensorObject_mul_, functional::mul_)
+DIRECT_PASS_FUNC(PyTensorObject_sub, functional::sub)
+DIRECT_PASS_FUNC(PyTensorObject_fmod, functional::fmod)
+DIRECT_PASS_FUNC(PyTensorObject_logical_and, functional::logical_and)
+DIRECT_PASS_FUNC(PyTensorObject_logical_or, functional::logical_or)
+DIRECT_PASS_FUNC(PyTensorObject_logical_xor, functional::logical_xor)
+DIRECT_PASS_FUNC(PyTensorObject_ne, functional::not_equal)
+DIRECT_PASS_FUNC(PyTensorObject_lt, functional::less)
+DIRECT_PASS_FUNC(PyTensorObject_le, functional::less_equal)
+DIRECT_PASS_FUNC(PyTensorObject_bmm, functional::batch_matmul)
+DIRECT_PASS_FUNC(PyTensorObject_argmax, functional::argmax)
+DIRECT_PASS_FUNC(PyTensorObject_argmin, functional::argmin)
+DIRECT_PASS_FUNC(PyTensorObject_amin, functional::amin)
+DIRECT_PASS_FUNC(PyTensorObject_addcmul, functional::addcmul)
+DIRECT_PASS_FUNC(PyTensorObject_addcmul_, functional::addcmul_)
+
+// functions that parsing at Python C api layer
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
@@ -237,26 +283,118 @@ static PyObject* PyTensorObject_element_size(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_get_device(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  auto device_type = ASSERT(PyTensor_Unpack(self)->device())->enum_type();
+  DeviceType device_type = ASSERT(PyTensor_Unpack(self)->device())->enum_type();
   CHECK_OR_THROW(device_type == DeviceType::kCUDA)
       << "get_device is only available for GPU tensor.";
   return functional::CastToPyObject(ASSERT(PyTensor_Unpack(self)->device())->device_id());
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args) {
+static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* idx_obj = Py_None;
+  static const char* keywords[2] = {"idx", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O:size", const_cast<char**>(keywords),
+                                   &idx_obj)) {
+    return NULL;
+  }
+  auto shape = PyTensor_Unpack(self)->shape();
+  if (idx_obj == NULL || idx_obj == Py_None) return TensorSize_NewFromShape(*shape);
+  int64_t idx = PyLong_AsLongLong(idx_obj);
+  int64_t ndim = shape->NumAxes();
+
+  CHECK_OR_THROW(idx >= -ndim && idx < ndim)
+      << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+      << ", " << ndim - 1 << "], but got " << idx << ")";
+  idx = idx < 0 ? idx + ndim : idx;
+  return PyLong_FromLongLong(shape->At(idx));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_cast(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* dtype = NULL;
+  PyObject* pin_memory = Py_False;
+  static const char* keywords[3] = {"dtype", "pin_memory", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|O!:cast", const_cast<char**>(keywords), &dtype,
+                                   &PyBool_Type, &pin_memory)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(functional::PyDTypeCheck(dtype))
+      << Error::TypeError() << "cast(): argument 'dtype' must be data type, but found "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype)));
+  const auto& result = functional::Cast(PyTensor_Unpack(self), functional::PyUnpackDType(dtype),
+                                        pin_memory == Py_True);
+  return PyTensor_New(ASSERT_PTR(result));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_diag(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  int32_t diagonal = 0;
+  static const char* keywords[2] = {"diagonal", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|i:diag", const_cast<char**>(keywords),
+                                   &diagonal)) {
+    return NULL;
+  }
+  return PyTensor_New(ASSERT_PTR(functional::Diag(PyTensor_Unpack(self), diagonal)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_diagonal(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  int32_t offset = 0;
+  int32_t dim1 = 0;
+  int32_t dim2 = 1;
+  static const char* keywords[4] = {"offset", "dim1", "dim2", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|iii:diagonal", const_cast<char**>(keywords),
+                                   &offset, &dim1, &dim2)) {
+    return NULL;
+  }
+  return PyTensor_New(ASSERT_PTR(functional::Diagonal(PyTensor_Unpack(self), offset, dim1, dim2)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_matmul(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:matmul", const_cast<char**>(keywords),
+                                   &other)) {
+    return NULL;
+  }
+  PyObjectPtr concat_args(PyTuple_Pack(2, self, other));
+  PyObject* result = functional::matmul(NULL, concat_args.get(), NULL);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_sub_(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:sub_", const_cast<char**>(keywords), &other)) {
+    return NULL;
+  }
+  PyObject* result = PyTensorObject_nb_inplace_sub(self, other);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_reshape(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* shape = args;
   if (PyTuple_Size(args) == 1) {
     PyObject* item = PyTuple_GetItem(args, 0);
     if (!PyLong_Check(item)) { shape = item; }
   }
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(shape))
-      << Error::TypeError() << "reshape(): argument 'shape' must be tuple of ints, but found "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape)));
-  const auto& dims = functional::PyUnpackLongSequence<int64_t>(shape);
-  DimVector dim(dims.begin(), dims.end());
-  return PyTensor_New(ASSERT_PTR(functional::Reshape(PyTensor_Unpack(self), Shape(dim))));
+
+  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
+  PyObject* result = functional::reshape(NULL, _args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
   END_HANDLE_ERRORS
 }
 
@@ -273,14 +411,121 @@ static PyObject* PyTensorObject_reshape_as(PyObject* self, PyObject* args, PyObj
   END_HANDLE_ERRORS
 }
 
+#define DATATYPE_FUNC(func_name, dtype)                                    \
+  static PyObject* func_name(PyObject* self, PyObject* unused) {           \
+    HANDLE_ERRORS                                                          \
+    auto tensor = PyTensor_Unpack(self);                                   \
+    return PyTensor_New(ASSERT_PTR(functional::To(tensor, dtype, false))); \
+    END_HANDLE_ERRORS                                                      \
+  }
+
+DATATYPE_FUNC(PyTensorObject_int, DType::Int32());
+DATATYPE_FUNC(PyTensorObject_long, DType::Int64());
+DATATYPE_FUNC(PyTensorObject_float, DType::Float());
+DATATYPE_FUNC(PyTensorObject_double, DType::Double());
+
+static PyObject* PyTensorObject_view(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* shape = args;
+  if (PyTuple_Size(args) == 1) {
+    PyObject* item = PyTuple_GetItem(args, 0);
+    if (!PyLong_Check(item)) { shape = item; }
+  }
+
+  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, shape));
+  PyObject* result = functional::view(NULL, _args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_view_as(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|:view_as", const_cast<char**>(keywords),
+                                   &other)) {
+    return NULL;
+  }
+  return PyTensor_New(ASSERT_PTR(functional::View(tensor, *PyTensor_Unpack(other)->shape())));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_permute(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* dims = args;
+  if (PyTuple_Size(args) == 1) {
+    PyObject* item = PyTuple_GetItem(args, 0);
+    if (!PyLong_Check(item)) { dims = item; }
+  }
+
+  PyObjectPtr _args = PyObjectPtr(PyTuple_Pack(2, self, dims));
+  PyObject* result = functional::permute(NULL, _args.get(), kwargs);
+  if (PyErr_Occurred()) { throw py::error_already_set(); }
+  return result;
+
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  int dim0 = 0;
+  int dim1 = 0;
+  static const char* keywords[3] = {"dim0", "dim1", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "ii:transpose", const_cast<char**>(keywords),
+                                   &dim0, &dim1)) {
+    return NULL;
+  }
+  return PyTensor_New(ASSERT_PTR(functional::Transpose2dim(tensor, dim0, dim1)));
+  END_HANDLE_ERRORS
+}
+
 PyMethodDef PyTensorObject_extra_methods[] = {
     {"byte", PyTensorObject_byte, METH_NOARGS, NULL},
+    {"size", (PyCFunction)PyTensorObject_size, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"argmax", (PyCFunction)PyTensorObject_argmax, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"argmin", (PyCFunction)PyTensorObject_argmin, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"amin", (PyCFunction)PyTensorObject_amin, METH_VARARGS | METH_KEYWORDS, NULL},
     {"dim", PyTensorObject_dim, METH_NOARGS, NULL},
     {"ndimension", PyTensorObject_dim, METH_NOARGS, NULL},
     {"nelement", PyTensorObject_nelement, METH_NOARGS, NULL},
     {"numel", PyTensorObject_nelement, METH_NOARGS, NULL},
     {"element_size", PyTensorObject_element_size, METH_NOARGS, NULL},
     {"get_device", PyTensorObject_get_device, METH_NOARGS, NULL},
+    {"cast", (PyCFunction)PyTensorObject_cast, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"diag", (PyCFunction)PyTensorObject_diag, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"diagonal", (PyCFunction)PyTensorObject_diagonal, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcmul", (PyCFunction)PyTensorObject_addcmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"addcmul_", (PyCFunction)PyTensorObject_addcmul_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"sub_", (PyCFunction)PyTensorObject_sub_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"matmul", (PyCFunction)PyTensorObject_matmul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"int", PyTensorObject_int, METH_NOARGS, NULL},
+    {"long", PyTensorObject_long, METH_NOARGS, NULL},
+    {"float", PyTensorObject_float, METH_NOARGS, NULL},
+    {"double", PyTensorObject_double, METH_NOARGS, NULL},
+
+    // macro DIRECT_PASS_FUNC
+    {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"atan2", (PyCFunction)PyTensorObject_atan2, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"gt", (PyCFunction)PyTensorObject_gt, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"ge", (PyCFunction)PyTensorObject_ge, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"div", (PyCFunction)PyTensorObject_div, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"div_", (PyCFunction)PyTensorObject_div_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mul", (PyCFunction)PyTensorObject_mul, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"mul_", (PyCFunction)PyTensorObject_mul_, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"sub", (PyCFunction)PyTensorObject_sub, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"fmod", (PyCFunction)PyTensorObject_fmod, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logical_and", (PyCFunction)PyTensorObject_logical_and, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logical_or", (PyCFunction)PyTensorObject_logical_or, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"logical_xor", (PyCFunction)PyTensorObject_logical_xor, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"bmm", (PyCFunction)PyTensorObject_bmm, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"ne", (PyCFunction)PyTensorObject_ne, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"lt", (PyCFunction)PyTensorObject_lt, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"le", (PyCFunction)PyTensorObject_le, METH_VARARGS | METH_KEYWORDS, NULL},
+
+    // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
     {"exp", PyTensorObject_exp, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
@@ -330,11 +575,15 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"sin_", PyTensorObject_sin_, METH_NOARGS, NULL},
     {"isnan", PyTensorObject_isnan, METH_NOARGS, NULL},
     {"isinf", PyTensorObject_isinf, METH_NOARGS, NULL},
-    {"floor_divide", PyTensorObject_div, METH_O, NULL},
+    {"logical_not", PyTensorObject_logical_not, METH_NOARGS, NULL},
     {"floor", PyTensorObject_floor, METH_NOARGS, NULL},
     {"floor_", PyTensorObject_floor_, METH_NOARGS, NULL},
-    {"reshape", PyTensorObject_reshape, METH_VARARGS, NULL},
+    {"reshape", (PyCFunction)PyTensorObject_reshape, METH_VARARGS | METH_KEYWORDS, NULL},
     {"reshape_as", (PyCFunction)PyTensorObject_reshape_as, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"view", (PyCFunction)PyTensorObject_view, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"view_as", (PyCFunction)PyTensorObject_view_as, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"permute", (PyCFunction)PyTensorObject_permute, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"transpose", (PyCFunction)PyTensorObject_transpose, METH_VARARGS | METH_KEYWORDS, NULL},
     {NULL},
 };
 
