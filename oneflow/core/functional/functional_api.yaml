@@ -1003,11 +1003,11 @@
   bind_python: False
 
 - name: "nll_loss"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NLLLoss"
   bind_python: True
 
-- name: "nll_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index) => NllLossGrad"
+- name: "nll_grad"
+  signature: "Tensor(Tensor out_grad, Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index) => NLLGrad"
   bind_python: False
 
 - name: "binary_cross_entropy_loss"

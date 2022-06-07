@@ -928,23 +928,20 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
   std::shared_ptr<OpExpr> op_weight_pos_;
 };
 
-class NllLossFunctor {
+class NLLLossFunctor {
  public:
-  NllLossFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("nll")
-                         .Input("input")
-                         .Input("target")
-                         .Output("out")
-                         .Output("total_weight")
-                         .Build());
+  NLLLossFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("nll").Input("input").Input("target").Output("output").Build());
+
     op_weight_ = CHECK_JUST(one::OpBuilder("nll")
                                 .Input("input")
                                 .Input("target")
                                 .Input("weight")
-                                .Output("out")
+                                .Output("output")
                                 .Output("total_weight")
                                 .Build());
   }
+
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t& ignore_index,
@@ -953,39 +950,70 @@ class NllLossFunctor {
         << "Reduction should be none, sum or mean.";
 
     const auto& input_shape = input->shape();
+    const int64_t K = input_shape->NumAxes();
+    CHECK_GE_OR_RETURN(K, 2) << "Expected 2 or more dimensions";
+    const int64_t N = input_shape->At(0);
+    const int64_t C = input_shape->At(1);
+
     const auto& target_shape = target->shape();
-    CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5);
-    CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes());
+    CHECK_EQ_OR_RETURN(target_shape->NumAxes(), K - 1)
+        << "Expected target dimensions (" << K - 1 << ") to match input dimensions (" << K
+        << "), got " << target_shape->NumAxes();
+    CHECK_EQ_OR_RETURN(target_shape->At(0), N)
+        << "Expected input batch_size (" << N << ") to match target batch_size ("
+        << target_shape->At(0) << ")";
+
+    std::shared_ptr<one::Tensor> input_;
+    std::shared_ptr<one::Tensor> target_;
+    if (K > 2) {
+      DimVector idea_target_dim_vec;
+      idea_target_dim_vec.push_back(N);
+      for (int64_t i = 2; i < K; ++i) { idea_target_dim_vec.push_back(input_shape->At(i)); }
+      Shape idea_target_shape(idea_target_dim_vec);
+      CHECK_EQ_OR_RETURN(*target_shape, idea_target_shape)
+          << "Expected target shape " << idea_target_shape.ToString() << ", got "
+          << target_shape->ToString();
+
+      std::vector<int> perm(input_shape->dim_vec().size(), 0);
+      perm[perm.size() - 1] = 1;
+      for (size_t i = 1; i < perm.size() - 1; ++i) { perm[i] = i + 1; }
+
+      input_ = JUST(sequence_function(functional::Transpose)
+                        .then(std::bind(functional::Reshape, std::placeholders::_1, Shape({-1, C})))
+                        .call(input, perm));
+      target_ = JUST(functional::Flatten(target, 0, K - 2));
+    } else {
+      input_ = input;
+      target_ = target;
+    }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
 
-    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
-    input_perm[input_perm.size() - 1] = 1;
-    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+    std::shared_ptr<Tensor> output;
+    std::shared_ptr<Tensor> total_weight;
 
-    const auto input_ = JUST(sequence_function(functional::Transpose)
-                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
-                                                 Shape({-1, input_shape->At(1)})))
-                                 .call(input, input_perm));
-    auto target_ = JUST(functional::Flatten(target, 0, target_shape->NumAxes() - 1));
-
-    std::shared_ptr<TensorTuple> kernel_result;
-    std::shared_ptr<Tensor> result;
     if (weight) {
-      kernel_result = JUST(
+      auto result = JUST(
           OpInterpUtil::Dispatch<TensorTuple>(*op_weight_, {input_, target_, JUST(weight)}, attrs));
+      output = result->at(0);
+      total_weight = result->at(1);
     } else {
-      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {input_, target_}, attrs));
+      output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input_, target_}, attrs));
     }
-    result = JUST(functional::Reshape(kernel_result->at(0), *target_shape));
-    if (reduction == "none") { return result; }
 
-    result = JUST(functional::ReduceSum(result, {}, false));
+    if (K > 2) { output = JUST(functional::Reshape(output, *target_shape)); }
 
-    if (reduction == "sum") { return result; }
+    if (reduction == "none") { return output; }
 
-    return functional::Div(result, kernel_result->at(1));
+    auto sum = JUST(functional::ReduceSum(output, {}, false));
+
+    if (reduction == "sum") { return sum; }
+
+    if (weight) { return functional::Div(sum, total_weight); }
+
+    size_t reduce_count = output->shape()->Count(0);
+    return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
 
  private:
@@ -3123,7 +3151,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::L1LossFunctor>("L1Loss");
   m.add_functor<impl::MseLossFunctor>("MseLoss");
   m.add_functor<impl::KLDivLossFunctor>("KLDivLoss");
-  m.add_functor<impl::NllLossFunctor>("NllLoss");
+  m.add_functor<impl::NLLLossFunctor>("NLLLoss");
   m.add_functor<impl::BinaryCrossEntropyLossFunctor>("BinaryCrossEntropyLoss");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossFunctor>("BinaryCrossEntropyWithLogitsLoss");
   m.add_functor<impl::SparseCrossEntropyFunctor>("SparseCrossEntropy");
