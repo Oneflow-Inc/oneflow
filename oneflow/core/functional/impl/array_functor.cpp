@@ -777,7 +777,7 @@ class DimGatherFunctor {
     CHECK_EQ_OR_RETURN(sparse_grad, false)
         << Error::RuntimeError() << "Only support bool = False for now!";
     // For 0-dim Tensor, skip this check.
-    if (index->ndim() > 0) {
+    if (input->ndim() > 0 && index->ndim() > 0) {
       CHECK_LT_OR_RETURN(dim, index->ndim())
           << Error::RuntimeError() << "Dimension out of range (expected to be in range of ["
           << -index->ndim() << ", " << index->ndim() - 1 << "], but got " << dim << ")";
