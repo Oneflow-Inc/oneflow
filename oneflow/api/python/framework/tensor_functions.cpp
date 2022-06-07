@@ -523,7 +523,8 @@ static PyObject* PyTensorObject_softplus(PyObject* self, PyObject* args, PyObjec
   double beta = 1.0;
   double threshold = 20.0;
   static const char* keywords[3] = {"beta", "threshold", NULL};
-  if(!PyArg_ParseTupleAndKeywords(args, kwargs, "dd:softplus", const_cast<char**>(keywords), &beta, &threshold)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "dd:softplus", const_cast<char**>(keywords), &beta,
+                                   &threshold)) {
     return NULL;
   }
   return PyTensor_New(ASSERT_PTR(functional::Softplus(PyTensor_Unpack(self), beta, threshold)));
