@@ -121,9 +121,9 @@ namespace oneflow {
       .Split(user_op::OpArg("x0", 0), 0)
       .Split(user_op::OpArg("matmul_result", 0), 0)
       .Split(user_op::OpArg("dx0", 0), 0)
-      .Broadcast(user_op::OpArg("dw", 0))
+      .PartialSum(user_op::OpArg("dw", 0))
       .Split(user_op::OpArg("dx", 0), 0)
-      .Broadcast(user_op::OpArg("dbias", 0))
+      .PartialSum(user_op::OpArg("dbias", 0))
       .Build();
 
   return Maybe<void>::Ok();
@@ -148,7 +148,7 @@ REGISTER_USER_OP_GRAD("fused_cross_feature_interaction")
             .Input("weight", op.input("weight", 0))
             .Input("x", op.input("x", 0))
             .Input("x0", op.input("x0", 0))
-            .Input("matmul_result", op.output("x0", 0));
+            .Input("matmul_result", op.output("matmul_result", 0));
       } else if (op.attr<std::string>("interaction_mode") == "matrix") {
         builder.Op("fused_cross_feature_interaction_v2_grad")
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
@@ -156,7 +156,7 @@ REGISTER_USER_OP_GRAD("fused_cross_feature_interaction")
             .Input("bias", op.input("bias", 0))
             .Input("x", op.input("x", 0))
             .Input("x0", op.input("x0", 0))
-            .Input("matmul_result", op.output("x0", 0));
+            .Input("matmul_result", op.output("matmul_result", 0));
       } else {
         UNIMPLEMENTED();
       }
