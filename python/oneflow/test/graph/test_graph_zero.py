@@ -227,10 +227,10 @@ class TestLinearTrainGraphWithZeRO(oneflow.unittest.TestCase):
     def test_linear_train_graph_with_zero_1(test_case):
         _test_linear_train_graph_with_zero(test_case, 1)
 
-    def _test_linear_train_graph_with_zero_2(test_case):
+    def test_linear_train_graph_with_zero_2(test_case):
         _test_linear_train_graph_with_zero(test_case, 2)
 
-    def _test_linear_train_graph_with_zero_3(test_case):
+    def test_linear_train_graph_with_zero_3(test_case):
         _test_linear_train_graph_with_zero(test_case, 3)
 
 
