@@ -49,7 +49,7 @@ void DfsSetNdSbp(const std::vector<::oneflow::SbpParallel>& id2sbp_parallel, int
 }
 
 // Let a nd sbp be consistent with the given hierarchy number
-Maybe<NdSbp> SetNdSbpDim(NdSbp nd_sbp, int32_t hierarchy_num) {
+Maybe<NdSbp> SetNdSbpDim(const NdSbp& nd_sbp, int32_t hierarchy_num) {
   // Do not need to change
   if (nd_sbp.sbp_parallel_size() == hierarchy_num) { return nd_sbp; }
   // (S0, S0) -> S0
