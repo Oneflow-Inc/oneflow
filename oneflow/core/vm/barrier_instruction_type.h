@@ -41,8 +41,9 @@ class BarrierInstructionType : public InstructionType {
 
  protected:
   void Run(const InstructionMsg& instr_msg) const {
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    CHECK_NOTNULL(dynamic_cast<const BarrierPhyInstrOperand*>(phy_instr_operand.get()));
+    const auto* operand =
+        dynamic_cast<const BarrierPhyInstrOperand*>(instr_msg.phy_instr_operand().get());
+    CHECK_NOTNULL(operand)->callback();
   }
 };
 
