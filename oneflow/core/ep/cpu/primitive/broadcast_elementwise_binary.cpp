@@ -96,10 +96,93 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
                               [functor, src0, dst](int64_t begin, int64_t end) {
                                 for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
                               });
+    } else if (simplified_num_dims == 2 && simplified_src0_dims[0] == 1) {  // row * matrix
+      int64_t rows = simplified_src1_dims[0];
+      int64_t cols = simplified_src0_dims[1];
+      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+      cpu_stream->ParallelFor(
+          0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+            for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+              for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+                const int64_t src0_offset = col_idx;
+                const int64_t src1_offset = row_idx * cols + col_idx;
+                dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
+              }
+            }
+          });
+    } else if (simplified_num_dims == 2 && simplified_src1_dims[0] == 1) {  // matrix * row
+      int64_t rows = simplified_src0_dims[0];
+      int64_t cols = simplified_src1_dims[1];
+      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+      cpu_stream->ParallelFor(
+          0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+            for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+              for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+                const int64_t src0_offset = row_idx * cols + col_idx;
+                const int64_t src1_offset = col_idx;
+                dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
+              }
+            }
+          });
+    } else if (simplified_num_dims == 2 && simplified_src0_dims[1] == 1) {  // col * matrix
+      int64_t rows = simplified_src0_dims[0];
+      int64_t cols = simplified_src1_dims[1];
+      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+      cpu_stream->ParallelFor(
+          0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+            for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+              for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+                const int64_t src0_offset = row_idx;
+                const int64_t src1_offset = row_idx * cols + col_idx;
+                dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
+              }
+            }
+          });
+    } else if (simplified_num_dims == 2 && simplified_src1_dims[1] == 1) {  // matrix * col
+      int64_t rows = simplified_src1_dims[0];
+      int64_t cols = simplified_src0_dims[1];
+      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+      cpu_stream->ParallelFor(
+          0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+            for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+              for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+                const int64_t src0_offset = row_idx * cols + col_idx;
+                const int64_t src1_offset = row_idx;
+                dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
+              }
+            }
+          });
     } else {
-      LaunchWithSimplified<binary_op, Src, Dst>(stream, simplified_num_dims, simplified_src0_dims,
-                                                src0, simplified_src1_dims, src1,
-                                                simplified_dst_dims, dst, attr0, attr1);
+      const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_dst_dims);
+      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+      cpu_stream->ParallelFor(
+          0, elem_cnt,
+          [functor, src0, src1, dst, simplified_num_dims, simplified_src0_dims,
+           simplified_src1_dims, simplified_dst_dims](int64_t begin, int64_t end) {
+            auto src0_index_helper = NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_src0_dims,
+                                                                               simplified_num_dims);
+            auto src1_index_helper = NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_src1_dims,
+                                                                               simplified_num_dims);
+            auto dst_index_helper =
+                NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_dst_dims, simplified_num_dims);
+            int64_t src0_index[kMaxNumDims];
+            int64_t src1_index[kMaxNumDims];
+            int64_t dst_index[kMaxNumDims];
+            for (int64_t offset = begin; offset < end; offset++) {
+              dst_index_helper.OffsetToNdIndex(offset, dst_index, simplified_num_dims);
+              for (int i = 0; i < kMaxNumDims; i++) {
+                if (i < simplified_num_dims) {
+                  src0_index[i] = (simplified_src0_dims[i] != 1) ? dst_index[i] : 0;
+                  src1_index[i] = (simplified_src1_dims[i] != 1) ? dst_index[i] : 0;
+                }
+              }
+              const int64_t src0_offset =
+                  src0_index_helper.NdIndexToOffset(src0_index, simplified_num_dims);
+              const int64_t src1_offset =
+                  src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
+              dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
+            }
+          });
     }
   }
 }
@@ -152,15 +235,6 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar
       new BroadcastElementwiseBinaryImpl<binary_op, Src, Dst>(attr0, attr1));
 }
 
-#define BINARY_MATH_OP_NDARRAY_PAIR         \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kAdd, Add) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSub, Sub) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMul, Mul) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kDiv, Div) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMax, Max) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kMin, Min) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kPow, Pow)
-
 #define NDARRAY_BINARY_TYPE_SEQ \
   CPU_PRIMITIVE_BOOL_TYPE_SEQ   \
   CPU_PRIMITIVE_INT8_TYPE_SEQ   \
@@ -170,17 +244,6 @@ std::unique_ptr<BroadcastElementwiseBinary> NewBroadcastElementwiseBinary(Scalar
   CPU_PRIMITIVE_FLOAT_TYPE_SEQ  \
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ \
   CPU_PRIMITIVE_FLOAT16_TYPE_SEQ
-
-#define BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kEqual, EQ)        \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kNotEqual, NE)     \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessThan, LT)     \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLessEqual, LE)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterThan, GT)  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kGreaterEqual, GE) \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalAnd, AND)  \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalOr, OR)    \
-  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kLogicalXor, XOR)
 
 #ifdef WITH_ONEDNN
 
@@ -379,34 +442,28 @@ class BroadcastElementwiseBinaryFactoryImpl : public BroadcastElementwiseBinaryF
                                                   DataType dst_type, size_t max_num_dims,
                                                   Scalar attr0, Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op_pair, data_type_pair) \
-  {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(data_type_pair),  \
-                   OF_PP_PAIR_SECOND(data_type_pair)),                                   \
-   NewBroadcastElementwiseBinary<                                                        \
-       OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_FIRST(data_type_pair),               \
-       OF_PP_PAIR_FIRST(data_type_pair),                                                 \
-       &NdarrayUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair)>::OF_PP_CAT(      \
-           Broadcast, OF_PP_PAIR_SECOND(binary_op_pair))>},
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY(binary_op, data_type_pair) \
+  {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(data_type_pair),                    \
+                   OF_PP_PAIR_SECOND(data_type_pair)),                              \
+   NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(data_type_pair),       \
+                                 OF_PP_PAIR_FIRST(data_type_pair)>},
 
-#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY(                \
-    binary_op_pair, src_data_type_pair, dst_data_type_pair)                                 \
-  {std::make_tuple(OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_SECOND(src_data_type_pair), \
-                   OF_PP_PAIR_SECOND(dst_data_type_pair)),                                  \
-   NewBroadcastElementwiseBinary<                                                           \
-       OF_PP_PAIR_FIRST(binary_op_pair), OF_PP_PAIR_FIRST(src_data_type_pair),              \
-       OF_PP_PAIR_FIRST(dst_data_type_pair),                                                \
-       &NdarrayUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(src_data_type_pair)>::OF_PP_CAT(     \
-           Broadcast, OF_PP_PAIR_SECOND(binary_op_pair))>},
+#define MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY(      \
+    binary_op, src_data_type_pair, dst_data_type_pair)                            \
+  {std::make_tuple(binary_op, OF_PP_PAIR_SECOND(src_data_type_pair),              \
+                   OF_PP_PAIR_SECOND(dst_data_type_pair)),                        \
+   NewBroadcastElementwiseBinary<binary_op, OF_PP_PAIR_FIRST(src_data_type_pair), \
+                                 OF_PP_PAIR_FIRST(dst_data_type_pair)>},
 
     static const std::map<
         std::tuple<BinaryOp, DataType, DataType>,
         std::function<std::unique_ptr<BroadcastElementwiseBinary>(Scalar, Scalar)>>
         new_broadcast_elementwise_binary_handle{
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_MATH_ENTRY,
-                                             BINARY_MATH_OP_NDARRAY_PAIR, NDARRAY_BINARY_TYPE_SEQ)
+                                             BINARY_MATH_OP_SEQ, NDARRAY_BINARY_TYPE_SEQ)
                 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
                     MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY,
-                    BINARY_LOGICAL_COMPARISION_OP_NDARRAY_PAIR, NDARRAY_BINARY_TYPE_SEQ,
+                    BINARY_LOGICAL_OP_SEQ BINARY_COMPARISION_OP_SEQ, NDARRAY_BINARY_TYPE_SEQ,
                     CPU_PRIMITIVE_BOOL_TYPE_SEQ)};
 
 #undef MAKE_NEW_BROADCAST_ELEMENTWISE_BINARY_COMPARASION_AND_LOGICAL_ENTRY

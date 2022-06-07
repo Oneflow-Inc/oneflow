@@ -29,6 +29,15 @@ struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, Src, Dst> {
 };
 
 template<>
+struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, bool, bool> {
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(bool src0, bool src1) const {
+    return static_cast<bool>(std::pow(static_cast<double>(src0), static_cast<double>(src1)));
+  }
+};
+
+template<>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kPow, float16, float16> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
