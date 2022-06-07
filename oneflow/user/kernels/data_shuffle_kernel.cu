@@ -133,12 +133,12 @@ void ShuffleData(cudaStream_t cuda_stream, ncclComm_t comm, DataType data_type,
 }
 
 template<typename IDX>
-void MakeShuffleParams(const IDX* host_num_unique_matrix, const int64_t num_ids,
-                       const int64_t row_size, int64_t parallel_id, int64_t parallel_num,
-                       std::vector<int64_t>* scatter_offset_vec,
-                       std::vector<int64_t>* scatter_elem_cnt_vec,
-                       std::vector<int64_t>* gather_offset_vec,
-                       std::vector<int64_t>* gather_elem_cnt_vec) {
+void MakeShuffleIdParams(const IDX* host_num_unique_matrix, const int64_t num_ids,
+                         const int64_t row_size, int64_t parallel_id, int64_t parallel_num,
+                         std::vector<int64_t>* scatter_offset_vec,
+                         std::vector<int64_t>* scatter_elem_cnt_vec,
+                         std::vector<int64_t>* gather_offset_vec,
+                         std::vector<int64_t>* gather_elem_cnt_vec) {
   scatter_offset_vec->resize(parallel_num);
   scatter_elem_cnt_vec->resize(parallel_num);
   gather_offset_vec->resize(parallel_num);
@@ -157,6 +157,32 @@ void MakeShuffleParams(const IDX* host_num_unique_matrix, const int64_t num_ids,
   }
 }
 
+template<typename IDX>
+void MakeShuffleParams(const IDX* host_num_unique_matrix, const int64_t num_ids,
+                       const int64_t row_size, int64_t parallel_id, int64_t parallel_num,
+                       std::vector<int64_t>* scatter_offset_vec,
+                       std::vector<int64_t>* scatter_elem_cnt_vec,
+                       std::vector<int64_t>* gather_offset_vec,
+                       std::vector<int64_t>* gather_elem_cnt_vec) {
+  scatter_offset_vec->resize(parallel_num);
+  scatter_elem_cnt_vec->resize(parallel_num);
+  gather_offset_vec->resize(parallel_num);
+  gather_elem_cnt_vec->resize(parallel_num);
+  int64_t gather_offset = 0;
+  int64_t scatter_offset = 0;
+  for (int64_t i = 0; i < parallel_num; ++i) {
+    const int64_t scatter_elem_cnt =
+        host_num_unique_matrix[parallel_id * parallel_num + i] * row_size;
+    const int64_t gather_elem_cnt =
+        host_num_unique_matrix[i * parallel_num + parallel_id] * row_size;
+    scatter_offset_vec->at(i) = scatter_offset;
+    scatter_elem_cnt_vec->at(i) = scatter_elem_cnt;
+    gather_offset_vec->at(i) = gather_offset;
+    gather_elem_cnt_vec->at(i) = gather_elem_cnt;
+    scatter_offset += scatter_elem_cnt;
+    gather_offset += gather_elem_cnt;
+  }
+}
 template<typename K, typename U, typename IDX>
 void ShuffleIdsAndTableIds(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
                            int64_t parallel_num, int64_t num_ids, DataType ids_data_type,
@@ -168,8 +194,8 @@ void ShuffleIdsAndTableIds(cudaStream_t cuda_stream, ncclComm_t comm, int64_t pa
   std::vector<int64_t> send_elem_cnt;
   std::vector<int64_t> recv_offsets;
   std::vector<int64_t> recv_elem_cnt;
-  MakeShuffleParams(host_num_unique_matrix, num_ids, 1, parallel_id, parallel_num, &send_offsets,
-                    &send_elem_cnt, &recv_offsets, &recv_elem_cnt);
+  MakeShuffleIdParams(host_num_unique_matrix, num_ids, 1, parallel_id, parallel_num, &send_offsets,
+                      &send_elem_cnt, &recv_offsets, &recv_elem_cnt);
   ShuffleData(cuda_stream, comm, ids_data_type, send_offsets, send_elem_cnt, partitioned_unique_ids,
               recv_offsets, recv_elem_cnt, received_ids);
   *received_elem_cnt = recv_offsets.at(parallel_num - 1) + recv_elem_cnt.at(parallel_num - 1);
@@ -299,6 +325,28 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
   IDX* host_num_unique_matrix_;
 };
 
+template<typename IDX>
+__global__ void ComputeOffset(int32_t n, IDX* value) {
+  IDX sum = 0;
+  for (int i = 0; i < n; ++i) {
+    IDX count = value[i];
+    value[i] = sum;
+    sum += count;
+  }
+}
+
+template<typename IDX>
+__global__ void ContiguousInverseUniquePartitionIndices(const int32_t num_ids, IDX* indices_offset,
+                                                        IDX* inverse_ptr) {
+  CUDA_1D_KERNEL_LOOP(i, num_ids) {
+    int inverse_indice = inverse_ptr[i];
+    int partition_id = inverse_indice / num_ids;
+    int partition_indice = inverse_indice - partition_id * num_ids;
+    int new_offset = indices_offset[partition_id];
+    inverse_ptr[i] = new_offset + partition_indice;
+  }
+}
+
 }  // namespace
 
 template<typename K, typename U, typename IDX>
@@ -368,6 +416,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
         partitioned_unique_ids, partitioned_unique_table_ids,
         reinterpret_cast<IDX*>(inverse_unique_partition_indices->mut_dptr()), workspace_ptr,
         workspace_size, need_process_table_ids);
+
     ncclComm_t comm = kernel_state->comm();
     OF_NCCL_CHECK(ncclAllGather(num_partitioned_unique, num_unique_matrix_ptr, parallel_num,
                                 GetNcclDataType(num_unique_matrix->data_type()), comm,
@@ -377,6 +426,14 @@ class IdShuffleKernel final : public user_op::OpKernel {
                                   parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
                                   cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
+    if (parallel_num > 1) {
+      // use num_partitioned_unique as indices_offset buffer, so should after ncclAllGather.
+      ComputeOffset<<<1, 1, 0, cuda_stream>>>(parallel_num, num_partitioned_unique);
+      ContiguousInverseUniquePartitionIndices<<<BlocksNum4ThreadsNum(num_ids),
+                                                kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+          num_ids, num_partitioned_unique,
+          reinterpret_cast<IDX*>(inverse_unique_partition_indices->mut_dptr()));
+    }
 
     K* received_ids = buffer_manager.template Ptr<K>(IdShuffleBufferType::kReceivedIds);
     U* received_table_ids = buffer_manager.template Ptr<U>(IdShuffleBufferType::kReceivedTableIds);
@@ -1172,21 +1229,17 @@ void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const T* data,
 }
 
 template<typename T, typename IDX>
-void UniquePartitionEmbeddingGrad(ep::Stream* stream, int64_t parallel_id, int64_t parallel_num,
+void UniquePartitionEmbeddingGrad(ep::Stream* stream, int64_t unique_partitioned_num_ids,
                                   int64_t num_ids, int64_t embedding_size,
                                   int64_t padded_embedding_size, const IDX* host_num_unique_matrix,
                                   const T* embedding_grad,
                                   const IDX* inverse_unique_partition_indices,
                                   T* unique_partition_embedding_grad) {
-  for (int64_t i = 0; i < parallel_num; ++i) {
-    const int64_t offset = i * num_ids * padded_embedding_size;
-    const int64_t valid_value_size =
-        host_num_unique_matrix[parallel_id * parallel_num + i] * padded_embedding_size * sizeof(T);
-    OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad + offset, 0, valid_value_size,
-                                  stream->As<ep::CudaStream>()->cuda_stream()));
-  }
+  const int64_t valid_value_size = unique_partitioned_num_ids * padded_embedding_size * sizeof(T);
+  OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad, 0, valid_value_size,
+                                stream->As<ep::CudaStream>()->cuda_stream()));
   UnsortedSegmentSum<T, IDX>(stream, inverse_unique_partition_indices, embedding_grad, num_ids,
-                             parallel_num * num_ids, embedding_size, padded_embedding_size,
+                             unique_partitioned_num_ids, embedding_size, padded_embedding_size,
                              unique_partition_embedding_grad);
 }
 
@@ -1280,6 +1333,10 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     for (int64_t i = 0; i < parallel_num; ++i) {
       cur_rank_num_ids += host_num_unique_matrix[i * parallel_num + parallel_id];
     }
+    int64_t unique_partitioned_num_ids = 0;
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      unique_partitioned_num_ids += host_num_unique_matrix[parallel_id * parallel_num + i];
+    }
     size_t full_num_ids = parallel_num * num_ids;
     size_t full_elem_cnt = full_num_ids * padded_embedding_size;
     size_t unique_partition_embedding_grad_size = GetCudaAlignedSize(full_elem_cnt * sizeof(T));
@@ -1293,7 +1350,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                unique_partition_embedding_grad_size + received_embedding_grad_size);
 
       UniquePartitionEmbeddingGrad(
-          ctx->stream(), parallel_id, parallel_num, num_ids, embedding_size, padded_embedding_size,
+          ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size, padded_embedding_size,
           host_num_unique_matrix, embedding_grad->dptr<T>(),
           reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           unique_partition_embedding_grad);
@@ -1340,22 +1397,15 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           + cur_rank_quantize_factor_size + received_cur_rank_quantize_factor_size);
 
       UniquePartitionEmbeddingGrad(
-          ctx->stream(), parallel_id, parallel_num, num_ids, embedding_size, padded_embedding_size,
+          ctx->stream(), unique_partitioned_num_ids, num_ids, embedding_size, padded_embedding_size,
           host_num_unique_matrix, embedding_grad->dptr<T>(),
           reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           unique_partition_embedding_grad);
 
       // Quantize.
-      for (int64_t i = 0; i < parallel_num; ++i) {
-        const int64_t embedding_grad_offset = i * num_ids * padded_embedding_size;
-        const int64_t quantize_factor_offset = i * num_ids;
-        const int64_t valid_row_size = host_num_unique_matrix[parallel_id * parallel_num + i];
-        DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
-            cuda_stream, unique_partition_embedding_grad + embedding_grad_offset,
-            quantize_cur_rank_embedding_grad + embedding_grad_offset,
-            cur_rank_quantize_factor + quantize_factor_offset, valid_row_size,
-            padded_embedding_size);
-      }
+      DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
+          cuda_stream, unique_partition_embedding_grad, quantize_cur_rank_embedding_grad,
+          cur_rank_quantize_factor, unique_partitioned_num_ids, padded_embedding_size);
 
       ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids,
                             padded_embedding_size, data_type, host_num_unique_matrix,
