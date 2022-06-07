@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
@@ -204,6 +205,56 @@ class DeConv3dFunctor : public DeConvBaseFunctor {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv3d").Input("in").Input("weight").Output("out").Build());
   }
+};
+
+class EmbeddingReNormFunctor {
+ public:
+  EmbeddingReNormFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("embedding_renorm").Input("in").Input("indices").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
+                           const std::shared_ptr<one::Tensor>& indices, const double& max_norm,
+                           const double& norm_type) const {
+    CHECK_EQ_OR_RETURN(in->ndim(), 2)
+        << Error::RuntimeError() << "The dimension of input should be 2.";
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    JUST(oneflow::VectorAt(*outputs, 0)) = in;
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("max_norm", max_norm));
+    JUST(attrs.SetAttr<double>("norm_type", norm_type));
+
+    JUST(OpInterpUtil::Dispatch(*op_, {in, indices}, outputs.get(), attrs));
+    return JUST(oneflow::VectorAt(*outputs, 0));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class EmbeddingFunctor {
+ public:
+  EmbeddingFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("embedding").Input("weight").Input("indices").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& indices,
+                           const Optional<int64_t>& padding_idx,
+                           const bool& scale_grad_by_freq) const {
+    CHECK_EQ_OR_RETURN(weight->ndim(), 2) << "The dimension of weight should be 2";
+    int64_t new_padding_idx = -1;
+    if (padding_idx.has_value()) { new_padding_idx = JUST(padding_idx); }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("padding_idx", new_padding_idx));
+    JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {weight, indices}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class MatMulFunctor {
@@ -1855,7 +1906,6 @@ class PadFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
                            const std::string& mode, const Scalar& value) const {
     const int64_t ndim = x->shape()->NumAxes();
-    CHECK_LE_OR_RETURN(ndim, 5) << "Dimension of input tensor should less than or equal to 5";
     CHECK_LE_OR_RETURN(pad.size(), 2 * ndim)
         << "Pad size should less than or equal to input axes * 2.";
     MutableAttrMap attrs;
@@ -1865,11 +1915,11 @@ class PadFunctor {
           << "Length of pad must be even but instead it equals " << pad.size();
       if (IsFloatingDataType(x->dtype()->data_type())
           || x->dtype()->data_type() == DataType::kFloat16) {
-        JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
+        JUST(attrs.SetAttr<double>("floating_constant_value", value.As<double>()));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
       } else if (IsIntegralDataType(x->dtype()->data_type())) {
         JUST(attrs.SetAttr<double>("floating_constant_value", 0));
-        JUST(attrs.SetAttr<int64_t>("integral_constant_value", JUST(value.As<int64_t>())));
+        JUST(attrs.SetAttr<int64_t>("integral_constant_value", value.As<int64_t>()));
       } else {
         UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
       }
@@ -2111,16 +2161,16 @@ class OneHotFunctor {
     bool is_off_value_double = off_value.IsFloatingPoint();
     if (is_on_value_double || is_off_value_double) {
       JUST(attrs.SetAttr<DataType>("dtype", kFloat));
-      JUST(attrs.SetAttr<double>("floating_on_value", JUST(on_value.As<double>())));
-      JUST(attrs.SetAttr<double>("floating_off_value", JUST(off_value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_on_value", on_value.As<double>()));
+      JUST(attrs.SetAttr<double>("floating_off_value", off_value.As<double>()));
       JUST(attrs.SetAttr<int64_t>("integer_on_value", 0));
       JUST(attrs.SetAttr<int64_t>("integer_off_value", 0));
     } else {
       JUST(attrs.SetAttr<DataType>("dtype", kInt64));
       JUST(attrs.SetAttr<double>("floating_on_value", 0));
       JUST(attrs.SetAttr<double>("floating_off_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(on_value.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(off_value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_on_value", on_value.As<int64_t>()));
+      JUST(attrs.SetAttr<int64_t>("integer_off_value", off_value.As<int64_t>()));
     }
     return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {input}, attrs);
   }
@@ -2446,22 +2496,22 @@ class FusedScaleTrilFunctor {
     bool is_fill_value_double = fill_value.IsFloatingPoint();
     bool is_scale_double = scale.IsFloatingPoint();
     if (is_fill_value_double) {
-      JUST(attrs.SetAttr<double>("floating_fill_value", JUST(fill_value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_fill_value", fill_value.As<double>()));
       JUST(attrs.SetAttr<int64_t>("integer_fill_value", 0));
       JUST(attrs.SetAttr<bool>("is_floating_fill_value", true));
     } else {
       JUST(attrs.SetAttr<double>("floating_fill_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_fill_value", JUST(fill_value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_fill_value", fill_value.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("is_floating_fill_value", false));
     }
 
     if (is_scale_double) {
-      JUST(attrs.SetAttr<double>("floating_scale_value", JUST(scale.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_scale_value", scale.As<double>()));
       JUST(attrs.SetAttr<int64_t>("integer_scale_value", 0));
       JUST(attrs.SetAttr<bool>("is_floating_scale_value", true));
     } else {
       JUST(attrs.SetAttr<double>("floating_scale_value", 0));
-      JUST(attrs.SetAttr<int64_t>("integer_scale_value", JUST(scale.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_scale_value", scale.As<int64_t>()));
       JUST(attrs.SetAttr<bool>("is_floating_scale_value", false));
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -3107,6 +3157,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
+  m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
+  m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");

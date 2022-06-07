@@ -879,6 +879,17 @@
   signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
   bind_python: True
 
+- name: "repeat_interleave_index"
+  signature: "Tensor (Tensor input, Tensor cumsum, Int32 dim) => RepeatInterLeaveIndex"
+  bind_python: False
+
+- name: "repeat_interleave"
+  signature: [
+    "Tensor (Tensor input, Int32 repeats, Int32 dim=None) => RepeatInterLeaveInt",
+    "Tensor (Tensor input, Tensor repeats, Int32 dim, Int32 output_size=None) => RepeatInterLeaveTensor",
+  ]
+  bind_python: True
+
 - name: "tile"
   signature: "Tensor (Tensor input, Shape dims) => Tile"
   bind_python: True
@@ -916,6 +927,18 @@
 - name: "dim_gather"
   signature: " Tensor (Tensor input, Int64 dim, Tensor index, Bool sparse_grad=False) => DimGather"
   bind_python: True
+
+- name: "embedding_renorm_"
+  signature: " Tensor (Tensor in, Tensor indices, Double max_norm, Double norm_type) => EmbeddingReNorm"
+  bind_python: True
+
+- name: "embedding"
+  signature: " Tensor (Tensor weight, Tensor indices, Int64 padding_idx=None, Bool scale_grad_by_freq=False) => Embedding"
+  bind_python: True
+
+- name: "embedding_grad"
+  signature: " Tensor (Tensor dy, Tensor weight, Tensor indices, Int64 padding_idx, Bool scale_grad_by_freq=False) => EmbeddingGrad"
+  bind_python: False
 
 - name: "arg_sort"
   signature: "Tensor (Tensor in, String direction) => ArgSort"

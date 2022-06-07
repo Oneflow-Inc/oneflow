@@ -38,6 +38,7 @@ def _test_diagonal_impl(test_case, placement, sbp):
     return z
 
 
+@unittest.skip("TODO: fix this test")
 class TestDiagonalConsistent(flow.unittest.TestCase):
     @globaltest
     def test_diagonal(test_case):

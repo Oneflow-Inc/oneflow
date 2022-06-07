@@ -1147,7 +1147,8 @@ Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(
   };
   const auto& maybe_ok =
       TRY(GenerateBackwardOpConfIf(op, &bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
-  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error());
+  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error())
+      << GetFormatedSerializedError(::oneflow::private_details::JustGetError(maybe_ok));
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
