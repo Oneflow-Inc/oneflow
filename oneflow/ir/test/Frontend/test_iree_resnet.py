@@ -45,17 +45,23 @@ def _test_iree_resnet_cpu(test_case):
     input = flow.tensor(data, requires_grad=False)
     f = GraphModule()
     for iter in range(3):
-        print("======== in cpu iter" + str(iter+1))
+        print("======== in cpu iter" + str(iter + 1))
         iree_output = func(input)
         start_time = time.time()
         graph_output = f(input)
         gap = time.time() - start_time
         print("graph cost: " + str(gap))
         graph_output = graph_output.cpu().detach().numpy()
-        rtol = np.abs((graph_output.cpu()- iree_output)/iree_output)
+        rtol = np.abs((graph_output.cpu() - iree_output) / iree_output)
         np.set_printoptions(threshold=np.inf)
-        print(np.transpose(np.concatenate((graph_output, iree_output, rtol),axis=0), [1, 0]))
-        test_case.assertTrue(np.allclose(iree_output, graph_output.cpu().detach().numpy(),rtol=1.e-1))
+        print(
+            np.transpose(
+                np.concatenate((graph_output, iree_output, rtol), axis=0), [1, 0]
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(iree_output, graph_output.cpu().detach().numpy(), rtol=1.0e-1)
+        )
 
 
 def _test_iree_resnet_cuda(test_case):
@@ -69,22 +75,30 @@ def _test_iree_resnet_cuda(test_case):
 
         def build(self, x):
             return self.model(x)
+
     func = Runner(GraphModule, return_numpy=True).cuda()
     data = np.ones([1, 3, 224, 224]).astype(np.float32)
     input = flow.tensor(data, requires_grad=False).cuda()
     f = GraphModule()
     for iter in range(3):
-        print("======== in cuda iter" + str(iter+1))
+        print("======== in cuda iter" + str(iter + 1))
         iree_output = func(input)
         start_time = time.time()
         graph_output = f(input)
         gap = time.time() - start_time
         print("graph cost: " + str(gap))
         graph_output = graph_output.cpu().detach().numpy()
-        rtol = np.abs((graph_output.cpu()- iree_output)/iree_output)
+        rtol = np.abs((graph_output.cpu() - iree_output) / iree_output)
         np.set_printoptions(threshold=np.inf)
-        print(np.transpose(np.concatenate((graph_output, iree_output, rtol),axis=0), [1, 0]))
-        test_case.assertTrue(np.allclose(iree_output, graph_output.cpu().detach().numpy(),rtol=1.e-1))
+        print(
+            np.transpose(
+                np.concatenate((graph_output, iree_output, rtol), axis=0), [1, 0]
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(iree_output, graph_output.cpu().detach().numpy(), rtol=1.0e-1)
+        )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestIreeResnet(oneflow.unittest.TestCase):
