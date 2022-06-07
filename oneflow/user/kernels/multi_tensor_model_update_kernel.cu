@@ -50,8 +50,7 @@ __global__ void MultiTensorSGDUpdateGpu(T scale, const float l1, const float l2,
   // assume each block process a tensor.
   const int32_t tensor_idx = blockIdx.x;
   const int64_t tensor_size = meta_data.sizes[tensor_idx];
-  for (int64_t i = blockIdx.x * blockDim.x + threadIdx.x, step = gridDim.x * blockDim.x;
-       i < tensor_size; i += step) {
+  for (int64_t i = threadIdx.x, step = blockDim.x; i < tensor_size; i += step) {
     SGDUpdateFunctor<T, G>()(meta_data.addresses[0][tensor_idx] + i,
                              meta_data.addresses[1][tensor_idx] + i, scale, l1, l2, weight_decay,
                              learning_rate_val);
@@ -96,14 +95,17 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
     TensorListMetadata<T, 2> tensor_list_meta_data{};
     int32_t count = 0;
     for (int i = 0; i < n_tensor; i++) {
-      tensor_list_meta_data.addresses[0][i] =
+      tensor_list_meta_data.addresses[0][count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", i))->mut_dptr<G>();
-      tensor_list_meta_data.addresses[1][i] =
+      tensor_list_meta_data.addresses[1][count] =
           (ctx->Tensor4ArgNameAndIndex("model", i))->mut_dptr<T>();
-      tensor_list_meta_data.sizes[i] =
+      tensor_list_meta_data.sizes[count] =
           (ctx->Tensor4ArgNameAndIndex("model", i))->shape().elem_cnt();
       count += 1;
       if (count == depth_to_max_tensors[1] || i == n_tensor - 1) {
+        for (int j = 0; i < n_tensor; i++) {
+          printf("elem_cnt is: %ld \n", tensor_list_meta_data.sizes[j]);
+        }
         MultiTensorSGDUpdateGpu<T, G, 2>
             <<<count, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                 static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, learning_rate_ptr,

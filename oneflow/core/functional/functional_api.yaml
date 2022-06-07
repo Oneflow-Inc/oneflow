@@ -2285,3 +2285,7 @@
 - name: "pack_padded_sequence"
   signature: "TensorTuple (Tensor input, Tensor lengths, Bool batch_first) => PackPaddedSequence"
   bind_python: True
+
+- name: "multi_tensor_sgd_update"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, Tensor learning_rate, Tensor skip_if, Double scale, Float weight_decay) => MultiTensorSgdUpdate"
+  bind_python: True

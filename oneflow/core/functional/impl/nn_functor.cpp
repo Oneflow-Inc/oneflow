@@ -3147,6 +3147,43 @@ class RocAucScoreFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MultiTensorSgdUpdateFunctor {
+ public:
+  MultiTensorSgdUpdateFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+
+    for (int n = 1; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
+                              .Input("model", n)
+                              .Input("model_diff", n)
+                              .Input("learning_rate")
+                              .Input("skip_if")
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const std::shared_ptr<one::Tensor>& learning_rate,
+                         const std::shared_ptr<one::Tensor>& skip_if, const double& scale,
+                         const float& weight_decay) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    const int64_t weight_size = model.size();
+
+    TensorTuple input(2 * weight_size + 2);
+    std::copy(model.begin(), model.end(), input.begin());
+    std::copy(model_diff.begin(), model_diff.end(), input.begin() + weight_size);
+    input[2 * weight_size] = learning_rate;
+    input[2 * weight_size + 1] = skip_if;
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[weight_size], input, attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3236,6 +3273,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
+  m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
 }
 
 }  // namespace functional
