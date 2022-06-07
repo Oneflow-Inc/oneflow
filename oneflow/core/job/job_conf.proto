@@ -228,8 +228,8 @@ message JobConfigProto {
   optional bool enable_fuse_optimizer_update_cast = 211 [default = false];
 
   optional bool enable_reuse_mem = 300 [default = true];
-  optional bool enable_inplace = 301 [default = false];
-  optional bool enable_inplace_in_reduce_struct = 302 [default = false];
+  optional bool enable_inplace = 301 [default = true];
+  optional bool enable_inplace_in_reduce_struct = 302 [default = true];
 
   optional bool do_parallel_cast_before_widening_type_cast = 403 [default = true];
 
