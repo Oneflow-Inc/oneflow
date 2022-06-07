@@ -26,6 +26,7 @@ namespace {
 // Refer from Apex
 // TODO:  Kernel arg size limit may be <4KB for some other cards (ie Jetson)
 constexpr int depth_to_max_tensors[5] = {110, 64, 48, 36, 30};
+// constexpr int depth_to_max_tensors[5] = {110, 2, 48, 36, 30};
 // constexpr int depth_to_max_blocks[5] = {320, 320, 320, 320, 320};
 
 template<typename T, int n>
@@ -103,9 +104,9 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
           (ctx->Tensor4ArgNameAndIndex("model", i))->shape().elem_cnt();
       count += 1;
       if (count == depth_to_max_tensors[1] || i == n_tensor - 1) {
-        for (int j = 0; i < n_tensor; i++) {
-          printf("elem_cnt is: %ld \n", tensor_list_meta_data.sizes[j]);
-        }
+        // for (int j = 0; j < n_tensor; j++) {
+        //   printf("elem_cnt is: %ld \n", tensor_list_meta_data.sizes[j]);
+        // }
         MultiTensorSGDUpdateGpu<T, G, 2>
             <<<count, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                 static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, learning_rate_ptr,
