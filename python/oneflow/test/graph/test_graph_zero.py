@@ -219,7 +219,7 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).
         # But their consumer will consum them as flow.sbp.broadcast.
-        #one_eval_iter()
+        one_eval_iter()
 
     iter_num = 1
     graph_check_list = train_with_graph(iter_num)
@@ -228,13 +228,13 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestLinearTrainGraphWithZeRO(oneflow.unittest.TestCase):
-    def _test_linear_train_graph_with_zero_1(test_case):
+    def test_linear_train_graph_with_zero_1(test_case):
         _test_linear_train_graph_with_zero(test_case, 1)
 
     def test_linear_train_graph_with_zero_2(test_case):
         _test_linear_train_graph_with_zero(test_case, 2)
 
-    def _test_linear_train_graph_with_zero_3(test_case):
+    def test_linear_train_graph_with_zero_3(test_case):
         _test_linear_train_graph_with_zero(test_case, 3)
 
 

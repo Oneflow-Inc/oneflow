@@ -253,7 +253,6 @@ void JobBuilder::RemoveOpByName(const std::string& op_name) {
 }
 
 void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_names) {
-  // rm module conf
   // Update net
   DLNetConf net = job_->net();
   job_->mutable_net()->clear_op();
