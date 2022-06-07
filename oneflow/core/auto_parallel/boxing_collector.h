@@ -129,6 +129,15 @@ class BoxingCollector final {
                                             BoxingCollector* boxing_collector_producer,
                                             BoxingCollector* boxing_collector_consumer,
                                             const std::vector<std::vector<int32_t>>& diag_nodes);
+  // Ask for sbp combination for general basic communication
+  Maybe<void> AskSbpCombination4GeneralBasicCommunication(
+      const NdSbp& sbp_producer, const NdSbp& sbp_consumer, const BlobDesc& logical_blob_desc,
+      const ParallelDesc& producer_parallel_desc, const ParallelDesc& consumer_parallel_desc,
+      std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos);
+  // Ask for a all-split sbp which is closed to the original one
+  Maybe<void> AskCloseAllSplitSbp(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc,
+                                  const BlobDesc& logical_blob_desc,
+                                  std::vector<NdSbp>& middle_sbps);
   // Stores all the possible SbpParallel.
   HashMap<::oneflow::SbpParallel, int32_t> sbp_parallel_universe_;
   // Relationship between id and Sbp Parallel

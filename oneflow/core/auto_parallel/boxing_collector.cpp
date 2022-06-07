@@ -71,6 +71,16 @@ Maybe<NdSbp> SetNdSbpDim(const NdSbp& nd_sbp, int32_t hierarchy_num) {
   return new_sbp;
 }
 
+int32_t TotalNumSplit(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc) {
+  int32_t total_num_split = 1;
+  for (int32_t i = 0; i < nd_sbp.sbp_parallel_size(); i++) {
+    if (nd_sbp.sbp_parallel(i).has_split_parallel()) {
+      total_num_split *= parallel_desc.hierarchy()->At(i);
+    }
+  }
+  return total_num_split;
+}
+
 }  // namespace
 
 // A constructor with init, designed for uncustomized boxing collector
@@ -496,25 +506,6 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
     return Maybe<void>::Ok();
   }
-  // If compute_cost==false + 2D sbp + same placment + nccl logical + not (p->b),
-  // Use nccl logical send recv instead of middle node.
-  // Note that in op sbp inference, cost of middle nodes is still used for the moment.
-#ifdef WITH_CUDA
-  if (compute_cost == false && producer_parallel_desc.hierarchy()->NumAxes() == 2
-      && producer_parallel_desc == consumer_parallel_desc
-      && !(NdSbpHasPartialParallel(sbp_consumer)) &&
-      // TODO(): When same dim 0 finished dealing with (*, P) -> (*, S) in nccl logical pass, open
-      // this condition. When dealing with (P, P) -> (B, S0), middle node will change it to (P, P)
-      // -> (P, S0) -> (B, S0), neither same dim 0 or send recv in nccl logical pass can deal with
-      // (P, P) -> (P, S0) at the moment.
-      // !(NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) &&
-      Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
-    VLOG(3) << "Middle node insertion is skipped when src sbp is " << NdSbpToString(sbp_producer)
-            << " dst sbp is " << NdSbpToString(sbp_consumer)
-            << ", because nccl logical send/recv can handle this.";
-    return Maybe<void>::Ok();
-  }
-#endif  // WITH_CUDA
 
   // Dealing with 1D sbp to 1D sbp
   // Specifically, S -> P.
@@ -568,6 +559,22 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   // Transfer for the same machines, devices and hierarchy.
   if (sbp_producer == sbp_consumer) { return Maybe<void>::Ok(); }
   const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
+
+#ifdef WITH_CUDA
+  // Use a general basic communication if no P in the consumer
+  if ((!NdSbpHasPartialParallel(sbp_consumer))) {
+    if (NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) {
+      // (?, P, ?)->(Si, Sj)->(?, B, ?), two-step transfer
+      JUST(AskSbpCombination4GeneralBasicCommunication(
+          sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+          consumer_parallel_desc, middle_sbps, diag_node_pos));
+    } else {
+      // one-step transfer
+      return Maybe<void>::Ok();
+    }
+  }
+#endif  // WITH_CUDA
+
   *diag_node_pos = 0;
   // Dealing with nD sbp, n>2
   if (parallel_hierarchy->NumAxes() > 2) {
@@ -1004,6 +1011,90 @@ Maybe<void> BoxingCollector::FilterNdSbpList4LogicalShape(const BlobDesc& logica
       nd_sbp_lists_.pop_back();
     }
   }
+  return Maybe<void>::Ok();
+}
+
+// Ask for sbp combination for general basic communication
+Maybe<void> BoxingCollector::AskSbpCombination4GeneralBasicCommunication(
+    const NdSbp& sbp_producer, const NdSbp& sbp_consumer, const BlobDesc& logical_blob_desc,
+    const ParallelDesc& producer_parallel_desc, const ParallelDesc& consumer_parallel_desc,
+    std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos) {
+  bool close2producer = true;
+  if (producer_parallel_desc.parallel_num() == consumer_parallel_desc.parallel_num()) {
+    // Get close to the one with more splits
+    close2producer = TotalNumSplit(sbp_producer, producer_parallel_desc)
+                     > TotalNumSplit(sbp_consumer, consumer_parallel_desc);
+  } else {
+    // Get close to the one with more machines
+    close2producer = producer_parallel_desc.parallel_num() > consumer_parallel_desc.parallel_num();
+  }
+  // Get the contiguous sbp
+  if (close2producer) {
+    JUST(AskCloseAllSplitSbp(sbp_producer, producer_parallel_desc, logical_blob_desc, middle_sbps));
+    *diag_node_pos = 1;
+  } else {
+    JUST(AskCloseAllSplitSbp(sbp_consumer, consumer_parallel_desc, logical_blob_desc, middle_sbps));
+    *diag_node_pos = 0;
+  }
+  return Maybe<void>::Ok();
+}
+
+// Ask for a all-split sbp which is close to the original one
+Maybe<void> BoxingCollector::AskCloseAllSplitSbp(const NdSbp& nd_sbp,
+                                                 const ParallelDesc& parallel_desc,
+                                                 const BlobDesc& logical_blob_desc,
+                                                 std::vector<NdSbp>& middle_sbps) {
+  Shape remain_shape = logical_blob_desc.shape();
+  Shape rest_split_shape = logical_blob_desc.shape();
+  int32_t dim_shape = remain_shape.NumAxes();
+  // Initialize the remains and splitting
+  // logical_blob_desc.shape() == remain_shape .* rest_split_shape;
+  for (int32_t i = 0; i < dim_shape; i++) { rest_split_shape.Set(i, 1); }
+  for (int32_t sbp_id = 0; sbp_id < nd_sbp.sbp_parallel_size(); sbp_id++) {
+    const auto& sbp = nd_sbp.sbp_parallel(sbp_id);
+    if (sbp.has_split_parallel()) {
+      int32_t axis = sbp.split_parallel().axis();
+      int32_t split_num = parallel_desc.hierarchy()->At(sbp_id);
+      remain_shape.Set(axis, remain_shape.At(axis) / split_num);
+      rest_split_shape.Set(axis, rest_split_shape.At(axis) * split_num);
+    }
+  }
+  // Get the contiguous sbp
+  NdSbp new_sbp = nd_sbp;
+  for (int32_t sbp_id = 0; sbp_id < nd_sbp.sbp_parallel_size(); sbp_id++) {
+    const auto& sbp = nd_sbp.sbp_parallel(sbp_id);
+    int32_t split_num = parallel_desc.hierarchy()->At(sbp_id);
+    if (sbp.has_split_parallel()) {
+      int32_t axis = sbp.split_parallel().axis();
+      // split shape is the total splitting number starting from sbp_id to the end
+      rest_split_shape.Set(axis, rest_split_shape.At(axis) / split_num);
+    } else {
+      // change P or B to S(axis)
+      int32_t axis = -1;
+      // 4096 is large enough, we might not have that much devices
+      int32_t min_split_num = 4096;
+      // We need to pick a suitable axis
+      for (int32_t i = 0; i < remain_shape.NumAxes(); i++) {
+        if (remain_shape.At(i) % split_num > 0) {
+          if (rest_split_shape.At(i) < min_split_num) {
+            // Pick the axis with smallest splitting number among the rest of the sbp
+            min_split_num = rest_split_shape.At(i);
+            axis = i;
+          }
+        }
+      }
+      // P, B -> S(axis)
+      if (axis >= 0) {
+        new_sbp.mutable_sbp_parallel(sbp_id)->mutable_split_parallel()->set_axis(axis);
+        remain_shape.Set(axis, remain_shape.At(axis) / split_num);
+      } else {
+        // Can not find a suitable contiguous sbp
+        return Maybe<void>::Ok();
+      }
+    }
+  }
+  // Add the new sbp into the middle node lists
+  middle_sbps.emplace_back(new_sbp);
   return Maybe<void>::Ok();
 }
 
