@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <cstdint>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
@@ -461,13 +462,13 @@ class ConcatFunctor {
       ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
     }
   }
-  Maybe<Tensor> operator()(const TensorTuple& inputs, int64_t& dim) const {
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& dim) const {
     const int64_t ninput = inputs.size();
     int64_t axis = dim;
     int64_t ndim = inputs[0]->ndim();
     int64_t max_dim_size = 0;
     CHECK_GE_OR_RETURN(ninput, 1) << Error::RuntimeError() << "inputs size must greater than 0";
-    axis = JUST(maybe_wrap_dim(axis, ndim));
+    axis = CHECK_JUST(maybe_wrap_dim(axis, ndim));
 
     const std::shared_ptr<const Shape>& shape = inputs[0]->shape();
     for (const auto& input : inputs) {
@@ -757,14 +758,14 @@ class DimGatherFunctor {
         one::OpBuilder("dim_gather").Input("input").Input("index").Output("output").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t& dim,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const std::shared_ptr<one::Tensor>& index,
                            const bool sparse_grad) const {
     CHECK_OR_RETURN(index->dtype()->data_type() == kInt64 || index->dtype()->data_type() == kInt32)
         << Error::RuntimeError() << "gather(): Expected dtype int32 or int64 for index";
     CHECK_EQ_OR_RETURN(sparse_grad, false)
         << Error::RuntimeError() << "Only support bool = False for now!";
-    dim = JUST(maybe_wrap_dim(dim, index->ndim()));
+    JUST(maybe_wrap_dim(dim, index->ndim()));
     CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
         << Error::RuntimeError()
         << "Index tensor must have the same number of dimensions as input tensor";
@@ -1903,12 +1904,12 @@ class DiagonalFunctor {
     op_ = CHECK_JUST(one::OpBuilder("diagonal").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& offset,
-                           int32_t& dim1, int32_t& dim2) const {
+                           const int32_t& dim1, const int32_t& dim2) const {
     int64_t ndims = x->shape()->NumAxes();
-    dim1 = JUST(maybe_wrap_dim(dim1, ndims));
-    dim2 = JUST(maybe_wrap_dim(dim2, ndims));
-    const int32_t p_dim1 = dim1 >= 0 ? dim1 : dim1 + ndims;
-    const int32_t p_dim2 = dim2 >= 0 ? dim2 : dim2 + ndims;
+    int32_t p_dim1 = dim1;
+    int32_t p_dim2 = dim2;
+    p_dim1 = JUST(maybe_wrap_dim(p_dim1, ndims));
+    p_dim2 = JUST(maybe_wrap_dim(p_dim2, ndims));
     CHECK_NE_OR_RETURN(p_dim1, p_dim2)
         << Error::RuntimeError() << "diagonal dimensions cannot be identical " << dim1 << ", "
         << dim2;
@@ -2342,11 +2343,10 @@ class SplitFunctor {
 class UnbindFunctor {
  public:
   UnbindFunctor() {}
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, int64_t& dim) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& dim) const {
     int32_t axis = dim;
     const int32_t ndim = x->ndim();
-    if (axis < 0) { axis += ndim; }
-    dim = JUST(maybe_wrap_dim(dim, ndim));
+    axis = JUST(maybe_wrap_dim(axis, ndim));
     int32_t dim_size = x->shape()->At(axis);
     std::shared_ptr<TensorTuple> chunk_res = JUST(functional::Chunk(x, dim_size, axis));
     TensorTuple unbinds(dim_size);
