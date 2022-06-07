@@ -13,7 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <glog/logging.h>
+#include <cstdint>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/job/sbp_parallel.h"
@@ -21,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -108,7 +112,6 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
       }
       if (!has_broadcast) { break; }
     }
-    //if (!IsAllowed(cur_node)) { break; }
     if (cur_node->op().output_bns().size() != 1) { break; }
     const std::string& sole_obn = cur_node->op().SoleObn();
     const NdSbp& obn_nd_sbp = cur_node->NdSbp4BnInOp(sole_obn);
@@ -337,6 +340,128 @@ void ForEachModelSizeBalancedPartition(
   }
 }
 
+namespace {
+bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy, int64_t min_size) {
+  if (shape.NumAxes() < 1 || shape.elem_cnt() < 1) { return false; }
+  CHECK_EQ(nd_sbp.sbp_parallel_size(), hierachy.NumAxes());
+  Shape cur_shape = shape;
+  if (cur_shape.elem_cnt() < min_size) { return false; }
+  FOR_RANGE(int64_t, i, 0, hierachy.NumAxes()) {
+    const auto& sbp = nd_sbp.sbp_parallel(i);
+    if (sbp.has_split_parallel()) {
+      const int64_t dim = sbp.split_parallel().axis(); 
+      if (dim >= cur_shape.NumAxes()) { return false; }
+      // Evenly split.
+      if (cur_shape.At(dim) % hierachy.At(i) != 0) { return false; }
+      cur_shape.Set(dim, cur_shape.At(dim) / hierachy.At(i));
+      // Larger then min size.
+      if (cur_shape.elem_cnt() < min_size) { return false; }
+    }
+  }
+  return true;
+}
+
+void GenerateSplitSignature(const NdSbp& var_nd_sbp, const OperatorConf& new_var_op_conf, std::string& new_split_signature, int64_t& split_dim) {
+    if (new_var_op_conf.variable_conf().nd_sbp_size() > 0 && NdSbpIsAllBroadcast(var_nd_sbp)) {
+      // split last dim
+      split_dim = new_var_op_conf.variable_conf().nd_sbp_size() - 1;
+      // All B, B -> S0
+      new_split_signature = "S(0)";
+    } else {
+      // ND sbp, (*, B, S, *) -> (*, S, S, *)
+      // ND sbp, (*, S, B, *) -> (*, S, S, *)
+      FOR_RANGE(int64_t, j, 0, new_var_op_conf.variable_conf().nd_sbp_size()) {
+        if (new_var_op_conf.variable_conf().nd_sbp(j) == "B") {
+          std::vector<int64_t> adjacent_dim{j - 1, j + 1};
+          for (auto const& dim_to_try : adjacent_dim) {
+            if (dim_to_try >= 0 && dim_to_try < new_var_op_conf.variable_conf().nd_sbp_size()) {
+              SbpParallel sbp;
+              if (ParseSbpParallelFromString(new_var_op_conf.variable_conf().nd_sbp(dim_to_try),
+                                             &sbp)
+                  && sbp.has_split_parallel()) {
+                new_split_signature = new_var_op_conf.variable_conf().nd_sbp(dim_to_try);
+                split_dim = j;
+              }
+            }
+            if (new_split_signature != "") break;
+          }
+        }
+        // Only split one more dim.
+        if (new_split_signature != "") break;
+      }
+    }
+}
+void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelDesc& pd, std::vector<SequencePtr>&& sorted_sequences) {
+  // For all sorted sequnence, set the variable op in the sequence to S
+  // and add ctrl edge to control the exectuion order between variable ops.
+  // A sequence is a variable op and its cast(fp32 to fp16) op. This is because the forward pass
+  // consume the fp16 variable and the optimizer consume the fp32 variable.
+  std::string prev_allowed_op_name = "";
+  for (int64_t i = 0; i < sorted_sequences.size(); ++i) {
+    const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
+    OperatorConf new_var_op_conf = var_node->op().op_conf();
+    const std::string& sole_obn = var_node->op().SoleObn();
+    const NdSbp& var_nd_sbp = var_node->NdSbp4BnInOp(sole_obn);
+    const Shape& logical_shape = Shape(new_var_op_conf.variable_conf().shape());
+
+    std::string new_split_signature = "";
+    int64_t split_dim = 0;
+    GenerateSplitSignature(var_nd_sbp, new_var_op_conf, new_split_signature, split_dim);
+    if (new_split_signature != "") {
+      *new_var_op_conf.mutable_variable_conf()->mutable_nd_sbp(split_dim) = new_split_signature;
+    } else {
+      continue;
+    }
+
+    bool split_is_allowed = true;
+    if (split_is_allowed) {
+      NdSbp new_nd_sbp;
+      std::vector<std::string> nd_sbp_str_vec;
+      for (const auto& sbp_str : new_var_op_conf.variable_conf().nd_sbp()) {
+        nd_sbp_str_vec.push_back(sbp_str);
+      }
+      ParseNdSbpFromStringList(nd_sbp_str_vec, &new_nd_sbp);
+      // check allowed by min shard size and evenly split
+      if (split_is_allowed) {
+        split_is_allowed = IsSplitValid(logical_shape, new_nd_sbp, *pd.hierarchy(), threshold);
+      }
+      if (split_is_allowed) {
+        // resize sequence by new nd sbp limit
+        auto& cur_seq = sorted_sequences.at(i);
+        int64_t max_len = 1;
+        if (cur_seq->len() > 1) {
+          FOR_RANGE(int64_t, node_idx, 1, cur_seq->len()) {
+            if (IsNdSbpSupported4Op(cur_seq->nodes().at(node_idx), new_nd_sbp)) {
+              ++max_len;
+            } else {
+              break;
+            }
+          }
+        }
+        if (max_len < cur_seq->len()) { cur_seq->resize(max_len); }
+      }
+    }
+    if (!split_is_allowed) {
+      VLOG(3) << var_node->op().op_name() << " failed to change form B to  S "
+              << " with op conf " << new_var_op_conf.variable_conf().DebugString();
+      continue;
+    }
+    if (i != 0) {
+      new_var_op_conf.add_ctrl_in_op_name(prev_allowed_op_name);
+    }
+    builder->MutOpsOnlyOnce({new_var_op_conf});
+    // Set consumers to consum this variable op's cast op's output as Broadcast.
+    if (new_split_signature != "") {
+      SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
+    }
+    prev_allowed_op_name = var_node->op().op_name();
+    VLOG(3) << var_node->op().op_name() << " succeed to change form B to "
+            << new_split_signature << " on ranks dim " << split_dim << " with op conf "
+            << new_var_op_conf.variable_conf().DebugString();
+  }
+}
+} // namespace
+
 Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder) {
   const int64_t threshold = builder->job().job_conf().optimizer_placement_optimization_threshold();
   const auto IsAllowed = [](const OpNode* n) -> bool {
@@ -344,104 +469,8 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     return true;
   };
   const auto PlacementSequencesAsSplitParallel = [&](const ParallelDesc& pd,
-                                                     std::vector<SequencePtr>&& sorted_sequences) {
-    // For all sorted sequnence, set the variable op in the sequence to S
-    // and add ctrl edge to control the exectuion order between variable ops.
-    // A sequence is a variable op and its cast(fp32 to fp16) op. This is because the forward pass
-    // consume the fp16 variable and the optimizer consume the fp32 variable.
-    std::string prev_allowed_op_name = "";
-    for (int64_t i = 0; i < sorted_sequences.size(); ++i) {
-      const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
-      OperatorConf new_var_op_conf = var_node->op().op_conf();
-      const std::string& sole_obn = var_node->op().SoleObn();
-      const NdSbp& var_nd_sbp = var_node->NdSbp4BnInOp(sole_obn);
-      std::string new_split_signature = "";
-      int64_t split_dim = 0;
-      if (new_var_op_conf.variable_conf().nd_sbp_size() > 0 && NdSbpIsAllBroadcast(var_nd_sbp)) {
-        // split last dim
-        split_dim = new_var_op_conf.variable_conf().nd_sbp_size() - 1;
-        // All B, B -> S0
-        new_split_signature = "S(0)";
-      } else {
-        // ND sbp, (*, B, S, *) -> (*, S, S, *)
-        // ND sbp, (*, S, B, *) -> (*, S, S, *)
-        FOR_RANGE(int64_t, j, 0, new_var_op_conf.variable_conf().nd_sbp_size()) {
-          if (new_var_op_conf.variable_conf().nd_sbp(j) == "B") {
-            std::vector<int64_t> adjacent_dim{j - 1, j + 1};
-            for (auto const& dim_to_try : adjacent_dim) {
-              if (dim_to_try >= 0 && dim_to_try < new_var_op_conf.variable_conf().nd_sbp_size()) {
-                SbpParallel sbp;
-                if (ParseSbpParallelFromString(new_var_op_conf.variable_conf().nd_sbp(dim_to_try),
-                                               &sbp)
-                    && sbp.has_split_parallel()) {
-                  new_split_signature = new_var_op_conf.variable_conf().nd_sbp(dim_to_try);
-                  split_dim = j;
-                }
-              }
-              if (new_split_signature != "") break;
-            }
-          }
-          // Only split one more dim.
-          if (new_split_signature != "") break;
-        }
-      }
-      if (new_split_signature != "") {
-        *new_var_op_conf.mutable_variable_conf()->mutable_nd_sbp(split_dim) = new_split_signature;
-      } else {
-        continue;
-      }
-
-      bool split_is_allowed = true;
-      if (split_is_allowed) {
-        NdSbp new_nd_sbp;
-        std::vector<std::string> nd_sbp_str_vec;
-        for (const auto& sbp_str : new_var_op_conf.variable_conf().nd_sbp()) {
-          nd_sbp_str_vec.push_back(sbp_str);
-        }
-        ParseNdSbpFromStringList(nd_sbp_str_vec, &new_nd_sbp);
-        // check allowed by min shard size and evenly split
-        const auto slices = GetTensorSliceView(*pd.hierarchy(), new_nd_sbp, Shape(new_var_op_conf.variable_conf().shape()));
-        if (slices.size() < 2) { split_is_allowed = false; }
-        if (split_is_allowed && slices.at(0).shape().elem_cnt() < threshold) { split_is_allowed = false; }
-        if (split_is_allowed) {
-          FOR_RANGE(int64_t, slice_idx, 1, slices.size()) {
-            if (slices.at(slice_idx).shape() != slices.at(0).shape()) { split_is_allowed = false; break;}
-          }
-        }
-        if (split_is_allowed) {
-          // resize sequence by new nd sbp limit
-          auto& cur_seq = sorted_sequences.at(i);
-          int64_t max_len = 1;
-          if (cur_seq->len() > 1) {
-            FOR_RANGE(int64_t, node_idx, 1, cur_seq->len()) {
-              if (IsNdSbpSupported4Op(cur_seq->nodes().at(node_idx), new_nd_sbp)) {
-                ++max_len;
-              } else {
-                break;
-              }
-            }
-          }
-          if (max_len < cur_seq->len()) { cur_seq->resize(max_len); }
-        }
-      }
-      if (!split_is_allowed) {
-        VLOG(3) << var_node->op().op_name() << " failed to change form B to  S "
-                << " with op conf " << new_var_op_conf.variable_conf().DebugString();
-        continue;
-      }
-      if (i != 0) {
-        new_var_op_conf.add_ctrl_in_op_name(prev_allowed_op_name);
-      }
-      builder->MutOpsOnlyOnce({new_var_op_conf});
-      // Set consumers to consum this variable op's cast op's output as Broadcast.
-      if (new_split_signature != "") {
-        SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
-      }
-      prev_allowed_op_name = var_node->op().op_name();
-      VLOG(3) << var_node->op().op_name() << " succeed to change form B to "
-              << new_split_signature << " on ranks dim " << split_dim << " with op conf "
-              << new_var_op_conf.variable_conf().DebugString();
-    }
+                                                   std::vector<SequencePtr>&& sorted_sequences) {
+    ShardSequence(builder, threshold, pd, std::forward<std::vector<SequencePtr>>(sorted_sequences));
   };
   ForEachParallelSortedNodeSequence(op_graph, IsAllowed, SequenceCompSortedByOrderAsc,
                                     PlacementSequencesAsSplitParallel);
