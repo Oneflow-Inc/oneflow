@@ -37,10 +37,10 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
-  DimVector dim_vec;
+  auto shape = std::make_shared<Shape>();
   FOR_RANGE(int, axis, 0, reshape.NumAxes()) {
     int64_t dim = reshape.At(axis);
-    dim_vec.emplace_back(dim);
+    shape->emplace_back(dim);
     if (dim == -1) {
       CHECK_OR_RETURN(has_minus_1 == false) << "only one `-1' supported";
       has_minus_1 = true;
@@ -56,12 +56,12 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
   }
   CHECK_EQ_OR_RETURN(in_shape.elem_cnt() % total_elem_dim_exclude_minus_1, 0);
   if (has_minus_1) {
-    dim_vec[minus_1_axis] = in_shape.elem_cnt() / total_elem_dim_exclude_minus_1;
+    (*shape)[minus_1_axis] = in_shape.elem_cnt() / total_elem_dim_exclude_minus_1;
   } else {
     CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), total_elem_dim_exclude_minus_1)
         << "input blob's element number not equals reshape_conf";
   }
-  return std::make_shared<Shape>(dim_vec);
+  return shape;
 }
 
 Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,

@@ -103,8 +103,6 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
   int64_t elem_count = shape.elem_cnt();
   int64_t ndim = shape.NumAxes();
   int64_t tgt_ndim = target_shape.NumAxes();
-  DimVector shape_vec = shape.dim_vec();
-  DimVector tgt_shape_vec = target_shape.dim_vec();
   DimVector stride_vec = stride.StrideVec();
   if (elem_count == 0) { return NullOpt; }
 
@@ -116,14 +114,14 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
   int64_t tensor_numel = 1;
   int64_t view_numel = 1;
   for (int64_t tensor_d = ndim - 1; tensor_d >= 0; tensor_d--) {
-    tensor_numel *= shape_vec[tensor_d];
+    tensor_numel *= shape[tensor_d];
     // if end of tensor size chunk, check view
     if ((tensor_d == 0)
-        || (shape_vec[tensor_d - 1] != 1
+        || (shape[tensor_d - 1] != 1
             && stride_vec[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
-      while (view_d >= 0 && (view_numel < tensor_numel || tgt_shape_vec[view_d] == 1)) {
+      while (view_d >= 0 && (view_numel < tensor_numel || target_shape[view_d] == 1)) {
         newstride[view_d] = view_numel * chunk_base_stride;
-        view_numel *= tgt_shape_vec[view_d];
+        view_numel *= target_shape[view_d];
         view_d--;
       }
       if (view_numel != tensor_numel) { return NullOpt; }

@@ -186,11 +186,11 @@ Shape TensorSize_AsShape(PyObject* self) {
     return Shape();
   }
   int size = TensorSize_length((TensorSize*)self);
-  DimVector dim_vec(size);
+  Shape shape(size);
   for (int i = 0; i < size; ++i) {
-    dim_vec[i] = PyLong_AsLongLong(PyTuple_GET_ITEM((TensorSize*)self, i));
+    shape[i] = PyLong_AsLongLong(PyTuple_GET_ITEM((TensorSize*)self, i));
   }
-  return Shape(std::move(dim_vec));
+  return shape;
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

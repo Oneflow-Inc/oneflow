@@ -113,7 +113,7 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
   return sp;
 }
 
-void InferMatmulCublasMNK(const DimVector& a_shape, const DimVector& b_shape,
+void InferMatmulCublasMNK(const Shape& a_shape, const Shape& b_shape,
                           ep::primitive::BlasTransposeType transpose_a,
                           ep::primitive::BlasTransposeType transpose_b, size_t* cublas_m,
                           size_t* cublas_n, size_t* cublas_k, int64_t* cublas_lda,

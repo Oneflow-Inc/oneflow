@@ -24,14 +24,13 @@ namespace {
 Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   const Shape& x_shape = ctx->InputShape("x", 0);
-  DimVector out_shape(x_shape.NumAxes());
-  out_shape[0] = x_shape.dim_vec()[0];
-  out_shape[1] = x_shape.dim_vec()[1];
-  for (int i = 2; i < out_shape.size(); ++i) {
-    out_shape[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
+  auto* y_shape = ctx->OutputShape("y", 0);
+  y_shape->resize(x_shape.NumAxes());
+  *y_shape = {x_shape[0], x_shape[1]};
+  for (int i = 2; i < y_shape->size(); ++i) {
+    (*y_shape)[i] = output_size.size() > i - 2 ? output_size[i - 2] : output_size[0];
   }
 
-  *ctx->OutputShape("y", 0) = Shape(out_shape);
   return Maybe<void>::Ok();
 }
 

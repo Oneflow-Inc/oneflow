@@ -132,7 +132,7 @@ bool PyShapeSequenceCheck(PyObject* obj) {
 std::vector<Shape> PyUnpackShapeSequence(PyObject* obj) {
   return PyUnpackSequence<Shape>(obj, [](PyObject* item) -> Shape {
     const auto& shape = PyUnpackLongSequence<int64_t>(item);
-    return Shape(DimVector(shape.begin(), shape.end()));
+    return Shape(shape.begin(), shape.end());
   });
 }
 

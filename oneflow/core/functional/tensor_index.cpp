@@ -94,14 +94,14 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
     } else {
       const auto& shape = indices.at(i)->shape();
       int ndims = std::max(shape->NumAxes(), expanded_shape->NumAxes());
-      DimVector sizes(ndims);
+      auto sizes = std::make_shared<Shape>(ndims);
       for (int j = ndims - 1; j >= 0; --j) {
         int dim = j - (ndims - shape->NumAxes());
         int expanded_dim = j - (ndims - expanded_shape->NumAxes());
         if (dim < 0) {
-          sizes[j] = expanded_shape->At(expanded_dim);
+          (*sizes)[j] = expanded_shape->At(expanded_dim);
         } else if (expanded_dim < 0) {
-          sizes[j] = shape->At(dim);
+          (*sizes)[j] = shape->At(dim);
         } else {
           int size = shape->At(dim);
           int expanded_size = expanded_shape->At(expanded_dim);
@@ -109,10 +109,10 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
               << Error::RuntimeError() << "The size of tensor a (" << size
               << ") must match the size of tensor b (" << expanded_size
               << ") at non-singleton dimension " << i;
-          sizes[j] = size == 1 ? expanded_size : size;
+          (*sizes)[j] = size == 1 ? expanded_size : size;
         }
       }
-      expanded_shape.reset(new Shape(sizes));
+      expanded_shape = sizes;
     }
   }
   auto expanded_indices = std::make_shared<TensorTuple>(indices.size());

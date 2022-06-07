@@ -61,9 +61,8 @@ Maybe<Shape> FlatShape::ToShape() const {
 }
 
 Maybe<void> FlatShape::ToShape(Shape* shape) const {
-  DimVector dim_vec;
-  for (int i = 0; i < this->dim_size(); ++i) { dim_vec.emplace_back(this->dim(i)); }
-  *shape = Shape(dim_vec);
+  shape->clear();
+  for (int i = 0; i < this->dim_size(); ++i) { shape->emplace_back(this->dim(i)); }
   return Maybe<void>::Ok();
 }
 

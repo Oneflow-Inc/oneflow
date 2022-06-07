@@ -65,16 +65,17 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   CHECK_LT_OR_RETURN(padding[2], x_shape.At(h_idx));
   CHECK_LT_OR_RETURN(padding[3], x_shape.At(h_idx));
 
-  DimVector y_dim_vec(x_shape.NumAxes());
+
+  Shape* y_shape = ctx->OutputShape("y", 0);
+  y_shape->resize(x_shape.NumAxes());
   const int64_t h_x = x_shape.At(h_idx);
   const int64_t w_x = x_shape.At(w_idx);
 
-  y_dim_vec[n_idx] = x_shape.At(n_idx);
-  y_dim_vec[c_idx] = x_shape.At(c_idx);
-  y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
-  y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
+  (*y_shape)[n_idx] = x_shape.At(n_idx);
+  (*y_shape)[c_idx] = x_shape.At(c_idx);
+  (*y_shape)[h_idx] = h_x + padding[2] + padding[3];
+  (*y_shape)[w_idx] = w_x + padding[0] + padding[1];
 
-  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReflectionPad2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -104,16 +105,16 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   const int64_t h_idx = 2;
   const int64_t w_idx = 3;
 
-  DimVector dx_dim_vec(dy_shape.NumAxes());
+  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  dx_shape->resize(dy_shape.NumAxes());
   int64_t h_dy = dy_shape.At(h_idx);
   int64_t w_dy = dy_shape.At(w_idx);
 
-  dx_dim_vec[n_idx] = dy_shape.At(0);
-  dx_dim_vec[c_idx] = dy_shape.At(1);
-  dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
-  dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
+  (*dx_shape)[n_idx] = dy_shape.At(0);
+  (*dx_shape)[c_idx] = dy_shape.At(1);
+  (*dx_shape)[h_idx] = h_dy - padding[2] - padding[3];
+  (*dx_shape)[w_idx] = w_dy - padding[0] - padding[1];
 
-  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReflectionPad2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -153,16 +154,16 @@ REGISTER_USER_OP_GRAD("reflection_pad2d")
   const int64_t h_idx = 2;
   const int64_t w_idx = 3;
 
-  DimVector y_dim_vec(x_shape.NumAxes());
+  Shape* y_shape = ctx->OutputShape("y", 0);
+  y_shape->resize(x_shape.NumAxes());
   const int64_t h_x = x_shape.At(h_idx);
   const int64_t w_x = x_shape.At(w_idx);
 
-  y_dim_vec[n_idx] = x_shape.At(n_idx);
-  y_dim_vec[c_idx] = x_shape.At(c_idx);
-  y_dim_vec[h_idx] = h_x + padding[2] + padding[3];
-  y_dim_vec[w_idx] = w_x + padding[0] + padding[1];
+  (*y_shape)[n_idx] = x_shape.At(n_idx);
+  (*y_shape)[c_idx] = x_shape.At(c_idx);
+  (*y_shape)[h_idx] = h_x + padding[2] + padding[3];
+  (*y_shape)[w_idx] = w_x + padding[0] + padding[1];
 
-  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad2DOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -192,16 +193,16 @@ REGISTER_USER_OP_GRAD("reflection_pad2d")
   const int64_t h_idx = 2;
   const int64_t w_idx = 3;
 
-  DimVector dx_dim_vec(dy_shape.NumAxes());
+  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  dx_shape->resize(dy_shape.NumAxes());
   int64_t h_dy = dy_shape.At(h_idx);
   int64_t w_dy = dy_shape.At(w_idx);
 
-  dx_dim_vec[n_idx] = dy_shape.At(0);
-  dx_dim_vec[c_idx] = dy_shape.At(1);
-  dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];
-  dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];
+  (*dx_shape)[n_idx] = dy_shape.At(0);
+  (*dx_shape)[c_idx] = dy_shape.At(1);
+  (*dx_shape)[h_idx] = h_dy - padding[2] - padding[3];
+  (*dx_shape)[w_idx] = w_dy - padding[0] - padding[1];
 
-  *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ReplicationPad2DGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

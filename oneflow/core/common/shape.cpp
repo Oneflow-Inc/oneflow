@@ -22,10 +22,9 @@ namespace oneflow {
 Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
   // For 0-dim Tensor
   if (axis_vec.empty()) { return Shape({}); }
-  DimVector dim_vec;
-  shape.ToDimVector(&dim_vec);
-  for (int64_t axis : axis_vec) { dim_vec.at(ShiftNegativeAxis(axis, shape.NumAxes())) = 1; }
-  return Shape(std::move(dim_vec));
+  Shape res(shape);
+  for (int64_t axis : axis_vec) { res.at(ShiftNegativeAxis(axis, shape.NumAxes())) = 1; }
+  return res;
 }
 
 Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) {
@@ -63,6 +62,8 @@ Shape::Shape(const DimVector& dim_vec) : DimVector(dim_vec), is_initialized_(tru
 Shape::Shape(DimVector&& dim_vec) : DimVector(std::move(dim_vec)), is_initialized_(true) {}
 Shape::Shape(const ShapeProto& shape_proto)
     : DimVector(shape_proto.dim().begin(), shape_proto.dim().end()), is_initialized_(true) {}
+Shape::Shape(ShapeView shape_view)
+    : DimVector(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes()), is_initialized_(true) {}
 
 Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
