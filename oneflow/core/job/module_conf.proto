@@ -1,0 +1,9 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/operator/op_conf.proto";
+
+message ModuleConf {
+  required string name = 1;
+  repeated OperatorConf ops = 2;
+}

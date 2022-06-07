@@ -186,6 +186,18 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
     (*op_name2is_mirrored_parallel_view)[operator_conf.name()] = true;
   }
   job_->mutable_net()->add_op()->CopyFrom(operator_conf);
+
+  // set up the module config
+  const auto& scope = Global<symbol::Storage<Scope>>::Get()->Get(operator_conf.scope_symbol_id());
+  if (scope.scope_proto().has_module_name()) {
+    const auto& module_name = scope.scope_proto().module_name();
+    auto* module_name2module_conf = job_->mutable_module_name2module_conf();
+    if (!(*module_name2module_conf)[module_name].has_name()) {
+      (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
+    }
+
+    (*module_name2module_conf)[module_name].add_ops()->CopyFrom(operator_conf);
+  }
 }
 
 Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
@@ -1129,7 +1141,8 @@ Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(
   };
   const auto& maybe_ok =
       TRY(GenerateBackwardOpConfIf(op, &bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
-  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error());
+  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error())
+      << GetFormatedSerializedError(::oneflow::private_details::JustGetError(maybe_ok));
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
