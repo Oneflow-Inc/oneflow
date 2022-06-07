@@ -49,7 +49,13 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
     OF_UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
   }
   // For 0-dim Tensor
-  CHECK_GE_OR_RETURN(output_num_axes, index_num_axes);
+  if (output_num_axes != 0 && index_num_axes != 0) {
+    CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
+  } else if (output_num_axes != 0) {
+    CHECK_LE_OR_RETURN(output_num_axes, 1);
+  } else {
+    CHECK_LE_OR_RETURN(index_num_axes, 1);
+  }
 
   // check index.shape(i) <= input/like.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
