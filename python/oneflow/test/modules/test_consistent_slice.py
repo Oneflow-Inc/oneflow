@@ -90,14 +90,20 @@ def _test_slice_ellipsis_type(test_case, placement, sbp):
 
 
 def _test_logical_slice(test_case, placement, sbp):
-    x = random_tensor(2, 8, 8, requires_grad=False).oneflow
-    x_numpy = x.detach().cpu().numpy()
+    input = random_tensor(2, 8, 8, requires_grad=True).oneflow
+    x_numpy = input.detach().cpu().numpy()
 
-    x = x.to_global(placement=placement, sbp=sbp)
+    x = input.to_global(placement=placement, sbp=sbp)
     y = flow.logical_slice(x, slice_tup_list=[[0, 1, 1]])
 
-    test_case.assertTrue(y.sbp in [(flow.sbp.partial_sum,), (oneflow.sbp.broadcast,)])
+    # forward
     test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[0:1:1]))
+
+    # backward
+    y.sum().backward()
+    input_grad_np = np.zeros((8, 8))
+    input_grad_np[0:1:1, :] = 1
+    test_case.assertTrue(np.array_equal(input.grad.numpy(), input_grad_np))
 
 
 def _test_logical_slice_with_bool(test_case, placement, sbp):
@@ -107,8 +113,54 @@ def _test_logical_slice_with_bool(test_case, placement, sbp):
     x = x.to_global(placement=placement, sbp=sbp)
     y = flow.logical_slice(x, slice_tup_list=[[0, 1, 1]])
 
-    test_case.assertTrue(y.sbp in [(flow.sbp.partial_sum,), (oneflow.sbp.broadcast,)])
     test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[0:1:1]))
+
+
+def _test_logical_slice_with_grad(test_case, placement, sbp):
+    x = random_tensor(2, 4, 4, requires_grad=True).oneflow
+    x_numpy = x.detach().cpu().numpy()
+
+    class LogicalSliceWithGrad(flow.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.input_grad = flow.nn.Parameter(flow.zeros(4, 4))
+
+        def forward(self, input):
+            x = input + self.input_grad
+            x = x.to_global(placement, sbp)
+            return x[:, :2]
+
+    logical_slice_with_grad = LogicalSliceWithGrad().to_global(
+        placement, [flow.sbp.broadcast,] * len(sbp)
+    )
+
+    of_sgd = flow.optim.SGD(logical_slice_with_grad.parameters(), lr=1.0, momentum=0.0)
+
+    class LogicalSliceTrainGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.module = logical_slice_with_grad
+            self.add_optimizer(of_sgd)
+
+        def build(self, x):
+            out = self.module(x)
+            z = out.sum()
+            z.backward()
+            return out
+
+    graph = LogicalSliceTrainGraph()
+
+    input = x.to_global(placement=placement, sbp=sbp)
+    y = graph(input)
+
+    # output
+    test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[:, :2]))
+    # input_grad
+    x_grad_np = np.zeros((4, 4))
+    x_grad_np[:, :2] = 1
+    test_case.assertTrue(
+        np.array_equal(-graph.module.input_grad.origin.numpy(), x_grad_np)
+    )
 
 
 class TestSlice(flow.unittest.TestCase):
@@ -128,11 +180,9 @@ class TestLogicalSlice(flow.unittest.TestCase):
     def test_logical_slice(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                # logical slice not support 2d sbp currently
-                if len(sbp) > 1:
-                    continue
                 _test_logical_slice(test_case, placement, sbp)
                 _test_logical_slice_with_bool(test_case, placement, sbp)
+                _test_logical_slice_with_grad(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -39,29 +40,6 @@ namespace functional {
 namespace impl {
 
 namespace {
-
-bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
-  }
-  return true;
-}
-
-bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
-  }
-  return true;
-}
-
-bool IsAllSplitNdSbp(Symbol<NdSbp> nd_sbp, int64_t axis) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
-      return false;
-    }
-  }
-  return true;
-}
 
 bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
@@ -212,8 +190,9 @@ class ConsistentAllReduceFunctor {
   ConsistentAllReduceFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
-      CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
+      CHECK_OR_RETURN(x->is_consistent()) << "Tensor is not consistent";
+      CHECK_OR_RETURN(NdSbpIsAllPartialSum(*JUST(x->nd_sbp())))
+          << "Tensor's sbp must be partial_sum";
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
@@ -229,10 +208,13 @@ class ConsistentReduceScatterFunctor {
     {
       CHECK_OR_RETURN(x->is_consistent());
       if (op_type == "max") {
-        CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(x->nd_sbp())));
-        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA);
+        CHECK_OR_RETURN(NdSbpIsAllBroadcast(*JUST(x->nd_sbp())))
+            << "Tensor's sbp must be broadcast to get reduce_max";
+        CHECK_EQ_OR_RETURN(JUST(x->parallel_desc())->device_type(), DeviceType::kCUDA)
+            << "reduce_max only support CUDA";
       } else if (op_type == "sum") {
-        CHECK_OR_RETURN(IsAllPartialSumNdSbp(JUST(x->nd_sbp())));
+        CHECK_OR_RETURN(NdSbpIsAllPartialSum(*JUST(x->nd_sbp())))
+            << "Tensor's sbp must be partial_sum to get reduce_sum";
       } else {
         UNIMPLEMENTED_THEN_RETURN();
       }
@@ -248,8 +230,9 @@ class ConsistentAllGatherFunctor {
   ConsistentAllGatherFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     {
-      CHECK_OR_RETURN(x->is_consistent());
-      CHECK_OR_RETURN(IsAllSplitNdSbp(JUST(x->nd_sbp()), 0));
+      CHECK_OR_RETURN(x->is_consistent()) << "Tensor is not consistent";
+      CHECK_OR_RETURN(NdSbpIsAllSplit(*JUST(x->nd_sbp()), 0))
+          << "Tensor's sbp must be split to get all_gather";
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));

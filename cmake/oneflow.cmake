@@ -182,7 +182,7 @@ endforeach()
 
 relative_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROJECT_SOURCE_DIR} ${of_all_rel_protos})
 
-oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
+oneflow_add_library(of_protoobj SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj make_pyproto_dir protobuf)
 
 if(BUILD_SHARED_LIBS)
@@ -228,7 +228,7 @@ include_directories(${PROJECT_SOURCE_DIR}) # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
 # cc obj lib
-oneflow_add_library(oneflow ${of_all_obj_cc})
+oneflow_add_library(oneflow SHARED ${of_all_obj_cc})
 
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_functional_obj)
@@ -282,18 +282,10 @@ get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
 target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
 
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_protoobj of_functional_obj of_op_schema)
+  set(of_libs -Wl,-force_load oneflow of_op_schema)
   target_link_libraries(oneflow of_protoobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs
-      -Wl,--whole-archive
-      oneflow
-      of_protoobj
-      of_functional_obj
-      of_op_schema
-      -Wl,--no-whole-archive
-      -ldl
-      -lrt)
+  set(of_libs -Wl,--whole-archive oneflow of_op_schema -Wl,--no-whole-archive -ldl -lrt)
   target_link_libraries(
     oneflow
     of_protoobj
@@ -325,7 +317,7 @@ endif()
 if(BUILD_PYTHON)
 
   # py ext lib
-  oneflow_add_library(of_pyext_obj ${of_pyext_obj_cc})
+  oneflow_add_library(of_pyext_obj SHARED ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                   ${Python_NumPy_INCLUDE_DIRS})
   target_link_libraries(of_pyext_obj oneflow pybind11::headers)
@@ -362,9 +354,10 @@ if(BUILD_PYTHON)
     COMMAND ${CMAKE_COMMAND} -E touch "${of_proto_python_dir}/oneflow/core/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${of_proto_python_dir}/oneflow/core"
             "${ONEFLOW_PYTHON_DIR}/oneflow/core"
-    COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py
-            ${gen_pip_args} --src=${PROJECT_SOURCE_DIR}
-            --out=${ONEFLOW_PYTHON_DIR}/oneflow/version.py)
+    COMMAND
+      ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args}
+      --src=${PROJECT_SOURCE_DIR} --cmake_project_binary_dir=${PROJECT_BINARY_DIR}
+      --out=${ONEFLOW_PYTHON_DIR}/oneflow/version.py)
 
   # source this file to add oneflow in PYTHONPATH
   file(WRITE "${PROJECT_BINARY_DIR}/source.sh"
