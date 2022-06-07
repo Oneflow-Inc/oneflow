@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FUNCTIONAL_FUNCTION_LIBRARY_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/wrap_dim_utils.h"
 #include "oneflow/core/functional/packed_functor.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/framework/tensor_methods.h"

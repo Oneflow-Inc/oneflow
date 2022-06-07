@@ -226,9 +226,7 @@ class GluFunctor {
     const auto ndim = input->ndim();
     CHECK_GT_OR_RETURN(ndim, 0) << Error::RuntimeError()
                                 << "glu does not support scalars because halving size must be even";
-    CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << ", " << ndim - 1 << "], but got " << dim << ")";
+    dim = JUST(maybe_wrap_dim(dim, ndim));
     if (dim < 0) { dim += ndim; }
     int64_t nc = input->dim(dim);
     CHECK_EQ_OR_RETURN(nc % 2, 0) << Error::RuntimeError()
