@@ -220,7 +220,7 @@ class ArgsTree(object):
             if isinstance(curr_value, list) or isinstance(curr_value, tuple):
                 children = curr_value
             elif isinstance(curr_value, dict):
-                children = curr_value.values()
+                children = list(curr_value.values())
             else:
                 children = None 
 
