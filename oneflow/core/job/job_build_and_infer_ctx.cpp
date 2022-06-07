@@ -1056,6 +1056,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseCastScalePass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
+    bool do_fuse_optimizer_update_cast_pass =
+        ParseBooleanFromEnv("ONEFLOW_FUSE_OPTIMIZER_UPDATE_CAST", false);
+    if (do_fuse_optimizer_update_cast_pass) { JUST(DoPass("FuseUpdateCastOpsPass")); }
     JUST(DoPass("FixPipelineStageIdPass"));
     JUST(DoPass("PipelineBufferPass"));
     JUST(DoPass("DumpVariableInfoPass"));

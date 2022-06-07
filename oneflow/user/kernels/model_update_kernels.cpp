@@ -126,6 +126,13 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
+    float16* model_half_ptr = nullptr;
+    bool fuse_update_cast = false;
+    if (ctx->has_input("model_half", 0)) {
+      user_op::Tensor* model_half = ctx->Tensor4ArgNameAndIndex("model_half", 0);
+      fuse_update_cast = true;
+      model_half_ptr = model_half->mut_dptr<float16>();
+    }
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
@@ -143,10 +150,10 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
-    SGDUpdateKernelUtil<device_type, T, G>::Update(
+    SGDUpdateKernelUtil<device_type, T, G, float16>::Update(
         ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
-        learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>());
+        learning_rate_val, fuse_update_cast, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), model_half_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -446,12 +453,20 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
-    AdamUpdateKernelUtil<device_type, T, G>::Update(
+    float16* model_half_ptr = nullptr;
+    bool fuse_update_cast = false;
+    if (ctx->has_input("model_half", 0)) {
+      user_op::Tensor* model_half = ctx->Tensor4ArgNameAndIndex("model_half", 0);
+      fuse_update_cast = true;
+      model_half_ptr = model_half->mut_dptr<float16>();
+    }
+
+    AdamUpdateKernelUtil<device_type, T, G, float16>::Update(
         ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta1, beta2,
-        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, bias_correction1_val,
-        bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, bias_correction1_ptr,
-        bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), m->mut_dptr<T>(),
-        v->mut_dptr<T>(), max_v_ptr);
+        epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val, fuse_update_cast,
+        bias_correction1_val, bias_correction2_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        bias_correction1_ptr, bias_correction2_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
+        model_half_ptr, m->mut_dptr<T>(), v->mut_dptr<T>(), max_v_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
