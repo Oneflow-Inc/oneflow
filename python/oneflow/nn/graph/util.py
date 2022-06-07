@@ -17,6 +17,7 @@ import sys
 from collections import OrderedDict
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.job.job_pb2 as job_pb
+import oneflow
 from oneflow.framework.tensor import Tensor
 from typing import Callable, Dict, Union, List, Tuple
 from string import Template
@@ -45,6 +46,9 @@ def _blob_desc_repr(blob_desc):
         if i > 0:
             desc_str += ", "
         desc_str += str(blob_desc.shape.dim[i])
+    desc_str += "), "
+    desc_str += "dtype=("
+    desc_str += str(oneflow.dtype.get(int(blob_desc.data_type)))
     desc_str += ")"
     return desc_str
 
