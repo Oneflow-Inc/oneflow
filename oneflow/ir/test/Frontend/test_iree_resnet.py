@@ -61,7 +61,7 @@ def _test_iree_resnet_cpu(test_case):
         )
         # the rtol accumulate layer by layer
         test_case.assertTrue(
-            np.allclose(iree_output, graph_output, rtol=1.0e-1)
+            np.allclose(iree_output, graph_output, rtol=1.0e-1, atol=1e-3)
         )
 
 
@@ -98,7 +98,7 @@ def _test_iree_resnet_cuda(test_case):
         )
         # the rtol accumulate layer by layer
         test_case.assertTrue(
-            np.allclose(iree_output, graph_output, rtol=1.0e-1)
+            np.allclose(iree_output, graph_output, rtol=1.0e-1, atol=1e-3)
         )
 
 
