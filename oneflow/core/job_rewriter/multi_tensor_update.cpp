@@ -44,6 +44,10 @@ class MultiTensorUpdatePass final : public JobPass {
 };
 
 Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  std::vector<OperatorConf> delete_ops;
+  user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder("multi_tensor_update");
+  ParallelConf parallel_conf{};
+
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
@@ -56,8 +60,9 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
       // Currently only support for cuda, maybe remove this limit.
       if (find_sgd_update_node->parallel_desc().device_type() != DeviceType::kCUDA) { continue; }
 
-      user_op::UserOpConfWrapperBuilder fused_sgd_op_builder(sgd_user_conf.op_name());
-      fused_sgd_op_builder.OpTypeName("multi_tensor_sgd_update")
+      delete_ops.emplace_back(find_sgd_update_node->op().op_conf());
+      parallel_conf = find_sgd_update_node->parallel_desc().parallel_conf();
+      multi_tensor_update_sgd_op_builder.OpTypeName("multi_tensor_sgd_update")
           .Input("model", sgd_user_conf.input("model", 0))
           .Input("model_diff", sgd_user_conf.input("model_diff", 0))
           .Input("learning_rate", sgd_user_conf.input("learning_rate", 0))
@@ -67,14 +72,13 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
           .Attr<float>("weight_decay", sgd_user_conf.attr<float>("weight_decay"));
 
       CHECK(sgd_user_conf.op_conf().has_scope_symbol_id());
-      fused_sgd_op_builder.ScopeSymbolId(sgd_user_conf.op_conf().scope_symbol_id());
-
-      OperatorConf new_sgd_op_conf = sgd_user_conf.op_conf();
-      *new_sgd_op_conf.mutable_user_conf() = fused_sgd_op_builder.Build().op_conf().user_conf();
-      job_builder->MutOpsOnlyOnce({new_sgd_op_conf});
+      multi_tensor_update_sgd_op_builder.ScopeSymbolId(sgd_user_conf.op_conf().scope_symbol_id());
       break;
     }
   });
+  auto multi_tensor_update_sgd_op = multi_tensor_update_sgd_op_builder.Build();
+  job_builder->AddOps(parallel_conf, {multi_tensor_update_sgd_op.op_conf()});
+  job_builder->DelOps(delete_ops);
   return Maybe<void>::Ok();
 }
 
