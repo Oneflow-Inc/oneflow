@@ -22,7 +22,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from oneflow.framework.tensor import Tensor, TensorTuple
-from oneflow.nn.graph.util import IONodeType, IONode
+from oneflow.nn.graph.util import ArgsTree
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -50,17 +50,17 @@ class TestGraphIOCheck(flow.unittest.TestCase):
             inp = (args, kwargs)
             print("origin: ", inp)
 
-            io_node = IONode(None, 0, inp, "Graph_0")
+            args_tree = ArgsTree(inp, True, "Graph_0", None)
 
-            for (name, node) in list(io_node.named_nodes()):
-                print(name, repr(node))
+            for (name, arg) in args_tree.iter_named_nodes():
+                print(name, repr(arg))
 
-            def leaf_fn(node):
-                if isinstance(node._value, str):
+            def leaf_fn(arg):
+                if isinstance(arg.value(), str):
                     return "mapped_str"
-                return node._value
+                return arg.value()
 
-            m_v = io_node.map_leaf(leaf_fn)
+            m_v = args_tree.map_leaf(leaf_fn)
             print("mapped:", m_v)
             return m_v[0], m_v[1]
 

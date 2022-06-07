@@ -30,10 +30,9 @@ from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
 from oneflow.nn.graph.util import (
     add_indent,
+    ArgsTree,
     operators_repr,
     seq_to_func_return,
-    IONodeType,
-    IONode,
 )
 
 
@@ -196,17 +195,20 @@ class ModuleBlock(Block):
         assert self._type == BlockType.MODULE
         self.__print(0, 1, self._shallow_repr())
 
-        in_node = IONode(
-            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_input"
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name_prefix + self.name + "_input", None
         )
-        for (name, node) in list(in_node.named_nodes()):
-            if node._is_leaf:
-                arg = node._value
+
+        for (name, arg) in args_tree.iter_named_nodes():
+            if arg.is_leaf():
+                arg_value = arg.value()
                 meta_repr_str = (
-                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                    arg_value._meta_repr()
+                    if isinstance(arg_value, Tensor)
+                    else str(type(arg_value))
                 )
                 in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg, Tensor):
+                if not isinstance(arg_value, Tensor):
                     in_str = "[WARNING]" + in_str
                 self._args_repr.append(in_str)
                 self.__print(0, 1, in_str)
@@ -236,17 +238,20 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        out_node = IONode(
-            None, 0, (outputs, {}), "_" + self.name_prefix + self.name + "_output"
+        args_tree = ArgsTree(
+            (outputs, {}), True, "_" + self.name_prefix + self.name + "_output", None
         )
-        for (name, node) in list(out_node.named_nodes()):
-            if node._is_leaf:
-                arg = node._value
+
+        for (name, arg) in args_tree.iter_named_nodes():
+            if arg.is_leaf():
+                arg_value = arg.value()
                 meta_repr_str = (
-                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                    arg_value._meta_repr()
+                    if isinstance(arg_value, Tensor)
+                    else str(type(arg_value))
                 )
                 out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
-                if not isinstance(arg, Tensor):
+                if not isinstance(arg_value, Tensor):
                     out_str = "[WARNING]" + out_str
                 self._outs_repr.append(out_str)
                 self.__print(0, 1, out_str)
@@ -326,13 +331,16 @@ class ModuleBlock(Block):
             assert isinstance(item, Tensor)
             return func(item)
 
-        io_node = IONode(
-            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type
+        args_tree = ArgsTree(
+            (args, kwargs),
+            True,
+            "_" + self.name_prefix + self.name + "_" + io_type,
+            None,
         )
 
         def leaf_node_fn(leaf_node):
-            arg = leaf_node._value
-            name = leaf_node._prefix + "_" + leaf_node._name
+            arg = leaf_node.value()
+            name = leaf_node.prefix() + "_" + leaf_node.name()
             is_tensor, repr_str = self.__io_tensor_check_and_gen(arg, io_type, name)
             if is_tensor:
                 self.__print(
@@ -349,7 +357,7 @@ class ModuleBlock(Block):
                 )
                 return arg
 
-        out = io_node.map_leaf(leaf_node_fn)
+        out = args_tree.map_leaf(leaf_node_fn)
         mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
