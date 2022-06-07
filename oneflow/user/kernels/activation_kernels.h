@@ -564,7 +564,7 @@ auto BinaryPrimitiveExists(ep::primitive::BinaryOp op, const std::string& output
   REGISTER_USER_KERNEL("relu_grad")                                                                \
       .SetCreateFn([]() {                                                                          \
         return user_op::NewOpKernel<                                                               \
-            BinaryPrimitiveKernel>("dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {       \
+            BinaryPrimitiveKernel>("dx", "y", "dy", [](user_op::KernelComputeContext* ctx) {       \
           const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("y", 0);                \
           const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);               \
           return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(    \

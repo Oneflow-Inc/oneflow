@@ -86,6 +86,7 @@ inline bool IsDimsEquals(size_t num_src0_dims, const int64_t* src0_dims, size_t 
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftsignBackwardWithDyX)    \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftplusBackwardWithDyX)    \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kSoftshrinkBackwardWithDyY)  \
+  OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kTanhBackwardWithDyX)        \
   OF_PP_MAKE_TUPLE_SEQ(BinaryOp::kThresholdBackwardWithDyX)
 
 }  // namespace broadcast_elementwise_binary
