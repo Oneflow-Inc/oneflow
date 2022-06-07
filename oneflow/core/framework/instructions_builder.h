@@ -24,13 +24,11 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/scope.pb.h"
-#include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
-#include "oneflow/core/operator/op_node_signature_desc.h"
 
 namespace oneflow {
 
@@ -69,13 +67,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> SoftSyncNNGraphBuffers(const one::EagerBlobObjectListPtr& eager_blob_objects,
                                      const std::shared_ptr<NNGraphIf>& nn_graph);
 
-  Maybe<int64_t> CreateSymbolId(const JobConfigProto& job_conf);
-
-  Maybe<int64_t> CreateSymbolId(const ParallelConf& parallel_conf);
-
-  Maybe<int64_t> CreateSymbolId(const ScopeProto& scope_proto);
-
-  Maybe<int64_t> CreateSymbolId(const OperatorConf& op_conf);
+  Maybe<int64_t> CreateSymbolId();
 
   Maybe<JobDesc> GetJobConfSymbol(const JobConfigProto& job_conf);
 
@@ -129,12 +121,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<Scope> BuildScopeByProtoStrSetter(
       const std::shared_ptr<Scope>& scope,
       const std::function<std::string(const std::string&)>& StrSetter);
-
-  template<typename T>
-  Maybe<int64_t> FindOrCreateSymbolId(const T& conf) {
-    auto* id_cache = Global<symbol::IdCache<T>>::Get();
-    return id_cache->FindOrCreate(conf, [&] { return this->CreateSymbolId(conf); });
-  }
 
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
