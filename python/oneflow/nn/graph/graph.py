@@ -1106,7 +1106,9 @@ class Graph(object):
             self.__print(0, 1, repr_str)
             return build_arg
 
-        args_tree = ArgsTree((args, kwargs), True, "_" + self.name + "_" + io_type, None)
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name + "_" + io_type, None
+        )
 
         def leaf_arg_fn(arg):
             name = arg.prefix() + "_" + arg.name()
@@ -1182,7 +1184,9 @@ class Graph(object):
                 mapped_arg = None
             return mapped_arg
 
-        args_tree = ArgsTree((args, kwargs), True, "_" + self.name + "_" + io_type, None)
+        args_tree = ArgsTree(
+            (args, kwargs), True, "_" + self.name + "_" + io_type, None
+        )
 
         def leaf_arg_fn(arg):
             arg_value = arg.value()
@@ -1360,6 +1364,7 @@ class Graph(object):
             return value
 
         args_tree.map_leaf(func)
+
 
 if __name__ == "__main__":
     import doctest
