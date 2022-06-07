@@ -59,10 +59,6 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   };
 }
 
-void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback"); };
-}
-
 std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
   const auto& stream_rt_desc = thread_ctx->stream_rt_desc();
   const auto& stream_type = stream_rt_desc.stream_type();
@@ -127,9 +123,6 @@ VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id
     worker_threads_.push_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
-  std::function<void()> CallbackInitializer;
-  GetCallbackThreadInitializer(&CallbackInitializer);
-  callback_thread_ = std::thread(&VirtualMachine::CallbackLoop, this, CallbackInitializer);
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
@@ -168,10 +161,7 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
 VirtualMachine::~VirtualMachine() {
   if (!vm_threads_closed_) { CHECK_JUST(CloseVMThreads()); }
   CHECK(vm_->SchedulerEmpty());
-  CHECK(vm_->CallbackEmpty());
   vm_.Reset();
-  callback_notifier_.Close();
-  callback_thread_.join();
 }
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
@@ -217,7 +207,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     if (vm_->flying_instruction_cnt() > kHighWaterMark) {
       JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
         auto bc = std::make_shared<BlockingCounter>(1);
-        vm_->InsertCallbackProbe([bc](vm::VirtualMachineEngine* vm) {
+        vm_->InsertProbe([bc](vm::VirtualMachineEngine* vm) {
           const int64_t kLowWaterMark = GetInstructionLowWaterMark();
           if (vm->flying_instruction_cnt() > kLowWaterMark) { return false; }
           bc->Decrease();
@@ -240,33 +230,24 @@ namespace {
 
 class SingleThreadScheduleCtx : public vm::ScheduleCtx {
  public:
-  explicit SingleThreadScheduleCtx(vm::VirtualMachineEngine* vm) : vm_(vm) {}
+  SingleThreadScheduleCtx() = default;
   ~SingleThreadScheduleCtx() = default;
 
-  void OnGarbageMsgPending() const override { vm_->Callback(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     while (thread_ctx->TryReceiveAndRun() > 0) {}
   }
-
- private:
-  vm::VirtualMachineEngine* vm_;
 };
 
 void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
-  do {
-    vm->Schedule(schedule_ctx);
-    vm->FlushGarbageInstructions(schedule_ctx);
-  } while (!(vm->SchedulerEmpty() && vm->CallbackEmpty()));
+  do { vm->Schedule(schedule_ctx); } while (!(vm->SchedulerEmpty()));
 }
 
 }  // namespace
 
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
   CHECK_OR_RETURN(vm_->SchedulerEmpty()) << "vm scheduler not empty. May be a fatal error occured";
-  CHECK_OR_RETURN(vm_->CallbackEmpty())
-      << "vm callback handler not empty. May be a fatal error occured";
   JUST(vm_->Receive(instr_list));
-  ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
+  ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx());
   return Maybe<void>::Ok();
 }
 
@@ -274,23 +255,19 @@ namespace {
 
 class MultiThreadScheduleCtx : public vm::ScheduleCtx {
  public:
-  explicit MultiThreadScheduleCtx(Notifier* cb_notifier) : cb_notifier_(cb_notifier) {}
+  MultiThreadScheduleCtx() = default;
   ~MultiThreadScheduleCtx() = default;
 
-  void OnGarbageMsgPending() const override { cb_notifier_->Notify(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     thread_ctx->mut_notifier()->Notify();
   }
-
- private:
-  Notifier* cb_notifier_;
 };
 
 }  // namespace
 
 void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   Initializer();
-  MultiThreadScheduleCtx schedule_ctx(&callback_notifier_);
+  MultiThreadScheduleCtx schedule_ctx{};
   auto* vm = mut_vm();
   while (pending_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
     OF_PROFILER_RANGE_GUARD("VirtualMachine::ScheduleLoop");
@@ -319,7 +296,6 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
         do { vm->Schedule(schedule_ctx); } while (!vm->SchedulerThreadUnsafeEmpty());
-        vm->FlushGarbageInstructions(schedule_ctx);
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
   }
@@ -329,12 +305,6 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     return Maybe<void>::Ok();
   }));
   for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
-}
-
-void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
-  Initializer();
-  auto* vm = mut_vm();
-  while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) { vm->Callback(); }
 }
 
 }  // namespace oneflow
