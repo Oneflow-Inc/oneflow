@@ -120,7 +120,7 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
               for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
                 const int64_t src0_offset = row_idx * cols + col_idx;
                 const int64_t src1_offset = col_idx;
-                dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
+                dst[src0_offset] = functor(src0[src0_offset], src1[src1_offset]);
               }
             }
           });
@@ -148,7 +148,7 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
               for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
                 const int64_t src0_offset = row_idx * cols + col_idx;
                 const int64_t src1_offset = row_idx;
-                dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
+                dst[src0_offset] = functor(src0[src0_offset], src1[src1_offset]);
               }
             }
           });
