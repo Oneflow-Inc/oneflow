@@ -417,21 +417,21 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
           conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
           reshape_op_attrs);
 
-      auto mul_op = rewriter.create<oneflow::MultiplyOp>(
+      auto mul_op = rewriter.create<oneflow::BroadcastMulOp>(
           conv_op->getLoc(), conv_op->getResultTypes(),
           SmallVector<Value, 4>({conv_op.weight(), reshape_op.out()}),
           GetUserOpCommonAttrs(ctx, "multiply"));
-      operands.push_back(mul_op.out());
+      operands.push_back(mul_op.z());
 
       // deal with bias
       if (!conv_op.bias()) {
-        auto mul_op_bias = rewriter.create<oneflow::MultiplyOp>(
+        auto mul_op_bias = rewriter.create<oneflow::BroadcastMulOp>(
             conv_op->getLoc(), conv_op->getResultTypes(),
             SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
             GetUserOpCommonAttrs(ctx, "multiply_bias"));
         auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
             conv_op->getLoc(), conv_op->getResultTypes(),
-            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.out()}),
+            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.z()}),
             GetUserOpCommonAttrs(ctx, "sub_bias"));
         operands.push_back(sub_op_bias.z());
       } else {
