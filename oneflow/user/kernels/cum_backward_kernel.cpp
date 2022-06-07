@@ -25,10 +25,11 @@ void CumProdBackward(const T* dy_ptr, T* dx_ptr, const T* output_ptr, const T* i
                      const int64_t elem_cnt) {
   const auto step = space * down_space;
   for (size_t i = 0; i < up_space; i++) {
-    const T* input_ptr_base = input_ptr + step * i;
-    const T* output_ptr_base = output_ptr + step * i;
-    const T* dy_ptr_base = dy_ptr + step * i;
-    T* dx_ptr_base = dx_ptr + step * i;
+    const size_t base_ptr_offset = step * i;
+    const T* input_ptr_base = input_ptr + base_ptr_offset;
+    const T* output_ptr_base = output_ptr + base_ptr_offset;
+    const T* dy_ptr_base = dy_ptr + base_ptr_offset;
+    T* dx_ptr_base = dx_ptr + base_ptr_offset;
 
     // Use dx as tmp buffer for finding 0 element in the input.
     for (size_t j = 0; j < space; j++) {
