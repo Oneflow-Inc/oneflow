@@ -40,6 +40,8 @@ class Shape final : public DimVector {
   explicit Shape(const DimVector& dim_vec);
   explicit Shape(DimVector&& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
+  // explicit constructor from ShapeView
+  explicit Shape(ShapeView shape_view);
   ~Shape() = default;
   Shape& CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view);
   Shape& LeftOnesExtendedAssign(const ShapeView& shape_view);
@@ -83,7 +85,9 @@ class Shape final : public DimVector {
   MutShapeView ToMutShapeView() { return MutShapeView(data(), size()); }
 
  private:
-  bool is_initialized_;
+  // Set default value here because some constructors are inherited from DimVector
+  // TODO(daquexian): remove this field and make it initializied by construction
+  bool is_initialized_ = true;
 };
 
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
