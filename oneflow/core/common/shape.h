@@ -44,19 +44,19 @@ class Shape final : public DimVector {
   explicit Shape(ShapeView shape_view);
   ~Shape() = default;
 
-#define OVERRIDE_ADD_DATA_FUNC(func) \
-  template<typename... Args>  \
-  void func(Args... args) { \
+#define OVERRIDE_ADD_DATA_FUNC(func)              \
+  template<typename... Args>                      \
+  void func(Args... args) {                       \
     DimVector::func(std::forward<Args>(args)...); \
-    is_initialized_ = true; \
+    is_initialized_ = true;                       \
   }
 
-OVERRIDE_ADD_DATA_FUNC(assign)
-OVERRIDE_ADD_DATA_FUNC(push_back)
-OVERRIDE_ADD_DATA_FUNC(emplace_back)
-OVERRIDE_ADD_DATA_FUNC(append)
-OVERRIDE_ADD_DATA_FUNC(insert)
-OVERRIDE_ADD_DATA_FUNC(resize)
+  OVERRIDE_ADD_DATA_FUNC(assign)
+  OVERRIDE_ADD_DATA_FUNC(push_back)
+  OVERRIDE_ADD_DATA_FUNC(emplace_back)
+  OVERRIDE_ADD_DATA_FUNC(append)
+  OVERRIDE_ADD_DATA_FUNC(insert)
+  OVERRIDE_ADD_DATA_FUNC(resize)
 
 #undef OVERRIDE_ADD_DATA_FUNC
 
