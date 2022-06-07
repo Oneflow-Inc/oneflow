@@ -41,7 +41,7 @@ class TestBiasAddError(flow.unittest.TestCase):
             out = flow._C.bias_add(x, bias, axis=3)
 
         test_case.assertTrue(
-            "Dimension out of range (expected to be in range of [ -2,1], but got 3)"
+            "Dimension out of range (expected to be in range of [-2,1], but got 3)"
             in str(ctx.exception)
         )
 

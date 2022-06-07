@@ -61,7 +61,7 @@ class BiasAddFunctor {
       axis_val += num_axes;
     }
     CHECK_LT_OR_RETURN(axis_val, x->shape()->NumAxes())
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [ -"
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [-"
         << x->shape()->NumAxes() << "," << x->shape()->NumAxes() - 1 << "], but got " << axis_val
         << ")";
     CHECK_EQ_OR_RETURN(x->shape()->At(axis_val), bias->shape()->At(0))
