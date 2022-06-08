@@ -292,8 +292,10 @@
   bind_python: True
 
 - name: "reduce_mean"
-  signature: ["Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceMean",
-  "Tensor (Tensor x) => ReduceMeanWhole"]
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceMean",
+    "Tensor (Tensor x) => ReduceMeanWhole"
+  ]
   bind_python: True
 
 - name: "reduce_all"

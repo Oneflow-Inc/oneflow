@@ -458,6 +458,7 @@ class ReduceSumWholeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     MutableAttrMap attrs;
     const int32_t naxis = x->ndim();
+    if (naxis == 0) { return x; }  // for 0-dim Tensor
     std::vector<int32_t> axis(naxis);
     std::iota(axis.begin(), axis.end(), 0);
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
@@ -1952,7 +1953,12 @@ class StandardDeviationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim,
                            const Optional<bool>& unbiased, const Optional<bool>& keepdim) const {
-    std::vector<int32_t> axis = *JUST(CheckAxis(*JUST(dim), input->ndim()));
+    std::vector<int32_t> axis;
+    if (!dim) {
+      for (int i = 0; i < input->ndim(); i++) { axis.emplace_back(i); }
+    } else {
+      axis = *JUST(CheckAxis(*JUST(dim), input->ndim()));
+    }
     bool unbias = true;
     bool keepdims = false;
     if (unbiased.has_value()) { unbias = JUST(unbiased); }
