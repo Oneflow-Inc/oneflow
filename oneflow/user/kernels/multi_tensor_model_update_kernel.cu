@@ -23,14 +23,11 @@ namespace oneflow {
 
 namespace {
 
-// Refer from Apex
-// TODO:  Kernel arg size limit may be <4KB for some other cards (ie Jetson)
+// Refer from https://github.com/NVIDIA/apex/blob/master/csrc/multi_tensor_apply.cuh
 constexpr int depth_to_max_tensors[5] = {110, 64, 48, 36, 30};
-// constexpr int depth_to_max_tensors[5] = {110, 2, 48, 36, 30};
-// constexpr int depth_to_max_blocks[5] = {320, 320, 320, 320, 320};
 
 template<typename T, typename G, int n>
-struct TensorListMetadata {
+struct TensorTupleParams {
   G* model_diff_addresses[depth_to_max_tensors[n - 1]];
   T* model_addresses[depth_to_max_tensors[n - 1]];
   int64_t sizes[depth_to_max_tensors[n - 1]];
@@ -41,7 +38,7 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
                                         const float weight_decay, float learning_rate_val,
                                         const float* learning_rate, const T* scale_by_ptr,
                                         const int64_t* skip_if,
-                                        TensorListMetadata<T, G, n> meta_data) {
+                                        TensorTupleParams<T, G, n> meta_data) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -80,7 +77,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
-      //   CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
+      CHECK_EQ(scale_by_tensor->data_type(), ctx->Tensor4ArgNameAndIndex("model", 0)->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
@@ -91,21 +88,21 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
-    TensorListMetadata<T, G, 2> tensor_list_meta_data{};
+    TensorTupleParams<T, G, 2> tensor_tuple_params{};
     int32_t count = 0;
     for (int i = 0; i < n_tensor; i++) {
-      tensor_list_meta_data.model_diff_addresses[count] =
+      tensor_tuple_params.model_diff_addresses[count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", i))->mut_dptr<G>();
-      tensor_list_meta_data.model_addresses[count] =
+      tensor_tuple_params.model_addresses[count] =
           (ctx->Tensor4ArgNameAndIndex("model", i))->mut_dptr<T>();
-      tensor_list_meta_data.sizes[count] =
+      tensor_tuple_params.sizes[count] =
           (ctx->Tensor4ArgNameAndIndex("model", i))->shape().elem_cnt();
       count += 1;
       if (count == depth_to_max_tensors[1] || i == n_tensor - 1) {
         MultiTensorSGDUpdateGpu<T, G, 2>
             <<<1024, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(count, 
                 static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, learning_rate_ptr,
-                scale_by_ptr, skip_if_ptr, tensor_list_meta_data);
+                scale_by_ptr, skip_if_ptr, tensor_tuple_params);
         count = 0;
       }
     }
