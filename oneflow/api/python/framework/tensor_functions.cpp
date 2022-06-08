@@ -715,7 +715,7 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   CHECK_OR_THROW(grad_sbp_obj == Py_None || functional::PySbpParallelCheck(grad_sbp_obj)
                  || functional::PySbpParallelSequenceCheck(grad_sbp_obj))
       << Error::TypeError()
-      << "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp";
+      << "grad_sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp";
   if (functional::PySbpParallelCheck(grad_sbp_obj)) {
     grad_sbp.emplace_back(functional::PyUnpackSbpParallel(grad_sbp_obj));
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
@@ -733,9 +733,6 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   if (tensor->is_consistent())
     result = PyTensorObject_global_to_global(self, args, kwargs);
   else {
-    if (kwargs != NULL && PyDict_GetItemString(kwargs, "grad_sbp")) {
-      CHECK_OR_THROW(PyDict_DelItemString(kwargs, "grad_sbp") > -1);
-    }
     result = PyTensorObject_local_to_global(self, args, kwargs);
   }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
@@ -765,7 +762,6 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(
           functional::ConsistentConstant({1}, value_scalar, tensor->dtype(), placement, sbp));
     } else {
-      CHECK_OR_THROW(PyTensor_Check(value));
       value_tensor = PyTensor_Unpack(value);
       value_tensor = ASSERT_PTR(functional::ToConsistent(value_tensor, placement, sbp, {}, true));
     }
@@ -775,7 +771,6 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(
           functional::Constant({1}, value_scalar, tensor->dtype(), ASSERT(tensor->device())));
     } else {
-      CHECK_OR_THROW(PyTensor_Check(value));
       value_tensor = PyTensor_Unpack(value);
       Optional<Symbol<Device>> device = ASSERT(tensor->device());
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));

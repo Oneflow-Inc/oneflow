@@ -125,16 +125,6 @@ static PyObject* PyTensorObject_subscript(PyObject* self, PyObject* item) {
   END_HANDLE_ERRORS
 }
 
-static int PyTensorObject_ass_subscript(PyObject* self, PyObject* item, PyObject* value) {
-  HANDLE_ERRORS
-  const auto& p = PyTensor_Unpack(self);
-  const auto& v = PyTensor_Unpack(value);
-  functional::PythonArg arg(item);
-  ASSERT(functional::TensorSetItem(p, arg.As<functional::TensorIndex>(), v));
-  return 0;
-  END_HANDLE_ERRORS_RET(-1)
-}
-
 static PySequenceMethods PyTensorObject_as_sequence = {
     (lenfunc)PyTensorObject_length, NULL, /*sq_concat*/
     NULL,                                 /*sq_repeat*/

@@ -71,30 +71,6 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 
-def _setitem(self, key, value):
-    if self.is_global:
-        if isinstance(value, (int, float)):
-            value = flow._C.global_constant(
-                [1],
-                value,
-                dtype=self.dtype,
-                placement=self.placement,
-                sbp=[flow.sbp.broadcast,] * len(self.sbp),
-            )
-        else:
-            value = value.to_global(
-                self.placement, sbp=[flow.sbp.broadcast,] * len(self.sbp)
-            )
-    else:
-        if isinstance(value, (int, float)):
-            value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
-        else:
-            value = value.to(device=self.device)
-
-    flow._C.tensor_setitem(self, key, value)
-    return self
-
-
 def _str(self):
     return self.__repr__()
 
@@ -918,22 +894,6 @@ def _to(self, *args, **kwargs):
     if ("device" in kwargs) and isinstance(kwargs["device"], int):
         kwargs["device"] = flow.device(f"cuda:{kwargs['device']}")
     return flow._C.to(self, *new_args, **kwargs)
-
-
-def _local_to_global(self, placement=None, sbp=None, *, check_meta=True):
-    return flow.local_to_global(self, placement, sbp, check_meta)
-
-
-def _global_to_global(
-    self, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
-):
-    return flow.global_to_global(
-        self, placement, sbp, grad_sbp=grad_sbp, check_meta=check_meta
-    )
-
-
-def _to_global(self, placement=None, sbp=None, **kwargs):
-    return flow.to_global(self, placement, sbp, **kwargs)
 
 
 def _to_local(self):
