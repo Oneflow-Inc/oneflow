@@ -33,6 +33,7 @@ limitations under the License.
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
 
 #include "mlir/Pass/Pass.h"
@@ -170,18 +171,13 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
                                 ConversionPatternRewriter& rewriter) const override {
     auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
     // decide whether call by python or not
-    if (mgr) {
-      auto tensor = mgr->Get(op.op_name().str());
+    if (!mgr) op->emitError("oneflow variable op doesn't support pure mlir file conversion");
 
-      auto value = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
-      auto output = op.output().getType();
-      rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
-    } else {
-      auto output = op.output().getType().cast<ShapedType>();
-      auto value = DenseElementsAttr::get(output, rewriter.getZeroAttr(output.getElementType()));
+    auto tensor = mgr->Get(op.op_name().str());
+    auto value = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
+    auto output = op.output().getType();
 
-      rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
-    }
+    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
     return success();
   }
 };
