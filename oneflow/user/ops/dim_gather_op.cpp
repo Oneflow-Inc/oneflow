@@ -22,16 +22,18 @@ namespace oneflow {
 /* static */ Maybe<void> DimGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("input", 0);
   int64_t input_num_axes = in.shape().NumAxes();
-  CHECK_GT_OR_RETURN(input_num_axes, 0);
+  // For 0-dim tensor
+  CHECK_GE_OR_RETURN(input_num_axes, 0);  // NOLINT
   CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
 
   const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
   int64_t index_num_axes = index.shape().NumAxes();
 
   const int32_t dim = ctx->Attr<int32_t>("dim");
+  // For 0-dim tensor
   CHECK_GE_OR_RETURN(dim, 0);
-  CHECK_LT_OR_RETURN(dim, input_num_axes);
-  CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
+  CHECK_LE_OR_RETURN(dim, input_num_axes);                                         // NOLINT
+  if (input_num_axes > 0) { CHECK_GE_OR_RETURN(input_num_axes, index_num_axes); }  // NOLINT
 
   CHECK_EQ_OR_RETURN(in.is_dynamic(), index.is_dynamic());
 
