@@ -36,8 +36,46 @@ struct TensorListMetadata {
   int64_t sizes[depth_to_max_tensors[n - 1]];
 };
 
+constexpr int block_num_per_tensor = 128; 
+
+// template<typename T, typename G, int n>
+// __global__ void MultiTensorSGDUpdateGpu(T scale, const float l1, const float l2,
+//                                         const float weight_decay, float learning_rate_val,
+//                                         const float* learning_rate, const T* scale_by_ptr,
+//                                         const int64_t* skip_if,
+//                                         TensorListMetadata<T, G, n> meta_data) {
+//   if (skip_if != nullptr && *skip_if != 0) { return; }
+//   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+//   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+
+//   // assume each block process a tensor.
+//   // const int32_t tensor_idx = blockIdx.x;
+//   // const int64_t tensor_size = meta_data.sizes[tensor_idx];
+//   // for (int64_t i = threadIdx.x, step = blockDim.x; i < tensor_size; i += step) {
+//   //   SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
+//   //                            meta_data.model_addresses[tensor_idx] + i, scale, l1, l2, weight_decay,
+//   //                            learning_rate_val);
+//   // }
+  
+
+//   /*
+//   Tensor data:   tensor0    tensor1    tensor2    tensor3
+//   blockIdx:      0 - 127   128 - 255  256 - 383  384 - 511
+//   */
+//   const int32_t tensor_idx = blockIdx.x / block_num_per_tensor;
+//   const int32_t tensor_block_idx = blockIdx.x % block_num_per_tensor;
+//   const int64_t tensor_size = meta_data.sizes[tensor_idx];
+//   for (int64_t i = tensor_block_idx * blockDim.x + threadIdx.x, 
+//        step = block_num_per_tensor * blockDim.x; i < tensor_size; i += step) {
+//     SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
+//                              meta_data.model_addresses[tensor_idx] + i, scale, l1, l2, weight_decay,
+//                              learning_rate_val);
+//   }
+// }
+
+
 template<typename T, typename G, int n>
-__global__ void MultiTensorSGDUpdateGpu(T scale, const float l1, const float l2,
+__global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float l1, const float l2,
                                         const float weight_decay, float learning_rate_val,
                                         const float* learning_rate, const T* scale_by_ptr,
                                         const int64_t* skip_if,
@@ -45,14 +83,13 @@ __global__ void MultiTensorSGDUpdateGpu(T scale, const float l1, const float l2,
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
-
-  // assume each block process a tensor.
-  const int32_t tensor_idx = blockIdx.x;
-  const int64_t tensor_size = meta_data.sizes[tensor_idx];
-  for (int64_t i = threadIdx.x, step = blockDim.x; i < tensor_size; i += step) {
-    SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
-                             meta_data.model_addresses[tensor_idx] + i, scale, l1, l2, weight_decay,
-                             learning_rate_val);
+  
+  for(int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++){
+    CUDA_1D_KERNEL_LOOP(i, meta_data.sizes[tensor_idx]){
+      SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
+                               meta_data.model_addresses[tensor_idx] + i, scale, l1, l2, weight_decay,
+                               learning_rate_val);
+    }
   }
 }
 
@@ -103,11 +140,8 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
           (ctx->Tensor4ArgNameAndIndex("model", i))->shape().elem_cnt();
       count += 1;
       if (count == depth_to_max_tensors[1] || i == n_tensor - 1) {
-        // for (int j = 0; j < n_tensor; j++) {
-        //   printf("elem_cnt is: %ld \n", tensor_list_meta_data.sizes[j]);
-        // }
         MultiTensorSGDUpdateGpu<T, G, 2>
-            <<<count, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            <<<1024, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(count, 
                 static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, learning_rate_ptr,
                 scale_by_ptr, skip_if_ptr, tensor_list_meta_data);
         count = 0;
