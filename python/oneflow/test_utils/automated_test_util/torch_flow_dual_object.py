@@ -65,6 +65,9 @@ def torch_tensor_to_flow(x):
 note_pytorch_method_names = []
 note_pytorch_args = []
 note_pytorch_kwargs = []
+note_pytorch_method_value_names = []
+pytorch_value_args = []
+pytorch_value_kwargs = []
 vis_parameters = {}
 call_tensor_id = []
 extra_input_tensor = set()
@@ -170,41 +173,55 @@ def get_args(callable, *args, **kwargs):
         pytorch_kwargs[key] = get_pytorch_value(value)
         oneflow_kwargs[key] = get_oneflow_value(value)
 
+    new_pytorch_value_args = []
     new_pytorch_args = []
+    new_pytorch_value_kwargs = {}
     new_pytorch_kwargs = {}
     for x in pytorch_args:
         if isinstance(x, (tuple, list)):
             new_x = f"("
+            new_value_x = f"("
             len_x = len(x)
             for i in range(len_x):
                 if type(x[i]) is torch_original.Tensor:
                     if i < len_x - 1:
                         new_x += f"Tensor({get_tensor_shape(x[i])}), "
+                        new_value_x += str(x[i]) + ", "
                     else:
                         new_x += f"Tensor({get_tensor_shape(x[i])})"
+                        new_value_x += str(x[i])
                 else:
                     if i < len_x - 1:
                         new_x += f"{x[i]}, "
+                        new_value_x += f"{x[i]}, "
                     else:
                         new_x += f"{x[i]}"
+                        new_value_x += f"{x[i]}"
             new_x += f")"
+            new_value_x += f")"
             new_pytorch_args.append(new_x)
+            new_pytorch_value_args.append(new_value_x)
             continue
         if type(x) is torch_original.Tensor:
             new_pytorch_args.append(f"Tensor({get_tensor_shape(x)})")
+            new_pytorch_value_args.append(str(x))
         else:
             new_pytorch_args.append(x)
+            new_pytorch_value_args.append(x)
     for key, value in pytorch_kwargs.items():
         if type(value) is torch_original.Tensor:
             new_pytorch_kwargs[key] = f"Tensor({get_tensor_shape(value)})"
+            new_pytorch_value_kwargs[key] = str(value)
         else:
             new_pytorch_kwargs[key] = value
+            new_pytorch_value_kwargs[key] = value
 
     if not isinstance(callable, (torch_original.nn.Module)):
         if isinstance(call_pytorch, torch_original.Tensor):
             note_pytorch_method_names.append(
                 f"Tensor({get_tensor_shape(call_pytorch)}).{callable.__name__}"
             )
+            note_pytorch_method_value_names.append(f"{str(call_pytorch)}.{callable.__name__}")
         elif isinstance(call_pytorch, torch_original.nn.Module):
             note_pytorch_method_names.append(f"Module.{callable.__name__}")
         else:
@@ -214,6 +231,8 @@ def get_args(callable, *args, **kwargs):
 
     note_pytorch_args.append(new_pytorch_args)
     note_pytorch_kwargs.append(new_pytorch_kwargs)
+    pytorch_value_args.append(new_pytorch_value_args)
+    pytorch_value_kwargs.append(new_pytorch_value_kwargs)
 
     return (pytorch_args, pytorch_kwargs, oneflow_args, oneflow_kwargs)
 
@@ -427,8 +446,8 @@ def get_tensor_graph_res(
                 oneflow,
                 "nn.Graph",
                 "get_tensor_graph_res",
-                oneflow_args,
-                oneflow_kwargs,
+                tensor_graph_args,
+                tensor_graph_kwargs,
             )
         raise OneFlowGraphBuildOrRunError(e)
     return test_g_res
@@ -792,11 +811,11 @@ def note_print_kwargs(x, y, end=True):
 
 
 def print_note_fake_program():
-    code_len = len(note_pytorch_method_names)
+    code_len = len(note_pytorch_method_value_names)
     for i in range(code_len):
         note_pytorch_args_len = len(note_pytorch_args[i])
         note_pytorch_kwargs_len = len(note_pytorch_kwargs[i])
-        print(f"\033[32m{note_pytorch_method_names[i]}\033[0m", end="")
+        print(f"\033[32m{note_pytorch_method_value_names[i]}\033[0m", end="")
         print(f"\033[32m(\033[0m", end="")
         if note_pytorch_args[i]:
             index = 0
@@ -815,11 +834,37 @@ def print_note_fake_program():
                 )
         print(f"\033[32m)\033[0m")
 
+def print_values_of_fake_program():
+    print(f"\033[1;33m=============For Detail Debug================\033[1;33m")
+    code_len = len(note_pytorch_method_names)
+    for i in range(code_len):
+        note_pytorch_value_args_len = len(pytorch_value_args[i])
+        note_pytorch_value_kwargs_len = len(pytorch_value_kwargs[i])
+        print(f"\033[32m{note_pytorch_method_names[i]}\033[0m", end="")
+        print(f"\033[32m(\033[0m", end="")
+        if pytorch_value_args[i]:
+            index = 0
+            for x in pytorch_value_args[i]:
+                index += 1
+                note_print_args(x, index < note_pytorch_value_args_len)
+
+        if pytorch_value_kwargs[i]:
+            index = 0
+            if pytorch_value_args[i]:
+                print(f"\033[32m, \033[0m", end="")
+            for x in pytorch_value_kwargs[i].keys():
+                index += 1
+                note_print_kwargs(
+                    x, pytorch_value_kwargs[i][x], index < note_pytorch_value_kwargs_len
+                )
+        print(f"\033[32m)\033[0m")
 
 def clear_note_fake_program():
     note_pytorch_method_names.clear()
     note_pytorch_args.clear()
     note_pytorch_kwargs.clear()
+    pytorch_value_args.clear()
+    pytorch_value_kwargs.clear()
     call_tensor_id.clear()
     vis_parameters.clear()
     extra_input_tensor.clear()
@@ -972,6 +1017,7 @@ def check_tensor_equality(
             torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
         ):
             print_note_fake_program()
+            print_values_of_fake_program()
             print("---------Grad Shape--------")
             print(torch_grad.shape)
             print(flow_grad.shape)
@@ -990,12 +1036,7 @@ def check_tensor_equality(
 
     if equality_res == False:
         print_note_fake_program()
-        print("---------Tensor Shape--------")
-        print(torch_tensor.shape)
-        print(flow_tensor.shape)
-        print("---------Tensor dtype--------")
-        print(torch_tensor.dtype)
-        print(flow_tensor.dtype)
+        print_values_of_fake_program()
     return equality_res
 
 
@@ -1023,12 +1064,7 @@ def check_basetype_equality(a, b, rtol=0.0001, atol=1e-05, check_dtype=False):
                 equality_res = equality_res and (torch_np.dtype == flow_np.dtype)
             if equality_res == False:
                 print_note_fake_program()
-                print("---------Tensor Shape--------")
-                print(a[i].shape)
-                print(b[i].shape)
-                print("---------Tensor dtype--------")
-                print(a[i].dtype)
-                print(b[i].dtype)
+                print_values_of_fake_program()
                 break
 
     return equality_res

@@ -36,7 +36,7 @@ def arange_op(
     if placement is None:
         if isinstance(device, str):
             device = flow.device(device)
-        res = flow._C.arange(start, end, step, dtype=dtype, device=device)
+        res = flow._C.arange(start, end, step, dtype=dtype, device=device) + 1.0
     else:
         assert isinstance(
             placement, flow._oneflow_internal.placement
