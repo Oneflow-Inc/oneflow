@@ -79,7 +79,7 @@ namespace oneflow {
 }
 
 REGISTER_USER_OP_GRAD("leaky_relu_yzh")
-    .SetGenBackwardOpConfFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const std::string leaky_relu_yzh_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(leaky_relu_yzh_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("leaky_relu_yzh_grad")
