@@ -961,6 +961,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     const int64_t num_unique = ptrs->lookup_num_unique_;
+    void* cur_rank_embeddings_ptr =
+        (ptrs->has_lookup_embeddings_) ? ptrs->lookup_embeddings_ : ptrs->lookup_values_;
     if (!enable_quantized_comm) {
       // 1. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,
       // embedding_size)
@@ -970,8 +972,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
           GetCudaAlignedSize(cur_rank_num_ids * embedding_size * sizeof(T)), cuda_stream));
       GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
-          cur_rank_num_ids, cur_rank_embeddings->dptr<T>(), Shape({1, num_unique, embedding_size}),
-          reverse_unique_cur_rank_embeddings, 0);
+          cur_rank_num_ids, reinterpret_cast<T*>(cur_rank_embeddings_ptr),
+          Shape({1, num_unique, embedding_size}), reverse_unique_cur_rank_embeddings, 0);
 
       // 2. send recv embedding, from (cur_rank_num_ids, embedding_size) to
       // (unique_partitioned_num_ids, embedding_size)
@@ -1003,7 +1005,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       OF_CUDA_CHECK(cudaMallocAsync(&cur_rank_quantize_factor,
                                     GetCudaAlignedSize(num_unique * sizeof(T)), cuda_stream));
       DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
-          cuda_stream, cur_rank_embeddings->dptr<T>(), quantize_cur_rank_embeddings,
+          cuda_stream, reinterpret_cast<T*>(cur_rank_embeddings_ptr), quantize_cur_rank_embeddings,
           cur_rank_quantize_factor, num_unique, embedding_size);
 
       // 2. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,

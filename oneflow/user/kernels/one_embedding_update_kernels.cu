@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/user/kernels/model_update_kernel_util.h"
+#include "oneflow/core/embedding/embedding_manager.h"
 
 namespace oneflow {
 
@@ -221,8 +222,8 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
     CHECK_EQ(unique_embeddings->shape().NumAxes(), 2);
     CHECK_EQ(embedding_grad->shape().NumAxes(), 2);
-    const int64_t line_size = unique_embeddings->shape().At(1);
-    const int64_t embedding_size = embedding_grad->shape().At(1);
+    const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     CHECK_EQ(line_size, embedding_size);
     const auto scale = ctx->Attr<double>("scale");
     const float l1 = ctx->Attr<float>("l1");
@@ -251,14 +252,27 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
+    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+
+    embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    const int64_t num_unique = ptrs->lookup_num_unique_;
+    T* unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->lookup_values_);
+    OF_CUDA_CHECK(cudaMallocAsync(&ptrs->updated_values_,
+                                  GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
+                                  cuda_stream));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->updated_values_);
     // update kernel
     SGDUpdateKernel<T, G, IDX>
-        <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            embedding_size, scale, l1, l2, weight_decay,
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
-            updated_unique_embeddings->mut_dptr<T>());
+        <<<BlocksNum4ThreadsNum(num_unique * embedding_size), kCudaThreadsNumPerBlock, 0,
+           cuda_stream>>>(embedding_size, scale, l1, l2, weight_decay,
+                          reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
+                          scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
+                          unique_embeddings_ptr, updated_unique_embeddings_ptr);
+    OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_values_, cuda_stream));
+    if (ptrs->has_lookup_embeddings_) {
+      OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_embeddings_, cuda_stream));
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -298,8 +312,8 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     CHECK_EQ(unique_embeddings->shape().NumAxes(), 2);
     CHECK_EQ(embedding_grad->shape().NumAxes(), 2);
     const int64_t num_keys = unique_embeddings->shape().At(0);
-    const int64_t line_size = unique_embeddings->shape().At(1);
-    const int64_t embedding_size = embedding_grad->shape().At(1);
+    const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     CHECK_EQ(line_size, embedding_size * 2);
     const float l1 = ctx->Attr<float>("l1");
     const float l2 = ctx->Attr<float>("l2");
@@ -373,8 +387,8 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
     CHECK_EQ(unique_embeddings->shape().NumAxes(), 2);
     CHECK_EQ(embedding_grad->shape().NumAxes(), 2);
     const int64_t num_keys = unique_embeddings->shape().At(0);
-    const int64_t line_size = unique_embeddings->shape().At(1);
-    const int64_t embedding_size = embedding_grad->shape().At(1);
+    const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     CHECK_EQ(line_size, embedding_size * 3);
 
     const float l1 = ctx->Attr<float>("l1");
@@ -460,8 +474,8 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
     CHECK_EQ(unique_embeddings->shape().NumAxes(), 2);
     CHECK_EQ(embedding_grad->shape().NumAxes(), 2);
     const int64_t num_keys = unique_embeddings->shape().At(0);
-    const int64_t line_size = unique_embeddings->shape().At(1);
-    const int64_t embedding_size = embedding_grad->shape().At(1);
+    const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     CHECK_EQ(line_size, embedding_size * 2);
 
     const float l1 = ctx->Attr<float>("l1");
@@ -540,8 +554,8 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
     CHECK_EQ(embedding_grad->shape().NumAxes(), 2)
         << "The NumAxes of embedding_grad should be equal to 2. ";
     const int64_t num_keys = unique_embeddings->shape().At(0);
-    const int64_t line_size = unique_embeddings->shape().At(1);
-    const int64_t embedding_size = embedding_grad->shape().At(1);
+    const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     CHECK_EQ(line_size, embedding_size * 3)
         << "The line_size should be equal to 3 x embedding_size. ";
     const float l1 = 0.0;
