@@ -221,7 +221,9 @@ def get_args(callable, *args, **kwargs):
             note_pytorch_method_names.append(
                 f"Tensor({get_tensor_shape(call_pytorch)}).{callable.__name__}"
             )
-            note_pytorch_method_value_names.append(f"{str(call_pytorch)}.{callable.__name__}")
+            note_pytorch_method_value_names.append(
+                f"{str(call_pytorch)}.{callable.__name__}"
+            )
         elif isinstance(call_pytorch, torch_original.nn.Module):
             note_pytorch_method_names.append(f"Module.{callable.__name__}")
         else:
@@ -835,6 +837,7 @@ def print_note_fake_program():
                 )
         print(f"\033[32m)\033[0m")
 
+
 def print_values_of_fake_program():
     print(f"\033[1;33m=============For Detail Debug================\033[1;33m")
     code_len = len(note_pytorch_method_value_names)
@@ -859,6 +862,7 @@ def print_values_of_fake_program():
                     x, pytorch_value_kwargs[i][x], index < note_pytorch_value_kwargs_len
                 )
         print(f"\033[32m)\033[0m")
+
 
 def clear_note_fake_program():
     note_pytorch_method_names.clear()
