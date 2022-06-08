@@ -20,6 +20,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 template<typename T>
 class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -130,6 +132,8 @@ REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(double, DataType::kDouble);
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(float, DataType::kFloat);
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(half, DataType::kFloat16);
 REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+
+}  // namespace
 
 }  // namespace oneflow
 
