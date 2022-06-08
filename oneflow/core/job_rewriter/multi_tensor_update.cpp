@@ -19,6 +19,39 @@ limitations under the License.
 
 namespace oneflow {
 
+struct SGDOptimizerKey {
+  std::string learning_rate;
+  double scale;
+  float l1;
+  float l2;
+  float weight_decay;
+};
+
+bool operator==(const SGDOptimizerKey& lhs, const SGDOptimizerKey& rhs) {
+  return (lhs.learning_rate == rhs.learning_rate) && (lhs.scale == rhs.scale) && (lhs.l1 == rhs.l1)
+         && (lhs.l2 == rhs.l2) && (lhs.weight_decay == rhs.weight_decay);
+}
+
+}  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::SGDOptimizerKey> {
+  size_t operator()(const oneflow::SGDOptimizerKey& key) const {
+    const auto& float_hash = std::hash<float>();
+    const auto& double_hash = std::hash<float>();
+    const auto& string_hash = std::hash<std::string>();
+
+    return string_hash(key.learning_rate) ^ double_hash(key.scale) ^ float_hash(key.l1)
+           ^ float_hash(key.l2) ^ float_hash(key.weight_decay);
+  }
+};
+
+}  // namespace std
+
+namespace oneflow {
+
 namespace {
 
 bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_type_name) {
@@ -46,8 +79,8 @@ class MultiTensorUpdatePass final : public JobPass {
 Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   if (!job_builder->job().job_conf().has_train_conf()) { return Maybe<void>::Ok(); }
   std::vector<OperatorConf> delete_ops;
-  user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder("multi_tensor_update");
   ParallelConf parallel_conf{};
+  HashMap<SGDOptimizerKey, user_op::UserOpConfWrapperBuilder> multi_tensor_hashmap;
 
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
@@ -64,24 +97,42 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
       delete_ops.emplace_back(find_sgd_update_node->op().op_conf());
       parallel_conf = find_sgd_update_node->parallel_desc().parallel_conf();
 
-      // TODO: 把相同参数learning_rate, l1, l2, weight_decay分组到一个multi_tensor_sgd_update
-      // sgd_user_conf.input("learning_rate", 0) 这里其实是一个字符串
-      multi_tensor_update_sgd_op_builder.OpTypeName("multi_tensor_sgd_update")
-          .Input("model", sgd_user_conf.input("model", 0))
-          .Input("model_diff", sgd_user_conf.input("model_diff", 0))
-          .Input("learning_rate", sgd_user_conf.input("learning_rate", 0))
-          .Attr<double>("scale", sgd_user_conf.attr<double>("scale"))
-          .Attr<float>("l1", sgd_user_conf.attr<float>("l1"))
-          .Attr<float>("l2", sgd_user_conf.attr<float>("l2"))
-          .Attr<float>("weight_decay", sgd_user_conf.attr<float>("weight_decay"));
+      SGDOptimizerKey key{sgd_user_conf.input("learning_rate", 0),
+                          sgd_user_conf.attr<double>("scale"), sgd_user_conf.attr<float>("l1"),
+                          sgd_user_conf.attr<float>("l2"),
+                          sgd_user_conf.attr<float>("weight_decay")};
 
-      CHECK(sgd_user_conf.op_conf().has_scope_symbol_id());
-      multi_tensor_update_sgd_op_builder.ScopeSymbolId(sgd_user_conf.op_conf().scope_symbol_id());
+      const auto& iter = multi_tensor_hashmap.find(key);
+
+      if (iter != multi_tensor_hashmap.end()) {
+        iter->second.Input("model", sgd_user_conf.input("model", 0))
+            .Input("model_diff", sgd_user_conf.input("model_diff", 0))
+            .Input("learning_rate", sgd_user_conf.input("learning_rate", 0))
+            .Attr<double>("scale", sgd_user_conf.attr<double>("scale"))
+            .Attr<float>("l1", sgd_user_conf.attr<float>("l1"))
+            .Attr<float>("l2", sgd_user_conf.attr<float>("l2"))
+            .Attr<float>("weight_decay", sgd_user_conf.attr<float>("weight_decay"));
+      } else {
+        user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder("multi_tensor_update");
+        multi_tensor_update_sgd_op_builder.OpTypeName("multi_tensor_sgd_update")
+            .Input("model", sgd_user_conf.input("model", 0))
+            .Input("model_diff", sgd_user_conf.input("model_diff", 0))
+            .Input("learning_rate", sgd_user_conf.input("learning_rate", 0))
+            .Attr<double>("scale", sgd_user_conf.attr<double>("scale"))
+            .Attr<float>("l1", sgd_user_conf.attr<float>("l1"))
+            .Attr<float>("l2", sgd_user_conf.attr<float>("l2"))
+            .Attr<float>("weight_decay", sgd_user_conf.attr<float>("weight_decay"));
+        CHECK(sgd_user_conf.op_conf().has_scope_symbol_id());
+        multi_tensor_update_sgd_op_builder.ScopeSymbolId(sgd_user_conf.op_conf().scope_symbol_id());
+        multi_tensor_hashmap.emplace(key, multi_tensor_update_sgd_op_builder);
+      }
       break;
     }
   });
-  auto multi_tensor_update_sgd_op = multi_tensor_update_sgd_op_builder.Build();
-  job_builder->AddOps(parallel_conf, {multi_tensor_update_sgd_op.op_conf()});
+  for (auto& op : multi_tensor_hashmap) {
+    auto multi_tensor_update_sgd_op = op.second.Build();
+    job_builder->AddOps(parallel_conf, {multi_tensor_update_sgd_op.op_conf()});
+  }
   job_builder->DelOps(delete_ops);
   return Maybe<void>::Ok();
 }
