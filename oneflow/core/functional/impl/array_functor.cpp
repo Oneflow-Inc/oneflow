@@ -467,7 +467,7 @@ class ConcatFunctor {
     int64_t ndim = inputs[0]->ndim();
     int64_t max_dim_size = 0;
     CHECK_GE_OR_RETURN(ninput, 1) << Error::RuntimeError() << "inputs size must greater than 0";
-    axis = CHECK_JUST(maybe_wrap_dim(axis, ndim));
+    axis = JUST(maybe_wrap_dim(axis, ndim));
 
     const std::shared_ptr<const Shape>& shape = inputs[0]->shape();
     for (const auto& input : inputs) {
