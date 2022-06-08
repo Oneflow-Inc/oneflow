@@ -1,52 +1,114 @@
+.. role:: hidden
+    :class: hidden-section
+    
 oneflow.nn.functional
 ===========================================
-Functional operations for neural networks
--------------------------------------------
+
 .. currentmodule:: oneflow.nn.functional
-.. autofunction:: conv1d
-.. autofunction:: conv2d
-.. autofunction:: conv3d
-.. autofunction:: conv_transpose1d
-.. autofunction:: conv_transpose2d
-.. autofunction:: conv_transpose3d
-.. autofunction:: adaptive_avg_pool1d
-.. autofunction:: adaptive_avg_pool2d
-.. autofunction:: adaptive_avg_pool3d
-.. autofunction:: relu
-.. autofunction:: hardsigmoid
-.. autofunction:: hardshrink
-.. autofunction:: hardswish
-.. autofunction:: hardtanh
-.. autofunction:: normalize
-.. autofunction:: layer_norm
-.. autofunction:: leaky_relu
-.. autofunction:: elu
-.. autofunction:: celu
-.. autofunction:: selu
-.. autofunction:: sigmoid
-.. autofunction:: pad
-.. autofunction:: prelu
-.. autofunction:: logsigmoid 
-.. autofunction:: log_softmax
-.. autofunction:: gelu
-.. autofunction:: glu
-.. autofunction:: softsign
-.. autofunction:: softmax 
-.. autofunction:: softplus
-.. autofunction:: tanh 
-.. autofunction:: threshold
-.. autofunction:: softshrink 
-.. autofunction:: silu
-.. autofunction:: mish
-.. autofunction:: one_hot
-.. autofunction:: triplet_margin_loss
-.. autofunction:: dropout 
-.. autofunction:: affine_grid
-.. autofunction:: grid_sample
-.. autofunction:: interpolate
-.. autofunction:: ctc_greedy_decoder
-.. autofunction:: sparse_softmax_cross_entropy
-.. autofunction:: embedding
-.. autofunction:: linear
-.. autofunction:: cosine_similarity
-.. autofunction:: cross_entropy
+
+Convolution functions
+-------------------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    conv1d
+    conv2d
+    conv3d
+
+Pooling functions
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    adaptive_avg_pool1d
+    adaptive_avg_pool2d
+    adaptive_avg_pool3d
+
+Non-linear activation functions
+-------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    threshold
+    relu
+    hardtanh
+    elu
+    selu
+    celu
+    leaky_relu
+    prelu
+    glu
+    gelu
+    logsigmoid
+    hardshrink
+    softsign
+    softplus
+    softmax
+    softshrink
+    log_softmax
+    tanh
+    sigmoid
+    hardsigmoid
+    silu
+    mish
+    layer_norm
+    normalize
+
+Linear functions
+----------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    linear
+
+Dropout functions
+-----------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    dropout
+
+Sparse functions
+----------------------------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    embedding
+    one_hot
+
+
+Loss functions
+--------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    sparse_softmax_cross_entropy
+    cross_entropy
+    triplet_margin_loss
+
+Vision functions
+----------------
+
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    pad
+    interpolate
+    upsample
+    grid_sample
+    affine_grid

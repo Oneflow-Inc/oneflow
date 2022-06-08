@@ -12,10 +12,10 @@ OneFlow API Reference
     :caption: OneFlow Python API
 
     oneflow
-    tensor
-    tensor_attributes
     nn
     functional
+    tensor
+    tensor_attributes
     autograd
     cuda
     distributed

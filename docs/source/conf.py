@@ -46,7 +46,17 @@ extensions = [
     "sphinx.ext.napoleon",
     "recommonmark",
     "sphinx_copybutton",
-]
+    "sphinx.ext.autosummary",
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.todo',
+    'sphinx.ext.coverage',
+    'sphinx.ext.viewcode',
+    'sphinx.ext.autosectionlabel',
+        ]
+
+# build the templated autosummary files
+autosummary_generate = True
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -205,6 +215,6 @@ def should_skip_member(app, what, name, obj, skip, options):
     magical = name in ["__weakref__", "__doc__", "__module__", "__dict__"]
     return skip or is_deprecated or magical
 
-
 def setup(app):
     app.connect("autodoc-skip-member", should_skip_member)
+
