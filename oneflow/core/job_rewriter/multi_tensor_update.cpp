@@ -25,11 +25,13 @@ struct SGDOptimizerKey {
   float l1;
   float l2;
   float weight_decay;
+  ParallelConf parallel_conf;
 };
 
 bool operator==(const SGDOptimizerKey& lhs, const SGDOptimizerKey& rhs) {
   return (lhs.learning_rate == rhs.learning_rate) && (lhs.scale == rhs.scale) && (lhs.l1 == rhs.l1)
-         && (lhs.l2 == rhs.l2) && (lhs.weight_decay == rhs.weight_decay);
+         && (lhs.l2 == rhs.l2) && (lhs.weight_decay == rhs.weight_decay)
+         && (lhs.parallel_conf == rhs.parallel_conf);
 }
 
 }  // namespace oneflow
@@ -42,9 +44,11 @@ struct hash<oneflow::SGDOptimizerKey> {
     const auto& float_hash = std::hash<float>();
     const auto& double_hash = std::hash<float>();
     const auto& string_hash = std::hash<std::string>();
+    const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
 
     return string_hash(key.learning_rate) ^ double_hash(key.scale) ^ float_hash(key.l1)
-           ^ float_hash(key.l2) ^ float_hash(key.weight_decay);
+           ^ float_hash(key.l2) ^ float_hash(key.weight_decay)
+           ^ parallel_conf_hash(key.parallel_conf);
   }
 };
 
@@ -97,10 +101,10 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
       delete_ops.emplace_back(find_sgd_update_node->op().op_conf());
       parallel_conf = find_sgd_update_node->parallel_desc().parallel_conf();
 
-      SGDOptimizerKey key{sgd_user_conf.input("learning_rate", 0),
-                          sgd_user_conf.attr<double>("scale"), sgd_user_conf.attr<float>("l1"),
-                          sgd_user_conf.attr<float>("l2"),
-                          sgd_user_conf.attr<float>("weight_decay")};
+      SGDOptimizerKey key{
+          sgd_user_conf.input("learning_rate", 0),   sgd_user_conf.attr<double>("scale"),
+          sgd_user_conf.attr<float>("l1"),           sgd_user_conf.attr<float>("l2"),
+          sgd_user_conf.attr<float>("weight_decay"), parallel_conf};
 
       const auto& iter = multi_tensor_hashmap.find(key);
 
