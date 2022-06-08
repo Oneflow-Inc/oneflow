@@ -522,8 +522,7 @@ class StackFunctor {
     const int64_t ninput = inputs.size();
     int64_t ndims = inputs[0]->ndim();
     int64_t stack_dim = dim;
-    if (dim < 0) { stack_dim = stack_dim + ndims + 1; }
-    stack_dim = JUST(maybe_wrap_dim(stack_dim, ndims));
+    stack_dim = JUST(maybe_wrap_dim(stack_dim, ndims + 1));
     if (ninput == 1) { return ExpandDims(inputs[0], dim); }
     const std::shared_ptr<const Shape>& first_in_shape = inputs[0]->shape();
     for (const auto& input : inputs) {
@@ -660,7 +659,7 @@ class ExpandDimsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim) const {
     int32_t expand_dim = dim;
     const int32_t ndim = input->shape()->NumAxes();
-    JUST(maybe_wrap_dim(dim, ndim));
+    JUST(maybe_wrap_dim(dim, ndim + 1));
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
