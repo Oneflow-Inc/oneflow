@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
