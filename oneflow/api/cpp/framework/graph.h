@@ -65,7 +65,7 @@ class Graph {
   IValue Forward(const IValue& inputs);
   void set_batch_size(int batch_size);
 
-  void ApplyJobPass(const std::function<std::string(const std::string& job)>& pass_fn);
+  void RegisterJobPass(const std::function<std::string(const std::string& job)>& pass_fn);
 
   static Graph Load(const std::string& model_path, const Device& device = Device("cpu"));
 

@@ -127,7 +127,8 @@ class Graph::GraphImpl final {
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
 
-  of::Maybe<void> ApplyJobPass(const std::function<std::string(const std::string& job)>& pass_fn);
+  of::Maybe<void> RegisterJobPass(
+      const std::function<std::string(const std::string& job)>& pass_fn);
 
  private:
   of::Maybe<void> CollectInputOutputInfos();
@@ -137,6 +138,7 @@ class Graph::GraphImpl final {
   of::Maybe<void> BuildGraph();
   of::Maybe<void> LoadCheckpoint();
   of::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
+  of::Maybe<of::Job> ApplyJobPasses(const of::Job& job);
 
   std::shared_ptr<of::NNGraph> graph_ = nullptr;
   std::string model_path_;
@@ -151,6 +153,7 @@ class Graph::GraphImpl final {
   of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> variable_op_name_to_tensor_;
   std::shared_ptr<of::one::TensorTuple> output_tensor_tuple_;
   std::shared_ptr<of::one::TensorTuple> parameter_tensor_tuple_;
+  std::vector<std::function<std::string(const std::string&)>> registered_job_passes_;
 };
 
 Graph::Graph(const std::string& model_path, const Device& device)
@@ -170,8 +173,8 @@ InputOutputInfos Graph::GetInputInfos() { return graph_->GetInputInfos(); }
 
 InputOutputInfos Graph::GetOutputInfos() { return graph_->GetOutputInfos(); }
 
-void Graph::ApplyJobPass(const std::function<std::string(const std::string& job)>& pass_fn) {
-  CHECK_JUST(graph_->ApplyJobPass(pass_fn));
+void Graph::RegisterJobPass(const std::function<std::string(const std::string& job)>& pass_fn) {
+  CHECK_JUST(graph_->RegisterJobPass(pass_fn));
 }
 
 IValue Graph::Forward(const IValue& inputs) {
@@ -210,7 +213,6 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) { LOG(ERROR) << job_.DebugString(); }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
-  CHECK_JUST(BuildGraph());
 }
 
 InputOutputInfos Graph::GraphImpl::GetInputInfos() { return input_infos_; }
@@ -241,16 +243,26 @@ of::Maybe<void> Graph::GraphImpl::CollectInputOutputInfos() {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::GraphImpl::ApplyJobPass(
+of::Maybe<void> Graph::GraphImpl::RegisterJobPass(
     const std::function<std::string(const std::string& job)>& pass_fn) {
-  CHECK(!is_compiled_) << "job pass should be applied before compile and forward";
-  std::string new_serialized_job = pass_fn(graph_->job().SerializeAsString());
-  of::Job new_job;
-  if (!new_job.ParseFromString(new_serialized_job)) {
-    LOG(FATAL) << "invalid serialized job after xrt pass applied";
+  if (is_compiled_) {
+    return of::Error::RuntimeError() << "job pass should be registered before compile and forward";
   }
-  graph_->restore_job(new_job);
+  registered_job_passes_.emplace_back(pass_fn);
   return of::Maybe<void>::Ok();
+}
+
+of::Maybe<of::Job> Graph::GraphImpl::ApplyJobPasses(const of::Job& job) {
+  auto current_job = std::make_shared<of::Job>(job);
+  for (const auto& pass_fn : registered_job_passes_) {
+    std::string new_serialized_job = pass_fn(current_job->SerializeAsString());
+    of::Job new_job;
+    if (!new_job.ParseFromString(new_serialized_job)) {
+      return of::Error::RuntimeError() << "invalid serialized job after pass applied";
+    }
+    current_job->Swap(&new_job);
+  }
+  return current_job;
 }
 
 std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
@@ -264,6 +276,7 @@ std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs)
 }
 
 of::Maybe<void> Graph::GraphImpl::Compile(const std::vector<Tensor>& inputs) {
+  JUST(BuildGraph());
   JUST(RegisterTensors(inputs));
   JUST(graph_->CompileAndInitRuntime());
   return of::Maybe<void>::Ok();
@@ -317,9 +330,12 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
   }
   JUST(LoadCheckpoint());
   JUST(of::CurJobBuildAndInferCtx_Complete());
-  const std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
+  std::shared_ptr<of::Job> complete_job = JUST(of::GetCurrentJob());
   int64_t job_id = JUST(of::JobBuildAndInferCtx_GetCurrentJobId());
   CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
+
+  // apply custom job passes
+  complete_job = JUST(ApplyJobPasses(*complete_job));
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(), *complete_job, job_id,
                                          of::Global<OneFlowEnv>::Get()->GetSessionCtx());
   {
