@@ -748,8 +748,12 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
   std::shared_ptr<Tensor> value_tensor;
-  CHECK_OR_THROW(functional::PyTensorIndexCheck(item));
-  CHECK_OR_THROW(functional::PyScalarCheck(value) || PyTensor_Check(value));
+  CHECK_OR_THROW(functional::PyTensorIndexCheck(item))
+      << Error::TypeError() << "tensor_setitem(): argument 'index' must be index, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(item)));
+  CHECK_OR_THROW(functional::PyScalarCheck(value) || PyTensor_Check(value))
+      << Error::TypeError() << "tensor_setitem(): argument 'value' must be tensor or scalar, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(value)));
 
   if (tensor->is_consistent()) {
     Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
