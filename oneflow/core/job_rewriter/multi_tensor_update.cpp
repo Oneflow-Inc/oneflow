@@ -110,12 +110,7 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
       if (iter != multi_tensor_hashmap.end()) {
         iter->second.Input("model", sgd_user_conf.input("model", 0))
-            .Input("model_diff", sgd_user_conf.input("model_diff", 0))
-            .Input("learning_rate", sgd_user_conf.input("learning_rate", 0))
-            .Attr<double>("scale", sgd_user_conf.attr<double>("scale"))
-            .Attr<float>("l1", sgd_user_conf.attr<float>("l1"))
-            .Attr<float>("l2", sgd_user_conf.attr<float>("l2"))
-            .Attr<float>("weight_decay", sgd_user_conf.attr<float>("weight_decay"));
+            .Input("model_diff", sgd_user_conf.input("model_diff", 0));
       } else {
         user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder("multi_tensor_update");
         multi_tensor_update_sgd_op_builder.OpTypeName("multi_tensor_sgd_update")
