@@ -393,9 +393,13 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
         &store_values, GetCudaAlignedSize(num_unique * line_size * sizeof(T)), cuda_stream));
   } else {
     CHECK(ptrs != nullptr);
+    if (ptrs->has_lookup_values_) {
+      OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_values_, cuda_stream));
+    }
     OF_CUDA_CHECK(cudaMallocAsync(&(ptrs->lookup_values_),
                                   GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
                                   cuda_stream));
+    ptrs->has_lookup_values_ = true;
     store_values = reinterpret_cast<T*>(ptrs->lookup_values_);
   }
   store->Get(stream, num_unique, unique_ids, store_values, num_missing_ptr, missing_indices);
@@ -574,12 +578,15 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     ptrs->lookup_num_unique_ = num_unique;
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
-      ptrs->has_lookup_embeddings_ = true;
+      if (ptrs->has_lookup_embeddings_) {
+        OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_embeddings_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+      }
       OF_CUDA_CHECK(
           cudaMallocAsync(&(ptrs->lookup_embeddings_),
                           GetCudaAlignedSize(num_unique * embedding_size
                                              * GetSizeOfDataType(embeddings->data_type())),
                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+      ptrs->has_lookup_embeddings_ = true;
       CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
                                 unique_values->data_type(), embeddings->data_type(),
                                 reinterpret_cast<T*>(ptrs->lookup_values_),

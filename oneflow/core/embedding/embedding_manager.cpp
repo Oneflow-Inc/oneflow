@@ -77,6 +77,8 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
 
   ValuesPtr ptrs;
+  ptrs.has_lookup_values_ = false;
+  ptrs.has_lookup_embeddings_ = false;
   CHECK(values_ptrs_map_.emplace(map_key, std::make_unique<ValuesPtr>(ptrs)).second)
       << "Can't create an embedding values with same name of an existing embedding, the name: "
       << name;

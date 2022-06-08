@@ -31,6 +31,7 @@ struct ValuesPtr {
   uint32_t lookup_num_unique_;
   void* lookup_values_;
   void* lookup_embeddings_;
+  bool has_lookup_values_;
   bool has_lookup_embeddings_;
   void* updated_values_;
 };

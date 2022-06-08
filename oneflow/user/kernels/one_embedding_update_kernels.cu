@@ -269,10 +269,6 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
                           reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
                           scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
                           unique_embeddings_ptr, updated_unique_embeddings_ptr);
-    OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_values_, cuda_stream));
-    if (ptrs->has_lookup_embeddings_) {
-      OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_embeddings_, cuda_stream));
-    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
