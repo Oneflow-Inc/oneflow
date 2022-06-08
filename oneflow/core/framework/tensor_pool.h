@@ -31,16 +31,7 @@ namespace dtr {
 struct TensorPool {
   TensorPool();
   OF_DISALLOW_COPY_AND_MOVE(TensorPool);
-  ~TensorPool() {
-    std::cout << "=======================" << std::endl;
-    std::cout << "Destruct TensorPool." << std::endl;
-    std::cout << "Times of forced eviction: " << num_forced_eviction_ << std::endl;
-    std::cout << "Times of eager eviction: " << num_eager_eviction_ << std::endl;
-    std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
-    std::cout << "Times of destruction: " << num_destruction_ << std::endl;
-    std::cout << "duration_: " << duration_ << std::endl;
-    if (dtr::is_enabled_and_debug()) { CHECK_JUST(display()); }
-  }
+  ~TensorPool();
 
   void set_total_memory(size_t mem);
   size_t get_total_memory();

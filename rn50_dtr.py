@@ -2,6 +2,7 @@
 
 import time
 import os
+import json
 
 import numpy as np
 from numpy import random
@@ -207,16 +208,25 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
         this_time = time.time() - last_time
         total_time += this_time
         if iter % 1 == 0:
-            print(f'iter {iter} end, time: {this_time}')
+            pass
+            # print(f'iter {iter} end, time: {this_time}')
 
     last_time = time.time()
     if iter == 0:
-        print('iter 0 ok')
+        pass
+        # print('iter 0 ok')
     # print(f'iter {iter} end, all pieces:')
     # flow._oneflow_internal.dtr.display_all_pieces()
     flow._oneflow_internal.dtr.set_left(True)
 
+time_per_run = total_time / (ALL_ITERS - WARMUP_ITERS)
 print(
-f"{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s"
+f"{ALL_ITERS - WARMUP_ITERS} iters: avg {time_per_run}s"
 )
+
+prefix = os.getenv("ONEFLOW_DTR_SUMMARY_FILE_PREFIX")
+if prefix is not None:
+    fn = f'{prefix}.json'
+    with open(fn, 'w') as f:
+        json.dump({"real time": time_per_run}, f)
 

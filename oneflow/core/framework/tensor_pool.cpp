@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 
@@ -34,6 +35,38 @@ TensorPool::TensorPool()
       num_recomputation_(0),
       num_destruction_(0) {
   start_time_ = std::chrono::steady_clock::now();
+}
+
+TensorPool::~TensorPool() {
+  std::cout << "=======================" << std::endl;
+  std::cout << "Destruct TensorPool." << std::endl;
+  std::cout << "Times of forced eviction: " << num_forced_eviction_ << std::endl;
+  std::cout << "Times of eager eviction: " << num_eager_eviction_ << std::endl;
+  std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
+  std::cout << "Times of destruction: " << num_destruction_ << std::endl;
+  std::cout << "duration_: " << duration_ << std::endl;
+  if (dtr::is_enabled_and_debug()) { CHECK_JUST(display()); }
+  const char* prefix = std::getenv("ONEFLOW_DTR_SUMMARY_FILE_PREFIX");
+  if (prefix != nullptr) {
+    using json = nlohmann::json;
+    json cpp_summary{{"forced eviction", num_forced_eviction_},
+                 {"eager eviction", num_eager_eviction_},
+                 {"recomputation", num_recomputation_},
+                 {"destruction", num_destruction_},
+                 {"theoretically time", duration_}};
+
+    json full_json;
+    // std::fstream has strange default append semantic
+    {
+      std::ifstream fs(std::string(prefix) + ".json");
+      fs >> full_json;
+    }
+    full_json.merge_patch(cpp_summary);
+    {
+      std::ofstream fs(std::string(prefix) + ".json");
+      fs << full_json;
+    }
+  }
 }
 
 namespace {
@@ -56,11 +89,11 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
 }
 }  // namespace
 
-void TensorPool::inc_num_eviction(bool eager_evict) { 
+void TensorPool::inc_num_eviction(bool eager_evict) {
   if (eager_evict) {
-    num_eager_eviction_++; 
+    num_eager_eviction_++;
   } else {
-    num_forced_eviction_++; 
+    num_forced_eviction_++;
   }
 }
 
