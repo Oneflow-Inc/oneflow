@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-// align to pytorch: `c10/core/WrapDimMinimal.h`
+// align with pytorch: `c10/core/WrapDimMinimal.h`
 static inline Maybe<int64_t> maybe_wrap_dim(int64_t dim, int64_t dim_post_expr,
                                             bool wrap_scalar = true) {
   if (dim_post_expr <= 0) {
