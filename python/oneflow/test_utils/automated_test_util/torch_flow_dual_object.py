@@ -811,11 +811,12 @@ def note_print_kwargs(x, y, end=True):
 
 
 def print_note_fake_program():
-    code_len = len(note_pytorch_method_value_names)
+    print(f"\033[1;32m=============For Roughly Debug================\033[1;32m")
+    code_len = len(note_pytorch_method_names)
     for i in range(code_len):
         note_pytorch_args_len = len(note_pytorch_args[i])
         note_pytorch_kwargs_len = len(note_pytorch_kwargs[i])
-        print(f"\033[32m{note_pytorch_method_value_names[i]}\033[0m", end="")
+        print(f"\033[32m{note_pytorch_method_names[i]}\033[0m", end="")
         print(f"\033[32m(\033[0m", end="")
         if note_pytorch_args[i]:
             index = 0
@@ -836,11 +837,11 @@ def print_note_fake_program():
 
 def print_values_of_fake_program():
     print(f"\033[1;33m=============For Detail Debug================\033[1;33m")
-    code_len = len(note_pytorch_method_names)
+    code_len = len(note_pytorch_method_value_names)
     for i in range(code_len):
         note_pytorch_value_args_len = len(pytorch_value_args[i])
         note_pytorch_value_kwargs_len = len(pytorch_value_kwargs[i])
-        print(f"\033[32m{note_pytorch_method_names[i]}\033[0m", end="")
+        print(f"\033[32m{note_pytorch_method_value_names[i]}\033[0m", end="")
         print(f"\033[32m(\033[0m", end="")
         if pytorch_value_args[i]:
             index = 0
