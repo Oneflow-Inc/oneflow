@@ -31,7 +31,7 @@ try:
     import torch as torch_original
 
     torch_original.backends.cudnn.deterministic = True
-    torch_original.set_printoptions(profile="full")
+    torch_original.set_printoptions(precision=5, profile="full")
 except ImportError:
     print(
         "automated_test_util module uses PyTorch to verify OneFlow module's interface and result. Please install Pytorch according `https://pytorch.org/get-started/locally/`."
