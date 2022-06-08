@@ -275,7 +275,7 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
         reduced_in_parallel_desc, reduced_out_parallel_desc);
   }
 
-  double total_cost = 0.0;
+  double total_cost = 1.0;
   if (reduced_in_parallel_desc == reduced_out_parallel_desc) {
     // NOTE: After analysis, transfer cost increase if spliting the same dimension.
     // Example 1: (S(1), S(0), S(1), S(0)) -> (S(0), S(0), S(0), S(0))
