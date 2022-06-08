@@ -347,7 +347,7 @@ jobs:
 
   find-test-cache-distributed:
     name: "Find test cache (distributed)"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && ${{ contains(github.event.pull_request.labels.*.name, 'need-test-distributed') }}
     runs-on: ubuntu-latest
     needs: [build-oneflow]
     env:
