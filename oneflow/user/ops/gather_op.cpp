@@ -23,7 +23,8 @@ namespace oneflow {
   CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
-  CHECK_GT_OR_RETURN(indices.shape().NumAxes(), 0);
+  // For 0-dim Tensor
+  CHECK_GE_OR_RETURN(indices.shape().NumAxes(), 0);  // NOLINT
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
   DimVector dim_vec;
