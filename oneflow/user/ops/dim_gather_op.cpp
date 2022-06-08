@@ -23,7 +23,7 @@ namespace oneflow {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("input", 0);
   int64_t input_num_axes = in.shape().NumAxes();
   // For 0-dim tensor
-  CHECK_GE_OR_RETURN(input_num_axes, 0);
+  CHECK_GE_OR_RETURN(input_num_axes, 0);  // NOLINT
   CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
 
   const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
@@ -32,8 +32,8 @@ namespace oneflow {
   const int32_t dim = ctx->Attr<int32_t>("dim");
   // For 0-dim tensor
   CHECK_GE_OR_RETURN(dim, 0);
-  CHECK_LE_OR_RETURN(dim, input_num_axes);
-  if (input_num_axes > 0) { CHECK_GE_OR_RETURN(input_num_axes, index_num_axes); }
+  CHECK_LE_OR_RETURN(dim, input_num_axes);                                         // NOLINT
+  if (input_num_axes > 0) { CHECK_GE_OR_RETURN(input_num_axes, index_num_axes); }  // NOLINT
 
   CHECK_EQ_OR_RETURN(in.is_dynamic(), index.is_dynamic());
 

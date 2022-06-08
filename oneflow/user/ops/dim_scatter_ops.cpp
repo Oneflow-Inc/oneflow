@@ -35,7 +35,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   // check index.numaxes == src.num_axes == input/like.numaxes
   int64_t src_num_axes = src.shape().NumAxes();
   // For 0-dim Tensor
-  CHECK_GE_OR_RETURN(src_num_axes, 0);
+  CHECK_GE_OR_RETURN(src_num_axes, 0);  // NOLINT
   CHECK_LE_OR_RETURN(src_num_axes, user_op::kDimGatherMaxDimCount);
   int64_t index_num_axes = index.shape().NumAxes();
   CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
@@ -50,11 +50,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   }
   // For 0-dim Tensor
   if (output_num_axes != 0 && index_num_axes != 0) {
-    CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
+    CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);  // NOLINT
   } else if (output_num_axes != 0) {
-    CHECK_LE_OR_RETURN(output_num_axes, 1);
+    CHECK_LE_OR_RETURN(output_num_axes, 1);  // NOLINT
   } else {
-    CHECK_LE_OR_RETURN(index_num_axes, 1);
+    CHECK_LE_OR_RETURN(index_num_axes, 1);  // NOLINT
   }
 
   // check index.shape(i) <= input/like.shape(i)
@@ -88,7 +88,7 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
   int64_t output_num_axes = input.shape().NumAxes();
   int64_t index_num_axes = index.shape().NumAxes();
   // For 0-dim tensor
-  CHECK_GE_OR_RETURN(output_num_axes, index_num_axes);
+  CHECK_GE_OR_RETURN(output_num_axes, index_num_axes);  // NOLINT
 
   // check index.shape(i) <= input/like.shape(i)
   FOR_RANGE(int64_t, i, 0, index_num_axes) {
