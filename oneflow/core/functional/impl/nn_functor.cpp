@@ -466,7 +466,7 @@ class TensorDotFunctor {
 class FusedMLPFunctor {
  public:
   FusedMLPFunctor() {
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11060
     fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
       fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp")
@@ -551,7 +551,7 @@ class FusedMLPFunctor {
   }
 
  private:
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11060
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 #endif
 };
@@ -559,7 +559,7 @@ class FusedMLPFunctor {
 class FusedMatmulBiasAddReluDropoutFunctor {
  public:
   FusedMatmulBiasAddReluDropoutFunctor() {
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11060
     fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
       fused_op_[n] = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu_dropout")
@@ -659,7 +659,7 @@ class FusedMatmulBiasAddReluDropoutFunctor {
   }
 
  private:
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11060
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
 #endif
 };
