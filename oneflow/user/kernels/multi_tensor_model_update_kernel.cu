@@ -42,12 +42,12 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
-  
-  for(int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++){
-    CUDA_1D_KERNEL_LOOP(i, meta_data.sizes[tensor_idx]){
+
+  for (int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++) {
+    CUDA_1D_KERNEL_LOOP(i, meta_data.sizes[tensor_idx]) {
       SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
-                               meta_data.model_addresses[tensor_idx] + i, scale, l1, l2, weight_decay,
-                               learning_rate_val);
+                               meta_data.model_addresses[tensor_idx] + i, scale, l1, l2,
+                               weight_decay, learning_rate_val);
     }
   }
 }
@@ -100,9 +100,9 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
       count += 1;
       if (count == depth_to_max_tensors[1] || i == n_tensor - 1) {
         MultiTensorSGDUpdateGpu<T, G, 2>
-            <<<1024, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(count, 
-                static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val, learning_rate_ptr,
-                scale_by_ptr, skip_if_ptr, tensor_tuple_params);
+            <<<1024, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+                count, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val,
+                learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
         count = 0;
       }
     }
