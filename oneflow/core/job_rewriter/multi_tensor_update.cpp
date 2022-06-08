@@ -44,6 +44,7 @@ class MultiTensorUpdatePass final : public JobPass {
 };
 
 Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  if (!job_builder->job().job_conf().has_train_conf()) { return Maybe<void>::Ok(); }
   std::vector<OperatorConf> delete_ops;
   user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder("multi_tensor_update");
   ParallelConf parallel_conf{};
