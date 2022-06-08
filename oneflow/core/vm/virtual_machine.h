@@ -34,7 +34,7 @@ class VirtualMachine final {
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
-  bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
+  bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
   std::string GetBlockingDebugString();
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
@@ -47,7 +47,6 @@ class VirtualMachine final {
   friend class InstructionsBuilder;
 
   void ScheduleLoop(const std::function<void()>& Initializer);
-  void CallbackLoop(const std::function<void()>& Initializer);
 
   vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
@@ -60,8 +59,6 @@ class VirtualMachine final {
   std::list<std::unique_ptr<std::thread>> worker_threads_;
   std::thread schedule_thread_;
   Notifier pending_notifier_;
-  std::thread callback_thread_;
-  Notifier callback_notifier_;
 };
 
 }  // namespace oneflow

@@ -37,6 +37,29 @@ def _test_local_empty(test_case, shape, dtype, device, requires_grad):
         test_case.assertEqual(x.requires_grad, requires_grad)
 
 
+def _test_new_empty(test_case, shape, dtype, device, requires_grad):
+    x = flow.empty(shape, dtype=dtype, device=flow.device(device))
+    y = x.new_empty(
+        shape,
+        dtype=dtype,
+        device=flow.device(device),
+        requires_grad=requires_grad if dtype == flow.float32 else False,
+    )
+    test_case.assertFalse(y.is_global)
+    test_case.assertEqual(y.shape, flow.Size(shape))
+    test_case.assertEqual(y.dtype, dtype)
+    test_case.assertEqual(y.device, flow.device(device))
+    if dtype == flow.float32:
+        test_case.assertEqual(y.requires_grad, requires_grad)
+
+    y = x.new_empty(*shape)
+    test_case.assertFalse(y.is_global)
+    test_case.assertEqual(y.shape, flow.Size(shape))
+    test_case.assertEqual(y.dtype, x.dtype)
+    test_case.assertEqual(y.device, x.device)
+    test_case.assertFalse(y.requires_grad)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestEmptyOp(flow.unittest.TestCase):
     def test_local_empty(test_case):
@@ -47,6 +70,7 @@ class TestEmptyOp(flow.unittest.TestCase):
         arg_dict["requires_grad"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _test_local_empty(test_case, **arg)
+            _test_new_empty(test_case, **arg)
 
 
 if __name__ == "__main__":

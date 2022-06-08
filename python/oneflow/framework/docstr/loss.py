@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.triplet_margin_loss,
     r"""    
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.triplet_margin_loss.html?highlight=triplet_margin_loss
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.triplet_margin_loss.html.
 
     Creates a criterion that measures the triplet loss given an input
     tensors :math:`x1`, :math:`x2`, :math:`x3` and a margin with a value greater than :math:`0`.
@@ -81,7 +81,7 @@ add_docstr(
 add_docstr(
     oneflow._C.cross_entropy,
     r"""
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.cross_entropy.html?highlight=nn%20functional%20cross_entropy#torch.nn.functional.cross_entropy
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.cross_entropy.html.
 
     See :class:`~oneflow.nn.CrossEntropyLoss` for details.
 

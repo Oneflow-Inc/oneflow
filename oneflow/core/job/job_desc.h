@@ -28,10 +28,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace cfg {
-class JobConfigProto;
-}
-
 bool IsInterfaceOpConf(const OperatorConf& op_conf);
 
 class JobDesc final {
@@ -43,13 +39,13 @@ class JobDesc final {
 
   static Maybe<JobDesc> New(int64_t symbol_id, const JobConfigProto& job_conf);
   const Optional<int64_t>& symbol_id() const { return symbol_id_; }
-  const std::shared_ptr<cfg::JobConfigProto>& cfg_job_conf() const { return cfg_job_conf_; }
 
   // Common
   int64_t job_id() const { return job_id_; }
   const std::string& job_name() const { return job_conf_.job_name(); }
   int64_t concurrency_width() const { return job_conf_.concurrency_width(); }
   const JobConfigProto& job_conf() const { return job_conf_; }
+  const JobConfigProto& data() const { return job_conf_; }
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
@@ -64,9 +60,6 @@ class JobDesc final {
   bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
   bool prune_amp_white_identity_ops() const { return job_conf_.prune_amp_white_identity_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
-
-  bool has_xrt_config() const { return job_conf_.has_xrt_config(); }
-  const XrtConfig& xrt_config() const { return job_conf_.xrt_config(); }
 
 #define DEFINE_FUNCTION_CONFIG_GETTER(T, func_name, field_name) \
   T func_name(const std::string& field_name) const {            \
@@ -86,8 +79,6 @@ class JobDesc final {
   JobConfigProto job_conf_;
   int64_t job_id_;
   Optional<int64_t> symbol_id_;
-  // merge job_conf_ and cfg_job_conf_ after cfg::JobConfigProto taken as a constructor argument
-  std::shared_ptr<cfg::JobConfigProto> cfg_job_conf_;
 };
 
 typedef HashMap<std::string, int64_t> JobName2JobId;

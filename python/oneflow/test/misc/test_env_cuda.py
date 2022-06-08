@@ -31,6 +31,22 @@ class TestEnv(flow.unittest.TestCase):
     def test_cuda_is_available(test_case):
         test_case.assertEqual(flow.cuda.is_available(), True)
 
+    def test_cuda_synchronize(test_case):
+        flow.cuda.synchronize()
+        flow.cuda.synchronize("cuda")
+        flow.cuda.synchronize("cuda:0")
+        flow.cuda.synchronize("cuda:1")
+        flow.cuda.synchronize(0)
+        flow.cuda.synchronize(1)
+        flow.cuda.synchronize(flow.device("cuda:0"))
+        flow.cuda.synchronize(flow.device("cuda:1"))
+
+        with test_case.assertRaisesRegex(ValueError, "Expected a cuda device, but"):
+            flow.cuda.synchronize(flow.device("cpu"))
+
+        with test_case.assertRaisesRegex(ValueError, "Expected a cuda device, but"):
+            flow.cuda.synchronize("cpu")
+
 
 if __name__ == "__main__":
     unittest.main()

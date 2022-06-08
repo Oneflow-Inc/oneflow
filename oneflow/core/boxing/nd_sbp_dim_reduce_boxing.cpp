@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -43,6 +44,7 @@ Maybe<std::tuple<Symbol<PlacedNdSbp>, Symbol<PlacedNdSbp>>> RawInOutPlacedNdSbpD
 constexpr auto* InOutPlacedNdSbpDimReduce =
     DECORATE(&RawInOutPlacedNdSbpDimReduce, ThreadLocalCached);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                       const Shape& logical_shape) {
   CHECK_OR_RETURN(in->nd_sbp()->sbp_parallel_size() > 1 || out->nd_sbp()->sbp_parallel_size() > 1);
@@ -50,6 +52,24 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
   Symbol<PlacedNdSbp> reduced_in;
   Symbol<PlacedNdSbp> reduced_out;
   std::tie(reduced_in, reduced_out) = *JUST(InOutPlacedNdSbpDimReduce(in, out));
+
+  for (int64_t in_parallel_id = 0; in_parallel_id < in->placement()->parallel_num();
+       ++in_parallel_id) {
+    const auto& in_physical_shape =
+        JUST(GetPhysicalShape(logical_shape, *in->nd_sbp(), *in->placement(), in_parallel_id));
+    const auto& reduce_in_physical_shape = JUST(GetPhysicalShape(
+        logical_shape, *reduced_in->nd_sbp(), *reduced_in->placement(), in_parallel_id));
+    CHECK_EQ_OR_RETURN(*in_physical_shape, *reduce_in_physical_shape);
+  }
+
+  for (int64_t out_parallel_id = 0; out_parallel_id < out->placement()->parallel_num();
+       ++out_parallel_id) {
+    const auto& out_physical_shape =
+        JUST(GetPhysicalShape(logical_shape, *out->nd_sbp(), *out->placement(), out_parallel_id));
+    const auto& reduce_out_physical_shape = JUST(GetPhysicalShape(
+        logical_shape, *reduced_out->nd_sbp(), *reduced_out->placement(), out_parallel_id));
+    CHECK_EQ_OR_RETURN(*out_physical_shape, *reduce_out_physical_shape);
+  }
 
   if (reduced_in->nd_sbp()->sbp_parallel_size() == 1
       && reduced_out->nd_sbp()->sbp_parallel_size() == 1) {
@@ -61,6 +81,7 @@ Maybe<void> RawCheckParallelDimReduce(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp
   }
   return Error::CheckFailedError();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckParallelDimReduce =
     DECORATE(&RawCheckParallelDimReduce, ThreadLocalCachedCopiable);
@@ -70,9 +91,14 @@ static constexpr auto* CheckParallelDimReduce =
 Maybe<one::Tensor> ParallelDimReduce(const std::shared_ptr<one::Tensor>& tensor,
                                      Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
+  CHECK_OR_RETURN(tensor_placement == in->placement())
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in->placement())) << ")";
 
   Symbol<PlacedNdSbp> reduced_in;
   Symbol<PlacedNdSbp> reduced_out;

@@ -59,10 +59,6 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   };
 }
 
-void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback"); };
-}
-
 std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
   const auto& stream_rt_desc = thread_ctx->stream_rt_desc();
   const auto& stream_type = stream_rt_desc.stream_type();
@@ -127,9 +123,6 @@ VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id
     worker_threads_.push_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
-  std::function<void()> CallbackInitializer;
-  GetCallbackThreadInitializer(&CallbackInitializer);
-  callback_thread_ = std::thread(&VirtualMachine::CallbackLoop, this, CallbackInitializer);
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
@@ -167,32 +160,28 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
 
 VirtualMachine::~VirtualMachine() {
   if (!vm_threads_closed_) { CHECK_JUST(CloseVMThreads()); }
-  CHECK(vm_->Empty());
-  CHECK(vm_->CallbackEmpty());
+  CHECK(vm_->SchedulerEmpty());
   vm_.Reset();
-  callback_notifier_.Close();
-  callback_thread_.join();
 }
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
   auto* vm = Global<VirtualMachine>::Get();
-  if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_lively_instruction_cnt(); }
+  if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_instruction_cnt(); }
   return [last_total_erased]() -> Maybe<bool> {
     auto* vm = Global<VirtualMachine>::Get();
     CHECK_NOTNULL_OR_RETURN(vm) << "virtual machine not initialized.";
-    CHECK_OR_RETURN(!vm->NoMoreErasedLivelyInstructions(last_total_erased.get()))
+    CHECK_OR_RETURN(!vm->NoMoreErasedInstructions(last_total_erased.get()))
         << "blocking instructions\n"
         << vm->GetBlockingDebugString();
     return false;
   };
 }
 
-bool VirtualMachine::NoMoreErasedLivelyInstructions(
-    size_t* last_total_erased_lively_instruction_cnt) const {
-  size_t cnt = vm_->total_erased_lively_instruction_cnt();
-  bool no_more_erased = (*last_total_erased_lively_instruction_cnt == cnt);
-  *last_total_erased_lively_instruction_cnt = cnt;
+bool VirtualMachine::NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const {
+  size_t cnt = vm_->total_erased_instruction_cnt();
+  bool no_more_erased = (*last_total_erased_instruction_cnt == cnt);
+  *last_total_erased_instruction_cnt = cnt;
   return no_more_erased;
 }
 
@@ -241,32 +230,24 @@ namespace {
 
 class SingleThreadScheduleCtx : public vm::ScheduleCtx {
  public:
-  explicit SingleThreadScheduleCtx(vm::VirtualMachineEngine* vm) : vm_(vm) {}
+  SingleThreadScheduleCtx() = default;
   ~SingleThreadScheduleCtx() = default;
 
-  void OnGarbageMsgPending() const override { vm_->Callback(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     while (thread_ctx->TryReceiveAndRun() > 0) {}
   }
-
- private:
-  vm::VirtualMachineEngine* vm_;
 };
 
 void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
-  while (!(vm->Empty() && vm->CallbackEmpty())) {
-    vm->Schedule(schedule_ctx);
-    vm->MoveToGarbageMsgListAndNotifyGC(schedule_ctx);
-  }
+  do { vm->Schedule(schedule_ctx); } while (!(vm->SchedulerEmpty()));
 }
 
 }  // namespace
 
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
-  CHECK_OR_RETURN(vm_->Empty());
-  CHECK_OR_RETURN(vm_->CallbackEmpty());
+  CHECK_OR_RETURN(vm_->SchedulerEmpty()) << "vm scheduler not empty. May be a fatal error occured";
   JUST(vm_->Receive(instr_list));
-  ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
+  ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx());
   return Maybe<void>::Ok();
 }
 
@@ -274,26 +255,22 @@ namespace {
 
 class MultiThreadScheduleCtx : public vm::ScheduleCtx {
  public:
-  explicit MultiThreadScheduleCtx(Notifier* cb_notifier) : cb_notifier_(cb_notifier) {}
+  MultiThreadScheduleCtx() = default;
   ~MultiThreadScheduleCtx() = default;
 
-  void OnGarbageMsgPending() const override { cb_notifier_->Notify(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     thread_ctx->mut_notifier()->Notify();
   }
-
- private:
-  Notifier* cb_notifier_;
 };
 
 }  // namespace
 
 void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   Initializer();
-  MultiThreadScheduleCtx schedule_ctx(&callback_notifier_);
+  MultiThreadScheduleCtx schedule_ctx{};
   auto* vm = mut_vm();
   while (pending_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
-    OF_PROFILER_RANGE_PUSH("VirtualMachine::ScheduleLoop");
+    OF_PROFILER_RANGE_GUARD("VirtualMachine::ScheduleLoop");
     auto start = std::chrono::steady_clock::now();
     static constexpr int kWorkingMicroseconds = 1000;
     // Every time this thread wakes up, vm is scheduled for about `kWorkingMicroseconds`.
@@ -307,21 +284,20 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
       // about 10ns.
       int i = 0;
       do {
-        // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
-        // It's safe to use ThreadUnsafeEmpty here. pending_notifier_.notified_cnt_ will be greater
-        // than zero when inconsistency between
+        // Use SchedulerThreadUnsafeEmpty to avoid acquiring mutex lock.
+        // It's safe to use SchedulerThreadUnsafeEmpty here. pending_notifier_.notified_cnt_ will be
+        // greater than zero when inconsistency between
         // vm->pending_msg_list.list_head_.list_head_.container_ and
         // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
         // instructions
         // will get handled in the next iteration.
-        //  VirtualMachine::Receive may be less effiencient if the thread safe version `vm->Empty()`
+        //  VirtualMachine::Receive may be less effiencient if the thread safe version
+        //  `vm->SchedulerEmpty()`
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
-        do { vm->Schedule(schedule_ctx); } while (!vm->ThreadUnsafeEmpty());
-        vm->MoveToGarbageMsgListAndNotifyGC(schedule_ctx);
+        do { vm->Schedule(schedule_ctx); } while (!vm->SchedulerThreadUnsafeEmpty());
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
-    OF_PROFILER_RANGE_POP();
   }
   ScheduleUntilVMEmpty(vm, schedule_ctx);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
@@ -329,12 +305,6 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     return Maybe<void>::Ok();
   }));
   for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
-}
-
-void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
-  Initializer();
-  auto* vm = mut_vm();
-  while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) { vm->Callback(); }
 }
 
 }  // namespace oneflow

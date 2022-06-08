@@ -24,7 +24,7 @@ import oneflow.unittest
 from alexnet_model import alexnet
 
 
-class Graph(flow.nn.Graph):
+class TvmFrontedGraph(flow.nn.Graph):
     def __init__(self, module):
         super().__init__()
         self.m = module
@@ -97,7 +97,7 @@ class TestConvertDependency(flow.unittest.TestCase):
 
     def test_infos_of_nodes(test_case):
         alexnet_module = alexnet()
-        alexnet_graph = Graph(alexnet_module)
+        alexnet_graph = TvmFrontedGraph(alexnet_module)
         if not alexnet_graph._is_compiled:
             alexnet_graph._compile(flow.rand(1, 3, 224, 224))
         graph_str = repr(alexnet_graph)
@@ -181,6 +181,30 @@ class TestConvertDependency(flow.unittest.TestCase):
         test_case.assertEqual(strides, (4, 4))
         test_case.assertEqual(padding_before, (2, 2))
 
+        node_input_list = []
+        node_output_list = []
+        for node_name in nodes:
+            node = nodes[node_name]
+            if is_user_op(node) and node.user_conf.op_type_name == "conv2d":
+                for input_name in node.user_conf.input:
+                    node_input_paths = getattr(node.user_conf.input[input_name], "s")
+                    for i in node_input_paths:
+                        node_input = i.split("/")[0]
+                        print(node_input)
+                        node_input_list.append(node_input)
+                for output_name in node.user_conf.output:
+                    node_output_paths = getattr(node.user_conf.output[output_name], "s")
+                    for node_output_path in node_output_paths:
+                        node_output_name = node_output_path.split("/")[0]
+                        print(node_output_name)
+                        node_output_list.append(node_output_name)
+
+        test_case.assertEqual("_TvmFrontedGraph_1_input.0.0_2" in node_input_list, True)
+        test_case.assertEqual("m.features.0.weight" in node_input_list, True)
+        test_case.assertEqual("m.features.5-max_pool_2d-7" in node_input_list, True)
+        test_case.assertEqual("m.features.0-conv2d-0" in node_output_list, True)
+        test_case.assertEqual("m.features.6-conv2d-8" in node_output_list, True)
+
     def test_buffer_convert_dependence(test_case):
         class SubModule(flow.nn.Module):
             def __init__(self):
@@ -194,7 +218,7 @@ class TestConvertDependency(flow.unittest.TestCase):
                 return x
 
         sub_module = SubModule()
-        sub_graph = Graph(sub_module)
+        sub_graph = TvmFrontedGraph(sub_module)
         graph_str = repr(sub_graph)
 
         size_where = 2

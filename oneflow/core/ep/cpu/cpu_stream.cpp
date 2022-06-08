@@ -21,11 +21,19 @@ namespace ep {
 
 DeviceType CpuStream::device_type() const { return DeviceType::kCPU; }
 
-Device* CpuStream::device() const { return device_; }
+CpuDevice* CpuStream::device() const { return device_; }
 
 Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
 
 void CpuStream::RecordEvent(Event* /*event*/) {}
+
+#ifdef WITH_ONEDNN
+
+const std::unique_ptr<ep::OneDnnExecutor>& CpuStream::onednn_executor() const {
+  return onednn_executor_;
+}
+
+#endif
 
 }  // namespace ep
 

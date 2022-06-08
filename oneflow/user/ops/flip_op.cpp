@@ -53,22 +53,4 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/*static*/ auto FlipGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  const Shape& dy_shape = ctx->InputShape("dy", 0);
-  Shape* dx_shape = ctx->OutputShape("dx", 0);
-  *dx_shape = dy_shape;
-  return Maybe<void>::Ok();
-}
-/*static*/ auto FlipGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
-  return FlipGradOp::InferLogicalTensorDesc(ctx);
-}
-/*static*/ auto FlipGradOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
-  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
-  return Maybe<void>::Ok();
-}
-/*static*/ auto FlipGradOp::InferDataType(user_op::InferContext* ctx) -> Maybe<void> {
-  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-  return Maybe<void>::Ok();
-}
-
 }  // namespace oneflow
