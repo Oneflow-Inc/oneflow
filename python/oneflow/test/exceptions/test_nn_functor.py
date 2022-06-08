@@ -320,8 +320,7 @@ class TestNormalError(flow.unittest.TestCase):
             )
 
         test_case.assertTrue(
-            "device type cpu:0 does not match device type of out parameter cuda:0"
-            in str(ctx.exception)
+            "does not match device type of out parameter" in str(ctx.exception)
         )
 
 
