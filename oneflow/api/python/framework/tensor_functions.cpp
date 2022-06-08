@@ -749,7 +749,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   auto tensor = PyTensor_Unpack(self);
   std::shared_ptr<Tensor> value_tensor;
   CHECK_OR_THROW(functional::PyTensorIndexCheck(item));
-  CHECK_OR_THROW(functional::PyScalarCheck(item) || PyTensor_Check(item));
+  CHECK_OR_THROW(functional::PyScalarCheck(value) || PyTensor_Check(value));
 
   if (tensor->is_consistent()) {
     Symbol<ParallelDesc> placement = ASSERT(tensor->parallel_desc());
