@@ -79,19 +79,20 @@ namespace oneflow {
 }
 
 REGISTER_USER_OP_GRAD("leaky_relu_yzh")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
-      if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        user_op::UserOpConfWrapper grad_op = builder.Op("leaky_relu_yzh_grad")
-                                                 .Input("x", op.input("x", 0))
-                                                 .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
-                                                 .Output("dx")
-                                                 .Attr("alpha", op.attr<float>("alpha"))
-                                                 .Build();
-        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
-        AddOp(grad_op);
-      }
+    .SetGenBackwardOpConfFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
+      const std::string leaky_relu_yzh_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(leaky_relu_yzh_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("leaky_relu_yzh_grad")
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
+            .InputBind("x", ctx->FwOp().input("x", 0))
+            .Attr("alpha", ctx->FwOp().attr<float>("alpha"))
+            .Output("dx")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                                [&ctx, &leaky_relu_yzh_grad_op_name]() -> const std::string& {
+                                  return ctx->GetOp(leaky_relu_yzh_grad_op_name).output("dx", 0);
+                                });
       return Maybe<void>::Ok();
     });
 
