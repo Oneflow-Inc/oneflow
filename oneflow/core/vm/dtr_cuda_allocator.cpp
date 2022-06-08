@@ -60,6 +60,9 @@ ptrdiff_t DtrCudaAllocator::get_offset(const char* mem_ptr) const {
 }
 
 void DtrCudaAllocator::Mark(DTREagerBlobObject* ebo, char* mem_ptr) {
+  if (EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && ebo->AlignedByteSizeOfBlobBody() <= kSmallPieceThreshold) {
+    return;
+  }
   if (dtr::debug_level() >= 2) { LOG(INFO) << "mark " << ebo << " " << (void*)mem_ptr; }
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo;
@@ -407,6 +410,10 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     return;
   }
   size_t aligned_size = CudaMemAlignedBytes(size);
+  if (EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && aligned_size <= kSmallPieceThreshold) {
+    OF_CUDA_CHECK(cudaMalloc(mem_ptr, aligned_size));
+    return;
+  }
 
   Piece* piece = FindPiece(aligned_size);
 
@@ -442,6 +449,11 @@ void DtrCudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
 
   auto it = ptr2piece_.find(mem_ptr);
+  if (EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && size <= kSmallPieceThreshold) {
+    CHECK(it == ptr2piece_.end());
+    OF_CUDA_CHECK(cudaFree(mem_ptr));
+    return;
+  }
   CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = "
                                 << mem_ptr << " size = " << size;
   Piece* piece = it->second;
