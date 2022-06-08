@@ -579,7 +579,8 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       if (ptrs->has_lookup_embeddings_) {
-        OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_embeddings_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+        OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_embeddings_,
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       }
       OF_CUDA_CHECK(
           cudaMallocAsync(&(ptrs->lookup_embeddings_),

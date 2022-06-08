@@ -118,9 +118,8 @@ namespace oneflow {
       ctx->InputShape("inverse_unique_partition_indices", 0);
   const int64_t num_ids = inverse_unique_partition_indices_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
-  CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.NumAxes(), 2);
-  CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.At(0), parallel_num * num_ids);
-  const int64_t embedding_size = cur_rank_embeddings_shape.At(1);
+  CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.elem_cnt(), 1);
+  const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   CHECK_EQ_OR_RETURN(num_unique_matrix_shape.elem_cnt(), parallel_num * parallel_num);
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);
   DimVector out_dim_vec = inverse_unique_partition_indices_shape.dim_vec();
@@ -136,6 +135,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingShuffleOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(ctx->inputs(), 0)
+      .Broadcast(user_op::OpArg("cur_rank_embeddings", 0))
       .Broadcast(user_op::OpArg("num_unique_matrix", 0))
       .Split(ctx->outputs(), 0)
       .Build();
