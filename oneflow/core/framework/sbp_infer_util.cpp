@@ -20,7 +20,9 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 
@@ -53,6 +55,25 @@ double Penalty4PartialInConsumer(double logical_blob_size, int32_t producer_para
   } else {
     return kUnsupportedBoxing;
   }
+}
+
+int32_t Ratio4Sbp(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc,
+                  std::function<bool(const SbpParallel&)> classifier) {
+  int32_t ratio = 1;
+  for (int32_t sbp_id = 0; sbp_id < nd_sbp.sbp_parallel_size(); sbp_id++) {
+    if (classifier(nd_sbp.sbp_parallel(sbp_id))) { ratio *= parallel_desc.hierarchy()->At(sbp_id); }
+  }
+  return ratio;
+}
+
+int32_t PartialRatio4Producer(const NdSbp& sbp_producer,
+                              const ParallelDesc& producer_parallel_desc) {
+  return Ratio4Sbp(sbp_producer, producer_parallel_desc, &SbpParallel::has_partial_sum_parallel);
+}
+
+int32_t BroadcastRatio4Consumer(const NdSbp& sbp_consumer,
+                                const ParallelDesc& consumer_parallel_desc) {
+  return Ratio4Sbp(sbp_consumer, consumer_parallel_desc, &SbpParallel::has_broadcast_parallel);
 }
 
 Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_parallel,
@@ -534,6 +555,21 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
                                              const ParallelDesc& producer_parallel_desc,
                                              const ParallelDesc& consumer_parallel_desc,
                                              bool requires_same_sbp) {
+  // In 90% of the transfer, we would have the same parallel description for producer and consumer
+  // We need to speed it up and give an approximation of the cost
+  if (producer_parallel_desc == consumer_parallel_desc) {
+    if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
+#ifdef WITH_CUDA
+    // Use a general basic communication if no P in the consumer
+    if ((!NdSbpHasPartialParallel(consumer_sbp_parallel))) {
+      return Ratio4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
+                                             producer_parallel_desc, consumer_parallel_desc)
+             * logical_blob_desc.shape().elem_cnt()
+             * GetSizeOfDataType(logical_blob_desc.data_type());
+    }
+#endif  // WITH_CUDA
+  }
+
   // Initialize boxing collector
   constexpr int32_t kRegularMaxSplitAxes = 6;
   static thread_local BoxingCollector boxing_collector(kRegularMaxSplitAxes);
@@ -612,6 +648,108 @@ double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
       return 1.0;
     }
   }
+}
+
+// The transfer ratio for general basic communication
+// Cost = ratio * data amount
+double Ratio4GeneralBasicCommunication(const NdSbp& producer_sbp_parallel,
+                                       const NdSbp& consumer_sbp_parallel,
+                                       const ParallelDesc& producer_parallel_desc,
+                                       const ParallelDesc& consumer_parallel_desc) {
+  // The upper bound of the amount of the transferred data
+  int32_t producer_partial_ratio =
+      PartialRatio4Producer(producer_sbp_parallel, producer_parallel_desc);
+  int32_t consumer_broadcast_ratio =
+      BroadcastRatio4Consumer(consumer_sbp_parallel, consumer_parallel_desc);
+  // approximate intersection ratio
+  double intersection_ratio = 1.0;
+  // (?, P, ?)->(Si, Sj)->(?, B, ?), two-step transfer
+  if (producer_partial_ratio > 1 && consumer_broadcast_ratio > 1) {
+    // Pure P in the producer or B in the consumer
+    // (P, P, P) -> ? or ? -> (B, B)
+    if (producer_partial_ratio == producer_parallel_desc.parallel_num()
+        || consumer_broadcast_ratio == consumer_parallel_desc.parallel_num()) {
+      // There some cases which is not applicable to this ratio
+      // We just take the one with the largest possibility
+      // For example: (P, S0) -> (B, B) for 1-D blob with machine hierarchy [n, m]
+      // The path should be (P, S0) -> (S0, S0) -> (B, B)
+      // true intersection ratio = 1/m + 1
+      intersection_ratio = 2.0;
+    } else {
+      // sbp_consumer = (B, Si) or (Si, B)
+      for (int32_t sbp_id = 0; sbp_id < consumer_sbp_parallel.sbp_parallel_size(); sbp_id++) {
+        if (consumer_sbp_parallel.sbp_parallel(sbp_id).has_split_parallel()) {
+          const auto& producer_sbp4sbp_id = producer_sbp_parallel.sbp_parallel(sbp_id);
+          // (B, P) or (Si, P) -> (Si, B)
+          // (P, B) or (P, Si) -> (B, Si)
+          if (producer_sbp4sbp_id.has_broadcast_parallel()
+              || producer_sbp4sbp_id == consumer_sbp_parallel.sbp_parallel(sbp_id)) {
+            intersection_ratio = 2.0;
+            break;
+          }
+        }
+      }
+      // Judge whether the intersection ratio is given a value (2.0)
+      if (intersection_ratio == 1.0) {
+        // The true intersection ratio range from 0 to 2,
+        // we just take a middle point of the range as the approximation
+        // For example: (P, S0) -> (S0, B), Path: (P, S0) -> (S1, S0) -> (S0, B)
+        // true intersection ratio = 1 + 1/m
+        // For example: (P, S0) -> (S1, B), Path: (P, S0) -> (S1, S0) -> (S1, B)
+        // true intersection ratio = 1 + 1
+        // For example: (P, S0) -> (B, S0), with a 1D blob
+        // true intersection ratio = (n+p-1)/nm + (n+p-1)/nm
+        // For example: (S0, P) -> (B, S0), Path: (S0, P) -> (S0, S1) -> (B, S0)
+        // true intersection ratio = 1 + 1/n
+
+        // We use the approximation 1 + (1/n + 1/m)/2
+        intersection_ratio = 1.0 + 0.5 / producer_parallel_desc.hierarchy()->At(0)
+                             + 0.5 / producer_parallel_desc.hierarchy()->At(1);
+      }
+    }
+  } else {
+    // No P in the producer or no B in the consumer, one-step transfer
+    // The intersection ratio is design for two steps.
+    // However, we only have one step here, we would increase the ratio by 1.0
+    // to eliminate the unused step
+    const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
+    for (int32_t sbp_id = 0; sbp_id < consumer_sbp_parallel.sbp_parallel_size(); sbp_id++) {
+      const auto& producer_sbp4sbp_id = producer_sbp_parallel.sbp_parallel(sbp_id);
+      const auto& consumer_sbp4sbp_id = consumer_sbp_parallel.sbp_parallel(sbp_id);
+      // ? -> Si
+      if (consumer_sbp4sbp_id.has_split_parallel()) {
+        // Sj -> Si
+        if (producer_sbp4sbp_id.has_split_parallel()
+            && producer_sbp4sbp_id != consumer_sbp4sbp_id) {
+          intersection_ratio /= parallel_hierarchy->At(sbp_id);
+        }
+      } else {
+        // B/P -> B
+        if (!producer_sbp4sbp_id.has_split_parallel()) {
+          intersection_ratio *= parallel_hierarchy->At(sbp_id);
+        }
+      }
+      // For B/P/Si -> Si and Si -> B
+      // intersection ratio remains the same
+    }
+    // With the approximation above,
+    // (S1, S0) -> (S0, S0) would have an approximate intersection ratio 1/n
+    // (B, S0) -> (S0, S0) would have an approximate intersection ratio 1
+    // However, their actual intersection ratios are (n+p-1)/(n^2*m) and (n+p-1)/(nm), respectively
+    // We add a patch for this approximation, making them 1/nm and 1/m respectively
+    if (producer_sbp_parallel.sbp_parallel(0) != consumer_sbp_parallel.sbp_parallel(0)
+        && producer_sbp_parallel.sbp_parallel_size() >= 2) {
+      const auto& producer_sbp_parallel_1 = producer_sbp_parallel.sbp_parallel(1);
+      if (producer_sbp_parallel_1 == consumer_sbp_parallel.sbp_parallel(1)
+          && producer_sbp_parallel_1.has_split_parallel()
+          && (producer_sbp_parallel_1 == producer_sbp_parallel.sbp_parallel(0)
+              || producer_sbp_parallel_1 == consumer_sbp_parallel.sbp_parallel(0))) {
+        intersection_ratio /= parallel_hierarchy->At(1);
+      }
+    }
+  }
+  // Subtract the intersection part
+  return producer_partial_ratio + consumer_broadcast_ratio - intersection_ratio;
 }
 
 }  // namespace oneflow
