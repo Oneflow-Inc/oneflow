@@ -338,14 +338,13 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
   }
 }
 
-template<int pack_size>
 unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
   auto* cuda_stream = stream->As<ep::CudaStream>();
   const int32_t max_threads_multi_process =
       cuda_stream->device_properties().maxThreadsPerMultiProcessor;
   const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
   unsigned int blocks_per_sm = max_threads_multi_process / block_size;
-  unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
+  unsigned int grid_size = std::max((int64_t)1, ((elem_cnt + block_size - 1) / block_size));
   grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
   return grid_size;
 }
@@ -354,9 +353,9 @@ template<typename T, bool has_addend>
 void DispatchTail(ep::Stream* stream, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                   const int64_t elem_cnt, float rate, float scale, const T* x, bool* mask,
                   const T* addend, T* y) {
-  unsigned int grid_size = ComputeGridSize<4>(stream, kBlockSize, elem_cnt);
   constexpr int pack_size = GetDropoutPackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
+  unsigned int grid_size = ComputeGridSize(stream, kBlockSize, pack_num);
   const int64_t tail_offset = pack_num * pack_size;
   const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
