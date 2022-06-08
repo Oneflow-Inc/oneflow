@@ -27,6 +27,13 @@ namespace embedding {
 
 #ifdef WITH_CUDA
 
+struct ValuesPtr {
+  uint32_t lookup_num_unique_;
+  void* lookup_values_;
+  void* lookup_embeddings_;
+  void* updated_values_;
+};
+
 class EmbeddingManager final {
  public:
   EmbeddingManager() = default;
@@ -36,6 +43,7 @@ class EmbeddingManager final {
                     const std::string& snapshot_name);
   void LoadSnapshot(const std::string& embedding_name, int64_t local_rank_id, int64_t rank_id,
                     const std::string& snapshot_name);
+  ValuesPtr* GetValuesPtr(const std::string& embedding_name, int64_t rank_id);
 
   KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t rank_id);
 
@@ -45,6 +53,7 @@ class EmbeddingManager final {
  private:
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<KeyValueStore>> key_value_store_map_;
   std::mutex mutex_;
+  HashMap<std::pair<std::string, int64_t>, std::unique_ptr<ValuesPtr>> values_ptrs_map_;
 };
 
 #endif  // WITH_CUDA

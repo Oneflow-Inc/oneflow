@@ -560,11 +560,14 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t num_unique;
     LookupAndInitMissing<T, U, IDX>(
         ctx->stream(), embedding_state, unique_ids->shape().elem_cnt(), embedding_size, line_size,
         num_unique_ids->dptr(), unique_ids->dptr(), table_ids->dptr(), unique_values->mut_dptr<T>(),
         tmp_buffer->mut_dptr(), &num_unique, false);
+    ptrs->lookup_num_unique_ = num_unique;
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,

@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/embedding/embedding_manager.h"
 
 namespace oneflow {
 
@@ -931,7 +932,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     ncclComm_t comm = kernel_state->comm();
     using ComputeType = typename DefaultComputeType<T>::type;
-    const int64_t embedding_size = cur_rank_embeddings->shape().At(1);
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     DataType data_type = cur_rank_embeddings->data_type();
     const int64_t num_ids = inverse_unique_partition_indices->shape().elem_cnt();
@@ -957,8 +958,9 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     for (int64_t i = 0; i < parallel_num; ++i) {
       unique_partitioned_num_ids += host_num_unique_matrix[parallel_id * parallel_num + i];
     }
-    // TODO:get num_unique from manager, num_unique lt cur_rank_num_ids
-    const int64_t num_unique = cur_rank_num_ids;
+    embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    const int64_t num_unique = ptrs->lookup_num_unique_;
     if (!enable_quantized_comm) {
       // 1. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,
       // embedding_size)
@@ -1286,7 +1288,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         ctx->Tensor4ArgNameAndIndex("inverse_unique_partition_indices", 0);
     user_op::Tensor* cur_rank_unique_embedding_grad =
         ctx->Tensor4ArgNameAndIndex("cur_rank_unique_embedding_grad", 0);
-    const int64_t embedding_size = cur_rank_unique_embedding_grad->shape().At(1);
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     DataType data_type = embedding_grad->data_type();
     const int64_t num_ids = inverse_unique_partition_indices->shape().elem_cnt();
@@ -1318,8 +1320,9 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     for (int64_t i = 0; i < parallel_num; ++i) {
       unique_partitioned_num_ids += host_num_unique_matrix[parallel_id * parallel_num + i];
     }
-    // TODO:get num_unique from manager, num_unique lt cur_rank_num_ids
-    const int64_t num_unique = cur_rank_num_ids;
+    embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    const int64_t num_unique = ptrs->lookup_num_unique_;
     if (!enable_quantized_comm) {
       // 1. sum to unique grad, from (num_ids, embedding_size) to (unique_partitioned_num_ids,
       // padded_embedding_size)
