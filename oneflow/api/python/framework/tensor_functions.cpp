@@ -693,12 +693,12 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
       << Error::TypeError()
       << "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp";
   if (functional::PySbpParallelCheck(sbp_obj)) {
-    sbp.push_back(functional::PyUnpackSbpParallel(sbp_obj));
+    sbp.emplace_back(functional::PyUnpackSbpParallel(sbp_obj));
   } else if (functional::PySbpParallelSequenceCheck(sbp_obj)) {
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   } else {
     for (int32_t i = 0; i < ASSERT(tensor->nd_sbp())->sbp_parallel_size(); i++)
-      sbp.push_back(ASSERT(tensor->nd_sbp())->sbp_parallel(i));
+      sbp.emplace_back(ASSERT(tensor->nd_sbp())->sbp_parallel(i));
   }
 
   // placement
@@ -717,7 +717,7 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
       << Error::TypeError()
       << "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp";
   if (functional::PySbpParallelCheck(grad_sbp_obj)) {
-    grad_sbp.push_back(functional::PyUnpackSbpParallel(grad_sbp_obj));
+    grad_sbp.emplace_back(functional::PyUnpackSbpParallel(grad_sbp_obj));
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   };
@@ -781,7 +781,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
     }
   }
-  functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor);
+  ASSERT(functional::TensorSetItem(tensor, functional::PyUnpackTensorIndex(item), value_tensor));
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
