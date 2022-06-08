@@ -29,35 +29,39 @@ namespace oneflow {
 
 namespace one {
 
-struct CublasFusedMLPCaptureState : public AutoGradCaptureState {
+struct FusedMatmulBiasAddReluDropoutCaptureState : public AutoGradCaptureState {
   int32_t weight_num = 0;
   bool skip_final_activation = false;
   bool x_requires_grad = false;
   std::vector<bool> weights_requires_grad;
   std::vector<bool> biases_requires_grad;
+  std::vector<float> dropout_rate_list;
 };
 
-class CublasFusedMLP : public OpExprGradFunction<CublasFusedMLPCaptureState> {
+class FusedMatmulBiasAddReluDropout
+    : public OpExprGradFunction<FusedMatmulBiasAddReluDropoutCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(CublasFusedMLPCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(FusedMatmulBiasAddReluDropoutCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const CublasFusedMLPCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override;
+  Maybe<void> Apply(const FusedMatmulBiasAddReluDropoutCaptureState* ctx,
+                    const TensorTuple& out_grads, TensorTuple* in_grads) const override;
 
  protected:
   AttrMap base_attrs_;
 };
 
-Maybe<void> CublasFusedMLP::Init(const OpExpr& op) {
+Maybe<void> FusedMatmulBiasAddReluDropout::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const TensorTuple& inputs,
-                                    const TensorTuple& outputs, const AttrMap& attrs) const {
+Maybe<void> FusedMatmulBiasAddReluDropout::Capture(FusedMatmulBiasAddReluDropoutCaptureState* ctx,
+                                                   const TensorTuple& inputs,
+                                                   const TensorTuple& outputs,
+                                                   const AttrMap& attrs) const {
   CHECK_OR_RETURN(inputs.size() % 2 == 1) << "Both weight and bias should be passed together. ";
   int32_t weight_num = (inputs.size() - 1) / 2;
   ctx->weight_num = weight_num;
@@ -86,28 +90,16 @@ Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const Tenso
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->skip_final_activation = JUST(composed_attrs.GetAttr<bool>("skip_final_activation"));
+  ctx->dropout_rate_list = JUST(composed_attrs.GetAttr<std::vector<float>>("dropout_rate_list"));
 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
-                                  const TensorTuple& out_grads, TensorTuple* in_grads) const {
+Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
+    const FusedMatmulBiasAddReluDropoutCaptureState* ctx, const TensorTuple& out_grads,
+    TensorTuple* in_grads) const {
   int32_t weight_num = ctx->weight_num;
   in_grads->resize(1 + 2 * weight_num);
-  std::shared_ptr<one::Tensor> last_bias_dy = JUST(VectorAt(out_grads, 0));
-
-  if (!ctx->skip_final_activation) {
-    // step1: use dy and final output to get last layer's relu grad.
-    last_bias_dy = JUST(functional::ReluGrad(JUST(VectorAt(out_grads, 0)),
-                                             JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num))));
-  }
-
-  // step2: use reduce_sum to get last layer's bias grad.
-  std::vector<int32_t> reduce_axes_vec{0};
-  if (JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1))) {
-    JUST(VectorAt(*in_grads, 2 * weight_num)) =
-        JUST(functional::ReduceSum(last_bias_dy, reduce_axes_vec, false));
-  }
 
   TensorTuple hiddens(weight_num - 1);
   TensorTuple weights(weight_num);
@@ -115,6 +107,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   TensorTuple dgrad(weight_num);
 
   std::shared_ptr<one::Tensor> x = JUST(VectorAt(ctx->SavedTensors(), 0));
+  std::shared_ptr<one::Tensor> out = JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num));
 
   for (int32_t i = 0; i < weight_num; ++i) {
     weights[i] = JUST(VectorAt(ctx->SavedTensors(), 1 + i));
@@ -127,6 +120,28 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   for (int32_t i = 0; i < weight_num - 1; ++i) {
     hiddens[i] = JUST(VectorAt(ctx->SavedTensors(), i + 2 + 2 * weight_num));
   }
+  float rate = ctx->dropout_rate_list.at(weight_num - 1);
+  float scale = 0.0f;
+  if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+
+  /*
+  step1: use dy and mask to get last layer's dropout + relu grad.
+  Because curand_uniform distribution is (0.0, 1.0], so the value after relu will be write into mask
+  too. And DropoutGrad use this mask to generate grad, it will generate dropout and relu grad
+  simultaneously.
+  */
+  std::shared_ptr<one::Tensor> last_bias_dy = JUST(VectorAt(out_grads, 0));
+  if (!ctx->skip_final_activation || rate != 0.0f) {
+    last_bias_dy = JUST(functional::FusedReluDropoutGrad(JUST(VectorAt(out_grads, 0)),
+                                                         cublas_auxs[weight_num - 1], scale));
+  }
+
+  // step2: use reduce_sum to get last layer's bias grad.
+  std::vector<int32_t> reduce_axes_vec{0};
+  if (JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1))) {
+    JUST(VectorAt(*in_grads, 2 * weight_num)) =
+        JUST(functional::ReduceSum(last_bias_dy, reduce_axes_vec, false));
+  }
 
   std::shared_ptr<one::Tensor> cublas_dy = last_bias_dy;
   for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
@@ -134,13 +149,16 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     if (hidden_layer_idx != weight_num - 1) {
       cublas_dy = JUST(VectorAt(dgrad, hidden_layer_idx + 1));
     }
+    rate = ctx->dropout_rate_list.at(hidden_layer_idx - 1);
+    scale = 1.0;
+    if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
     /*
     Here we use cublas to compute bias + relu + matmul grad.
     Then use Matmul to compute weight grad.
     */
     const auto& matmul_relu_bias_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
         cublas_dy, JUST(VectorAt(weights, hidden_layer_idx)),
-        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)), /*alpha=*/1.0));
+        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)), /*alpha=*/scale));
 
     // dgrad
     dgrad.at(hidden_layer_idx) = matmul_relu_bias_bgrad->at(0);  // NOLINT
@@ -179,7 +197,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("cublas_fused_mlp", CublasFusedMLP);
+REGISTER_OP_EXPR_GRAD_FUNCTION("fused_matmul_bias_add_relu_dropout", FusedMatmulBiasAddReluDropout);
 
 }  // namespace one
 
