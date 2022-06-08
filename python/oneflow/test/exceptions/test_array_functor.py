@@ -31,7 +31,7 @@ class TestArrayError(flow.unittest.TestCase):
             like = flow.ones((2, 2, 2), dtype=flow.float32, requires_grad=True)
             y = flow.broadcast_like(x, like)
         test_case.assertTrue(
-            "doesn't match the broadcast shape" in str(context.exception)
+            "The expanded size of the tensor" in str(context.exception)
         )
 
     def test_concat_index_error(test_case):

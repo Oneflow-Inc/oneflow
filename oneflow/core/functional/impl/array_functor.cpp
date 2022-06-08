@@ -451,7 +451,7 @@ class BroadcastLikeFunctor {
                                          << " must match the existing size (" << prepend_shape[i]
                                          << ") at non-singleton dimension " << i
                                          << ". Target sizes: " << like_shape.ToString()
-                                         << ".  Tensor sizes: " << x_shape.ToString();
+                                         << ". Tensor sizes: " << x_shape.ToString();
           }
         }
       }
