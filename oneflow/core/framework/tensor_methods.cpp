@@ -401,9 +401,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   CHECK_EQ_OR_RETURN(permute.size(), ndim)
       << "permute size should be equal to input tensor's ndim, but got " << permute.size();
   auto positive_perm = permute;
-  for (auto i = 0; i < positive_perm.size(); i++) {
-    JUST(maybe_wrap_dim(positive_perm[i], ndim));
-  }
+  for (auto i = 0; i < positive_perm.size(); i++) { JUST(maybe_wrap_dim(positive_perm[i], ndim)); }
 
   DimVector target_dims(ndim);
   DimVector stride_vec(ndim);

@@ -409,9 +409,7 @@ class AminFunctor {
 
     const int32_t ndim = x->ndim();
     std::vector<int32_t>& dims = *JUST(dim);
-    for (int i = 0; i < dims.size(); i++) {
-      dims[i] = JUST(maybe_wrap_dim(dims[i], ndim));
-    }
+    for (int i = 0; i < dims.size(); i++) { dims[i] = JUST(maybe_wrap_dim(dims[i], ndim)); }
     return ReduceMin(x, dims, keepdim);
   }
 };
@@ -424,9 +422,7 @@ class AmaxFunctor {
 
     const int32_t ndim = x->ndim();
     std::vector<int32_t>& dims = *JUST(dim);
-    for (int i = 0; i < dims.size(); i++) {
-      dims[i] = JUST(maybe_wrap_dim(dims[i], ndim));
-    }
+    for (int i = 0; i < dims.size(); i++) { dims[i] = JUST(maybe_wrap_dim(dims[i], ndim)); }
     return ReduceMax(x, dims, keepdim);
   }
 };
