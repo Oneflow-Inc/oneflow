@@ -375,24 +375,28 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
   embedding::KeyValueStore* store = embedding_state->KeyValueStore();
   const EmbeddingInitializer* initializer_param = embedding_state->Initializers();
   const int8_t* initializer_index = embedding_state->InitializerIndex();
-  bool need_value_buffer = (values_ptr == nullptr);
-  EmbeddingTmpBufferManager buffer_manager(tmp_buffer_ptr, num_ids, line_size * sizeof(T),
-                                           need_value_buffer);
+  EmbeddingTmpBufferManager buffer_manager(tmp_buffer_ptr, num_ids, line_size * sizeof(T), false);
+  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
   void* host_num_keys = embedding_state->HostNumKeys();
-  OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ptr, sizeof(IDX), cudaMemcpyDefault,
-                                stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(
+      cudaMemcpyAsync(host_num_keys, num_unique_ptr, sizeof(IDX), cudaMemcpyDefault, cuda_stream));
   CHECK_JUST(stream->Sync());
   uint32_t num_unique = *reinterpret_cast<IDX*>(host_num_keys);
   uint32_t* num_missing_ptr =
       buffer_manager.template Ptr<uint32_t>(EmbeddingBufferType::kNumMissing);
   uint32_t* missing_indices =
       buffer_manager.template Ptr<uint32_t>(EmbeddingBufferType::kMissingIndices);
-  T* store_values =
-      need_value_buffer ? buffer_manager.template Ptr<T>(EmbeddingBufferType::kValues) : values_ptr;
+  T* store_values;
+  if (put_to_kv_store) {
+    OF_CUDA_CHECK(cudaMallocAsync(
+        &store_values, GetCudaAlignedSize(num_unique * line_size * sizeof(T)), cuda_stream));
+  } else {
+    store_values = values_ptr;
+  }
   store->Get(stream, num_unique, unique_ids, store_values, num_missing_ptr, missing_indices);
   CHECK_GE(sizeof(IDX), sizeof(uint32_t));  // host_num_keys's buffer size is sizeof(IDX)
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_missing_ptr, sizeof(uint32_t), cudaMemcpyDefault,
-                                stream->As<ep::CudaStream>()->cuda_stream()));
+                                cuda_stream));
   CHECK_JUST(stream->Sync());
   uint32_t num_missing = *reinterpret_cast<uint32_t*>(host_num_keys);
   // init missing values
@@ -400,13 +404,15 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
     const int64_t elem_cnt = num_missing * line_size;
     const int64_t num_blocks = BlocksNum4ThreadsNum(elem_cnt);
     const uint64_t inc_offset = std::ceil(elem_cnt / num_blocks / kCudaThreadsNumPerBlock);
-    InitValueKernel<T, U>
-        <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, line_size, embedding_size, initializer_param,
-            initializer_index, reinterpret_cast<const U*>(table_ids), num_missing_ptr,
-            missing_indices, store_values);
+    InitValueKernel<T, U><<<num_blocks, kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+        seed, cuda_gen_state, inc_offset, line_size, embedding_size, initializer_param,
+        initializer_index, reinterpret_cast<const U*>(table_ids), num_missing_ptr, missing_indices,
+        store_values);
   }
-  if (put_to_kv_store) { store->Put(stream, num_unique, unique_ids, store_values); }
+  if (put_to_kv_store) {
+    store->Put(stream, num_unique, unique_ids, store_values);
+    OF_CUDA_CHECK(cudaFreeAsync(store_values, cuda_stream));
+  }
   *return_num_unique = num_unique;
 }
 
@@ -523,7 +529,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);          \
         EmbeddingTmpBufferManager buffer_manager(                                               \
             nullptr, unique_ids.shape().elem_cnt(),                                             \
-            ctx->Attr<int64_t>("line_size") * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)), true);    \
+            ctx->Attr<int64_t>("line_size") * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)), false);   \
         return buffer_manager.TotalBufferSize();                                                \
       });
 
