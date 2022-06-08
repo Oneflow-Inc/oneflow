@@ -63,6 +63,9 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
       delete_ops.emplace_back(find_sgd_update_node->op().op_conf());
       parallel_conf = find_sgd_update_node->parallel_desc().parallel_conf();
+
+      // TODO: 把相同参数learning_rate, l1, l2, weight_decay分组到一个multi_tensor_sgd_update
+      // sgd_user_conf.input("learning_rate", 0) 这里其实是一个字符串
       multi_tensor_update_sgd_op_builder.OpTypeName("multi_tensor_sgd_update")
           .Input("model", sgd_user_conf.input("model", 0))
           .Input("model_diff", sgd_user_conf.input("model_diff", 0))

@@ -23,35 +23,18 @@ namespace oneflow {
 
 namespace {
 
-// Refer from https://github.com/NVIDIA/apex/blob/master/csrc/multi_tensor_apply.cuh
-constexpr int depth_to_max_tensors[5] = {110, 64, 48, 36, 30};
+constexpr int kBlockSize = 256;
+
+// Kernel arg size has 4K limit.
+constexpr int max_tensors[5] = {160, 80, 40, 20, 15};
 
 template<typename T, typename G, int n>
 struct TensorTupleParams {
-  G* model_diff_addresses[depth_to_max_tensors[n - 1]];
-  T* model_addresses[depth_to_max_tensors[n - 1]];
-  int64_t sizes[depth_to_max_tensors[n - 1]];
+  G* model_diff_addresses[max_tensors[n - 1]];
+  T* model_addresses[max_tensors[n - 1]];
+  int64_t sizes[max_tensors[n - 1]];
+  int64_t block_offset[max_tensors[n - 1]];
 };
-
-// template<typename T, typename G, int n>
-// __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float l1, const float l2,
-//                                         const float weight_decay, float learning_rate_val,
-//                                         const float* learning_rate, const T* scale_by_ptr,
-//                                         const int64_t* skip_if,
-//                                         TensorTupleParams<T, G, n> meta_data) {
-//   if (skip_if != nullptr && *skip_if != 0) { return; }
-//   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
-//   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
-
-//   for (int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++) {
-//     CUDA_1D_KERNEL_LOOP(i, meta_data.sizes[tensor_idx]) {
-//       SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
-//                                meta_data.model_addresses[tensor_idx] + i, scale, l1, l2,
-//                                weight_decay, learning_rate_val);
-//     }
-//   }
-// }
-
 
 template<typename T, typename G, int n>
 __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float l1, const float l2,
@@ -62,21 +45,28 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
-  int64_t v_block_id = blockIdx.x; 
-  
+  int64_t v_block_id = blockIdx.x;
   for (int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++) {
-    if(v_block_id == 0){
-      for(int64_t i = v_block_id * blockDim.x + threadIdx.x; i < meta_data.sizes[tensor_idx]; i+= blockDim.x * gridDim.x)  {
-        SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
-                                meta_data.model_addresses[tensor_idx] + i, scale, l1, l2,
-                                weight_decay, learning_rate_val);
-      }
-    } 
-    const int64_t tensor_elem_cnt = meta_data.sizes[tensor_idx]; 
-    const int64_t block_offset = ((tensor_elem_cnt + blockDim.x - 1) / blockDim.x) % gridDim.x;
-    v_block_id -= block_offset; 
-    if(v_block_id < 0) { v_block_id += gridDim.x; }
+    for (int64_t i = v_block_id * blockDim.x + threadIdx.x; i < meta_data.sizes[tensor_idx];
+         i += blockDim.x * gridDim.x) {
+      SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + i,
+                               meta_data.model_addresses[tensor_idx] + i, scale, l1, l2,
+                               weight_decay, learning_rate_val);
+    }
+    v_block_id -= meta_data.block_offset[tensor_idx];
+    if (v_block_id < 0) { v_block_id += gridDim.x; }
   }
+}
+
+unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const int64_t elem_cnt) {
+  auto* cuda_stream = stream->As<ep::CudaStream>();
+  const int32_t max_threads_multi_process =
+      cuda_stream->device_properties().maxThreadsPerMultiProcessor;
+  const int32_t multi_processor_count = cuda_stream->device_properties().multiProcessorCount;
+  unsigned int blocks_per_sm = max_threads_multi_process / block_size;
+  unsigned int grid_size = ((elem_cnt + block_size - 1) / block_size);
+  grid_size = std::min((unsigned int)multi_processor_count * blocks_per_sm, grid_size);
+  return grid_size;
 }
 
 template<DeviceType device_type, typename T, typename G>
@@ -117,20 +107,31 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
 
     TensorTupleParams<T, G, 2> tensor_tuple_params{};
     int32_t count = 0;
-    for (int i = 0; i < n_tensor; i++) {
+    int32_t total_elem_cnt = 0;
+    for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
       tensor_tuple_params.model_diff_addresses[count] =
-          (ctx->Tensor4ArgNameAndIndex("model_diff", i))->mut_dptr<G>();
+          (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr<G>();
       tensor_tuple_params.model_addresses[count] =
-          (ctx->Tensor4ArgNameAndIndex("model", i))->mut_dptr<T>();
-      tensor_tuple_params.sizes[count] =
-          (ctx->Tensor4ArgNameAndIndex("model", i))->shape().elem_cnt();
+          (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr<T>();
+      const int64_t tensor_elem_cnt =
+          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape().elem_cnt();
+      tensor_tuple_params.sizes[count] = tensor_elem_cnt;
+
       count += 1;
-      if (count == depth_to_max_tensors[1] || i == n_tensor - 1) {
+      total_elem_cnt += tensor_elem_cnt;
+      if (count == max_tensors[1] || tensor_idx == n_tensor - 1) {
+        const unsigned int grid_size =
+            ComputeGridSize(ctx->stream()->As<ep::CudaStream>(), kBlockSize, total_elem_cnt);
+        for (int i = 0; i < count; i++) {
+          tensor_tuple_params.block_offset[i] =
+              ((tensor_tuple_params.sizes[i] + kBlockSize - 1) / kBlockSize) % grid_size;
+        }
         MultiTensorSGDUpdateGpu<T, G, 2>
-            <<<16384, 256, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            <<<grid_size, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                 count, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val,
                 learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
         count = 0;
+        total_elem_cnt = 0;
       }
     }
   }
