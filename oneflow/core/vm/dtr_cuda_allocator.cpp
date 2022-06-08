@@ -36,17 +36,23 @@ inline bool IsAlignedSize(size_t size) { return size % kCudaMemAllocAlignSize ==
 
 inline double bytes2Mb(size_t bytes) { return bytes * 1. / 1024 / 1024; }
 
+static constexpr size_t kSmallPieceThreshold = 10 * 1024;  // 10 KB
+
+inline bool ShouldBeHeldBySmallPiece(size_t size) {
+  return EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && size <= kSmallPieceThreshold;
+}
+
 }  // namespace
 
 DtrCudaAllocator::DtrCudaAllocator(int64_t device_id)
-    : Allocator(), device_id_(device_id), total_memory_bytes_(0), recycle_piece_list_(nullptr) {
-  bins_.resize(kBinNumSize);
+    : Allocator(), device_id_(device_id), memory_size_(0), recycle_piece_list_(nullptr) {
+  bins_.resize(kBinNumSize + 1);
   for (int i = 0; i < kBinNumSize; ++i) {
-    size_t bin_size = BinSize4BinNum(i);
-    CHECK_EQ(BinNum4BinSize(bin_size), i);
-    CHECK_EQ(BinNum4BinSize(bin_size + kCudaMemAllocAlignSize - 1), i);
-    CHECK_EQ(BinNum4BinSize(bin_size * 2 - 1), i);
-    CHECK_EQ(BinNum4BinSize(bin_size * 2), i == (kBinNumSize - 1) ? i : i + 1);
+    size_t bin_size = BinSize4BinId(i);
+    CHECK_EQ(LowerBoundBinId4NormalPiece(bin_size), i);
+    CHECK_EQ(LowerBoundBinId4NormalPiece(bin_size + kCudaMemAllocAlignSize - 1), i);
+    CHECK_EQ(LowerBoundBinId4NormalPiece(bin_size * 2 - 1), i);
+    CHECK_EQ(LowerBoundBinId4NormalPiece(bin_size * 2), i == (kBinNumSize - 1) ? i : i + 1);
   }
 }
 
@@ -59,18 +65,31 @@ ptrdiff_t DtrCudaAllocator::get_offset(const char* mem_ptr) const {
   return mem_ptr - (char*)memory_;
 }
 
+int32_t DtrCudaAllocator::LowerBoundBinId4NormalPiece(size_t size) {
+  uint64_t value = std::max(size, kCudaMemAllocAlignSize) >> 9;
+  return std::min(kBinNumSize - 1, static_cast<int32_t>(63 ^ __builtin_clzll(value)));
+}
+
+int32_t DtrCudaAllocator::UpperBoundBinId4NormalPiece(size_t size) { return kBinNumSize; }
+
 void DtrCudaAllocator::Mark(DTREagerBlobObject* ebo, char* mem_ptr) {
-  if (EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && ebo->AlignedByteSizeOfBlobBody() <= kSmallPieceThreshold) {
-    return;
-  }
   if (dtr::debug_level() >= 2) { LOG(INFO) << "mark " << ebo << " " << (void*)mem_ptr; }
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo;
 }
 
+bool DtrCudaAllocator::InSmallMemoryArea(void* ptr) {
+  CHECK_NOTNULL(small_piece_area_ptr_);
+  CHECK_GE(ptr, memory_);
+  CHECK_LT(ptr, (char*)memory_ + memory_size_);
+  // compare pointer by raw < or > is undefined behavior
+  return std::greater_equal<>{}(ptr, small_piece_area_ptr_);
+}
+
 void DtrCudaAllocator::InsertPiece2Bin(Piece* piece) {
   CHECK(piece->is_free && piece->bin_num == kInvalidBinNum);
-  int32_t bin_num = BinNum4BinSize(piece->size);
+  int32_t bin_num =
+      InSmallMemoryArea(piece->ptr) ? kBinNumSize : LowerBoundBinId4NormalPiece(piece->size);
   piece->bin_num = bin_num;
   CHECK(bins_.at(bin_num).pieces.insert(piece).second);
 }
@@ -103,11 +122,12 @@ void DtrCudaAllocator::DeallocatePiece(Piece* piece) {
   recycle_piece_list_ = piece;
 }
 
-void DtrCudaAllocator::MarkPiece(Piece* piece) {
+void DtrCudaAllocator::InsertPiece2PtrMap(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.emplace(piece->ptr, piece).second);
 }
-void DtrCudaAllocator::UnMarkPiece(Piece* piece) {
+
+void DtrCudaAllocator::ErasePieceFromPtrMap(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   auto it = ptr2piece_.find(piece->ptr);
   CHECK(it != ptr2piece_.end());
@@ -149,32 +169,58 @@ void DtrCudaAllocator::Display() {
   std::cout << "total_free_piece_bytes: " << bytes2Mb(total_free_piece_bytes) << "MB"
             << ", total allocate bytes: " << bytes2Mb(total_allocate_bytes_) << "MB"
             << ", total deallocate bytes: " << bytes2Mb(total_deallocate_bytes_) << "MB"
-            << ", total memory bytes: " << bytes2Mb(total_memory_bytes_) << "MB" << std::endl;
+            << std::endl;
 }
 
 DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size));
 
   if (memory_ == nullptr) {
-    size_t size = dtr::memory_threshold();
+    memory_size_ = dtr::memory_threshold();
     if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
       LOG(INFO) << "****"
-                << "BEGINNING-" << size << std::endl;
+                << "BEGINNING-" << memory_size_ << std::endl;
     }
-    OF_CUDA_CHECK(cudaMalloc(&memory_, size));
-    Piece* piece = AllocatePiece();
-    piece->size = size;
-    piece->ptr = static_cast<char*>(memory_);
-    piece->prev = nullptr;
-    piece->next = nullptr;
-    piece->is_free = true;
-    piece->tensor = nullptr;
-    piece->bin_num = kInvalidBinNum;
-    InsertPiece2Bin(piece);
-    MarkPiece(piece);
+    OF_CUDA_CHECK(cudaMalloc(&memory_, memory_size_));
+    const size_t small_piece_area_size =
+        EnvBool<ONEFLOW_DTR_SMALL_PIECE>() ? 1024 * kSmallPieceThreshold : 0;
+    const size_t normal_area_size = memory_size_ - small_piece_area_size;
+    small_piece_area_ptr_ = static_cast<char*>(memory_) + normal_area_size;
+
+    Piece* normal_piece = AllocatePiece();
+    normal_piece->size = memory_size_ - small_piece_area_size;
+    normal_piece->ptr = static_cast<char*>(memory_);
+    normal_piece->prev = nullptr;
+    normal_piece->next = nullptr;
+    normal_piece->is_free = true;
+    normal_piece->tensor = nullptr;
+    normal_piece->bin_num = kInvalidBinNum;
+    InsertPiece2Bin(normal_piece);
+    InsertPiece2PtrMap(normal_piece);
+    if (small_piece_area_size > 0) {
+      Piece* small_piece = AllocatePiece();
+      small_piece->size = small_piece_area_size;
+      small_piece->ptr = static_cast<char*>(small_piece_area_ptr_);
+      small_piece->prev = nullptr;
+      small_piece->next = nullptr;
+      small_piece->is_free = true;
+      small_piece->tensor = nullptr;
+      small_piece->bin_num = kInvalidBinNum;
+      InsertPiece2Bin(small_piece);
+      CHECK_EQ(small_piece->bin_num, kBinNumSize);
+      InsertPiece2PtrMap(small_piece);
+    }
   }
 
-  for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
+  const size_t lower_bound = [&]() {
+    if (ShouldBeHeldBySmallPiece(aligned_size)) { return kBinNumSize; }
+    return LowerBoundBinId4NormalPiece(aligned_size);
+  }();
+  const size_t upper_bound = [&]() {
+    if (ShouldBeHeldBySmallPiece(aligned_size)) { return kBinNumSize + 1; }
+    return UpperBoundBinId4NormalPiece(aligned_size);
+  }();
+  for (int32_t bin_num = lower_bound; bin_num < upper_bound; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
     for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
       Piece* piece = *it;
@@ -227,7 +273,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
             CHECK(IsAlignedSize(piece->size));
             CHECK(IsAlignedSize(new_piece->size));
             InsertPiece2Bin(new_piece);
-            MarkPiece(new_piece);
+            InsertPiece2PtrMap(new_piece);
           } else {
             // is right
             piece->bin_num = kInvalidBinNum;
@@ -249,7 +295,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
             CHECK(IsAlignedSize(piece->size));
             CHECK(IsAlignedSize(new_piece->size));
             InsertPiece2Bin(piece);
-            MarkPiece(new_piece);
+            InsertPiece2PtrMap(new_piece);
             return new_piece;
           }
         }
@@ -270,7 +316,7 @@ void DtrCudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   lhs->size += rhs->size;
   lhs->next = rhs->next;
   if (rhs->next != nullptr) { rhs->next->prev = lhs; }
-  UnMarkPiece(rhs);
+  ErasePieceFromPtrMap(rhs);
   DeallocatePiece(rhs);
 }
 
@@ -305,7 +351,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
   double min_cost = std::numeric_limits<double>::max();
   auto min_start = start;
   auto min_end = start;
-  while (end != ptr2piece_.end()) {
+  while (end != ptr2piece_.end() && !InSmallMemoryArea(end->second->ptr)) {
     if (total_size < required_size) {
       auto* end_tensor = end->second->tensor;
       // const auto* end_tensor = end->second->tensor;
@@ -391,7 +437,10 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
     // e.g. two contiguous pieces relu, no_tensor, after relu evict, no_tensor will be deallocated.
     // currently deallocation only set tensor to nullptr, not real free,
     // so no bug occurs. It is tricky and fragile.
-    if (piece->tensor != nullptr) { CHECK_JUST(piece->tensor->evict(false)); }
+    if (piece->tensor != nullptr) {
+      CHECK(!ShouldBeHeldBySmallPiece(piece->size));
+      CHECK_JUST(piece->tensor->evict(false));
+    }
   }
   if (dtr::debug_level() >= 2) { LOG(INFO) << "evict size: " << evict_size; }
 
@@ -410,10 +459,6 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     return;
   }
   size_t aligned_size = CudaMemAlignedBytes(size);
-  if (EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && aligned_size <= kSmallPieceThreshold) {
-    OF_CUDA_CHECK(cudaMalloc(mem_ptr, aligned_size));
-    return;
-  }
 
   Piece* piece = FindPiece(aligned_size);
 
@@ -439,7 +484,6 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (EnvBool<OF_DTR_LR>()) { left_ = !left_; }
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "aid " << id_ << ", allocate " << (size / 1024. / 1024.)
-  //             << "MB, total mem: " << (total_memory_bytes_ / 1024. / 1024.)
   //             << "MB, total allocate bytes: " << (total_allocate_bytes_ / 1024. / 1024.)
   //             << std::endl;
   // }
@@ -449,11 +493,6 @@ void DtrCudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
 
   auto it = ptr2piece_.find(mem_ptr);
-  if (EnvBool<ONEFLOW_DTR_SMALL_PIECE>() && size <= kSmallPieceThreshold) {
-    CHECK(it == ptr2piece_.end());
-    OF_CUDA_CHECK(cudaFree(mem_ptr));
-    return;
-  }
   CHECK(it != ptr2piece_.end()) << "Error! : Try deallocate mem_ptr non-existent. mem ptr = "
                                 << mem_ptr << " size = " << size;
   Piece* piece = it->second;

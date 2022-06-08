@@ -99,7 +99,7 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
         dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);
     if (dtr::is_enabled_and_debug()) {
-      LOG(INFO) << "ReleaseTensor instruction: " << ptr->eager_blob_object().get() << "(id: "
+      LOG(INFO) << "ReleaseTensor instruction: (id: "
                 << std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object())->id()
                 << ") with ref count " << ptr->eager_blob_object().use_count() << std::endl;
     }

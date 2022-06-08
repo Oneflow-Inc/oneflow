@@ -46,7 +46,6 @@ class DtrCudaAllocator final : public Allocator {
 
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
-  static constexpr size_t kSmallPieceThreshold = 10 * 1024;  // 10 KB
 
   // Piece is the basic memory unit of CudaAllocator.
   // A Piece is either is free(is_free = true) or in used(is_free = false).
@@ -86,12 +85,13 @@ class DtrCudaAllocator final : public Allocator {
     std::set<Piece*, PieceCmp> pieces;
   };
 
-  size_t BinSize4BinNum(int32_t bin_num) { return kCudaMemAllocAlignSize << bin_num; }
+  size_t BinSize4BinId(int32_t bin_num) { return kCudaMemAllocAlignSize << bin_num; }
 
-  int32_t BinNum4BinSize(size_t size) {
-    uint64_t value = std::max(size, kCudaMemAllocAlignSize) >> 9;
-    return std::min(kBinNumSize - 1, static_cast<int32_t>(63 ^ __builtin_clzll(value)));
-  }
+  int32_t LowerBoundBinId4NormalPiece(size_t size);
+
+  int32_t UpperBoundBinId4NormalPiece(size_t size);
+
+  bool InSmallMemoryArea(void* ptr);
 
   // Try find free Piece which size is larger than aligned_size in Bins.
   // Return nullptr when find failure
@@ -108,10 +108,10 @@ class DtrCudaAllocator final : public Allocator {
 
   // Insert a {piece->ptr, piece} pair into the ptr2piece_ map for search Piece when call
   // Deallocate()
-  void MarkPiece(Piece* piece);
+  void InsertPiece2PtrMap(Piece* piece);
   // Erase the {piece->ptr, piece} pair from ptr2piece_ because the ptr is useless
   // Usually call before DeallocatePiece()
-  void UnMarkPiece(Piece* piece);
+  void ErasePieceFromPtrMap(Piece* piece);
 
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
   void RemovePieceFromBin(Piece* piece);
@@ -119,8 +119,9 @@ class DtrCudaAllocator final : public Allocator {
   Piece* EvictAndFindPiece(size_t size);
 
   int64_t device_id_;
-  size_t total_memory_bytes_;
   void* memory_ = nullptr;
+  size_t memory_size_;
+  void* small_piece_area_ptr_ = nullptr;
 
   std::vector<Bin> bins_;
   std::vector<std::unique_ptr<Piece>> pieces_;
