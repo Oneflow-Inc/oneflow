@@ -758,6 +758,34 @@ void OfGetDeviceDesc(const TaskProto* task_proto, boxing::of_collective::DeviceD
   device_desc->set_device_id(device_id.device_index());
 }
 
+enum TreeTopo {
+  Star,
+  Binomial
+};
+
+void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info, const TreeTopo topo=Star) {
+  if (topo == Star) {
+    auto task_ids = std::vector<int64_t>(info.op_desc.num_ranks());
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      task_ids.push_back(info.rank2node.at(i)->task_proto()->task_id());
+    }
+    int64_t root = task_ids[0];
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      int64_t task_id = info.rank2node.at(i)->task_proto()->task_id();
+      auto nego_tree_info = (*(request_desc->mutable_negotiation_tree_topo()))[task_id];
+      if (task_id == root) {
+        nego_tree_info.set_upstream_id(-1);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::move(std::vector<int64_t>(task_ids.begin() + 1, task_ids.end())));
+      } else {
+        nego_tree_info.set_upstream_id(root);
+        *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(
+          std::move(std::vector<int64_t>(0)));
+      }
+    }
+  }
+}
+
 }  // namespace
 
 void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
@@ -963,6 +991,7 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
         }
         request_desc->set_order(info.order);
         request_desc->set_dependency_depth(info.dependency_depth);
+        CalcNegoTree(request_desc, info);
       } else {
         CHECK_LT(info.rank2node.size(), info.op_desc.num_ranks());
         for (const auto& pair : info.rank2node) { visited.erase(pair.second); }

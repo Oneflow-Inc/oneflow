@@ -28,8 +28,6 @@ class OfRequestStore;
 
 struct OfRequestId;
 
-class GroupToken;
-
 class CollectiveBuilder {
  public:
   CollectiveBuilder() = default;

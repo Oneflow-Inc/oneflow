@@ -47,11 +47,17 @@ message OpDesc {
     required Backend backend = 8;
 }
 
+message NegoTreeInfo {
+    required int64 upstream_id = 1;
+    repeated int64 downstream_id = 2;
+}
+
 message RequestDesc {
     required OpDesc op_desc = 1;
     required DeviceSet device_set = 2;
     required int64 order = 3;
     required int64 dependency_depth = 4;
+    map<int64, NegoTreeInfo> negotiation_tree_topo = 5; 
 }
 
 message RequestSet {
