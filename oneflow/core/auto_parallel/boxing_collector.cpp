@@ -568,10 +568,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
       JUST(AskSbpCombination4GeneralBasicCommunication(
           sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
           consumer_parallel_desc, middle_sbps, diag_node_pos));
-    } else {
-      // one-step transfer
-      return Maybe<void>::Ok();
     }
+    // Otherwise, one-step transfer
+    return Maybe<void>::Ok();
   }
 #endif  // WITH_CUDA
 
