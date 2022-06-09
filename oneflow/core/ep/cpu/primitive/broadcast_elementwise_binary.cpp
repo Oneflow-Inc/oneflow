@@ -63,6 +63,149 @@ struct BinaryRhsScalarFunctor {
 };
 
 template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchElementwise(CpuStream* cpu_stream, size_t simplified_num_dims,
+                       const int64_t* simplified_src0_dims, const Src* src0,
+                       const int64_t* simplified_src1_dims, const Src* src1, Dst* dst, Scalar attr0,
+                       Scalar attr1) {
+  const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(0, elem_cnt, [functor, src0, src1, dst](int64_t begin, int64_t end) {
+    for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
+  });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchSingleElementSrc0(CpuStream* cpu_stream, Src src0_value,
+                             const int64_t* simplified_src1_dims, const Src* src1, Dst* dst,
+                             Scalar attr0, Scalar attr1) {
+  auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(src0_value, attr0, attr1);
+  cpu_stream->ParallelFor(0, simplified_src1_dims[0],
+                          [functor, src1, dst](int64_t begin, int64_t end) {
+                            for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
+                          });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchSingleElementSrc1(CpuStream* cpu_stream, Src src1_value,
+                             const int64_t* simplified_src0_dims, const Src* src0, Dst* dst,
+                             Scalar attr0, Scalar attr1) {
+  auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(src1_value, attr0, attr1);
+  cpu_stream->ParallelFor(0, simplified_src0_dims[0],
+                          [functor, src0, dst](int64_t begin, int64_t end) {
+                            for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
+                          });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchRowWithMatrix(CpuStream* cpu_stream, const int64_t* simplified_src0_dims,
+                         const Src* src0, const int64_t* simplified_src1_dims, const Src* src1,
+                         Dst* dst, Scalar attr0, Scalar attr1) {
+  int64_t rows = simplified_src1_dims[0];
+  int64_t cols = simplified_src0_dims[1];
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+    for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+      for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+        const int64_t src0_offset = col_idx;
+        const int64_t src1_offset = row_idx * cols + col_idx;
+        dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
+      }
+    }
+  });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchMatrixWithRow(CpuStream* cpu_stream, const int64_t* simplified_src0_dims,
+                         const Src* src0, const int64_t* simplified_src1_dims, const Src* src1,
+                         Dst* dst, Scalar attr0, Scalar attr1) {
+  int64_t rows = simplified_src0_dims[0];
+  int64_t cols = simplified_src1_dims[1];
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+    for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+      for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+        const int64_t src0_offset = row_idx * cols + col_idx;
+        const int64_t src1_offset = col_idx;
+        dst[src0_offset] = functor(src0[src0_offset], src1[src1_offset]);
+      }
+    }
+  });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchColWithMatrix(CpuStream* cpu_stream, const int64_t* simplified_src0_dims,
+                         const Src* src0, const int64_t* simplified_src1_dims, const Src* src1,
+                         Dst* dst, Scalar attr0, Scalar attr1) {
+  int64_t rows = simplified_src0_dims[0];
+  int64_t cols = simplified_src1_dims[1];
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+    for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+      for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+        const int64_t src0_offset = row_idx;
+        const int64_t src1_offset = row_idx * cols + col_idx;
+        dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
+      }
+    }
+  });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchMatrixWithCol(CpuStream* cpu_stream, const int64_t* simplified_src0_dims,
+                         const Src* src0, const int64_t* simplified_src1_dims, const Src* src1,
+                         Dst* dst, Scalar attr0, Scalar attr1) {
+  int64_t rows = simplified_src1_dims[0];
+  int64_t cols = simplified_src0_dims[1];
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+    for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+      for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+        const int64_t src0_offset = row_idx * cols + col_idx;
+        const int64_t src1_offset = row_idx;
+        dst[src0_offset] = functor(src0[src0_offset], src1[src1_offset]);
+      }
+    }
+  });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
+                   const int64_t* simplified_src0_dims, const Src* src0,
+                   const int64_t* simplified_src1_dims, const Src* src1,
+                   const int64_t* simplified_dst_dims, Dst* dst, Scalar attr0, Scalar attr1) {
+  const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_dst_dims);
+  auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
+  cpu_stream->ParallelFor(
+      0, elem_cnt,
+      [functor, src0, src1, dst, simplified_num_dims, simplified_src0_dims, simplified_src1_dims,
+       simplified_dst_dims](int64_t begin, int64_t end) {
+        auto src0_index_helper =
+            NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_src0_dims, simplified_num_dims);
+        auto src1_index_helper =
+            NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_src1_dims, simplified_num_dims);
+        auto dst_index_helper =
+            NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_dst_dims, simplified_num_dims);
+        int64_t src0_index[kMaxNumDims];
+        int64_t src1_index[kMaxNumDims];
+        int64_t dst_index[kMaxNumDims];
+        for (int64_t offset = begin; offset < end; offset++) {
+          dst_index_helper.OffsetToNdIndex(offset, dst_index, simplified_num_dims);
+          for (int i = 0; i < kMaxNumDims; i++) {
+            if (i < simplified_num_dims) {
+              src0_index[i] = (simplified_src0_dims[i] != 1) ? dst_index[i] : 0;
+              src1_index[i] = (simplified_src1_dims[i] != 1) ? dst_index[i] : 0;
+            }
+          }
+          const int64_t src0_offset =
+              src0_index_helper.NdIndexToOffset(src0_index, simplified_num_dims);
+          const int64_t src1_offset =
+              src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
+          dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
+        }
+      });
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
 void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const Src* src0,
                     size_t num_src1_dims, const int64_t* src1_dims, const Src* src1, Dst* dst,
                     Scalar attr0, Scalar attr1) {
@@ -78,111 +221,31 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
                simplified_dst_dims, dst);
   if (IsDimsEquals(simplified_num_dims, simplified_src0_dims, simplified_num_dims,
                    simplified_src1_dims)) {
-    const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
-    auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-    cpu_stream->ParallelFor(0, elem_cnt, [functor, src0, src1, dst](int64_t begin, int64_t end) {
-      for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
-    });
+    LaunchElementwise<binary_op, Src, Dst>(cpu_stream, simplified_num_dims, simplified_src0_dims,
+                                           src0, simplified_src1_dims, src1, dst, attr0, attr1);
   } else {
     if (simplified_num_dims == 1 && simplified_src0_dims[0] == 1) {
-      auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(*src0, attr0, attr1);
-      cpu_stream->ParallelFor(0, simplified_src1_dims[0],
-                              [functor, src1, dst](int64_t begin, int64_t end) {
-                                for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
-                              });
+      LaunchSingleElementSrc0<binary_op, Src, Dst>(cpu_stream, *src0, simplified_src1_dims, src1,
+                                                   dst, attr0, attr1);
     } else if (simplified_num_dims == 1 && simplified_src1_dims[0] == 1) {
-      auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(*src1, attr0, attr1);
-      cpu_stream->ParallelFor(0, simplified_src0_dims[0],
-                              [functor, src0, dst](int64_t begin, int64_t end) {
-                                for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
-                              });
-    } else if (simplified_num_dims == 2 && simplified_src0_dims[0] == 1) {  // row * matrix
-      int64_t rows = simplified_src1_dims[0];
-      int64_t cols = simplified_src0_dims[1];
-      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-      cpu_stream->ParallelFor(
-          0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
-            for (int64_t row_idx = begin; row_idx < end; row_idx++) {
-              for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
-                const int64_t src0_offset = col_idx;
-                const int64_t src1_offset = row_idx * cols + col_idx;
-                dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
-              }
-            }
-          });
-    } else if (simplified_num_dims == 2 && simplified_src1_dims[0] == 1) {  // matrix * row
-      int64_t rows = simplified_src0_dims[0];
-      int64_t cols = simplified_src1_dims[1];
-      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-      cpu_stream->ParallelFor(
-          0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
-            for (int64_t row_idx = begin; row_idx < end; row_idx++) {
-              for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
-                const int64_t src0_offset = row_idx * cols + col_idx;
-                const int64_t src1_offset = col_idx;
-                dst[src0_offset] = functor(src0[src0_offset], src1[src1_offset]);
-              }
-            }
-          });
-    } else if (simplified_num_dims == 2 && simplified_src0_dims[1] == 1) {  // col * matrix
-      int64_t rows = simplified_src0_dims[0];
-      int64_t cols = simplified_src1_dims[1];
-      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-      cpu_stream->ParallelFor(
-          0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
-            for (int64_t row_idx = begin; row_idx < end; row_idx++) {
-              for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
-                const int64_t src0_offset = row_idx;
-                const int64_t src1_offset = row_idx * cols + col_idx;
-                dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
-              }
-            }
-          });
-    } else if (simplified_num_dims == 2 && simplified_src1_dims[1] == 1) {  // matrix * col
-      int64_t rows = simplified_src1_dims[0];
-      int64_t cols = simplified_src0_dims[1];
-      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-      cpu_stream->ParallelFor(
-          0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
-            for (int64_t row_idx = begin; row_idx < end; row_idx++) {
-              for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
-                const int64_t src0_offset = row_idx * cols + col_idx;
-                const int64_t src1_offset = row_idx;
-                dst[src0_offset] = functor(src0[src0_offset], src1[src1_offset]);
-              }
-            }
-          });
+      LaunchSingleElementSrc1<binary_op, Src, Dst>(cpu_stream, *src1, simplified_src0_dims, src0,
+                                                   dst, attr0, attr1);
+    } else if (simplified_num_dims == 2 && simplified_src0_dims[0] == 1) {
+      LaunchRowWithMatrix<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
+                                               simplified_src1_dims, src1, dst, attr0, attr1);
+    } else if (simplified_num_dims == 2 && simplified_src1_dims[0] == 1) {
+      LaunchMatrixWithRow<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
+                                               simplified_src1_dims, src1, dst, attr0, attr1);
+    } else if (simplified_num_dims == 2 && simplified_src0_dims[1] == 1) {
+      LaunchColWithMatrix<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
+                                               simplified_src1_dims, src1, dst, attr0, attr1);
+    } else if (simplified_num_dims == 2 && simplified_src1_dims[1] == 1) {
+      LaunchMatrixWithCol<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
+                                               simplified_src1_dims, src1, dst, attr0, attr1);
     } else {
-      const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_dst_dims);
-      auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-      cpu_stream->ParallelFor(
-          0, elem_cnt,
-          [functor, src0, src1, dst, simplified_num_dims, simplified_src0_dims,
-           simplified_src1_dims, simplified_dst_dims](int64_t begin, int64_t end) {
-            auto src0_index_helper = NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_src0_dims,
-                                                                               simplified_num_dims);
-            auto src1_index_helper = NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_src1_dims,
-                                                                               simplified_num_dims);
-            auto dst_index_helper =
-                NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_dst_dims, simplified_num_dims);
-            int64_t src0_index[kMaxNumDims];
-            int64_t src1_index[kMaxNumDims];
-            int64_t dst_index[kMaxNumDims];
-            for (int64_t offset = begin; offset < end; offset++) {
-              dst_index_helper.OffsetToNdIndex(offset, dst_index, simplified_num_dims);
-              for (int i = 0; i < kMaxNumDims; i++) {
-                if (i < simplified_num_dims) {
-                  src0_index[i] = (simplified_src0_dims[i] != 1) ? dst_index[i] : 0;
-                  src1_index[i] = (simplified_src1_dims[i] != 1) ? dst_index[i] : 0;
-                }
-              }
-              const int64_t src0_offset =
-                  src0_index_helper.NdIndexToOffset(src0_index, simplified_num_dims);
-              const int64_t src1_offset =
-                  src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
-              dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
-            }
-          });
+      LaunchGeneral<binary_op, Src, Dst>(cpu_stream, simplified_num_dims, simplified_src0_dims,
+                                         src0, simplified_src1_dims, src1, simplified_dst_dims, dst,
+                                         attr0, attr1);
     }
   }
 }
