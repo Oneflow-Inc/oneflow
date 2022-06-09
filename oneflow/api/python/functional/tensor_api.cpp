@@ -239,10 +239,10 @@ class LocalTensorSharedNumpyDataFunctor {
     if (!PyArray_IS_C_CONTIGUOUS(array)) {
       OF_LOG_ONCE(LOG(WARNING) << "OneFlow don't support non-contiguous array now, "
                                   "and we will copy the array to a contiguous one.");
+      array = PyArray_GETCONTIGUOUS(array);
+    } else {
+      Py_INCREF(obj);
     }
-    // PyArray_GETCONTIGUOUS will return a reference if array is already contiguous,
-    // otherwise return a (contiguous) copy of the array.
-    array = PyArray_GETCONTIGUOUS(array);
 
     // Build TensorMeta
     int32_t dim = PyArray_NDIM(array);
