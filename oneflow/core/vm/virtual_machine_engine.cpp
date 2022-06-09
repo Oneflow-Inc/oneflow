@@ -173,7 +173,7 @@ intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListEr
 
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx) {
-  OF_PROFILER_RANGE_PUSH("ReleaseFinishedInstructions");
+  // OF_PROFILER_RANGE_PUSH("ReleaseFinishedInstructions");
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
@@ -378,7 +378,7 @@ int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 // Returns true if old pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
-  OF_PROFILER_RANGE_GUARD("vm:Receive");
+  // OF_PROFILER_RANGE_GUARD("vm:Receive");
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
     OF_PROFILER_RANGE_PUSH(compute_instr_msg->DebugName());
     OF_PROFILER_RANGE_POP();

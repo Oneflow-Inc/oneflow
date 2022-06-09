@@ -270,7 +270,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   MultiThreadScheduleCtx schedule_ctx{};
   auto* vm = mut_vm();
   while (pending_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
-    OF_PROFILER_RANGE_GUARD("VirtualMachine::ScheduleLoop");
+    // OF_PROFILER_RANGE_GUARD("VirtualMachine::ScheduleLoop");
     auto start = std::chrono::steady_clock::now();
     static constexpr int kWorkingMicroseconds = 1000;
     // Every time this thread wakes up, vm is scheduled for about `kWorkingMicroseconds`.
