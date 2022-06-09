@@ -49,7 +49,10 @@ class DimGatherKernel final : public user_op::OpKernel {
     const IDX_T* index = index_tensor->dptr<IDX_T>();
     IN_T* output = out_tensor->mut_dptr<IN_T>();
 
-    int ndim = input_tensor->shape().NumAxes();
+    const int& ndim = input_tensor->shape().NumAxes();
+    int dim_value = 0;
+    if (ndim > 0) { dim_value = input_tensor->shape().At(dim); }
+
     fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
     auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void {
       std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
@@ -59,9 +62,9 @@ class DimGatherKernel final : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> input_nd_helper(shape_vec.data(), ndim);
     shape2dims(index_tensor->shape());
     DimOpIndexNdHelper<IDX_T> index_nd_helper(shape_vec.data(), ndim);
-    DimGatherFunctor<device_type, IN_T, IDX_T>()(
-        ctx->stream(), input_nd_helper, index_nd_helper, ndim, index_tensor->shape().elem_cnt(),
-        input_tensor->shape().At(dim), dim, index, input, output);
+    DimGatherFunctor<device_type, IN_T, IDX_T>()(ctx->stream(), input_nd_helper, index_nd_helper,
+                                                 ndim, index_tensor->shape().elem_cnt(), dim_value,
+                                                 dim, index, input, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
