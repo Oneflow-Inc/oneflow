@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/auto_parallel/boxing_collector.h"
@@ -23,11 +25,43 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+bool NeedBoxingCollector(const OpGraph& op_graph) {
+  bool need_boxing_collector = false;
+  op_graph.ForEachNode([&](const OpNode* node) {
+    if (need_boxing_collector) { return; }
+    OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
+    if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
+    for (const std::string& ibn : node->op().input_bns()) {
+      const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
+      const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
+      const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
+      const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
+      // If dealing with different placement
+      if (producer.parallel_desc().parallel_num() != 1
+          || node->parallel_desc().parallel_num() != 1) {
+        const auto& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
+        if (CHECK_JUST(ComputeLazyCopyCostBetweenNdSbp(producer_nd_sbp, consumer_nd_sbp,
+                                                       logical_blob_desc, producer.parallel_desc(),
+                                                       node->parallel_desc(),
+                                                       /*requires_same_sbp=*/false))
+            > GetValidMaxCopyCost()) {
+          need_boxing_collector = true;
+          return;
+        }
+      }
+    }
+  });
+  return need_boxing_collector;
+}
+}  // namespace
+
 Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_builder) {
   // Not allowed two-step boxing and disable checking for debugging
   if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
     return Maybe<void>::Ok();
   }
+  if (!NeedBoxingCollector(op_graph)) { return Maybe<void>::Ok(); }
   // Initialize boxing collector
   BoxingCollector boxing_collector;
   // We assemble the boxing table from S(0) to S(5).

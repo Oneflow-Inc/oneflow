@@ -428,6 +428,17 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
 
   double logical_blob_size =
       logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
+
+#ifdef WITH_CUDA
+  // Use a general basic communication if no P in the consumer
+  if ((!NdSbpHasPartialParallel(consumer_sbp_parallel))) {
+    return Ratio4GeneralBasicCommunication(producer_sbp_parallel, consumer_sbp_parallel,
+                                           producer_parallel_desc, consumer_parallel_desc)
+           * logical_blob_desc.shape().elem_cnt()
+           * GetSizeOfDataType(logical_blob_desc.data_type());
+  }
+#endif  // WITH_CUDA
+
   bool on_same_devices =
       reduced_in_parallel_desc.EqualsIgnoringHierarchy(reduced_out_parallel_desc);
 
