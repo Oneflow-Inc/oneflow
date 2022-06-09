@@ -40,11 +40,10 @@ int64_t GetSoleOutBlobSize(const OpNode* node) {
 class DataParallelNodeSequence final {
  public:
   DataParallelNodeSequence(std::vector<const OpNode*> nodes, int64_t order)
-      : nodes_(std::move(nodes)), order_(order) {
+      : nodes_(std::move(nodes)), order_(order), len_(nodes_.size()) {
     const OpNode* var_node = nodes_.front();
     CHECK(var_node->op().op_conf().has_variable_conf());
     model_size_ = GetSoleOutBlobSize(var_node);
-    len_ = nodes_.size();
   }
   ~DataParallelNodeSequence() = default;
 
