@@ -39,8 +39,8 @@ void MultiTensorSGDUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
     for (int64_t i = 0; i < tensor_elem_cnt; i++) {
       SGDUpdateFunctor<T, G>()(tensor_tuple_params.model_diff_addresses[tensor_idx] + i,
-                               tensor_tuple_params.model_addresses[tensor_idx] + i, scale, l1, l2,
-                               weight_decay, learning_rate_val);
+                               tensor_tuple_params.model_addresses[0][tensor_idx] + i, scale, l1,
+                               l2, weight_decay, learning_rate_val);
     }
   }
 }

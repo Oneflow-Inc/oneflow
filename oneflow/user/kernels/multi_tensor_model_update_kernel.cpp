@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/multi_tensor_model_update_kernel_util.h"
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 
 namespace oneflow {
@@ -64,7 +63,7 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
     for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
       tensor_tuple_params.model_diff_addresses[count] =
           (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr<G>();
-      tensor_tuple_params.model_addresses[count] =
+      tensor_tuple_params.model_addresses[0][count] =
           (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr<T>();
       const int64_t tensor_elem_cnt =
           ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape().elem_cnt();

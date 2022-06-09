@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/model_update_kernel_util.h"
 #include "oneflow/user/kernels/multi_tensor_model_update_kernel_util.h"
-#include <cub/cub.cuh>
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -48,8 +46,8 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
   int64_t v_block_id = blockIdx.x;
   for (int64_t tensor_idx = 0; tensor_idx < num_tensor; tensor_idx++) {
     const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
-    T* model_ptr = tensor_tuple_params.model_addresses[tensor_idx]; 
-    G* model_diff_ptr = tensor_tuple_params.model_diff_addresses[tensor_idx]; 
+    T* model_ptr = tensor_tuple_params.model_addresses[0][tensor_idx];
+    G* model_diff_ptr = tensor_tuple_params.model_diff_addresses[tensor_idx];
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
       T model_val[kUnrollSize] = {0};
@@ -78,9 +76,7 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
 #pragma unroll
       for (int32_t ilp = 0; ilp < kUnrollSize; ilp++) {
         int64_t actual_idx = i + ilp * blockDim.x;
-        if (actual_idx < tensor_elem_cnt) {
-          *(model_ptr + actual_idx) = model_val[ilp];
-        }
+        if (actual_idx < tensor_elem_cnt) { *(model_ptr + actual_idx) = model_val[ilp]; }
       }
     }
     v_block_id -= tensor_tuple_params.block_offset[tensor_idx];
@@ -130,7 +126,7 @@ void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
   TensorTupleParams<T, half, 2> half_tensor_tuple_params{};
 
   for (int64_t i = 0; i < max_tensors[2]; i++) {
-    half_tensor_tuple_params.model_addresses[i] = tensor_tuple_params.model_addresses[i];
+    half_tensor_tuple_params.model_addresses[0][i] = tensor_tuple_params.model_addresses[0][i];
     half_tensor_tuple_params.model_diff_addresses[i] =
         reinterpret_cast<half*>(tensor_tuple_params.model_diff_addresses[i]);
     half_tensor_tuple_params.sizes[i] = tensor_tuple_params.sizes[i];
