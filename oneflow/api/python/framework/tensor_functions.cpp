@@ -741,6 +741,15 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_to_local(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  auto tensor = PyTensor_Unpack(self);
+  CHECK_OR_THROW(tensor->is_consistent())
+      << Error::RuntimeError() << "Expected global tensor for to_local but got local tensor!";
+  return PyTensor_New(ASSERT_PTR(functional::ConsistentToLocal(tensor)));
+  END_HANDLE_ERRORS
+}
+
 int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
@@ -808,6 +817,7 @@ PyMethodDef PyTensorObject_extra_methods[] = {
      NULL},
     {"global_to_global", (PyCFunction)PyTensorObject_global_to_global, METH_VARARGS | METH_KEYWORDS,
      NULL},
+    {"to_local", PyTensorObject_to_local, METH_NOARGS, NULL},
     {"to_global", (PyCFunction)PyTensorObject_to_global, METH_VARARGS | METH_KEYWORDS, NULL},
     {"cpu", PyTensorObject_cpu, METH_NOARGS, NULL},
     {"cuda", (PyCFunction)PyTensorObject_cuda, METH_VARARGS | METH_KEYWORDS, NULL},

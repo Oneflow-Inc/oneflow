@@ -617,10 +617,6 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
-def _to_local(self):
-    return flow.to_local(self)
-
-
 def _relu(self):
     return flow._C.relu(self)
 
@@ -896,10 +892,6 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *new_args, **kwargs)
 
 
-def _to_local(self):
-    return flow.to_local(self)
-
-
 def _tolist(self):
     if self.numel() == 1 and self.ndim == 0:
         return self.item()
@@ -1147,7 +1139,6 @@ def RegisterMethods():
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.item = _item
-    Tensor.to_local = _to_local
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
