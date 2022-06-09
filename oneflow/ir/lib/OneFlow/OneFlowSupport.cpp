@@ -152,7 +152,7 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
     return __DenseElementsAttrToTensor<float>(dense_attr_, device_tag_attr, device_name_attr,
                                               ::oneflow::DataType::kFloat);
   }
-  llvm::errs() << "Converting mlir::DenseElementsAttr to oneflow::Tensor only support float32 now."
+  llvm::errs() << "Converting mlir::DenseElementsAttr to oneflow::Tensor only support float32 and int64 now."
                << "\n";
   exit(EXIT_FAILURE);
 }
