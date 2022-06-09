@@ -75,7 +75,7 @@ void LaunchElementwise(CpuStream* cpu_stream, size_t simplified_num_dims,
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
-void LaunchSingleElementSrc0(CpuStream* cpu_stream, Src src0_value,
+void LaunchBinaryLhsScalar(CpuStream* cpu_stream, Src src0_value,
                              const int64_t* simplified_src1_dims, const Src* src1, Dst* dst,
                              Scalar attr0, Scalar attr1) {
   auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(src0_value, attr0, attr1);
@@ -86,7 +86,7 @@ void LaunchSingleElementSrc0(CpuStream* cpu_stream, Src src0_value,
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
-void LaunchSingleElementSrc1(CpuStream* cpu_stream, Src src1_value,
+void LaunchBinaryRhsScalar(CpuStream* cpu_stream, Src src1_value,
                              const int64_t* simplified_src0_dims, const Src* src0, Dst* dst,
                              Scalar attr0, Scalar attr1) {
   auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(src1_value, attr0, attr1);
@@ -225,10 +225,10 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
                                            src0, simplified_src1_dims, src1, dst, attr0, attr1);
   } else {
     if (simplified_num_dims == 1 && simplified_src0_dims[0] == 1) {
-      LaunchSingleElementSrc0<binary_op, Src, Dst>(cpu_stream, *src0, simplified_src1_dims, src1,
+      LaunchBinaryLhsScalar<binary_op, Src, Dst>(cpu_stream, *src0, simplified_src1_dims, src1,
                                                    dst, attr0, attr1);
     } else if (simplified_num_dims == 1 && simplified_src1_dims[0] == 1) {
-      LaunchSingleElementSrc1<binary_op, Src, Dst>(cpu_stream, *src1, simplified_src0_dims, src0,
+      LaunchBinaryRhsScalar<binary_op, Src, Dst>(cpu_stream, *src1, simplified_src0_dims, src0,
                                                    dst, attr0, attr1);
     } else if (simplified_num_dims == 2 && simplified_src0_dims[0] == 1) {
       LaunchRowWithMatrix<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
