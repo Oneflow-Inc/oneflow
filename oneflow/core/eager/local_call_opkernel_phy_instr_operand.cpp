@@ -35,6 +35,8 @@ LocalCallOpKernelPhyInstrOperand::LocalCallOpKernelPhyInstrOperand(
         .op_interp_ctx = op_interp_ctx,
       },
       opkernel_(opkernel),
+      user_opkernel_(nullptr),
+      need_temp_storage_(false),
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
       output_dependences_() {
