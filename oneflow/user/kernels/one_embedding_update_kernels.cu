@@ -251,6 +251,7 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
+    // update kernel
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
 
     embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
@@ -261,7 +262,6 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
                                   GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
                                   cuda_stream));
     T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->updated_values_);
-    // update kernel
     SGDUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(num_unique * embedding_size), kCudaThreadsNumPerBlock, 0,
            cuda_stream>>>(embedding_size, scale, l1, l2, weight_decay,
@@ -339,13 +339,22 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     // update kernel
+    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+
+    embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    const int64_t num_unique = ptrs->lookup_num_unique_;
+    T* unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->lookup_values_);
+    OF_CUDA_CHECK(cudaMallocAsync(&ptrs->updated_values_,
+                                  GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
+                                  cuda_stream));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->updated_values_);
     MomentumUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            line_size, embedding_size, scale, l1, l2, weight_decay, beta,
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
-            updated_unique_embeddings->mut_dptr<T>());
+           cuda_stream>>>(line_size, embedding_size, scale, l1, l2, weight_decay, beta,
+                          reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
+                          scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
+                          unique_embeddings_ptr, updated_unique_embeddings_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -426,14 +435,24 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
       bias_correction2_ptr = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0)->dptr<float>();
     }
     // update kernel
+    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+
+    embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    const int64_t num_unique = ptrs->lookup_num_unique_;
+    T* unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->lookup_values_);
+    OF_CUDA_CHECK(cudaMallocAsync(&ptrs->updated_values_,
+                                  GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
+                                  cuda_stream));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->updated_values_);
     AdamUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, beta1, beta2,
             epsilon, bias_correction1_ptr, bias_correction2_ptr,
             reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
-            updated_unique_embeddings->mut_dptr<T>());
+            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
+            updated_unique_embeddings_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -504,13 +523,23 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     // update kernel
+    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+
+    embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    const int64_t num_unique = ptrs->lookup_num_unique_;
+    T* unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->lookup_values_);
+    OF_CUDA_CHECK(cudaMallocAsync(&ptrs->updated_values_,
+                                  GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
+                                  cuda_stream));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->updated_values_);
     AdagradUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, lr_decay,
             epsilon, reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr,
             train_step_ptr, scale_by_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
-            unique_embeddings->dptr<T>(), updated_unique_embeddings->mut_dptr<T>());
+            unique_embeddings_ptr, updated_unique_embeddings_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -582,13 +611,23 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     // update kernel
+    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+
+    embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    const int64_t num_unique = ptrs->lookup_num_unique_;
+    T* unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->lookup_values_);
+    OF_CUDA_CHECK(cudaMallocAsync(&ptrs->updated_values_,
+                                  GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
+                                  cuda_stream));
+    T* updated_unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->updated_values_);
     FtrlUpdateKernel<T, G, IDX>
         <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             line_size, embedding_size, static_cast<T>(scale), l1, l2, weight_decay, lr_power,
             lambda1, lambda2, beta, reinterpret_cast<const IDX*>(num_unique_ids->dptr()),
             learning_rate_ptr, down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(),
-            unique_embeddings->dptr<T>(), updated_unique_embeddings->mut_dptr<T>());
+            unique_embeddings_ptr, updated_unique_embeddings_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
