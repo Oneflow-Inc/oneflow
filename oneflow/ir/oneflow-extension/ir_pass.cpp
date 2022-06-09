@@ -177,7 +177,7 @@ Maybe<void> IRRoundTrip<ir_pass_type>::Apply(Job* job, JobPassCtx* ctx) const {
 template class IRRoundTrip<kBeforeAD>;
 template class IRRoundTrip<kAfterAD>;
 
-Maybe<std::string> ConvertJobToTosaIR(Job* job) {
+std::string ConvertJobToTosaIR(Job* job) {
   RoundTripOneFlowJobWrapper<kBeforeAD> job_wrapper(job);
   return ::mlir::oneflow::ConvertJobToTosaIR(job_wrapper);
 }
