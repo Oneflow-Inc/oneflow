@@ -115,7 +115,8 @@ mlir::DenseElementsAttr TensorToDenseElementsAttr(
     const std::shared_ptr<::oneflow::one::Tensor>& tensor, MLIRContext* ctx) {
   const auto dtype = tensor->dtype()->data_type();
   if (dtype == ::oneflow::DataType::kFloat) {
-    return __TensorToDenseElementsAttr<float, mlir::FloatType>(tensor, mlir::FloatType::getF32(ctx));
+    return __TensorToDenseElementsAttr<float, mlir::FloatType>(tensor,
+                                                               mlir::FloatType::getF32(ctx));
   } else if (dtype == ::oneflow::DataType::kInt64) {
     auto mlir_type = mlir::IntegerType::IntegerType::get(
         ctx, 64, mlir::IntegerType::SignednessSemantics::Signed);
