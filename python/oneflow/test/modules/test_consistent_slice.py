@@ -117,18 +117,18 @@ def _test_logical_slice_with_bool(test_case, placement, sbp):
 
 
 def _test_logical_slice_with_grad(test_case, placement, sbp):
-    x = random_tensor(2, 4, 4, requires_grad=True).oneflow
+    x = random_tensor(2, 8, 16, requires_grad=True).oneflow
     x_numpy = x.detach().cpu().numpy()
 
     class LogicalSliceWithGrad(flow.nn.Module):
         def __init__(self):
             super().__init__()
-            self.input_grad = flow.nn.Parameter(flow.zeros(4, 4))
+            self.input_grad = flow.nn.Parameter(flow.zeros(8, 16))
 
         def forward(self, input):
             x = input + self.input_grad
             x = x.to_global(placement, sbp)
-            return x[:, :2]
+            return x[:, :8]
 
     logical_slice_with_grad = LogicalSliceWithGrad().to_global(
         placement, [flow.sbp.broadcast,] * len(sbp)
@@ -154,10 +154,10 @@ def _test_logical_slice_with_grad(test_case, placement, sbp):
     y = graph(input)
 
     # output
-    test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[:, :2]))
+    test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[:, :8]))
     # input_grad
-    x_grad_np = np.zeros((4, 4))
-    x_grad_np[:, :2] = 1
+    x_grad_np = np.zeros((8, 16))
+    x_grad_np[:, :8] = 1
     test_case.assertTrue(
         np.array_equal(-graph.module.input_grad.origin.numpy(), x_grad_np)
     )
