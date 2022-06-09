@@ -62,6 +62,14 @@ Maybe<void> CheckLearningRateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                                       const std::string& arg_name, int32_t arg_index) {
+  user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
+  CHECK_NOTNULL_OR_RETURN(arg_modifier);
+  arg_modifier->set_is_mutable(true);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
   const int64_t weight_size = ctx->input_size("model");
   for (int i = 0; i < weight_size; i++) {
@@ -87,11 +95,34 @@ Maybe<void> InferSGDUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                       const std::string& arg_name, int32_t arg_index) {
-  user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
-  CHECK_NOTNULL_OR_RETURN(arg_modifier);
-  arg_modifier->set_is_mutable(true);
+Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
+  const int64_t weight_size = ctx->input_size("model");
+  bool amsgrad = ctx->Attr<bool>("amsgrad");
+  for (int i = 0; i < weight_size; i++) {
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
+    const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", i);
+    const user_op::TensorDesc& m = ctx->InputTensorDesc("m", i);
+    const user_op::TensorDesc& v = ctx->InputTensorDesc("v", i);
+
+    CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
+    CHECK_EQ_OR_RETURN(m.shape(), model.shape());
+    CHECK_EQ_OR_RETURN(v.shape(), model.shape());
+  }
+  JUST(CheckLearningRateShape(ctx));
+  if (ctx->has_input("scale_by_tensor", 0)) {
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarShape(&scale_by_tensor));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferAdamUpdateDataType(user_op::InferContext* ctx) {  // todo
+  JUST(CheckLearningRateDataType(ctx));
+  if (ctx->has_input("scale_by_tensor", 0)) {
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+    JUST(CheckScalarDataType(&scale_by_tensor, model.data_type()));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -134,6 +165,48 @@ Maybe<void> SgdInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgM
 
 /* static */ Maybe<void> MultiTensorSgdUpdateOp::InferDataType(user_op::InferContext* ctx) {
   return InferSGDUpdateDataType(ctx);
+}
+
+/* static */ Maybe<void> MultiTensorAdamUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferAdamUpdateTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> MultiTensorAdamUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> MultiTensorAdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+    auto builder = ctx->NewBuilder().Broadcast(ctx->inputs());
+    for (int i = 0; i < ctx->user_op_conf().input_size("model"); ++i) {
+      builder.Split(user_op::OpArg("model", i), axis);
+      builder.Split(user_op::OpArg("model_diff", i), axis);
+    }
+    builder.Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+                                 const user_op::UserOpConfWrapper& conf) {
+  for (int64_t i = 0; i < conf.input_size("model"); i++) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0));
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0));
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> MultiTensorAdamUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return AdamInputArgModifyFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> MultiTensorAdamUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferAdamUpdateDataType(ctx);
 }
 
 }  // namespace oneflow

@@ -3184,6 +3184,59 @@ class MultiTensorSgdUpdateFunctor {
   std::vector<std::shared_ptr<OpExpr>> op_;
 };
 
+class MultiTensorAdamUpdateFunctor {
+ public:
+  MultiTensorAdamUpdateFunctor() {
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+
+    for (int n = 1; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_adam_update")
+                              .Input("model", n)
+                              .Input("model_diff", n)
+                              .Input("m", n)
+                              .Input("v", n)
+                              .Input("learning_rate")
+                              .Input("skip_if")
+                              .Input("bias_correction1")
+                              .Input("bias_correction2")
+                              .Build());
+    }
+  }
+
+  Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
+                         const TensorTuple& m, const TensorTuple& v,
+                         const std::shared_ptr<one::Tensor>& learning_rate,
+                         const std::shared_ptr<one::Tensor>& skip_if,
+                         const std::shared_ptr<one::Tensor>& bias_correction1,
+                         const std::shared_ptr<one::Tensor>& bias_correction2, const double& scale,
+                         const float& weight_decay) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    JUST(attrs.SetAttr<float>("beta1", 0.9f));
+    JUST(attrs.SetAttr<float>("beta2", 0.999f));
+
+    const int64_t weight_size = model.size();
+
+    TensorTuple input(4 * weight_size + 4);
+    std::copy(model.begin(), model.end(), input.begin());
+    std::copy(model_diff.begin(), model_diff.end(), input.begin() + weight_size);
+    std::copy(m.begin(), m.end(), input.begin() + 2 * weight_size);
+    std::copy(v.begin(), v.end(), input.begin() + 3 * weight_size);
+
+    input[4 * weight_size] = learning_rate;
+    input[4 * weight_size + 1] = skip_if;
+    input[4 * weight_size + 2] = bias_correction1;
+    input[4 * weight_size + 3] = bias_correction2;
+
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[weight_size], input, attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -3274,6 +3327,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
   m.add_functor<impl::MultiTensorSgdUpdateFunctor>("MultiTensorSgdUpdate");
+  m.add_functor<impl::MultiTensorAdamUpdateFunctor>("MultiTensorAdamUpdate");
 }
 
 }  // namespace functional

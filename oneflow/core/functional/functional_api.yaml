@@ -2289,3 +2289,8 @@
 - name: "multi_tensor_sgd_update"
   signature: "Void (TensorTuple model, TensorTuple model_diff, Tensor learning_rate, Tensor skip_if, Double scale, Float weight_decay) => MultiTensorSgdUpdate"
   bind_python: True
+
+- name: "multi_tensor_adam_update"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Tensor learning_rate, Tensor skip_if, Tensor bias_correction1, Tensor bias_correction2, Double scale, Float weight_decay) => MultiTensorAdamUpdate"
+  bind_python: True
+

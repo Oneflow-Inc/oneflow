@@ -148,7 +148,7 @@ __global__ void MultiTensorAdamUpdateGpu(
     float weight_decay, bool amsgrad, bool do_bias_correction, float learning_rate_val,
     float bias_correction1_val, float bias_correction2_val, const float* learning_rate,
     const T* scale_by_ptr, const int64_t* skip_if, const float* bias_correction1_ptr,
-    const float* bias_correction2_ptr, TensorTupleParams<T, G, 5> tensor_tuple_params) {
+    const float* bias_correction2_ptr, TensorTupleParams<T, G, 4> tensor_tuple_params) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -161,7 +161,6 @@ __global__ void MultiTensorAdamUpdateGpu(
     T* model_ptr = tensor_tuple_params.model_addresses[0][tensor_idx];
     T* m_ptr = tensor_tuple_params.model_addresses[1][tensor_idx];
     T* v_ptr = tensor_tuple_params.model_addresses[2][tensor_idx];
-    T* max_v_ptr = tensor_tuple_params.model_addresses[3][tensor_idx];
     G* model_diff_ptr = tensor_tuple_params.model_diff_addresses[tensor_idx];
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
@@ -169,7 +168,6 @@ __global__ void MultiTensorAdamUpdateGpu(
       T model_val[kUnrollSize] = {0};
       T m_val[kUnrollSize] = {0};
       T v_val[kUnrollSize] = {0};
-      T max_v_val[kUnrollSize] = {0};
       G model_diff[kUnrollSize] = {0};
 
 #pragma unroll
@@ -179,7 +177,6 @@ __global__ void MultiTensorAdamUpdateGpu(
           model_val[ilp] = *(model_ptr + actual_idx);
           m_val[ilp] = *(m_ptr + actual_idx);
           v_val[ilp] = *(v_ptr + actual_idx);
-          if (amsgrad) { max_v_val[ilp] = *(max_v_ptr + actual_idx); }
           model_diff[ilp] = *(model_diff_ptr + actual_idx);
         }
       }
@@ -194,13 +191,7 @@ __global__ void MultiTensorAdamUpdateGpu(
           m_val[ilp] = beta1 * m_val[ilp] + (1 - beta1) * model_diff_t;
           v_val[ilp] = beta2 * v_val[ilp] + (1 - beta2) * model_diff_t * model_diff_t;
 
-          T denom = 0;
-          if (amsgrad) {
-            max_v_val[ilp] = max_v_val[ilp] > v_val[ilp] ? max_v_val[ilp] : v_val[ilp];
-            denom = (sqrt(max_v_val[ilp]) / sqrt(bias_correction2_val)) + epsilon;
-          } else {
-            denom = (sqrt(v_val[ilp]) / sqrt(bias_correction2_val)) + epsilon;
-          }
+          T denom = (sqrt(v_val[ilp]) / sqrt(bias_correction2_val)) + epsilon;
           const T step_size = learning_rate_val / bias_correction1_val;
           model_val[ilp] = model_val[ilp] - step_size * (m_val[ilp] / denom)
                            - learning_rate_val * weight_decay * model_val[ilp];
@@ -214,7 +205,6 @@ __global__ void MultiTensorAdamUpdateGpu(
           *(model_ptr + actual_idx) = model_val[ilp];
           *(m_ptr + actual_idx) = m_val[ilp];
           *(v_ptr + actual_idx) = v_val[ilp];
-          if (amsgrad) { *(max_v_ptr + actual_idx) = max_v_val[ilp]; }
         }
       }
     }
@@ -231,7 +221,7 @@ struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, G> {
                      float learning_rate_val, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1,
-                     const float* bias_correction2, TensorTupleParams<T, G, 5> tensor_tuple_params);
+                     const float* bias_correction2, TensorTupleParams<T, G, 4> tensor_tuple_params);
 };
 
 template<typename T, typename G>
@@ -241,7 +231,7 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
-    TensorTupleParams<T, G, 5> tensor_tuple_params) {
+    TensorTupleParams<T, G, 4> tensor_tuple_params) {
   const unsigned int grid_size =
       ComputeGridSize(stream->As<ep::CudaStream>(), kBlockSize, elem_cnt);
   for (int i = 0; i < n_tensor; i++) {
@@ -249,11 +239,16 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
         ((tensor_tuple_params.sizes[i] + kBlockSize * kUnrollSize - 1) / (kBlockSize * kUnrollSize))
         % grid_size;
   }
+  printf("Enter here!!! \n");
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+
   MultiTensorAdamUpdateGpu<T, G>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
           learning_rate_val, bias_correction1_val, bias_correction2_val, learning_rate,
           scale_by_ptr, skip_if, bias_correction1, bias_correction2, tensor_tuple_params);
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
+  printf("End Adam kernel!!! \n");
 }
 
 template<typename T>
@@ -265,7 +260,7 @@ struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2,
-                     TensorTupleParams<T, float16, 5> tensor_tuple_params);
+                     TensorTupleParams<T, float16, 4> tensor_tuple_params);
 };
 
 template<typename T>
@@ -275,14 +270,13 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
-    TensorTupleParams<T, float16, 5> tensor_tuple_params) {
-  TensorTupleParams<T, half, 5> half_tensor_tuple_params{};
+    TensorTupleParams<T, float16, 4> tensor_tuple_params) {
+  TensorTupleParams<T, half, 4> half_tensor_tuple_params{};
 
-  for (int64_t i = 0; i < max_tensors[5]; i++) {
+  for (int64_t i = 0; i < max_tensors[4]; i++) {
     half_tensor_tuple_params.model_addresses[0][i] = tensor_tuple_params.model_addresses[0][i];
     half_tensor_tuple_params.model_addresses[1][i] = tensor_tuple_params.model_addresses[1][i];
     half_tensor_tuple_params.model_addresses[2][i] = tensor_tuple_params.model_addresses[2][i];
-    half_tensor_tuple_params.model_addresses[3][i] = tensor_tuple_params.model_addresses[3][i];
     half_tensor_tuple_params.model_diff_addresses[i] =
         reinterpret_cast<half*>(tensor_tuple_params.model_diff_addresses[i]);
     half_tensor_tuple_params.sizes[i] = tensor_tuple_params.sizes[i];

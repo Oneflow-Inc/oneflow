@@ -34,6 +34,33 @@ bool operator==(const SGDOptimizerKey& lhs, const SGDOptimizerKey& rhs) {
          && (lhs.parallel_conf == rhs.parallel_conf);
 }
 
+struct AdamOptimizerKey {
+  std::string learning_rate;
+  std::string bias_correction1_lbn;
+  std::string bias_correction2_lbn;
+  double scale;
+  float l1;
+  float l2;
+  float beta1;
+  float beta2;
+  float epsilon;
+  float weight_decay;
+  bool amsgrad;
+  bool do_bias_correction;
+  ParallelConf parallel_conf;
+};
+
+bool operator==(const AdamOptimizerKey& lhs, const AdamOptimizerKey& rhs) {
+  return (lhs.learning_rate == rhs.learning_rate)
+         && (lhs.bias_correction1_lbn == rhs.bias_correction1_lbn)
+         && (lhs.bias_correction2_lbn == rhs.bias_correction2_lbn) && (lhs.scale == rhs.scale)
+         && (lhs.l1 == rhs.l1) && (lhs.l2 == rhs.l2) && (lhs.beta1 == rhs.beta1)
+         && (lhs.beta2 == rhs.beta2) && (lhs.epsilon == rhs.epsilon)
+         && (lhs.weight_decay == rhs.weight_decay) && (lhs.amsgrad == rhs.amsgrad)
+         && (lhs.do_bias_correction == rhs.do_bias_correction)
+         && (lhs.parallel_conf == rhs.parallel_conf);
+}
+
 }  // namespace oneflow
 
 namespace std {
@@ -49,6 +76,23 @@ struct hash<oneflow::SGDOptimizerKey> {
     return string_hash(key.learning_rate) ^ double_hash(key.scale) ^ float_hash(key.l1)
            ^ float_hash(key.l2) ^ float_hash(key.weight_decay)
            ^ parallel_conf_hash(key.parallel_conf);
+  }
+};
+
+template<>
+struct hash<oneflow::AdamOptimizerKey> {
+  size_t operator()(const oneflow::AdamOptimizerKey& key) const {
+    const auto& float_hash = std::hash<float>();
+    const auto& double_hash = std::hash<float>();
+    const auto& string_hash = std::hash<std::string>();
+    const auto& bool_hash = std::hash<bool>();
+    const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
+
+    return string_hash(key.learning_rate) ^ string_hash(key.bias_correction1_lbn)
+           ^ string_hash(key.bias_correction2_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
+           ^ float_hash(key.l2) ^ float_hash(key.beta1) ^ float_hash(key.beta2)
+           ^ float_hash(key.epsilon) ^ float_hash(key.weight_decay) ^ bool_hash(key.amsgrad)
+           ^ bool_hash(key.do_bias_correction) ^ parallel_conf_hash(key.parallel_conf);
   }
 };
 
@@ -84,54 +128,138 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
   if (!job_builder->job().job_conf().has_train_conf()) { return Maybe<void>::Ok(); }
   std::vector<OperatorConf> delete_ops;
   ParallelConf parallel_conf{};
-  HashMap<SGDOptimizerKey, user_op::UserOpConfWrapperBuilder> multi_tensor_hashmap;
+  HashMap<SGDOptimizerKey, user_op::UserOpConfWrapperBuilder> multi_tensor_sgd_update_hashmap;
+  HashMap<AdamOptimizerKey, user_op::UserOpConfWrapperBuilder> multi_tensor_adam_update_hashmap;
 
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
     LogicalBlobId model_half_lbi;
 
-    for (OpEdge* find_sgd_edge : op_node->out_edges()) {
-      OpNode* find_sgd_update_node = find_sgd_edge->dst_node();
-      if (!IsUserOpWithTypeName(find_sgd_update_node->op().op_conf(), "sgd_update")) { continue; }
-      const user_op::UserOpConfWrapper sgd_user_conf(find_sgd_update_node->op().op_conf());
+    for (OpEdge* find_model_update_edge : op_node->out_edges()) {
+      OpNode* find_model_update_update_node = find_model_update_edge->dst_node();
+      if (!IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")
+          && !IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "adam_update")) {
+        continue;
+      }
+      const user_op::UserOpConfWrapper model_update_user_conf(
+          find_model_update_update_node->op().op_conf());
       // Currently only support for cuda, maybe remove this limit.
-      if (find_sgd_update_node->parallel_desc().device_type() != DeviceType::kCUDA) { continue; }
+      if (find_model_update_update_node->parallel_desc().device_type() != DeviceType::kCUDA) {
+        continue;
+      }
 
-      delete_ops.emplace_back(find_sgd_update_node->op().op_conf());
-      parallel_conf = find_sgd_update_node->parallel_desc().parallel_conf();
+      delete_ops.emplace_back(find_model_update_update_node->op().op_conf());
+      parallel_conf = find_model_update_update_node->parallel_desc().parallel_conf();
 
-      SGDOptimizerKey key{
-          sgd_user_conf.input("learning_rate", 0),   sgd_user_conf.attr<double>("scale"),
-          sgd_user_conf.attr<float>("l1"),           sgd_user_conf.attr<float>("l2"),
-          sgd_user_conf.attr<float>("weight_decay"), parallel_conf};
+      if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
+        SGDOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
+                            model_update_user_conf.attr<double>("scale"),
+                            model_update_user_conf.attr<float>("l1"),
+                            model_update_user_conf.attr<float>("l2"),
+                            model_update_user_conf.attr<float>("weight_decay"),
+                            parallel_conf};
 
-      const auto& iter = multi_tensor_hashmap.find(key);
+        const auto& iter = multi_tensor_sgd_update_hashmap.find(key);
 
-      if (iter != multi_tensor_hashmap.end()) {
-        iter->second.Input("model", sgd_user_conf.input("model", 0))
-            .Input("model_diff", sgd_user_conf.input("model_diff", 0));
+        if (iter != multi_tensor_sgd_update_hashmap.end()) {
+          iter->second.Input("model", model_update_user_conf.input("model", 0))
+              .Input("model_diff", model_update_user_conf.input("model_diff", 0));
+        } else {
+          user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder(
+              "multi_tensor_update");
+          multi_tensor_update_sgd_op_builder.OpTypeName("multi_tensor_sgd_update")
+              .Input("model", model_update_user_conf.input("model", 0))
+              .Input("model_diff", model_update_user_conf.input("model_diff", 0))
+              .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
+              .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
+              .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
+              .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
+              .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"));
+          CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
+          multi_tensor_update_sgd_op_builder.ScopeSymbolId(
+              model_update_user_conf.op_conf().scope_symbol_id());
+          multi_tensor_sgd_update_hashmap.emplace(key, multi_tensor_update_sgd_op_builder);
+        }
+      } else if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
+                                      "adam_update")) {
+        // printf("1111 \n");
+        AdamOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
+                             model_update_user_conf.input("bias_correction1", 0),
+                             model_update_user_conf.input("bias_correction1", 0),
+                             model_update_user_conf.attr<double>("scale"),
+                             model_update_user_conf.attr<float>("l1"),
+                             model_update_user_conf.attr<float>("l2"),
+                             model_update_user_conf.attr<float>("beta1"),
+                             model_update_user_conf.attr<float>("beta2"),
+                             model_update_user_conf.attr<float>("epsilon"),
+                             model_update_user_conf.attr<float>("weight_decay"),
+                             model_update_user_conf.attr<bool>("amsgrad"),
+                             model_update_user_conf.attr<bool>("do_bias_correction"),
+                             parallel_conf};
+        if (key.amsgrad) {
+          UNIMPLEMENTED() << "Multi Tensor Adam update do not support amsgrad = True. ";
+        }
+        const auto& iter = multi_tensor_adam_update_hashmap.find(key);
+
+        if (iter != multi_tensor_adam_update_hashmap.end()) {
+          // printf("222 \n");
+
+          iter->second.Input("model", model_update_user_conf.input("model", 0))
+              .Input("model_diff", model_update_user_conf.input("model_diff", 0))
+              .Input("m", model_update_user_conf.input("m", 0))
+              .Input("v", model_update_user_conf.input("v", 0));
+        } else {
+          printf("333 \n");
+
+          user_op::UserOpConfWrapperBuilder multi_tensor_update_adam_op_builder(
+              "multi_tensor_update");
+          multi_tensor_update_adam_op_builder.OpTypeName("multi_tensor_adam_update")
+              .Input("model", model_update_user_conf.input("model", 0))
+              .Input("model_diff", model_update_user_conf.input("model_diff", 0))
+              .Input("m", model_update_user_conf.input("m", 0))
+              .Input("v", model_update_user_conf.input("v", 0))
+              .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
+              .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
+              .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
+              .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
+              .Attr<float>("beta1", model_update_user_conf.attr<float>("beta1"))
+              .Attr<float>("beta2", model_update_user_conf.attr<float>("beta2"))
+              .Attr<float>("epsilon", model_update_user_conf.attr<float>("epsilon"))
+              .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"))
+              .Attr<bool>("amsgrad", model_update_user_conf.attr<bool>("amsgrad"))
+              .Attr<bool>("do_bias_correction",
+                          model_update_user_conf.attr<bool>("do_bias_correction"));
+
+          if (model_update_user_conf.attr<bool>("do_bias_correction")) {
+            printf("444 \n");
+
+            multi_tensor_update_adam_op_builder
+                .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
+                .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0));
+          }
+          printf("5555 \n");
+
+          CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
+          multi_tensor_update_adam_op_builder.ScopeSymbolId(
+              model_update_user_conf.op_conf().scope_symbol_id());
+          multi_tensor_adam_update_hashmap.emplace(key, multi_tensor_update_adam_op_builder);
+        }
       } else {
-        user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder("multi_tensor_update");
-        multi_tensor_update_sgd_op_builder.OpTypeName("multi_tensor_sgd_update")
-            .Input("model", sgd_user_conf.input("model", 0))
-            .Input("model_diff", sgd_user_conf.input("model_diff", 0))
-            .Input("learning_rate", sgd_user_conf.input("learning_rate", 0))
-            .Attr<double>("scale", sgd_user_conf.attr<double>("scale"))
-            .Attr<float>("l1", sgd_user_conf.attr<float>("l1"))
-            .Attr<float>("l2", sgd_user_conf.attr<float>("l2"))
-            .Attr<float>("weight_decay", sgd_user_conf.attr<float>("weight_decay"));
-        CHECK(sgd_user_conf.op_conf().has_scope_symbol_id());
-        multi_tensor_update_sgd_op_builder.ScopeSymbolId(sgd_user_conf.op_conf().scope_symbol_id());
-        multi_tensor_hashmap.emplace(key, multi_tensor_update_sgd_op_builder);
+        UNIMPLEMENTED() << "Current Optimizer do not support multi tensor update. ";
       }
       break;
     }
   });
-  for (auto& op : multi_tensor_hashmap) {
+  for (auto& op : multi_tensor_sgd_update_hashmap) {
     auto multi_tensor_update_sgd_op = op.second.Build();
     job_builder->AddOps(parallel_conf, {multi_tensor_update_sgd_op.op_conf()});
   }
+  for (auto& op : multi_tensor_adam_update_hashmap) {
+    auto multi_tensor_update_adam_op = op.second.Build();
+    job_builder->AddOps(parallel_conf, {multi_tensor_update_adam_op.op_conf()});
+  }
+  printf("==== ok === \n");
   job_builder->DelOps(delete_ops);
   return Maybe<void>::Ok();
 }

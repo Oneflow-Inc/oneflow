@@ -48,7 +48,7 @@ struct MultiTensorAdamUpdateKernelUtil {
                      float learning_rate_val, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1,
-                     const float* bias_correction2, TensorTupleParams<T, G, 5> tensor_tuple_params);
+                     const float* bias_correction2, TensorTupleParams<T, G, 4> tensor_tuple_params);
 };
 
 }  // namespace oneflow

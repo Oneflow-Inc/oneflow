@@ -53,7 +53,7 @@ struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCPU, T, G> {
                      float learning_rate_val, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1,
-                     const float* bias_correction2, TensorTupleParams<T, G, 5> tensor_tuple_params);
+                     const float* bias_correction2, TensorTupleParams<T, G, 4> tensor_tuple_params);
 };
 
 template<typename T, typename G>
@@ -63,7 +63,7 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
-    TensorTupleParams<T, G, 5> tensor_tuple_params) {
+    TensorTupleParams<T, G, 4> tensor_tuple_params) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -74,9 +74,9 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
                                 tensor_tuple_params.model_addresses[0][tensor_idx] + i,
                                 tensor_tuple_params.model_addresses[1][tensor_idx] + i,
                                 tensor_tuple_params.model_addresses[2][tensor_idx] + i,
-                                tensor_tuple_params.model_addresses[3][tensor_idx] + i, scale, l1,
-                                l2, beta1, beta2, epsilon, weight_decay, amsgrad,
-                                bias_correction1_val, bias_correction2_val, learning_rate_val);
+                                /*max_v*/ nullptr, scale, l1, l2, beta1, beta2, epsilon,
+                                weight_decay, /*amsgrad*/ false, bias_correction1_val,
+                                bias_correction2_val, learning_rate_val);
     }
   }
 }
