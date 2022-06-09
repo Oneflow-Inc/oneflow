@@ -20,7 +20,8 @@ limitations under the License.
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/FileUtilities.h"
-#include "mlir/Support/MlirOptMain.h"
+#include "mlir/Tools/mlir-opt/MlirOptMain.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -29,7 +30,8 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 
 namespace mlir {
-struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, OperationPass<FuncOp>> {
+struct TestOneFlowTraitFolder
+    : public PassWrapper<TestOneFlowTraitFolder, OperationPass<func::FuncOp>> {
   void runOnOperation() override {
     if (failed(applyPatternsAndFoldGreedily(getOperation(), RewritePatternSet(&getContext())))) {
       exit(1);
@@ -54,7 +56,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect>();
-  registry.insert<mlir::StandardOpsDialect>();
+  registry.insert<mlir::func::FuncDialect>();
   registry.insert<mlir::tosa::TosaDialect>();
   registry.insert<mlir::linalg::LinalgDialect>();
   registry.insert<mlir::memref::MemRefDialect>();

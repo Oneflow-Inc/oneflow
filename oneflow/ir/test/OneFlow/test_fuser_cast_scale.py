@@ -62,7 +62,10 @@ def do_relu_graph(test_case, data, with_cuda):
 @flow.unittest.skip_unless_1n1d()
 class TestFuseCastScale(oneflow.unittest.TestCase):
     def test_relu_graph(test_case):
-        do_relu_graph(test_case, np.array([2.0, 1.0, 0.0, -1.0, -2.0]), True)
+        import oneflow.sysconfig
+
+        if oneflow.sysconfig.with_cuda():
+            do_relu_graph(test_case, np.array([2.0, 1.0, 0.0, -1.0, -2.0]), True)
         do_relu_graph(
             test_case,
             np.array([[2.0, 1.0, 0.0, -1.0, -2.0], [2.0, 1.0, 0.0, -1.0, -2.0]]),

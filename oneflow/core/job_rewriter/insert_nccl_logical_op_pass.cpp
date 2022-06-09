@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/job/nd_sbp_util.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -217,6 +218,20 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                .Build()
                .op_conf();
     return true;
+  } else if (CanSplitAtDim(dst_sbp.split_parallel().axis())
+             && (src_sbp.has_partial_sum_parallel() && dst_sbp.has_split_parallel())
+             && (dst_sbp.split_parallel().axis() > 0)) {
+    // P->S(1) : ReduceScatter Noncontinuous
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-P2S-" + NewUniqueId())
+               .Op("_nccl_logical_reduce_scatter_noncontinuous")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<std::vector<std::string>>("src_reduced_nd_sbp", {SbpToString(src_sbp)})
+               .Attr<std::vector<std::string>>("dst_reduced_nd_sbp", {SbpToString(dst_sbp)})
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
   }
   return false;
 }
@@ -330,6 +345,37 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const NdSbp& src_nd_sb
   return false;
 }
 
+bool TryBuildNcclBy2DHierarchyOthers(OperatorConf* ret, const NdSbp& src_nd_sbp,
+                                     const NdSbp& dst_nd_sbp,
+                                     const std::shared_ptr<Shape>& hierarchy,
+                                     const std::string& lbn, const int64_t scope_symbol_id,
+                                     const BlobDesc& logical_blob_desc) {
+  CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
+  CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
+  // send recv is dealing with same 0-Dim
+  VLOG_IF(3, src_nd_sbp.sbp_parallel(0) == dst_nd_sbp.sbp_parallel(0))
+      << "send recv is dealing with same 0-Dim, src sbp " << NdSbpToString(src_nd_sbp)
+      << ", dst sbp " << NdSbpToString(dst_nd_sbp);
+  // send recv is dealing with same 1-Dim, such as (B, S0) -> (S0, S0)
+  VLOG_IF(3, ((src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1))
+              && !(NdSbpAllSameSplitParallel(src_nd_sbp) || NdSbpAllSameSplitParallel(dst_nd_sbp))))
+      << "send recv is dealing with same 1-Dim,  src sbp " << NdSbpToString(src_nd_sbp)
+      << ", dst sbp " << NdSbpToString(dst_nd_sbp);
+  // send recv can not dealing with P in dst_nd_sbp
+  if (NdSbpHasPartialParallel(dst_nd_sbp)) return false;
+  *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(Send)2(Recv)-"
+                                           + NewUniqueId())
+             .Op("_nccl_logical_send_recv")
+             .Input("in", lbn)
+             .Output("out")
+             .Attr<std::vector<std::string>>("src_nd_sbp", NdSbpToStringList(src_nd_sbp))
+             .Attr<std::vector<std::string>>("dst_nd_sbp", NdSbpToStringList(dst_nd_sbp))
+             .ScopeSymbolId(scope_symbol_id)
+             .Build()
+             .op_conf();
+  return true;
+}
+
 Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
                                                  const ParallelDesc& parallel_desc) {
   auto* scope_storage = Global<symbol::Storage<Scope>>::Get();
@@ -338,7 +384,7 @@ Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
   std::shared_ptr<Scope> new_scope;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     new_scope =
-        JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_desc.cfg_parallel_conf()));
+        JUST(builder->BuildScopeWithNewParallelConf(old_scope, parallel_desc.parallel_conf()));
     return Maybe<void>::Ok();
   }));
   // NOTE(chengcheng): need sync vm for get scope right now
@@ -366,14 +412,19 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   std::shared_ptr<Shape> dst_reduced_hierarchy = dst_reduced_parallel_desc->hierarchy();
 
   if ((*src_reduced_hierarchy) == (*dst_reduced_hierarchy)
-      && src_reduced_nd_sbp == dst_reduced_nd_sbp) {
+      && (*src_reduced_nd_sbp) == (*dst_reduced_nd_sbp)) {
     // one to one
     return false;
   }
 
   // NOTE(chengcheng): nccl donot support dynamic shape.
   if (logical_blob_desc.is_dynamic()) { return false; }
-  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0);
+  CHECK_GT(logical_blob_desc.shape().elem_cnt(), 0)
+      << dst_node->op().op_name() << " consume " << GenLogicalBlobName(lbi) << ", "
+      << *CHECK_JUST(PlacementToString(*src_reduced_parallel_desc)) << " "
+      << NdSbpToString(*src_reduced_nd_sbp) << " -> "
+      << *CHECK_JUST(PlacementToString(*dst_reduced_parallel_desc)) << " "
+      << NdSbpToString(*dst_reduced_nd_sbp);
 
   int64_t scope_symbol_id = CHECK_JUST(BuildScopeWithReducedParallelDesc(
       src_node->op().op_conf().scope_symbol_id(), *src_reduced_parallel_desc));
@@ -384,18 +435,29 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
                                      logical_blob_desc, src_reduced_parallel_desc->parallel_num());
   } else if (src_reduced_hierarchy->NumAxes() == 2
              && (*src_reduced_hierarchy == *dst_reduced_hierarchy)) {
+    bool got_nccl = false;
     if (src_reduced_nd_sbp->sbp_parallel(0) == dst_reduced_nd_sbp->sbp_parallel(0)) {
-      return TryBuildNcclBy2DHierarchySameDim0(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
-                                               src_reduced_hierarchy, lbn, scope_symbol_id,
-                                               logical_blob_desc);
+      // TODO(): same dim 0 need to deal with (*, P) -> (*, S)
+      got_nccl = TryBuildNcclBy2DHierarchySameDim0(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
+                                                   src_reduced_hierarchy, lbn, scope_symbol_id,
+                                                   logical_blob_desc);
     } else if (src_reduced_nd_sbp->sbp_parallel(1) == dst_reduced_nd_sbp->sbp_parallel(1)) {
       if (!(NdSbpAllSameSplitParallel(*src_reduced_nd_sbp)
             || NdSbpAllSameSplitParallel(*dst_reduced_nd_sbp))) {
-        return TryBuildNcclBy2DHierarchySameDim1(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
-                                                 src_reduced_hierarchy, lbn, scope_symbol_id,
-                                                 logical_blob_desc);
+        got_nccl = TryBuildNcclBy2DHierarchySameDim1(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
+                                                     src_reduced_hierarchy, lbn, scope_symbol_id,
+                                                     logical_blob_desc);
       }
     }
+    if (!got_nccl) {
+      got_nccl = TryBuildNcclBy2DHierarchyOthers(ret, *src_reduced_nd_sbp, *dst_reduced_nd_sbp,
+                                                 src_reduced_hierarchy, lbn, scope_symbol_id,
+                                                 logical_blob_desc);
+    }
+    VLOG_IF(3, !got_nccl) << "Cannot get nccl logical op for 2D sbp, src nd sbp "
+                          << NdSbpToString(*src_reduced_nd_sbp) << ", dst nd sbp "
+                          << NdSbpToString(*dst_reduced_nd_sbp) << ".";
+    return got_nccl;
   }
   return false;
 }
@@ -455,12 +517,11 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
-                  << "](order=" << src_order
-                  << ", nd_sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << ")->[" << dst_op_name
-                  << "](order=" << node2subgraph_order.at(dst_node)
-                  << ", nd_sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << ") and before: ["
-                  << next_op_name << "](order=" << src_order + 1 << ")\n";
+          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
+                  << ", order=" << src_order << ", sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi))
+                  << "] to [" << dst_op_name << ", order=" << node2subgraph_order.at(dst_node)
+                  << ", sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << "] and before ["
+                  << next_op_name << ", order=" << src_order + 1 << "]\n";
         }
         nccl_op_confs->emplace_back(nccl_op);
         nccl_op_parallel_confs->emplace_back(src_reduced_parallel_desc.parallel_conf());
@@ -522,9 +583,10 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name << "]("
-                  << node2subgraph_order.at(src_node) << ")->[" << dst_op_name << "](" << dst_order
-                  << ") and after: [" << pre_op_name << "](" << dst_order - 1 << ")\n";
+          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
+                  << ", order=" << node2subgraph_order.at(src_node) << "] to [" << dst_op_name
+                  << ", order=" << dst_order << "] and after [" << pre_op_name
+                  << ", order=" << dst_order - 1 << "]\n";
         }
         nccl_op_confs->emplace_back(nccl_op);
         // NOTE(chengcheng, guoran): set nccl op as src_node parallel_conf (hierarchy) may check
@@ -612,10 +674,10 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         nccl_op_info.nccl_parallel_conf = src_reduced_parallel_desc.parallel_conf();
         nccl_op_info.order = op_node2global_order.at(src_node);
         nccl_op_info.debug_str =
-            (" After ACC insert nccl op: " + nccl_op.name() + " from: [" + src_op_name + "]("
-             + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + ")->[" + dst_op_name + "]("
-             + NdSbpToString(dst_node->NdSbp4Lbi(lbi))
-             + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
+            (" After ACC insert nccl op: " + nccl_op.name() + " from [" + src_op_name
+             + ", sbp=" + NdSbpToString(src_node->NdSbp4Lbi(lbi)) + "] to [" + dst_op_name
+             + ", sbp=" + NdSbpToString(dst_node->NdSbp4Lbi(lbi))
+             + ", src_order=" + std::to_string(nccl_op_info.order) + "]\n");
         nccl_op_infos.emplace_back(nccl_op_info);
       }
 
@@ -741,10 +803,6 @@ void InsertNcclLogicalOpsInSubGraph(
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
-    if (nccl_op_confs.size() == 0 || subgraph_id_in_same_placement_group <= 0) {
-      break;  // NOTE(chengcheng): skip for first subgraph using compute stream(0).
-    }
-
     int64_t nccl_compute_stream_id = *stream_offset;
     if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.

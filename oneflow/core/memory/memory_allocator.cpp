@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/tensor_buffer.h"
@@ -114,6 +115,22 @@ void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
     int64_t elem_cnt = blob_desc.shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       allocator->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
+    }
+  }
+}
+
+void InitNonPODTypeEagerBlobObjectIfNeed(MemoryAllocator* allocator,
+                                         vm::EagerBlobObject* eager_blob_object_ptr) {
+  if (eager_blob_object_ptr->data_type() == kOFRecord) {
+    int64_t elem_cnt = eager_blob_object_ptr->shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&eager_blob_object_ptr->mut_dptr<OFRecord>()[idx]);
+    }
+  }
+  if (eager_blob_object_ptr->data_type() == kTensorBuffer) {
+    int64_t elem_cnt = eager_blob_object_ptr->shape().elem_cnt();
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      allocator->PlacementNew(&eager_blob_object_ptr->mut_dptr<TensorBuffer>()[idx]);
     }
   }
 }

@@ -23,11 +23,14 @@ limitations under the License.
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "OneFlow/Conversion/OneFlowToTosa.h"
 #include "OneFlow/Conversion/SCFToGPU.h"
 #include "OneFlow/Transform/BufferHostRegister.h"
+#include "OneFlow/Transform/ConvertInferenceOp.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
+#include "OneFlow/Transform/AutoNhwc.h"
+
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
@@ -47,6 +50,11 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
+void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);
+
+void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns);
+void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns);
+void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 
 }  // namespace oneflow
 

@@ -35,12 +35,6 @@ def in_device_mode(ctx):
     return rt_mode.CurrentMode() == rt_mode.DEVICE_MODE
 
 
-@bool_functor("Environment initialized")
-def env_initialized(ctx):
-    assert in_normal_mode(ctx)
-    return oneflow._oneflow_internal.IsEnvInited()
-
-
 @bool_functor("Any global function defined")
 def any_global_function_defined(ctx):
     assert in_normal_mode(ctx)

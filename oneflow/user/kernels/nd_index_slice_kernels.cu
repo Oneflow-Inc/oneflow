@@ -35,6 +35,13 @@ __global__ void CudaScatterNdAdd(NdIndexSliceArgs<T, I> args, const I* indices, 
 }
 
 template<typename T, typename I>
+__global__ void CudaScatterNdUpdate(NdIndexSliceArgs<T, I> args, const I* indices, const T* slices,
+                                    T* dense) {
+  DoScatterNdUpdate<DeviceType::kCUDA>(args.num_slices * args.slice_size, args.slice_size,
+                                       args.index_ndims, args.dense_shape, indices, slices, dense);
+}
+
+template<typename T, typename I>
 __global__ void CudaFillByNdIndex(NdIndexSliceArgs<T, I> args, const I* indices, T* dense,
                                   T value) {
   DoFillByNdIndex(args.num_slices * args.slice_size, args.slice_size, args.index_ndims,
@@ -57,6 +64,15 @@ struct ScatterNdAddFunctor<DeviceType::kCUDA, T, I> final {
   void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
                   const T* slices, T* dense) const {
     RUN_CUDA_KERNEL((CudaScatterNdAdd<T, I>), stream, args.num_slices * args.slice_size, args,
+                    indices, slices, dense);
+  }
+};
+
+template<typename T, typename I>
+struct ScatterNdUpdateFunctor<DeviceType::kCUDA, T, I> final {
+  void operator()(ep::Stream* stream, const NdIndexSliceArgs<T, I>& args, const I* indices,
+                  const T* slices, T* dense) const {
+    RUN_CUDA_KERNEL((CudaScatterNdUpdate<T, I>), stream, args.num_slices * args.slice_size, args,
                     indices, slices, dense);
   }
 };

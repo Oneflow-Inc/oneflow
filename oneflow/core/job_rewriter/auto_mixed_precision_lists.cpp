@@ -27,7 +27,9 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "prelu",
                                "tf_prelu",
                                "cublas_fused_mlp",
-                               "fused_dot_feature_interaction"};
+                               "fused_matmul_bias_add_relu_dropout",
+                               "fused_dot_feature_interaction",
+                               "embedding_lookup_placeholder"};
   return white_list;
 }
 
@@ -43,8 +45,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "tf_avg_pool_2d",
                               "tf_avg_pool_3d",
                               "bias_add",
-                              "multiply",
-                              "sigmoid",
+                              "sigmoid_v2",
                               "tanh",
                               "sqrt",
                               "scalar_mul",

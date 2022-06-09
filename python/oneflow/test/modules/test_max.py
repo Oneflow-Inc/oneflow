@@ -79,6 +79,25 @@ class TestMaxModule(flow.unittest.TestCase):
         y = random_tensor(ndim, *dims).to(device)
         return torch.max(x, y)
 
+    @autotest(n=5, check_graph=False, check_dtype=True)
+    def test_max_elementwise_dtype_promotion(test_case):
+        device = random_device()
+        ndim = random().to(int).value()
+        dims = [random(1, 8) for _ in range(ndim)]
+        x = random_tensor(ndim, *dims, dtype=float).to(device)
+        y = random_tensor(ndim, *dims, dtype=int).to(device)
+        return torch.max(x, y)
+
+    @autotest(n=5, check_graph=False, check_dtype=True)
+    def test_max_broadcast_dtype_promotion(test_case):
+        device = random_device()
+        ndim = random().to(int).value()
+        dims = [random(1, 8) for _ in range(ndim)]
+        b_dims = [1 for _ in range(ndim)]
+        x = random_tensor(ndim, *dims, dtype=float).to(device)
+        y = random_tensor(ndim, *b_dims, dtype=int).to(device)
+        return torch.max(x, y)
+
 
 if __name__ == "__main__":
     unittest.main()

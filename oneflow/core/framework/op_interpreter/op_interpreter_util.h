@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/scope_util.h"
@@ -58,21 +57,10 @@ class OpInterpUtil {
   static Maybe<void> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
                               TensorTuple* outputs, const OpExprInterpContext& ctx);
 
-  static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
-                                                          const bool is_mirrored_strategy_enabled);
+  static Maybe<OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
+                                                     const bool is_mirrored_strategy_enabled);
 
   static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
-
-  static Maybe<Tensor> BuildTensor(
-      const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
-      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
-      const bool is_lazy, const bool is_local);
-
-  static Maybe<void> CheckTensorMatchAttr(
-      const std::shared_ptr<Tensor>& tensor,
-      const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
-      const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
-      const bool is_lazy, const bool is_local, const bool requires_grad, const bool is_leaf);
 };
 
 }  // namespace one

@@ -34,8 +34,8 @@ class CopyKernel final : public user_op::OpKernel {
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
     if (in_shape.elem_cnt() == 0) {
-      CHECK_ISNULL(in->raw_dptr());
-      CHECK_ISNULL(out->mut_raw_dptr());
+      // 0 shape tensor do not need copy
+      return;
     } else {
       AutoMemcpy(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
                  in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),

@@ -629,7 +629,7 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
 NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
                     ImageDecoderRandomCropResizeKernel<DeviceType::kCUDA>)
     .SetIsMatchedPred([](const KernelConf& conf) -> bool {
-      return conf.op_attribute().op_conf().device_tag() == "gpu";
+      return conf.op_attribute().op_conf().device_tag() == "cuda";
     });
 
 #endif  // defined(WITH_NVJPEG)

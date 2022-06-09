@@ -50,14 +50,13 @@ class SplitLikeKernel final : public user_op::OpKernel {
         }
       }
       if (ctx->TensorDesc4ArgNameAndIndex("out", i)->is_dynamic()) {
-        auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
-        CHECK_NOTNULL(mut_shape_view);
+        auto mut_shape_view = ctx->MutShapeView4ArgNameAndIndex("out", i);
         DimVector out_i_dim_vec;
         like_shape_view.ToDimVector(&out_i_dim_vec);
         FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
           out_i_dim_vec.emplace_back(in_shape_view.At(j));
         }
-        mut_shape_view->set_shape(Shape(out_i_dim_vec));
+        mut_shape_view.set_shape(Shape(out_i_dim_vec));
       }
     }
     CHECK_EQ(total_dim_size, in_shape_view.At(axis));

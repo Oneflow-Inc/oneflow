@@ -124,9 +124,6 @@ class UpsampleTrilinear3DCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const float depth_scale = ctx->Attr<float>("depth_scale");
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = y_tensor->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
@@ -143,6 +140,16 @@ class UpsampleTrilinear3DCPUKernel final : public user_op::OpKernel {
     const int64_t out_depth = y_tensor->shape().At(2);
     const int64_t out_height = y_tensor->shape().At(3);
     const int64_t out_width = y_tensor->shape().At(4);
+
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double depth_scale = ctx->Attr<double>("depth_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
+    if (!output_size.empty()) {
+      depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
+    }
 
     const T scale_depth = GetAreaPixelScale(in_depth, out_depth, align_corners, depth_scale);
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
@@ -169,9 +176,6 @@ class UpsampleTrilinearGrad3DCPUKernel final : public user_op::OpKernel {
     Memset<DeviceType::kCPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    const float depth_scale = ctx->Attr<float>("depth_scale");
-    const float height_scale = ctx->Attr<float>("height_scale");
-    const float width_scale = ctx->Attr<float>("width_scale");
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
     NdIndexOffsetHelper<int64_t, 5> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
@@ -188,6 +192,16 @@ class UpsampleTrilinearGrad3DCPUKernel final : public user_op::OpKernel {
     const int64_t out_depth = dy_tensor->shape().At(2);
     const int64_t out_height = dy_tensor->shape().At(3);
     const int64_t out_width = dy_tensor->shape().At(4);
+
+    const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+    double depth_scale = ctx->Attr<double>("depth_scale");
+    double height_scale = ctx->Attr<double>("height_scale");
+    double width_scale = ctx->Attr<double>("width_scale");
+    if (!output_size.empty()) {
+      depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
+      height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
+      width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
+    }
 
     const T scale_depth = GetAreaPixelScale(in_depth, out_depth, align_corners, depth_scale);
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);

@@ -144,6 +144,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& in = ctx->InputTensorDesc("in", 0);                                            \
+        if (in.shape().elem_cnt() == 0) return 0;                                                  \
         const auto& weight = ctx->InputTensorDesc("weight", 0);                                    \
         const auto* out = ctx->OutputTensorDesc("out", 0);                                         \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \

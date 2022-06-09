@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/job_set.pb.h"
-#include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/operator.h"
@@ -55,11 +54,6 @@ Maybe<JobDesc> JobDesc::New(int64_t symbol_id, const JobConfigProto& job_conf) {
 }
 
 Maybe<void> JobDesc::Init() {
-  cfg_job_conf_.reset(new cfg::JobConfigProto(job_conf_));
-
-#ifndef WITH_CUDA
-  CHECK_EQ_OR_RETURN((Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum()), 0);
-#endif
   CheckFunctionConfig(job_conf_);
   return Maybe<void>::Ok();
 }

@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-struct ThreadCtx;
+class ThreadCtx;
 
 class Stream final : public intrusive::Base {
  public:

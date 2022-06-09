@@ -19,6 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
+from oneflow.test_utils.automated_test_util import util
 
 import oneflow as flow
 import oneflow.unittest
@@ -29,6 +30,8 @@ def _test_slice(test_case, device):
     x = flow.tensor(np_arr, device=flow.device(device))
     tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
     y = flow.slice(x, slice_tup_list=tup_list)
+    flow_tmp = x[0:3, 0:5, 0:6]
+    y = flow_tmp[::1, ::2, ::3]
     tmp = np_arr[0:3, 0:5, 0:6]
     np_out = tmp[::1, ::2, ::3]
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
@@ -128,6 +131,38 @@ def _test_slice_backward(test_case, device):
     test_case.assertTrue(np.array_equal(x.grad.numpy(), np_grad))
 
 
+def _test_slice_update(test_case, device):
+    x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+    input = flow.tensor(x, requires_grad=True)
+    input.retain_grad()
+    update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
+    output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
+    # Get the inplaced tensor grad by another tensor
+    t = input + 0
+    flow._C.slice_update(t, update, [1,], [4,], [1,], inplace=True)
+    z = t.sum()
+    z.backward()
+    test_case.assertTrue(np.array_equal(t.numpy(), output))
+    np_grad = np.zeros(x.shape)
+    np_grad[0] = 1
+    np_grad[4] = 1
+    test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
+    test_case.assertTrue(np.array_equal(update.grad.numpy(), np.ones(update.shape)))
+
+
+def _test_slice_update_with_stride(test_case, device):
+    arr = np.arange(24).reshape(2, 2, 2, 3).astype(np.float32)
+    np_in = arr
+    np_out = np_in.transpose(1, 0, 2, 3)
+    np_out[0:1, 1:2, :, 1:2] = 3.1415
+
+    input = flow.tensor(arr, device=flow.device(device))
+    output = input.permute(1, 0, 2, 3)
+    output[0:1, 1:2, :, 1:2] = 3.1415
+
+    test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestSlice(flow.unittest.TestCase):
     def test_slice(test_case):
@@ -150,20 +185,53 @@ class TestSlice(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSliceUpdate(flow.unittest.TestCase):
-    def test_slice_update(test_case):
+    def test_slice(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_slice_update,
+            # # TODO:(zhaoluyang) test when slice_update support stride
+            # _test_slice_update_with_stride
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_slice_update_graph(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.tensor(x, requires_grad=True)
         update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-        y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
-        z = y.sum()
-        z.backward()
+
+        class TestModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = flow.nn.Parameter(flow.Tensor(x))
+
+            def forward(self, x, update):
+                flow._C.slice_update(x, update, [1,], [4,], [1,], inplace=True)
+                y = x + self.weight
+                return x, y
+
+        test_m = TestModule()
+        of_sgd = flow.optim.SGD(test_m.parameters(), lr=0.001, momentum=0.9)
+
+        class TestSliceUpdateGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = test_m
+                self.add_optimizer(of_sgd)
+
+            def build(self, x, update):
+                x, y = self.m(x, update)
+                z = y.sum()
+                z.backward()
+                return x
+
+        slice_update_g = TestSliceUpdateGraph()
+
+        y = slice_update_g(input, update)
         test_case.assertTrue(np.array_equal(y.numpy(), output))
-        np_grad = np.zeros(x.shape)
-        np_grad[0] = 1
-        np_grad[4] = 1
-        test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
-        test_case.assertTrue(np.array_equal(update.grad.numpy(), np.ones(update.shape)))
+        # TODO(): check grad of slice_update in graph.
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -176,6 +244,21 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         flow.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(input.numpy(), output))
 
+    def test_logical_slice_assign_graph(test_case):
+        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+        input = flow.tensor(x)
+        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32))
+        output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
+
+        @flow.nn.Graph.to_graph
+        def test_func(input):
+            flow.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
+            return input
+
+        # NOTE(strint): input outside the graph has not been change yet currently.
+        out = test_func(input)
+        test_case.assertTrue(np.array_equal(out.numpy(), output))
+
     def test_logical_slice_assign_negative_index(test_case):
         np_arr = np.zeros(shape=(2, 3, 4))
         input = flow.tensor(np_arr, dtype=flow.float32)
@@ -183,12 +266,38 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         input[-1] = 1
         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
 
+    def test_logical_slice_assign_negative_index_graph(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4))
+        input = flow.tensor(np_arr, dtype=flow.float32)
+        np_arr[-1] = 1
+
+        @flow.nn.Graph.to_graph
+        def test_func():
+            input[-1] = 1
+            return input
+
+        out = test_func()
+        test_case.assertTrue(np.array_equal(out.numpy(), np_arr))
+
     def test_logical_slice_assign_ellipsis_type(test_case):
         np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
         input = flow.tensor(np_arr, dtype=flow.float32)
         np_arr[0, ::1, ..., 2:3] = 1
         input[0, ::1, ..., 2:3] = 1
         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
+
+    def test_logical_slice_assign_ellipsis_type_graph(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
+        input = flow.tensor(np_arr, dtype=flow.float32)
+        np_arr[0, ::1, ..., 2:3] = 1
+
+        @flow.nn.Graph.to_graph
+        def test_func():
+            input[0, ::1, ..., 2:3] = 1
+            return input
+
+        out = test_func()
+        test_case.assertTrue(np.array_equal(out.numpy(), np_arr))
 
 
 if __name__ == "__main__":

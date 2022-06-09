@@ -111,6 +111,17 @@ class TestConstantModule(flow.unittest.TestCase):
         )
         return y
 
+    @autotest(n=5)
+    def test_new_zeros(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.new_zeros(
+            (random().to(int), random().to(int), random().to(int)),
+            device=device.value(),
+            requires_grad=constant(True),
+        )
+        return y
+
     @autotest(n=10, auto_backward=True)
     def test_full_with_random_data_int(test_case):
         device = random_device()

@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "oneflow/core/kernel/util/interface_bridge.h"
 #include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
 
 namespace oneflow {
 
@@ -28,18 +30,26 @@ class Stream;
 }
 
 template<DeviceType deivce_type>
-struct NewKernelUtil : public DnnIf<deivce_type>,
-                       public BlasIf<deivce_type>,
-                       public ArithemeticIf<deivce_type> {};
+struct NewKernelUtil : public BlasIf<deivce_type> {};
 
 template<DeviceType device_type>
-void Memcpy(ep::Stream* stream, void* dst, const void* src, size_t sz);
+void Memcpy(ep::Stream* stream, void* dst, const void* src, size_t sz) {
+  CHECK_EQ(device_type, stream->device_type()) << "Device type mismatch";
+  std::unique_ptr<ep::primitive::Memcpy> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(stream->device_type(),
+                                                                ep::primitive::MemcpyKind::kDtoD);
+  CHECK(primitive) << "Can not create Memcpy primitive for device type " << device_type;
+  primitive->Launch(stream, dst, src, sz);
+}
 
 template<DeviceType device_type>
-void Memset(ep::Stream* stream, void* dst, const char value, size_t sz);
-
-void WithHostBlobAndStreamSynchronizeEnv(ep::Stream* stream, Blob* blob,
-                                         std::function<void(Blob*)> Callback);
+void Memset(ep::Stream* stream, void* dst, const char value, size_t sz) {
+  CHECK_EQ(device_type, stream->device_type()) << "Device type mismatch";
+  std::unique_ptr<ep::primitive::Memset> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(stream->device_type());
+  CHECK(primitive) << "Can not create Memset primitive for device type " << device_type;
+  primitive->Launch(stream, dst, value, sz);
+}
 
 }  // namespace oneflow
 

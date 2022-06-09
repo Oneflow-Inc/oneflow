@@ -18,7 +18,7 @@ import os
 from collections import OrderedDict
 
 from oneflow.nn.graph.optimizer import OptDict
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 
 
 class GraphConfig(object):
@@ -28,20 +28,20 @@ class GraphConfig(object):
     def __init__(self):
         super().__init__()
         self._outputs_buffer_size = 2
-        self.proto = job_conf_cfg.JobConfigProto()
+        self.proto = job_conf_pb.JobConfigProto()
         self._train(False)
 
     def _train(self, mode: bool = True):
         if mode:
-            self.proto.mutable_train_conf()
+            self.proto.train_conf.SetInParent()
         else:
-            self.proto.mutable_predict_conf()
+            self.proto.predict_conf.SetInParent()
 
     @property
     def training(self):
-        if self.proto.has_train_conf():
+        if self.proto.HasField("train_conf"):
             return True
-        if self.proto.has_predict_conf():
+        if self.proto.HasField("predict_conf"):
             return False
         raise NotImplementedError
 
@@ -84,7 +84,7 @@ class GraphConfig(object):
             mode (bool, optional): The default vaule is True.
         """
         assert type(mode) is bool
-        self.proto.set_enable_auto_mixed_precision(mode)
+        self.proto.enable_auto_mixed_precision = mode
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
@@ -108,7 +108,7 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
         """
-        self.proto.set_enable_fuse_model_update_ops(mode)
+        self.proto.enable_fuse_model_update_ops = mode
 
     def allow_fuse_add_to_output(self, mode: bool = True):
         r"""If set to true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
@@ -134,7 +134,7 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
         """
-        self.proto.set_enable_fuse_add_to_output(mode)
+        self.proto.enable_fuse_add_to_output = mode
 
     def allow_fuse_cast_scale(self, mode: bool = True):
         r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
@@ -161,7 +161,7 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
         """
-        self.proto.set_enable_fuse_cast_scale(mode)
+        self.proto.enable_fuse_cast_scale = mode
 
     def set_gradient_accumulation_steps(self, value):
         r"""Set num of steps to accumulate gradient.
@@ -186,7 +186,7 @@ class GraphConfig(object):
         Args:
             value (int): num of steps.
         """
-        self.proto.set_num_gradient_accumulation_steps(value)
+        self.proto.num_gradient_accumulation_steps = value
 
     def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
         r"""Set mode to remove redundancy of optimizer states.
@@ -215,7 +215,7 @@ class GraphConfig(object):
                          will place each optimizer state to only one device.
         """
         assert mode in ("distributed_split", "non_distributed")
-        self.proto.set_optimizer_placement_optimization_mode(mode)
+        self.proto.optimizer_placement_optimization_mode = mode
 
     def set_zero_redundancy_optimizer_min_size_after_split(self, value):
         r"""Set the min size of optimizer state/grad/parameter after split.
@@ -242,107 +242,7 @@ class GraphConfig(object):
         """
         assert isinstance(value, int)
         assert value >= 1
-        self.proto.set_optimizer_placement_optimization_threshold(value)
-
-    def enable_xla_jit(self, value=True):
-        r"""Whether use xla_jit in xrt or not.
-
-        When this option enable, oneflow will check all operators is supported by xla_jit or not. Clustering supported operators as subgraph, then runing subgraph by xla_jit.
-
-           XLA: https://www.tensorflow.org/xla
-
-        If you need to use XLA to optimize the model running speed, you need to compile the XLA version of oneflow. 
-        
-        Tutorial for build with XLA: 
-        
-        https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-xla
-
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.enable_xla_jit(True) # Use xla_jit in xrt.
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
-        Args:
-            value (bool, optional): The default vaule is True.
-        """
-        self.proto.mutable_xrt_config().set_use_xla_jit(value)
-
-    def enable_tensorrt(self, value=True):
-        r"""Whether use tensorrt in xrt or not.
-
-        When this option enable, oneflow will check all operators is supported by tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
-
-           TensorRT: https://developer.nvidia.com/tensorrt
-
-        If you need to use TensorRT to optimize the model running speed, you need to compile the TensorRT version of oneflow. 
-
-        Tutorial for build with TensorRT: 
-        
-        https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-tensorrt
-
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.enable_tensorrt(True) # Use tensorrt in xrt.
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
-        Args:
-            value (bool, optional): The default vaule is True.
-        """
-        self.proto.mutable_xrt_config().set_use_tensorrt(value)
-
-    def enable_openvino(self, value=True):
-        r"""Whether use openvino in xrt or not.
-
-        When this option enable, oneflow will check all operators is supported by openvino or not. Clustering supported operators as subgraph, then runing subgraph by openvino.
-
-           Please note that, openvino only support inference mode.
-
-           OpenVINO: https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html
-
-        It is also necessary to compile the XLA or TensorRT version of oneflow, tutorial: https://github.com/Oneflow-Inc/oneflow/tree/master/oneflow/xrt#readme
-
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.enable_openvino(True) # Use openvino in xrt.
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
-        Args:
-            value (bool, optional): The default vaule is True.
-        """
-        self.proto.mutable_xrt_config().set_use_openvino(value)
+        self.proto.optimizer_placement_optimization_threshold = value
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
         r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
@@ -367,7 +267,7 @@ class GraphConfig(object):
         Args:
             mode (bool, optional): The default vaule is True.
         """
-        self.proto.set_cudnn_conv_heuristic_search_algo(mode)
+        self.proto.cudnn_conv_heuristic_search_algo = mode
 
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,

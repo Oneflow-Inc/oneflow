@@ -30,10 +30,9 @@ struct Throw final {
 
 }  // namespace oneflow
 
-#define THROW(err_type)                                                          \
-  oneflow::details::Throw() =                                                    \
-      oneflow::Error::err_type().AddStackFrame(__FILE__, __LINE__, __FUNCTION__) \
-      << #err_type << ": "
+#define THROW(err_type)       \
+  oneflow::details::Throw() = \
+      oneflow::Error::err_type().AddStackFrame(__FILE__, __LINE__, __FUNCTION__)
 
 #define CHECK_OR_THROW(expr)                                                             \
   if (!(expr))                                                                           \

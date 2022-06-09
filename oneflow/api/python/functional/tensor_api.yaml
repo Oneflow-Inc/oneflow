@@ -15,7 +15,7 @@
 - name: "tensor"
   signature: [
       "Tensor (PyObject* data, *, DataType dtype=None, Device device=None,
-      Bool requires_grad=False) => TensorWithData",
+      Bool requires_grad=False, Bool pin_memory=False) => TensorWithData",
       "Tensor (PyObject* data, *, DataType dtype=None, Placement placement,
       SbpList sbp, Bool requires_grad=False) => ConsistentTensorWithData",
     ]
@@ -35,7 +35,7 @@
   bind_python: True
 
 - name: "assign_local_tensor"
-  signature: "Void (Tensor ref, Tensor value) => AssignLocalTensorFunctor"
+  signature: "Void (Tensor ref, Tensor value) => AssignLocalTensor"
   bind_python: True
 
 - name: "from_numpy"

@@ -13,11 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import oneflow as flow
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.common_types import _size_any_t
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
 def _rand_op_common_process(
@@ -125,6 +126,7 @@ def rand_op(
 
 
     """
+    size = _handle_size_arg(size)
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
@@ -144,50 +146,6 @@ def rand_op(
             generator=generator,
             requires_grad=requires_grad,
         )
-
-
-class RandN(Module):
-    def __init__(
-        self,
-        size,
-        generator=None,
-        dtype=None,
-        layout=None,
-        device=None,
-        placement=None,
-        sbp=None,
-        requires_grad=False,
-    ) -> None:
-        super().__init__()
-        self.requires_grad = requires_grad
-        (
-            self.size,
-            self.device,
-            self.generator,
-            self.placement,
-            self.sbp,
-        ) = _rand_op_common_process(size, device, generator, placement, sbp)
-        self.dtype = dtype
-
-    def forward(self):
-        if self.placement is not None:
-            res = flow._C.randn(
-                self.size,
-                placement=self.placement,
-                sbp=self.sbp,
-                dtype=self.dtype,
-                generator=self.generator,
-                requires_grad=self.requires_grad,
-            )
-        else:
-            res = flow._C.randn(
-                self.size,
-                dtype=self.dtype,
-                device=self.device,
-                generator=self.generator,
-                requires_grad=self.requires_grad,
-            )
-        return res
 
 
 def randn_op(
@@ -238,6 +196,7 @@ def randn_op(
         True
 
     """
+    size = _handle_size_arg(size)
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
@@ -502,6 +461,79 @@ def randperm_op(
         return flow._C.randperm(
             n=n, device=device, generator=generator, requires_grad=requires_grad
         ).to(dtype)
+
+
+def normal_op(
+    mean,
+    std,
+    *size: Union[_size_any_t, flow.Size, List[int]],
+    out=None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
+    generator=None,
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    requires_grad: bool = False
+):
+    r"""
+    Returns a tensor of random numbers drawn from separate normal distributions whose mean and standard deviation are given.
+
+    Args:
+        mean (float):  the mean for all distributions
+        std (float):  the standard deviation for all distributions
+        size (int...):  a sequence of integers defining the shape of the output tensor.
+
+    Keyword args:
+        out (Tensor, optional):  the output tensor.
+        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
+          construct local tensor.
+        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
+          numbers of placement.
+        generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
+        dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
+            Default: `oneflow.float32`.
+        device: the desired device of returned tensor. Default: cpu.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    Example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0)
+        >>> y = flow.normal(0, 1, 5, generator=generator)
+        >>> y
+        tensor([2.2122, 1.1631, 0.7740, 0.4838, 1.0434], dtype=oneflow.float32)
+    """
+    if len(size) == 1:
+        size = size[0]
+        if isinstance(size, int):
+            size = (size,)
+
+    if placement is not None:
+        return flow._C.normal(
+            mean=mean,
+            std=std,
+            size=size,
+            out=out,
+            placement=placement,
+            sbp=sbp,
+            dtype=dtype,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
+    else:
+        return flow._C.normal(
+            mean=mean,
+            std=std,
+            size=size,
+            out=out,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
 
 
 if __name__ == "__main__":

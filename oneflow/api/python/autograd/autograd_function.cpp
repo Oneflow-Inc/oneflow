@@ -20,7 +20,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/autograd/autograd_function.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -34,15 +34,21 @@ namespace {
 // Transform input to TensorTuple
 Maybe<one::TensorTuple> UnpackTensorTuple(const py::object& input) {
   one::TensorTuple tp;
-  if (py::isinstance<one::Tensor>(input)) {
+  if (one::PyTensor_Check(input.ptr())) {
     tp.emplace_back(input.cast<std::shared_ptr<one::Tensor>>());
   } else if (py::isinstance<py::tuple>(input)) {
-    for (const auto& tensor : input.cast<py::tuple>()) {
-      CHECK_OR_RETURN(py::isinstance<one::Tensor>(tensor));
-      tp.emplace_back(tensor.cast<std::shared_ptr<one::Tensor>>());
+    auto tuple = input.cast<py::tuple>();
+    for (int i = 0; i < tuple.size(); ++i) {
+      PyObject* obj = tuple[i].ptr();
+      if (!one::PyTensor_Check(obj)) {
+        return Error::RuntimeError()
+               << "expected Tensor as element " << i << ", but got "
+               << one::functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(obj)));
+      }
+      tp.emplace_back(one::PyTensor_Unpack(obj));
     }
   } else {
-    throw std::runtime_error("Only support tensor or list of tensors");
+    return Error::RuntimeError() << "Only support tensor or list of tensors";
   }
   return tp;
 }

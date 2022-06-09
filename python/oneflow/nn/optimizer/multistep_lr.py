@@ -69,7 +69,8 @@ class MultiStepLR(LRScheduler):
         return base_lr * factor
 
     def _generate_conf_for_graph(self, lr_conf):
-        multi_step_conf = lr_conf.mutable_multi_step_conf()
+        lr_conf.multi_step_conf.SetInParent()
+        multi_step_conf = lr_conf.multi_step_conf
         for milestone in self.milestones:
-            multi_step_conf.add_milestones(milestone)
-        multi_step_conf.set_gamma(self.gamma)
+            multi_step_conf.milestones.append(milestone)
+        multi_step_conf.gamma = self.gamma

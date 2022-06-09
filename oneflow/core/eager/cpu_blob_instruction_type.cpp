@@ -29,14 +29,5 @@ class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
     "cpu.AccessBlobByCallback"));
 
-class CpuTensorViewInstructionType final : public TensorViewInstructionType {
- public:
-  CpuTensorViewInstructionType() = default;
-  ~CpuTensorViewInstructionType() override = default;
-
-  using stream_type = vm::CpuStreamType;
-};
-COMMAND(vm::RegisterInstructionType<CpuTensorViewInstructionType>("cpu.TensorView"));
-
 }  // namespace vm
 }  // namespace oneflow
