@@ -69,9 +69,9 @@ namespace {
   return ::oneflow::Device::ParseAndNew(device_info).GetOrThrow();
 }
 
-template<typename T>
+template<typename T, typename MLIR_T>
 mlir::DenseElementsAttr __TensorToDenseElementsAttr(
-    const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::FloatType& float_type) {
+    const std::shared_ptr<::oneflow::one::Tensor>& tensor, const MLIR_T& mlir_type) {
   ::oneflow::LazyMode::Guard guard{false};
   const auto tensor_ = ::oneflow::one::functional::ToContiguous(tensor).GetPtrOrThrow();
   auto shape = tensor_->shape();
@@ -81,23 +81,7 @@ mlir::DenseElementsAttr __TensorToDenseElementsAttr(
     CHECK_JUST(::oneflow::BlobBufferCopyUtil<T>::To(ofblob_ptr, data.data(), data.size()));
   };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor_, callback, "const").GetOrThrow();
-  return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, float_type),
-                                      llvm::makeArrayRef(data));
-}
-
-template<typename T>
-mlir::DenseElementsAttr __TensorToDenseElementsAttr(
-    const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::IntegerType& int_type) {
-  ::oneflow::LazyMode::Guard guard{false};
-  const auto tensor_ = ::oneflow::one::functional::ToContiguous(tensor).GetPtrOrThrow();
-  auto shape = tensor_->shape();
-  std::vector<int64_t> shape_vec(shape->dim_vec().begin(), shape->dim_vec().end());
-  std::vector<T> data(shape->elem_cnt());
-  const auto& callback = [&](uint64_t ofblob_ptr) {
-    CHECK_JUST(::oneflow::BlobBufferCopyUtil<T>::To(ofblob_ptr, data.data(), data.size()));
-  };
-  ::oneflow::one::SyncAccessTensorWithTimeOut(tensor_, callback, "const").GetOrThrow();
-  return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, int_type),
+  return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, mlir_type),
                                       llvm::makeArrayRef(data));
 }
 
@@ -131,11 +115,11 @@ mlir::DenseElementsAttr TensorToDenseElementsAttr(
     const std::shared_ptr<::oneflow::one::Tensor>& tensor, MLIRContext* ctx) {
   const auto dtype = tensor->dtype()->data_type();
   if (dtype == ::oneflow::DataType::kFloat) {
-    return __TensorToDenseElementsAttr<float>(tensor, mlir::FloatType::getF32(ctx));
+    return __TensorToDenseElementsAttr<float, mlir::FloatType>(tensor, mlir::FloatType::getF32(ctx));
   } else if (dtype == ::oneflow::DataType::kInt64) {
-    return __TensorToDenseElementsAttr<int64_t>(
-        tensor, mlir::IntegerType::IntegerType::get(
-                    ctx, 64, mlir::IntegerType::SignednessSemantics::Signed));
+    auto mlir_type = mlir::IntegerType::IntegerType::get(
+        ctx, 64, mlir::IntegerType::SignednessSemantics::Signed);
+    return __TensorToDenseElementsAttr<int64_t, mlir::IntegerType>(tensor, mlir_type);
   }
   llvm::errs() << "Converting oneflow::Tensor to mlir::DenseElementsAttr only support float32 now."
                << "\n";
