@@ -119,6 +119,7 @@ void DtrCudaAllocator::DeallocatePiece(Piece* piece) {
   CHECK(piece->is_free);
   piece->prev = nullptr;
   piece->next = recycle_piece_list_;
+  piece->is_left = true;
   recycle_piece_list_ = piece;
 }
 
@@ -141,6 +142,7 @@ void DtrCudaAllocator::DisplayAllPieces() {
     ss << "piece " << piece << ", " << (void*)piece->ptr << ", " << piece->size << ", ";
     if (piece->tensor) {
       ss << "ebo: " << piece->tensor << ", id: " << piece->tensor->id()
+         << ", is_left: " << piece->is_left
          << ", pinned: " << piece->tensor->num_pinned()
          << ", evictable: " << piece->tensor->is_evictable()
          << ", compute op: " << piece->tensor->compute_op_type_name();
@@ -172,7 +174,7 @@ void DtrCudaAllocator::Display() {
             << std::endl;
 }
 
-DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
+DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size, bool after_eviction) {
   CHECK(IsAlignedSize(aligned_size));
 
   if (memory_ == nullptr) {
@@ -237,6 +239,9 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
         } else if (piece->size > aligned_size) {
           const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
           const bool choose_left = [&]() {
+            if (after_eviction) {
+              return true;
+            }
             if (EnvBool<OF_DTR_NLR>()) {
               // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
               // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true));
@@ -249,7 +254,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
               return false;
 
             } else {
-              return left_;
+              return left;
             }
           }();
           if (choose_left) {
@@ -291,6 +296,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
             if (next_p != nullptr) { next_p->prev = new_piece; }
 
             new_piece->is_free = false;
+            new_piece->is_left = false;
             new_piece->bin_num = kInvalidBinNum;
             CHECK(IsAlignedSize(piece->size));
             CHECK(IsAlignedSize(new_piece->size));
@@ -449,9 +455,11 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_siz
               << "END-EvictAndFindPiece" << std::endl;
   }
 
-  if (!pieces_to_be_evicted.empty()) { return CHECK_NOTNULL(FindPiece(required_size)); }
+  if (!pieces_to_be_evicted.empty()) { return CHECK_NOTNULL(FindPiece(required_size, true)); }
   return nullptr;
 }
+
+bool first_time = true;
 
 void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (size == 0) {
@@ -460,9 +468,15 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   }
   size_t aligned_size = CudaMemAlignedBytes(size);
 
-  Piece* piece = FindPiece(aligned_size);
+  Piece* piece = FindPiece(aligned_size, false);
 
-  if (piece == nullptr) { piece = EvictAndFindPiece(aligned_size); }
+  if (piece == nullptr) {
+    if (first_time) {
+      // DisplayAllPieces();
+      first_time = false;
+    }
+    piece = EvictAndFindPiece(aligned_size);
+  }
 
   if (piece == nullptr) { DisplayAllPieces(); }
 
@@ -481,7 +495,6 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
               << "ALLOCATE-" << mem_ptr << "-" << size << std::endl;
   }
 
-  if (EnvBool<OF_DTR_LR>()) { left_ = !left_; }
   // if (oneflow::DTRDebugEnabled()) {
   //   std::cout << "aid " << id_ << ", allocate " << (size / 1024. / 1024.)
   //             << "MB, total allocate bytes: " << (total_allocate_bytes_ / 1024. / 1024.)
@@ -502,6 +515,7 @@ void DtrCudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
 
   piece->is_free = true;
   piece->tensor = nullptr;
+  piece->is_left = true;
 
   Piece* last_piece_insert_to_bin = piece;
   Piece* next_p = piece->next;

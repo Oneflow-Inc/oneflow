@@ -37,12 +37,12 @@ class DtrCudaAllocator final : public Allocator {
   void Mark(DTREagerBlobObject* ebo, char* mem_ptr);
   void DisplayAllPieces();
   size_t allocated_memory();
-  void set_left(bool is_left) { left_ = is_left; }
+  void set_left(bool is_left) { left = is_left; }
+  bool left = true;
 
  private:
   ptrdiff_t get_offset(const char* mem_ptr) const;
 
-  bool left_ = true;
 
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
@@ -60,6 +60,7 @@ class DtrCudaAllocator final : public Allocator {
     Piece* next = nullptr;
     int32_t bin_num = kInvalidBinNum;
     vm::DTREagerBlobObject* tensor = nullptr;
+    bool is_left = true;
   };
 
   // Bin is a structure that stores a set of pieces which is free and has similar size, and
@@ -95,7 +96,7 @@ class DtrCudaAllocator final : public Allocator {
 
   // Try find free Piece which size is larger than aligned_size in Bins.
   // Return nullptr when find failure
-  Piece* FindPiece(size_t aligned_size);
+  Piece* FindPiece(size_t aligned_size, bool after_eviction);
   void Display();
 
   // Insert the free Piece to the appropriate Bin which bin size is smaller than piece

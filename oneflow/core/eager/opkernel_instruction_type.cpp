@@ -50,6 +50,20 @@ namespace vm {
 
 using DTREagerBlobObjectList = std::vector<std::shared_ptr<vm::DTREagerBlobObject>>;
 
+bool IsInplace(const DTREagerBlobObjectList& inputs, const DTREagerBlobObjectList& outputs) {
+  bool is_in_place = false;
+  for (const auto& input : inputs) {
+    for (const auto& output : outputs) {
+      if (input->object_dptr() == output->object_dptr()) {
+        is_in_place = true;
+        break;
+      }
+    }
+    if (is_in_place) { break; }
+  }
+  return is_in_place;
+}
+
 struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
     auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg).get();
@@ -330,20 +344,6 @@ std::string LocalCallOpKernelInstructionType::DebugOpTypeName(
       .op_type_name();
 }
 
-bool IsInplace(const DTREagerBlobObjectList& inputs, const DTREagerBlobObjectList& outputs) {
-  bool is_in_place = false;
-  for (const auto& input : inputs) {
-    for (const auto& output : outputs) {
-      if (input->object_dptr() == output->object_dptr()) {
-        is_in_place = true;
-        break;
-      }
-    }
-    if (is_in_place) { break; }
-  }
-  return is_in_place;
-}
-
 Maybe<void> _IncReferenceNumOfRecomputedTensor(
     const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, int& pinned_num) {
   for (auto& input : GetDTRInputs(operand)) {
@@ -414,9 +414,7 @@ Maybe<void> _RecursivelyCompute(
   const auto& inputs = GetDTRInputs(operand);
   const auto& outputs = GetDTROutputs(operand);
 
-  for (auto& output : outputs) {
-    output->pin();
-  }
+  for (auto& output : outputs) { output->pin(); }
 
   for (auto& input : inputs) {
     if (!input->is_in_memory()) {
