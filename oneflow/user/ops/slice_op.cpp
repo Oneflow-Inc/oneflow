@@ -367,9 +367,76 @@ Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> GenLogicalSliceAssignGradOp(user_op::BackwardOpConfContext* ctx) {
+  const std::string update_grad_op_name = ctx->FwOp().op_name() + "_value_grad";
+  ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("logical_slice")
+        .InputBind("x", ctx->FwOp().output_grad("y", 0))
+        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
+        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
+        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
+        .Output("y")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("value", 0), [&]() -> const std::string& {
+    return ctx->GetOp(update_grad_op_name).output("y", 0);
+  });
+
+  const std::string zero_grad_op_name = ctx->FwOp().op_name() + "_zero_grad";
+  ctx->DefineOp(zero_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("zero_like")
+        .InputBind("like", ctx->FwOp().input("value", 0))
+        .Output("out")
+        .Build();
+  });
+  const std::string x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
+  ctx->DefineOp(x_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("logical_slice_assign")
+        .InputBind("ref", ctx->FwOp().output_grad("y", 0))
+        .InputBind("value", ctx->GetOp(zero_grad_op_name).output("out", 0))
+        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
+        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
+        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
+        .Output("y")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("ref", 0), [&]() -> const std::string& {
+    return ctx->GetOp(x_grad_op_name).output("y", 0);
+  });
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GenLogicalSliceGradOp(user_op::BackwardOpConfContext* ctx) {
+  const std::string zero_grad_op_name = ctx->FwOp().op_name() + "_zero_grad";
+  ctx->DefineOp(zero_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("zero_like")
+        .InputBind("like", ctx->FwOp().input("x", 0))
+        .Output("out")
+        .Build();
+  });
+  const std::string x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
+  ctx->DefineOp(x_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("logical_slice_assign")
+        .InputBind("ref", ctx->GetOp(zero_grad_op_name).output("out", 0))
+        .InputBind("value", ctx->FwOp().output_grad("y", 0))
+        .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
+        .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
+        .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
+        .Output("y")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
+    return ctx->GetOp(x_grad_op_name).output("y", 0);
+  });
+
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 REGISTER_USER_OP_GRAD("slice").SetGenBackwardOpConfFn(GenSliceGradOp);
 REGISTER_USER_OP_GRAD("slice_update").SetBackwardOpConfGenFn(GenSliceUpdateGradOp);
+REGISTER_USER_OP_GRAD("logical_slice_assign").SetBackwardOpConfGenFn(GenLogicalSliceAssignGradOp);
+REGISTER_USER_OP_GRAD("logical_slice").SetBackwardOpConfGenFn(GenLogicalSliceGradOp);
 
 }  // namespace oneflow

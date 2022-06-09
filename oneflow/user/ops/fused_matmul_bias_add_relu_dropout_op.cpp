@@ -13,11 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
@@ -40,7 +36,7 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   int32_t weight_size = ctx->input_size("weights");
   int32_t bias_size = ctx->input_size("biases");
-  CHECK_EQ_OR_RETURN(weight_size, bias_size);
+  CHECK_EQ_OR_RETURN(weight_size, bias_size) << "Weight num should be equal to bias num. ";
   /*
   A: (m, k)
   B: (n, k) need transpose
@@ -54,12 +50,16 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     // skip first input weight.
     const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weights", idx);
     const user_op::TensorDesc& bias_desc = ctx->InputTensorDesc("biases", idx);
-    CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1);
+    CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2) << "Weight's ndim should be equal to 2. ";
+    CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1) << "Bias's ndim should be equal to 1. ";
 
     n = weight_desc.shape().At(0);
-    CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
-    CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
+    CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n)
+        << "Bias shape should be equal to N. Assume (M, K) matmul (N, K, transpose_b=True) "
+           "bias_add (N, ). ";
+    CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k)
+        << "Weight shape should be equal to K. Assume (M, K) matmul (N, K, transpose_b=True) "
+           "bias_add (N, ). ";
 
     cublas_aux_ld = n;
     // Set Middle result shape.
@@ -80,7 +80,8 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& in_desc =
         ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
+    CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type())
+        << "The Input's datatype should be equal. ";
   }
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
@@ -101,16 +102,17 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
 
 }  // namespace
 
-/* static */ Maybe<void> CublasFusedMLPOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmul(ctx);
 }
 
-/*static*/ Maybe<void> CublasFusedMLPOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> CublasFusedMLPOp::GetSbp(user_op::SbpContext* ctx) {
-  // Currently Only support S0 B B B B ... S0
+/* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::GetSbp(user_op::SbpContext* ctx) {
   auto builder = ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0);
   for (int i = 0; i < ctx->user_op_conf().input_size("weights"); ++i) {
     builder.Broadcast(user_op::OpArg("weights", i));
@@ -129,35 +131,41 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> CublasFusedMLPOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedMatmulBiasAddReluDropoutOp::InferDataType(
+    user_op::InferContext* ctx) {
   return InferDataType4Matmul(ctx);
 }
 
-REGISTER_USER_OP_GRAD("cublas_fused_mlp")
+REGISTER_USER_OP_GRAD("fused_matmul_bias_add_relu_dropout")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
       bool skip_final_activation = op.attr<bool>("skip_final_activation");
+      const std::vector<float> dropout_rate_list = op.attr<std::vector<float>>("dropout_rate_list");
+      float scale = 1.0;
+      float rate = 0.0;
       int64_t weight_num = op.input_size("weights");
 
       std::string last_bias_grad;
-      if (!skip_final_activation) {
-        // step1: use dy and final output to get last layer's relu grad.
-        user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name() + "_relu_grad");
-        user_op::UserOpConfWrapper relu_grad_op =
-            relu_grad_builder.Op("relu_grad")
-                .Input("y", op.output("out", 0))
+      if (!skip_final_activation || (dropout_rate_list[weight_num - 1] != 0.0f)) {
+        // step1: Get last layer's relu+dropout grad.
+        rate = dropout_rate_list[weight_num - 1];
+        if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
+        user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name()
+                                                            + "fused_relu_dropout_grad");
+        user_op::UserOpConfWrapper relu_dropout_grad_op =
+            relu_grad_builder.Op("fused_relu_dropout_grad")
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                .Input("mask", op.output("cublas_aux", weight_num - 1))
+                .Attr<float>("scale", scale)
                 .Output("dx")
                 .Build();
-        AddOp(relu_grad_op);
-        last_bias_grad = relu_grad_op.output("dx", 0);
+        AddOp(relu_dropout_grad_op);
+        last_bias_grad = relu_dropout_grad_op.output("dx", 0);
       } else {
         last_bias_grad = op.GetGradTensorWithOpOutput("out", 0);
       }
 
-      // step2: use reduce_sum to get last layer's bias grad.
-      // TODO: Currently Only support 2d fused_matmul.
-      // so here we hard encode bias reduce axis as 0.
+      // step2: Get last layer's bias grad.
       std::vector<int32_t> reduce_axes_vec{0};
       user_op::UserOpConfWrapperBuilder bias_grad_builder(op.op_name() + "_bias_grad");
       user_op::UserOpConfWrapper bias_grad_op = bias_grad_builder.Op("reduce_sum")
@@ -172,7 +180,11 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                      weight_num - 1);
       }
       std::string cublas_dy = last_bias_grad;
+
       for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
+        rate = dropout_rate_list[hidden_layer_idx - 1];
+        scale = 1.0;
+        if (rate < 1.0f) { scale = 1.0f / (1.0f - rate); }
         user_op::UserOpConfWrapperBuilder cublas_bias_add_relu_matmul_grad_builder(
             op.op_name() + "_cublas_bias_add_relu_matmul_grad_" + std::to_string(hidden_layer_idx));
         user_op::UserOpConfWrapper cublas_bias_add_relu_matmul_grad_op =
@@ -180,7 +192,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Input("dy", cublas_dy)
                 .Input("weight", op.input("weights", hidden_layer_idx))
                 .Input("aux", op.output("cublas_aux", hidden_layer_idx - 1))
-                .Attr<double>("alpha", 1.0)
+                .Attr<double>("alpha", scale)
                 .Output("d_grad")
                 .Output("d_bias")
                 .Build();
@@ -212,7 +224,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
       }
 
       // For the first layer, we need to use 2 matmul to get grads.
-      std::string last_dy;
+      std::string last_dy = last_bias_grad;
       if (weight_num != 1) { last_dy = cublas_dy; }
       // dx:
       user_op::UserOpConfWrapperBuilder matmul_input_grad_builder(op.op_name()
