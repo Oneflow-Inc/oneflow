@@ -170,14 +170,16 @@ void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const 
     std::string parallel_cast_input_lbn = GenLogicalBlobName(lbi);
     // Add indentity to enable mem reuse of boxing op when there is no op between var op and boxing.
     if (sequence->len() == 1) {
-      VLOG(3) << "ZeRO find a data-parallel sequence only has one variable " << sequence->GetVariableNode()->op().op_name();
-      const auto var_identity_op = user_op::UserOpConfWrapperBuilder("System-ZeRO-Identity-" + node->op().op_name() + "-"
-                                          + NewUniqueId())
-            .Op("identity")
-            .Input("in", GenLogicalBlobName(lbi))
-            .Output("out")
-            .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
-            .Build();
+      VLOG(3) << "ZeRO find a data-parallel sequence only has one variable "
+              << sequence->GetVariableNode()->op().op_name();
+      const auto var_identity_op =
+          user_op::UserOpConfWrapperBuilder("System-ZeRO-Identity-" + node->op().op_name() + "-"
+                                            + NewUniqueId())
+              .Op("identity")
+              .Input("in", GenLogicalBlobName(lbi))
+              .Output("out")
+              .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
+              .Build();
       builder->AddOps(node->parallel_desc().parallel_conf(), {var_identity_op.op_conf()});
       parallel_cast_input_lbn = var_identity_op.output("out", 0);
     }
@@ -298,7 +300,7 @@ bool IsNdSbpSupported4Op(const OpNode* node, const NdSbp& nd_sbp) {
     return Maybe<const BlobDesc&>(node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi(bn)));
   };
   CHECK_JUST(node->op().GetNdSbpSignatureList(LogicalBlobDesc4Ibn, node->parallel_desc(), &list));
-  const auto IsInAndOutMatch= [&](const NdSbpSignature& signature) {
+  const auto IsInAndOutMatch = [&](const NdSbpSignature& signature) {
     return IsNdSbpMatch(signature, node->op().SoleIbn(), nd_sbp)
            && IsNdSbpMatch(signature, node->op().SoleObn(), nd_sbp);
   };
@@ -340,7 +342,8 @@ void ForEachModelSizeBalancedPartition(
 }
 
 namespace {
-bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy, int64_t min_size) {
+bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy,
+                  int64_t min_size) {
   if (shape.NumAxes() < 1 || shape.elem_cnt() < 1) { return false; }
   CHECK_EQ(nd_sbp.sbp_parallel_size(), hierachy.NumAxes());
   Shape cur_shape = shape;
@@ -348,7 +351,7 @@ bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy
   FOR_RANGE(int64_t, i, 0, hierachy.NumAxes()) {
     const auto& sbp = nd_sbp.sbp_parallel(i);
     if (sbp.has_split_parallel()) {
-      const int64_t dim = sbp.split_parallel().axis(); 
+      const int64_t dim = sbp.split_parallel().axis();
       if (dim >= cur_shape.NumAxes()) { return false; }
       // Evenly split.
       if (cur_shape.At(dim) % hierachy.At(i) != 0) { return false; }
@@ -360,37 +363,38 @@ bool IsSplitValid(const Shape& shape, const NdSbp& nd_sbp, const Shape& hierachy
   return true;
 }
 
-void GenerateSplitSignature(const NdSbp& var_nd_sbp, const OperatorConf& new_var_op_conf, std::string& new_split_signature, int64_t& split_dim) {
-    if (new_var_op_conf.variable_conf().nd_sbp_size() > 0 && NdSbpIsAllBroadcast(var_nd_sbp)) {
-      // split last dim
-      split_dim = new_var_op_conf.variable_conf().nd_sbp_size() - 1;
-      // All B, B -> S0
-      new_split_signature = "S(0)";
-    } else {
-      // ND sbp, (*, B, S, *) -> (*, S, S, *)
-      // ND sbp, (*, S, B, *) -> (*, S, S, *)
-      FOR_RANGE(int64_t, j, 0, new_var_op_conf.variable_conf().nd_sbp_size()) {
-        if (new_var_op_conf.variable_conf().nd_sbp(j) == "B") {
-          std::vector<int64_t> adjacent_dim{j - 1, j + 1};
-          for (auto const& dim_to_try : adjacent_dim) {
-            if (dim_to_try >= 0 && dim_to_try < new_var_op_conf.variable_conf().nd_sbp_size()) {
-              SbpParallel sbp;
-              if (ParseSbpParallelFromString(new_var_op_conf.variable_conf().nd_sbp(dim_to_try),
-                                             &sbp)
-                  && sbp.has_split_parallel()) {
-                new_split_signature = new_var_op_conf.variable_conf().nd_sbp(dim_to_try);
-                split_dim = j;
-              }
+void GenerateSplitSignature(const NdSbp& var_nd_sbp, const OperatorConf& new_var_op_conf,
+                            std::string& new_split_signature, int64_t& split_dim) {
+  if (new_var_op_conf.variable_conf().nd_sbp_size() > 0 && NdSbpIsAllBroadcast(var_nd_sbp)) {
+    // split last dim
+    split_dim = new_var_op_conf.variable_conf().nd_sbp_size() - 1;
+    // All B, B -> S0
+    new_split_signature = "S(0)";
+  } else {
+    // ND sbp, (*, B, S, *) -> (*, S, S, *)
+    // ND sbp, (*, S, B, *) -> (*, S, S, *)
+    FOR_RANGE(int64_t, j, 0, new_var_op_conf.variable_conf().nd_sbp_size()) {
+      if (new_var_op_conf.variable_conf().nd_sbp(j) == "B") {
+        std::vector<int64_t> adjacent_dim{j - 1, j + 1};
+        for (auto const& dim_to_try : adjacent_dim) {
+          if (dim_to_try >= 0 && dim_to_try < new_var_op_conf.variable_conf().nd_sbp_size()) {
+            SbpParallel sbp;
+            if (ParseSbpParallelFromString(new_var_op_conf.variable_conf().nd_sbp(dim_to_try), &sbp)
+                && sbp.has_split_parallel()) {
+              new_split_signature = new_var_op_conf.variable_conf().nd_sbp(dim_to_try);
+              split_dim = j;
             }
-            if (new_split_signature != "") break;
           }
+          if (new_split_signature != "") break;
         }
-        // Only split one more dim.
-        if (new_split_signature != "") break;
       }
+      // Only split one more dim.
+      if (new_split_signature != "") break;
     }
+  }
 }
-void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelDesc& pd, std::vector<SequencePtr>&& sorted_sequences) {
+void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelDesc& pd,
+                   std::vector<SequencePtr>&& sorted_sequences) {
   // For all sorted sequnence, set the variable op in the sequence to S
   // and add ctrl edge to control the exectuion order between variable ops.
   // A sequence is a variable op and its cast(fp32 to fp16) op. This is because the forward pass
@@ -445,21 +449,19 @@ void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelD
               << " with op conf " << new_var_op_conf.variable_conf().DebugString();
       continue;
     }
-    if (i != 0) {
-      new_var_op_conf.add_ctrl_in_op_name(prev_allowed_op_name);
-    }
+    if (i != 0) { new_var_op_conf.add_ctrl_in_op_name(prev_allowed_op_name); }
     builder->MutOpsOnlyOnce({new_var_op_conf});
     // Set consumers to consum this variable op's cast op's output as Broadcast.
     if (new_split_signature != "") {
       SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
     }
     prev_allowed_op_name = var_node->op().op_name();
-    VLOG(3) << var_node->op().op_name() << " succeed to change form B to "
-            << new_split_signature << " on ranks dim " << split_dim << " with op conf "
+    VLOG(3) << var_node->op().op_name() << " succeed to change form B to " << new_split_signature
+            << " on ranks dim " << split_dim << " with op conf "
             << new_var_op_conf.variable_conf().DebugString();
   }
 }
-} // namespace
+}  // namespace
 
 Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder) {
   const int64_t threshold = builder->job().job_conf().optimizer_placement_optimization_threshold();
@@ -468,7 +470,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     return true;
   };
   const auto PlacementSequencesAsSplitParallel = [&](const ParallelDesc& pd,
-                                                   std::vector<SequencePtr>&& sorted_sequences) {
+                                                     std::vector<SequencePtr>&& sorted_sequences) {
     ShardSequence(builder, threshold, pd, std::forward<std::vector<SequencePtr>>(sorted_sequences));
   };
   ForEachParallelSortedNodeSequence(op_graph, IsAllowed, SequenceCompSortedByOrderAsc,
