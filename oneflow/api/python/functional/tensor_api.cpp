@@ -239,8 +239,8 @@ class LocalTensorSharedNumpyDataFunctor {
     if (!PyArray_IS_C_CONTIGUOUS(array)) {
       OF_LOG_ONCE(LOG(WARNING) << "OneFlow don't support non-contiguous array now, "
                                   "and we will copy the array to a contiguous one.");
-      array = PyArray_GETCONTIGUOUS(array);
     }
+    array = PyArray_GETCONTIGUOUS(array);
 
     // Build TensorMeta
     int32_t dim = PyArray_NDIM(array);
@@ -264,13 +264,12 @@ class LocalTensorSharedNumpyDataFunctor {
     auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, strides, data_type, device, 0);
 
     // Build TensorBuffer
-    const auto& Free = [obj](char* dptr) {
+    const auto& Free = [array](char* dptr) {
       CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-        Py_DECREF(obj);
+        Py_DECREF(array);
         return Maybe<void>::Ok();
       }));
     };
-    Py_INCREF(obj);  // make TensorBuffer hold ndarray
     void* data_ptr = PyArray_DATA(array);
     auto array_size_in_bytes = PyArray_NBYTES(array);
     auto tensor_data = std::make_shared<vm::TensorStorage>();
