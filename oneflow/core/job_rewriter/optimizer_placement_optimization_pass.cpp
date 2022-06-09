@@ -105,7 +105,6 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
       if (cur_node->op().input_bns().size() != 1) { break; }
       const std::string& sole_ibn = cur_node->op().SoleIbn();
       const NdSbp& ibn_nd_sbp = cur_node->NdSbp4BnInOp(sole_ibn);
-      if (ibn_nd_sbp.sbp_parallel_size() == 0) { break; }
       bool has_broadcast = false;
       FOR_RANGE(int, i, 0, ibn_nd_sbp.sbp_parallel_size()) {
         if (ibn_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { has_broadcast = true; };
