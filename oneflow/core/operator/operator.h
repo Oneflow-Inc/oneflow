@@ -151,6 +151,12 @@ class Operator {
   Maybe<void> InferNdSbpSignatureIf(
       const NdSbpSignature& nd_sbp_constraints, const ParallelDesc& parallel_desc,
       std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn);
+
+  // The function that how to dump nd_sbp for op_conf
+  using DumpNdSbpSignatureForOpConfFn =
+      std::function<Maybe<void>(const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf)>;
+  virtual DumpNdSbpSignatureForOpConfFn GetDumpNdSbpSignatureForOpConfFn() const;
+
   // Infer blob's MirroredSignature
   Maybe<void> InferMirroredSignatureIf(
       std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>

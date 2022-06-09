@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
@@ -145,6 +146,18 @@ Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx, const SbpParalle
     }
   }
 
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DumpNdSbpSignatureForOpConf4SrcOp(const NdSbpSignature& nd_sbp_sig,
+                                              const std::string& blob_name, OperatorConf* op_conf) {
+  const auto& nd_sbp = nd_sbp_sig.bn_in_op2nd_sbp().at(blob_name);
+  std::vector<std::string> nd_sbp_str_list = *JUST(GetNdSbpStrList(nd_sbp));
+  *op_conf->mutable_user_conf()
+       ->mutable_attr()
+       ->at("nd_sbp")
+       .mutable_at_list_string()
+       ->mutable_val() = {nd_sbp_str_list.begin(), nd_sbp_str_list.end()};
   return Maybe<void>::Ok();
 }
 

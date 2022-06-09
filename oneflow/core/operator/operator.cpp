@@ -502,6 +502,12 @@ Maybe<void> Operator::GetValidNdSbpSignatureList(
   return Maybe<void>::Ok();
 }
 
+Operator::DumpNdSbpSignatureForOpConfFn Operator::GetDumpNdSbpSignatureForOpConfFn() const {
+  return [](const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf) -> Maybe<void> {
+    return Maybe<void>::Ok();
+  };
+}
+
 void Operator::ForEachBnInOp(const std::function<void(const std::string&)>& Handler) const {
   for (const std::string& bn_in_op : input_bns()) { Handler(bn_in_op); }
   for (const std::string& bn_in_op : output_bns()) { Handler(bn_in_op); }
