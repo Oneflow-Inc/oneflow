@@ -39,6 +39,9 @@ class OfCollectiveActor final: public ActorBase {
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) override { return (this->*msg_handler_)(msg); }
 
+  int64_t GetUpstreamId() { return nego_tree_info_.upstream_id; }
+  std::vector<int64_t> GetDownstreamId() { return nego_tree_info_.downstream_id; }
+
  private:
   using MsgHandler = int (OfCollectiveActor::*)(const ActorMsg&);
     // Msg Handler
@@ -60,6 +63,9 @@ class OfCollectiveActor final: public ActorBase {
   int64_t actor_id_;
   int64_t thrd_id_;
   int64_t job_id_;
+  std::string op_name_;
+  boxing::of_collective::RuntimeNegoTreeInfo nego_tree_info_;
+
   MsgHandler msg_handler_;
 };
 

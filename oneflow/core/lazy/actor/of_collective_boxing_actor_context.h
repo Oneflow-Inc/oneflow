@@ -36,10 +36,7 @@ class OfCollectiveBoxingActorContext : public ActorContext {
  private:
   StreamContext* stream_ctx_{};
   TaskProto task_proto_{};
-  size_t scheduled_count_{};
-  size_t completed_count_{};
   std::mutex mutex_;
-  std::deque<std::pair<size_t, std::function<void()>>> callbacks_;
 };
 
 }  // namespace oneflow

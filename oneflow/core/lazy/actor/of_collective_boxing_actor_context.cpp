@@ -22,7 +22,6 @@ using namespace boxing::collective;
 void OfCollectiveBoxingActorContext::Init(const TaskProto& task_proto, StreamContext* stream_ctx) {
   stream_ctx_ = stream_ctx;
   task_proto_ = task_proto;
-  completed_count_ = 0;
 }
 
 StreamContext* OfCollectiveBoxingActorContext::stream_ctx() const { return stream_ctx_; }

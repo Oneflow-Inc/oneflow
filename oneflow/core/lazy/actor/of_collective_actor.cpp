@@ -17,6 +17,8 @@ limitations under the License.
 
 namespace oneflow {
 
+using namespace boxing::of_collective;
+
 // void OfCollectiveActor::Act() {
 //   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
 // }
@@ -27,6 +29,15 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_id_ = task_proto.task_id();
   thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
+  CHECK_EQ(actor_ctx->task_proto().exec_sequence().exec_node().size(), 0);
+  const ExecNodeProto& node = actor_ctx->task_proto().exec_sequence().exec_node()[0];
+  op_name_ = node.kernel_conf().op_attribute_ref();
+
+  const OfRequestId& request_id = 
+    Global<CollectiveMgr>::Get()->GetOfRequestIdByName(op_name_);
+  auto* token = Global<CollectiveMgr>::Get()->CreateOfRequestEntryToken(request_id);
+  auto* request_entry = Global<CollectiveMgr>::Get()->GetOfRequestEntry(token);
+  nego_tree_info_ = std::move(request_entry->nego_tree_topo()[job_id_]);
 }
 
 int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {

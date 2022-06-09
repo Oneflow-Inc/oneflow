@@ -84,6 +84,21 @@ CollectiveMgr::Impl::Impl() {
   collective_builder->Init(request_store);
 }
 
+OfRequestId CollectiveMgr::GetOfRequestIdByName(const std::string& name) const {
+  return impl_->request_store->GetOfRequestIdByName(name);
+}
+
+void* CollectiveMgr::CreateOfRequestEntryToken(const OfRequestId& request_id) {
+  return impl_->request_store->CreateOfRequestEntryToken(request_id);
+}
+
+void CollectiveMgr::DestroyOfRequestEntryToken(void* token) {
+  impl_->request_store->DestroyOfRequestEntryToken(token);
+}
+OfRequestEntry* CollectiveMgr::GetOfRequestEntry(void* token) {
+  return impl_->request_store->GetOfRequestEntry(token);
+}
+
 class CollectiveMgrPlanToken {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveMgrPlanToken);

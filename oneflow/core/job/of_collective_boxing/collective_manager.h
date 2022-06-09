@@ -36,6 +36,14 @@ class CollectiveMgr final {
   CollectiveMgrPlanToken* AddPlan(const Plan& plan);
   void DeletePlan(CollectiveMgrPlanToken* plan_token);
 
+  OfRequestId GetOfRequestIdByName(const std::string& name) const;
+
+  void* CreateOfRequestEntryToken(const OfRequestId& request_id);
+
+  void DestroyOfRequestEntryToken(void* token);
+
+  OfRequestEntry* GetOfRequestEntry(void* token);
+
  private:
   friend class Global<CollectiveMgr>;
   CollectiveMgr();

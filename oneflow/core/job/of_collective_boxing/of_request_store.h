@@ -58,6 +58,8 @@ class OfRequestEntry final {
   int64_t size_in_bytes() const { return size_in_bytes_; }
   const Symbol<DeviceSet>& device_set_symbol() const { return device_set_symbol_; }
 
+  std::map<int64_t, RuntimeNegoTreeInfo> nego_tree_topo() const { return nego_tree_topo_; }
+
  private:
   RequestDesc desc_;
   int32_t node_count_;
