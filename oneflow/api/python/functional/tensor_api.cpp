@@ -242,6 +242,7 @@ class LocalTensorSharedNumpyDataFunctor {
     }
     // PyArray_GETCONTIGUOUS will return a reference if array is already contiguous,
     // otherwise return a (contiguous) copy of the array.
+    // Note: Increment the reference count for array occurs whether the array is continuous or not
     array = PyArray_GETCONTIGUOUS(array);
 
     // Build TensorMeta
