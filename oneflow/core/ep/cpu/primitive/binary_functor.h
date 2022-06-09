@@ -50,10 +50,9 @@ template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kGeluBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
     return static_cast<Dst>(
-        0.5 * (1.0 + std::erf(inv_sqrt2 * src0) + src0 * coef * std::exp(-0.5 * src0 * src0))
-        * src1);
+        0.5 * (1.0 + std::erf(inv_sqrt2 * x) + x * coef * std::exp(-0.5 * x * x)) * dy);
   }
 
   Src inv_sqrt2 = std::sqrt(0.5);
@@ -64,9 +63,9 @@ template<typename Src, typename Dst>
 struct BinaryFunctor<DeviceType::kCPU, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC Dst operator()(Src src0, Src src1) const {
-    Src tanh_val = std::tanh(src0);
-    return static_cast<Dst>(src1 * (static_cast<Src>(1.0) - tanh_val * tanh_val));
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    Src tanh_val = std::tanh(x);
+    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - tanh_val * tanh_val));
   }
 };
 

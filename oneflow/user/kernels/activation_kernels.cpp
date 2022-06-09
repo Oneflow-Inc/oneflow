@@ -62,8 +62,8 @@ REGISTER_USER_KERNEL("elu")
 REGISTER_USER_KERNEL("elu_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kEluBackwardWithDyX, src->data_type(),
@@ -71,7 +71,7 @@ REGISTER_USER_KERNEL("elu_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kEluBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("celu")
     .SetCreateFn([]() {
@@ -89,8 +89,8 @@ REGISTER_USER_KERNEL("celu")
 REGISTER_USER_KERNEL("celu_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kCeluBackwardWithDyX, src->data_type(),
@@ -98,7 +98,7 @@ REGISTER_USER_KERNEL("celu_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kCeluBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("hardswish")
     .SetCreateFn([]() {
@@ -116,8 +116,8 @@ REGISTER_USER_KERNEL("hardswish")
 REGISTER_USER_KERNEL("hardswish_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kHardswishBackwardWithDyX,
@@ -125,7 +125,7 @@ REGISTER_USER_KERNEL("hardswish_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kHardswishBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("hardsigmoid")
     .SetCreateFn([]() {
@@ -143,8 +143,8 @@ REGISTER_USER_KERNEL("hardsigmoid")
 REGISTER_USER_KERNEL("hardsigmoid_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kHardsigmoidBackwardWithDyX,
@@ -152,7 +152,7 @@ REGISTER_USER_KERNEL("hardsigmoid_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kHardsigmoidBackwardWithDyX,
-                                           "dx", "x"));
+                                           "dx", "dy"));
 
 REGISTER_USER_KERNEL("hardshrink")
     .SetCreateFn([]() {
@@ -175,8 +175,8 @@ REGISTER_USER_KERNEL("hardshrink")
 REGISTER_USER_KERNEL("hardshrink_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "y", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+          "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kHardshrinkBackwardWithDyY,
@@ -184,7 +184,7 @@ REGISTER_USER_KERNEL("hardshrink_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kHardshrinkBackwardWithDyY,
-                                           "dx", "y"))
+                                           "dx", "dy"))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));
@@ -212,8 +212,8 @@ REGISTER_USER_KERNEL("hardtanh")
 REGISTER_USER_KERNEL("hardtanh_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "y", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+          "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kHardtanhBackwardWithDyY,
@@ -222,7 +222,7 @@ REGISTER_USER_KERNEL("hardtanh_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kHardtanhBackwardWithDyY, "dx",
-                                           "y"))
+                                           "dy"))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));
@@ -245,8 +245,8 @@ REGISTER_USER_KERNEL("gelu")
 REGISTER_USER_KERNEL("gelu_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kGeluBackwardWithDyX, src->data_type(),
@@ -254,7 +254,7 @@ REGISTER_USER_KERNEL("gelu_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kGeluBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("leaky_relu")
     .SetCreateFn([]() {
@@ -272,8 +272,8 @@ REGISTER_USER_KERNEL("leaky_relu")
 REGISTER_USER_KERNEL("leaky_relu_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kLeakyReluBackwardWithDyX,
@@ -281,7 +281,7 @@ REGISTER_USER_KERNEL("leaky_relu_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kLeakyReluBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("mish")
     .SetCreateFn([]() {
@@ -299,8 +299,8 @@ REGISTER_USER_KERNEL("mish")
 REGISTER_USER_KERNEL("mish_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kMishBackwardWithDyX, src->data_type(),
@@ -308,7 +308,7 @@ REGISTER_USER_KERNEL("mish_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kMishBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("relu")
     .SetCreateFn([]() {
@@ -331,8 +331,8 @@ REGISTER_USER_KERNEL("relu")
 REGISTER_USER_KERNEL("relu_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "y", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+          "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kReluBackwardWithDyY, src->data_type(),
@@ -340,7 +340,7 @@ REGISTER_USER_KERNEL("relu_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kReluBackwardWithDyY, "dx",
-                                           "y"))
+                                           "dy"))
     .SetInplaceProposalFn([](const user_op::InferContext&,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));
@@ -363,8 +363,8 @@ REGISTER_USER_KERNEL("silu")
 REGISTER_USER_KERNEL("silu_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kSiluBackwardWithDyX, src->data_type(),
@@ -372,7 +372,7 @@ REGISTER_USER_KERNEL("silu_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kSiluBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("selu")
     .SetCreateFn([]() {
@@ -390,8 +390,8 @@ REGISTER_USER_KERNEL("selu")
 REGISTER_USER_KERNEL("selu_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kSeluBackwardWithDyX, src->data_type(),
@@ -399,7 +399,7 @@ REGISTER_USER_KERNEL("selu_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kSeluBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("softshrink")
     .SetCreateFn([]() {
@@ -417,8 +417,8 @@ REGISTER_USER_KERNEL("softshrink")
 REGISTER_USER_KERNEL("softshrink_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "y", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+          "dx", "dy", "y", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kSoftshrinkBackwardWithDyY,
@@ -426,7 +426,7 @@ REGISTER_USER_KERNEL("softshrink_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kSoftshrinkBackwardWithDyY,
-                                           "dx", "y"));
+                                           "dx", "dy"));
 
 REGISTER_USER_KERNEL("softsign")
     .SetCreateFn([]() {
@@ -444,8 +444,8 @@ REGISTER_USER_KERNEL("softsign")
 REGISTER_USER_KERNEL("softsign_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kSoftsignBackwardWithDyX,
@@ -453,7 +453,7 @@ REGISTER_USER_KERNEL("softsign_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kSoftsignBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("softplus")
     .SetCreateFn([]() {
@@ -471,8 +471,8 @@ REGISTER_USER_KERNEL("softplus")
 REGISTER_USER_KERNEL("softplus_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kSoftplusBackwardWithDyX,
@@ -481,7 +481,7 @@ REGISTER_USER_KERNEL("softplus_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kSoftplusBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("tanh")
     .SetCreateFn([]() {
@@ -499,8 +499,8 @@ REGISTER_USER_KERNEL("tanh")
 REGISTER_USER_KERNEL("tanh_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kTanhBackwardWithDyX, src->data_type(),
@@ -508,7 +508,7 @@ REGISTER_USER_KERNEL("tanh_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kTanhBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 REGISTER_USER_KERNEL("threshold")
     .SetCreateFn([]() {
@@ -526,8 +526,8 @@ REGISTER_USER_KERNEL("threshold")
 REGISTER_USER_KERNEL("threshold_grad")
     .SetCreateFn([]() {
       return user_op::NewOpKernel<BinaryPrimitiveKernel>(
-          "dx", "x", "dy", [](user_op::KernelComputeContext* ctx) {
-            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+          "dx", "dy", "x", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
             const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
             return ep::primitive::NewPrimitive<ep::primitive::BroadcastElementwiseBinaryFactory>(
                 ctx->device_type(), ep::primitive::BinaryOp::kThresholdBackwardWithDyX,
@@ -536,6 +536,6 @@ REGISTER_USER_KERNEL("threshold_grad")
           });
     })
     .SetIsMatchedHob(BinaryPrimitiveExists(ep::primitive::BinaryOp::kThresholdBackwardWithDyX, "dx",
-                                           "x"));
+                                           "dy"));
 
 }  // namespace oneflow
