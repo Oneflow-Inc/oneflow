@@ -190,9 +190,9 @@ struct BinaryFunctor<device, BinaryOp::kHardsigmoidBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return static_cast<Dst>((x > static_cast<Src>(-3) && x < static_cast<Src>(3))
-                                ? dy / static_cast<Src>(6)
-                                : static_cast<Src>(0));
+    return static_cast<Dst>((x <= static_cast<Src>(-3) || x >= static_cast<Src>(3))
+                                ? static_cast<Src>(0)
+                                : dy / static_cast<Src>(6));
   }
 };
 
@@ -211,7 +211,7 @@ struct BinaryFunctor<device, BinaryOp::kHardtanhBackwardWithDyY, Src, Dst> {
       : min_val(attr0.Value<float>()), max_val(attr1.Value<float>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
-    return static_cast<Dst>((y != min_val && y != max_val) ? dy : static_cast<Src>(0));
+    return static_cast<Dst>((y == min_val || y == max_val) ? static_cast<Src>(0) : dy);
   }
 
   const Src min_val;
@@ -246,7 +246,7 @@ struct BinaryFunctor<device, BinaryOp::kReluBackwardWithDyY, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src y) const {
-    return static_cast<Dst>((y > static_cast<Src>(0.0)) ? dy : static_cast<Src>(0.0));
+    return static_cast<Dst>((y <= static_cast<Src>(0.0)) ? static_cast<Src>(0.0) : dy);
   }
 };
 
@@ -309,7 +309,7 @@ struct BinaryFunctor<device, BinaryOp::kThresholdBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : threshold(attr0.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
-    return static_cast<Dst>((x > threshold) ? dy : 0);
+    return static_cast<Dst>((x <= threshold) ? 0 : dy);
   }
   const Src threshold;
 };
