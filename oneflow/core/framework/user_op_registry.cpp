@@ -218,7 +218,8 @@ OpRegistry& OpRegistry::SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn get_n
   return *this;
 }
 
-OpRegistry& OpRegistry::SetDumpNdSbpSignatureForOpConfFn(DumpNdSbpSignatureForOpConfFn fn) {
+OpRegistry& OpRegistry::SetDumpNdSbpSignatureForOpConfFn(
+    Operator::DumpNdSbpSignatureForOpConfFn fn) {
   result_.dump_nd_sbp_signature_for_op_conf_fn = std::move(fn);
   return *this;
 }

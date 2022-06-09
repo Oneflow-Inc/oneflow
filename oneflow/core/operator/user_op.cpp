@@ -857,13 +857,12 @@ Maybe<double> UserOp::GetComputeComplexity(
   }
 }
 
-Maybe<void> UserOp::DumpNdSbpSignatureForOpConf(OperatorConf* op_conf) const {
+Operator::DumpNdSbpSignatureForOpConfFn UserOp::GetDumpNdSbpSignatureForOpConfFn() const {
   if (val_->dump_nd_sbp_signature_for_op_conf_fn) {
-    return val_->dump_nd_sbp_signature_for_op_conf_fn(*JUST(nd_sbp_signature()), op_conf);
+    return val_->dump_nd_sbp_signature_for_op_conf_fn;
   } else {
-    return Operator::DumpNdSbpSignatureForOpConf(op_conf);
+    return Operator::GetDumpNdSbpSignatureForOpConfFn();
   }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> UserOp::InferOpTimeShape(

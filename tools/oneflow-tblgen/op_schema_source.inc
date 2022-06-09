@@ -80,7 +80,7 @@ REGISTER_USER_OP("{{op.name}}")
     .SetGetNdSbpSignatureListFn(&{{opname}}::GetNdSbpSignatureList)
 {%- endif -%}
 {%- if op.has_dump_nd_sbp_signature_for_op_conf_fn -%}
-    .SetDumpNdSbpSignatureForOpConfFn(&{{opname}}::DumpNdSbpSignatureForOpConf)
+    .SetDumpNdSbpSignatureForOpConfFn(&{{opname}}::DumpNdSbpSignatureForOpConfFn)
 {%- endif -%}
 {%- if op.has_compute_complexity_fn -%}
     .SetComputeComplexityFn(&{{opname}}::GetComputeComplexity)

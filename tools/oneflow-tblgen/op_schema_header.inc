@@ -52,7 +52,7 @@ class {{opname}} : public OpBase {
   static Maybe<void> GetNdSbpSignatureList(user_op::GetNdSbpSignatureListContext* ctx);
   {% endif -%}
   {% if op.has_dump_nd_sbp_signature_for_op_conf_fn -%}
-  static Maybe<void> DumpNdSbpSignatureForOpConf(const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf);
+  static Maybe<void> DumpNdSbpSignatureForOpConfFn(const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf);
   {% endif -%}
   {% if op.has_logical_tensor_desc_infer_fn -%}
   static Maybe<void> InferLogicalTensorDesc(user_op::InferContext* ctx);
