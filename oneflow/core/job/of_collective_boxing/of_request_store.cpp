@@ -42,6 +42,13 @@ OfRequestEntry::OfRequestEntry(const RequestDesc& desc) : desc_(desc) {
   elem_cnt_ = Shape(desc.op_desc().shape()).elem_cnt();
   size_in_bytes_ = elem_cnt_ * GetSizeOfDataType(desc.op_desc().data_type());
   device_set_symbol_.reset(desc.device_set());
+
+  FOR_EACH(id7nego_tree_info, desc.negotiation_tree_topo()) {
+    auto nego_tree_info = RuntimeNegoTreeInfo();
+    nego_tree_info.upstream_id = id7nego_tree_info->second.upstream_id();
+    nego_tree_info.downstream_id = PbRf2StdVec(id7nego_tree_info->second.downstream_id());
+    nego_tree_topo_[id7nego_tree_info->first] = std::move(nego_tree_info);
+  }
 }
 
 void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {

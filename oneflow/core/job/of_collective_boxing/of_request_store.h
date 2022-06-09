@@ -27,6 +27,11 @@ namespace boxing {
 
 namespace of_collective {
 
+struct RuntimeNegoTreeInfo {
+  int64_t upstream_id;
+  std::vector<int64_t> downstream_id;
+};
+
 class OfRequestEntry final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfRequestEntry);
@@ -61,6 +66,8 @@ class OfRequestEntry final {
   std::map<int64_t, int64_t> global_rank2local_rank_;
   int64_t elem_cnt_;
   int64_t size_in_bytes_;
+
+  std::map<int64_t, RuntimeNegoTreeInfo> nego_tree_topo_;
 
   Symbol<DeviceSet> device_set_symbol_;
 };
