@@ -71,6 +71,26 @@ if(NOT Python_NumPy_INCLUDE_DIRS)
 endif()
 message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 
+message(STATUS "Getting numpy version..")
+execute_process(COMMAND ${Python_EXECUTABLE} -c "import numpy; print(numpy.__version__)"
+                OUTPUT_VARIABLE NumPy_VERSION RESULT_VARIABLE ret_code)
+if (NOT ret_code EQUAL 0)
+  message(FATAL_ERROR "Cannot get numpy version")
+endif()
+message(STATUS "numpy version: ${NumPy_VERSION}")
+
+message(STATUS "Getting numpy c api feature version..")
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E echo "#include <numpy/arrayobject.h>\nNPY_FEATURE_VERSION"
+  OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp)
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -E ${CMAKE_CURRENT_BINARY_DIR}/temp.cpp -I ${Python_NumPy_INCLUDE_DIRS} -I ${Python_INCLUDE_DIRS} 
+                COMMAND tail -1
+                OUTPUT_VARIABLE NumPy_C_API_FEATURE_VERSION RESULT_VARIABLE ret_code ERROR_QUIET)
+if (NOT ret_code EQUAL 0)
+  message(FATAL_ERROR "Cannot get numpy c api feature version")
+endif()
+message(STATUS "numpy c api feature version: ${NumPy_C_API_FEATURE_VERSION}")
+
 # PYTHON_EXECUTABLE will be used by pybind11
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 include(pybind11)

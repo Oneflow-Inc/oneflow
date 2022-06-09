@@ -109,8 +109,11 @@ bool PyArrayCheckBoolScalar(PyObject* obj) {
 // https://numpy.org/doc/stable/reference/c-api/array.html#importing-the-api
 Maybe<void> InitNumpyCAPI() {
   CHECK_ISNULL_OR_RETURN(PyArray_API);
-  CHECK_EQ_OR_RETURN(_import_array(), 0)
-      << ". Unable to import Numpy array, try to upgrade Numpy version!";
+  if (_import_array() < 0) {
+    PyErr_Print();
+    return Error::RuntimeError() << "numpy.core.multiarray failed to import. Please check the "
+                                    "above error message for more information.";
+  }
   return Maybe<void>::Ok();
 }
 
