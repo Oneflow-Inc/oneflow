@@ -1354,9 +1354,12 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       // padded_embedding_size) then slice to out from (num_unique, padded_embedding_size) to
       // (num_unique, embedding_size) should memset cur_rank_unique_embedding_grad all tensor for
       // amp count_not_finite
+      // OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
+      //                              cur_rank_unique_embedding_grad->shape().elem_cnt() *
+      //                              sizeof(T), cuda_stream));
+      // TODO: use attr, memset all when dynamic loss scale.
       OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
-                                    cur_rank_unique_embedding_grad->shape().elem_cnt() * sizeof(T),
-                                    cuda_stream));
+                                    num_unique * padded_embedding_size * sizeof(T), cuda_stream));
       UniqueCurRankEmbeddingGrad(ctx->stream(), data_type, cur_rank_num_ids, num_unique,
                                  embedding_size, padded_embedding_size, received_embedding_grad,
                                  reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
