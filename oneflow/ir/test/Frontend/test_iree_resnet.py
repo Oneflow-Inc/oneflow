@@ -41,8 +41,9 @@ def _test_iree_resnet_cpu(test_case):
             return self.model(x)
 
     func = Runner(GraphModule, return_numpy=True)
-    data = np.ones([1, 3, 224, 224]).astype(np.float32)
-    input = flow.tensor(data, requires_grad=False)
+    # data = np.ones([1, 3, 224, 224]).astype(np.float32)
+    # input = flow.tensor(data, requires_grad=False)
+    input = flow.ones([1, 3, 224, 224])
     f = GraphModule()
     for iter in range(3):
         print("======== in cpu iter" + str(iter + 1))
@@ -78,8 +79,9 @@ def _test_iree_resnet_cuda(test_case):
             return self.model(x)
 
     func = Runner(GraphModule, return_numpy=True).cuda()
-    data = np.ones([1, 3, 224, 224]).astype(np.float32)
-    input = flow.tensor(data, requires_grad=False).cuda()
+    # data = np.ones([1, 3, 224, 224]).astype(np.float32)
+    # input = flow.tensor(data, requires_grad=False).cuda()
+    input = flow.ones([1, 3, 224, 224])
     f = GraphModule()
     for iter in range(3):
         print("======== in cuda iter" + str(iter + 1))

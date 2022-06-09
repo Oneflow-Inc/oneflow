@@ -157,8 +157,6 @@ struct OutputOpLowering final : public OpConversionPattern<OutputOp> {
                                 ConversionPatternRewriter& rewriter) const override {
     // TODO: more choices to passing data between tosa and oneflow
     auto newValues = op.input();
-    auto is_block_arg = newValues.dyn_cast<BlockArgument>() != nullptr;
-    if (!is_block_arg) op->emitError("output is not block arg");
     rewriter.replaceOp(op, newValues);
     return success();
   }
