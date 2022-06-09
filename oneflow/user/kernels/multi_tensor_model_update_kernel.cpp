@@ -98,6 +98,116 @@ REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif
 
+template<DeviceType device_type, typename T, typename G>
+class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
+ public:
+  MultiTensorAdamUpdateKernel() = default;
+  ~MultiTensorAdamUpdateKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const int64_t n_tensor = ctx->input_size("model");
+    const auto scale = ctx->Attr<double>("scale");
+    const float l1 = ctx->Attr<float>("l1");
+    const float l2 = ctx->Attr<float>("l2");
+    const float beta1 = ctx->Attr<float>("beta1");
+    const float beta2 = ctx->Attr<float>("beta2");
+    const float epsilon = ctx->Attr<float>("epsilon");
+    const float weight_decay = ctx->Attr<float>("weight_decay");
+    const bool amsgrad = ctx->Attr<bool>("amsgrad");
+    const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+
+    const float* learning_rate_ptr = nullptr;
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
+
+    const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
+    const float* bias_correction1_ptr = nullptr;
+    if (ctx->has_input("bias_correction1", 0)) {
+      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      bias_correction1_ptr = bias_correction1->dptr<float>();
+    }
+
+    const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
+    const float* bias_correction2_ptr = nullptr;
+    if (ctx->has_input("bias_correction2", 0)) {
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
+      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      bias_correction2_ptr = bias_correction2->dptr<float>();
+    }
+
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), ctx->Tensor4ArgNameAndIndex("model", 0)->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
+
+    TensorTupleParams<T, G, 5> tensor_tuple_params{};
+    int32_t count = 0;
+    int32_t total_elem_cnt = 0;
+    for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
+      tensor_tuple_params.model_diff_addresses[count] =
+          (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr<G>();
+      tensor_tuple_params.model_addresses[0][count] =
+          (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr<T>();
+      tensor_tuple_params.model_addresses[1][count] =
+          (ctx->Tensor4ArgNameAndIndex("m", tensor_idx))->mut_dptr<T>();
+      tensor_tuple_params.model_addresses[2][count] =
+          (ctx->Tensor4ArgNameAndIndex("v", tensor_idx))->mut_dptr<T>();
+      if (amsgrad) {
+        tensor_tuple_params.model_addresses[3][count] =
+            (ctx->Tensor4ArgNameAndIndex("max_v", tensor_idx))->mut_dptr<T>();
+      }
+      const int64_t tensor_elem_cnt =
+          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape().elem_cnt();
+      tensor_tuple_params.sizes[count] = tensor_elem_cnt;
+
+      count += 1;
+      total_elem_cnt += tensor_elem_cnt;
+      if (count == max_tensors[1] || tensor_idx == n_tensor - 1) {
+        MultiTensorAdamUpdateKernelUtil<device_type, T, G>::Update(
+            ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, beta1, beta2,
+            epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val,
+            bias_correction1_val, bias_correction2_val, learning_rate_ptr, scale_by_ptr,
+            skip_if_ptr, bias_correction1_ptr, bias_correction2_ptr, tensor_tuple_params);
+        count = 0;
+        total_elem_cnt = 0;
+      }
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(device, dtype, gtype)             \
+  REGISTER_USER_KERNEL("multi_tensor_adam_update")                                        \
+      .SetCreateFn<MultiTensorAdamUpdateKernel<device, dtype, gtype>>()                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+
+REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float);
+REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
+REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif
+
 }  // namespace
 
 }  // namespace oneflow

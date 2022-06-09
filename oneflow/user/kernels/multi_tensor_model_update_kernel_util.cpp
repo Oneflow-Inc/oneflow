@@ -45,7 +45,43 @@ void MultiTensorSGDUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
   }
 }
 
-template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCPU, float, float>;
-template struct MultiTensorSGDUpdateKernelUtil<DeviceType::kCPU, double, double>;
+template<typename T, typename G>
+struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCPU, T, G> {
+  static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
+                     float l1, float l2, float beta1, float beta2, float epsilon,
+                     float weight_decay, bool amsgrad, bool do_bias_correction,
+                     float learning_rate_val, float bias_correction1_val,
+                     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const float* bias_correction1,
+                     const float* bias_correction2, TensorTupleParams<T, G, 5> tensor_tuple_params);
+};
+
+template<typename T, typename G>
+void MultiTensorAdamUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
+    float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
+    bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
+    float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
+    TensorTupleParams<T, G, 5> tensor_tuple_params) {
+  if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
+  if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  for (int64_t tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
+    const int64_t tensor_elem_cnt = tensor_tuple_params.sizes[tensor_idx];
+    for (int64_t i = 0; i < tensor_elem_cnt; i++) {
+      AdamUpdateFunctor<T, G>()(tensor_tuple_params.model_diff_addresses[tensor_idx] + i,
+                                tensor_tuple_params.model_addresses[0][tensor_idx] + i,
+                                tensor_tuple_params.model_addresses[1][tensor_idx] + i,
+                                tensor_tuple_params.model_addresses[2][tensor_idx] + i,
+                                tensor_tuple_params.model_addresses[3][tensor_idx] + i, scale, l1,
+                                l2, beta1, beta2, epsilon, weight_decay, amsgrad,
+                                bias_correction1_val, bias_correction2_val, learning_rate_val);
+    }
+  }
+}
+
+template struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCPU, float, float>;
+template struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCPU, double, double>;
 
 }  // namespace oneflow
