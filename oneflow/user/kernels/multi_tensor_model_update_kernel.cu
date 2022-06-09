@@ -77,7 +77,7 @@ constexpr int kUnrollSize = 2;
 //          i += blockDim.x * gridDim.x * kUnrollSize) {
 //       #pragma unroll
 //       for(int32_t ilp = 0; ilp < kUnrollSize; ilp++){
-//         int64_t actual_idx = i + ilp * v_block_id * blockDim.x; 
+//         int64_t actual_idx = i + ilp * blockDim.x; 
 //         if(actual_idx < tensor_elem_cnt){
 //           SGDUpdateFunctor<T, G>()(meta_data.model_diff_addresses[tensor_idx] + actual_idx,
 //                                meta_data.model_addresses[tensor_idx] + actual_idx, scale, l1, l2,
@@ -111,7 +111,7 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
 
       #pragma unroll
       for(int32_t ilp = 0; ilp < kUnrollSize; ilp++){
-        int64_t actual_idx = i + ilp * v_block_id * blockDim.x; 
+        int64_t actual_idx = i + ilp * blockDim.x; 
         if(actual_idx < tensor_elem_cnt){
           model_val[ilp] = *(meta_data.model_addresses[tensor_idx] + actual_idx); 
           model_diff[ilp] = *(meta_data.model_diff_addresses[tensor_idx] + actual_idx); 
@@ -120,7 +120,7 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
 
       #pragma unroll
       for(int32_t ilp = 0; ilp < kUnrollSize; ilp++){
-        int64_t actual_idx = i + ilp * v_block_id * blockDim.x; 
+        int64_t actual_idx = i + ilp * blockDim.x; 
         if(actual_idx < tensor_elem_cnt){
           model_diff[ilp] = CastScaleRegularizeGradientFunctor<T, G>()(model_diff[ilp], model_val[ilp], scale, l1, l2); 
           model_val[ilp] = model_val[ilp] - learning_rate_val * (model_diff[ilp] + weight_decay * model_val[ilp]); 
@@ -129,7 +129,7 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
 
       #pragma unroll
       for(int32_t ilp = 0; ilp < kUnrollSize; ilp++){
-        int64_t actual_idx = i + ilp * v_block_id * blockDim.x; 
+        int64_t actual_idx = i + ilp * blockDim.x; 
         if(actual_idx < tensor_elem_cnt){
           *(meta_data.model_addresses[tensor_idx] + actual_idx) = model_val[ilp]; 
         }
@@ -210,10 +210,15 @@ class MultiTensorSGDUpdateKernel final : public user_op::OpKernel,
           tensor_tuple_params.block_offset[i] =
               ((tensor_tuple_params.sizes[i] + kBlockSize * kUnrollSize - 1) / (kBlockSize * kUnrollSize)) % grid_size;
         }
+        // MultiTensorSGDUpdateGpu<T, G, 2>
+        //     <<<grid_size, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        //         count, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val,
+        //         learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
         MultiTensorSGDUpdateGpu<T, G, 2>
-            <<<grid_size, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            <<<4, 32, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
                 count, static_cast<T>(scale), l1, l2, weight_decay, learning_rate_val,
                 learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
+        
         count = 0;
         total_elem_cnt = 0;
       }
