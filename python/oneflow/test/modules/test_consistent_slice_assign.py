@@ -54,7 +54,6 @@ def _test_graph_logical_slice_assign(test_case, placement, sbp):
     ref = random_tensor(2, 8, 16, requires_grad=True).oneflow
     value = random_tensor(2, 8, 8, requires_grad=True).oneflow
 
-
     class LogicalSliceAssignWithGrad(flow.nn.Module):
         def __init__(self):
             super().__init__()
