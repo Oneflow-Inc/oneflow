@@ -763,17 +763,29 @@ class DimGatherFunctor {
         << Error::RuntimeError() << "gather(): Expected dtype int32 or int64 for index";
     CHECK_EQ_OR_RETURN(sparse_grad, false)
         << Error::RuntimeError() << "Only support bool = False for now!";
+   
     JUST(maybe_wrap_dim(dim, index->ndim()));
-    CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
-        << Error::RuntimeError()
-        << "Index tensor must have the same number of dimensions as input tensor";
-
-    FOR_RANGE(int32_t, i, 0, input->ndim()) {
-      if (i != dim) {
-        CHECK_LE_OR_RETURN(index->shape()->At(i), input->shape()->At(i))
-            << Error::RuntimeError() << "Size does not match at dimension " << i
-            << " expected index " << *(index->shape()) << " to be smaller than self "
-            << *(input->shape()) << " apart from dimension " << dim;
+    if (input->ndim() > 0 && index->ndim() > 0) {
+      CHECK_EQ_OR_RETURN(input->ndim(), index->ndim())
+          << Error::RuntimeError()
+          << "Index tensor must have the same number of dimensions as input tensor";
+    } else if (input->ndim() == 0) {
+      CHECK_LE_OR_RETURN(index->ndim(), 1)
+          << Error::RuntimeError()
+          << "Index tensor must have the same number of dimensions as input tensor";
+    } else {
+      CHECK_LE_OR_RETURN(input->ndim(), 1)
+          << Error::RuntimeError()
+          << "Index tensor must have the same number of dimensions as input tensor";
+    }
+    if (input->ndim() > 0 && index->ndim() > 0) {
+      FOR_RANGE(int32_t, i, 0, input->ndim()) {
+        if (i != dim) {
+          CHECK_LE_OR_RETURN(index->shape()->At(i), input->shape()->At(i))
+              << Error::RuntimeError() << "Size does not match at dimension " << i
+              << " expected index " << *(index->shape()) << " to be smaller than self "
+              << *(input->shape()) << " apart from dimension " << dim;
+        }
       }
     }
 
