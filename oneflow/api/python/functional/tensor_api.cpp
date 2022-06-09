@@ -239,6 +239,9 @@ class LocalTensorSharedNumpyDataFunctor {
     if (!PyArray_IS_C_CONTIGUOUS(array)) {
       OF_LOG_ONCE(LOG(WARNING) << "OneFlow don't support non-contiguous array now, "
                                   "and we will copy the array to a contiguous one.");
+      // PyArray_GETCONTIGUOUS will return a reference if array is already contiguous,
+      // otherwise return a (contiguous) copy of the array.
+      // Note: Increment the reference count for array occurs whether the array is continuous or not
       array = PyArray_GETCONTIGUOUS(array);
     } else {
       Py_INCREF(obj);
