@@ -93,11 +93,11 @@ jobs:
           clean-ccache: true
           nightly: ${{ github.event_name == 'schedule' }}
           python-versions: |
+            3.10
+            3.9
+            3.8
             3.6
             3.7
-            3.8
-            3.9
-            3.10
       - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
