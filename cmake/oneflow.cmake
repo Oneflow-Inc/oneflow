@@ -317,8 +317,8 @@ endif()
 if(BUILD_PYTHON)
 
   # py ext lib
-  # This library should be static to make sure all python symbols are included in the final so
-  # It is safe to do wheel audit of multiple python version in parallel.
+  # This library should be static to make sure all python symbols are included in the final ext shared lib,
+  # so that it is safe to do wheel audits of multiple pythons version in parallel.
   oneflow_add_library(of_pyext_obj STATIC ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                   ${Python_NumPy_INCLUDE_DIRS})
