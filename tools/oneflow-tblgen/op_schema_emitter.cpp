@@ -142,6 +142,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitBit(def, "has_output_blob_time_shape_infer_fn", &op);
     emitBit(def, "has_sbp_signature_infer_fn", &op);
     emitBit(def, "has_get_nd_sbp_fn", &op);
+    emitBit(def, "has_dump_nd_sbp_signature_for_op_conf_fn", &op);
     emitBit(def, "has_compute_complexity_fn", &op);
     emitBit(def, "has_check_fn", &op);
     ops[op_name.str()] = op;

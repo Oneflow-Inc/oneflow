@@ -128,6 +128,19 @@ Maybe<void> VariableOp::InferNdSbpSignature(
   return Maybe<void>::Ok();
 }
 
+Operator::DumpNdSbpSignatureForOpConfFn VariableOp::GetDumpNdSbpSignatureForOpConfFn() const {
+  return [](const NdSbpSignature& nd_sbp_sig, OperatorConf* op_conf) -> Maybe<void> {
+    CHECK_OR_RETURN(op_conf->has_variable_conf()) << "VariableOp don't set variable op_conf";
+    op_conf->mutable_variable_conf()->clear_nd_sbp();
+    const auto& nd_sbp = nd_sbp_sig.bn_in_op2nd_sbp().at("out");
+
+    for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
+      op_conf->mutable_variable_conf()->mutable_nd_sbp()->Add(SbpParallelToString(sbp_parallel));
+    }
+    return Maybe<void>::Ok();
+  };
+}
+
 REGISTER_OP(OperatorConf::kVariableConf, VariableOp);
 REGISTER_OP_SAME_OUTPUT_BLOB_REGST_NUM(OperatorConf::kVariableConf, 1);
 REGISTER_INTERFACE_OP(OperatorConf::kVariableConf);

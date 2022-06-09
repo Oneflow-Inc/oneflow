@@ -218,6 +218,12 @@ OpRegistry& OpRegistry::SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn get_n
   return *this;
 }
 
+OpRegistry& OpRegistry::SetDumpNdSbpSignatureForOpConfFn(
+    Operator::DumpNdSbpSignatureForOpConfFn fn) {
+  result_.dump_nd_sbp_signature_for_op_conf_fn = std::move(fn);
+  return *this;
+}
+
 Maybe<OpRegistry&> OpRegistry::Finish() {
   CHECK_OR_RETURN(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;

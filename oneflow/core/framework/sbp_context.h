@@ -96,6 +96,8 @@ struct GetSbpFnUtil {
 };
 
 Maybe<void> InferNdSbp4SrcOp(user_op::InferNdSbpFnContext* ctx, const SbpParallel& default_sbp);
+Maybe<void> DumpNdSbpSignatureForOpConf4SrcOp(const NdSbpSignature& nd_sbp_sig,
+                                              const std::string& blob_name, OperatorConf* op_conf);
 
 }  // namespace user_op
 

@@ -87,37 +87,21 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
   for (auto& op_conf : *job->mutable_net()->mutable_op()) {
     const OpNode* node = op_graph.OpNode4OpName(op_conf.name());
     SbpNode<NdSbpSignature>* sbp_node = op_name2sbp_node_[node->op().op_name()];
+    const NdSbpSignature& nd_sbp_sig = *sbp_node->FinalSbpSignature();
     // Update NdSbpSignature
     (*job->mutable_job_parallel_view_conf()
           ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]
-        .CopyFrom(*sbp_node->FinalSbpSignature());
+        .CopyFrom(nd_sbp_sig);
     // If we have 1D SbpSignature Conf
     if (node->parallel_desc().hierarchy()->NumAxes() == 1) {
       // Update SbpSignature
       SbpSignature sbp_signature;
-      NdSbpSignatureToSbpSignature(*sbp_node->FinalSbpSignature(), &sbp_signature);
+      NdSbpSignatureToSbpSignature(nd_sbp_sig, &sbp_signature);
       (*job->mutable_job_parallel_view_conf()
             ->mutable_op_name2sbp_signature_conf())[node->op().op_name()]
           .CopyFrom(sbp_signature);
     }
-    // TODO: Specially update sbp conf by using polymorphism function
-    // Update sbp for variable op
-    if (op_conf.has_variable_conf()) {
-      op_conf.mutable_variable_conf()->clear_nd_sbp();
-      const auto& nd_sbp = sbp_node->FinalSbpSignature()->bn_in_op2nd_sbp().at("out");
-      for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
-        op_conf.mutable_variable_conf()->mutable_nd_sbp()->Add(SbpParallelToString(sbp_parallel));
-      }
-    } else if (op_conf.has_user_conf() && op_conf.name().find("uniform") != std::string::npos
-               && /*is_source_op=*/node->op().input_bns().empty()) {
-      const auto& nd_sbp = sbp_node->FinalSbpSignature()->bn_in_op2nd_sbp().at("out_0");
-      std::vector<std::string> nd_sbp_str_list = *JUST(GetNdSbpStrList(nd_sbp));
-      *op_conf.mutable_user_conf()
-           ->mutable_attr()
-           ->at("nd_sbp")
-           .mutable_at_list_string()
-           ->mutable_val() = {nd_sbp_str_list.begin(), nd_sbp_str_list.end()};
-    }
+    JUST(node->op().GetDumpNdSbpSignatureForOpConfFn()(nd_sbp_sig, &op_conf));
   }
   return Maybe<void>::Ok();
 }
