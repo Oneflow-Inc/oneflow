@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/extension/python/numpy.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif
@@ -85,17 +86,29 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #endif  // RPC_BACKEND_LOCAL
   });
 
-#define STRINGIFY(x) STRINGIFY_(x)
-#define STRINGIFY_(x) #x
   m.def("cmake_build_type", []() {
 #ifdef ONEFLOW_CMAKE_BUILD_TYPE
-    return std::string(STRINGIFY(ONEFLOW_CMAKE_BUILD_TYPE));
+    return std::string(OF_PP_STRINGIZE(ONEFLOW_CMAKE_BUILD_TYPE));
 #else
     return std::string("Undefined");
 #endif  // ONEFLOW_CMAKE_BUILD_TYPE
   });
-#undef STRINGIFY
-#undef STRINGIFY_
+
+  m.def("compile_time_numpy_include_dir", []() {
+#ifdef ONEFLOW_NP_INCLUDE_DIR
+    return std::string(OF_PP_STRINGIZE(ONEFLOW_NP_INCLUDE_DIR));
+#else
+#error "ONEFLOW_NP_INCLUDE_DIR is not defined"
+#endif
+  });
+
+  m.def("compile_time_numpy_c_api_feature_version", []() {
+#ifdef NPY_FEATURE_VERSION
+    return std::string(OF_PP_STRINGIZE(NPY_FEATURE_VERSION));
+#else
+#error "NPY_FEATURE_VERSION is not defined"
+#endif
+  });
 }
 
 }  // namespace oneflow

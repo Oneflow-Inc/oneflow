@@ -338,6 +338,8 @@ if(BUILD_PYTHON)
                              ${oneflow_third_party_libs} of_pyext_obj glog::glog)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})
+  target_compile_definitions(oneflow_internal PRIVATE
+                             ONEFLOW_NP_INCLUDE_DIR=${Python_NumPy_INCLUDE_DIRS})
 
   target_compile_definitions(oneflow_internal PRIVATE ONEFLOW_CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
   if(WITH_MLIR)
