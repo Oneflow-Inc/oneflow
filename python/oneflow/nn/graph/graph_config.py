@@ -120,7 +120,9 @@ class GraphConfig(object):
         if stage >= 1:
             self.proto.optimizer_placement_optimization_mode = "distributed_split"
             self.proto.optimizer_placement_optimization_threshold = shard_min_size
-            self.proto.optimizer_placement_optimization_shard_restore_level = shard_restore_level
+            self.proto.optimizer_placement_optimization_shard_restore_level = (
+                shard_restore_level
+            )
         if stage >= 2:
             nccl_config.enable_use_compute_stream(True)
         if stage >= 3:

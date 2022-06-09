@@ -54,10 +54,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                 self.config.enable_amp(True)
                 self.set_grad_scaler(grad_scaler)
                 self.config.enable_zero(
-                    True,
-                    stage=zero_stage,
-                    shard_min_size=1,
-                    shard_restore_level=0,
+                    True, stage=zero_stage, shard_min_size=1, shard_restore_level=0,
                 )
                 self.debug(2)
 
@@ -133,14 +130,14 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
                     super().__init__()
                     self.dp_mp = linear_dp_mp
                     self.mp_dp = linear_mp_dp
-                
+
                 def forward(self, x):
                     x = self.dp_mp(x)
                     x = flow.relu(x)
                     x = self.mp_dp(x)
                     x = flow.relu(x)
                     return x
-            
+
             return MixedLinear()
 
         mixed_linear0 = get_mixed_linear()
@@ -170,10 +167,7 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
                 self.config.enable_amp(True)
                 self.set_grad_scaler(grad_scaler)
                 self.config.enable_zero(
-                    True,
-                    stage=zero_stage,
-                    shard_min_size=1,
-                    shard_restore_level=1,
+                    True, stage=zero_stage, shard_min_size=1, shard_restore_level=1,
                 )
 
             def build(self, x):
@@ -186,8 +180,8 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
         class LinearEvalGraph2DWithZeRO(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.mixed_linear0 = mixed_linear0 
-                self.mixed_linear1 = mixed_linear1 
+                self.mixed_linear0 = mixed_linear0
+                self.mixed_linear1 = mixed_linear1
 
                 self.config.enable_amp(True)
 
@@ -201,7 +195,7 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
         def one_train_iter():
             out = linear_t_g(x)
-            #if flow.env.get_rank() == 0:
+            # if flow.env.get_rank() == 0:
             #    print(linear_t_g)
 
         def one_eval_iter():
@@ -211,7 +205,9 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
             one_train_iter()
 
         for state in linear_t_g._state():
-            test_case.assertEqual(state.origin.sbp, (oneflow.sbp.split(axis=0), oneflow.sbp.split(axis=0)))
+            test_case.assertEqual(
+                state.origin.sbp, (oneflow.sbp.split(axis=0), oneflow.sbp.split(axis=0))
+            )
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).
         # But their consumer will consum them as flow.sbp.broadcast.
@@ -245,7 +241,6 @@ class TestLinearTrainGraph2DWithZeRO(oneflow.unittest.TestCase):
 
     def test_linear_train_graph_2d_with_zero_1(test_case):
         _test_linear_train_graph_2d_with_zero(test_case, 1)
-
 
 
 if __name__ == "__main__":
