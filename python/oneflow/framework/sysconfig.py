@@ -55,7 +55,6 @@ def get_liboneflow_link_flags() -> List[str]:
     return [
         f"-L{oneflow_python_libs_path}",
         f"-l:oneflow",
-        f"-l:of_pyext_obj",
         f"-l:of_protoobj",
     ]
 
