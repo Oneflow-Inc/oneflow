@@ -110,6 +110,30 @@ class ConvDataGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class EmbeddingGradFunctor {
+ public:
+  EmbeddingGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_grad")
+                         .Input("dy")
+                         .Input("weight")
+                         .Input("indices")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& indices, const int64_t& padding_idx,
+                           const bool& scale_grad_by_freq) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("padding_idx", padding_idx));
+    JUST(attrs.SetAttr<bool>("scale_grad_by_freq", scale_grad_by_freq));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, indices}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class MaxPoolNdGradFunctor {
  public:
   MaxPoolNdGradFunctor() {
@@ -925,8 +949,11 @@ class CublasBiasAddReluMatmulGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const std::shared_ptr<one::Tensor>& weight,
-                                const std::shared_ptr<one::Tensor>& aux) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux});
+                                const std::shared_ptr<one::Tensor>& aux,
+                                const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux}, attrs);
   }
 
  private:
@@ -946,6 +973,23 @@ class CublasMatmulBiasAddGradFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const std::shared_ptr<one::Tensor>& x) const {
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class FusedReluDropoutGradFunctor {
+ public:
+  FusedReluDropoutGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("fused_relu_dropout_grad").Input("dy").Input("mask").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
+    MutableAttrMap attr_map;
+    JUST(attr_map.SetAttr<float>("scale", scale));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, mask}, attr_map);
   }
 
  private:
@@ -1013,6 +1057,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvBiasGradFunctor>("ConvBiasGrad");
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
+  m.add_functor<impl::EmbeddingGradFunctor>("EmbeddingGrad");
   m.add_functor<impl::TFPoolNdGradFunctor>("TFPoolNdGrad");
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::KLDivLossGradFunctor>("KLDivLossGrad");
@@ -1043,6 +1088,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
   m.add_functor<impl::CublasBiasAddReluMatmulGradFunctor>("CublasBiasAddReluMatmulGrad");
   m.add_functor<impl::CublasMatmulBiasAddGradFunctor>("CublasMatmulBiasAddGrad");
+  m.add_functor<impl::FusedReluDropoutGradFunctor>("FusedReluDropoutGrad");
   m.add_functor<impl::FusedDotFeatureInteractionGradFunctor>("FusedDotFeatureInteractionGrad");
 };
 
