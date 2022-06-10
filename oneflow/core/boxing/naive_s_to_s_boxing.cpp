@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/boxing/slice_boxing_util.h"
 
 namespace oneflow {
 
@@ -27,6 +28,7 @@ bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckNaiveSToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
@@ -38,6 +40,7 @@ Maybe<void> RawCheckNaiveSToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   CHECK_EQ_OR_RETURN(in->placement()->device_tag(), out->placement()->device_tag());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckNaiveSToS = DECORATE(&RawCheckNaiveSToS, ThreadLocalCachedCopiable);
 
@@ -46,9 +49,14 @@ static constexpr auto* CheckNaiveSToS = DECORATE(&RawCheckNaiveSToS, ThreadLocal
 Maybe<one::Tensor> NaiveSToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                              Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
+  CHECK_OR_RETURN(tensor_placement == in->placement())
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in->placement())) << ")";
   const auto& in_sbp_list = JUST(GetSbpList(tensor_nd_sbp));
   const auto& out_sbp_list = JUST(GetSbpList(out->nd_sbp()));
 
@@ -67,6 +75,9 @@ Maybe<one::Tensor> NaiveSToS(const std::shared_ptr<one::Tensor>& tensor, Symbol<
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("naive-s-to-s", CheckNaiveSToS, &NaiveSToS));
+static constexpr auto* NaiveSToSWithAutoConvert =
+    EAGER_SLICE_BOXING_WARPPER(&NaiveSToS, EagerSliceBoxingType::kNaiveSToS);
+
+COMMAND(RegisterBoxingFunction("naive-s-to-s", CheckNaiveSToS, NaiveSToSWithAutoConvert));
 
 }  // namespace oneflow

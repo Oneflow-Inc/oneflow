@@ -23,8 +23,8 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/xrt/utility/env.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/common/wrap_dim_utils.h"
 
 namespace oneflow {
 namespace one {
@@ -33,7 +33,7 @@ namespace view {
 // NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
 // If  set true, then do not use view mechanism(and view ops)
 bool IsEnvViewDisabled() {
-  static const bool env_view_disabled = EnvToBool(ONEFLOW_DISABLE_VIEW, false);
+  static const bool env_view_disabled = ParseBooleanFromEnv("ONEFLOW_DISABLE_VIEW", false);
   return env_view_disabled;
 }
 
@@ -401,12 +401,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   CHECK_EQ_OR_RETURN(permute.size(), ndim)
       << "permute size should be equal to input tensor's ndim, but got " << permute.size();
   auto positive_perm = permute;
-  for (auto i = 0; i < positive_perm.size(); i++) {
-    if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
-    CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
-        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
-        << ndim << " ) but got " << positive_perm[i];
-  }
+  for (auto i = 0; i < positive_perm.size(); i++) { JUST(maybe_wrap_dim(positive_perm[i], ndim)); }
 
   DimVector target_dims(ndim);
   DimVector stride_vec(ndim);

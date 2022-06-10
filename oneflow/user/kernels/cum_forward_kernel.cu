@@ -187,6 +187,7 @@ class GpuCumSumKernel final : public GpuCumKernel<T, SumFunctor> {
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTmpBufferSize<dtype, SumFunctor>);
 
+REGISTER_CUDA_CUMSUM_KERNEL(int32_t)
 REGISTER_CUDA_CUMSUM_KERNEL(int64_t)
 REGISTER_CUDA_CUMSUM_KERNEL(float)
 REGISTER_CUDA_CUMSUM_KERNEL(double)
@@ -206,6 +207,7 @@ class GpuCumProdKernel final : public GpuCumKernel<T, ProdFunctor> {
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferTmpBufferSize<dtype, ProdFunctor>);
 
+REGISTER_CUDA_CUMPROD_KERNEL(int32_t)
 REGISTER_CUDA_CUMPROD_KERNEL(int64_t)
 REGISTER_CUDA_CUMPROD_KERNEL(float)
 REGISTER_CUDA_CUMPROD_KERNEL(double)

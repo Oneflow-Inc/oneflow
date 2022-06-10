@@ -310,13 +310,18 @@ std::string GetErrorString(const std::shared_ptr<ErrorProto>& error) {
   if (IsInDebugMode()) {
     return GetStackedErrorString(error);
   } else {
-    return error->msg();
+    if (error->msg().empty() && error->stack_frame().size() > 0) {
+      return error->stack_frame(0).error_msg();
+    } else {
+      return error->msg();
+    }
   }
 }
 
 void ThrowError(const std::shared_ptr<ErrorProto>& error) {
   *MutThreadLocalError() = error;
   if (error->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
+  if (error->has_type_error()) { throw TypeException(GetErrorString(error)); }
   if (error->has_index_error()) { throw IndexException(GetErrorString(error)); }
   if (error->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
   throw Exception(GetStackedErrorString(error));

@@ -158,22 +158,6 @@ message MemoryAllocationAlgorithmConf {
   optional bool use_time_line_algo = 3 [default = false];
 }
 
-message XrtConfig {
-  message XlaConfig {
-    // TODO
-  }
-  message TensorRTConfig {
-    optional bool use_fp16 = 1 [default = false];
-    optional bool use_int8 = 2 [default = false];
-    optional string int8_calibration = 3;
-  }
-  optional bool use_xla_jit = 1 [default = false];
-  optional bool use_tensorrt = 2 [default = false];
-  optional bool use_openvino = 5 [default = false];
-  optional XlaConfig xla_config = 3;
-  optional TensorRTConfig tensorrt_config = 4;
-}
-
 message QatConfig {
   optional bool per_channel_weight_quantization = 1 [default = false];
   optional bool symmetric = 2 [default = true];
@@ -221,8 +205,6 @@ message JobConfigProto {
   }
 
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
-
-  optional XrtConfig xrt_config = 103;
 
   optional IndexedSlicesOptimizerConf indexed_slices_optimizer_conf = 104;
   optional bool enable_fuse_model_update_ops = 105 [default = false];

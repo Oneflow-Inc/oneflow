@@ -26,7 +26,6 @@ class AttrVal;
 }
 class AttrValue;
 class MutableAttrMap;
-class MutableCfgAttrMap;
 
 // Make sure AttrName2AttrVal is a ordered map.
 using AttrName2AttrVal = std::map<std::string, std::shared_ptr<const user_op::AttrVal>>;
@@ -71,7 +70,6 @@ class AttrMap final {
   AttrMap(std::initializer_list<value_type> init);
 
   AttrMap(const MutableAttrMap& other);  // without coping AttrVal
-  AttrMap(const MutableCfgAttrMap& other);
 
   AttrMap(const AttrMap&) = default;
   AttrMap(AttrMap&&) = default;
@@ -125,14 +123,6 @@ class ComposedAttrMap final {
 class MutableAttrMap : public std::map<std::string, std::shared_ptr<user_op::AttrVal>> {
  public:
   using std::map<std::string, std::shared_ptr<user_op::AttrVal>>::map;
-
-  template<typename T>
-  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
-};
-
-class MutableCfgAttrMap : public std::map<std::string, std::shared_ptr<AttrValue>> {
- public:
-  using std::map<std::string, std::shared_ptr<AttrValue>>::map;
 
   template<typename T>
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);

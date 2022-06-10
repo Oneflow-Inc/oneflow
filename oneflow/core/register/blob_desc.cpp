@@ -23,12 +23,12 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic)
     : shape_(std::make_shared<Shape>(shape)),
-      stride_(std::make_shared<Stride>(shape)),
+      stride_(std::shared_ptr<Stride>(new Stride(shape))),
       data_type_(dtype),
       is_dynamic_(is_dynamic) {}
 BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic)
     : shape_(std::make_shared<Shape>(shape)),
-      stride_(std::make_shared<Stride>(stride)),
+      stride_(std::shared_ptr<Stride>(new Stride(stride))),
       data_type_(dtype),
       is_dynamic_(is_dynamic) {}
 BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,

@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <type_traits>
 
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
@@ -56,19 +57,19 @@ class Scalar {
   }
 
   template<typename T, typename std::enable_if<std::is_scalar<T>::value, int>::type = 0>
-  Maybe<T> As() const {
+  OF_DEVICE_FUNC T As() const {
     switch (active_tag_) {
       case HAS_B: return static_cast<T>(value_.b);
       case HAS_S: return static_cast<T>(value_.s);
       case HAS_U: return static_cast<T>(value_.u);
       case HAS_D: return static_cast<T>(value_.d);
-      default: UNIMPLEMENTED_THEN_RETURN() << "The scalar has not been initialized.";
+      default: assert(false); return 0;
     }
   }
 
   template<typename T, typename std::enable_if<std::is_scalar<T>::value, int>::type = 0>
-  T Value() const {
-    return CHECK_JUST(As<T>());
+  OF_DEVICE_FUNC T Value() const {
+    return As<T>();
   }
 
   bool IsBool() const { return active_tag_ == HAS_B; }

@@ -38,6 +38,10 @@ inline Maybe<std::string> JobBuildAndInferCtx_GetCurrentJobName() {
   return mgr->GetCurrentJobName();
 }
 
+inline Maybe<int64_t> JobBuildAndInferCtx_GetCurrentJobId() {
+  return JUST(GetCurInferCtx())->job_id();
+}
+
 inline Maybe<void> JobBuildAndInferCtx_Close() {
   auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
   JUST(mgr->CloseCurrentJobBuildAndInferCtx());

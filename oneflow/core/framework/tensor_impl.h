@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/tensor_meta.h"

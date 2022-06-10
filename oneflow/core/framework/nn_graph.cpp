@@ -262,10 +262,6 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
-  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
-  // TODO(chengcheng): CHECK job valid for each rank.
-  job_ = job_ctx->job();
-
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
   JUST(DeleteOutdatedVariableInVariableTensorMgr());
@@ -276,7 +272,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // NOTE(chengcheng): Global<JobDesc> need be clear before GlobalJobDescScope construct.
   if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
 
-  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_ctx->job_id());
+  auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
@@ -323,16 +319,14 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
   CHECK_OR_RETURN(variable_op_name2eager_blob_object_.empty()) << kOfBugIssueUploadPrompt;
   JUST(vm::CurrentRankSync());
-  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
-  auto job_id = job_ctx->job_id();
   // Create or Rebuild variable, then get the real blob.
   for (const std::string& var_name : variable_op_names_) {
     auto iter = variable_op_name2tensor_.find(var_name);
     CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
     std::shared_ptr<one::Tensor> tensor = iter->second;
     vm::EagerBlobObject* var_blob = nullptr;
-    if (plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().find(var_name)
-        == plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().end()) {
+    if (plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().find(var_name)
+        == plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().end()) {
       // Deal with variable tensor not used in nn.Graph build.
       CHECK(tensor != NULL)
           << "the tensor of " << var_name
@@ -347,7 +341,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       // Deal with tensors which are not in the nn.Module.
       // We can call these tensors as additional variables.
       const auto& op_attribute =
-          plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
+          plan_.job_id2op_attribute_ref_table().at(job_id_).op_name2op_attribute().at(var_name);
       // NOTE(chengcheng): handle constant variable created by job pass
       Symbol<ParallelDesc> placement(op_attribute.parallel_conf_signature().op_parallel_conf());
       NdSbp nd_sbp(NdSbpSignature(op_attribute.nd_sbp_signature()).bn_in_op2nd_sbp().at("out"));
@@ -400,7 +394,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
     } else if (tensor->is_consistent()) {
       // Deal with tensors which need to change sbp.
       NdSbpSignature var_nd_sbp_signature = NdSbpSignature(plan_.job_id2op_attribute_ref_table()
-                                                               .at(job_id)
+                                                               .at(job_id_)
                                                                .op_name2op_attribute()
                                                                .at(var_name)
                                                                .nd_sbp_signature());

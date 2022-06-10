@@ -26,9 +26,6 @@ Base class for running neural networks in Static Graph Mode.
             set_gradient_accumulation_steps,
             set_zero_redundancy_optimizer_mode,
             set_zero_redundancy_optimizer_min_size_after_split,
-            enable_xla_jit,
-            enable_tensorrt,
-            enable_openvino,
             enable_cudnn_conv_heuristic_search_algo,
     :member-order: bysource
 

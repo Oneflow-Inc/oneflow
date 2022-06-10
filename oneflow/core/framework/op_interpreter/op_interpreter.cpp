@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -94,7 +93,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
 // NOTE: if this op not support stride, then need to tensor->contiguous()
 #define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
   TensorTuple tmp_inputs;                                                                   \
-  if (!JUST(op_expr.SupportNonContiguous())) {                                              \
+  if (!LazyMode::is_enabled() && !JUST(op_expr.SupportNonContiguous())) {                   \
     tmp_inputs.resize(inputs.size());                                                       \
     for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
     tensor_tuple_ptr = &tmp_inputs;                                                         \

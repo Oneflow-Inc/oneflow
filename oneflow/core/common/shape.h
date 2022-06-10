@@ -26,9 +26,9 @@ limitations under the License.
 namespace oneflow {
 
 class ShapeView;
+class ShapeProto;
 
 namespace cfg {
-// TODO: use Int64ListProto replace ShapeProto
 class ShapeProto;
 }  // namespace cfg
 

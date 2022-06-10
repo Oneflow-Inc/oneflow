@@ -113,7 +113,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
     }
     if (ctx->requires_grad_update) {
       (*in_grads)[1] = JUST(functional::Slice(out_grads[0], ctx->start, ctx->stop, ctx->step,
-                                              /*enable_view_slice=*/true));
+                                              /*enable_view_slice=*/false));
     }
     return Maybe<void>::Ok();
   }

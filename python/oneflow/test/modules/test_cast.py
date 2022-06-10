@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from random import shuffle
 import unittest
 from collections import OrderedDict
 
@@ -40,6 +41,19 @@ def _test_cast_int2float(test_case, device, shape):
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 
+def _test_cast_with_non_contiguous_input(test_case, device, shape):
+    np_arr = np.random.randn(*shape).astype(np.int8)
+    permute_dims = np.arange(len(shape)).tolist()
+    shuffle(permute_dims)
+    input = flow.tensor(np_arr, dtype=flow.int8, device=flow.device(device)).permute(
+        permute_dims
+    )
+    output = flow.cast(input, flow.float32)
+    np_out = np_arr.astype(np.float32).transpose(permute_dims)
+    test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+    test_case.assertTrue(input.stride() == output.stride())
+
+
 def _test_cast_backward(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.float32)
     x = flow.tensor(
@@ -60,6 +74,7 @@ class TestCast(flow.unittest.TestCase):
             _test_cast_float2int,
             _test_cast_int2float,
             _test_cast_backward,
+            _test_cast_with_non_contiguous_input,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]

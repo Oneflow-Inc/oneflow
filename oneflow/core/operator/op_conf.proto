@@ -330,32 +330,6 @@ message SliceBoxingAddOpConf {
   required SliceBoxingConf slice_boxing_conf = 1;
 }
 
-message XrtLaunchOpConf {
-  message Argument {
-    required string name = 1;
-    required string value = 2;
-    required DeviceType device_type = 3;
-  }
-  message Function {
-    repeated Argument argument = 1;
-    repeated OperatorConf node = 2;
-  }
-  repeated string in = 1;
-  repeated string out = 2;
-  required Function function = 3;
-  // Function executing engine.
-  // Only "XLA" and "TensorRT" are supported currently.
-  required string engine = 4;
-  // Input mutability.
-  map<string, bool> input_mutability = 5;
-  // Mapping launch op's input and output names into function.
-  map<string, string> input_output_mapping = 6;
-  // Sbp signatures of each function node.
-  map<string, SbpSignature> sbp_signatures = 8;
-  optional bool model_update = 9 [default = false];
-  map<string, BlobDescProto> lbn2logical_blob_desc = 10;
-}
-
 message ConstantLikeOpConf {
   required string like = 1;
   required string out = 2;
@@ -488,7 +462,6 @@ message OperatorConf {
     CastToMirroredOpConf cast_to_mirrored_conf = 344;
     CastFromMirroredOpConf cast_from_mirrored_conf = 345;
     ImageDecoderRandomCropResizeOpConf image_decoder_random_crop_resize_conf = 349;
-    XrtLaunchOpConf xrt_launch_conf = 410;
 
     // math op
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;

@@ -18,11 +18,12 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/sequential.pb.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-class StrideView;
+class Int64ListProto;
 
 class Stride final {
  public:

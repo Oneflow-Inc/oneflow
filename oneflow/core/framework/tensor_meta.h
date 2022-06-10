@@ -36,7 +36,7 @@ class TensorMeta : public user_op::TensorDesc {
  public:
   TensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
       : shape_(shape),
-        stride_(std::make_shared<Stride>(*shape)),
+        stride_(std::shared_ptr<Stride>(new Stride(*shape))),
         data_type_(dtype),
         is_dynamic_(false) {}
   TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,

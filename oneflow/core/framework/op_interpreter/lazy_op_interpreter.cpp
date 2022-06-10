@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
@@ -35,12 +34,12 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/eager/foreign_boxing_util.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
-
+#include "oneflow/core/functional/functional.h"
 namespace oneflow {
 
 namespace one {
@@ -105,7 +104,8 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
     NdSbp nd_sbp(nd_sbp_it->second);
     CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
-        << "The input sbp is not valid for an inplace operation, please try to use non-inplace.";
+        << "The input sbp is not valid for an inplace operation, please try to use non-inplace. "
+        << NdSbpToString(JUST(tensor->nd_sbp())) << " vs " << NdSbpToString(nd_sbp);
     CHECK_OR_RETURN(JUST(tensor->parallel_desc()) == SymbolOf(*parallel_desc));
   }
   return Maybe<void>::Ok();
@@ -414,6 +414,12 @@ Maybe<std::string> GradAccTryInsertRepeatAfterFreeVar(const OperatorConf& var_co
 }
 
 Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_tensor) {
+  if (!input_tensor->is_contiguous()) {
+    LazyMode::Guard lazy_mode_disabled_guard(false);
+    JUST(functional::InplaceToContiguous(input_tensor));
+    JUST(vm::CurrentRankSync());
+  }
+
   CHECK_OR_RETURN(input_tensor->is_eager());
   const std::string& empty_lbn = TensorNameScope::Global()->Lookup(input_tensor);
   CHECK_OR_RETURN(empty_lbn.empty());
@@ -457,7 +463,6 @@ Maybe<void> AddFreeEagerTensorToVariableOp(const std::shared_ptr<Tensor>& input_
   //  create a new tensor for repeat op out. We just set repeat lbn as this free eager tensor's lbn.
   TensorNameScope::Global()->Record(input_tensor,
                                     *JUST(GradAccTryInsertRepeatAfterFreeVar(op_conf)));
-
   return Maybe<void>::Ok();
 }
 

@@ -24,9 +24,6 @@ limitations under the License.
 
 namespace py = pybind11;
 
-PYBIND11_MAKE_OPAQUE(
-    std::unordered_map<std::string, std::shared_ptr<::oneflow::compatible_py::BlobObject>>);
-
 namespace oneflow {
 
 namespace {
