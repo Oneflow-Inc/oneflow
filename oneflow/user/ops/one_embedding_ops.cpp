@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/embedding/embedding_manager.h"
 
 namespace oneflow {
 
@@ -151,8 +152,25 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   CHECK_NE_OR_RETURN(line_size, 0);
   CHECK_GE_OR_RETURN(line_size, embedding_size);
   CHECK_EQ_OR_RETURN(line_size % embedding_size, 0);
-  if (ctx->has_output("embeddings", 0)) { *ctx->OutputShape("embeddings", 0) = Shape({1}); }
-  *ctx->OutputShape("unique_values", 0) = Shape({1});
+  const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
+
+  if (ctx->has_output("embeddings", 0)) {
+    if (use_dynamic_memory_allocation) {
+      *ctx->OutputShape("embeddings", 0) = Shape({1});
+    } else {
+      DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
+      embeddings_dim_vec.push_back(embedding_size);
+      *ctx->OutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
+    }
+  }
+  if (use_dynamic_memory_allocation) {
+    *ctx->OutputShape("unique_values", 0) = Shape({1});
+  } else {
+    DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
+    unique_values_dim_vec.push_back(line_size);
+    *ctx->OutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
+  }
+
   return Maybe<void>::Ok();
 }
 
@@ -164,13 +182,22 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
                      .Split(user_op::OpArg("unique_ids", 0), 0)
-                     .Split(user_op::OpArg("table_ids", 0), 0)
-                     .Broadcast(user_op::OpArg("unique_values", 0));
+                     .Split(user_op::OpArg("table_ids", 0), 0);
   if (ctx->user_op_conf().has_input("context", 0)) {
     builder.Broadcast(user_op::OpArg("context", 0));
   }
+  const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
+  if (use_dynamic_memory_allocation) {
+    builder.Broadcast(user_op::OpArg("unique_values", 0));
+  } else {
+    builder.Split(user_op::OpArg("unique_values", 0), 0);
+  }
   if (ctx->user_op_conf().has_output("embeddings", 0)) {
-    builder.Broadcast(user_op::OpArg("embeddings", 0));
+    if (use_dynamic_memory_allocation) {
+      builder.Broadcast(user_op::OpArg("embeddings", 0));
+    } else {
+      builder.Split(user_op::OpArg("embeddings", 0), 0);
+    }
   }
   builder.Build();
   return Maybe<void>::Ok();
@@ -214,7 +241,12 @@ Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
   const Shape& embedding_grad_shape = ctx->InputShape("embedding_grad", 0);
   CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1);
+  if (embedding::UseDynamicMemoryAllocation()) {
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1);
+  } else {
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.NumAxes(), 2);
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(0), embedding_grad_shape.At(0));
+  }
   return Maybe<void>::Ok();
 }
 

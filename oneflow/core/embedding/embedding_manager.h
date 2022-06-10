@@ -27,6 +27,20 @@ namespace embedding {
 
 #ifdef WITH_CUDA
 
+inline bool UseDynamicMemoryAllocation() {
+  bool use_dynamic_memory_allocation =
+      ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION", true);
+#if CUDA_VERSION >= 11020
+  return use_dynamic_memory_allocation;
+#else
+  if (use_dynamic_memory_allocation) {
+    LOG(WARNING)
+        << "Dynamic memory allocation only support when cuda_version greater equal than 11200. ";
+  }
+  return false;
+#endif
+}
+
 struct ValuesPtr {
   uint32_t lookup_num_unique_;
   void* lookup_values_;
