@@ -40,29 +40,35 @@ void SumSquares2(int64_t n, const T* src0, T* dst0, const T* src1, T* dst1) {
 
 }  // namespace
 
-template<typename T, typename G>
-struct SGDUpdateKernelUtil<DeviceType::kCPU, T, G> {
+template<typename T, typename G, typename H>
+struct SGDUpdateKernelUtil<DeviceType::kCPU, T, G, H> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model);
+                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     H* model_half);
 };
 
-template<typename T, typename G>
-void SGDUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+template<typename T, typename G, typename H>
+void SGDUpdateKernelUtil<DeviceType::kCPU, T, G, H>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const G* model_diff, T* model) {
+    float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+    const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, H* model_half) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   for (int64_t i = 0; i != n; ++i) {
-    SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
-                             learning_rate_val);
+    if (fuse_update_cast) {
+      FusedSGDUpdateFunctor<T, G, H>()(model_diff + i, model + i, model_half + i, scale, l1, l2,
+                                    weight_decay, learning_rate_val);
+    } else {
+      SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
+                               learning_rate_val);
+    }
   }
 }
 
-template struct SGDUpdateKernelUtil<DeviceType::kCPU, float, float>;
-template struct SGDUpdateKernelUtil<DeviceType::kCPU, double, double>;
+template struct SGDUpdateKernelUtil<DeviceType::kCPU, float, float, float16>;
+template struct SGDUpdateKernelUtil<DeviceType::kCPU, double, double, float16>;
 
 template<typename T, typename K, typename IDX>
 struct IndexedSlicesSGDUpdateKernelUtil<DeviceType::kCPU, T, K, IDX> {
