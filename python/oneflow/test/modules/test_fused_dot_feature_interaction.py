@@ -25,6 +25,7 @@ import os
 
 def _test_fused_dot_feature_interaction(
     test_case,
+    embedding_size,
     self_interaction=False,
     output_concat=True,
     output_padding=0,
@@ -32,7 +33,6 @@ def _test_fused_dot_feature_interaction(
     device_type="cuda",
 ):
     batch_size = 100
-    embedding_size = 128
     dims = 26
     if dtype == flow.float16:
         np_dtype = np.float16
@@ -112,6 +112,7 @@ def _test_fused_dot_feature_interaction(
             atol=1e-4,
         )
     )
+
     test_case.assertTrue(np.allclose(fused_R.numpy(), R.numpy(), rtol=1e-3, atol=1e-3))
 
 
@@ -175,19 +176,19 @@ def _test_fused_dot_feature_interaction_pooling_sum(
 class FusedDotFeatureInteractionTestCase(flow.unittest.TestCase):
     def test_fused_dot_feature_interaction(test_case):
         arg_dict = OrderedDict()
-        arg_dict["self_interaction"] = [True, False]
-        arg_dict["output_concat"] = [False, True]
-        arg_dict["output_padding"] = [0, 1]
+        arg_dict["embedding_size"] = [128, 127, 16, 15]
+        arg_dict["self_interaction"] = [False, True]
+        arg_dict["output_concat"] = [True, False]
+        arg_dict["output_padding"] = [1, 0]
         arg_dict["dtype"] = [flow.float16, flow.float32]
         for kwargs in GenArgDict(arg_dict):
             _test_fused_dot_feature_interaction(test_case, **kwargs)
 
     def test_fused_dot_feature_interaction_pooling_sum(test_case):
         arg_dict = OrderedDict()
-        arg_dict["dtype"] = [flow.float32, flow.float16]
+        arg_dict["dtype"] = [flow.float16, flow.float32]
         arg_dict["feature_dims"] = [[39], [13, 26], [1, 10, 3]]
         arg_dict["embedding_size"] = [127, 128, 16, 11, 12, 110]
-
         for kwargs in GenArgDict(arg_dict):
             _test_fused_dot_feature_interaction_pooling_sum(test_case, **kwargs)
 

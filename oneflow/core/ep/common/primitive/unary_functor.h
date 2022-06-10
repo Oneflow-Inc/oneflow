@@ -141,10 +141,10 @@ struct UnaryFunctor<device, UnaryOp::kRelu, Dst, Src> {
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
     const Src zero_val = static_cast<Src>(0.0);
-    if (src > zero_val) {
-      return static_cast<Dst>(src);
-    } else {
+    if (src <= zero_val) {
       return static_cast<Dst>(zero_val);
+    } else {
+      return static_cast<Dst>(src);
     }
   }
 };
@@ -199,9 +199,13 @@ struct UnaryFunctor<device, UnaryOp::kSoftShrink, Dst, Src> {
   UnaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
-    if (src > alpha) return static_cast<Dst>(src - alpha);
-    if (src < -alpha) return static_cast<Dst>(src + alpha);
-    return static_cast<Dst>(0);
+    if (src <= alpha && src >= -alpha) {
+      return static_cast<Dst>(0);
+    } else if (src > alpha) {
+      return static_cast<Dst>(src - alpha);
+    } else {
+      return static_cast<Dst>(src + alpha);
+    }
   }
   const Src alpha;
 };
@@ -212,7 +216,7 @@ struct UnaryFunctor<device, UnaryOp::kThreshold, Dst, Src> {
       : threshold(attr0.Value<double>()), value(attr1.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src src) const {
-    return static_cast<Dst>((src > threshold) ? src : value);
+    return static_cast<Dst>((src <= threshold) ? value : src);
   }
   const Src threshold;
   const Src value;

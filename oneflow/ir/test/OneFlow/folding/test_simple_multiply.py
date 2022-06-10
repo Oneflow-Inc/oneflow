@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
-# CHECK-NOT: oneflow.multiply
+# CHECK-NOT: oneflow.broadcast_mul
 
 import os
 import unittest
@@ -64,6 +64,7 @@ def _test_fold_multiply(test_case, module, with_cuda, *args):
 
     if with_cuda:
         model.to("cuda")
+    model.eval()
     eager_res = model(*args)
 
     class MultiplyGraph(nn.Graph):

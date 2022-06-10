@@ -56,6 +56,7 @@ class Scope final {
     return scope_proto_.opt_mirrored_parallel_conf();
   }
   const ScopeProto& scope_proto() const { return scope_proto_; }
+  const ScopeProto& data() const { return scope_proto_; }
 
 #define DEFINE_SCOPE_CONFIG_GETTER(T, func_name, field_name) \
   T func_name(const std::string& field_name) const {         \

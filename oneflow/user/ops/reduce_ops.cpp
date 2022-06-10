@@ -194,13 +194,13 @@ Maybe<void> GenerateBackwardOpConf4ReduceMaxMin(const user_op::UserOpWrapper& op
 
     user_op::UserOpConfWrapperBuilder multiply_mask_builder(op.op_name() + "_grad_multiply_mask");
     user_op::UserOpConfWrapper multiply_mask_op =
-        multiply_mask_builder.Op("multiply")
+        multiply_mask_builder.Op("broadcast_mul")
             .Input("x", broadcast_divided_dy_op.output("y", 0))
             .Input("y", cast_mask_op.output("out", 0))
-            .Output("out")
+            .Output("z")
             .Build();
     AddOp(multiply_mask_op);
-    op.BindGradTensorWithOpInput(multiply_mask_op.output("out", 0), "input_tensor", 0);
+    op.BindGradTensorWithOpInput(multiply_mask_op.output("z", 0), "input_tensor", 0);
   }
   return Maybe<void>::Ok();
 }
