@@ -46,7 +46,9 @@ struct ValuesPtr {
   void* lookup_values_;
   void* lookup_embeddings_;
   bool has_lookup_values_;
+  size_t lookup_values_size_;
   bool has_lookup_embeddings_;
+  size_t lookup_embeddings_size_;
   void* updated_values_;
 };
 
