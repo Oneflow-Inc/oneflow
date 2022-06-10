@@ -72,6 +72,11 @@ class GraphConfig(object):
         assert type(mode) is bool
         self.proto.enable_auto_mixed_precision = mode
 
+    def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
+        raise RuntimeError(
+            "`set_zero_redundancy_optimizer_mode` has been changed to `enable_zero`, please use `enable_zero(True)` to activate ZeRO optimization."
+        )
+
     def enable_zero(
         self,
         mode: bool = True,
@@ -120,7 +125,9 @@ class GraphConfig(object):
         if stage >= 1:
             self.proto.optimizer_placement_optimization_mode = "distributed_split"
             self.proto.optimizer_placement_optimization_threshold = shard_min_size
-            self.proto.optimizer_placement_optimization_shard_restore_level = shard_restore_level
+            self.proto.optimizer_placement_optimization_shard_restore_level = (
+                shard_restore_level
+            )
         if stage >= 2:
             nccl_config.enable_use_compute_stream(True)
         if stage >= 3:
