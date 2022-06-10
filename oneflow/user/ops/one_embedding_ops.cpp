@@ -222,10 +222,10 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
                      .Split(user_op::OpArg("unique_ids", 0), 0);
-  if (embedding::UseDynamicMemoryAllocation) {
-    builder.Split(user_op::OpArg("unique_embeddings", 0), 0).Build();
-  } else {
+  if (embedding::UseDynamicMemoryAllocation()) {
     builder.Broadcast(user_op::OpArg("unique_embeddings", 0)).Build();
+  } else {
+    builder.Split(user_op::OpArg("unique_embeddings", 0), 0).Build();
   }
   return Maybe<void>::Ok();
 }

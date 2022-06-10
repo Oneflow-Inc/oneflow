@@ -19,8 +19,8 @@ from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
 import numpy as np
 import oneflow as flow
+import os
 
-from oneflow.test_utils.automated_test_util import *
 
 parallel_num = 2
 max_id = 1000
@@ -136,6 +136,7 @@ def round_half_away_from_zero(x):
 
 
 def embedding_shuffle_quantize(np_data, np_dtype):
+
     # When use float16, ComputeType is set to as Float.
     np_reduce_data = np_data.astype(np.float32)
     abs_max_factor = np.max(np.abs(np_reduce_data), axis=2)
@@ -160,6 +161,8 @@ def embedding_shuffle_quantize(np_data, np_dtype):
 
 
 def _test_embedding_shuffle(test_case, dtype, enable_quantize):
+    # dynamic memory allocation can't be tested in unittest
+    os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_tables = 26
@@ -218,6 +221,8 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
 
 
 def _test_embedding_gradient_shuffle(test_case, enable_quantize, fp16, embedding_size):
+    # dynamic memory allocation can't be tested in unittest
+    os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
     np_tolerance = 0
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
