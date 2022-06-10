@@ -333,7 +333,9 @@ endif()
 if(BUILD_PYTHON)
 
   # py ext lib
-  oneflow_add_library(of_pyext_obj SHARED ${of_pyext_obj_cc})
+  # This library should be static to make sure all python symbols are included in the final ext shared lib,
+  # so that it is safe to do wheel audits of multiple pythons version in parallel.
+  oneflow_add_library(of_pyext_obj STATIC ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                   ${Python_NumPy_INCLUDE_DIRS})
   target_link_libraries(of_pyext_obj oneflow pybind11::headers)
