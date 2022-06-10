@@ -1226,7 +1226,7 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop, const std::vector<int64_t>& step,
                            const Optional<bool>& enable_view_slice) const {
-    if (view::IsViewApplicable(x) && enable_view_slice.value_or(false)) {
+    if (view::IsViewApplicable(x) && enable_view_slice.value_or(true)) {
       return view::Slice(x, start, stop, step);
     }
 
