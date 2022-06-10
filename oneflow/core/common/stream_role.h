@@ -19,6 +19,7 @@ limitations under the License.
 #include <functional>
 #include <array>
 #include "oneflow/core/common/preprocessor.h"
+#include "glog/logging.h"
 
 namespace oneflow {
 
@@ -39,7 +40,7 @@ struct StreamRoleVisitor {
   template<typename... Args>
   static auto Visit(StreamRole stream_role, Args&&... args) {
     switch (stream_role) {
-      case StreamRole::kInvalid: return DerivedT::VisitInvalid(std::forward<Args>(args)...);
+      case StreamRole::kInvalid: LOG(FATAL) << "invalid stream role";
       case StreamRole::kCompute: return DerivedT::VisitCompute(std::forward<Args>(args)...);
       case StreamRole::kHost2Device: return DerivedT::VisitHost2Device(std::forward<Args>(args)...);
       case StreamRole::kDevice2Host: return DerivedT::VisitDevice2Host(std::forward<Args>(args)...);
@@ -53,7 +54,7 @@ struct StreamRoleVisitor {
       case StreamRole::kLazyJobLauncher:
         return DerivedT::VisitLazyJobLauncher(std::forward<Args>(args)...);
     }
-    return DerivedT::VisitInvalid(std::forward<Args>(args)...);
+    LOG(FATAL) << "invalid stream role";
   }
 };
 

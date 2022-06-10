@@ -23,7 +23,6 @@ limitations under the License.
 namespace oneflow {
 
 struct NeedSoftSync : public StreamRoleVisitor<NeedSoftSync> {
-  static bool VisitInvalid(DeviceType) { LOG(FATAL); }  // NOLINT
   static bool VisitCompute(DeviceType device_type) { return device_type != kCPU; }
   static bool VisitHost2Device(DeviceType) { return false; }
   static bool VisitDevice2Host(DeviceType) { return false; }

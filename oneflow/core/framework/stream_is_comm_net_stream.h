@@ -22,7 +22,6 @@ limitations under the License.
 namespace oneflow {
 
 struct IsCommNetStream final : public StreamRoleVisitor<IsCommNetStream> {
-  static bool VisitInvalid() { LOG(FATAL); }  // NOLINT
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }

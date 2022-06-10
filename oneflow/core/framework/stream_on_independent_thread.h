@@ -22,7 +22,6 @@ limitations under the License.
 namespace oneflow {
 
 struct StreamOnIndependentThread : public StreamRoleVisitor<StreamOnIndependentThread> {
-  static bool VisitInvalid() { LOG(FATAL); }  // NOLINT
   static bool VisitCompute() { return false; }
   static bool VisitHost2Device() { return false; }
   static bool VisitDevice2Host() { return false; }

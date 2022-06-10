@@ -31,9 +31,6 @@ limitations under the License.
 namespace oneflow {
 
 struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
-  static Maybe<const vm::StreamType*> VisitInvalid(DeviceType device_type) {  // NOLINT
-    UNIMPLEMENTED_THEN_RETURN();
-  }
   static Maybe<const vm::StreamType*> VisitCompute(DeviceType device_type) {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuStreamType>();

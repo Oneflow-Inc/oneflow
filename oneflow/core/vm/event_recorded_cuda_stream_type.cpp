@@ -26,12 +26,12 @@ namespace oneflow {
 namespace vm {
 
 void EventRecordedCudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                        Stream* stream) const {
+                                                Stream* stream) const {
   device_ctx->reset(new CudaStreamHandleDeviceCtx(stream->device_id()));
 }
 
-void EventRecordedCudaStreamType::InitInstructionStatus(const Stream& stream,
-                                                InstructionStatusBuffer* status_buffer) const {
+void EventRecordedCudaStreamType::InitInstructionStatus(
+    const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
   auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream.device_ctx().get());
   auto* data_ptr = status_buffer->mut_buffer()->mut_data();
@@ -39,8 +39,8 @@ void EventRecordedCudaStreamType::InitInstructionStatus(const Stream& stream,
   CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, cuda_event);
 }
 
-void EventRecordedCudaStreamType::DeleteInstructionStatus(const Stream& stream,
-                                                  InstructionStatusBuffer* status_buffer) const {
+void EventRecordedCudaStreamType::DeleteInstructionStatus(
+    const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   auto* ptr =
       CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
   ptr->~CudaOptionalEventRecordStatusQuerier();

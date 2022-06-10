@@ -71,9 +71,6 @@ class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType {
 }  // namespace vm
 
 struct GetReleaseInstructionType : public StreamRoleVisitor<GetReleaseInstructionType> {
-  static Maybe<const vm::InstructionType*> VisitInvalid(DeviceType device_type) {  // NOLINT
-    UNIMPLEMENTED_THEN_RETURN();
-  }
   static Maybe<const vm::InstructionType*> VisitCompute(DeviceType device_type) {
     return GetInstructionType(device_type);
   }

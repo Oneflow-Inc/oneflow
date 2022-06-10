@@ -25,7 +25,6 @@ limitations under the License.
 namespace oneflow {
 
 struct GetStreamRoleName : public StreamRoleVisitor<GetStreamRoleName> {
-  static const char* VisitInvalid() { return "invalid"; }  // NOLINT
   static const char* VisitCompute() { return "compute"; }
   static const char* VisitHost2Device() { return "h2d"; }
   static const char* VisitDevice2Host() { return "d2h"; }
