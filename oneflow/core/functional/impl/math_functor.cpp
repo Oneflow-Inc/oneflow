@@ -121,7 +121,7 @@ class ScalarMathBaseFunctor {
       JUST(CheckInplaceValid(x));
       auto input = JUST(functional::InplaceToContiguous(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = input;
+      (*outputs)[0] = input;
       JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
