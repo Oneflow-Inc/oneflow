@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -269,19 +270,27 @@ class BroadcastMinMax : public BroadcastBinaryGrad {
         const auto& x_shape = *(x->shape());
         const Shape& left_extended_x_shape =
             CreateLeftExtendedShape(ShapeView(x_shape), out_shape.NumAxes());
-        const AxisVector& broadcast_axis_vec = left_extended_x_shape.Axes4BroadcastTo(out_shape);
-        const std::vector<int32_t> x_axis =
-            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
-        broad_x_ = JUST(functional::BroadcastLike(x, out_grads.at(0), x_axis));
+        if (left_extended_x_shape == out_shape) {
+          broad_x_ = JUST(functional::ReshapeLike(x, JUST(VectorAt(out_grads, 0))));
+        } else {
+          const AxisVector& broadcast_axis_vec = left_extended_x_shape.Axes4BroadcastTo(out_shape);
+          const std::vector<int32_t> x_axis =
+              std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
+          broad_x_ = JUST(functional::BroadcastLike(x, JUST(VectorAt(out_grads, 0)), x_axis));
+        }
       }
       if (ctx->broadcast_y) {
         const auto& y_shape = *(y->shape());
         const Shape& left_extended_y_shape =
             CreateLeftExtendedShape(ShapeView(y_shape), out_shape.NumAxes());
-        const AxisVector& broadcast_axis_vec = left_extended_y_shape.Axes4BroadcastTo(out_shape);
-        const std::vector<int32_t> y_axis =
-            std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
-        broad_y_ = JUST(functional::BroadcastLike(y, out_grads.at(0), y_axis));
+        if (left_extended_y_shape == out_shape) {
+          broad_y_ = JUST(functional::ReshapeLike(y, JUST(VectorAt(out_grads, 0))));
+        } else {
+          const AxisVector& broadcast_axis_vec = left_extended_y_shape.Axes4BroadcastTo(out_shape);
+          const std::vector<int32_t> y_axis =
+              std::vector<int32_t>{broadcast_axis_vec.begin(), broadcast_axis_vec.end()};
+          broad_y_ = JUST(functional::BroadcastLike(y, JUST(VectorAt(out_grads, 0)), y_axis));
+        }
       }
       const auto& broad_grads =
           JUST(elementwise_grad_functor_(out_grads.at(0), broad_x_, broad_y_));
