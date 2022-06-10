@@ -208,43 +208,6 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
 
 }  // namespace
 
-template<DeviceType device_type, typename T>
-class SliceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  SliceKernel() = default;
-  ~SliceKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    SliceParams params = ConstructSliceParams(ctx, x_tensor, y_tensor);
-    SliceKernelUtil<device_type, T>::Forward(ctx->stream(), params, x_tensor->dptr<T>(),
-                                             y_tensor->mut_dptr<T>());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-template<DeviceType device_type, typename T>
-class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  SliceGradKernel() = default;
-  ~SliceGradKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
-    Memset<device_type>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
-    if (dy_tensor->shape().elem_cnt() == 0) { return; }
-    SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
-    SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, dy_tensor->dptr<T>(),
-                                              dx_tensor->mut_dptr<T>());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
 template<int NDIM, typename T>
 void WriteSlice(user_op::KernelComputeContext* ctx, const user_op::Tensor* src,
                 user_op::Tensor* dst, const SliceContext& slice_ctx,
@@ -437,60 +400,6 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
-
-template<DeviceType device_type, typename T>
-class SliceUpdateKernel final : public user_op::OpKernel {
- public:
-  SliceUpdateKernel() = default;
-  ~SliceUpdateKernel() = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const user_op::Tensor* update_tensor = ctx->Tensor4ArgNameAndIndex("update", 0);
-    user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    Memcpy<device_type>(ctx->stream(), y_tensor->mut_dptr<T>(), x_tensor->dptr<T>(),
-                        y_tensor->shape().elem_cnt() * sizeof(T));
-    SliceParams params = ConstructSliceParams(ctx, y_tensor, update_tensor);
-    SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, update_tensor->dptr<T>(),
-                                              y_tensor->mut_dptr<T>());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-#define REGISTER_SLICE_KERNELS(device, dtype)                                                   \
-  REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<device, dtype>>().SetIsMatchedHob(      \
-      (user_op::HobDeviceType() == device)                                                      \
-      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));                          \
-  REGISTER_USER_KERNEL("slice_grad")                                                            \
-      .SetCreateFn<SliceGradKernel<device, dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));        \
-  REGISTER_USER_KERNEL("slice_update")                                                          \
-      .SetCreateFn<SliceUpdateKernel<device, dtype>>()                                          \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)           \
-                       && (user_op::HobDataType("update", 0) == GetDataType<dtype>::value))     \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
-        return Maybe<void>::Ok();                                                               \
-      });
-
-#define REGISTER_SLICE_KERNELS_WITH_DEVICE(device) \
-  REGISTER_SLICE_KERNELS(device, bool)             \
-  REGISTER_SLICE_KERNELS(device, float)            \
-  REGISTER_SLICE_KERNELS(device, double)           \
-  REGISTER_SLICE_KERNELS(device, int32_t)          \
-  REGISTER_SLICE_KERNELS(device, int64_t)          \
-  REGISTER_SLICE_KERNELS(device, int8_t)           \
-  REGISTER_SLICE_KERNELS(device, uint8_t)
-
-REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCPU)
-#ifdef WITH_CUDA
-REGISTER_SLICE_KERNELS_WITH_DEVICE(DeviceType::kCUDA)
-REGISTER_SLICE_KERNELS(DeviceType::kCUDA, float16)
-#endif
 
 #define REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)               \
   REGISTER_USER_KERNEL("logical_slice_assign")                                       \
