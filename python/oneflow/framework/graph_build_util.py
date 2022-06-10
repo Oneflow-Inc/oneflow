@@ -31,6 +31,7 @@ import oneflow._oneflow_internal._C as _C
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
+
 @contextmanager
 def graph_build_context(config_proto, session):
     prev_scope = oneflow._oneflow_internal.GetCurrentScope()
@@ -41,7 +42,7 @@ def graph_build_context(config_proto, session):
     )
 
     graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name)
-    
+
     with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
             with BlockScopeContext(prev_scope, graph_scope):
@@ -117,6 +118,7 @@ class DebugScopeContext(object):
             self._prev_max_py_stack_depth
         )
 
+
 def _make_new_scope(prev_scope, scope_proto_str_setter):
     new_scope = None
 
@@ -143,8 +145,9 @@ def _make_new_graph_scope(prev_scope, graph_name):
         )
         scope_proto.module_name = graph_name
         return str(text_format.MessageToString(scope_proto))
-    
+
     return _make_new_scope(prev_scope, scope_proto_str_setter)
+
 
 def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None

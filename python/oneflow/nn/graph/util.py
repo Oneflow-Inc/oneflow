@@ -25,6 +25,7 @@ import google.protobuf as protobuf
 from google.protobuf import text_format
 from typing import List, Tuple
 
+
 def _nd_sbp2repr(nd_sbp):
     dim_len = len(nd_sbp.sbp_parallel)
     nd_sbp_str = "sbp=("
@@ -41,6 +42,7 @@ def _nd_sbp2repr(nd_sbp):
     nd_sbp_str += ")"
     return nd_sbp_str
 
+
 def _blob_desc_repr(blob_desc):
     desc_str = "size=("
     for i in range(len(blob_desc.shape.dim)):
@@ -52,6 +54,7 @@ def _blob_desc_repr(blob_desc):
     desc_str += str(oneflow.dtype.get(int(blob_desc.data_type)))
     desc_str += ")"
     return desc_str
+
 
 def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
     arg_repr_list = []
@@ -75,8 +78,14 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
         # sub arg repr
         sub_arg_repr_list = []
         for bn_idx in range(len(lbns)):
-            sub_arg_repr_list.append(lbns[bn_idx] + ":(" + sub_bns_sbp[bn_idx] + ", " + sub_bns_desc[bn_idx] + ")")
-
+            sub_arg_repr_list.append(
+                lbns[bn_idx]
+                + ":("
+                + sub_bns_sbp[bn_idx]
+                + ", "
+                + sub_bns_desc[bn_idx]
+                + ")"
+            )
 
         if len(lbns) > 1:  # arg of multiple tensors
             arg_repr_list.append("[" + (", ").join(sub_arg_repr_list) + "]")
@@ -86,11 +95,21 @@ def _get_args_repr(ordered_bn, bn2lbn, bn2nd_sbp, lbn2blob_desc):
 
     return arg_repr_list
 
+
 def _get_user_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     user_op_conf = op_conf.user_conf
-    input_sig_str = ", ".join(_get_args_repr(user_op_conf.input_order, user_op_conf.input, bn2nd_sbp, lbn2blob_desc))
-    output_sig_str = ", ".join(_get_args_repr(user_op_conf.output_order, user_op_conf.output, bn2nd_sbp, lbn2blob_desc))
+    input_sig_str = ", ".join(
+        _get_args_repr(
+            user_op_conf.input_order, user_op_conf.input, bn2nd_sbp, lbn2blob_desc
+        )
+    )
+    output_sig_str = ", ".join(
+        _get_args_repr(
+            user_op_conf.output_order, user_op_conf.output, bn2nd_sbp, lbn2blob_desc
+        )
+    )
     return input_sig_str, output_sig_str
+
 
 def _get_var_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     input_sig_str = ""
@@ -98,25 +117,35 @@ def _get_var_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     output_lbn = op_conf.name + "/" + var_op_conf.out
     output_sig_str = var_op_conf.out
     nd_sbp = bn2nd_sbp[var_op_conf.out]
-    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+    output_sig_str += (
+        ":" + _nd_sbp2repr(nd_sbp) + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+    )
     return input_sig_str, output_sig_str
+
 
 def _get_iden_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     iden_op_conf = op_conf.identity_conf
     input_lbn = getattr(iden_op_conf, "in")
-    input_sig_str = input_lbn + ":" + _nd_sbp2repr(bn2nd_sbp["in"])  + ", " + _blob_desc_repr(lbn2blob_desc[input_lbn])
+    input_sig_str = (
+        input_lbn
+        + ":"
+        + _nd_sbp2repr(bn2nd_sbp["in"])
+        + ", "
+        + _blob_desc_repr(lbn2blob_desc[input_lbn])
+    )
 
     output_lbn = op_conf.name + "/" + iden_op_conf.out
     output_sig_str = iden_op_conf.out
     nd_sbp = bn2nd_sbp[iden_op_conf.out]
-    output_sig_str += ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+    output_sig_str += (
+        ":" + _nd_sbp2repr(nd_sbp) + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
+    )
 
     return input_sig_str, output_sig_str
 
 
 def operators_repr(
-    ops: protobuf.pyext._message.RepeatedCompositeContainer,
-    graph_proto: job_pb.Job
+    ops: protobuf.pyext._message.RepeatedCompositeContainer, graph_proto: job_pb.Job
 ) -> List[str]:
     r"""Generate operators' string representation of this module
     """
@@ -125,31 +154,51 @@ def operators_repr(
         for op_conf in graph_proto.net.op:
             op_confs[op_conf.name] = op_conf
 
-        op2placement= dict()
+        op2placement = dict()
         for group in graph_proto.placement.placement_group:
             parallel_conf = group.parallel_conf
             for op_name in group.op_set.op_name:
-                op2placement[op_name] = str(oneflow.placement(proto_str=text_format.MessageToString(parallel_conf)))
+                op2placement[op_name] = str(
+                    oneflow.placement(
+                        proto_str=text_format.MessageToString(parallel_conf)
+                    )
+                )
 
     def _op_signature(op: op_conf_util.OperatorConf) -> Tuple[bool, str]:
-        bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[op.name].bn_in_op2nd_sbp
+        bn2nd_sbp = graph_proto.job_parallel_view_conf.op_name2nd_sbp_signature_conf[
+            op.name
+        ].bn_in_op2nd_sbp
         lbn2blob_desc = graph_proto.helper.lbn2logical_blob_desc
-        signature_template = Template(op.name + "($input) -> ($output)" + ":placement=("+ op2placement[op.name] + ")")
+        signature_template = Template(
+            op.name
+            + "($input) -> ($output)"
+            + ":placement=("
+            + op2placement[op.name]
+            + ")"
+        )
         input_sig_str = "..."
         output_sig_str = "..."
 
         # Only deal with UserOpConf and VariableOpConf for now.
         if op.HasField("user_conf"):
-            input_sig_str, output_sig_str = _get_user_op_io_repr(op, bn2nd_sbp, lbn2blob_desc)
+            input_sig_str, output_sig_str = _get_user_op_io_repr(
+                op, bn2nd_sbp, lbn2blob_desc
+            )
         elif op.HasField("variable_conf"):
-            input_sig_str, output_sig_str = _get_var_op_io_repr(op, bn2nd_sbp, lbn2blob_desc)
+            input_sig_str, output_sig_str = _get_var_op_io_repr(
+                op, bn2nd_sbp, lbn2blob_desc
+            )
         elif op.HasField("identity_conf"):
-            input_sig_str, output_sig_str = _get_iden_op_io_repr(op, bn2nd_sbp, lbn2blob_desc)
+            input_sig_str, output_sig_str = _get_iden_op_io_repr(
+                op, bn2nd_sbp, lbn2blob_desc
+            )
         elif op.name.startswith("System-"):
             return False, ""
 
         op_str = "(OPERATOR: "
-        op_str += signature_template.substitute(input=input_sig_str, output=output_sig_str)
+        op_str += signature_template.substitute(
+            input=input_sig_str, output=output_sig_str
+        )
         op_str += ")"
 
         return True, op_str
@@ -163,6 +212,7 @@ def operators_repr(
         if got_repr:
             ops_strs.append(op_str)
     return ops_strs
+
 
 def add_indent(in_s, num_spaces):
     s = in_s.split("\n")

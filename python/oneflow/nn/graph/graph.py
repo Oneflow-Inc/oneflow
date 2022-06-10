@@ -215,10 +215,7 @@ class Graph(object):
 
         if not self._is_compiled:
             self._compile(*args, **kwargs)
-            self.__print(
-                0,
-                2,
-                f"{self.name} with operators:\n" + self.__repr__())
+            self.__print(0, 2, f"{self.name} with operators:\n" + self.__repr__())
 
         return self.__run(*args, **kwargs)
 
@@ -535,13 +532,10 @@ class Graph(object):
         r"""Generate operators' string representation of this graph 
         """
         if self._is_compiled and self._compiled_graph_proto is not None:
-            module_conf = self._compiled_graph_proto.module_name2module_conf[
-                self.name
-            ]
+            module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]
             return operators_repr(module_conf.ops, self._compiled_graph_proto)
 
         return []
-
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level."""
