@@ -25,8 +25,6 @@ namespace oneflow {
 
 namespace embedding {
 
-#ifdef WITH_CUDA
-
 inline bool UseDynamicMemoryAllocation() {
   bool use_dynamic_memory_allocation =
       ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION", true);
@@ -40,6 +38,8 @@ inline bool UseDynamicMemoryAllocation() {
   return false;
 #endif
 }
+
+#ifdef WITH_CUDA
 
 struct ValuesPtr {
   uint32_t lookup_num_unique_;

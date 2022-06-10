@@ -153,7 +153,6 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   CHECK_GE_OR_RETURN(line_size, embedding_size);
   CHECK_EQ_OR_RETURN(line_size % embedding_size, 0);
   const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
-
   if (ctx->has_output("embeddings", 0)) {
     if (use_dynamic_memory_allocation) {
       *ctx->OutputShape("embeddings", 0) = Shape({1});
@@ -220,11 +219,14 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
 }
 
 /* static */ Maybe<void> EmbeddingPutOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Broadcast(user_op::OpArg("unique_embeddings", 0))
-      .Build();
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(user_op::OpArg("num_unique_ids", 0))
+                     .Split(user_op::OpArg("unique_ids", 0), 0);
+  if (embedding::UseDynamicMemoryAllocation) {
+    builder.Split(user_op::OpArg("unique_embeddings", 0), 0).Build();
+  } else {
+    builder.Broadcast(user_op::OpArg("unique_embeddings", 0)).Build();
+  }
   return Maybe<void>::Ok();
 }
 
@@ -260,10 +262,26 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(ctx->inputs())
+                     .Broadcast(user_op::OpArg("num_unique_ids", 0))
+                     .Split(user_op::OpArg("embedding_grad", 0), 0);
+  if (embedding::UseDynamicMemoryAllocation()) {
+    builder.Broadcast(user_op::OpArg("unique_embeddings", 0))
+        .Broadcast(user_op::OpArg("updated_unique_embeddings", 0))
+        .Build();
+  } else {
+    builder.Split(user_op::OpArg("unique_embeddings", 0), 0)
+        .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -273,13 +291,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Broadcast(user_op::OpArg("unique_embeddings", 0))
-      .Broadcast(user_op::OpArg("updated_unique_embeddings", 0))
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -293,7 +305,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -304,13 +315,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> MomentumEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Broadcast(user_op::OpArg("unique_embeddings", 0))
-      .Broadcast(user_op::OpArg("updated_unique_embeddings", 0))
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -323,7 +328,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -333,13 +337,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Broadcast(user_op::OpArg("unique_embeddings", 0))
-      .Broadcast(user_op::OpArg("updated_unique_embeddings", 0))
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -353,7 +351,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -364,13 +361,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> AdagradEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Broadcast(user_op::OpArg("unique_embeddings", 0))
-      .Broadcast(user_op::OpArg("updated_unique_embeddings", 0))
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -383,7 +374,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1);
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -393,13 +383,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Broadcast(user_op::OpArg("unique_embeddings", 0))
-      .Broadcast(user_op::OpArg("updated_unique_embeddings", 0))
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
