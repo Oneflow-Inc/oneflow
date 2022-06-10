@@ -71,7 +71,7 @@ class GraphConfig(object):
         """
         assert type(mode) is bool
         self.proto.enable_auto_mixed_precision = mode
-    
+
     def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
         raise RuntimeError(
             "`set_zero_redundancy_optimizer_mode` has been changed to `enable_zero`, please use `enable_zero(True)` to activate ZeRO optimization."
