@@ -758,13 +758,18 @@ void OfGetDeviceDesc(const TaskProto* task_proto, boxing::of_collective::DeviceD
   device_desc->set_device_id(device_id.device_index());
 }
 
-enum TreeTopo {
-  Star,
-  Binomial
+class NegoTreeBuilder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NegoTreeBuilder);
+  NegoTreeBuilder() = default;
+  virtual ~NegoTreeBuilder() = default;
+  
+  virtual void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) = 0;
 };
 
-void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info, const TreeTopo topo=Star) {
-  if (topo == Star) {
+class StarNegoTreeBuilder : public NegoTreeBuilder {
+ public:
+  void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) override {
     auto task_ids = std::vector<int64_t>(info.op_desc.num_ranks());
     for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
       task_ids.push_back(info.rank2node.at(i)->task_proto()->task_id());
@@ -784,7 +789,12 @@ void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfColl
       }
     }
   }
-}
+};
+
+class BinomialNegoTreeBuilder : public NegoTreeBuilder {
+ public:
+  void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) override {}
+};
 
 }  // namespace
 
@@ -991,7 +1001,9 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
         }
         request_desc->set_order(info.order);
         request_desc->set_dependency_depth(info.dependency_depth);
-        CalcNegoTree(request_desc, info);
+        NegoTreeBuilder* nego_tree_builder = new StarNegoTreeBuilder();
+        nego_tree_builder->CalcNegoTree(request_desc, info);
+        delete nego_tree_builder;
       } else {
         CHECK_LT(info.rank2node.size(), info.op_desc.num_ranks());
         for (const auto& pair : info.rank2node) { visited.erase(pair.second); }

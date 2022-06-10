@@ -37,11 +37,14 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
     Global<CollectiveMgr>::Get()->GetOfRequestIdByName(op_name_);
   auto* token = Global<CollectiveMgr>::Get()->CreateOfRequestEntryToken(request_id);
   auto* request_entry = Global<CollectiveMgr>::Get()->GetOfRequestEntry(token);
-  nego_tree_info_ = std::move(request_entry->nego_tree_topo()[job_id_]);
+  Global<CollectiveMgr>::Get()->DestroyOfRequestEntryToken(token);
+  nego_tree_info_ = std::move(request_entry->nego_tree_topo()[actor_id_]);
 }
 
 int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kRegstMsg) {
 
+  }
   return 0;
 }
 
