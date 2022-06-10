@@ -259,7 +259,7 @@ struct AvgPool2DOpLowering final : public OpConversionPattern<AvgPool2DOp> {
     auto kernel_pairs = get_pair_int64_from_array(op.kernel_size());
 
     auto loc = op.getLoc();
-    const auto perms = {0, 2, 3, 1};
+    auto perms = {0, 2, 3, 1};
 
     const auto kernel = rewriter.getI64ArrayAttr({kernel_pairs.first, kernel_pairs.second});
     const auto stride = rewriter.getI64ArrayAttr({stride_pairs.first, stride_pairs.second});
@@ -298,7 +298,7 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
     auto pad_pairs = get_pair_int64_from_array(op.padding());
 
     auto loc = op.getLoc();
-    const auto perms = {0, 2, 3, 1};
+    auto perms = {0, 2, 3, 1};
 
     const auto kernel = rewriter.getI64ArrayAttr({kernel_pairs.first, kernel_pairs.second});
     const auto stride = rewriter.getI64ArrayAttr({stride_pairs.first, stride_pairs.second});
@@ -512,7 +512,7 @@ struct Conv2DOpLowering final : public OpConversionPattern<Conv2DOp> {
           op.getLoc(), type, DenseElementsAttr::get(type, rewriter.getZeroAttr(bias_elem_type)));
     }
 
-    const auto perms = {0, 2, 3, 1};
+    auto perms = {0, 2, 3, 1};
     auto in = CreateTranspose(loc, rewriter, op.in(), perms);
     auto weight = CreateTranspose(loc, rewriter, op.weight(), perms);
     const auto output = reshape_type(op.out().getType().cast<ShapedType>(), perms);
