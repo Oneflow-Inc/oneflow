@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
-#include "oneflow/core/vm/async_cuda_stream_type.h"
+#include "oneflow/core/vm/event_recorded_cuda_stream_type.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/critical_section_stream_type.h"
@@ -74,7 +74,7 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
       return SingletonPtr<vm::CpuStreamType>();
     } else if (device_type == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
-      return SingletonPtr<vm::CudaStreamType>();
+      return SingletonPtr<vm::EventRecordedCudaStreamType>();
 #else
       UNIMPLEMENTED_THEN_RETURN();
 #endif
@@ -87,7 +87,7 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
       return SingletonPtr<vm::CpuStreamType>();
     } else if (device_type == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
-      return SingletonPtr<vm::AsyncCudaStreamType>();
+      return SingletonPtr<vm::EventRecordedCudaStreamType>();
 #else
       UNIMPLEMENTED_THEN_RETURN();
 #endif

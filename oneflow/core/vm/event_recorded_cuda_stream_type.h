@@ -15,8 +15,8 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 
-#ifndef ONEFLOW_CORE_VM_ASYNC_CUDA_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_ASYNC_CUDA_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_EVENT_RECORDED_CUDA_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_EVENT_RECORDED_CUDA_STREAM_TYPE_H_
 
 #include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -27,10 +27,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class AsyncCudaStreamType final : public StreamType {
+class EventRecordedCudaStreamType final : public StreamType {
  public:
-  AsyncCudaStreamType() = default;
-  ~AsyncCudaStreamType() override = default;
+  EventRecordedCudaStreamType() = default;
+  ~EventRecordedCudaStreamType() override = default;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -48,5 +48,5 @@ class AsyncCudaStreamType final : public StreamType {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_ASYNC_CUDA_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_EVENT_RECORDED_CUDA_STREAM_TYPE_H_
 #endif  // WITH_CUDA

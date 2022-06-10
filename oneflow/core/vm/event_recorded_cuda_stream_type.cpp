@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 
-#include "oneflow/core/vm/async_cuda_stream_type.h"
+#include "oneflow/core/vm/event_recorded_cuda_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
@@ -25,12 +25,12 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void AsyncCudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
+void EventRecordedCudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                         Stream* stream) const {
   device_ctx->reset(new CudaStreamHandleDeviceCtx(stream->device_id()));
 }
 
-void AsyncCudaStreamType::InitInstructionStatus(const Stream& stream,
+void EventRecordedCudaStreamType::InitInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
   auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream.device_ctx().get());
@@ -39,19 +39,19 @@ void AsyncCudaStreamType::InitInstructionStatus(const Stream& stream,
   CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, cuda_event);
 }
 
-void AsyncCudaStreamType::DeleteInstructionStatus(const Stream& stream,
+void EventRecordedCudaStreamType::DeleteInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
   auto* ptr =
       CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
   ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
-bool AsyncCudaStreamType::QueryInstructionStatusDone(
+bool EventRecordedCudaStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
-void AsyncCudaStreamType::Compute(Instruction* instruction) const {
+void EventRecordedCudaStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->instr_msg().DebugName());
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
