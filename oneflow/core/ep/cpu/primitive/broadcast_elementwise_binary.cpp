@@ -73,8 +73,7 @@ void LaunchElementwise(CpuStream* cpu_stream, size_t simplified_num_dims,
       0, elem_cnt,
       [functor, src0, src1, dst](int64_t begin, int64_t end) {
         for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
-      },
-      1);
+      });
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -85,8 +84,7 @@ void LaunchBinaryLhsScalar(CpuStream* cpu_stream, Src src0_value, size_t src1_el
       0, src1_elem_cnt,
       [functor, src1, dst](int64_t begin, int64_t end) {
         for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
-      },
-      1);
+      });
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -97,8 +95,7 @@ void LaunchBinaryRhsScalar(CpuStream* cpu_stream, Src src1_value, size_t src0_el
       0, src0_elem_cnt,
       [functor, src0, dst](int64_t begin, int64_t end) {
         for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
-      },
-      1);
+      });
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -219,8 +216,7 @@ void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
               src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
           dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
         }
-      },
-      1);
+      });
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
