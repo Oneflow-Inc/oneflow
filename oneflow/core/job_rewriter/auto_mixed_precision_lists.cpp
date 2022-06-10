@@ -90,6 +90,7 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "identity",
                                "flatten",
                                "squeeze",
+                               "embedding",
                                "expand_dims",
                                "cast_to_static_shape",
                                "parallel_cast",
