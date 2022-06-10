@@ -337,6 +337,7 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), copied,            \
                                                 BlobNumpyCopyUtil<T>::From, "mut",        \
                                                 /*block_host_until_done=*/false));        \
+    Py_DECREF(copied);                                                                    \
     Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
   }
