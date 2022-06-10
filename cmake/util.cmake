@@ -269,6 +269,12 @@ function(set_compile_options_to_oneflow_target target)
   endif()
 endfunction()
 
+function(check_variable_defined variable)
+  if(NOT DEFINED ${variable})
+    message(FATAL_ERROR "Variable ${variable} is not defined")
+  endif()
+endfunction()
+
 function(checkDirAndAppendSlash)
   set(singleValues DIR;OUTPUT)
   set(prefix ARG)
