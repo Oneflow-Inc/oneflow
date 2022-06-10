@@ -21,7 +21,6 @@ from oneflow.framework.tensor import Tensor
 from typing import Callable, Dict, Union, List, Tuple
 from string import Template
 import google.protobuf as protobuf
-<<<<<<< HEAD
 from typing import List, Tuple
 
 def _nd_sbp2repr(nd_sbp):
@@ -108,8 +107,6 @@ def _get_iden_op_io_repr(op_conf, bn2nd_sbp, lbn2blob_desc):
     output_sig_str += ":" + _nd_sbp2repr(nd_sbp)  + ", " + _blob_desc_repr(lbn2blob_desc[output_lbn])
 
     return input_sig_str, output_sig_str
-=======
->>>>>>> 2817305c932471690e39d2b172a6231c18aded7c
 
 
 def operators_repr(
