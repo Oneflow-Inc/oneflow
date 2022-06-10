@@ -983,13 +983,16 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     for (int64_t mem_block_id : rank_memory_info.chunk_info.mem_block_ids) {
       CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
       const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
-      VLOG(2) << "     In Device: " << device_id << " Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id
+      VLOG(2) << "     In Device: " << device_id << " Chunk id: " << chunk_id
+              << " MemBlock id: " << mem_block_id
               << " has num = " << mem_block_info.ordered_op_names.size()
               << " ops with mem size = " << B2MiB(mem_block_info.mem_block_mem_size)
               << " is reused " << mem_block_info.is_reused;
       for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
-        VLOG(3) << "         In Device: " << device_id << " Chunk id: " << chunk_id << " In MemBlock id: " << mem_block_id << " order: " << i
-                << " is reused " << mem_block_info.is_reused << " op_name: " << mem_block_info.ordered_op_names.at(i);
+        VLOG(3) << "         In Device: " << device_id << " Chunk id: " << chunk_id
+                << " In MemBlock id: " << mem_block_id << " order: " << i << " is reused "
+                << mem_block_info.is_reused
+                << " op_name: " << mem_block_info.ordered_op_names.at(i);
       }
     }
   }
