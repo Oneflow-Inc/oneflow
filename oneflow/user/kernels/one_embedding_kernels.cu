@@ -185,12 +185,16 @@ void ParseInitializers(const int64_t line_size, const int64_t embedding_size,
 template<typename IDX>
 class EmbeddingKernelState final : public user_op::OpKernelState {
  public:
-  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx)
-      : device_index_(-1), generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
+  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx, bool is_prefetch)
+      : is_lookup_(is_prefetch),
+        device_index_(-1),
+        embedding_name_(ctx->Attr<std::string>("embedding_name")),
+        parallel_id_(ctx->parallel_ctx().parallel_id()),
+        generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    key_value_store_ =
+        Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(embedding_name_, parallel_id_);
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
@@ -228,6 +232,13 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaFree(device_initializer_param_));
     OF_CUDA_CHECK(cudaFreeHost(host_initializer_index_));
     OF_CUDA_CHECK(cudaFree(device_initializer_index_));
+    // when use dynamic memory alloc, should free lookup_values_ and lookup_embeddings_ ptrs in the end.
+    if (is_lookup_ && embedding::UseDynamicMemoryAllocation()) {
+      embedding::ValuesPtr* ptrs =
+          Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name_, parallel_id_);
+      if (ptrs->has_lookup_values_) { OF_CUDA_CHECK(cudaFree(ptrs->lookup_values_)); }
+      if (ptrs->has_lookup_embeddings_) { OF_CUDA_CHECK(cudaFree(ptrs->lookup_embeddings_)); }
+    }
   }
 
   void* HostNumKeys() { return host_num_keys_; }
@@ -240,7 +251,10 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   const EmbeddingInitializer* Initializers() { return device_initializer_param_; }
 
  private:
+  bool is_lookup_;
   int device_index_;
+  std::string embedding_name_;
+  int64_t parallel_id_;
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
   embedding::KeyValueStore* key_value_store_;
@@ -496,7 +510,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EmbeddingKernelState<IDX>>(ctx);
+    return std::make_shared<EmbeddingKernelState<IDX>>(ctx, false);
   }
 
  private:
@@ -566,7 +580,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<EmbeddingKernelState<IDX>>(ctx);
+    return std::make_shared<EmbeddingKernelState<IDX>>(ctx, true);
   }
 
  private:
