@@ -113,6 +113,7 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
     const float beta2 = ctx->Attr<float>("beta2");
     const float epsilon = ctx->Attr<float>("epsilon");
     const float weight_decay = ctx->Attr<float>("weight_decay");
+
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
     if (amsgrad) { UNIMPLEMENTED() << "Multi Tensor Adam Update do not support amsgrad = True. "; }

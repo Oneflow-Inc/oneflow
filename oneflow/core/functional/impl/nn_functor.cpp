@@ -3150,32 +3150,29 @@ class RocAucScoreFunctor {
 class MultiTensorSgdUpdateFunctor {
  public:
   MultiTensorSgdUpdateFunctor() {
+    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
-
     for (int n = 1; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_sgd_update")
                               .Input("model", n)
                               .Input("model_diff", n)
                               .Input("learning_rate")
-                              .Input("skip_if")
                               .Build());
     }
   }
 
   Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
-                         const std::shared_ptr<one::Tensor>& learning_rate,
-                         const std::shared_ptr<one::Tensor>& skip_if, const double& scale,
+                         const std::shared_ptr<one::Tensor>& learning_rate, const double& scale,
                          const float& weight_decay) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("scale", scale));
     JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
     const int64_t weight_size = model.size();
 
-    TensorTuple input(2 * weight_size + 2);
+    TensorTuple input(2 * weight_size + 1);
     std::copy(model.begin(), model.end(), input.begin());
     std::copy(model_diff.begin(), model_diff.end(), input.begin() + weight_size);
     input[2 * weight_size] = learning_rate;
-    input[2 * weight_size + 1] = skip_if;
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[weight_size], input, attrs));
     return Maybe<void>::Ok();
   }
@@ -3187,8 +3184,8 @@ class MultiTensorSgdUpdateFunctor {
 class MultiTensorAdamUpdateFunctor {
  public:
   MultiTensorAdamUpdateFunctor() {
+    // This functor is just for unittest
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
-
     for (int n = 1; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("multi_tensor_adam_update")
                               .Input("model", n)
@@ -3196,38 +3193,34 @@ class MultiTensorAdamUpdateFunctor {
                               .Input("m", n)
                               .Input("v", n)
                               .Input("learning_rate")
-                              .Input("skip_if")
-                              .Input("bias_correction1")
-                              .Input("bias_correction2")
                               .Build());
     }
   }
 
   Maybe<void> operator()(const TensorTuple& model, const TensorTuple& model_diff,
                          const TensorTuple& m, const TensorTuple& v,
-                         const std::shared_ptr<one::Tensor>& learning_rate,
-                         const std::shared_ptr<one::Tensor>& skip_if,
-                         const std::shared_ptr<one::Tensor>& bias_correction1,
-                         const std::shared_ptr<one::Tensor>& bias_correction2, const double& scale,
-                         const float& weight_decay) const {
+                         const std::shared_ptr<one::Tensor>& learning_rate, const float& beta1,
+                         const float& beta2, const float& bias_correction1_val,
+                         const float& bias_correction2_val, const bool& do_bias_correction,
+                         const double& scale, const float& weight_decay) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("scale", scale));
     JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
-    JUST(attrs.SetAttr<float>("beta1", 0.9f));
-    JUST(attrs.SetAttr<float>("beta2", 0.999f));
+    JUST(attrs.SetAttr<float>("beta1", beta1));
+    JUST(attrs.SetAttr<float>("beta2", beta2));
+    JUST(attrs.SetAttr<float>("bias_correction1_val", bias_correction1_val));
+    JUST(attrs.SetAttr<float>("bias_correction2_val", bias_correction2_val));
+    JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
 
     const int64_t weight_size = model.size();
 
-    TensorTuple input(4 * weight_size + 4);
+    TensorTuple input(4 * weight_size + 1);
     std::copy(model.begin(), model.end(), input.begin());
     std::copy(model_diff.begin(), model_diff.end(), input.begin() + weight_size);
     std::copy(m.begin(), m.end(), input.begin() + 2 * weight_size);
     std::copy(v.begin(), v.end(), input.begin() + 3 * weight_size);
 
     input[4 * weight_size] = learning_rate;
-    input[4 * weight_size + 1] = skip_if;
-    input[4 * weight_size + 2] = bias_correction1;
-    input[4 * weight_size + 3] = bias_correction2;
 
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_[weight_size], input, attrs));
     return Maybe<void>::Ok();

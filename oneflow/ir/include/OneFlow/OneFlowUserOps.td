@@ -6038,7 +6038,7 @@ def OneFlow_MultiTensorAdamUpdateOp : OneFlow_BaseOp<"multi_tensor_adam_update",
     DefaultValuedAttr<F32Attr, "0.">:$l2,
     DefaultValuedAttr<F32Attr, "0.9">:$beta1,
     DefaultValuedAttr<F32Attr, "0.999">:$beta2,
-    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<F32Attr, "0.00001">:$epsilon,
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay,
     DefaultValuedAttr<BoolAttr, "false">:$amsgrad,
     DefaultValuedAttr<BoolAttr, "true">:$do_bias_correction
