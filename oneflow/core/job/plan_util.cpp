@@ -898,7 +898,6 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   };
   std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
 
-  // HashMap<int64_t, RankDeviceMemoryInfo> rank2memory_info;
   std::vector<RankDeviceMemoryInfo> rank_device_memory_infos(GlobalProcessCtx::WorldSize(),
                                                              RankDeviceMemoryInfo());
   HashMap<int64_t, MemBlockMemoryInfo> mem_block_id2info;
@@ -985,8 +984,8 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
         CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
         const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
         for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
-          VLOG(3) << " In MemBlock id: " << mem_block_id << " order: " << i
-                  << " op_name: " << mem_block_info.ordered_op_names.at(i);
+          VLOG(3) << " In Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id
+                  << " order: " << i << " op_name: " << mem_block_info.ordered_op_names.at(i);
         }
       }
     }
@@ -1005,7 +1004,6 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
   HashMap<int64_t, const TaskProto*> task_id2proto;
   HashMap<int64_t, std::string> regst_id2name;
   HashMap<int64_t, const RegstDescProto&> regst_id2proto;
-  // HashMap<int64_t, int64_t> regst_id2produced_task_id;
   for (const auto* task : ordered_tasks) {
     const auto& exec_seq = task->exec_sequence();
     std::string name;
@@ -1026,7 +1024,6 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
       std::string regst_name = name + "/" + pair.first;
       regst_id2name.emplace(pair.second.regst_desc_id(), regst_name);
       regst_id2proto.emplace(pair.second.regst_desc_id(), pair.second);
-      // regst_id2produced_task_id.emplace(pair.second.regst_desc_id(), task->task_id());
     }
   }
 
