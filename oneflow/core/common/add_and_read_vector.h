@@ -42,7 +42,8 @@ class AddAndReadVector {
     CHECK_GE(index, 0);
     CHECK_LT(index, size_);
     int gran = GetGranularity(index + 1);
-    return granularity2vector_[gran].data()[index];
+    int offset = (1 << gran) - 1;
+    return granularity2vector_[gran].data()[index - offset];
   }
 
   // lock free.
@@ -50,7 +51,8 @@ class AddAndReadVector {
     CHECK_GE(index, 0);
     CHECK_LT(index, size_);
     int gran = GetGranularity(index + 1);
-    return granularity2vector_[gran].data()[index];
+    int offset = (1 << gran) - 1;
+    return granularity2vector_[gran].data()[index - offset];
   }
 
   void push_back(const T& elem) {
@@ -61,7 +63,6 @@ class AddAndReadVector {
       CHECK_LT(next_granularity, N);
       CHECK_EQ(next_granularity, GetGranularity(size_ + 1));
       granularity2vector_[next_granularity].reserve(1 << next_granularity);
-      granularity2vector_[next_granularity] = granularity2vector_[granularity];
       granularity = next_granularity;
     } else if (granularity2vector_[granularity].size() > (1 << granularity)) {
       LOG(FATAL) << "fatal bug in AddAndReadVector::push_back";
