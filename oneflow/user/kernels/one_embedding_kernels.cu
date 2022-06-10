@@ -185,8 +185,8 @@ void ParseInitializers(const int64_t line_size, const int64_t embedding_size,
 template<typename IDX>
 class EmbeddingKernelState final : public user_op::OpKernelState {
  public:
-  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx, bool is_prefetch)
-      : is_lookup_(is_prefetch),
+  explicit EmbeddingKernelState(user_op::KernelInitContext* ctx, bool is_lookup)
+      : is_lookup_(is_lookup),
         device_index_(-1),
         embedding_name_(ctx->Attr<std::string>("embedding_name")),
         parallel_id_(ctx->parallel_ctx().parallel_id()),
