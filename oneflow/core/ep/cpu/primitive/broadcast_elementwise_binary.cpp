@@ -69,31 +69,36 @@ void LaunchElementwise(CpuStream* cpu_stream, size_t simplified_num_dims,
                        Scalar attr1) {
   const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
   auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-  cpu_stream->ParallelFor(0, elem_cnt, [functor, src0, src1, dst](int64_t begin, int64_t end) {
-    for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
-  });
+  cpu_stream->ParallelFor(
+      0, elem_cnt,
+      [functor, src0, src1, dst](int64_t begin, int64_t end) {
+        for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
+      },
+      1);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
-void LaunchBinaryLhsScalar(CpuStream* cpu_stream, Src src0_value,
-                             const int64_t* simplified_src1_dims, const Src* src1, Dst* dst,
-                             Scalar attr0, Scalar attr1) {
+void LaunchBinaryLhsScalar(CpuStream* cpu_stream, Src src0_value, size_t src1_elem_cnt,
+                           const Src* src1, Dst* dst, Scalar attr0, Scalar attr1) {
   auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(src0_value, attr0, attr1);
-  cpu_stream->ParallelFor(0, simplified_src1_dims[0],
-                          [functor, src1, dst](int64_t begin, int64_t end) {
-                            for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
-                          });
+  cpu_stream->ParallelFor(
+      0, src1_elem_cnt,
+      [functor, src1, dst](int64_t begin, int64_t end) {
+        for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
+      },
+      1);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
-void LaunchBinaryRhsScalar(CpuStream* cpu_stream, Src src1_value,
-                             const int64_t* simplified_src0_dims, const Src* src0, Dst* dst,
-                             Scalar attr0, Scalar attr1) {
+void LaunchBinaryRhsScalar(CpuStream* cpu_stream, Src src1_value, size_t src0_elem_cnt,
+                           const Src* src0, Dst* dst, Scalar attr0, Scalar attr1) {
   auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(src1_value, attr0, attr1);
-  cpu_stream->ParallelFor(0, simplified_src0_dims[0],
-                          [functor, src0, dst](int64_t begin, int64_t end) {
-                            for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
-                          });
+  cpu_stream->ParallelFor(
+      0, src0_elem_cnt,
+      [functor, src0, dst](int64_t begin, int64_t end) {
+        for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
+      },
+      1);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -103,15 +108,18 @@ void LaunchRowWithMatrix(CpuStream* cpu_stream, const int64_t* simplified_src0_d
   int64_t rows = simplified_src1_dims[0];
   int64_t cols = simplified_src0_dims[1];
   auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-  cpu_stream->ParallelFor(0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
-    for (int64_t row_idx = begin; row_idx < end; row_idx++) {
-      for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
-        const int64_t src0_offset = col_idx;
-        const int64_t src1_offset = row_idx * cols + col_idx;
-        dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
-      }
-    }
-  });
+  cpu_stream->ParallelFor(
+      0, rows,
+      [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+        for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+          const Src* src1_row = src1 + row_idx * cols;
+          Dst* dst_row = dst + row_idx * cols;
+          for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+            dst_row[col_idx] = functor(src0[col_idx], src1_row[col_idx]);
+          }
+        }
+      },
+      1);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -121,15 +129,18 @@ void LaunchMatrixWithRow(CpuStream* cpu_stream, const int64_t* simplified_src0_d
   int64_t rows = simplified_src0_dims[0];
   int64_t cols = simplified_src1_dims[1];
   auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-  cpu_stream->ParallelFor(0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
-    for (int64_t row_idx = begin; row_idx < end; row_idx++) {
-      for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
-        const int64_t src0_offset = row_idx * cols + col_idx;
-        const int64_t src1_offset = col_idx;
-        dst[src0_offset] = functor(src0[src0_offset], src1[src1_offset]);
-      }
-    }
-  });
+  cpu_stream->ParallelFor(
+      0, rows,
+      [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+        for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+          const Src* src0_row = src0 + row_idx * cols;
+          Dst* dst_row = dst + row_idx * cols;
+          for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+            dst_row[col_idx] = functor(src0_row[col_idx], src1[col_idx]);
+          }
+        }
+      },
+      1);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -139,15 +150,18 @@ void LaunchColWithMatrix(CpuStream* cpu_stream, const int64_t* simplified_src0_d
   int64_t rows = simplified_src0_dims[0];
   int64_t cols = simplified_src1_dims[1];
   auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-  cpu_stream->ParallelFor(0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
-    for (int64_t row_idx = begin; row_idx < end; row_idx++) {
-      for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
-        const int64_t src0_offset = row_idx;
-        const int64_t src1_offset = row_idx * cols + col_idx;
-        dst[src1_offset] = functor(src0[src0_offset], src1[src1_offset]);
-      }
-    }
-  });
+  cpu_stream->ParallelFor(
+      0, rows,
+      [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+        for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+          const Src* src1_row = src1 + row_idx * cols;
+          Dst* dst_row = dst + row_idx * cols;
+          for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+            dst_row[col_idx] = functor(src0[row_idx], src1_row[col_idx]);
+          }
+        }
+      },
+      1);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -157,15 +171,18 @@ void LaunchMatrixWithCol(CpuStream* cpu_stream, const int64_t* simplified_src0_d
   int64_t rows = simplified_src1_dims[0];
   int64_t cols = simplified_src0_dims[1];
   auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-  cpu_stream->ParallelFor(0, rows, [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
-    for (int64_t row_idx = begin; row_idx < end; row_idx++) {
-      for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
-        const int64_t src0_offset = row_idx * cols + col_idx;
-        const int64_t src1_offset = row_idx;
-        dst[src0_offset] = functor(src0[src0_offset], src1[src1_offset]);
-      }
-    }
-  });
+  cpu_stream->ParallelFor(
+      0, rows,
+      [functor, src0, src1, dst, cols](int64_t begin, int64_t end) {
+        for (int64_t row_idx = begin; row_idx < end; row_idx++) {
+          const Src* src0_row = src0 + row_idx * cols;
+          Dst* dst_row = dst + row_idx * cols;
+          for (int64_t col_idx = 0; col_idx < cols; col_idx++) {
+            dst_row[col_idx] = functor(src0_row[col_idx], src1[row_idx]);
+          }
+        }
+      },
+      1);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -202,7 +219,8 @@ void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
               src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
           dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
         }
-      });
+      },
+      1);
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -225,11 +243,11 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
                                            src0, simplified_src1_dims, src1, dst, attr0, attr1);
   } else {
     if (simplified_num_dims == 1 && simplified_src0_dims[0] == 1) {
-      LaunchBinaryLhsScalar<binary_op, Src, Dst>(cpu_stream, *src0, simplified_src1_dims, src1,
-                                                   dst, attr0, attr1);
+      LaunchBinaryLhsScalar<binary_op, Src, Dst>(cpu_stream, *src0, simplified_src1_dims[0], src1,
+                                                 dst, attr0, attr1);
     } else if (simplified_num_dims == 1 && simplified_src1_dims[0] == 1) {
-      LaunchBinaryRhsScalar<binary_op, Src, Dst>(cpu_stream, *src1, simplified_src0_dims, src0,
-                                                   dst, attr0, attr1);
+      LaunchBinaryRhsScalar<binary_op, Src, Dst>(cpu_stream, *src1, simplified_src0_dims[0], src0,
+                                                 dst, attr0, attr1);
     } else if (simplified_num_dims == 2 && simplified_src0_dims[0] == 1) {
       LaunchRowWithMatrix<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
                                                simplified_src1_dims, src1, dst, attr0, attr1);
@@ -263,10 +281,8 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     const size_t elem_cnt = GetElementCount(num_src1_dims, src1_dims);
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src1 = reinterpret_cast<const Src*>(src1_ptr);
-    auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(GetValue<Src>(src0), attr0, attr1);
-    cpu_stream->ParallelFor(0, elem_cnt, [functor, src1, dst](int64_t begin, int64_t end) {
-      for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
-    });
+    LaunchBinaryLhsScalar<binary_op, Src, Dst>(cpu_stream, GetValue<Src>(src0), elem_cnt, src1, dst,
+                                               attr0, attr1);
   }
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0_ptr,
               Scalar src1, void* dst_ptr) override {
@@ -274,10 +290,8 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     const size_t elem_cnt = GetElementCount(num_src0_dims, src0_dims);
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
     const Src* src0 = reinterpret_cast<const Src*>(src0_ptr);
-    auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(GetValue<Src>(src1), attr0, attr1);
-    cpu_stream->ParallelFor(0, elem_cnt, [functor, src0, dst](int64_t begin, int64_t end) {
-      for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
-    });
+    LaunchBinaryRhsScalar<binary_op, Src, Dst>(cpu_stream, GetValue<Src>(src1), elem_cnt, src0, dst,
+                                               attr0, attr1);
   }
   void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims, const void* src0,
               size_t num_src1_dims, const int64_t* src1_dims, const void* src1,
