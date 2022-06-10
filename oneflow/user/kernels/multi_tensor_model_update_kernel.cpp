@@ -108,7 +108,6 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
     const auto scale = ctx->Attr<double>("scale");
     const float l1 = ctx->Attr<float>("l1");
     const float l2 = ctx->Attr<float>("l2");
-    printf("===000===\n");
 
     const float beta1 = ctx->Attr<float>("beta1");
     const float beta2 = ctx->Attr<float>("beta2");
@@ -116,7 +115,6 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
     const float weight_decay = ctx->Attr<float>("weight_decay");
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
-    printf("===11===\n");
     if (amsgrad) { UNIMPLEMENTED() << "Multi Tensor Adam Update do not support amsgrad = True. "; }
 
     const float* learning_rate_ptr = nullptr;
@@ -125,7 +123,6 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
     if (ctx->has_input("learning_rate", 0)) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
-      printf("===221===\n");
     }
 
     const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
@@ -134,7 +131,6 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
       CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
       bias_correction1_ptr = bias_correction1->dptr<float>();
-      printf("===333===\n");
     }
 
     const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
@@ -143,7 +139,6 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
       CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
       bias_correction2_ptr = bias_correction2->dptr<float>();
-      printf("===1444===\n");
     }
 
     const T* scale_by_ptr = nullptr;
@@ -152,14 +147,12 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
       CHECK_EQ(scale_by_tensor->data_type(), ctx->Tensor4ArgNameAndIndex("model", 0)->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
-      printf("===555===\n");
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
-      printf("===6666===\n");
     }
 
     TensorTupleParams<T, G, 4> tensor_tuple_params{};
@@ -181,8 +174,6 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
       count += 1;
       total_elem_cnt += tensor_elem_cnt;
       if (count == max_tensors[3] || tensor_idx == n_tensor - 1) {
-        printf("===777===\n");
-
         MultiTensorAdamUpdateKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, beta1, beta2,
             epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val,
@@ -190,7 +181,6 @@ class MultiTensorAdamUpdateKernel final : public user_op::OpKernel,
             skip_if_ptr, bias_correction1_ptr, bias_correction2_ptr, tensor_tuple_params);
         count = 0;
         total_elem_cnt = 0;
-        printf("===888===\n");
       }
     }
   }

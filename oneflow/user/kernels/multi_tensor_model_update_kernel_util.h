@@ -29,7 +29,7 @@ struct TensorTupleParams {
   G* model_diff_addresses[max_tensors[n - 1]];
   T* model_addresses[n - 1][max_tensors[n - 1]];
   int64_t sizes[max_tensors[n - 1]];
-  int32_t block_offset[max_tensors[n - 1]];  // use int32
+  int32_t block_offset[max_tensors[n - 1]];
 };
 
 template<DeviceType device_type, typename T, typename G>

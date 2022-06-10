@@ -239,16 +239,11 @@ void MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
         ((tensor_tuple_params.sizes[i] + kBlockSize * kUnrollSize - 1) / (kBlockSize * kUnrollSize))
         % grid_size;
   }
-  printf("Enter here!!! \n");
-  OF_CUDA_CHECK(cudaDeviceSynchronize());
-
   MultiTensorAdamUpdateGpu<T, G>
       <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
           n_tensor, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
           learning_rate_val, bias_correction1_val, bias_correction2_val, learning_rate,
           scale_by_ptr, skip_if, bias_correction1, bias_correction2, tensor_tuple_params);
-  OF_CUDA_CHECK(cudaDeviceSynchronize());
-  printf("End Adam kernel!!! \n");
 }
 
 template<typename T>
