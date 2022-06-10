@@ -22,17 +22,7 @@ def flip_op(input, dims):
     if isinstance(dims, int):
         dims = [dims]
 
-    input_len = len(input.shape)
-    assert len(dims) <= input_len, f"len of dims must less than len of input tensor"
-    new_dims = []
-    for i in dims:
-        if i < 0:
-            i += input_len
-        assert (
-            i < input_len
-        ), f"IndexError: Dimension out of range (expected to be in range of {input_len}, but got {i})"
-        new_dims.append(i)
-    return flow._C.flip(input, new_dims)
+    return flow._C.flip(input, dims)
 
 
 if __name__ == "__main__":
