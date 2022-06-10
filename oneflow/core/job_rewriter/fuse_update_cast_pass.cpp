@@ -30,7 +30,7 @@ class FuseUpdateCastOpsPass final : public JobPass {
   ~FuseUpdateCastOpsPass() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return (ctx.job_desc().job_conf().enable_fuse_optimizer_update_cast() && ctx.job_desc().job_conf().enable_auto_mixed_precision());
+    return ParseBooleanFromEnv("ONEFLOW_FUSE_OPTIMIZER_UPDATE_CAST", false) && ctx.job_desc().enable_auto_mixed_precision();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 

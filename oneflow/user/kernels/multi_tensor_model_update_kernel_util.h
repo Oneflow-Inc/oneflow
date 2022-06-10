@@ -2,12 +2,12 @@
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
+you may not use this file except N compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
+Unless required by applicable law or agreed to N writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
@@ -24,12 +24,23 @@ namespace oneflow {
 // Kernel arg size has 4K limit.
 constexpr int max_tensors[5] = {160, 80, 40, 20, 15};
 
-template<typename T, typename G, int n>
+// template<typename T, typename G, int N>
+template<int N>
 struct TensorTupleParams {
-  G* model_diff_addresses[max_tensors[n - 1]];
-  T* model_addresses[n - 1][max_tensors[n - 1]];
-  int64_t sizes[max_tensors[n - 1]];
-  int32_t block_offset[max_tensors[n - 1]];
+  // G* model_diff_addresses[max_tensors[N - 1]];
+  // T* model_addresses[N - 1][max_tensors[N - 1]];
+  void* model_addresses[N][max_tensors[N-1]]; 
+  int64_t sizes[max_tensors[N - 1]];
+  int32_t block_offset[max_tensors[N - 1]];
+};
+
+template<typename T, typename G, typename H, int N>
+struct TensorTupleWithCastParams {
+  G* model_diff_addresses[max_tensors[N - 1]];
+  T* model_addresses[N - 1][max_tensors[N - 1]];
+  H* model_half_addresses[max_tensors[N - 1]];
+  int64_t sizes[max_tensors[N - 1]];
+  int32_t block_offset[max_tensors[N - 1]];
 };
 
 template<DeviceType device_type, typename T, typename G>
@@ -37,7 +48,7 @@ struct MultiTensorSGDUpdateKernelUtil {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     TensorTupleParams<T, G, 2> tensor_tuple_params);
+                     TensorTupleParams<2> tensor_tuple_params);
 };
 
 template<DeviceType device_type, typename T, typename G>
@@ -48,8 +59,28 @@ struct MultiTensorAdamUpdateKernelUtil {
                      float learning_rate_val, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1,
-                     const float* bias_correction2, TensorTupleParams<T, G, 4> tensor_tuple_params);
+                     const float* bias_correction2, TensorTupleParams<4> tensor_tuple_params);
 };
+
+template<DeviceType device_type, typename T, typename G, typename H>
+struct MultiTensorSGDUpdateWithCastKernelUtil {
+  static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
+                     float l1, float l2, float weight_decay, float learning_rate_val,
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     TensorTupleWithCastParams<T, G, H, 2> tensor_tuple_params);
+};
+
+// template<DeviceType device_type, typename T, typename G, typename H>
+// struct MultiTensorAdamUpdateWithCastKernelUtil {
+//   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
+//                      float l1, float l2, float beta1, float beta2, float epsilon,
+//                      float weight_decay, bool amsgrad, bool do_bias_correction,
+//                      float learning_rate_val, float bias_correction1_val,
+//                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
+//                      const int64_t* skip_if, const float* bias_correction1,
+//                      const float* bias_correction2, TensorTupleWithCastParams<T, G, H, 4> tensor_tuple_params);
+// };
+
 
 }  // namespace oneflow
 
