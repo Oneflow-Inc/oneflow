@@ -1445,14 +1445,25 @@ void UniquePartitionEmbeddingGrad(ep::Stream* stream, int64_t unique_partitioned
 template<typename T, typename IDX>
 void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t cur_rank_num_ids,
                                 int64_t num_unique, int64_t embedding_size,
-                                int64_t padded_embedding_size, const T* cur_rank_embedding_grad,
+                                int64_t padded_embedding_size, bool only_memset_num_unique_grad,
+                                int64_t cur_rank_unique_embedding_grad_elem_cnt,
+                                const T* cur_rank_embedding_grad,
                                 const IDX* cur_rank_inverse_indices,
                                 T* cur_rank_unique_embedding_grad, T* tmp_buffer) {
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  // memset cur_rank_unique_embedding_grad, if only_memset_num_unique_grad, only memset valid data.
+  if (only_memset_num_unique_grad) {
+    OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad, 0,
+                                  num_unique * embedding_size * sizeof(T), cuda_stream));
+  } else {
+    OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad, 0,
+                                  cur_rank_unique_embedding_grad_elem_cnt * sizeof(T),
+                                  cuda_stream));
+  }
   bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
   T* unsorted_segment_sum_out;
   if (embedding_size != padded_embedding_size) {
-    size_t buffer_size = GetCudaAlignedSize(cur_rank_num_ids * padded_embedding_size * sizeof(T));
+    size_t buffer_size = GetCudaAlignedSize(num_unique * padded_embedding_size * sizeof(T));
     if (use_dynamic_memory_allocation) {
       CHECK(tmp_buffer == nullptr);
       OF_CUDA_CHECK(cudaMallocAsync(&unsorted_segment_sum_out, buffer_size, cuda_stream));
@@ -1519,6 +1530,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* cur_rank_unique_embedding_grad =
         ctx->Tensor4ArgNameAndIndex("cur_rank_unique_embedding_grad", 0);
     const int64_t embedding_size = cur_rank_unique_embedding_grad->shape().At(1);
+    const bool only_memset_num_unique_grad = ctx->Attr<bool>("only_memset_num_unique_grad");
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     DataType data_type = embedding_grad->data_type();
     const int64_t num_ids = inverse_unique_partition_indices->shape().elem_cnt();
@@ -1574,18 +1586,13 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
 
       // use unique_partition_embedding_grad as UniqueCurRankEmbeddingGrad buffer.
       T* buffer_ptr = unique_partition_embedding_grad;
+      // num_unique is letter than cur_rank_num_ids, when not dynamic alloc, set num_unique as
+      // cur_rank_num_ids.
       int64_t num_unique = cur_rank_num_ids;
-      // (num_unique, embedding_size) should memset cur_rank_unique_embedding_grad all tensor for
-      // amp count_not_finite
-      // OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
-      //                              cur_rank_unique_embedding_grad->shape().elem_cnt() *
-      //                              sizeof(T), cuda_stream));
-      // TODO: use attr, memset all when dynamic loss scale.
-      OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
-                                    num_unique * padded_embedding_size * sizeof(T), cuda_stream));
       UniqueCurRankEmbeddingGrad<T, IDX>(
           ctx->stream(), data_type, cur_rank_num_ids, num_unique, embedding_size,
-          padded_embedding_size, received_embedding_grad,
+          padded_embedding_size, only_memset_num_unique_grad,
+          cur_rank_unique_embedding_grad->shape().elem_cnt(), received_embedding_grad,
           reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_unique_embedding_grad->mut_dptr<T>(), buffer_ptr);
     } else {
@@ -1656,17 +1663,10 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       // use unique_partition_embedding_grad as UniqueCurRankEmbeddingGrad buffer.
       T* buffer_ptr = unique_partition_embedding_grad;
       int64_t num_unique = cur_rank_num_ids;
-      // (num_unique, embedding_size) should memset cur_rank_unique_embedding_grad all tensor for
-      // amp count_not_finite
-      // OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
-      //                              cur_rank_unique_embedding_grad->shape().elem_cnt() *
-      //                              sizeof(T), cuda_stream));
-      // TODO: use attr, memset all when dynamic loss scale.
-      OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
-                                    num_unique * padded_embedding_size * sizeof(T), cuda_stream));
       UniqueCurRankEmbeddingGrad<T, IDX>(
           ctx->stream(), data_type, cur_rank_num_ids, num_unique, embedding_size,
-          padded_embedding_size, dequantize_cur_rank_embedding_grad,
+          padded_embedding_size, only_memset_num_unique_grad,
+          cur_rank_unique_embedding_grad->shape().elem_cnt(), dequantize_cur_rank_embedding_grad,
           reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_unique_embedding_grad->mut_dptr<T>(), buffer_ptr);
     }
@@ -1749,6 +1749,7 @@ class EmbeddingGradientShuffleDynamicMemoryAllocKernel final : public user_op::O
     user_op::Tensor* cur_rank_unique_embedding_grad =
         ctx->Tensor4ArgNameAndIndex("cur_rank_unique_embedding_grad", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    const bool only_memset_num_unique_grad = ctx->Attr<bool>("only_memset_num_unique_grad");
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     DataType data_type = embedding_grad->data_type();
     const int64_t num_ids = inverse_unique_partition_indices->shape().elem_cnt();
@@ -1812,15 +1813,10 @@ class EmbeddingGradientShuffleDynamicMemoryAllocKernel final : public user_op::O
       // padded_embedding_size) then slice to out from (num_unique, padded_embedding_size) to
       // (num_unique, embedding_size) should memset cur_rank_unique_embedding_grad all tensor for
       // amp count_not_finite
-      // OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
-      //                              cur_rank_unique_embedding_grad->shape().elem_cnt() *
-      //                              sizeof(T), cuda_stream));
-      // TODO: use attr, memset all when dynamic loss scale.
-      OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
-                                    num_unique * padded_embedding_size * sizeof(T), cuda_stream));
       UniqueCurRankEmbeddingGrad<T, IDX>(
           ctx->stream(), data_type, cur_rank_num_ids, num_unique, embedding_size,
-          padded_embedding_size, received_embedding_grad,
+          padded_embedding_size, only_memset_num_unique_grad,
+          cur_rank_unique_embedding_grad->shape().elem_cnt(), received_embedding_grad,
           reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_unique_embedding_grad->mut_dptr<T>(), nullptr);
       OF_CUDA_CHECK(cudaFreeAsync(received_embedding_grad, cuda_stream));
@@ -1900,12 +1896,10 @@ class EmbeddingGradientShuffleDynamicMemoryAllocKernel final : public user_op::O
       // padded_embedding_size) then slice to out from (num_unique, padded_embedding_size) to
       // (num_unique, embedding_size) should memset cur_rank_unique_embedding_grad all tensor for
       // amp count_not_finite
-      OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr<T>(), 0,
-                                    cur_rank_unique_embedding_grad->shape().elem_cnt() * sizeof(T),
-                                    cuda_stream));
       UniqueCurRankEmbeddingGrad<T, IDX>(
           ctx->stream(), data_type, cur_rank_num_ids, num_unique, embedding_size,
-          padded_embedding_size, dequantize_cur_rank_embedding_grad,
+          padded_embedding_size, only_memset_num_unique_grad,
+          cur_rank_unique_embedding_grad->shape().elem_cnt(), dequantize_cur_rank_embedding_grad,
           reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_unique_embedding_grad->mut_dptr<T>(), nullptr);
       OF_CUDA_CHECK(cudaFreeAsync(dequantize_cur_rank_embedding_grad, cuda_stream));

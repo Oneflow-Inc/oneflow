@@ -232,7 +232,8 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaFree(device_initializer_param_));
     OF_CUDA_CHECK(cudaFreeHost(host_initializer_index_));
     OF_CUDA_CHECK(cudaFree(device_initializer_index_));
-    // when use dynamic memory alloc, should free lookup_values_ and lookup_embeddings_ ptrs in the end.
+    // when use dynamic memory alloc, should free lookup_values_ and lookup_embeddings_ ptrs in the
+    // end.
     if (is_lookup_ && embedding::UseDynamicMemoryAllocation()) {
       embedding::ValuesPtr* ptrs =
           Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name_, parallel_id_);

@@ -9278,6 +9278,7 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
+    DefaultValuedAttr<BoolAttr, "false">:$only_memset_num_unique_grad,
     StrAttr:$embedding_name
   );
   let same_output_regst_num = 1;

@@ -237,6 +237,11 @@ void BuildEmbeddingGradientShuffle(
     *cur_rank_unique_embedding_grad_lbn = unsorted_segment_sum_op.output("out", 0);
   } else {
     // embedding_gradient_shuffle op
+    // if no dynamic loss scale or no clip_grad, we think gradient shuffle grad's invalid buffer
+    // need not to be memset.
+    const bool has_dynamic_loss_scale =
+        job_builder->job().job_conf().train_conf().has_dynamic_loss_scale_policy();
+    const bool only_memset_num_unique_grad = (!has_clip_grad) && (!has_dynamic_loss_scale);
     user_op::UserOpConfWrapperBuilder embedding_gradient_shuffle_op_builder(
         embedding_op.op_name() + "_embedding_gradient_shuffle");
     user_op::UserOpConfWrapper embedding_gradient_shuffle_op =
@@ -248,6 +253,7 @@ void BuildEmbeddingGradientShuffle(
             .Output("cur_rank_unique_embedding_grad")
             .Attr<std::string>("embedding_name", embedding_name)
             .Attr<int64_t>("embedding_size", embedding_size)
+            .Attr<bool>("only_memset_num_unique_grad", only_memset_num_unique_grad)
             .ScopeSymbolId(embedding_scope_symbol_id)
             .Build();
     OperatorConf embedding_gradient_shuffle_new_op_conf = embedding_gradient_shuffle_op.op_conf();
