@@ -87,17 +87,21 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> InferSGDUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckLearningRateDataType(ctx));
+  const user_op::TensorDesc& first_model_desc = ctx->InputTensorDesc("model", 0);
+  const int64_t input_size = ctx->input_size("model");
+  for (int64_t i = 0; i < input_size; i++) {
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
+    CHECK_EQ(model.data_type(), first_model_desc.data_type()) << "Model DataType should be equal. ";
+  }
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
-    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-    JUST(CheckScalarDataType(&scale_by_tensor, model.data_type()));
+    JUST(CheckScalarDataType(&scale_by_tensor, first_model_desc.data_type()));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const int64_t weight_size = ctx->input_size("model");
-  bool amsgrad = ctx->Attr<bool>("amsgrad");
   for (int i = 0; i < weight_size; i++) {
     const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
     const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", i);
@@ -118,10 +122,19 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> InferAdamUpdateDataType(user_op::InferContext* ctx) {  // todo
   JUST(CheckLearningRateDataType(ctx));
+  const user_op::TensorDesc& first_model_desc = ctx->InputTensorDesc("model", 0);
+  const int64_t input_size = ctx->input_size("model");
+  for (int64_t i = 0; i < input_size; i++) {
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", i);
+    const user_op::TensorDesc& m = ctx->InputTensorDesc("m", i);
+    const user_op::TensorDesc& v = ctx->InputTensorDesc("v", i);
+    CHECK_EQ(model.data_type(), first_model_desc.data_type()) << "Model DataType should be equal. ";
+    CHECK_EQ(m.data_type(), first_model_desc.data_type()) << "m DataType should be equal. ";
+    CHECK_EQ(v.data_type(), first_model_desc.data_type()) << "v DataType should be equal. ";
+  }
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
-    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-    JUST(CheckScalarDataType(&scale_by_tensor, model.data_type()));
+    JUST(CheckScalarDataType(&scale_by_tensor, first_model_desc.data_type()));
   }
   return Maybe<void>::Ok();
 }
