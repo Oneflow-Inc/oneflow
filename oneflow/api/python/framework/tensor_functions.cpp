@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -282,8 +283,31 @@ DIRECT_PASS_FUNC(PyTensorObject_pow, functional::pow)
 DIRECT_PASS_FUNC(PyTensorObject_chunk, functional::chunk)
 DIRECT_PASS_FUNC(PyTensorObject_narrow, functional::narrow)
 DIRECT_PASS_FUNC(PyTensorObject_masked_fill, functional::masked_fill)
+DIRECT_PASS_FUNC(PyTensorObject_repeat_interleave, functional::repeat_interleave);
+DIRECT_PASS_FUNC(PyTensorObject_prod, functional::reduce_prod);
 
 // functions that parsing at Python C api layer
+static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* other = NULL;
+  static const char* keywords[2] = {"other", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:eq", const_cast<char**>(keywords), &other)) {
+    return NULL;
+  }
+  if (other == Py_None) return Py_False;
+  CHECK_OR_THROW(functional::PyScalarCheck(other) || PyTensor_Check(other))
+      << Error::TypeError() << "eq(): argument 'other' must be tensor or scalar, but found "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(other)));
+  if (PyTensor_Check(other))
+    return PyTensor_New(
+        ASSERT_PTR(functional::BroadcastEqual(PyTensor_Unpack(self), PyTensor_Unpack(other))));
+  return PyTensor_New(ASSERT_PTR(
+      functional::ScalarLogicalEqual(PyTensor_Unpack(self), functional::PyUnpackScalar(other))));
+  // // CHECK_OR_THROW()
+  // return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_byte(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
@@ -634,6 +658,139 @@ static PyObject* PyTensorObject_transpose(PyObject* self, PyObject* args, PyObje
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_flip(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* dims = NULL;
+  static const char* keywords[2] = {"dims", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:flip", const_cast<char**>(keywords), &dims)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(PyLong_Check(dims) || functional::PyLongSequenceCheck(dims))
+      << Error::TypeError() << "dims must be int, list or tuple, but got "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dims)));
+  if (PyLong_Check(dims)) {
+    int32_t dim = PyLong_AsLong(dims);
+    return PyTensor_New(ASSERT_PTR(functional::Flip(PyTensor_Unpack(self), {dim})));
+  }
+  return PyTensor_New(ASSERT_PTR(
+      functional::Flip(PyTensor_Unpack(self), functional::PyUnpackLongSequence<int32_t>(dims))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_repeat(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  // PyObject* sizes = NULL;
+  // static const char* keywords[2] = {"sizes", NULL};
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(args));
+  std::vector<int64_t> shape_vec = functional::PyUnpackLongSequence<int64_t>(args);
+  DimVector shape(shape_vec.size());
+  for (int32_t i = 0; i < shape.size(); ++i) { shape[i] = ASSERT(VectorAt(shape_vec, i)); }
+  return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(args));
+  std::vector<int64_t> dim_vec = functional::PyUnpackLongSequence<int64_t>(args);
+  DimVector dim(dim_vec.size());
+  for (int32_t i = 0; i < dim_vec.size(); ++i) { dim[i] = ASSERT(VectorAt(dim_vec, i)); }
+  return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim))));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_gather(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  int64_t dim = 0;
+  PyObject* index = NULL;
+  static const char* keywords[3] = {"dim", "index", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iO:gather", const_cast<char**>(keywords), &dim,
+                                   &index)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(PyTensor_Check(index))
+      << "dim_gather(): argument 'index' must be tensor, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(index)));
+  return PyTensor_New(
+      ASSERT_PTR(functional::DimGather(PyTensor_Unpack(self), dim, PyTensor_Unpack(index), false)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_split(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* split_size_or_sections = NULL;
+  int64_t dim = 0;
+  static const char* keywords[3] = {"split_size_or_sections", "dim", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|i:split", const_cast<char**>(keywords),
+                                   &split_size_or_sections, &dim)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(PyLong_Check(split_size_or_sections)
+                 || functional::PyLongSequenceCheck(split_size_or_sections))
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(split_size_or_sections)));
+  if (PyLong_Check(split_size_or_sections))
+    return functional::CastToPyObject(
+        functional::Split(PyTensor_Unpack(self), PyLong_AsLong(split_size_or_sections), dim));
+  std::vector<int64_t> split_sections =
+      functional::PyUnpackLongSequence<int64_t>(split_size_or_sections);
+  return functional::CastToPyObject(
+      functional::SplitWithSize(PyTensor_Unpack(self), split_sections, dim));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_cumsum(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  int64_t dim = 0;
+  PyObject* dtype_obj = Py_None;
+  static const char* keywords[3] = {"dim", "dtype", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O!:cumsum", const_cast<char**>(keywords), &dim,
+                                   &dtype_obj)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj));
+  if (dtype_obj == Py_None)
+    return PyTensor_New(ASSERT_PTR(functional::Cumsum(PyTensor_Unpack(self), dim, NullOpt)));
+  Symbol<DType> dtype = functional::PyUnpackDType(dtype_obj);
+  return PyTensor_New(ASSERT_PTR(functional::Cumsum(PyTensor_Unpack(self), dim, dtype)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_cumprod(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  int64_t dim = 0;
+  PyObject* dtype_obj = Py_None;
+  static const char* keywords[3] = {"dim", "dtype", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O!:cumprod", const_cast<char**>(keywords),
+                                   &dim, &dtype_obj)) {
+    return NULL;
+  }
+  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj));
+  if (dtype_obj == Py_None)
+    return PyTensor_New(ASSERT_PTR(functional::Cumprod(PyTensor_Unpack(self), dim, NullOpt)));
+  Symbol<DType> dtype = functional::PyUnpackDType(dtype_obj);
+  return PyTensor_New(ASSERT_PTR(functional::Cumprod(PyTensor_Unpack(self), dim, dtype)));
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_is_floating_point(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return PyTensor_Unpack(self)->dtype()->is_floating_point() ? Py_True : Py_False;
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject* kwargs) {
+  HANDLE_ERRORS
+  PyObject* target = NULL;
+  static const char* keywords[2] = {"target", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O!:type_as", const_cast<char**>(keywords),
+                                   PyTensorObject_Type, &target)) {
+    return NULL;
+  }
+  return PyTensor_New(
+      ASSERT_PTR(functional::To(PyTensor_Unpack(self), PyTensor_Unpack(target), false)));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
@@ -791,6 +948,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
 }
 
 PyMethodDef PyTensorObject_extra_methods[] = {
+    {"eq", (PyCFunction)PyTensorObject_eq, METH_VARARGS | METH_KEYWORDS, NULL},
     {"byte", PyTensorObject_byte, METH_NOARGS, NULL},
     {"size", (PyCFunction)PyTensorObject_size, METH_VARARGS | METH_KEYWORDS, NULL},
     {"argmax", (PyCFunction)PyTensorObject_argmax, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -830,6 +988,15 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"any", (PyCFunction)PyTensorObject_any, METH_VARARGS | METH_KEYWORDS, NULL},
     {"sum", (PyCFunction)PyTensorObject_sum, METH_VARARGS | METH_KEYWORDS, NULL},
     {"mean", (PyCFunction)PyTensorObject_mean, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"flip", (PyCFunction)PyTensorObject_flip, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"repeat", (PyCFunction)PyTensorObject_repeat, METH_VARARGS, NULL},
+    {"tile", (PyCFunction)PyTensorObject_tile, METH_VARARGS, NULL},
+    {"gather", (PyCFunction)PyTensorObject_gather, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"is_floating_point", (PyCFunction)PyTensorObject_is_floating_point, METH_NOARGS, NULL},
+    {"split", (PyCFunction)PyTensorObject_split, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"cumsum", (PyCFunction)PyTensorObject_cumsum, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"cumprod", (PyCFunction)PyTensorObject_cumprod, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"type_as", (PyCFunction)PyTensorObject_type_as, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro DIRECT_PASS_FUNC
     {"floor_divide", (PyCFunction)PyTensorObject_floor_divide, METH_VARARGS | METH_KEYWORDS, NULL},
@@ -876,6 +1043,9 @@ PyMethodDef PyTensorObject_extra_methods[] = {
     {"chunk", (PyCFunction)PyTensorObject_chunk, METH_VARARGS | METH_KEYWORDS, NULL},
     {"narrow", (PyCFunction)PyTensorObject_narrow, METH_VARARGS | METH_KEYWORDS, NULL},
     {"masked_fill", (PyCFunction)PyTensorObject_masked_fill, METH_VARARGS | METH_KEYWORDS, NULL},
+    {"repeat_interleave", (PyCFunction)PyTensorObject_repeat_interleave,
+     METH_VARARGS | METH_KEYWORDS, NULL},
+    {"prod", (PyCFunction)PyTensorObject_prod, METH_VARARGS | METH_KEYWORDS, NULL},
 
     // macro UNARY_METHOD
     {"abs", PyTensorObject_abs, METH_NOARGS, NULL},
