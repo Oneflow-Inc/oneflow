@@ -103,7 +103,20 @@ struct LocalCallOpKernelUtil final {
     if (dtr::debug_level() >= 2) {
       LOG(INFO) << operand->shared_opkernel()->op_type_name() << " ComputeOperand done";
     }
-    if (dtr::is_enabled()) { JUST(CheckOutputInMemory(operand)); }
+    if (dtr::is_enabled()) {
+      JUST(CheckOutputInMemory(operand));
+      if (EnvBool<OF_DTR_LR>() && EnvBool<OF_DTR_ALLO>() && !IsInplace(GetDTRInputs(operand), GetDTROutputs(operand))) {
+        if (auto* thread_safe_allocator =
+                dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
+          if (auto* dtr_allocator =
+                  dynamic_cast<vm::DtrCudaAllocator*>(thread_safe_allocator->backend_allocator())) {
+            dtr_allocator->left = !dtr_allocator->left;
+          } else {
+            CHECK_OR_RETURN(false);
+          }
+        }
+      }
+    }
     return Maybe<void>::Ok();
   }
 

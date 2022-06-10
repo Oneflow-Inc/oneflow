@@ -63,6 +63,12 @@ def setup_seed(seed):
     flow.manual_seed(seed)
 
 
+prefix = os.getenv("ONEFLOW_DTR_SUMMARY_FILE_PREFIX")
+if prefix is not None:
+    model_name = os.getenv("ONEFLOW_DTR_MODEL_NAME")
+    assert model_name is not None
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("bs", type=int)
 parser.add_argument("threshold", type=str)
@@ -96,9 +102,9 @@ import oneflow as flow
 import oneflow.nn as nn
 import flowvision
 import flowvision.transforms as transforms
-# import flowvision.models as models
+import flowvision.models as models
 
-import resnet50_model as models
+# import resnet50_model as models
 # import resnet50
 
 # run forward, backward and update parameters
@@ -123,11 +129,12 @@ setup_seed(seed)
 
 writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
-model = models.resnet50(fuse_bn_relu=False, fuse_bn_add_relu=False)
+# model = models.resnet50(fuse_bn_relu=False, fuse_bn_add_relu=False)
+model = models.densenet121()
 
 # flow.save(model.state_dict(), '/tmp/abcde')
-weights = flow.load("/tmp/abcde")
-model.load_state_dict(weights)
+# weights = flow.load("/tmp/abcde")
+# model.load_state_dict(weights)
 
 criterion = nn.CrossEntropyLoss()
 
@@ -224,9 +231,8 @@ print(
 f"{ALL_ITERS - WARMUP_ITERS} iters: avg {time_per_run}s"
 )
 
-prefix = os.getenv("ONEFLOW_DTR_SUMMARY_FILE_PREFIX")
 if prefix is not None:
     fn = f'{prefix}.json'
     with open(fn, 'w') as f:
-        json.dump({"real time": time_per_run}, f)
+        json.dump({"real time": time_per_run, "threshold": args.threshold, "model_name": model_name, "batch_size": args.bs}, f)
 

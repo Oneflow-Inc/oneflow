@@ -135,14 +135,33 @@ void DtrCudaAllocator::ErasePieceFromPtrMap(Piece* piece) {
   ptr2piece_.erase(it);
 }
 
+double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
+  if (ebo == nullptr) { return 0.; }
+  const std::string cost_type = "eq_compute_time_and_last_access";
+  double cost = CHECK_JUST(ebo->cost(cost_type));
+
+  if (!EnvBool<OF_DTR_O_ONE>()) {
+    CHECK(!isinf(cost));
+    CHECK(!isnan(cost));
+    return cost;
+  }
+  // const double cost = CHECK_JUST(ebo->cost());
+  if (coeff < 0) { coeff = ebo->pesudo_cnt(); }
+  cost = cost * coeff;
+  CHECK(!isinf(cost));
+  CHECK(!isnan(cost));
+  return cost;
+}
+
 void DtrCudaAllocator::DisplayAllPieces() {
   for (const auto& pair : ptr2piece_) {
     Piece* piece = pair.second;
     std::stringstream ss;
     ss << "piece " << piece << ", " << (void*)piece->ptr << ", " << piece->size << ", ";
+    int coeff = -1;
     if (piece->tensor) {
       ss << "ebo: " << piece->tensor << ", id: " << piece->tensor->id()
-         << ", is_left: " << piece->is_left
+         << ", cost: " << get_cost(piece->tensor, coeff)
          << ", pinned: " << piece->tensor->num_pinned()
          << ", evictable: " << piece->tensor->is_evictable()
          << ", compute op: " << piece->tensor->compute_op_type_name();
@@ -326,24 +345,6 @@ void DtrCudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
-  if (ebo == nullptr) { return 0.; }
-  const std::string cost_type = "eq_compute_time_and_last_access";
-  double cost = CHECK_JUST(ebo->cost(cost_type));
-
-  if (!EnvBool<OF_DTR_O_ONE>()) {
-    CHECK(!isinf(cost));
-    CHECK(!isnan(cost));
-    return cost;
-  }
-  // const double cost = CHECK_JUST(ebo->cost());
-  if (coeff < 0) { coeff = ebo->pesudo_cnt(); }
-  cost = cost * coeff;
-  CHECK(!isinf(cost));
-  CHECK(!isnan(cost));
-  return cost;
-}
-
 DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t required_size) {
   if (EnvBool<ONEFLOW_DTR_OPERATION_LOG>()) {
     LOG(INFO) << "****"
@@ -472,7 +473,9 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
 
   if (piece == nullptr) {
     if (first_time) {
-      // DisplayAllPieces();
+      if (EnvBool<ONEFLOW_DTR_DISPLAY_IN_FIRST_TIME>()) {
+        DisplayAllPieces();
+      }
       first_time = false;
     }
     piece = EvictAndFindPiece(aligned_size);

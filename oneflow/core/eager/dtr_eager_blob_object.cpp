@@ -336,7 +336,7 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
       heuristic == "size" ? 1 : Global<dtr::TensorPool>::Get()->duration() - last_access_time_;
 
   if (dtr::debug_level() >= 2) {
-    std::cout << std::dec << "ap compute " << JUST(approx_neighbor_cost()) << ", blob_body_bytes_ "
+    LOG(INFO) << std::dec << "ap compute " << JUST(approx_neighbor_cost()) << ", blob_body_bytes_ "
               << tensor_storage_->blob_bytes() << ", time_since_last_access "
               << time_since_last_access << std::endl;
     // const auto pd = parent_depth();
@@ -390,12 +390,12 @@ void DTREagerBlobObject::set_compute_time(double val) {
     compute_time_ = tensor_storage_->blob_bytes();
   }
   if (EnvBool<OF_DTR_HIGH_ADD_N>()) {
-    if (compute_op_type_name() == "add_n") { compute_time_ *= 3; }
+    if (compute_op_type_name() == "add_n") { compute_time_ *= 5; }
   }
   if (EnvBool<OF_DTR_HIGH_CONV>()) {
-    if (compute_op_type_name() == "conv2d") { compute_time_ *= 3; }
-    if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= 3; }
-    if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= 3; }
+    if (compute_op_type_name() == "conv2d") { compute_time_ *= 5; }
+    if (compute_op_type_name() == "conv_filter_grad") { compute_time_ *= 5; }
+    if (compute_op_type_name() == "conv_data_grad") { compute_time_ *= 5; }
   }
   if (dtr::debug_level() >= 2) {
     LOG(INFO) << "Compute time of " << this << ": " << compute_time_ << ", compute op "
