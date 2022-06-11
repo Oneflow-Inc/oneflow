@@ -116,6 +116,7 @@ def check_memrory(x):
     # save < 0.5MB Tensor for autotest debug in ci.
     return tensor_size_mb < 0.5
 
+
 def get_tensor_shape(call_pytorch):
     shape_list = []
     for i in range(len(call_pytorch.shape)):
