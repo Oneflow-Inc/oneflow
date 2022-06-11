@@ -49,6 +49,8 @@ if(NOT llvm_monorepo_POPULATED)
   endif()
 endif()
 
+set(LLVM_INCLUDE_DIRS ${llvm_monorepo_SOURCE_DIR}/llvm/include;${llvm_monorepo_BINARY_DIR}/include)
+
 if(WITH_MLIR)
   set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
   set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
