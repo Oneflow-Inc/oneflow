@@ -41,33 +41,26 @@ class AddAndReadVector {
   const T& at(size_t index) const {
     CHECK_GE(index, 0);
     CHECK_LT(index, size_);
-    int gran = GetGranularity(index + 1);
-    int offset = (1 << gran) - 1;
-    return granularity2vector_[gran].data()[index - offset];
+    int gran = GetGranularity(index);
+    int start = (1 << gran) - 1;
+    return granularity2vector_[gran].data()[index - start];
   }
 
   // lock free.
   T& at(size_t index) {
     CHECK_GE(index, 0);
     CHECK_LT(index, size_);
-    int gran = GetGranularity(index + 1);
-    int offset = (1 << gran) - 1;
-    return granularity2vector_[gran].data()[index - offset];
+    int gran = GetGranularity(index);
+    int start = (1 << gran) - 1;
+    return granularity2vector_[gran].data()[index - start];
   }
 
   void push_back(const T& elem) {
     std::unique_lock<std::mutex> lock(mutex_);
     int granularity = GetGranularity(size_);
-    if (granularity2vector_[granularity].size() == (1 << granularity)) {
-      int next_granularity = granularity + 1;
-      CHECK_LT(next_granularity, N);
-      CHECK_EQ(next_granularity, GetGranularity(size_ + 1));
-      granularity2vector_[next_granularity].reserve(1 << next_granularity);
-      granularity = next_granularity;
-    } else if (granularity2vector_[granularity].size() > (1 << granularity)) {
-      LOG(FATAL) << "fatal bug in AddAndReadVector::push_back";
-    } else {
-      // do nothing.
+    if (size_ + 1 == (1 << granularity)) {
+      CHECK_LT(granularity, N);
+      granularity2vector_[granularity].reserve(1 << granularity);
     }
     auto* vec = &granularity2vector_[granularity];
     vec->push_back(elem);
@@ -75,10 +68,7 @@ class AddAndReadVector {
   }
 
  private:
-  static int GetGranularity(size_t size) {
-    if (size == 0) { return 0; }
-    return std::ceil(std::log2(size));
-  }
+  static int GetGranularity(size_t index) { return std::log2(index + 1); }
 
   std::atomic<size_t> size_;
   std::mutex mutex_;
