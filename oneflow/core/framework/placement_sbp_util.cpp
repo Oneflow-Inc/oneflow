@@ -708,9 +708,8 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
 }  // namespace
 
 int64_t CalcIndex4Axis(int64_t offset, const Stride& stride, int axis) {
-  CHECK_LT(axis, stride.size())
-      << "Expected axis (" << axis << ") to be less than size of stride (" << stride.size()
-      << ")";
+  CHECK_LT(axis, stride.size()) << "Expected axis (" << axis << ") to be less than size of stride ("
+                                << stride.size() << ")";
   if (axis == 0) {
     return offset / stride.at(0);
   } else {
