@@ -71,7 +71,7 @@ class AddAndReadVector {
     }
     auto* vec = &granularity2vector_[granularity];
     vec->push_back(elem);
-    size_ = vec->size();
+    ++size_;
   }
 
  private:
