@@ -232,14 +232,6 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaFree(device_initializer_param_));
     OF_CUDA_CHECK(cudaFreeHost(host_initializer_index_));
     OF_CUDA_CHECK(cudaFree(device_initializer_index_));
-    // when use dynamic memory alloc, should free lookup_values_ and lookup_embeddings_ ptrs in the
-    // end.
-    if (is_lookup_ && embedding::UseDynamicMemoryAllocation()) {
-      embedding::ValuesPtr* ptrs =
-          Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name_, parallel_id_);
-      if (ptrs->has_lookup_values_) { OF_CUDA_CHECK(cudaFree(ptrs->lookup_values_)); }
-      if (ptrs->has_lookup_embeddings_) { OF_CUDA_CHECK(cudaFree(ptrs->lookup_embeddings_)); }
-    }
   }
 
   void* HostNumKeys() { return host_num_keys_; }
@@ -413,17 +405,8 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
       OF_CUDA_CHECK(cudaMallocAsync(&store_values, values_size, cuda_stream));
     } else {
       CHECK(ptrs != nullptr);
-      if (ptrs->has_lookup_values_ && ptrs->lookup_values_size_ >= values_size) {
-        // do nothing
-      } else {
-        if (ptrs->has_lookup_values_) {
-          OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_values_, cuda_stream));
-        }
-        OF_CUDA_CHECK(cudaMallocAsync(&(ptrs->lookup_values_), values_size, cuda_stream));
-        ptrs->has_lookup_values_ = true;
-        ptrs->lookup_values_size_ = values_size;
-      }
-      store_values = reinterpret_cast<T*>(ptrs->lookup_values_);
+      void* lookup_values_ptr = ptrs->MallocLookupValuesPtr(values_size, cuda_stream);
+      store_values = reinterpret_cast<T*>(lookup_values_ptr);
     }
   } else {
     CHECK(ptrs == nullptr);
@@ -579,7 +562,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_PREFETCH_KERNEL, EMBEDD
 template<typename T, typename U, typename IDX>
 class EmbeddingLookupKernel final : public user_op::OpKernel {
  public:
-  EmbeddingLookupKernel() = default;
+  EmbeddingLookupKernel() : current_iter_(0){};
   ~EmbeddingLookupKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -609,28 +592,17 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                                       unique_ids->shape().elem_cnt(), embedding_size, line_size,
                                       num_unique_ids->dptr(), unique_ids->dptr(), table_ids->dptr(),
                                       nullptr, tmp_buffer->mut_dptr(), &num_unique, false, ptrs);
-      ptrs->lookup_num_unique_ = num_unique;
+      ptrs->SetNumUnique(num_unique, current_iter_);
       if (ctx->has_output("embeddings", 0)) {
         user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
         const size_t lookup_embeddings_size = GetCudaAlignedSize(
             num_unique * embedding_size * GetSizeOfDataType(embeddings->data_type()));
-        if (ptrs->has_lookup_embeddings_
-            && ptrs->lookup_embeddings_size_ >= lookup_embeddings_size) {
-          // do nothing
-        } else {
-          cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
-          if (ptrs->has_lookup_embeddings_) {
-            OF_CUDA_CHECK(cudaFreeAsync(ptrs->lookup_embeddings_, cuda_stream));
-          }
-          OF_CUDA_CHECK(
-              cudaMallocAsync(&(ptrs->lookup_embeddings_), lookup_embeddings_size, cuda_stream));
-          ptrs->has_lookup_embeddings_ = true;
-          ptrs->lookup_embeddings_size_ = lookup_embeddings_size;
-        }
+        void* lookup_embeddings_ptr = ptrs->MallocLookupEmbeddingsPtr(
+            lookup_embeddings_size, ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+        void* lookup_values_ptr = ptrs->GetLookupValuesPtr(current_iter_);
         CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
                                   unique_values->data_type(), embeddings->data_type(),
-                                  reinterpret_cast<T*>(ptrs->lookup_values_),
-                                  ptrs->lookup_embeddings_);
+                                  reinterpret_cast<T*>(lookup_values_ptr), lookup_embeddings_ptr);
       }
     } else {
       uint32_t num_unique;
@@ -645,8 +617,10 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
                                   unique_values->dptr<T>(), embeddings->mut_dptr());
       }
     }
+    current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
 };
 
 #define REGISTER_CUDA_EMBEDDING_LOOKUP_KERNEL(t_dtype_pair, table_dtype_pair, idx_dtype_pair)  \
@@ -673,7 +647,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_LOOKUP_KERNEL, EMBEDDIN
 template<typename IDX>
 class EmbeddingPutKernel final : public user_op::OpKernel {
  public:
-  EmbeddingPutKernel() = default;
+  EmbeddingPutKernel() : current_iter_(0){};
   ~EmbeddingPutKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -693,10 +667,10 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
     if (embedding::UseDynamicMemoryAllocation()) {
       embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
           ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
-      const int64_t num_unique = ptrs->lookup_num_unique_;
-      store->Put(ctx->stream(), num_unique, unique_ids->dptr(), ptrs->updated_values_);
-      OF_CUDA_CHECK(
-          cudaFreeAsync(ptrs->updated_values_, ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+      const int64_t num_unique = ptrs->GetNumUnique(current_iter_);
+      void* updated_values_ptr = ptrs->GetUpdatedValuesPtr(current_iter_);
+      store->Put(ctx->stream(), num_unique, unique_ids->dptr(), updated_values_ptr);
+      ptrs->FreeUpdatedValuesPtr(ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else {
       const user_op::Tensor* unique_embeddings =
           ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
@@ -707,8 +681,10 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
       CHECK_JUST(ctx->stream()->Sync());
       store->Put(ctx->stream(), *host_num_keys, unique_ids->dptr(), unique_embeddings->dptr());
     }
+    current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
 };
 
 #define REGISTER_CUDA_EMBEDDING_PUT_KERNEL(dtype, typeproto)           \

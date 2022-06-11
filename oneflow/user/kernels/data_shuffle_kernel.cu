@@ -1124,7 +1124,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
 template<typename T, typename IDX>
 class EmbeddingShuffleKernelDynamicMemoryAlloc final : public user_op::OpKernel {
  public:
-  EmbeddingShuffleKernelDynamicMemoryAlloc() = default;
+  EmbeddingShuffleKernelDynamicMemoryAlloc() : current_iter_(0){};
   ~EmbeddingShuffleKernelDynamicMemoryAlloc() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -1177,9 +1177,10 @@ class EmbeddingShuffleKernelDynamicMemoryAlloc final : public user_op::OpKernel 
     }
     embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
-    const int64_t num_unique = ptrs->lookup_num_unique_;
-    void* cur_rank_embeddings_ptr =
-        (ptrs->has_lookup_embeddings_) ? ptrs->lookup_embeddings_ : ptrs->lookup_values_;
+    const int64_t num_unique = ptrs->GetNumUnique(current_iter_);
+    void* cur_rank_embeddings_ptr = (ptrs->HasLookupEmbeddings())
+                                        ? ptrs->GetLookupEmbeddingsPtr(current_iter_)
+                                        : ptrs->GetLookupValuesPtr(current_iter_);
     if (!enable_quantized_comm) {
       // 1. reverse cur_rank unique, from (num_unique, embedding_size) to (cur_rank_num_ids,
       // embedding_size)
@@ -1297,8 +1298,10 @@ class EmbeddingShuffleKernelDynamicMemoryAlloc final : public user_op::OpKernel 
       OF_CUDA_CHECK(cudaFreeAsync(reverse_recv_quantize_cur_rank_embeddings, cuda_stream));
       OF_CUDA_CHECK(cudaFreeAsync(reverse_recv_quantize_factor, cuda_stream));
     }
+    current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
 };
 
 #define REGISTER_CUDA_EMBEDDING_SHUFFLE_DYNAMIC_MEMORY_ALLOC_KERNEL(t_dtype_pair, idx_dtype_pair) \
@@ -1725,7 +1728,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL
 template<typename T, typename IDX>
 class EmbeddingGradientShuffleDynamicMemoryAllocKernel final : public user_op::OpKernel {
  public:
-  EmbeddingGradientShuffleDynamicMemoryAllocKernel() = default;
+  EmbeddingGradientShuffleDynamicMemoryAllocKernel() : current_iter_(0){};
   ~EmbeddingGradientShuffleDynamicMemoryAllocKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
@@ -1783,7 +1786,7 @@ class EmbeddingGradientShuffleDynamicMemoryAllocKernel final : public user_op::O
     }
     embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
-    const int64_t num_unique = ptrs->lookup_num_unique_;
+    const int64_t num_unique = ptrs->GetNumUnique(current_iter_);
     if (!enable_quantized_comm) {
       // 1. sum to unique grad, from (num_ids, embedding_size) to (unique_partitioned_num_ids,
       // padded_embedding_size)
@@ -1904,8 +1907,10 @@ class EmbeddingGradientShuffleDynamicMemoryAllocKernel final : public user_op::O
           cur_rank_unique_embedding_grad->mut_dptr<T>(), nullptr);
       OF_CUDA_CHECK(cudaFreeAsync(dequantize_cur_rank_embedding_grad, cuda_stream));
     }
+    current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  mutable int64_t current_iter_;
 };
 
 #define REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_DYNAMIC_MEMORY_ALLOC_KERNEL(t_dtype_pair,       \
