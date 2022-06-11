@@ -84,14 +84,14 @@ __global__ void CumForwardGpu(const T* in_ptr, T* out_ptr, int64_t cs_up_space, 
 
 template<typename T, template<typename> class BinaryFunc>
 void ScanOuterDim(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_t dim,
-                               const T* in_ptr, T* out_ptr) {
+                  const T* in_ptr, T* out_ptr) {
   // data partition: up_space|space|down_space
   auto up_space = in_shape.elem_cnt() / in_shape.Count(dim);
   auto space = in_shape.At(dim);
   auto down_space = in_shape.Count(dim + 1);
   auto thread_num = up_space * down_space;
-  RUN_CUDA_KERNEL((CumForwardGpu<T, BinaryFunc>), ep_stream, thread_num, in_ptr, out_ptr,
-                  up_space, space, down_space);
+  RUN_CUDA_KERNEL((CumForwardGpu<T, BinaryFunc>), ep_stream, thread_num, in_ptr, out_ptr, up_space,
+                  space, down_space);
 }
 
 // Refer from
@@ -180,17 +180,13 @@ void ScanInnerMostDim(const T* in_ptr, T* out_ptr, const int64_t num_rows, const
 }
 
 template<typename T, template<typename> class BinaryFunc>
-void CubInclusiveScan(user_op::Tensor* temp_buffer,
-                            const T* in_ptr,
-                            T* out_ptr,
-                            const int64_t elem_cnt,
-                            const ep::CudaStream* cuda_stream) {
+void CubInclusiveScan(user_op::Tensor* temp_buffer, const T* in_ptr, T* out_ptr,
+                      const int64_t elem_cnt, const ep::CudaStream* cuda_stream) {
   auto* temp_storage = temp_buffer->mut_dptr<T>();
   size_t temp_storage_bytes = temp_buffer->shape().elem_cnt();
-  OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(temp_storage, temp_storage_bytes, in_ptr,
-                                                out_ptr, BinaryFunc<T>(), elem_cnt,
-                                                cuda_stream->cuda_stream()));
-
+  OF_CUDA_CHECK(cub::DeviceScan::InclusiveScan(temp_storage, temp_storage_bytes, in_ptr, out_ptr,
+                                               BinaryFunc<T>(), elem_cnt,
+                                               cuda_stream->cuda_stream()));
 }
 }  // namespace
 
