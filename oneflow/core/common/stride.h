@@ -38,7 +38,6 @@ class Stride final : public DimVector {
 
   std::string ToString() const;
   void ToProto(Int64ListProto*) const;
-
 };
 
 }  // namespace oneflow
