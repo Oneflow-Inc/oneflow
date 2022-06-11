@@ -108,7 +108,13 @@ class BothDoNotSupportError(Exception):
 
 
 call_pytorch = None
+tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 32))
 
+
+def check_memrory(x):
+    tensor_size_mb = x.nelement() * x.element_size() / 1024 / 1024
+    # save <2MB Tensor for autotest debug in ci.
+    return tensor_size_mb < 1
 
 def get_tensor_shape(call_pytorch):
     shape_list = []
@@ -186,10 +192,16 @@ def get_args(callable, *args, **kwargs):
                 if type(x[i]) is torch_original.Tensor:
                     if i < len_x - 1:
                         new_x += f"Tensor({get_tensor_shape(x[i])}), "
-                        new_value_x += str(x[i]) + ", "
+                        if check_memrory(x[i]):
+                            new_value_x += str(x[i]) + ", "
+                        else:
+                            new_value_x += "Tensor is too large! , "
                     else:
                         new_x += f"Tensor({get_tensor_shape(x[i])})"
-                        new_value_x += str(x[i])
+                        if check_memrory(x[i]):
+                            new_value_x += str(x[i])
+                        else:
+                            new_value_x += "Tensor is too large!"
                 else:
                     if i < len_x - 1:
                         new_x += f"{x[i]}, "
@@ -204,14 +216,20 @@ def get_args(callable, *args, **kwargs):
             continue
         if type(x) is torch_original.Tensor:
             new_pytorch_args.append(f"Tensor({get_tensor_shape(x)})")
-            new_pytorch_value_args.append(str(x))
+            if check_memrory(x):
+                new_pytorch_value_args.append(str(x))
+            else:
+                new_pytorch_value_args.append("Tensor is too large!")
         else:
             new_pytorch_args.append(x)
             new_pytorch_value_args.append(x)
     for key, value in pytorch_kwargs.items():
         if type(value) is torch_original.Tensor:
             new_pytorch_kwargs[key] = f"Tensor({get_tensor_shape(value)})"
-            new_pytorch_value_kwargs[key] = str(value)
+            if check_memrory(value):
+                new_pytorch_value_kwargs[key] = str(value)
+            else:
+                new_pytorch_value_kwargs[key] = "Tensor is too large!"
         else:
             new_pytorch_kwargs[key] = value
             new_pytorch_value_kwargs[key] = value
@@ -874,9 +892,6 @@ def clear_note_fake_program():
     vis_parameters.clear()
     extra_input_tensor.clear()
     flow.set_printoptions(profile="full")
-
-
-tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 32))
 
 
 class DualObject:
