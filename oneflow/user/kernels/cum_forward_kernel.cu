@@ -26,6 +26,11 @@ namespace oneflow {
 namespace {
 
 template<typename T>
+inline T CeilDiv(T n, T m) {
+  return (n + m - 1) / m;
+}
+
+template<typename T>
 struct SumFunctor {
   CUB_RUNTIME_FUNCTION __device__ __forceinline__ T operator()(const T a, const T b) const {
     return a + b;
@@ -174,7 +179,7 @@ void ScanInnerMostDim(const T* in_ptr, T* out_ptr, const int64_t num_rows, const
                       const ep::CudaStream* cuda_stream) {
   dim3 block(16, 32);
   const int64_t max_grid_dim = GetDevicePropeties()->maxGridSize[0];
-  dim3 grid(std::min(max_grid_dim, num_rows));
+  dim3 grid(std::min(max_grid_dim, CeilDiv(num_rows, (int64_t)block.y)));
   ScanInnerMostDimKernel<T, 16, 32, BinaryFunctor>
       <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size, 0);
 }
