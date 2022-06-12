@@ -46,7 +46,7 @@ namespace oneflow {
   const int32_t max_acc_num = ctx->user_op_conf().attr<int32_t>("max_acc_num");
   const Shape& in_time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
   DimVector time_shape_dim_vec = in_time_shape.dim_vec();
-  CHECK_OR_RETURN(!time_shape_dim_vec.empty());
+  CHECK_OR_RETURN(!time_shape_dim_vec.empty()); // NOLINT(maybe-need-error-msg)
   if (time_shape_dim_vec.back() == max_acc_num) {
     time_shape_dim_vec.pop_back();
   } else if (time_shape_dim_vec.back() % max_acc_num == 0) {
