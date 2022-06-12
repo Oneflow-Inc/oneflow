@@ -31,22 +31,22 @@ class ConstantNpuKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
-    const int64_t len = elem_cnt * sizeof(int64_t);
+    const int64_t len = elem_cnt * GetSizeOfDataType(out_tensor->data_type());
     CHECK_GE(elem_cnt, 0);
     if (elem_cnt == 0) { return; }
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     if(is_floating_value)
     {
         double value = ctx->Attr<double>("floating_value");
-        std::vector<double> values(elem_cnt,value);
-        OF_NPU_CHECK(aclrtMemcpy(out_tensor->mut_dptr(), len, values.data(), len, ACL_MEMCPY_HOST_TO_DEVICE));
+        std::vector<float> values(elem_cnt,value);
+        OF_NPU_CHECK(aclrtMemcpy(out_tensor->mut_dptr<void>(), len, static_cast<void*>(values.data()), len, ACL_MEMCPY_HOST_TO_DEVICE));
     }
     else
     {
         int64_t value = ctx->Attr<int64_t>("integer_value");
         std::vector<int64_t> values(elem_cnt, value);
-        OF_NPU_CHECK(aclrtMemcpy(out_tensor->mut_dptr(), len, values.data(), len, ACL_MEMCPY_HOST_TO_DEVICE));        
+        OF_NPU_CHECK(aclrtMemcpy(out_tensor->mut_dptr<void>(), len, static_cast<void*>(values.data()), len, ACL_MEMCPY_HOST_TO_DEVICE));        
     }
-    std::cout<<"ConstantNpuKernel Over"<<std::endl;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

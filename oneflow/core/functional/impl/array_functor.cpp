@@ -2547,6 +2547,23 @@ class TopKFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class TopKNpuFunctor {
+ public:
+  TopKNpuFunctor() { op_ = CHECK_JUST(one::OpBuilder("top_k_npu").Input("in").Output("out").Output("indice").Build()); }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& input, int32_t k, int32_t dim, bool sorted, bool largest) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("k", k));
+    JUST(attrs.SetAttr<bool>("sorted", sorted));
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    JUST(attrs.SetAttr<bool>("largest", largest));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+
 class InTopKFunctor {
  public:
   InTopKFunctor() {
@@ -2818,6 +2835,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
+  m.add_functor<impl::TopKNpuFunctor>("TopKNpu");
   m.add_functor<impl::InTopKFunctor>("InTopK");
   m.add_functor<impl::TensorToTensorBufferFunctor>("TensorToTensorBuffer");
   m.add_functor<impl::TensorBufferToTensorFunctor>("TensorBufferToTensor");

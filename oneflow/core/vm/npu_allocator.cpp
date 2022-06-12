@@ -47,7 +47,6 @@ NpuAllocator::NpuAllocator(int64_t device_id)
 }
 
 NpuAllocator::~NpuAllocator() {
-  std::cout<<"NpuAllocator::~NpuAllocator()"<<std::endl;
   if (total_memory_bytes_ == 0) {
     CHECK_EQ(mem_ptr2block_.size(), 0);
     return;
@@ -267,7 +266,6 @@ void NpuAllocator::Allocate(char** mem_ptr, std::size_t size) {
     return;
   }
   size_t aligned_size = NpuMemAlignedBytes(size);
-
   Piece* piece = FindPiece(aligned_size);
   if (piece == nullptr) {
     if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
@@ -295,6 +293,7 @@ void NpuAllocator::Allocate(char** mem_ptr, std::size_t size) {
 }
 
 void NpuAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+
   if (mem_ptr == nullptr) { return; }
 
   auto it = ptr2piece_.find(mem_ptr);

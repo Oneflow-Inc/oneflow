@@ -40,9 +40,9 @@ class LogSoftmaxNpuKernel final : public user_op::OpKernel{
             .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
             .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
-    //PrintResult(prob);
-    //std::cout<<"LogSoftmaxNpuKernel Execute Over"<<std::endl;  
+    // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
+    // PrintResult(prob);
+    // std::cout<<"LogSoftmaxNpuKernel Execute Over"<<std::endl;  
       
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -70,7 +70,7 @@ class LogSoftmaxGradNpuKernel final : public user_op::OpKernel {
             .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
             .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
     //PrintResult(dx);
     //std::cout<<"LogSoftmaxNpuGradKernel Execute Over"<<std::endl;  
 

@@ -56,7 +56,6 @@ NpuDevice::NpuDevice(int device_index, DeviceManager* device_manager)
 }
 
 NpuDevice::~NpuDevice() {
-  std::cout<<"NpuDevice::~NpuDevice()"<<std::endl;
   NpuCurrentDeviceGuard guard(device_index_);
   //for (auto* event : events_) { delete event; }
   OF_NPU_CHECK(aclrtFree(const_zeros_buffer_));
@@ -73,7 +72,6 @@ Stream* NpuDevice::CreateStream() {
 }
 
 void NpuDevice::DestroyStream(Stream* stream) {
-  std::cout<<"NpuDevice::DestroyStream()"<<std::endl;
   NpuCurrentDeviceGuard guard(device_index_);
   delete stream;
 }

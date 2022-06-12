@@ -7,10 +7,21 @@
 
 namespace oneflow
 {
+std::unordered_map<std::string, std::vector<int>> const_tensor_map = {};
 void testblock()
 {
   int a = 1;
   return;
+}
+
+std::string ShapeToString(std::vector<int> & v)
+{
+    std::string r = "";
+    for(int shape: v)
+    {
+        r += std::to_string(shape)+',';
+    }
+    return r;
 }
 
 aclDataType dataTypeMap(DataType type)
@@ -141,6 +152,26 @@ aclTensorDesc* getTensorDesc(MaxPoolTensorWrapper& wrap)
     aclSetTensorShape(desc, wrap.num_dims, wrap.dims);
     return desc;
 }
+aclTensorDesc* getTensorDesc(HostTensorWrapper& wrap)
+{
+    aclTensorDesc* desc = aclCreateTensorDesc(wrap.type, 
+                                    wrap.num_dims, 
+                                    wrap.dims, 
+                                    wrap.format);
+    NOT_NULLPTR_CHECK(desc);    
+    return desc;
+}
+// aclTensorDesc* getTensorDesc(BatchNormTensorWrapper& wrap)
+// {
+//     aclTensorDesc* desc = aclCreateTensorDesc(wrap.dataType, 
+//                                     wrap.num_dims-1, 
+//                                     wrap.dims, 
+//                                     wrap.origin_format);
+//     NOT_NULLPTR_CHECK(desc);    
+//     aclSetTensorFormat(desc, wrap.npu_format);
+//     aclSetTensorShape(desc, wrap.num_dims, wrap.dims);
+//     return desc;
+// }
 // aclTensorDesc* getTensorDesc(std::vector<int32_t>& v)
 // {
 //     aclTensorDesc* descCast = aclCreateTensorDesc(ACL_INT32, 
@@ -179,6 +210,18 @@ aclDataBuffer* getDataBuffer(MaxPoolTensorWrapper& wrap)
     NOT_NULLPTR_CHECK(data_buffer);
     return data_buffer;
 }
+aclDataBuffer* getDataBuffer(HostTensorWrapper& wrap)
+{
+    aclDataBuffer* data_buffer = aclCreateDataBuffer(wrap.data_ptr, wrap.tensor_size); 
+    NOT_NULLPTR_CHECK(data_buffer);
+    return data_buffer;
+}
+// aclDataBuffer* getDataBuffer(BatchNormTensorWrapper& wrap)
+// {
+//     aclDataBuffer* data_buffer = aclCreateDataBuffer(wrap.data_ptr, wrap.malloc_size); 
+//     NOT_NULLPTR_CHECK(data_buffer);
+//     return data_buffer;
+// }
 // aclDataBuffer* getDataBuffer(std::vector<int32_t>& v)
 // {
 //     aclDataBuffer* data_buffer = aclCreateDataBuffer(v.data(), v.size()*4); 
@@ -218,9 +261,10 @@ NpuCommand& NpuCommand::Input(AclTensorWrapper& wrap)
     aclTensorDesc* desc = getTensorDesc(wrap);
     command_param.in_descs.push_back(desc);
     // setConsTensor
-    if(wrap.isConst)
+    if(wrap.key!= "")
     {
-        aclSetTensorConst(desc, wrap.data_ptr, wrap.tensor_size); 
+        CHECK_NE(wrap.key, "");
+        aclSetTensorConst(desc, const_tensor_map[wrap.key].data(), wrap.tensor_size); 
     }
     return *this;
 }
@@ -235,6 +279,25 @@ NpuCommand& NpuCommand::Input(MaxPoolTensorWrapper& wrap)
     // setConsTensor
     return *this;
 }
+NpuCommand& NpuCommand::Input(HostTensorWrapper& wrap)
+{
+    aclTensorDesc* desc = getTensorDesc(wrap);
+    command_param.in_descs.push_back(desc);
+    aclSetTensorPlaceMent(desc, ACL_MEMTYPE_HOST);
+    command_param.in_buffers.push_back(getDataBuffer(wrap));
+    return *this;     
+}
+// NpuCommand& NpuCommand::Input(BatchNormTensorWrapper& wrap)
+// {
+//     // fix : use NpuAllocator to malloc
+//     // generate DataBuffer
+//     command_param.in_buffers.push_back(getDataBuffer(wrap));
+//     // generate TensorDesc
+//     aclTensorDesc* desc = getTensorDesc(wrap);
+//     command_param.in_descs.push_back(desc);
+//     // setConsTensor
+//     return *this;
+// }
 NpuCommand& NpuCommand::Input()
 {
     command_param.in_descs.push_back(

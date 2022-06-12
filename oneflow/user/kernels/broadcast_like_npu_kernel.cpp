@@ -33,29 +33,26 @@ class BroadcastLikeNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* like_tensor = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
-    std::vector<int32_t> x_shape;
     std::vector<int32_t> like_shape;
     for(size_t i = 0;i<like_tensor->shape().NumAxes();++i)
     {
-        x_shape.push_back(like_tensor->shape().ptr()[i]);
         like_shape.push_back(like_tensor->shape().ptr()[i]);
     }
-    for(auto& ax: axis)
-    {
-        x_shape[ax] = 1;
-    }
-    void* tensor_ptr = nullptr;
     std::vector<int64_t> shape_desc;
     shape_desc.push_back(like_shape.size());
-    AclTensorWrapper wrap(tensor_ptr,
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
+    std::string key = "BroadcastLikeNpu" + ShapeToString(like_shape);
+    if(!const_tensor_map.count(key))  const_tensor_map[key] = like_shape;
+    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
                           ACL_INT32,
                           shape_desc.size(),
                           shape_desc.data(),
                           ACL_FORMAT_ND,
                           mulVector(shape_desc)*sizeof(int32_t),
                           like_shape.data(),
-                          /*isConst*/true);
+                          key); // dck_caution_here const_wrap
     NpuCommand npu_command;
     npu_command.OpName("BroadcastTo")
                .Input(in_tensor,"channels_nd")
@@ -64,22 +61,27 @@ class BroadcastLikeNpuKernel final : public user_op::OpKernel {
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     //PrintResult(out_tensor);
-    //std::cout<<"BroadcastLikeNpuKernel Execute Over"<<std::endl; 
-
+    //std::cout<<"BroadcastTo over"<<std::endl;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
 
-#define REGISTER_BROADCAST_LIKE_NPU_KERNEL(dtype)   \
-  REGISTER_USER_KERNEL("broadcast_like")                    \
-      .SetCreateFn<BroadcastLikeNpuKernel<dtype>>()    \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU) \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
-
+#define REGISTER_BROADCAST_LIKE_NPU_KERNEL(dtype)                                               \
+  REGISTER_USER_KERNEL("broadcast_like")                                                        \
+      .SetCreateFn<BroadcastLikeNpuKernel<dtype>>()                                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                           \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))          \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
+          const auto& like = ctx->InputTensorDesc("like", 0);                                   \
+          size_t tmp_size = 0;                                                                  \
+          int shape_size = like.shape().NumAxes() * sizeof(int32_t);                            \
+          tmp_size += shape_size;                                                               \
+          return tmp_size;                                                                      \
+      });   
 
 
 REGISTER_BROADCAST_LIKE_NPU_KERNEL(float)

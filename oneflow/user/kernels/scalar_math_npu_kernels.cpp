@@ -35,8 +35,10 @@ class ScalarMulNpuKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-    AclTensorWrapper wrap(nullptr, ACL_FLOAT, 0, nullptr,
-                             ACL_FORMAT_ND, sizeof(T), &scalar_operand);//dck_caution_here ACL_FLOAT/ACL_FLOAT16
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(),sizeof(T));
+    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), DataTypeTraits<T>::type, 0, nullptr,
+                             ACL_FORMAT_ND, sizeof(T), &scalar_operand);//dck_caution_here typetraits
     NpuCommand npu_command;
     npu_command.OpName("Mul")
                 .Input(in)
@@ -45,17 +47,21 @@ class ScalarMulNpuKernel final : public user_op::OpKernel {
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
     npu_command.Run();
-    PrintResult(out);
-    std::cout<<"ScalarMulNpuKernel Execute Over"<<std::endl; 
-
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-#define REGISTER_SCALAR_MUL_NPU_KERNEL(dtype)                             \
-  REGISTER_USER_KERNEL("scalar_mul")                                               \
-      .SetCreateFn<ScalarMulNpuKernel<dtype>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                                \
-                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
+#define REGISTER_SCALAR_MUL_NPU_KERNEL(dtype)                                                   \
+  REGISTER_USER_KERNEL("scalar_mul")                                                            \
+      .SetCreateFn<ScalarMulNpuKernel<dtype>>()                                                 \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                           \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))         \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
+          const auto& x = ctx->InputTensorDesc("in", 0);                                        \
+          size_t tmp_size = 0;                                                                  \
+          int mul2_size = sizeof(dtype);                                                        \
+          tmp_size +=  mul2_size;                                                               \
+          return tmp_size;                                                                      \
+      });   
 REGISTER_SCALAR_MUL_NPU_KERNEL(float);
 REGISTER_SCALAR_MUL_NPU_KERNEL(float16);
 } // namespace oneflow

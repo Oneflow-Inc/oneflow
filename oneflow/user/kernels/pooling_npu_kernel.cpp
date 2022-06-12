@@ -74,7 +74,7 @@ class MaxPool2dNpuKernel final : public user_op::OpKernel {
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(y);
     
   };
@@ -109,9 +109,6 @@ class MaxPool2dGradNpuKernel final : public user_op::OpKernel {
     std::vector<int64_t> dilations_64 = {1, dilation[0], dilation[1], 1};
     std::string data_format = ctx->Attr<std::string>("data_format");
     
-    // MaxPoolTensorWrapper wrap(indice->mut_dptr<void>(), ACL_UINT16, ACL_FORMAT_NCHW, ACL_FORMAT_NC1HWC0,
-    //                             indice_dim.size(), indice_dim.data(), 
-    //                             mulVector(indice_dim)*8);
     MaxPoolTensorWrapper wrap( indice->mut_dptr<void>(), ACL_UINT16, ACL_FORMAT_NCHW, ACL_FORMAT_NC1HWC0,
                                 indice->shape().NumAxes(), indice->shape().ptr(), 
                                 indice->shape().elem_cnt()*GetSizeOfDataType(indice->data_type()));
@@ -129,7 +126,7 @@ class MaxPool2dGradNpuKernel final : public user_op::OpKernel {
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(dx);
     //std::cout<<"MaxPoolGrad Execute Over"<<std::endl; 
   };

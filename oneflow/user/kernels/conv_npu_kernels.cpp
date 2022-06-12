@@ -44,11 +44,6 @@ class ConvNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     //user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-
-    const user_op::TensorDesc* weight_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-    const user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-
     //const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
     std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding_before");
     std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
@@ -68,9 +63,6 @@ class ConvNpuKernel final : public user_op::OpKernel {
               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
               .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    //PrintResult(out);
-    //std::cout<<"Conv Execute Over"<<std::endl; 
   };
 };
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                                \
@@ -107,7 +99,7 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* x_like = ctx->Tensor4ArgNameAndIndex("x_like", 0);
     user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    //user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding_before");
     std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
     std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
@@ -122,17 +114,19 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
     {
       x_shape.push_back(dx->shape().ptr()[i]);
     }    
-    void* tensor_ptr = nullptr;
     std::vector<int64_t> shape_desc;
     shape_desc.push_back(x_shape.size());
-    AclTensorWrapper wrap(tensor_ptr,
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
+    std::string key = "ConvDataGradNpu" + ShapeToString(x_shape);
+    if(!const_tensor_map.count(key))  const_tensor_map[key] = x_shape;
+    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
                       ACL_INT32,
                       shape_desc.size(),
                       shape_desc.data(),
                       ACL_FORMAT_ND,
                       mulVector(shape_desc)*sizeof(int32_t),
                       x_shape.data(),
-                      /*isConst*/true);
+                      key);
     int64_t groups = 1;
     NpuCommand npu_command;
     npu_command.OpName("Conv2DBackpropInput")
@@ -148,9 +142,9 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(dx);
-    std::cout<<"ConvDataGrad Execute Over"<<std::endl; 
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    //PrintResult(dx);
+    //std::cout<<"ConvDataGrad Execute Over"<<std::endl; 
 
   }
 };
@@ -161,16 +155,12 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                      \
                        && (user_op::HobAttr<int32_t>("groups") == 1)                       \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))    \
-      // .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
-      //   size_t tmp_buffer_size = 0;                                                        \
-      //   const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                \
-      //   const auto& weight_shape = ctx->InputTensorDesc("filter", 0).shape();              \
-      //                                                                                      \
-      //   int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));             \
-      //   tmp_buffer_size +=                                                                 \
-      //       CalcElemNumOfColBuf(out_diff_shape, weight_shape, idx_offset) * sizeof(dtype); \
-      //   return tmp_buffer_size;                                                            \
-      // })
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
+        size_t tmp_buffer_size = 0;                                                        \
+        const auto& x_like_shape = ctx->InputTensorDesc("x_like", 0).shape();                \
+        tmp_buffer_size += x_like_shape.NumAxes()*sizeof(int);                                          \
+        return tmp_buffer_size;                                                              \
+      })
 
 REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, float);
 REGISTER_CONV_DATA_GRAD_KERNEL(conv_data_grad, float16);
@@ -191,7 +181,7 @@ class ConvFilterGradNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
-    
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     //user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding_before");
     std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("strides");
@@ -206,17 +196,20 @@ class ConvFilterGradNpuKernel final : public user_op::OpKernel {
     {
       filter_shape.push_back(filter_diff->shape().ptr()[i]);
     }
-    void* tensor_ptr = nullptr;
+    
     std::vector<int64_t> shape_desc;
     shape_desc.push_back(filter_shape.size());
-    AclTensorWrapper wrap(tensor_ptr,
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
+    std::string key = "ConvDataFilterNpu" + ShapeToString(filter_shape);
+    if(!const_tensor_map.count(key)) const_tensor_map[key] = filter_shape;
+    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
                       ACL_INT32,
                       shape_desc.size(),
                       shape_desc.data(),
                       ACL_FORMAT_ND,
                       mulVector(shape_desc)*sizeof(int32_t),
                       filter_shape.data(),
-                      /*isConst*/true);
+                      key);
     int64_t groups = 1;
 
     NpuCommand npu_command;
@@ -233,9 +226,9 @@ class ConvFilterGradNpuKernel final : public user_op::OpKernel {
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    PrintResult(filter_diff);
-    std::cout<<"ConvFilterGrad Execute Over"<<std::endl; 
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    //PrintResult(filter_diff);
+    //std::cout<<"ConvFilterGrad Execute Over"<<std::endl; 
   }
 };
 #define REGISTER_CONV_FILTER_GRAD_KERNEL(op_name, dtype)                                        \
@@ -244,16 +237,12 @@ class ConvFilterGradNpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                           \
                        && (user_op::HobAttr<int32_t>("groups") == 1)                            \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value))         \
-      // .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                             \
-      //   size_t tmp_buffer_size = 0;                                                             \
-      //   const auto& out_diff_shape = ctx->InputTensorDesc("dy", 0).shape();                     \
-      //   const auto& weight_diff_shape = ctx->OutputTensorDesc("filter_diff", 0)->shape();       \
-      //                                                                                           \
-      //   int64_t idx_offset = IdxOffset(ctx->Attr<std::string>("data_format"));                  \
-      //   tmp_buffer_size +=                                                                      \
-      //       CalcElemNumOfColBuf(out_diff_shape, weight_diff_shape, idx_offset) * sizeof(dtype); \
-      //   return tmp_buffer_size;                                                                 \
-      // })
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
+        size_t tmp_buffer_size = 0;                                                        \
+        const auto& filter_diff_shape = ctx->InputTensorDesc("filter_diff", 0).shape();                \
+        tmp_buffer_size += filter_diff_shape.NumAxes() * sizeof(int);                                          \
+        return tmp_buffer_size;                                                              \
+      })
 
 REGISTER_CONV_FILTER_GRAD_KERNEL(conv_filter_grad, float);
 REGISTER_CONV_FILTER_GRAD_KERNEL(conv_filter_grad, double);

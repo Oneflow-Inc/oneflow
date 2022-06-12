@@ -933,6 +933,10 @@
   signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropy"
   bind_python: True
 
+- name: "cross_entropy_npu"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropyNpu"
+  bind_python: True
+
 - name: "distributed_sparse_cross_entropy_grad"
   signature: "Tensor (Tensor prediction, Tensor label, Tensor dy, Int64 depth) => SparseCrossEntropyMsGrad"
   bind_python: False
@@ -2000,6 +2004,10 @@
 
 - name: "top_k"
   signature: "Tensor (Tensor input, Int32 k, Bool sorted=True) => TopK"
+  bind_python: True
+
+- name: "top_k_npu"
+  signature: "TensorTuple (Tensor input, Int32 k, Int32 dim, Bool sorted=True, Bool largest=True) => TopKNpu"
   bind_python: True
 
 - name: "in_top_k"

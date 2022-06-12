@@ -38,19 +38,21 @@ class NllKernel final : public user_op::OpKernel {
     user_op::Tensor*  target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
-
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int64_t ignore_index = ctx->Attr<int64_t>("ignore_index");
+    std::string reduction = ctx->Attr<std::string>("reduction");
     user_op::Tensor* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0) : nullptr;
+
     if(!weight)
     {
         std::vector<float> weight_v(input_blob->shape().elem_cnt(), 1.0);
         std::vector<int64_t> weight_shape;
         weight_shape.push_back(input_blob->shape().At(1));
-        AclTensorWrapper wrap(nullptr, ACL_FLOAT, weight_shape.size(), weight_shape.data(), ACL_FORMAT_ND,
+        CHECK_EQ(input_blob->shape().At(1)*sizeof(float), tmp_buffer->shape().elem_cnt() );
+        AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_FLOAT, weight_shape.size(), weight_shape.data(), ACL_FORMAT_ND,
                                 input_blob->shape().At(1)*sizeof(float), weight_v.data());
         NpuCommand npu_command;
-        std::string reduction = "none";
         npu_command.OpName("NLLLoss")
                   .Input(input_blob)
                   .Input(target_blob)
@@ -62,15 +64,9 @@ class NllKernel final : public user_op::OpKernel {
                   .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                   .Check();
         npu_command.Run();
-        OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
-        if(reduction=="none")
-        {
-          float tw = input_blob->shape().At(0) * 1.0;
-          OF_NPU_CHECK(aclrtMemcpy(total_weight_blob->mut_dptr<void>(),
-                                    sizeof(float), &tw, sizeof(float), ACL_MEMCPY_HOST_TO_DEVICE));
-        }  
-        //PrintResult(total_weight_blob);
-       // std::cout<<"NllKernel Execute Over"<<std::endl;  
+      //   OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
+      //   PrintResult(out_blob);
+      //  std::cout<<"NllKernel Execute Over"<<std::endl;  
     }
     else
     {
@@ -94,7 +90,9 @@ class NllGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int64_t ignore_index = ctx->Attr<int64_t>("ignore_index");
+    std::string reduction = "mean";//ctx->Attr<std::string>("reduction");
     user_op::Tensor* weight =
         ctx->has_input("weight", 0) ? ctx->Tensor4ArgNameAndIndex("weight", 0) : nullptr;
     if(!weight)
@@ -102,9 +100,9 @@ class NllGradKernel final : public user_op::OpKernel {
         std::vector<float> weight_v(input_blob->shape().At(1), 1.0);
         std::vector<int64_t> weight_shape;
         weight_shape.push_back(input_blob->shape().At(1));
-        AclTensorWrapper wrap(nullptr, ACL_FLOAT, weight_shape.size(), weight_shape.data(), ACL_FORMAT_ND,
+        CHECK_EQ(tmp_buffer->shape().elem_cnt(), input_blob->shape().At(1)*sizeof(float));
+        AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_FLOAT, weight_shape.size(), weight_shape.data(), ACL_FORMAT_ND,
                                 input_blob->shape().At(1)*sizeof(float), weight_v.data());
-        std::string reduction = "none";
         NpuCommand npu_command;
         npu_command.OpName("NLLLossGrad")
                 .Input(input_blob)
@@ -118,9 +116,9 @@ class NllGradKernel final : public user_op::OpKernel {
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
         npu_command.Run();
-        OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
-        //PrintResult(dx_blob);
-        //std::cout<<"NllGradKernel Execute Over"<<std::endl;        
+        // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
+        // PrintResult(dx_blob);
+        // std::cout<<"NLLLossGrad over"<<std::endl;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -128,23 +126,38 @@ class NllGradKernel final : public user_op::OpKernel {
 
 }  // namespace
 #define REGISTER_NLL_KERNEL(dtype_pair, ltype_pair)                                            \
-  REGISTER_USER_KERNEL("nll")                                                                  \
+  REGISTER_USER_KERNEL("nll_npu")                                                                  \
       .SetCreateFn<NllKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()    \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                          \
                        && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair)) \
-                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
-
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))    \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
+          const auto& x = ctx->InputTensorDesc("input", 0);                                   \
+          size_t tmp_size = 0;                                                                  \
+          int shape_size = x.shape().At(1) * sizeof(float);                                     \
+          tmp_size += shape_size;                                                               \
+          return tmp_size;                                                                      \
+      });   
 #define REGISTER_NLL_GRAD_KERNEL(dtype_pair, ltype_pair)                                        \
   REGISTER_USER_KERNEL("nll_grad")                                                              \
       .SetCreateFn<NllGradKernel<OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                           \
                        && (user_op::HobDataType("target", 0) == OF_PP_PAIR_SECOND(ltype_pair))  \
                        && (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dtype_pair))      \
-                       && (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
-
+                       && (user_op::HobDataType("dx", 0) == OF_PP_PAIR_SECOND(dtype_pair)))     \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
+          const auto& x = ctx->InputTensorDesc("input", 0);                                     \
+          size_t tmp_size = 0;                                                                  \
+          int shape_size = x.shape().At(1) * sizeof(float);                                     \
+          tmp_size += shape_size;                                                               \
+          return tmp_size;                                                                      \
+      });   
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_KERNEL, FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_KERNEL, FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_GRAD_KERNEL, FLOATING_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_NLL_GRAD_KERNEL, FLOAT16_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 }  // namespace user_op
 }  // namespace oneflow

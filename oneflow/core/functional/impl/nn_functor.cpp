@@ -856,6 +856,12 @@ class CrossEntropyFunctor {
                              .Output("out")
                              .Output("total_weight")
                              .Build());
+    op_nll_npu_ = CHECK_JUST(one::OpBuilder("nll_npu")
+                             .Input("input")
+                             .Input("target")
+                             .Output("out")
+                             .Output("total_weight")
+                             .Build());
     op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
                                     .Input("input")
                                     .Input("target")
@@ -874,9 +880,6 @@ class CrossEntropyFunctor {
     const auto& target_shape = target->shape();
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
-
-
-    std::cout<<std::endl;
     std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
     input_perm[input_perm.size() - 1] = 1;
     for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
@@ -893,11 +896,13 @@ class CrossEntropyFunctor {
 
     std::shared_ptr<TensorTuple> kernel_result;
     std::shared_ptr<Tensor> result;
-    // bool isNpu = (input->device().GetOrThrow()->of_type().GetOrThrow()=="npu");
-    // if(isNpu)
-    // {
-    //   JUST(attrs.SetAttr<std::string>("reduction", reduction));
-    // }
+    bool isNpu = (input->device().GetOrThrow()->of_type().GetOrThrow()=="npu");
+    if(isNpu)
+    {
+      JUST(attrs.SetAttr<std::string>("reduction", reduction));
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_npu_, {input_, target_}, attrs));
+      return kernel_result->at(0);
+    }
     if (weight) {
       kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
           *op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
@@ -911,6 +916,69 @@ class CrossEntropyFunctor {
     if (reduction == "sum") { return result; }
 
     return functional::Div(result, kernel_result->at(1));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_log_softmax_;
+  std::shared_ptr<OpExpr> op_nll_;
+  std::shared_ptr<OpExpr> op_nll_npu_;
+  std::shared_ptr<OpExpr> op_nll_weight_;
+};
+
+class CrossEntropyNpuFunctor {
+ public:
+  CrossEntropyNpuFunctor() {
+    op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+    op_nll_ = CHECK_JUST(one::OpBuilder("nll_npu")
+                             .Input("input")
+                             .Input("target")
+                             .Output("out")
+                             .Output("total_weight")
+                             .Build());
+    op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll_npu")
+                                    .Input("input")
+                                    .Input("target")
+                                    .Input("weight")
+                                    .Output("out")
+                                    .Output("total_weight")
+                                    .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& target,
+                           const Optional<one::Tensor>& weight, const int64_t& ignore_index,
+                           const std::string& reduction) const {
+    CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
+        << "Reduction should be none, sum or mean.";
+    const auto& input_shape = input->shape();
+    const auto& target_shape = target->shape();
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+    std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
+    input_perm[input_perm.size() - 1] = 1;
+    for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
+
+    const auto input_ = JUST(sequence_function(functional::Transpose)
+                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                 Shape({-1, input_shape->At(1)})))
+                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                 })
+                                 .call(input, input_perm));
+
+    const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
+
+    std::shared_ptr<TensorTuple> kernel_result;
+    std::shared_ptr<Tensor> result;
+
+    JUST(attrs.SetAttr<std::string>("reduction", reduction));
+
+    if (weight) {
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+          *op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
+    } else {
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
+    }
+    return kernel_result->at(0);
   }
 
  private:
@@ -2481,6 +2549,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SparseCrossEntropyFunctor>("SparseCrossEntropy");
   m.add_functor<impl::SparseCrossEntropyMsFunctor>("SparseCrossEntropyMs");
   m.add_functor<impl::CrossEntropyFunctor>("CrossEntropy");
+  m.add_functor<impl::CrossEntropyNpuFunctor>("CrossEntropyNpu");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyFunctor>("SoftmaxCrossEntropy");
   m.add_functor<impl::SoftmaxCrossEntropyGradFunctor>("SoftmaxCrossEntropyGrad");

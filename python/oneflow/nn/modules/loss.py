@@ -163,6 +163,10 @@ class CrossEntropyLoss(_WeightedLoss):
         self.ignore_index = ignore_index
 
     def forward(self, input, target):
+        # if input.device.type == "npu":
+        #     return flow._C.cross_entropy(
+        #         input, target, self.weight, self.ignore_index, self.reduction
+        #     )
         return flow._C.cross_entropy(
             input, target, self.weight, self.ignore_index, self.reduction
         )

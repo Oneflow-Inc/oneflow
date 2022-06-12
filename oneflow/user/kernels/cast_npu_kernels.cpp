@@ -47,7 +47,7 @@ class CastNpuKernel final : public OpKernel{
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+   // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(output_tensor);
     //std::cout<<"Cast Execute Over"<<std::endl;       
   }

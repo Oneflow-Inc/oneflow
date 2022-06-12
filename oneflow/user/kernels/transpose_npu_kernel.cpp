@@ -42,6 +42,7 @@ class TransposeNpuKernel final : public OpKernel {
     Tensor* tensor_in = ctx->Tensor4ArgNameAndIndex("input", 0);
     Tensor* tensor_out = ctx->Tensor4ArgNameAndIndex("output", 0);
     std::vector<int32_t> perm = ctx->Attr<std::vector<int32_t>>("perm");
+    Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const ShapeView& in_shape = tensor_in->shape();
     DataType dtype = tensor_out->data_type();
     size_t num_dims = tensor_in->shape().NumAxes();
@@ -57,9 +58,12 @@ class TransposeNpuKernel final : public OpKernel {
                    tensor_in->mem_case());
         //std::cout<<"Transpose aclrtMemcpy over"<<std::endl;
       } else {
+          CHECK_EQ(tmp_buffer->shape().elem_cnt(), perm.size()*sizeof(int));
           std::vector<int64_t> shape_desc = {static_cast<int64_t>(perm.size())};
-          AclTensorWrapper wrap(nullptr, ACL_INT32, shape_desc.size(), shape_desc.data(), ACL_FORMAT_ND,
-                                  mulVector(perm)*sizeof(int32_t), perm.data());
+          std::string key = "TransposeNpu" + ShapeToString(perm);
+          if(!const_tensor_map.count(key))  const_tensor_map[key] = perm;
+          AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_INT32, shape_desc.size(), shape_desc.data(), ACL_FORMAT_ND,
+                                  perm.size()*sizeof(int32_t), perm.data(), key);
           NpuCommand npu_command;
           npu_command.OpName("Transpose")
                     .Input(tensor_in)
@@ -68,7 +72,7 @@ class TransposeNpuKernel final : public OpKernel {
                     .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                     .Check();
           npu_command.Run();
-          OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
+          //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
           //PrintResult(tensor_out);
           //std::cout<<"TransposeNpuKernel Execute Over"<<std::endl;  
       }
@@ -84,7 +88,13 @@ class TransposeNpuKernel final : public OpKernel {
 
 REGISTER_USER_KERNEL("transpose")
     .SetCreateFn<TransposeNpuKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU);
-
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kNPU)
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              
+        const auto& x = ctx->InputTensorDesc("input", 0);                                   
+        size_t tmp_size = 0;                                                                  
+        int shape_size =  x.shape().NumAxes() * sizeof(int);                                     
+        tmp_size += shape_size;                                                               
+        return tmp_size;                                                                      
+    });       
 }  // namespace user_op
 }  // namespace oneflow

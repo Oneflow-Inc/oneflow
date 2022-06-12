@@ -21,7 +21,72 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+template<typename T>
+class NormalizationInferenceNpuKernel final : public user_op::OpKernel {
+ public:
+  NormalizationInferenceNpuKernel() = default;
+  ~NormalizationInferenceNpuKernel() override = default;
 
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const bool training = ctx->Attr<bool>("training");
+    CHECK(!training);
+    user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
+    user_op::Tensor* beta = ctx->Tensor4ArgNameAndIndex("beta", 0);
+    user_op::Tensor* moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
+    user_op::Tensor* moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0);
+    const auto axis = ctx->Attr<int32_t>("axis");
+    const auto epsilon = ctx->Attr<float>("epsilon");
+
+    const DataType data_type = x->data_type();
+    CHECK_EQ(x->shape(), y->shape());
+    CHECK_EQ(y->data_type(), data_type);
+    CHECK_GE(axis, 0);
+    CHECK_LT(axis, x->shape().NumAxes());
+
+    if (axis == 1) {  // NOTE(Liang Depeng): NCHW format
+        NpuCommand npu_command;
+        npu_command.OpName("BNInfer")
+                   .Input(x,"channels_fisrt")
+                   .Input(gamma,"channels_fisrt")
+                   .Input(beta,"channels_fisrt")
+                   .Input(moving_mean)
+                   .Input(moving_variance)
+                   .Output(y)
+                   .Attr("epsilon",epsilon)
+                   .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
+                   .Check();
+        npu_command.Run();
+        //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    } else {  // TODO(Liang Depeng): NHWC format
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_BN_INFERENCE_CPU_KERNEL(dtype)                                           \
+  REGISTER_USER_KERNEL("normalization")                                                   \
+      .SetCreateFn<NormalizationInferenceNpuKernel<dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                     \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)     \
+                       && (user_op::HobAttr<bool>("training") == false));
+      // .SetInplaceProposalFn(                                                              \
+      //     [](const user_op::InferContext& ctx,                                            \
+      //        const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {      \
+      //       if (ctx.has_input("_add_to_output", 0)) {                                     \
+      //         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true)); \
+      //       }                                                                             \
+      //       return Maybe<void>::Ok();                                                     \
+      //     });
+REGISTER_BN_INFERENCE_CPU_KERNEL(float16)
+REGISTER_BN_INFERENCE_CPU_KERNEL(float)
+REGISTER_BN_INFERENCE_CPU_KERNEL(double)
+
+#undef REGISTER_BN_INFERENCE_CPU_KERNEL
 
 template<typename T>
 class NormalizationTrainKernel final : public user_op::OpKernel {
@@ -41,6 +106,7 @@ void NormalizationTrainKernel<T>::Compute(user_op::KernelComputeContext* ctx) co
      if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int32_t axis = ctx->Attr<int32_t>("axis");
     float epsilon = ctx->Attr<float>("epsilon");
     float momentum = ctx->Attr<float>("momentum");
@@ -57,19 +123,20 @@ void NormalizationTrainKernel<T>::Compute(user_op::KernelComputeContext* ctx) co
     user_op::Tensor* inv_variance = ctx->Tensor4ArgNameAndIndex("inv_variance", 0);
     
     std::vector<int64_t> batch_desc = {x->shape().ptr()[axis]};
-    std::vector<int64_t> batch_desc2 = {x->shape().ptr()[axis]};
-    AclTensorWrapper sum_warp(nullptr,
+    size_t len_of_wrap = sizeof(float) * mulVector(batch_desc);
+    char* tmp_ptr = tmp_buffer->mut_dptr<char>();
+    AclTensorWrapper sum_warp(static_cast<void*>(tmp_ptr),
                               ACL_FLOAT, 
                               batch_desc.size(), 
                               batch_desc.data(),
                               ACL_FORMAT_NCHW,
-                              sizeof(float) * mulVector(batch_desc));
-    AclTensorWrapper square_sum_warp(nullptr,
+                              len_of_wrap);
+    AclTensorWrapper square_sum_warp(static_cast<void*>(tmp_ptr+len_of_wrap),
                               ACL_FLOAT, 
-                              batch_desc2.size(), 
-                              batch_desc2.data(),
+                              batch_desc.size(), 
+                              batch_desc.data(),
                               ACL_FORMAT_NCHW,
-                              sizeof(float) * mulVector(batch_desc));
+                              len_of_wrap);
     NpuCommand reduce_command;
     reduce_command.OpName("BNTrainingReduce")
                .Input(x,"channels_first")
@@ -86,13 +153,14 @@ void NormalizationTrainKernel<T>::Compute(user_op::KernelComputeContext* ctx) co
       moving_mean = ctx->Tensor4ArgNameAndIndex("moving_mean", 0);
       moving_variance = ctx->Tensor4ArgNameAndIndex("moving_variance", 0); 
     }
+    
     NpuCommand update_command;
     update_command.OpName("BNTrainingUpdate")
                   .Input(x,"channels_first")
                   .Input(sum_warp)
                   .Input(square_sum_warp)
                   .Input(gamma,"channels_first")
-                  .Input(beta,"channels_first")
+                  .Input(beta, "channels_first")
                   .Input(moving_mean,"channels_first")
                   .Input(moving_variance,"channels_first")
                   .Output(y,"channels_first")
@@ -105,24 +173,20 @@ void NormalizationTrainKernel<T>::Compute(user_op::KernelComputeContext* ctx) co
                   .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                   .Check();
     update_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    //PrintResult(y);
-    //std::cout<<"BN Execute Over"<<std::endl;
 }
 #define REGISTER_BN_TRAIN_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("normalization")                                                         \
       .SetCreateFn<NormalizationTrainKernel<dtype>>()                                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                          \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                           \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)           \
-                       && (user_op::HobAttr<bool>("training") == true));                         \
-    //   .SetInferTmpSizeFn(InferTrainTmpSize)                                                     \
-    //   .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
-    //                            user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-    //     if (ctx.has_input("_add_to_output", 0)) {                                               \
-    //       OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));           \
-    //     }                                                                                       \
-    //     return Maybe<void>::Ok();                                                               \
-    //   });
+                       && (user_op::HobAttr<bool>("training") == true))                         \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
+          const auto& x = ctx->InputTensorDesc("x", 0);                                         \
+          size_t tmp_size = 0;                                                                  \
+          int channel_size = x.shape().At(1) * sizeof(float); /* only support channels first*/  \
+          tmp_size += 2 * channel_size; /* for sum and square_sum */                            \
+          return tmp_size;                                                                      \
+      });                                                    
 
 REGISTER_BN_TRAIN_KERNEL(float16)
 REGISTER_BN_TRAIN_KERNEL(float)
@@ -191,11 +255,9 @@ class NormalizationGradNpuKernel final : public user_op::OpKernel {
                     .Attr("epsilon",epsilon)
                     .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                     .Check();
-      reduce_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    //PrintResult(dx);
-    //std::cout<<"BNGrad Execute Over"<<std::endl;           
+      reduce_command.Run();        
     } else {  // TODO(Liang Depeng): NHWC format
+      UNIMPLEMENTED();
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -206,7 +268,6 @@ class NormalizationGradNpuKernel final : public user_op::OpKernel {
       .SetCreateFn<NormalizationGradNpuKernel<dtype>>()               \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
 REGISTER_BN_GRAD_NPU_KERNEL(float16)
 REGISTER_BN_GRAD_NPU_KERNEL(float)
 REGISTER_BN_GRAD_NPU_KERNEL(double)

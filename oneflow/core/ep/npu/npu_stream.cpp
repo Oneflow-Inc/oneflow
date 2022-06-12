@@ -44,7 +44,6 @@ NpuStream::NpuStream(NpuDevice* device)
 }
 
 NpuStream::~NpuStream() {
-  std::cout<<"NpuStream::~NpuStream()"<<std::endl;
   NpuCurrentDeviceGuard guard(device_index_);
   OF_NPU_CHECK(aclrtSynchronizeStream(npu_stream_));
   OF_NPU_CHECK(aclrtDestroyStream(npu_stream_));

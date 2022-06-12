@@ -57,7 +57,7 @@ class AvgPool2dNpuKernel final : public user_op::OpKernel {
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
       npu_command.Run();
-      OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+      //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
       //PrintResult(y);
       //std::cout<<"AvgPool Execute Over"<<std::endl; 
   };
@@ -84,6 +84,7 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache* cache) const override {
     user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     std::string data_format = ctx->Attr<std::string>("data_format");
     std::vector<int32_t> padding = ctx->Attr<std::vector<int32_t>>("padding");
     std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
@@ -100,18 +101,21 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
     {
       dx_shape.push_back(dx->shape().ptr()[i]);
     }
-    VECTOR_PRINT(dx_shape);
     void* tensor_ptr = nullptr;
     std::vector<int64_t> shape_desc;
     shape_desc.push_back(dx_shape.size());
-    AclTensorWrapper wrap(tensor_ptr,
+    CHECK_EQ(mulVector(shape_desc)*sizeof(int32_t), tmp_buffer->shape().elem_cnt());
+    std::string key = "AvgPool2dNpu" + ShapeToString(dx_shape);
+    if(!const_tensor_map.count(key)) const_tensor_map[key] = dx_shape;
+    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
                       ACL_INT32,
                       shape_desc.size(),
                       shape_desc.data(),
                       ACL_FORMAT_ND,
                       mulVector(shape_desc)*sizeof(int32_t),
                       dx_shape.data(),
-                      /*isConst*/true);    
+                      key);   
+    bool exclusive = (count_include_pad == false) ? true : false; 
     NpuCommand npu_command;
     npu_command.OpName("AvgPoolV2Grad")
                .Input(wrap)
@@ -124,21 +128,27 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
                .Attr("data_format", data_format)
                .Attr("global_pooling", false)
                .Attr("ceil_mode", ceil_mode)
-               .Attr("exclusive", false)
+               .Attr("exclusive", exclusive)
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
     npu_command.Run();     
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(dx);
     //std::cout<<"AvgPoolGrad Execute Over"<<std::endl; 
   };
 };
-#define REGISTER_AVG_POOLING_NPU_KERNELS(dtype)                                         \
-       REGISTER_USER_KERNEL("avgpool_2d_grad")                                           \
-       .SetCreateFn<AvgPool2dGradNpuKernel<dtype>>()                                            \
-       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                   \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));  
-                       
+#define REGISTER_AVG_POOLING_NPU_KERNELS(dtype)                                                   \
+       REGISTER_USER_KERNEL("avgpool_2d_grad")                                                    \
+       .SetCreateFn<AvgPool2dGradNpuKernel<dtype>>()                                              \
+       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)                            \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))            \
+        .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
+            const auto& dx = ctx->InputTensorDesc("dx", 0);                                         \
+            size_t tmp_size = 0;                                                                  \
+            int shape_size = dx.shape().NumAxes() * sizeof(float);                                   \
+            tmp_size +=  shape_size;                                                          \
+            return tmp_size;                                                                      \
+        });                        
 REGISTER_AVG_POOLING_NPU_KERNELS(float16)
 REGISTER_AVG_POOLING_NPU_KERNELS(float)
 } // namespace oneflow

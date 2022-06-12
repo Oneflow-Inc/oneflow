@@ -21,7 +21,7 @@ namespace oneflow {
 
 namespace {
 
-template<DeviceType device>
+template<DeviceType device, typename T>
 class BroadcastDivGradNpuKernel final : public user_op::OpKernel {
  public:
   BroadcastDivGradNpuKernel() = default;
@@ -33,7 +33,10 @@ class BroadcastDivGradNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* z = ctx->Tensor4ArgNameAndIndex("z", 0);
     user_op::Tensor* dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    AclTensorWrapper wrap(nullptr, ACL_FLOAT, 0, nullptr, ACL_FORMAT_ND, sizeof(float));
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), sizeof(T));
+    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), DataTypeTraits<T>::type, 0, nullptr, ACL_FORMAT_ND, sizeof(T));
+    //dck_caution_here datatypetraits
     NpuCommand div_command;
     div_command.OpName("RealDiv")
                 .Input(z)
@@ -42,7 +45,7 @@ class BroadcastDivGradNpuKernel final : public user_op::OpKernel {
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
     div_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+
     NpuCommand mul_command;
     mul_command.OpName("Mul")
                 .Input(dz)
@@ -51,26 +54,28 @@ class BroadcastDivGradNpuKernel final : public user_op::OpKernel {
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
     div_command.Run();
-    //PrintResult(dy);
-    //std::cout<<"MathBinaryBroadcastAddKernel Execute Over"<<std::endl; 
-
+    // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
+    // PrintResult(dy);
+    // std::cout<<"DivGrad Execute Over"<<std::endl; 
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
 
+
 #define REGISTER_BROADCAST_DIV_GRAD_NPU_KERNEL(device, dtype)                             \
   REGISTER_USER_KERNEL("broadcast_div_grad")                                               \
-      .SetCreateFn<BroadcastDivGradNpuKernel<device>>()         \
+      .SetCreateFn<BroadcastDivGradNpuKernel<device,dtype>>()                                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
-    //   .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         
-    //     const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                       
-    //     const DataType& data_type = z.data_type();                                         
-    //     const int64_t elem_cnt = z.shape().elem_cnt();                                     
-    //     return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));                
-    //   });
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              \
+          const auto& y = ctx->InputTensorDesc("y", 0);                                   \
+          size_t tmp_size = 0;                                                                  \
+          int shape_size = sizeof(dtype);                                                    \
+          tmp_size += shape_size;                                                               \
+          return tmp_size;                                                                      \
+      });   
 REGISTER_BROADCAST_DIV_GRAD_NPU_KERNEL(kNPU, float);
 REGISTER_BROADCAST_DIV_GRAD_NPU_KERNEL(kNPU, float16);
 }  // namespace oneflow

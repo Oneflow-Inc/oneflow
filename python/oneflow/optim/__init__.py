@@ -21,4 +21,6 @@ from oneflow.nn.optimizer.sgd import SGD
 from oneflow.nn.optimizer.adagrad import Adagrad
 from oneflow.nn.optimizer.lamb import LAMB
 
+from oneflow.nn.optimizer.torch_sgd import TORCH_SGD
+
 from . import lr_scheduler

@@ -33,15 +33,15 @@ class ReduceSumLikeNpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
-    std::cout<<"ReduceSumLikeNpuKernel tensor_x shape"<< x->shape().ToString()<<std::endl;
-    std::cout<<"ReduceSumLikeNpuKernel tensor_y shape"<< y->shape().ToString()<<std::endl;
-    VECTOR_PRINT(axis);
     NpuCommand npu_command;
     std::vector<int64_t> axis_shape = {static_cast<int64_t>(axis.size())};
-    VECTOR_PRINT(axis_shape);
-    AclTensorWrapper wrap(nullptr, ACL_INT32, axis_shape.size(), axis_shape.data(), 
-                          ACL_FORMAT_ND, sizeof(int32_t), axis.data(), /**isConst**/true);
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), sizeof(int));
+    std::string key = "ReduceSumLike" + ShapeToString(axis);
+    if(!const_tensor_map.count(key)) const_tensor_map[key] = axis;
+    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_INT32, axis_shape.size(), axis_shape.data(), 
+                          ACL_FORMAT_ND, sizeof(int32_t), axis.data(), key);
     npu_command.OpName("ReduceSum")
                 .Input(x)
                 .Input(wrap)
@@ -50,22 +50,7 @@ class ReduceSumLikeNpuKernel final : public user_op::OpKernel {
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
     npu_command.Run();
-    OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
-    //PrintResult(y);
-    // if (tensor_x->shape().elem_cnt() == 0) {
-    //   if (tensor_y->shape().elem_cnt() != 0) {
-    //     Memset<device_type>(
-    //         ctx->stream(), tensor_y->mut_dptr<T>(), 0,
-    //         tensor_y->shape().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()));
-    //   }
-    //   return;
-    // }
-    // if (axis.empty()) {
-    //   CHECK_EQ(tensor_x->shape(), tensor_y->shape());
-    //   Memcpy<device_type>(ctx->stream(), tensor_y->mut_dptr(), tensor_x->dptr(),
-    //                       tensor_x->shape().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
-    // } 
-
+    //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -74,10 +59,23 @@ class ReduceSumLikeNpuKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("reduce_sum_like")
     .SetCreateFn<ReduceSumLikeNpuKernel<DeviceType::kNPU>>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)
-                     && (user_op::HobDataType("y", 0) == GetDataType<float16>::value));
-
+                     && (user_op::HobDataType("y", 0) == GetDataType<float16>::value))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              
+        const auto& x = ctx->InputTensorDesc("x", 0);                                   
+        size_t tmp_size = 0;                                                                  
+        int shape_size =  sizeof(int);                                     
+        tmp_size += shape_size;                                                               
+        return tmp_size;                                                                      
+    });   
 REGISTER_USER_KERNEL("reduce_sum_like")
     .SetCreateFn<ReduceSumLikeNpuKernel<DeviceType::kNPU>>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU)
-                     && (user_op::HobDataType("y", 0) == GetDataType<float>::value));
+                     && (user_op::HobDataType("y", 0) == GetDataType<float>::value))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t{                              
+        const auto& x = ctx->InputTensorDesc("x", 0);                                   
+        size_t tmp_size = 0;                                                                  
+        int shape_size = sizeof(int);                                   
+        tmp_size += shape_size;                                                               
+        return tmp_size;                                                                      
+    });  
 }  // namespace oneflow

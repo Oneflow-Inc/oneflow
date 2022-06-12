@@ -36,7 +36,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = input_desc.is_dynamic();
-  *out_desc->mut_shape() = target_desc.shape();
+  *out_desc->mut_shape() = Shape({});
 
   user_op::TensorDesc* total_weight_desc = ctx->OutputTensorDesc("total_weight", 0);
   *total_weight_desc->mut_is_dynamic() = input_desc.is_dynamic();
@@ -64,8 +64,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   CHECK_GE_OR_RETURN(input_desc.shape().NumAxes(), 2);
   CHECK_EQ_OR_RETURN(target_desc.shape().NumAxes(), 1);
   CHECK_EQ_OR_RETURN(input_desc.shape().At(0), target_desc.shape().At(0));
-  if(ctx->device_tag()!="npu")
-    CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
+  //CHECK_EQ_OR_RETURN(dy_desc.shape(), target_desc.shape());
   CHECK_EQ_OR_RETURN(total_weight_desc.shape(), Shape({}));
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);
@@ -90,22 +89,22 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 }
 }  // namespace
 
-/* static */ Maybe<void> NllOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> NllNpuOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferTensorDescFn(ctx);
 }
 
-/*static*/ Maybe<void> NllOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NllNpuOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> NllOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> NllNpuOp::GetSbp(user_op::SbpContext* ctx) {
   return GenLossForwardDefaultGetSbpFn(
       [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {
         builder.PartialSum(user_op::OpArg("total_weight", 0));
       })(ctx);
 }
 
-/* static */ Maybe<void> NllOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
+/* static */ Maybe<void> NllNpuOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
                                                const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
   CHECK_OR_RETURN(target_modifier != nullptr);
@@ -113,40 +112,41 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> NllOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> NllNpuOp::InferDataType(user_op::InferContext* ctx) {
   return NllInferDataType(ctx);
 }
 
-/* static */ Maybe<void> NllGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> NllGradNpuOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
 }
 
-/*static*/ Maybe<void> NllGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> NllGradNpuOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> NllGradOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> NllGradNpuOp::GetSbp(user_op::SbpContext* ctx) {
   return GenLossBackwardDefaultGetSbpFn(
       [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {
         builder.PartialSum(user_op::OpArg("total_weight", 0));
       })(ctx);
 }
 
-/* static */ Maybe<void> NllGradOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> NllGradNpuOp::InferDataType(user_op::InferContext* ctx) {
   return InferGradDataType(ctx);
 }
 
-REGISTER_USER_OP_GRAD("nll").SetGenBackwardOpConfFn(
+REGISTER_USER_OP_GRAD("nll_npu").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-        builder.Op("nll_grad")
+        builder.Op("nll_npu_grad")
             .Input("input", op.input("input", 0))
             .Input("target", op.input("target", 0))
             .Input("total_weight", op.output("total_weight", 0))
             .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
             .Output("dx")
-            .Attr("ignore_index", op.attr<int64_t>("ignore_index"));
+            .Attr("ignore_index", op.attr<int64_t>("ignore_index"))
+            .Attr("reduction", op.attr<std::string>("reduction"));
         if (op.user_op_conf().has_input("weight", 0)) {
           builder.Input("weight", op.input("weight", 0));
         }

@@ -43,4 +43,8 @@ REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCPU)
 REGISTER_ZERO_LIKE_KERNEL(DeviceType::kCUDA)
 #endif
 
+#ifdef WITH_NPU
+REGISTER_ZERO_LIKE_KERNEL(DeviceType::kNPU)
+#endif
+
 }  // namespace oneflow

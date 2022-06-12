@@ -54,7 +54,8 @@ static std::map<std::string, std::string> attr_format_map ={
                 {"channels_last", "NHWC"},
                 {"channels_first", "NCHW"},
             };
-
+std::string ShapeToString(std::vector<int> &v);
+extern std::unordered_map<std::string, std::vector<int>> const_tensor_map;
 #define NOT_NULLPTR_CHECK(x) if(x==nullptr) {                                           \
           std::cout<<"Get nullptr error, create input "<<#x<<" failed"<<std::endl; \
         }
@@ -89,57 +90,54 @@ dtype mulVector(const std::vector<dtype> &v)
                             std::cout<<"npu_command check fail "<<#x<<std::endl;\
                             return ;\
                             }
-// template<typename dtype>
-// struct NpuCommandSimpleTensorDesc
-// {
-//     dtype* data_ptr;
-//     size_t count;
-//     std::string format;
-//     DataType data_type = kInvalidDataType;
-//     NpuCommandSimpleTensorDesc(dtype* ptr, size_t cnt, std::string fmt)
-//                                 :data_ptr(ptr), count(cnt), format(fmt) {}
-// };
-// template<>
-// struct NpuCommandSimpleTensorDesc<float>
-// {
-//     float* data_ptr;
-//     size_t count;
-//     std::string format;
-//     DataType data_type = kFloat;
-//     NpuCommandSimpleTensorDesc(float* ptr, size_t cnt, std::string fmt)
-//                                 :data_ptr(ptr), count(cnt), format(fmt) {}
-// };
-// template<>
-// struct NpuCommandSimpleTensorDesc<float16>
-// {
-//     float16* data_ptr;
-//     size_t count;
-//     std::string format;
-//     DataType data_type = kFloat16;
-//     NpuCommandSimpleTensorDesc(float16* ptr, size_t cnt, std::string fmt)
-//                                 :data_ptr(ptr), count(cnt), format(fmt) {}
-// };
+template<typename T>
+struct DataTypeTraits
+{
+   static const aclDataType type = ACL_DT_UNDEFINED;
+};
+template<>
+struct DataTypeTraits<float>
+{
+    static const aclDataType type = ACL_FLOAT;
+};
+template<>
+struct DataTypeTraits<float16>
+{
+    static const aclDataType type = ACL_FLOAT16 ;
+};
+template<>
+struct DataTypeTraits<int>
+{
+    static const aclDataType type = ACL_INT32 ;
+};
+template<>
+struct DataTypeTraits<int64_t>
+{
+    static const aclDataType type = ACL_INT64 ;
+};
+
+
 
 struct AclTensorWrapper
 {
     AclTensorWrapper(void *ptr, aclDataType data_type, int ndims, const int64_t* dims,
                     aclFormat format, uint32_t size )
-            : AclTensorWrapper(ptr, data_type, ndims, dims, format, size, nullptr, false) {}
+            : AclTensorWrapper(ptr, data_type, ndims, dims, format, size, nullptr, "") {}
 
     AclTensorWrapper(void *ptr, aclDataType data_type, int ndims, const int64_t* dims,
                     aclFormat format, uint32_t size, void* data_ptr)
-            : AclTensorWrapper(ptr, data_type, ndims, dims, format, size, data_ptr, false) {
-                if(data_ptr) OF_NPU_CHECK(aclrtMemcpy(tensor_ptr, tensor_size, data_ptr, tensor_size, ACL_MEMCPY_HOST_TO_DEVICE));
+            : AclTensorWrapper(ptr, data_type, ndims, dims, format, size, data_ptr, "") {
                 //std::cout<<"Wrap Memcpy"<<std::endl;
             }
 
     AclTensorWrapper(void *ptr, aclDataType data_type, int ndims, const int64_t* dims,
-                    aclFormat format, uint32_t size, void* data_ptr, bool isConst)
+                    aclFormat format, uint32_t size, void* data_ptr, std::string key4const)
             : tensor_ptr(ptr), data_type(data_type), num_dims(ndims), 
               dims(dims), format(format), tensor_size(size),
-              data_ptr(data_ptr), isConst(isConst) {
+              data_ptr(data_ptr), key(key4const) {
                   // fix : use NpuAllocator to malloc
-                  OF_NPU_CHECK(aclrtMalloc(&tensor_ptr, tensor_size, ACL_MEM_MALLOC_NORMAL_ONLY));//dck_caution_here
+                  //OF_NPU_CHECK(aclrtMalloc(&tensor_ptr, tensor_size, ACL_MEM_MALLOC_NORMAL_ONLY));//dck_caution_here
+                  if(data_ptr) OF_NPU_CHECK(aclrtMemcpy(tensor_ptr, tensor_size, data_ptr, tensor_size, ACL_MEMCPY_HOST_TO_DEVICE));
                   //std::cout<<"Wrap Malloc"<<std::endl;
               }
     
@@ -150,7 +148,7 @@ struct AclTensorWrapper
     aclFormat format;
     uint32_t tensor_size;
     void* data_ptr;
-    bool isConst;
+    std::string key;
 };
 struct MaxPoolTensorWrapper
 {
@@ -166,6 +164,40 @@ struct MaxPoolTensorWrapper
     const int64_t* dims;
     uint32_t tensor_size;
 };
+struct HostTensorWrapper
+{
+    HostTensorWrapper(aclDataType type, aclFormat format, int64_t num_dims, const int64_t* dims, uint32_t tensor_size,
+                        void* data_ptr)
+                    : type(type), format(format), num_dims(num_dims), dims(dims), tensor_size(tensor_size), data_ptr(data_ptr){}
+    aclDataType type;
+    aclFormat format;
+    int64_t num_dims;
+    const int64_t* dims;
+    uint32_t tensor_size;
+    void* data_ptr;
+};
+// struct BatchNormTensorWrapper
+// {
+//     BatchNormTensorWrapper(void* tensor_ptr, aclDataType dataType,aclFormat origin_format, aclFormat npu_format,
+//                     int64_t num_dims, const int64_t* dims,size_t malloc_size, uint32_t tensor_size)
+//                 : tensor_ptr(tensor_ptr), dataType(dataType), origin_format(origin_format), npu_format(npu_format),
+//                   num_dims(num_dims), dims(dims), malloc_size(malloc_size), tensor_size(tensor_size),
+//                   data_ptr(nullptr)
+//                 {
+//                     OF_NPU_CHECK(aclrtMalloc(&data_ptr, malloc_size, ACL_MEM_MALLOC_NORMAL_ONLY));
+//                     OF_NPU_CHECK(aclrtMemset(data_ptr, malloc_size, 0, malloc_size));
+//                     OF_NPU_CHECK(aclrtMemcpy(data_ptr, tensor_size, tensor_ptr, tensor_size, ACL_MEMCPY_DEVICE_TO_DEVICE ));
+//                 }
+//     void * tensor_ptr;
+//     aclDataType dataType;
+//     aclFormat origin_format;
+//     aclFormat npu_format;
+//     int64_t num_dims;
+//     const int64_t* dims;
+//     uint32_t tensor_size;   
+//     size_t malloc_size; 
+//     void * data_ptr;
+// };
 class NpuCommand 
 {
 public:
@@ -183,6 +215,8 @@ public:
                         std::string real_type = "");
     NpuCommand& Input(AclTensorWrapper& wrap);
     NpuCommand& Input(MaxPoolTensorWrapper& wrap);
+    NpuCommand& Input(HostTensorWrapper& wrap);
+    //NpuCommand& Input(BatchNormTensorWrapper& wrap);
     //NpuCommand& Input(std::vector<int32_t> &v);
     NpuCommand& Input();
     //NpuCommand& Input( NpuCommandSimpleTensorDesc input);

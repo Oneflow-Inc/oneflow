@@ -1851,6 +1851,26 @@ def OneFlow_TopKOp : OneFlow_BaseOp<"top_k", [NoSideEffect, NoGrad, DeclareOpInt
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_TopKNpuOp : OneFlow_BaseOp<"top_k_npu", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$indice
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$k,
+    DefaultValuedAttr<SI32Attr, "0">:$dim,
+    DefaultValuedAttr<BoolAttr, "false">:$sorted,
+    DefaultValuedAttr<BoolAttr, "true">:$largest
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_DETECTION_OP_DEFINITIONS
 
 // Group: EAGER
@@ -4633,6 +4653,27 @@ def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMetho
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_NllNpuOp : OneFlow_BaseOp<"nll_npu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    Optional<OneFlow_Tensor>:$weight
+  );
+  let output = (outs
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$total_weight
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
+    DefaultValuedAttr<StrAttr, "\"mean\"">:$reduction
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
 def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
@@ -4646,6 +4687,27 @@ def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInter
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$ignore_index
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_NllGradNpuOp : OneFlow_BaseOp<"nll_grad_npu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input,
+    OneFlow_Tensor:$target,
+    OneFlow_Tensor:$total_weight,
+    Optional<OneFlow_Tensor>:$weight,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
+    DefaultValuedAttr<StrAttr, "\"mean\"">:$reduction
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
