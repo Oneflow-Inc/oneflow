@@ -448,7 +448,9 @@ void ShardSequence(JobBuilder* builder, const int64_t threshold, const ParallelD
               << " with op conf " << new_var_op_conf.variable_conf().DebugString();
       continue;
     }
-    if (i != 0) { new_var_op_conf.add_ctrl_in_op_name(prev_allowed_op_name); }
+    if (!prev_allowed_op_name.empty()) {
+      new_var_op_conf.add_ctrl_in_op_name(prev_allowed_op_name);
+    }
     builder->MutOpsOnlyOnce({new_var_op_conf});
     // Set consumers to consum this variable op's cast op's output as Broadcast.
     if (new_split_signature != "") {
