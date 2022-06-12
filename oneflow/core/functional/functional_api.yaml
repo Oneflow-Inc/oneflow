@@ -292,8 +292,10 @@
   bind_python: True
 
 - name: "reduce_mean"
-  signature: ["Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceMean",
-  "Tensor (Tensor x) => ReduceMeanWhole"]
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceMean",
+    "Tensor (Tensor x) => ReduceMeanWhole"
+  ]
   bind_python: True
 
 - name: "reduce_all"
@@ -928,6 +930,18 @@
   signature: " Tensor (Tensor input, Int64 dim, Tensor index, Bool sparse_grad=False) => DimGather"
   bind_python: True
 
+- name: "embedding_renorm_"
+  signature: " Tensor (Tensor in, Tensor indices, Double max_norm, Double norm_type) => EmbeddingReNorm"
+  bind_python: True
+
+- name: "embedding"
+  signature: " Tensor (Tensor weight, Tensor indices, Int64 padding_idx=None, Bool scale_grad_by_freq=False) => Embedding"
+  bind_python: True
+
+- name: "embedding_grad"
+  signature: " Tensor (Tensor dy, Tensor weight, Tensor indices, Int64 padding_idx, Bool scale_grad_by_freq=False) => EmbeddingGrad"
+  bind_python: False
+
 - name: "arg_sort"
   signature: "Tensor (Tensor in, String direction) => ArgSort"
   bind_python: True
@@ -961,12 +975,22 @@
 
 - name: "cublas_bias_add_relu_matmul_grad"
   signature:
-    "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => CublasBiasAddReluMatmulGrad"
+    "TensorTuple (Tensor dy, Tensor weight, Tensor aux, Double alpha=1.0) => CublasBiasAddReluMatmulGrad"
   bind_python: False
 
 - name: "cublas_matmul_bias_add_grad"
   signature:
     "TensorTuple (Tensor dy, Tensor x) => CublasMatmulBiasAddGrad"
+  bind_python: False
+
+- name: "fused_matmul_bias_add_relu_dropout"
+  signature:
+    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, FloatList dropout_rate_list, Generator generator=None) => FusedMatmulBiasAddReluDropout"
+  bind_python: True
+
+- name: "fused_relu_dropout_grad"
+  signature:
+    "Tensor (Tensor dy, Tensor mask, Float scale) => FusedReluDropoutGrad"
   bind_python: False
 
 - name: "broadcast_matmul_grad_b"
