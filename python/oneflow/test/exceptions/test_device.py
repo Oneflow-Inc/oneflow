@@ -41,5 +41,6 @@ class TestDevice(flow.unittest.TestCase):
         #     test_case.assertTrue("CUDA error: invalid device ordinal" in str(exp.exception))
         pass
 
+
 if __name__ == "__main__":
     unittest.main()
