@@ -64,7 +64,7 @@ Indexing, Slicing, Joining, Mutating Ops
     select
     scatter
     scatter_add
-    oneflow.scatter_nd
+    scatter_nd
     split
     squeeze
     stack
@@ -160,7 +160,7 @@ Pointwise Ops
     div 
     erf 
     erfc 
-    erfin 
+    erfinv
     exp 
     expm1 
     floor 

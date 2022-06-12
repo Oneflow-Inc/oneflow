@@ -106,6 +106,5 @@ Vision functions
 
     pad
     interpolate
-    upsample
     grid_sample
     affine_grid

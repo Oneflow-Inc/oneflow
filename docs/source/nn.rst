@@ -12,6 +12,9 @@ Containers
     :template: 
 
     Module
+
+    :noindex: oneflow.nn.module.Module
+
     Sequential
     ModuleList
     ModuleDict
@@ -62,7 +65,7 @@ Padding Layers
     ZeroPad2d
 
 Non-linear Activations (weighted sum, nonlinearity)
-----------------------------------
+----------------------------------------------------
 
 .. autosummary::
     :toctree: generated
@@ -184,25 +187,14 @@ DataParallel Layers
 .. autosummary::
     :toctree: generated
     :nosignatures:
-
-    DistributedDataParallel
-
-DataParallel Layers
-----------------------------------
-
-.. autosummary::
-    :toctree: generated
-    :nosignatures:
     
     utils.clip_grad_norm_ 
     utils.weight_norm 
     utils.remove_weight_norm
 
-.. autofunction:: oneflow.nn.modules.pixelshuffle.PixelShufflev2
+
 
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
 
-.. currentmodule:: oneflow.nn.utils
-.. autofunction:: oneflow.nn.utils.clip_grad_norm_
-.. autofunction:: oneflow.nn.utils.weight_norm
-.. autofunction:: oneflow.nn.utils.remove_weight_norm
+
+
