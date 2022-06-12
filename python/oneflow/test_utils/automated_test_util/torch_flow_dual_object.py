@@ -113,8 +113,8 @@ tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 32))
 
 def check_memrory(x):
     tensor_size_mb = x.nelement() * x.element_size() * 1.0 / 1024 / 1024
-    # save < 1.0MB Tensor for autotest debug in ci only in Eager mode.
-    return tensor_size_mb < 1.0 and not is_global()
+    # save < 0.5MB Tensor for AutoTest debug in ci only in Eager mode.
+    return tensor_size_mb < 0.5 and not is_global()
 
 
 def get_tensor_shape(call_pytorch):
