@@ -213,9 +213,9 @@ void GetUniqueValueAndUpdatedPtr(user_op::KernelComputeContext* ctx, const int64
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     const int64_t num_unique = ptrs->GetNumUnique(current_iter);
-    void* updated_values_ptr =
-        ptrs->MallocUpdatedValuesPtr(GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
-                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+    void* updated_values_ptr = ptrs->MallocUpdatedValuesPtr(
+        current_iter, GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     *unique_embeddings_ptr = reinterpret_cast<T*>(ptrs->GetLookupValuesPtr(current_iter));
     *updated_unique_embeddings_ptr = reinterpret_cast<T*>(updated_values_ptr);
   } else {

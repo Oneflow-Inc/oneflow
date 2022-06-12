@@ -44,38 +44,38 @@ inline bool UseDynamicMemoryAllocation() {
 class ValuesPtr {
  public:
   ValuesPtr() {
-    lookup_num_unique_ = 0;
-    num_unique_counter_ = -1;
-
     has_lookup_values_ = false;
-    lookup_values_counter_ = -1;
     has_lookup_embeddings_ = false;
-    lookup_embeddings_counter_ = -1;
-    updated_values_counter_ = -1;
+    has_updated_values_ = false;
   }
   ~ValuesPtr() {
     if (has_lookup_values_) { OF_CUDA_CHECK(cudaFree(lookup_values_)); }
     if (has_lookup_embeddings_) { OF_CUDA_CHECK(cudaFree(lookup_embeddings_)); }
   }
   uint32_t GetNumUnique(int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
     CHECK_EQ(iter, num_unique_counter_);
     return lookup_num_unique_;
   }
   void SetNumUnique(uint32_t num_unique, int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
     lookup_num_unique_ = num_unique;
     num_unique_counter_ = iter;
   }
   void* GetLookupValuesPtr(int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_lookup_values_);
     CHECK_EQ(lookup_values_counter_, iter);
     return lookup_values_;
   }
   void* GetLookupEmbeddingsPtr(int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_lookup_embeddings_);
     CHECK_EQ(lookup_embeddings_counter_, iter);
     return lookup_embeddings_;
   }
-  void* MallocLookupValuesPtr(size_t data_size, cudaStream_t cuda_stream) {
+  void* MallocLookupValuesPtr(int iter, size_t data_size, cudaStream_t cuda_stream) {
+    std::unique_lock<std::mutex> lock(mutex_);
     if (has_lookup_values_ && lookup_values_size_ >= data_size) {
       // do nothing
     } else {
@@ -84,11 +84,13 @@ class ValuesPtr {
       has_lookup_values_ = true;
       lookup_values_size_ = data_size;
     }
-    lookup_values_counter_++;
+    lookup_values_counter_ = iter;
     return lookup_values_;
   }
   bool HasLookupEmbeddings() { return has_lookup_embeddings_; }
-  void* MallocLookupEmbeddingsPtr(size_t data_size, cudaStream_t cuda_stream) {
+
+  void* MallocLookupEmbeddingsPtr(int iter, size_t data_size, cudaStream_t cuda_stream) {
+    std::unique_lock<std::mutex> lock(mutex_);
     if (has_lookup_embeddings_ && lookup_embeddings_size_ >= data_size) {
       // do nothing
     } else {
@@ -97,24 +99,28 @@ class ValuesPtr {
       has_lookup_embeddings_ = true;
       lookup_embeddings_size_ = data_size;
     }
-    lookup_embeddings_counter_++;
+    lookup_embeddings_counter_ = iter;
     return lookup_embeddings_;
   }
 
-  void* MallocUpdatedValuesPtr(size_t data_size, cudaStream_t cuda_stream) {
+  void* MallocUpdatedValuesPtr(int iter, size_t data_size, cudaStream_t cuda_stream) {
+    std::unique_lock<std::mutex> lock(mutex_);
     CHECK(!has_updated_values_);
     OF_CUDA_CHECK(cudaMallocAsync(&updated_values_, data_size, cuda_stream));
     has_updated_values_ = true;
-    updated_values_counter_++;
+    updated_values_counter_ = iter;
     return updated_values_;
   }
   void* GetUpdatedValuesPtr(int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_updated_values_);
     CHECK_EQ(updated_values_counter_, iter);
     return updated_values_;
   }
-  void FreeUpdatedValuesPtr(cudaStream_t cuda_stream) {
+  void FreeUpdatedValuesPtr(int iter, cudaStream_t cuda_stream) {
+    std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_updated_values_);
+    CHECK_EQ(updated_values_counter_, iter);
     OF_CUDA_CHECK(cudaFreeAsync(updated_values_, cuda_stream));
     has_updated_values_ = false;
   }
@@ -136,6 +142,7 @@ class ValuesPtr {
   void* updated_values_;
   bool has_updated_values_;
   int updated_values_counter_;
+  std::mutex mutex_;
 };
 
 class EmbeddingManager final {
