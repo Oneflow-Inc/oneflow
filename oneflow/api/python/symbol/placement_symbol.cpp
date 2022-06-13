@@ -66,7 +66,7 @@ struct PlacementSymbolExportUtil {
 
   static Maybe<ParallelDesc> CreateParallelDesc(const std::string& proto_str) {
     ParallelConf parallel_conf;
-    CHECK_OR_RETURN(TxtString2PbMessage(proto_str, &parallel_conf));
+    CHECK_OR_RETURN(TxtString2PbMessage(proto_str, &parallel_conf)) << " Get ParallelConf Pb from string failed.";
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
       parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
