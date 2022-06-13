@@ -57,7 +57,7 @@ Maybe<typename VecT::value_type&> VectorAt(VecT& vec, typename VecT::size_type i
   static_assert(!std::is_same<typename VecT::value_type, bool>::value,
                 "VectorAt(vector<bool>&, size_t) is not supported.");
   CHECK_LT_OR_RETURN(index, vec.size());
-  return vec.at(index);
+  return vec[index];
 }
 
 template<>

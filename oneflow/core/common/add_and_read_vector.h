@@ -31,7 +31,7 @@ class AddAndReadVector {
   AddAndReadVector() : size_(0) {}
   ~AddAndReadVector() = default;
 
-  using value_type = T;
+  using value_type = const T;
   using size_type = size_t;
 
   // not thread safe.
@@ -46,10 +46,7 @@ class AddAndReadVector {
     return granularity2vector_[gran].data()[index - start];
   }
 
-  // lock free.
-  T& at(size_t index) {
-    CHECK_GE(index, 0);
-    CHECK_LT(index, size_);
+  const T& operator[](size_t index) const {
     int gran = GetGranularity(index);
     int start = (1 << gran) - 1;
     return granularity2vector_[gran].data()[index - start];
