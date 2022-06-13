@@ -210,7 +210,7 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
               .Input("model_diff", model_update_user_conf.input("model_diff", 0));
           if(has_model_half){
             iter->second.Input("model_half", model_update_user_conf.input("model_half", 0)); 
-          }
+          } 
         } else {
           user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder(
               "multi_tensor_update" + NewUniqueId());
@@ -229,7 +229,8 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
               .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"));
           if(has_model_half){
             multi_tensor_update_sgd_op_builder.Input("model_half", model_update_user_conf.input("model_half", 0)); 
-          }
+          } 
+
           AddScaleAndSkipLbn(multi_tensor_update_sgd_op_builder, model_update_user_conf);
 
           CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
