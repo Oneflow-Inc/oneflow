@@ -27,8 +27,6 @@ namespace vm {
 
 using PendingInstructionMutexedList =
     intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
-using PendingInstructionList =
-    intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
 
 class ThreadCtx final : public intrusive::Base {
  public:
