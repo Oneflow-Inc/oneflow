@@ -206,7 +206,8 @@ def operators_repr(
 
     ops_strs = []
     for op in ops:
-        assert op in op_confs
+        if op not in op_confs:
+            continue
         op_conf = op_confs[op]
         assert isinstance(op_conf, op_conf_util.OperatorConf)
         got_repr, op_str = _op_signature(op_conf)
