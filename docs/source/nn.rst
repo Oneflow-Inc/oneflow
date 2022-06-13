@@ -1,10 +1,20 @@
 oneflow.nn
 ===================================
 
-.. currentmodule:: oneflow.nn
+These are the basic building blocks for graphs:
+
+.. contents:: oneflow.nn
+    :depth: 2
+    :local:
+    :class: this-will-duplicate-information-and-it-is-still-useful-here
+    :backlinks: top
+
+
+
 
 Containers
 ----------------------------------
+.. currentmodule:: oneflow.nn
 
 .. autosummary::
     :toctree: generated
@@ -12,9 +22,6 @@ Containers
     :template: 
 
     Module
-
-    :noindex: oneflow.nn.module.Module
-
     Sequential
     ModuleList
     ModuleDict
@@ -23,17 +30,17 @@ Containers
 
 Convolution Layers
 ----------------------------------
-
+.. currentmodule:: oneflow
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
-    Conv1d 
-    Conv2d 
-    Conv3d
-    ConvTranspose1d 
-    ConvTranspose2d 
-    ConvTranspose3d
+    nn.Conv1d 
+    nn.Conv2d 
+    nn.Conv3d
+    nn.ConvTranspose1d 
+    nn.ConvTranspose2d 
+    nn.ConvTranspose3d
 
 Pooling Layers
 ----------------------------------
@@ -42,15 +49,15 @@ Pooling Layers
     :toctree: generated
     :nosignatures:
 
-    MaxPool1d 
-    MaxPool2d 
-    MaxPool3d 
-    AdaptiveAvgPool1d 
-    AdaptiveAvgPool2d 
-    AdaptiveAvgPool3d
-    AvgPool1d 
-    AvgPool2d 
-    AvgPool3d
+    nn.MaxPool1d 
+    nn.MaxPool2d 
+    nn.MaxPool3d 
+    nn.AdaptiveAvgPool1d 
+    nn.AdaptiveAvgPool2d 
+    nn.AdaptiveAvgPool3d
+    nn.AvgPool1d 
+    nn.AvgPool2d 
+    nn.AvgPool3d
 
 Padding Layers
 ----------------------------------
@@ -59,10 +66,10 @@ Padding Layers
     :toctree: generated
     :nosignatures:
 
-    ConstantPad1d 
-    ConstantPad2d 
-    ConstantPad3d
-    ZeroPad2d
+    nn.ConstantPad1d 
+    nn.ConstantPad2d 
+    nn.ConstantPad3d
+    nn.ZeroPad2d
 
 Non-linear Activations (weighted sum, nonlinearity)
 ----------------------------------------------------
@@ -70,27 +77,28 @@ Non-linear Activations (weighted sum, nonlinearity)
 .. autosummary::
     :toctree: generated
     :nosignatures:
+    :template: classtemplate.rst
 
-    ELU 
-    Hardsigmoid 
-    Hardswish 
-    Hardtanh 
-    LeakyReLU 
-    LogSigmoid 
-    PReLU 
-    ReLU 
-    SELU 
-    CELU 
-    GELU 
-    SiLU 
-    Sigmoid 
-    Mish 
-    Softplus 
-    Softshrink 
-    Softsign 
-    Tanh 
-    Threshold 
-    GLU
+    nn.ELU 
+    nn.Hardsigmoid 
+    nn.Hardswish 
+    nn.Hardtanh 
+    nn.LeakyReLU 
+    nn.LogSigmoid 
+    nn.PReLU 
+    nn.ReLU 
+    nn.SELU 
+    nn.CELU 
+    nn.GELU 
+    nn.SiLU 
+    nn.Sigmoid 
+    nn.Mish 
+    nn.Softplus 
+    nn.Softshrink 
+    nn.Softsign 
+    nn.Tanh 
+    nn.Threshold 
+    nn.GLU
 
 Non-linear Activations (other)
 ----------------------------------
@@ -99,8 +107,8 @@ Non-linear Activations (other)
     :toctree: generated
     :nosignatures:
 
-    Softmax
-    LogSoftmax
+    nn.Softmax
+    nn.LogSoftmax
 
 Normalization Layers
 ----------------------------------
@@ -109,17 +117,17 @@ Normalization Layers
     :toctree: generated
     :nosignatures:
 
-    BatchNorm1d 
-    BatchNorm2d 
-    BatchNorm3d 
-    FusedBatchNorm1d 
-    FusedBatchNorm2d
-    FusedBatchNorm3d 
-    GroupNorm 
-    InstanceNorm1d 
-    InstanceNorm2d 
-    InstanceNorm3d 
-    LayerNorm
+    nn.BatchNorm1d 
+    nn.BatchNorm2d 
+    nn.BatchNorm3d 
+    nn.FusedBatchNorm1d 
+    nn.FusedBatchNorm2d
+    nn.FusedBatchNorm3d 
+    nn.GroupNorm 
+    nn.InstanceNorm1d 
+    nn.InstanceNorm2d 
+    nn.InstanceNorm3d 
+    nn.LayerNorm
 
 Linear Layers
 ----------------------------------
@@ -128,8 +136,8 @@ Linear Layers
     :toctree: generated
     :nosignatures:
     
-    Identity
-    Linear
+    nn.Identity
+    nn.Linear
 
 Dropout Layers
 ----------------------------------
@@ -138,7 +146,7 @@ Dropout Layers
     :toctree: generated
     :nosignatures:
 
-    Dropout
+    nn.Dropout
 
 Sparse Layers
 ----------------------------------
@@ -147,7 +155,7 @@ Sparse Layers
     :toctree: generated
     :nosignatures:
 
-    Embedding
+    nn.Embedding
 
 Loss Functions
 ----------------------------------
@@ -156,18 +164,18 @@ Loss Functions
     :toctree: generated
     :nosignatures:
 
-    BCELoss 
-    BCEWithLogitsLoss 
-    CTCLoss 
-    CombinedMarginLoss 
-    CrossEntropyLoss 
-    KLDivLoss 
-    L1Loss 
-    MSELoss 
-    MarginRankingLoss 
-    NLLLoss 
-    SmoothL1Loss 
-    TripletMarginLoss
+    nn.BCELoss 
+    nn.BCEWithLogitsLoss 
+    nn.CTCLoss 
+    nn.CombinedMarginLoss 
+    nn.CrossEntropyLoss 
+    nn.KLDivLoss 
+    nn.L1Loss 
+    nn.MSELoss 
+    nn.MarginRankingLoss 
+    nn.NLLLoss 
+    nn.SmoothL1Loss 
+    nn.TripletMarginLoss
 
 Vision Layers
 ----------------------------------
@@ -176,10 +184,10 @@ Vision Layers
     :toctree: generated
     :nosignatures:
 
-    PixelShuffle 
-    Upsample 
-    UpsamplingBilinear2d 
-    UpsamplingNearest2d
+    nn.PixelShuffle 
+    nn.Upsample 
+    nn.UpsamplingBilinear2d 
+    nn.UpsamplingNearest2d
 
 DataParallel Layers
 ----------------------------------
@@ -188,9 +196,9 @@ DataParallel Layers
     :toctree: generated
     :nosignatures:
     
-    utils.clip_grad_norm_ 
-    utils.weight_norm 
-    utils.remove_weight_norm
+    nn.utils.clip_grad_norm_ 
+    nn.utils.weight_norm 
+    nn.utils.remove_weight_norm
 
 
 
