@@ -363,7 +363,7 @@ class DataLoader(Generic[T_co]):
             None  # See NOTE [ IterableDataset and __len__ ]
         )
 
-        self._iterator = None
+        self._iterator = None if not self.persistent_workers else self._get_iterator()
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
         if self.num_workers == 0:
@@ -918,6 +918,12 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
     def __init__(self, loader):
         super(_MultiProcessingDataLoaderIter, self).__init__(loader)
 
+        assert not flow.env.rdma_inited(), (
+            "RDMA inited! Could not create _MultiProcessingDataLoaderIter any more. "
+            "Please make sure Dataloader is created before invoking oneflow.init_rdma(). "
+            "If this condition is met, You can pass the arg persistent_workers=True in "
+            "Dataloader to avoid this error!"
+        )
         assert self._num_workers > 0
         assert self._prefetch_factor > 0
 
