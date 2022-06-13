@@ -63,7 +63,7 @@ VariableTensorMgr::Dump() {
   return std::make_tuple(variable_op_names, variable_tensors);
 }
 
-void VariableTensorMgr::Clear(){
+void VariableTensorMgr::Clear() {
   std::map<std::string, std::shared_ptr<one::Tensor>>().swap(variables_);
 }
 

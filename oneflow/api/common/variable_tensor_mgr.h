@@ -28,7 +28,7 @@ inline Maybe<void> FillVariableTensorMgr(
   auto mgr = Global<VariableTensorMgr>::Get();
   return mgr->Fill(variable_op_names, variable_tensors);
 }
-inline void ClearVariableTensorMgr(){
+inline void ClearVariableTensorMgr() {
   auto mgr = Global<VariableTensorMgr>::Get();
   mgr->Clear();
 }
