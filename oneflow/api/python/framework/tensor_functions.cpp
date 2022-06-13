@@ -686,20 +686,22 @@ static PyObject* PyTensorObject_repeat(PyObject* self, PyObject* args, PyObject*
   HANDLE_ERRORS
   PyObject* shape_obj = NULL;
   DimVector shape_vec;
-  if(PyTuple_Size(args) == 1) {
+  if (PyTuple_Size(args) == 1) {
     shape_obj = PyTuple_GetItem(args, 0);
-    CHECK_OR_THROW(PyLong_Check(shape_obj) || functional::PyLongSequenceCheck(shape_obj)) << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape_obj)));
-    if(PyLong_Check(shape_obj)) 
+    CHECK_OR_THROW(PyLong_Check(shape_obj) || functional::PyLongSequenceCheck(shape_obj))
+        << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
+        << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape_obj)));
+    if (PyLong_Check(shape_obj))
       shape_vec.emplace_back(PyLong_AsLong(shape_obj));
-    else{
+    else {
       std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(shape_obj);
       shape_vec = DimVector(shape.begin(), shape.end());
     }
     return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape_vec))));
-  }   
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(args)) << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
-    << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(args)));
+  }
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(args))
+      << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(args)));
   std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
   shape_vec = DimVector(shape.begin(), shape.end());
   return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape_vec))));
@@ -710,20 +712,22 @@ static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* k
   HANDLE_ERRORS
   PyObject* dim_obj = NULL;
   DimVector dim_vec;
-  if(PyTuple_Size(args) == 1) {
+  if (PyTuple_Size(args) == 1) {
     dim_obj = PyTuple_GetItem(args, 0);
-    CHECK_OR_THROW(PyLong_Check(dim_obj) || functional::PyLongSequenceCheck(dim_obj)) << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
-    if(PyLong_Check(dim_obj)) 
+    CHECK_OR_THROW(PyLong_Check(dim_obj) || functional::PyLongSequenceCheck(dim_obj))
+        << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
+        << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
+    if (PyLong_Check(dim_obj))
       dim_vec.emplace_back(PyLong_AsLong(dim_obj));
-    else{
+    else {
       std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(dim_obj);
       dim_vec = DimVector(shape.begin(), shape.end());
     }
     return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
-  }   
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(args)) << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
-    << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(args)));
+  }
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(args))
+      << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(args)));
   std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
   dim_vec = DimVector(shape.begin(), shape.end());
   return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
