@@ -41,7 +41,6 @@ class VirtualMachine final {
       Symbol<Device> device, StreamRole stream_role);
   intrusive::shared_ptr<vm::MirroredObject> FindOrCreateTransportLocalDepObject();
 
-  bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
   std::string GetBlockingDebugString();
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
@@ -54,6 +53,8 @@ class VirtualMachine final {
   friend class InstructionsBuilder;
 
   void ScheduleLoop(const std::function<void()>& Initializer);
+
+  bool NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const;
 
   const vm::VirtualMachineEngine& engine() const { return *engine_; }
   vm::VirtualMachineEngine* mut_engine() { return engine_.Mutable(); }
