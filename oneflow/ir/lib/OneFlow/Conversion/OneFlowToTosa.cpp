@@ -182,7 +182,7 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
 struct VariableOpToConstLowering final : public OpConversionPattern<VariableOp> {
  public:
   VariableOpToConstLowering(TypeConverter& typeConverter, MLIRContext* context, int const_val)
-      : OpConversionPattern<VariableOp>(typeConverter, context), const_val(const_val){};
+      : OpConversionPattern<VariableOp>(typeConverter, context), const_val_(const_val){};
 
   using OpConversionPattern<VariableOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(VariableOp op, OpAdaptor adaptor,
@@ -192,13 +192,13 @@ struct VariableOpToConstLowering final : public OpConversionPattern<VariableOp> 
 
     // TODO: more control about this scope with flag
     if (type.isa<FloatType>()) {
-      const auto float_attr = rewriter.getFloatAttr(type, const_val);
+      const auto float_attr = rewriter.getFloatAttr(type, const_val_);
       auto value = DenseElementsAttr::get(output, float_attr);
 
       rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
     } else if (auto integerType = type.dyn_cast<IntegerType>()) {
       const auto int_attr =
-          rewriter.getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), const_val));
+          rewriter.getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), const_val_));
       auto value = DenseElementsAttr::get(output, int_attr);
 
       rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
@@ -210,7 +210,7 @@ struct VariableOpToConstLowering final : public OpConversionPattern<VariableOp> 
   }
 
  private:
-  int const_val;
+  int const_val_;
 };
 
 struct CastOpLowering final : public OpConversionPattern<CastOp> {
