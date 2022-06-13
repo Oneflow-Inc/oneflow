@@ -112,7 +112,7 @@ tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 32))
 
 def check_memrory(x):
     tensor_size_mb = x.nelement() * x.element_size() * 1.0 / 1024 / 1024
-    return id(x) not in call_tensor_id and tensor_size_mb < 2
+    return id(x) not in call_tensor_id and tensor_size_mb < 0.0006
 
 
 def get_tensor_shape(call_pytorch):
