@@ -171,6 +171,7 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
     if (!mgr) op->emitError("global variable tensor manager miss");
 
     const auto tensor = mgr->Get(op.op_name().str());
+    if (!tensor) op->emitError("tensor is null");
     const auto value = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
     const auto output = op.output().getType();
 

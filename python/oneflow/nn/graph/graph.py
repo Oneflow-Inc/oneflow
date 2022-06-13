@@ -525,7 +525,7 @@ class Graph(object):
         return shallow_repr
 
     def _ops_repr(self):
-        r"""Generate this graph's operators' string representation 
+        r"""Generate this graph's operators' string representation
         """
         if self._is_compiled:
             conf = self._graph_proto.module_name2module_conf[
@@ -898,10 +898,10 @@ class Graph(object):
                     )
                 enable_mlir_inference_opt = False
                 del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
-            if enable_mlir_inference_opt:
-                oneflow._oneflow_internal.FillVariableTensorMgr(
-                    state_op_names, self._state_tensor_tuple
-                )
+            # if enable_mlir_inference_opt:
+            oneflow._oneflow_internal.FillVariableTensorMgr(
+                state_op_names, self._state_tensor_tuple
+            )
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
@@ -941,12 +941,12 @@ class Graph(object):
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
             )
-            if enable_mlir_inference_opt:
-                (
-                    state_op_names,
-                    state_tensors,
-                ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
-                self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+            # if enable_mlir_inference_opt:
+            (
+                state_op_names,
+                state_tensors,
+            ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
+            self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
 
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
