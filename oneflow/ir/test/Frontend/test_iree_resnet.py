@@ -25,8 +25,6 @@ import numpy as np
 import time
 
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-
 
 def _test_iree_resnet_cpu(test_case):
     model = resnet50(pretrained=True)
@@ -121,8 +119,8 @@ class TestIreeResnet(oneflow.unittest.TestCase):
     def test_iree_resnet_cpu(test_case):
         _test_iree_resnet_cpu(test_case)
 
-    # def test_iree_resnet_cuda(test_case):
-    #     _test_iree_resnet_cuda(test_case)
+    def test_iree_resnet_cuda(test_case):
+        _test_iree_resnet_cuda(test_case)
 
 
 if __name__ == "__main__":
