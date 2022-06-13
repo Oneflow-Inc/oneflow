@@ -755,7 +755,8 @@ static PyObject* PyTensorObject_split(PyObject* self, PyObject* args, PyObject* 
   }
   CHECK_OR_THROW(PyLong_Check(split_size_or_sections)
                  || functional::PyLongSequenceCheck(split_size_or_sections))
-                 << Error::TypeError() << "split(): argument 'split_size_or_sections' must be int or list of int, not "
+      << Error::TypeError()
+      << "split(): argument 'split_size_or_sections' must be int or list of int, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(split_size_or_sections)));
   if (PyLong_Check(split_size_or_sections))
     return functional::CastToPyObject(
@@ -776,7 +777,8 @@ static PyObject* PyTensorObject_cumsum(PyObject* self, PyObject* args, PyObject*
                                    &dtype_obj)) {
     return NULL;
   }
-  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj)) << "cumsum(): argument 'dtype' must be data type, not "
+  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj))
+      << "cumsum(): argument 'dtype' must be data type, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype_obj)));
   if (dtype_obj == Py_None)
     return PyTensor_New(ASSERT_PTR(functional::Cumsum(PyTensor_Unpack(self), dim, NullOpt)));
@@ -790,11 +792,12 @@ static PyObject* PyTensorObject_cumprod(PyObject* self, PyObject* args, PyObject
   int64_t dim = 0;
   PyObject* dtype_obj = Py_None;
   static const char* keywords[3] = {"dim", "dtype", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O:cumprod", const_cast<char**>(keywords),
-                                   &dim, &dtype_obj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O:cumprod", const_cast<char**>(keywords), &dim,
+                                   &dtype_obj)) {
     return NULL;
   }
-  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj)) << "cumprod(): argument 'dtype' must be data type, not "
+  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj))
+      << "cumprod(): argument 'dtype' must be data type, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype_obj)));
   if (dtype_obj == Py_None)
     return PyTensor_New(ASSERT_PTR(functional::Cumprod(PyTensor_Unpack(self), dim, NullOpt)));
