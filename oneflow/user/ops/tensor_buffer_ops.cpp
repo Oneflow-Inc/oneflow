@@ -32,7 +32,8 @@ namespace oneflow {
   const auto& instance_shape = ctx->Attr<Shape>("instance_shape");
   Shape out_shape;
   out_shape.insert(out_shape.end(), in.shape().dim_vec().cbegin(), in.shape().dim_vec().cend());
-  out_shape.insert(out_shape.end(), instance_shape.dim_vec().cbegin(), instance_shape.dim_vec().cend());
+  out_shape.insert(out_shape.end(), instance_shape.dim_vec().cbegin(),
+                   instance_shape.dim_vec().cend());
   *out->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
@@ -65,7 +66,7 @@ namespace oneflow {
   out->set_is_dynamic(in.is_dynamic());
   Shape out_shape;
   out_shape.insert(out_shape.end(), in_shape.dim_vec().cbegin(),
-                     in_shape.dim_vec().cend() - instance_dims);
+                   in_shape.dim_vec().cend() - instance_dims);
   *out->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }

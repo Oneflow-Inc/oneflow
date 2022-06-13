@@ -29,11 +29,11 @@ namespace oneflow {
 
   Shape out_shape;
   out_shape.insert(out_shape.end(), in.shape().dim_vec().cbegin(),
-                 in.shape().dim_vec().cbegin() + axis);
+                   in.shape().dim_vec().cbegin() + axis);
   out_shape.insert(out_shape.end(), indices.shape().dim_vec().cbegin(),
-                 indices.shape().dim_vec().cend());
+                   indices.shape().dim_vec().cend());
   out_shape.insert(out_shape.end(), in.shape().dim_vec().cbegin() + axis + 1,
-                 in.shape().dim_vec().end());
+                   in.shape().dim_vec().end());
   *out->mut_shape() = out_shape;
   out->set_is_dynamic(indices.is_dynamic() || in.is_dynamic());
   return Maybe<void>::Ok();

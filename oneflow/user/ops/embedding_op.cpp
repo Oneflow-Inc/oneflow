@@ -43,7 +43,7 @@ namespace oneflow {
 
   Shape out_shape;
   out_shape.insert(out_shape.end(), indices_shape.dim_vec().cbegin(),
-                     indices_shape.dim_vec().cend());
+                   indices_shape.dim_vec().cend());
   out_shape.push_back(weight_shape.At(1));
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);

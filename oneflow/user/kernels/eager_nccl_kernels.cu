@@ -331,8 +331,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
           ctx->stream()->device_type(), transpose_in_shape.size());
       CHECK(transpose);
       transpose->Launch(ctx->stream(), in->data_type(), transpose_in_shape.size(),
-                        transpose_in_shape.data(), in->dptr(), perm.data(),
-                        tmp_buffer->mut_dptr());
+                        transpose_in_shape.data(), in->dptr(), perm.data(), tmp_buffer->mut_dptr());
     }
 
     if (in_split_axis != 0) {

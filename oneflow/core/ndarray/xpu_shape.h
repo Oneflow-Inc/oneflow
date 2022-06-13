@@ -120,8 +120,7 @@ void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& b, Shape* simpli
                              Shape* simplified_b);
 
 void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShape& b,
-                             Shape* simplified_y, Shape* simplified_a,
-                             Shape* simplified_b);
+                             Shape* simplified_y, Shape* simplified_a, Shape* simplified_b);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_NDARRAY_XPU_SHAPE_H_

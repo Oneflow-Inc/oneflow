@@ -89,8 +89,7 @@ void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& b, Shape* simpli
 }
 
 void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShape& b,
-                             Shape* simplified_y, Shape* simplified_a,
-                             Shape* simplified_b) {
+                             Shape* simplified_y, Shape* simplified_a, Shape* simplified_b) {
   CHECK_EQ(y.NumAxes(), a.NumAxes());
   CHECK_EQ(b.NumAxes(), a.NumAxes());
   CHECK(simplified_y->empty());
