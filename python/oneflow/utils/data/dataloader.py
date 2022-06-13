@@ -923,7 +923,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
 
         assert not flow.env.rdma_inited(), (
             "RDMA inited! Could not create _MultiProcessingDataLoaderIter any more. "
-            "Please make sure Dataloader is created before invoking oneflow.init_rdma(). "
+            "Please make sure Dataloader is created before invoking oneflow.env.init_rdma(). "
             "If this condition is met, You can pass the arg persistent_workers=True in "
             "Dataloader to avoid this error!"
         )
