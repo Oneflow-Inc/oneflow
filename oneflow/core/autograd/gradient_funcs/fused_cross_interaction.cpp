@@ -42,34 +42,34 @@ class FusedCrossFeatureInteraction
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "fw_op_expr should not be None. ";
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(FusedCrossFeatureInteractionInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 4);
+    CHECK_EQ_OR_RETURN(inputs.size(), 4) << "Input size should be equal to 4. ";
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->interaction_mode = JUST(composed_attrs.GetAttr<std::string>("interaction_mode"));
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    ctx->weight_requires_grad = inputs.at(1)->requires_grad();
-    ctx->x_requires_grad = inputs.at(2)->requires_grad();
-    ctx->weight_requires_grad = inputs.at(3)->requires_grad();
-    ctx->x_idx = ctx->SaveTensorForBackward(inputs.at(0));
-    ctx->weight_idx = ctx->SaveTensorForBackward(inputs.at(1));
-    ctx->x0_idx = ctx->SaveTensorForBackward(inputs.at(2));
+    ctx->x_requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
+    ctx->weight_requires_grad = JUST(oneflow::VectorAt(inputs, 1))->requires_grad();
+    ctx->x_requires_grad = JUST(oneflow::VectorAt(inputs, 2))->requires_grad();
+    ctx->weight_requires_grad = JUST(oneflow::VectorAt(inputs, 3))->requires_grad();
+    ctx->x_idx = ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 0)));
+    ctx->weight_idx = ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 1)));
+    ctx->x0_idx = ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 2)));
     if (ctx->interaction_mode == "matrix") {
-      ctx->bias_idx = ctx->SaveTensorForBackward(inputs.at(3));
+      ctx->bias_idx = ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 3)));
     }
-    ctx->matmul_result_idx = ctx->SaveTensorForBackward(outputs.at(1));
+    ctx->matmul_result_idx = ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(outputs, 1)));
 
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const FusedCrossFeatureInteractionInterpState* ctx,
                     const TensorTuple& out_grads, TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 2) << "Out grads size should be equal to 2. ";
     std::shared_ptr<oneflow::one::TensorTuple> grads;
     in_grads->resize(4);
     if (ctx->interaction_mode == "vector") {
