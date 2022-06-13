@@ -80,7 +80,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   InstructionMsgList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
 
   // Returns true if old pending_instruction_list is empty
-  Maybe<bool> Receive(InstructionMsgList* instr_list);
+  Maybe<bool> Receive(InstructionMsgList* compute_instr_msg_list);
   void Schedule(const ScheduleCtx& schedule_ctx);
   void Callback();
   bool SchedulerThreadUnsafeEmpty() const;
