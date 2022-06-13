@@ -176,7 +176,7 @@ class DataLoader(Generic[T_co]):
             consumed once. This allows to maintain the workers `Dataset` instances alive. 
             If you are using oneflow with RDMA support in distributed training, the
             ``persistent_workers`` must be ``True`` otherwise will encounter segmentation
-            fault.(default: ``False``)
+            fault. (default: ``False``)
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
