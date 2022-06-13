@@ -2138,6 +2138,18 @@
   signature: "TensorTuple (Tensor dy, TensorTuple features, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0, String pooling=\"none\") => FusedDotFeatureInteractionGrad"
   bind_python: False
 
+- name: "fused_cross_feature_interaction"
+  signature: "Tensor (Tensor x, Tensor weight, Tensor x_0, Tensor bias, String interaction_mode) => FusedCrossFeatureInteraction"
+  bind_python: True
+
+- name: "fused_cross_feature_interaction_v1_grad"
+  signature: "TensorTuple (Tensor dy, Tensor weight, Tensor x, Tensor x_0, Tensor matmul_result) => FusedCrossFeatureInteractionV1Grad"
+  bind_python: False
+
+- name: "fused_cross_feature_interaction_v2_grad"
+  signature: "TensorTuple (Tensor dy, Tensor weight, Tensor bias, Tensor x, Tensor x_0, Tensor matmul_result) => FusedCrossFeatureInteractionV2Grad"
+  bind_python: False
+
 - name: "tensor_buffer_to_tensor"
   signature: "Tensor (Tensor input, Shape instance_shape, DataType dtype) => TensorBufferToTensor"
   bind_python: True
