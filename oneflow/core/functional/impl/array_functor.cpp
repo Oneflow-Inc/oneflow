@@ -2070,7 +2070,7 @@ class TensorSetItemFunctor {
       if (slice_shape != *(value_tensor->shape())) {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
-      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/false));
+      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
     }
     return Maybe<void>::Ok();
   }

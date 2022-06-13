@@ -63,10 +63,10 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
-    CHECK_GT_OR_RETURN(step, 0) << "logical_slice_assign step must be greater than 0";
-    CHECK_GE_OR_RETURN(start, 0) << "logical_slice_assign start must be greater or equal to 0";
-    CHECK_GT_OR_RETURN(stop, 0) << "logical_slice_assign stop must be greater than 0";
-    CHECK_LT_OR_RETURN(start, stop) << "logical_slice_assign start must be less than stop";
+    CHECK_GT_OR_RETURN(step, 0) << "slice_update step must be greater than 0";
+    CHECK_GE_OR_RETURN(start, 0) << "slice_update start must be greater or equal to 0";
+    CHECK_GT_OR_RETURN(stop, 0) << "slice_update stop must be greater than 0";
+    CHECK_LT_OR_RETURN(start, stop) << "slice_update start must be less than stop";
   }
   auto* y_desc = ctx->OutputTensorDesc("y", 0);
   *y_desc->mut_shape() = ref_desc.shape();
@@ -111,7 +111,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     CHECK_GT_OR_RETURN(step, 0) << "Slice step must be greater than 0";
     CHECK_GE_OR_RETURN(start, 0) << "Slice start must be greater or equal to 0";
     CHECK_GT_OR_RETURN(stop, 0) << "Slice stop must be greater than 0";
-    CHECK_LT_OR_RETURN(start, stop) << "Slice start must be less than stop";
+    CHECK_LE_OR_RETURN(start, stop) << "Slice start must be less than stop";
     const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
@@ -131,7 +131,7 @@ namespace {
 Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   const std::string update_grad_op_name = ctx->FwOp().op_name() + "_value_grad";
   ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("logical_slice")
+    return builder.OpTypeName("slice")
         .InputBind("x", ctx->FwOp().output_grad("y", 0))
         .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
         .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
@@ -152,7 +152,7 @@ Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   });
   const std::string x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
   ctx->DefineOp(x_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("logical_slice_assign")
+    return builder.OpTypeName("slice_update")
         .InputBind("ref", ctx->FwOp().output_grad("y", 0))
         .InputBind("value", ctx->GetOp(zero_grad_op_name).output("out", 0))
         .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
@@ -177,7 +177,7 @@ Maybe<void> GenSliceGradOp(user_op::BackwardOpConfContext* ctx) {
   });
   const std::string x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
   ctx->DefineOp(x_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("logical_slice_assign")
+    return builder.OpTypeName("slice_update")
         .InputBind("ref", ctx->GetOp(zero_grad_op_name).output("out", 0))
         .InputBind("value", ctx->FwOp().output_grad("y", 0))
         .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))

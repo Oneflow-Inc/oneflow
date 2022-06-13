@@ -49,7 +49,7 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
     ctx->like_shape = *(inputs[0]->shape());
-    ctx->in_sbp = JUST(inputs[0]->nd_sbp());
+    if (inputs[0]->is_consistent()) { ctx->in_sbp = JUST(inputs[0]->nd_sbp()); }
     return Maybe<void>::Ok();
   }
 
@@ -109,7 +109,7 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
 
     if (ctx->requires_grad_ref) {
       ctx->value_shape = *(inputs[1]->shape());
-      ctx->value_sbp = JUST(inputs[1]->nd_sbp());
+      if (inputs[1]->is_consistent()) { ctx->value_sbp = JUST(inputs[1]->nd_sbp()); }
     }
     return Maybe<void>::Ok();
   }

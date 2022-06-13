@@ -325,6 +325,7 @@ class SliceKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    if (y_tensor->shape().elem_cnt() == 0) { return; }
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
@@ -402,12 +403,11 @@ class SliceUpdateKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(dtype)                               \
-  REGISTER_USER_KERNEL("logical_slice_assign")                                       \
+  REGISTER_USER_KERNEL("slice_update")                                               \
       .SetCreateFn<SliceUpdateKernel<dtype>>()                                       \
       .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value); \
-  REGISTER_USER_KERNEL("logical_slice")                                              \
-      .SetCreateFn<SliceKernel<dtype>>()                                             \
-      .SetIsMatchedHob(user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
+  REGISTER_USER_KERNEL("slice").SetCreateFn<SliceKernel<dtype>>().SetIsMatchedHob(   \
+      user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
 
 REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float)
 REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(double)
