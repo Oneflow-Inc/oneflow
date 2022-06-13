@@ -30,6 +30,7 @@ os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "0"
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
 
+
 def _test_iree_resnet_cpu(test_case):
     model = resnet50(pretrained=True)
     model.eval()
