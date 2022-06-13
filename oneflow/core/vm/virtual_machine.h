@@ -46,8 +46,6 @@ class VirtualMachine final {
 
   Maybe<void> Receive(vm::InstructionMsgList* instr_list);
 
-  const vm::VirtualMachineEngine& vm() const { return *vm_; }
-
   Maybe<void> CloseVMThreads();
 
   Maybe<vm::Stream*> GetVmStream(Symbol<Stream> stream);
@@ -57,7 +55,9 @@ class VirtualMachine final {
 
   void ScheduleLoop(const std::function<void()>& Initializer);
 
-  vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
+  const vm::VirtualMachineEngine& engine() const { return *engine_; }
+  vm::VirtualMachineEngine* mut_engine() { return engine_.Mutable(); }
+
   void ControlSync();
   Maybe<vm::ThreadCtx*> FindOrCreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
   Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
@@ -72,7 +72,7 @@ class VirtualMachine final {
 
   bool disable_vm_threads_;
   bool scheduler_stopped_;
-  intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
+  intrusive::shared_ptr<vm::VirtualMachineEngine> engine_;
 
   // for asynchronized execution
   std::mutex worker_threads_mutex_;
