@@ -27,9 +27,10 @@ class NcclSendRecvBoxingTaskNode : public TransportTaskNode {
   ~NcclSendRecvBoxingTaskNode() override = default;
 
   void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
-            const Shape& logical_shape, const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp,
-            const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
-            int64_t parallel_id);
+            const Shape& logical_shape, const DataType& data_type, const NdSbp& src_nd_sbp,
+            const NdSbp& dst_nd_sbp, const ParallelDesc& src_parallel_desc,
+            const ParallelDesc& dst_parallel_desc, const int64_t parallel_id,
+            const ParallelDesc& parallel_desc, const bool has_input, const bool has_output);
   TaskType GetTaskType() const override { return TaskType::kNcclSendRecvBoxing; }
   const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
 
@@ -40,10 +41,15 @@ class NcclSendRecvBoxingTaskNode : public TransportTaskNode {
   void InferProducedDataRegstTimeShape() final;
 
   Shape logical_shape_;
+  DataType data_type_;
   NdSbp src_nd_sbp_;
   NdSbp dst_nd_sbp_;
+  ParallelConf src_parallel_conf_;
+  ParallelConf dst_parallel_conf_;
   ParallelConf parallel_conf_;
   ParallelContext parallel_ctx_;
+  bool has_input_;
+  bool has_output_;
 };
 
 }  // namespace oneflow

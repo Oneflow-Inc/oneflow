@@ -22,14 +22,15 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgList
 
-from oneflow.test_utils.automated_test_util import *
 import time
 import os
 
 os.environ["ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK"] = "1"
 
 
-def _test_nccl_send_recv_boxing(test_case, src_nd_sbp, dst_nd_sbp):
+def _test_nccl_send_recv_boxing(
+    test_case, src_nd_sbp, dst_nd_sbp, src_ranks, dst_ranks
+):
     # can not process p in dst
     if flow.sbp.partial_sum() in dst_nd_sbp:
         return
@@ -49,20 +50,21 @@ def _test_nccl_send_recv_boxing(test_case, src_nd_sbp, dst_nd_sbp):
     # in this case, use 1d boxing
     if src_nd_sbp[0] == src_nd_sbp[1] and dst_nd_sbp[0] == dst_nd_sbp[1]:
         return
-    placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
+    src_placement = flow.placement("cuda", ranks=src_ranks)
+    dst_placement = flow.placement("cuda", ranks=dst_ranks)
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
         def build(self, x):
-            y = x.to_global(sbp=dst_nd_sbp, placement=placement)
+            y = x.to_global(sbp=dst_nd_sbp, placement=dst_placement)
             return y
 
     x = flow.tensor(
         np.arange(12 * 16 * 16).reshape(12, 16, 16),
         sbp=src_nd_sbp,
-        placement=placement,
+        placement=src_placement,
     )
     graph = TestGraph()
     y = graph(x)
@@ -91,6 +93,8 @@ class TestNcclSendRecvBoxing(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_nd_sbp()
         arg_dict["dst_nd_sbp"] = gen_nd_sbp()
+        arg_dict["src_ranks"] = [[[0, 1], [2, 3]], [[0, 1]]]
+        arg_dict["dst_ranks"] = [[[0, 1], [2, 3]], [[2, 3]]]
         for arg in GenArgList(arg_dict):
             _test_nccl_send_recv_boxing(test_case, *arg)
 

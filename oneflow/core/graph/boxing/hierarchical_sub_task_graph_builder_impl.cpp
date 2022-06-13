@@ -120,6 +120,27 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   return std::make_shared<ChainSubTskGphBuilder>(builders);
 }
 
+void MergeParallelConf(const ParallelDesc& parallel_desc_0, const ParallelDesc& parallel_desc_1,
+                       ParallelConf* parallel_conf) {
+  CHECK_EQ(parallel_desc_0.device_tag(), parallel_desc_1.device_tag());
+  std::set<std::pair<int64_t, int64_t>> machine_device_ids;
+  for (int64_t machine_id : parallel_desc_0.sorted_machine_ids()) {
+    for (int64_t device_id : parallel_desc_0.sorted_dev_phy_ids(machine_id)) {
+      machine_device_ids.insert(std::make_pair(machine_id, device_id));
+    }
+  }
+  for (int64_t machine_id : parallel_desc_1.sorted_machine_ids()) {
+    for (int64_t device_id : parallel_desc_1.sorted_dev_phy_ids(machine_id)) {
+      machine_device_ids.insert(std::make_pair(machine_id, device_id));
+    }
+  }
+  parallel_conf->set_device_tag(parallel_desc_0.device_tag());
+  for (const auto& pair : machine_device_ids) {
+    parallel_conf->add_device_name("@" + std::to_string(pair.first) + ":"
+                                   + std::to_string(pair.second));
+  }
+}
+
 }  // namespace
 
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
@@ -189,20 +210,42 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
                                       const NdSbp& in_nd_sbp, const NdSbp& out_nd_sbp,
                                       const Shape& time_shape) const override {
-    if (in_parallel_desc.Equals(out_parallel_desc)
-        && in_parallel_desc.device_type() == DeviceType::kCUDA
+    if (in_parallel_desc.device_type() == DeviceType::kCUDA
+        && out_parallel_desc.device_type() == DeviceType::kCUDA
         && !NdSbpHasPartialParallel(out_nd_sbp)) {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-      FOR_RANGE(int64_t, out_id, 0, out_parallel_desc.parallel_num()) {
+      ParallelConf merged_parallel_conf;
+      MergeParallelConf(in_parallel_desc.parallel_conf(), out_parallel_desc.parallel_conf(),
+                        &merged_parallel_conf);
+      ParallelDesc merged_parallel_desc(merged_parallel_conf);
+      TaskNode* first_in_node = sorted_in_tasks.front();
+      sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
+      FOR_RANGE(int64_t, id, 0, merged_parallel_desc.parallel_num()) {
         NcclSendRecvBoxingTaskNode* node = ctx->task_graph()->NewNode<NcclSendRecvBoxingTaskNode>();
-        const int64_t machine_id = CHECK_JUST(out_parallel_desc.MachineId4ParallelId(out_id));
-        int64_t device_index = CHECK_JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
+        const int64_t machine_id = JUST(merged_parallel_desc.MachineId4ParallelId(id));
+        int64_t device_index = JUST(merged_parallel_desc.DeviceId4ParallelId(id));
         int64_t thrd_id = EncodeStreamIdToInt64(GenerateNamedTaskStreamId(
-            machine_id, out_parallel_desc.device_type(), device_index, "NCCL_SEND_RECV_BOXING"));
-        node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(), in_nd_sbp, out_nd_sbp,
-                   in_parallel_desc, out_parallel_desc, out_id);
-        ctx->task_graph()->ConnectWithLbi(sorted_in_tasks.at(out_id), node, lbi);
-        sorted_out_tasks->push_back(node);
+            machine_id, merged_parallel_desc.device_type(), device_index, "NCCL_SEND_RECV_BOXING"));
+        bool has_input = in_parallel_desc.Containing(machine_id, device_index);
+        bool has_output = out_parallel_desc.Containing(machine_id, device_index);
+        node->Init(machine_id, thrd_id, lbi, logical_blob_desc.shape(),
+                   logical_blob_desc.data_type(), in_nd_sbp, out_nd_sbp, in_parallel_desc,
+                   out_parallel_desc, id, merged_parallel_desc, has_input, has_output);
+        if (has_input) {
+          int64_t in_id =
+              JUST(in_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
+          ctx->task_graph()->ConnectWithLbi(sorted_in_tasks.at(in_id), node, lbi);
+        } else {
+          std::string regst_desc_name;
+          first_in_node->BuildCtrlRegstDesc(node, &regst_desc_name);
+          TaskEdge* edge = ctx->task_graph()->NewEdge();
+          Connect<TaskNode>(first_in_node, edge, node);
+          first_in_node->BindEdgeWithProducedRegst(edge, regst_desc_name);
+        }
+        if (has_output) { sorted_out_tasks->push_back(node); }
+        for (int64_t out_id = 0; out_id < out_parallel_desc.parallel_num(); ++out_id) {
+          sorted_ctrl_tasks->at(out_id).emplace_back(node);
+        }
       }
       return BuildSubTskGphBuilderStatus("NDNcclSendRecvBoxingSubTskGphBuilder", "");
 #else
@@ -540,7 +583,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_nd_sbp);
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
-  if (in_hierarchy->NumAxes() > 2) {
+  if (reduced_in_parallel_desc.device_type() == DeviceType::kCUDA
+      && reduced_out_parallel_desc.device_type() == DeviceType::kCUDA) {
     return impl_->nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
         reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,

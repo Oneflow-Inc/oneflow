@@ -18,10 +18,14 @@ limitations under the License.
 
 namespace oneflow {
 
-void GetSendRecvIntersection(int64_t parallel_id, const std::shared_ptr<Shape> parallel_hierarchy,
-                             const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp,
-                             const Shape& logical_shape,
-                             std::vector<TensorSliceView>* src_send_intersections,
-                             std::vector<TensorSliceView>* dst_recv_intersections);
+int64_t GetMappedParallelId(const int64_t from_parallel_id, const ParallelDesc& from_parallel_desc,
+                            const ParallelDesc& to_parallel_desc);
+
+void GetRankSendRecvIntersection(int64_t parallel_id, const ParallelDesc& parallel_desc,
+                                 const ParallelDesc& in_parallel_desc,
+                                 const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
+                                 const NdSbp& out_nd_sbp, const Shape& logical_shape,
+                                 std::vector<TensorSliceView>* send_intersections,
+                                 std::vector<TensorSliceView>* recv_intersections);
 
 }  // namespace oneflow

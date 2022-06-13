@@ -407,7 +407,12 @@ message NcclSendRecvBoxingOpConf {
   required NdSbp src_nd_sbp = 2;
   required NdSbp dst_nd_sbp = 3;
   required ParallelConf parallel_conf = 4;
-  required ShapeProto logical_shape = 5;
+  required ParallelConf src_parallel_conf = 5;
+  required ParallelConf dst_parallel_conf = 6;
+  required ShapeProto logical_shape = 7;
+  required DataType data_type = 8;
+  required bool has_input = 9;
+  required bool has_output = 10;
 }
 
 message OperatorConf {
