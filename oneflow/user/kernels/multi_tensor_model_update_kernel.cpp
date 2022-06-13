@@ -210,7 +210,6 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    printf("========= Enter Here with cast Kernel ========= \n"); 
     const int64_t n_tensor = ctx->input_size("model");
     const double scale = ctx->Attr<double>("scale");
     const float l1 = ctx->Attr<float>("l1");
@@ -275,6 +274,112 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model_half", 0) == GetDataType<htype>::value));
 
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16, float16);
+
+template<DeviceType device_type, typename T, typename G, typename H>
+class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
+                                          public user_op::CudaGraphSupport {
+ public:
+  MultiTensorAdamUpdateWithCastKernel() = default;
+  ~MultiTensorAdamUpdateWithCastKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const int64_t n_tensor = ctx->input_size("model");
+    const auto scale = ctx->Attr<double>("scale");
+    const float l1 = ctx->Attr<float>("l1");
+    const float l2 = ctx->Attr<float>("l2");
+
+    const float beta1 = ctx->Attr<float>("beta1");
+    const float beta2 = ctx->Attr<float>("beta2");
+    const float epsilon = ctx->Attr<float>("epsilon");
+    const float weight_decay = ctx->Attr<float>("weight_decay");
+
+    const bool amsgrad = ctx->Attr<bool>("amsgrad");
+    const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    if (amsgrad) { UNIMPLEMENTED() << "Multi Tensor Adam Update do not support amsgrad = True. "; }
+
+    const float* learning_rate_ptr = nullptr;
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
+
+    const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
+    const float* bias_correction1_ptr = nullptr;
+    if (ctx->has_input("bias_correction1", 0)) {
+      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      bias_correction1_ptr = bias_correction1->dptr<float>();
+    }
+
+    const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
+    const float* bias_correction2_ptr = nullptr;
+    if (ctx->has_input("bias_correction2", 0)) {
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
+      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      bias_correction2_ptr = bias_correction2->dptr<float>();
+    }
+
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), ctx->Tensor4ArgNameAndIndex("model", 0)->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
+
+    TensorTupleParams<5> tensor_tuple_params{};
+    int32_t count = 0;
+    int32_t total_elem_cnt = 0;
+    for (int tensor_idx = 0; tensor_idx < n_tensor; tensor_idx++) {
+      tensor_tuple_params.model_addresses[0][count] =
+          (ctx->Tensor4ArgNameAndIndex("model", tensor_idx))->mut_dptr();
+      tensor_tuple_params.model_addresses[1][count] =
+          (ctx->Tensor4ArgNameAndIndex("model_diff", tensor_idx))->mut_dptr();
+      tensor_tuple_params.model_addresses[2][count] =
+          (ctx->Tensor4ArgNameAndIndex("m", tensor_idx))->mut_dptr();
+      tensor_tuple_params.model_addresses[3][count] =
+          (ctx->Tensor4ArgNameAndIndex("v", tensor_idx))->mut_dptr();
+      tensor_tuple_params.model_addresses[4][count] =
+          (ctx->Tensor4ArgNameAndIndex("model_half", tensor_idx))->mut_dptr();
+      const int64_t tensor_elem_cnt =
+          ctx->Tensor4ArgNameAndIndex("model", tensor_idx)->shape().elem_cnt();
+      tensor_tuple_params.sizes[count] = tensor_elem_cnt;
+
+      count += 1;
+      total_elem_cnt += tensor_elem_cnt;
+      if (count == max_tensors[3] || tensor_idx == n_tensor - 1) {
+        MultiTensorAdamUpdateWithCastKernelUtil<device_type, T, G, H>::Update(
+            ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, beta1, beta2,
+            epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val,
+            bias_correction1_val, bias_correction2_val, learning_rate_ptr, scale_by_ptr,
+            skip_if_ptr, bias_correction1_ptr, bias_correction2_ptr, tensor_tuple_params);
+        count = 0;
+        total_elem_cnt = 0;
+      }
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype, htype)             \
+  REGISTER_USER_KERNEL("multi_tensor_adam_update_with_cast")                                        \
+      .SetCreateFn<MultiTensorAdamUpdateWithCastKernel<device, dtype, gtype, htype>>()                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
+                       && (user_op::HobDataType("model_half", 0) == GetDataType<htype>::value));
+
+REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16, float16);
 
 }  // namespace
 
