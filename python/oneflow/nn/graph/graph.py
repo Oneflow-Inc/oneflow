@@ -941,7 +941,6 @@ class Graph(object):
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
             )
-            # if enable_mlir_inference_opt:
             (
                 state_op_names,
                 state_tensors,
