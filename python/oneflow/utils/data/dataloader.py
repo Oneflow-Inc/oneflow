@@ -171,9 +171,12 @@ class DataLoader(Generic[T_co]):
         prefetch_factor (int, optional, keyword-only arg): Number of samples loaded
             in advance by each worker. ``2`` means there will be a total of
             2 * num_workers samples prefetched across all workers. (default: ``2``)
-        persistent_workers (bool, optional): If ``True``, the data loader will not shutdown
-            the worker processes after a dataset has been consumed once. This allows to
-            maintain the workers `Dataset` instances alive. (default: ``False``)
+        persistent_workers (bool, optional): If ``True``, the data loader will immediately 
+            initialize worker preocesses and not shutdown them after a dataset has been 
+            consumed once. This allows to maintain the workers `Dataset` instances alive. 
+            If you are using oneflow with RDMA support in distributed training, the
+            ``persistent_workers`` must be ``True`` otherwise will encounter segmentation
+            fault.(default: ``False``)
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
@@ -363,7 +366,7 @@ class DataLoader(Generic[T_co]):
             None  # See NOTE [ IterableDataset and __len__ ]
         )
 
-        self._iterator = None
+        self._iterator = self._get_iterator() if self.persistent_workers else None
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
         if self.num_workers == 0:
