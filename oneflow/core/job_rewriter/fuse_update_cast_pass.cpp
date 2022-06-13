@@ -45,6 +45,8 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
     LogicalBlobId model_half_lbi;
+    bool has_model_half_lbi = false; 
+
     for (OpEdge* find_cast_edge : op_node->out_edges()) {
       OpNode* find_cast_node = find_cast_edge->dst_node();
       if (!IsUserOpWithTypeName(find_cast_node->op().op_conf(), "cast")) { continue; }
@@ -77,69 +79,71 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
       const user_op::UserOpConfWrapper new_cast_user_conf(new_cast_op_conf);
       model_half_lbi = GenLogicalBlobId(new_cast_user_conf.output("out", 0));
+      has_model_half_lbi = true; 
       break;
     }
 
-    for (OpEdge* find_model_update_edge : op_node->out_edges()) {
-      OpNode* find_model_update_update_node = find_model_update_edge->dst_node();
-      if (!IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")
-          || !IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "adam_update")) {
-        continue;
-      }
-      const user_op::UserOpConfWrapper model_update_user_conf(
-          find_model_update_update_node->op().op_conf());
-      // Currently only support for cuda, maybe remove this limit.
-      if (find_model_update_update_node->parallel_desc().device_type() != DeviceType::kCUDA) {
-        continue;
-      }
-
-      user_op::UserOpConfWrapperBuilder fused_model_update_op_builder(
-          model_update_user_conf.op_name());
-      if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
-        fused_model_update_op_builder.OpTypeName("sgd_update")
-            .Input("model", model_update_user_conf.input("model", 0))
-            .Input("model_diff", model_update_user_conf.input("model_diff", 0))
-            .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
-            .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
-            .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
-            .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
-            .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"));
-      } else if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
-                                      "adam_update")) {
-        fused_model_update_op_builder.OpTypeName("adam_update")
-            .Input("model", model_update_user_conf.input("model", 0))
-            .Input("model_diff", model_update_user_conf.input("model_diff", 0))
-            .Input("m", model_update_user_conf.input("m", 0))
-            .Input("v", model_update_user_conf.input("v", 0))
-            .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
-            .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0))
-            .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
-            .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
-            .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
-            .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
-            .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"))
-            .Attr<float>("beta1", model_update_user_conf.attr<float>("beta1"))
-            .Attr<float>("beta2", model_update_user_conf.attr<float>("beta2"))
-            .Attr<float>("epsilon", model_update_user_conf.attr<float>("epsilon"))
-            .Attr<bool>("amsgrad", model_update_user_conf.attr<bool>("amsgrad"))
-            .Attr<bool>("do_bias_correction",
-                        model_update_user_conf.attr<bool>("do_bias_correction"));
-        if (model_update_user_conf.attr<bool>("amsgrad")) {
-          fused_model_update_op_builder.Input("max_v", model_update_user_conf.input("max_v", 0));
+    if(has_model_half_lbi){
+      for (OpEdge* find_model_update_edge : op_node->out_edges()) {
+        OpNode* find_model_update_update_node = find_model_update_edge->dst_node();
+        if (!IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")
+            && !IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "adam_update")) {
+          continue;
         }
-      } else {
-        UNIMPLEMENTED() << "Need support more optimizers. ";
-      }
-      fused_model_update_op_builder.Input("model_half", GenLogicalBlobName(model_half_lbi));
-      CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
-      fused_model_update_op_builder.ScopeSymbolId(
-          model_update_user_conf.op_conf().scope_symbol_id());
+        const user_op::UserOpConfWrapper model_update_user_conf(
+            find_model_update_update_node->op().op_conf());
+        // Currently only support for cuda, maybe remove this limit.
+        if (find_model_update_update_node->parallel_desc().device_type() != DeviceType::kCUDA) {
+          continue;
+        }
+        user_op::UserOpConfWrapperBuilder fused_model_update_op_builder(
+            model_update_user_conf.op_name());
+        if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
+          fused_model_update_op_builder.OpTypeName("sgd_update")
+              .Input("model", model_update_user_conf.input("model", 0))
+              .Input("model_diff", model_update_user_conf.input("model_diff", 0))
+              .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
+              .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
+              .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
+              .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
+              .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"));
+        } else if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
+                                        "adam_update")) {
+          fused_model_update_op_builder.OpTypeName("adam_update")
+              .Input("model", model_update_user_conf.input("model", 0))
+              .Input("model_diff", model_update_user_conf.input("model_diff", 0))
+              .Input("m", model_update_user_conf.input("m", 0))
+              .Input("v", model_update_user_conf.input("v", 0))
+              .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
+              .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0))
+              .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
+              .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
+              .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
+              .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
+              .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"))
+              .Attr<float>("beta1", model_update_user_conf.attr<float>("beta1"))
+              .Attr<float>("beta2", model_update_user_conf.attr<float>("beta2"))
+              .Attr<float>("epsilon", model_update_user_conf.attr<float>("epsilon"))
+              .Attr<bool>("amsgrad", model_update_user_conf.attr<bool>("amsgrad"))
+              .Attr<bool>("do_bias_correction",
+                          model_update_user_conf.attr<bool>("do_bias_correction"));
+          if (model_update_user_conf.attr<bool>("amsgrad")) {
+            fused_model_update_op_builder.Input("max_v", model_update_user_conf.input("max_v", 0));
+          }
+        } else {
+          UNIMPLEMENTED() << "Need support more optimizers. ";
+        }
+        fused_model_update_op_builder.Input("model_half", GenLogicalBlobName(model_half_lbi));
+        CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
+        fused_model_update_op_builder.ScopeSymbolId(
+            model_update_user_conf.op_conf().scope_symbol_id());
 
-      OperatorConf new_model_update_op_conf = model_update_user_conf.op_conf();
-      *new_model_update_op_conf.mutable_user_conf() =
-          fused_model_update_op_builder.Build().op_conf().user_conf();
-      job_builder->MutOpsOnlyOnce({new_model_update_op_conf});
-      break;
+        OperatorConf new_model_update_op_conf = model_update_user_conf.op_conf();
+        *new_model_update_op_conf.mutable_user_conf() =
+            fused_model_update_op_builder.Build().op_conf().user_conf();
+        job_builder->MutOpsOnlyOnce({new_model_update_op_conf});
+        break;
+      }
     }
   });
   return Maybe<void>::Ok();
