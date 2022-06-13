@@ -275,16 +275,16 @@ template struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, double, doubl
 template struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, float, float>;
 template struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, float, float16>;
 
-template<typename T, typename G, typename H>
-struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G, H> {
+template<typename T, typename G>
+struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
                      TensorTupleParams<3> tensor_tuple_params);
 };
 
-template<typename T, typename G, typename H>
-void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G, H>::Update(
+template<typename T, typename G>
+void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float weight_decay, float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params) {
@@ -302,7 +302,7 @@ void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G, H>::Update(
 }
 
 template<typename T>
-struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, float16> {
+struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float weight_decay, float learning_rate_val,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
@@ -310,19 +310,19 @@ struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, flo
 };
 
 template<typename T>
-void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, float16>::Update(
+void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float weight_decay, float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params) {
-  MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half, half>::Update(
+  MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, learning_rate,
       scale_by_ptr, skip_if, tensor_tuple_params);
 }
 
-template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16, float16>;
+template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16>;
 
-template<typename T, typename G, typename H>
-struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G, H> {
+template<typename T, typename G>
+struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction,
@@ -332,8 +332,8 @@ struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G, H> {
                      const float* bias_correction2, TensorTupleParams<5> tensor_tuple_params);
 };
 
-template<typename T, typename G, typename H>
-void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G, H>::Update(
+template<typename T, typename G>
+void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
@@ -355,7 +355,7 @@ void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, G, H>::Update
 }
 
 template<typename T>
-struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, float16> {
+struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale,
                      float l1, float l2, float beta1, float beta2, float epsilon,
                      float weight_decay, bool amsgrad, bool do_bias_correction,
@@ -366,20 +366,20 @@ struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, fl
 };
 
 template<typename T>
-void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, float16>::Update(
+void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
     bool do_bias_correction, float learning_rate_val, float bias_correction1_val,
     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
     TensorTupleParams<5> tensor_tuple_params) {
-  MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half, half>::Update(
+  MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad,
       do_bias_correction, learning_rate_val, bias_correction1_val, bias_correction2_val,
       learning_rate, scale_by_ptr, skip_if, bias_correction1, bias_correction2,
       tensor_tuple_params);
 }
 
-template struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16, float16>;
+template struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16>;
 
 }  // namespace oneflow

@@ -200,7 +200,7 @@ REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float1
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 
-template<DeviceType device_type, typename T, typename G, typename H>
+template<DeviceType device_type, typename T, typename G>
 class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
                                                  public user_op::CudaGraphSupport {
  public:
@@ -254,7 +254,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
       count += 1;
       total_elem_cnt += tensor_elem_cnt;
       if (count == max_tensors[1] || tensor_idx == n_tensor - 1) {
-        MultiTensorSGDUpdateWithCastKernelUtil<device_type, T, G, H>::Update(
+        MultiTensorSGDUpdateWithCastKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, weight_decay,
             learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, tensor_tuple_params);
         count = 0;
@@ -265,18 +265,17 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype, htype)  \
+#define REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype)         \
   REGISTER_USER_KERNEL("multi_tensor_sgd_update_with_cast")                                    \
-      .SetCreateFn<MultiTensorSGDUpdateWithCastKernel<device, dtype, gtype, htype>>()          \
+      .SetCreateFn<MultiTensorSGDUpdateWithCastKernel<device, dtype, gtype>>()                 \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)      \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
-                       && (user_op::HobDataType("model_half", 0) == GetDataType<htype>::value));
+                       && (user_op::HobDataType("model_half", 0) == GetDataType<float16>::value));
 
-REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16,
-                                                         float16);
+REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
 
-template<DeviceType device_type, typename T, typename G, typename H>
+template<DeviceType device_type, typename T, typename G>
 class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
                                                   public user_op::CudaGraphSupport {
  public:
@@ -359,7 +358,7 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
       count += 1;
       total_elem_cnt += tensor_elem_cnt;
       if (count == max_tensors[3] || tensor_idx == n_tensor - 1) {
-        MultiTensorAdamUpdateWithCastKernelUtil<device_type, T, G, H>::Update(
+        MultiTensorAdamUpdateWithCastKernelUtil<device_type, T, G>::Update(
             ctx->stream(), total_elem_cnt, count, static_cast<T>(scale), l1, l2, beta1, beta2,
             epsilon, weight_decay, amsgrad, do_bias_correction, learning_rate_val,
             bias_correction1_val, bias_correction2_val, learning_rate_ptr, scale_by_ptr,
@@ -372,16 +371,15 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype, htype) \
+#define REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(device, dtype, gtype)        \
   REGISTER_USER_KERNEL("multi_tensor_adam_update_with_cast")                                   \
-      .SetCreateFn<MultiTensorAdamUpdateWithCastKernel<device, dtype, gtype, htype>>()         \
+      .SetCreateFn<MultiTensorAdamUpdateWithCastKernel<device, dtype, gtype>>()                \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value)      \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
-                       && (user_op::HobDataType("model_half", 0) == GetDataType<htype>::value));
+                       && (user_op::HobDataType("model_half", 0) == GetDataType<float16>::value));
 
-REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16,
-                                                          float16);
+REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
 
 }  // namespace
 
