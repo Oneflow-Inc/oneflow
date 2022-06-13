@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "mlir/Parser.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/MemRefUtils.h"
@@ -138,7 +138,7 @@ void WithMlirContext(
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
   registry
-      .insert<mlir::oneflow::OneFlowDialect, mlir::StandardOpsDialect, mlir::memref::MemRefDialect,
+      .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
               mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   mlir::MLIRContext mlir_ctx(registry);
@@ -155,9 +155,13 @@ void WithMlirContext(
     module->print(os_mlir);
     TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
   }
-  auto jit_or_error = mlir::ExecutionEngine::create(
-      /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
-      /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
+
+  mlir::ExecutionEngineOptions jitOptions;
+  jitOptions.transformer = {};
+  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.sharedLibPaths = ext_libs;
+
+  auto jit_or_error = mlir::ExecutionEngine::create(*module, jitOptions);
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString(jit_or_error.takeError());
   auto jit = std::move(jit_or_error.get());

@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -34,13 +34,6 @@ class RankFrontSeqCallbackInstructionType : public InstructionType {
   bool IsFrontSequential() const override { return true; }
 
  protected:
-  void Run(const InstructionMsg& instr_msg) const {
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
-    CHECK_NOTNULL(ptr);
-    ptr->callback()();
-  }
 };
 
 class ComputeRankFrontSeqCallbackInstructionType final
@@ -51,8 +44,16 @@ class ComputeRankFrontSeqCallbackInstructionType final
 
   using stream_type = ControlStreamType;
 
-  void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
-  void ComputeInFuseMode(InstructionMsg* instr_msg) const override { Run(*instr_msg); }
+  void Compute(Instruction* instruction) const override {
+    const auto* operand = instruction->instr_msg().phy_instr_operand().get();
+    const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+    CHECK_NOTNULL(barrier_operand)->callback();
+  }
+  void ComputeInFuseMode(InstructionMsg* instr_msg) const override {
+    const auto* operand = instr_msg->phy_instr_operand().get();
+    const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+    CHECK_NOTNULL(barrier_operand)->callback();
+  }
 };
 COMMAND(RegisterInstructionType<ComputeRankFrontSeqCallbackInstructionType>(
     "ComputeRankFrontSeqCallback"));
@@ -65,7 +66,11 @@ class CtrlComputeRankFrontSeqCallbackInstructionType final
 
   using stream_type = ControlStreamType;
 
-  void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
+  void Compute(Instruction* instruction) const override {
+    const auto* operand = instruction->instr_msg().phy_instr_operand().get();
+    const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+    CHECK_NOTNULL(barrier_operand)->callback();
+  }
 };
 COMMAND(RegisterInstructionType<CtrlComputeRankFrontSeqCallbackInstructionType>(
     "CtrlComputeRankFrontSeqCallback"));
@@ -86,7 +91,12 @@ class ComputeGlobalFrontSeqBarrierInstructionType final
   ComputeGlobalFrontSeqBarrierInstructionType() = default;
   ~ComputeGlobalFrontSeqBarrierInstructionType() override = default;
 
-  void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
+  void Compute(Instruction* instruction) const override {
+    OF_ENV_BARRIER();
+    const auto* operand = instruction->instr_msg().phy_instr_operand().get();
+    const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+    CHECK_NOTNULL(barrier_operand)->callback();
+  }
 };
 COMMAND(RegisterInstructionType<ComputeGlobalFrontSeqBarrierInstructionType>(
     "ComputeGlobalFrontSeqBarrier"));

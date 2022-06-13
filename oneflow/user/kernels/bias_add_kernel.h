@@ -38,6 +38,7 @@ class BiasAddUserKernel final : public user_op::OpKernel, public user_op::CudaGr
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* a_tensor = ctx->Tensor4ArgNameAndIndex("a", 0);
     const auto* b_tensor = ctx->Tensor4ArgNameAndIndex("b", 0);
+    if (a_tensor->shape().elem_cnt() == 0 || b_tensor->shape().elem_cnt() == 0) { return; }
     auto* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int32_t bias_add_axis = ctx->Attr<int32_t>("axis");
     const int64_t outer_size = a_tensor->shape().Count(0, bias_add_axis);

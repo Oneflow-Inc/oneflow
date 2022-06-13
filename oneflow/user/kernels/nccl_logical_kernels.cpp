@@ -33,7 +33,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
   explicit NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
         has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
-        stream_name_(""),
+        stream_name_("NONE"),
         parallel_desc_(ctx->parallel_desc()) {
     if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
@@ -58,6 +58,8 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
     return comm_;
   }
 
+  const std::string& stream_name() const { return stream_name_; }
+
  private:
   bool is_init_;
   bool has_independent_stream_;
@@ -77,6 +79,19 @@ class NcclLogicalAllGatherNoncontinuousKernelState : public NcclLogicalKernelCom
 
  private:
   int64_t src_split_axis_;
+};
+
+class NcclLogicalReduceScatterNoncontinuousKernelState : public NcclLogicalKernelCommState {
+ public:
+  explicit NcclLogicalReduceScatterNoncontinuousKernelState(user_op::KernelInitContext* ctx)
+      : NcclLogicalKernelCommState(ctx), dst_split_axis_(-1) {}
+  ~NcclLogicalReduceScatterNoncontinuousKernelState() override = default;
+
+  int64_t dst_split_axis() const { return dst_split_axis_; }
+  void set_dst_split_axis(int64_t split_axis) { dst_split_axis_ = split_axis; }
+
+ private:
+  int64_t dst_split_axis_;
 };
 
 class NcclLogicalS2SKernelState : public NcclLogicalKernelCommState {
@@ -114,12 +129,15 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape(), out->shape());
     CHECK_EQ(in->data_type(), out->data_type());
+    VLOG(3) << "[NcclLogical][AllReduce] " << nccl_comm->stream_name() << " " << ctx->op_name()
+            << std::endl;
     OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
                                 nccl_comm->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
@@ -142,12 +160,15 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt() * num_ranks);
+    VLOG(3) << "[NcclLogical][ReduceScatter] " << nccl_comm->stream_name() << " " << ctx->op_name()
+            << std::endl;
     OF_NCCL_CHECK(ncclReduceScatter(in->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
                                     GetNcclDataType(in->data_type()), ncclRedOp_t::ncclSum,
                                     nccl_comm->comm(),
                                     ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
@@ -170,11 +191,14 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
+    VLOG(3) << "[NcclLogical][AllGather] " << nccl_comm->stream_name() << " " << ctx->op_name()
+            << std::endl;
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
                                 GetNcclDataType(in->data_type()), nccl_comm->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 template<typename T>
@@ -215,6 +239,9 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
     in->shape().ToDimVector(&logical_shape_dim_vec);
     logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
 
+    VLOG(3) << "[NcclLogical][AllGatherNoncontinuous] " << kernel_state->stream_name() << " "
+            << ctx->op_name() << std::endl;
+
     // NOTE(chengcheng): Do AllGather
     CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
@@ -237,12 +264,82 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
                       unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
   const user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   return GetCudaAlignedSize(out_tensor->shape().elem_cnt()
                             * GetSizeOfDataType(out_tensor->data_type()));
+}
+
+template<typename T>
+class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
+ public:
+  NcclLogicalReduceScatterNoncontinuous() = default;
+  ~NcclLogicalReduceScatterNoncontinuous() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    auto state = std::make_shared<NcclLogicalReduceScatterNoncontinuousKernelState>(ctx);
+    NdSbp dst_nd_sbp;
+    CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_reduced_nd_sbp", &dst_nd_sbp));
+    CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 1);
+    CHECK(dst_nd_sbp.sbp_parallel(0).has_split_parallel());
+    state->set_dst_split_axis(dst_nd_sbp.sbp_parallel(0).split_parallel().axis());
+    return state;
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* kernel_state = dynamic_cast<NcclLogicalReduceScatterNoncontinuousKernelState*>(state);
+    CHECK(kernel_state != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const int64_t dtype_size = GetSizeOfDataType(in->data_type());
+    int64_t data_size = GetCudaAlignedSize(in->shape().elem_cnt() * dtype_size);
+    CHECK_EQ(tmp_buffer->shape().elem_cnt(), data_size);
+
+    CHECK_EQ(in->data_type(), out->data_type());
+    const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
+    const int64_t out_split_axis = kernel_state->dst_split_axis();
+
+    DimVector logical_shape_dim_vec;
+    in->shape().ToDimVector(&logical_shape_dim_vec);
+
+    DimVector transpose_in_dim_vec = logical_shape_dim_vec;
+    transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
+    transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
+    const Shape transpose_in_shape(transpose_in_dim_vec);
+    std::vector<int32_t> perm;
+    perm.emplace_back(out_split_axis);
+    FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+      if (i != out_split_axis) { perm.emplace_back(i); }
+    }
+    auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
+        ctx->stream()->device_type(), transpose_in_dim_vec.size());
+    CHECK(transpose);
+    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
+                      transpose_in_dim_vec.data(), in->dptr(), perm.data(), tmp_buffer->mut_dptr());
+    VLOG(3) << "[NcclLogical][ReduceScatterNoncontinuous] " << kernel_state->stream_name() << " "
+            << ctx->op_name() << std::endl;
+    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
+    if (in->data_type() == kBool) { reduce_type = ncclRedOp_t::ncclMax; }
+    OF_NCCL_CHECK(ncclReduceScatter(tmp_buffer->dptr(), out->mut_dptr(), out->shape().elem_cnt(),
+                                    GetNcclDataType(in->data_type()), reduce_type,
+                                    kernel_state->comm(),
+                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
+};
+
+size_t InferReduceScatterNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* in_tensor = ctx->OutputTensorDesc("in", 0);
+  return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
+                            * GetSizeOfDataType(in_tensor->data_type()));
 }
 
 template<typename T>
@@ -294,6 +391,9 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
     DimVector logical_shape_dim_vec;
     in->shape().ToDimVector(&logical_shape_dim_vec);
     logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
+
+    VLOG(3) << "[NcclLogical][S2S] " << kernel_state->stream_name() << " " << ctx->op_name()
+            << std::endl;
 
     if (out_split_axis != 0) {
       // NOTE(chengcheng): Do pack. Need transpose in -> pack_to
@@ -364,6 +464,7 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -412,6 +513,22 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int64_t)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(double)
 REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
+
+#define REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(dtype)                              \
+  REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter_noncontinuous")                     \
+      .SetCreateFn<NcclLogicalReduceScatterNoncontinuous<dtype>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferReduceScatterNoncontinuousKernelTmpBufferSize);
+
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(bool)
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(int8_t)
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(int32_t)
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(int64_t)
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(float)
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(double)
+REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(float16)
 
 #define REGISTER_S2S_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("_nccl_logical_s2s")                                              \

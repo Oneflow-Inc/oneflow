@@ -41,8 +41,8 @@ class OFRecordParser final : public Parser<TensorBuffer> {
       CHECK(dptr[i].ParseFromArray(sample.data(), sample.nbytes()));
     });
     if (batch_data.size() != out_tensor->shape().elem_cnt()) {
-      CHECK_EQ(out_tensor->mut_shape()->NumAxes(), 1);
-      out_tensor->mut_shape()->Set(0, batch_data.size());
+      CHECK_EQ(out_tensor->mut_shape().NumAxes(), 1);
+      out_tensor->mut_shape().Set(0, batch_data.size());
     }
   }
 };

@@ -12,6 +12,8 @@ include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Pass/PassBase.td"
 
+include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/OpBase.td"
 def OneFlow_NormalizationAddReluOp : OneFlow_NormalizationAddReluBaseOp {
   let builders = [
     OpBuilder<(ins
@@ -48,6 +50,10 @@ def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompati
   let hasCanonicalizer = 1;
 }
 
+def OneFlow_ConfOp : OneFlow_BaseOp<"conf", [OneFlow_IsImportCompatible]> {
+  let summary = "This op is mainly used by create its adaptor in importing/exporting";
+}
+
 def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let summary = "";
   let input = (ins Variadic<AnyType>:$data_input);
@@ -60,12 +66,31 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let hasCanonicalizer = 1;
 }
 
+def F32ElementsAttr : FloatElementsAttr<32>;
+
+def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSideEffect]> {
+  let summary = "Auxiliary variable op for constant folding, only exists in IR.";
+  let arguments = (ins
+    F32ElementsAttr:$value,
+    StrAttr:$op_name,
+    StrAttr:$device_tag,
+    StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
+    OptionalAttr<I64Attr>:$scope_symbol_id,
+    OptionalAttr<I64ArrayAttr>:$hierarchy,
+    StrArrayAttr:$nd_sbp
+  );
+  let results = (outs
+    AnyType:$output
+  );
+  let hasFolder = 1;
+}
+
 def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
   let summary = "mark a result as loss to prevent its defining op from optimized away";
   let arguments = (ins Variadic<AnyType>:$loss);
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,
@@ -84,13 +109,13 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
     StrAttr:$mlir_assembly
   );
   let builders = [
-    OpBuilder<(ins "FuncOp":$callee,
+    OpBuilder<(ins "func::FuncOp":$callee,
       "NamedAttrList":$attributes,
       CArg<"ValueRange", "{}">:$data_input), [{
       $_state.addOperands(data_input);
       $_state.addAttributes(attributes);
       $_state.addAttribute("callee", SymbolRefAttr::get(callee));
-      $_state.addTypes(callee.getType().getResults());
+      $_state.addTypes(callee.getFunctionType().getResults());
     }]>
   ];
   let extraClassDeclaration = [{
@@ -179,29 +204,27 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    TypeAttr:$type,
+    TypeAttrOf<FunctionType>:$function_type,
     OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let builders = [OpBuilder<(ins
-    "StringRef":$name, "FunctionType":$type)
+    "StringRef":$sys_name, "FunctionType":$function_type)
   >];
 
   let extraClassDeclaration = [{
     bool isDeclaration() { return isExternal(); }
 
-    /// Returns the type of this function.
-    /// TODO: use the ODS `type`
-    FunctionType getType() {
-      return getTypeAttr().getValue().cast<FunctionType>();
-    }
+   FunctionType getFunctionType() { return function_type(); }
 
-    ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
+   TypeAttr getFunctionTypeAttr() { return function_typeAttr(); }
 
-    ArrayRef<Type> getResultTypes() { return getType().getResults(); }
+    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
+
+    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
 
     LogicalResult verifyType() {
-      auto type = getTypeAttr().getValue();
+      auto type = getFunctionTypeAttr().getValue();
       if (!type.isa<FunctionType>())
         return emitOpError("requires '" + getTypeAttrName() +
                            "' attribute of function type");
@@ -209,9 +232,8 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
     }
   }];
 
-  let parser = [{ return ::mlir::oneflow::parseJob(parser, result); }];
-  let printer = [{ return ::mlir::oneflow::print(*this, p); }];
-  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"Job">,
@@ -239,9 +261,14 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 
-  let printer = [{ return ::mlir::oneflow::print(p, *this); }];
-  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
-  let parser = [{ return ::mlir::oneflow::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", [DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
 }
 
 #endif // REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
@@ -254,7 +281,7 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
-  let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
+  let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
 }
 
 def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
@@ -263,13 +290,13 @@ def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
   let dependentDialects = ["scf::SCFDialect"];
 }
 
-def BufferHostRegisterPass : Pass<"buffer-host-register", "FuncOp"> {
+def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
   let dependentDialects = ["gpu::GPUDialect"];
 }
 
-def GpuCopyArgPass : Pass<"gpu-copy-arg", "FuncOp"> {
+def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createGpuCopyArgPass()";
   let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
@@ -283,6 +310,26 @@ def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
 def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
+}
+
+def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createAutoNhwcPass()";
+}
+
+def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
+  let summary = "Convert variable op to variable ir op for constant folding.";
+  let constructor = "mlir::oneflow::createPreConvertInferenceOpPass()";
+}
+
+def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
+  let summary = "Convert ops to their inference version and rewrite them with a more performant equivalent in inference workflow.";
+  let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
+}
+
+def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
+  let summary = "Convert variable ir op to variable op after contant folding.";
+  let constructor = "mlir::oneflow::createPostConvertInferenceOpPass()";
 }
 
 #endif // ONEFLOW_PASSES

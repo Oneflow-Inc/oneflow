@@ -52,8 +52,8 @@ struct BinaryCrossEntropyFunctor<float> {
   __device__ __forceinline__ float operator()(float input_val, float target_val) const {
     assert(input_val >= zero_);
     assert(input_val <= one_);
-    return (target_val - one_) * max(__logf(one_ - input_val), negative_hundred_)
-           - target_val * max(__logf(input_val), negative_hundred_);
+    return (target_val - one_) * max(logf(one_ - input_val), negative_hundred_)
+           - target_val * max(logf(input_val), negative_hundred_);
   }
 
   __device__ __forceinline__ float operator()(float input_val, float target_val,

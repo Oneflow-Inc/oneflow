@@ -971,6 +971,75 @@ REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_LARS_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA
 
+template<DeviceType device_type, typename T, typename G>
+class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  FtrlUpdateKernel() = default;
+  ~FtrlUpdateKernel() override = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
+    user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
+    user_op::Tensor* accumulate = ctx->Tensor4ArgNameAndIndex("accumulate", 0);
+    user_op::Tensor* z = ctx->Tensor4ArgNameAndIndex("z", 0);
+    const auto scale = ctx->Attr<double>("scale");
+    const auto l1 = ctx->Attr<float>("l1");
+    const auto l2 = ctx->Attr<float>("l2");
+    const float lr_power = ctx->Attr<float>("lr_power");
+    const float lambda1 = ctx->Attr<float>("lambda1");
+    const float lambda2 = ctx->Attr<float>("lambda2");
+    const float beta = ctx->Attr<float>("beta");
+    const float weight_decay = ctx->Attr<float>("weight_decay");
+    // TODO(zhengzekang): Undefined behavior for ftrl optimizer with weight_decay in `abs(new_z_val)
+    // < lambda1` condition.
+    CHECK_EQ(weight_decay, static_cast<float>(0.0))
+        << "Currently not support for setting weight decay. ";
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float* learning_rate_ptr = nullptr;
+
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
+
+    const T* scale_by_ptr = nullptr;
+    if (ctx->has_input("scale_by_tensor", 0)) {
+      const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
+      CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
+      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      scale_by_ptr = scale_by_tensor->dptr<T>();
+    }
+    const int64_t* skip_if_ptr = nullptr;
+    if (ctx->has_input("skip_if", 0)) {
+      const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
+      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      skip_if_ptr = skip_if->dptr<int64_t>();
+    }
+    FtrlUpdateKernelUtil<device_type, T, G>::Update(
+        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, lr_power, lambda1,
+        lambda2, beta, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr,
+        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), accumulate->mut_dptr<T>(),
+        z->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
+};
+
+#define REGISTER_FTRL_UPDATE_KERNEL(device, dtype, gtype)                                 \
+  REGISTER_USER_KERNEL("ftrl_update")                                                     \
+      .SetCreateFn<FtrlUpdateKernel<device, dtype, gtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
+                       && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));
+
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCPU, float, float);
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCPU, double, double);
+#ifdef WITH_CUDA
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
+#endif  // WITH_CUDA
+
 }  // namespace
 
 }  // namespace oneflow

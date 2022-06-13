@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/lazy/actor/light_actor.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
@@ -30,7 +31,7 @@ Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(strea
       NewObj<int, StreamContext, const StreamId&>(stream_id.device_id().device_type(), stream_id);
   stream_ctx_.reset(stream_ctx);
   actor_thread_ = std::thread([this, stream_id]() {
-    OF_PROFILER_NAME_THIS_HOST_THREAD("_" + DeviceTypeName(stream_id.device_id().device_type())
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_" + ToString(stream_id.device_id().device_type())
                                       + std::to_string(stream_id.device_id().device_index())
                                       + "_actor");
     CHECK_JUST(stream_ctx_->stream()->OnExecutionContextSetup());
@@ -59,7 +60,9 @@ void Thread::PollMsgChannel() {
     local_msg_queue_.pop();
     if (msg.msg_type() == ActorMsgType::kCmdMsg) {
       if (msg.actor_cmd() == ActorCmd::kStopThread) {
-        CHECK(id2actor_ptr_.empty());
+        CHECK(id2actor_ptr_.empty())
+            << " RuntimeError! Thread: " << thrd_id_
+            << " NOT empty when stop with actor num: " << id2actor_ptr_.size();
         break;
       } else if (msg.actor_cmd() == ActorCmd::kConstructActor) {
         ConstructActor(msg.dst_actor_id());

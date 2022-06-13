@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/shape.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -60,56 +59,32 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   return axis;
 }
 
-Shape::Shape(const std::initializer_list<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
-Shape::Shape(const DimVector& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
-Shape::Shape(DimVector&& dim_vec) : dim_vec_(std::move(dim_vec)) { UpdateElemCnt(); }
-Shape::Shape(const ShapeProto& shape_proto) {
-  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
-  UpdateElemCnt();
-}
-Shape::Shape(const cfg::ShapeProto& shape_proto) {
-  dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
-  UpdateElemCnt();
-}
-
-Shape& Shape::operator=(const Shape& shape) {
-  dim_vec_ = shape.dim_vec_;
-  UpdateElemCnt();
-  return *this;
-}
-
-Shape& Shape::assign(const DimVector& dim_vec) {
-  dim_vec_ = dim_vec;
-  UpdateElemCnt();
-  return *this;
-}
+Shape::Shape(const DimVector& dim_vec) : DimVector(dim_vec), is_initialized_(true) {}
+Shape::Shape(DimVector&& dim_vec) : DimVector(std::move(dim_vec)), is_initialized_(true) {}
+Shape::Shape(const ShapeProto& shape_proto)
+    : DimVector(shape_proto.dim().begin(), shape_proto.dim().end()), is_initialized_(true) {}
 
 Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
-  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), dim_vec_.data());
-  UpdateElemCnt();
+  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), data());
   return *this;
 }
 
 Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
   CHECK_GE(NumAxes(), shape_view.NumAxes());
   size_t left_ones_size = NumAxes() - shape_view.NumAxes();
-  FOR_RANGE(int, i, 0, left_ones_size) { dim_vec_.at(i) = 1LL; }
-  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(),
-            dim_vec_.data() + left_ones_size);
-  UpdateElemCnt();
+  FOR_RANGE(int, i, 0, left_ones_size) { (*this)[i] = 1LL; }
+  std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), data() + left_ones_size);
   return *this;
 }
-
-bool Shape::operator==(const Shape& rhs) const { return dim_vec_ == rhs.dim_vec_; }
 
 std::string Shape::ToString() const {
   std::stringstream ss;
   int32_t idx = 0;
   ss << "(";
-  for (int64_t dim : dim_vec_) {
+  for (int64_t dim : *this) {
     ss << dim;
-    if (++idx != dim_vec_.size() || dim_vec_.size() == 1) { ss << ","; }
+    if (++idx != size() || size() == 1) { ss << ","; }
   }
   ss << ")";
   return ss.str();
@@ -118,22 +93,21 @@ std::string Shape::ToString() const {
 std::string Shape::DebugStr() const { return ToString(); }
 
 void Shape::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(dim_vec_.begin(), dim_vec_.end());
+  *(ret->mutable_dim()) = PbRf<int64_t>(begin(), end());
 }
 
 int64_t Shape::At(int64_t index) const {
   CHECK_GE(index, 0);
   CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
                                    << " > num_axes: " << this->NumAxes();
-  return dim_vec_.at(index);
+  return (*this)[index];
 }
 
 void Shape::Set(int64_t index, int64_t val) {
   CHECK_GE(index, 0);
   CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
                                    << " > num_axes: " << this->NumAxes();
-  dim_vec_.at(index) = val;
-  UpdateElemCnt();
+  (*this)[index] = val;
 }
 
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
@@ -145,12 +119,6 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
 }
 
 int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
-
-void Shape::UpdateElemCnt() {
-  int64_t elem_cnt = 1;
-  for (int64_t s : dim_vec_) { elem_cnt *= s; }
-  elem_cnt_ = elem_cnt;
-}
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
   out << shape.DebugStr();
@@ -207,14 +175,22 @@ bool Shape::Containing(const Shape& small_shape) const {
   return true;
 }
 
+bool Shape::MatchBeforeLastDim(const Shape& next_shape) const {
+  if (this->NumAxes() != next_shape.NumAxes()) { return false; }
+  for (int64_t i = 0; i < this->NumAxes() - 1; ++i) {
+    if (next_shape.At(i) != this->At(i)) { return false; }
+  }
+  return true;
+}
+
 Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   CHECK_OR_RETURN(start_dim >= 0 && end_dim >= start_dim);
   int64_t ndims = this->NumAxes();
   if (start_dim > ndims) { start_dim = ndims; }
   if (end_dim > ndims) { end_dim = ndims; }
-  DimVector dim_vec;
-  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { dim_vec.emplace_back(this->At(i)); }
-  return std::make_shared<Shape>(dim_vec);
+  std::shared_ptr<Shape> shape = std::make_shared<Shape>();
+  for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { shape->emplace_back(this->At(i)); }
+  return shape;
 }
 
 }  // namespace oneflow

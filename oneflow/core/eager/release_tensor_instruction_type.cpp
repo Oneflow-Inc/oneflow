@@ -72,8 +72,6 @@ class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType<Str
 };
 
 COMMAND(vm::RegisterInstructionType<CudaReleaseTensorInstructionType<CudaStreamType>>(
-    "gpu.ReleaseTensor"));
-COMMAND(vm::RegisterInstructionType<CudaReleaseTensorInstructionType<CudaStreamType>>(
     "cuda.ReleaseTensor"));
 COMMAND(vm::RegisterInstructionType<CudaReleaseTensorInstructionType<CudaCopyH2DStreamType>>(
     "cuda_h2d.ReleaseTensor"));

@@ -35,6 +35,8 @@ struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
       : attrs(attrs_arg), device(device_arg) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg, const bool pin_memory)
+      : attrs(attrs_arg), device(device_arg), pin_memory(pin_memory) {}
   OpExprInterpContext(const AttrMap& attrs_arg, std::shared_ptr<user_op::OpKernelState> state_arg)
       : attrs(attrs_arg), state(state_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg,
@@ -53,6 +55,7 @@ struct OpExprInterpContext {
   Optional<Symbol<Device>> device;               // for local op
   Optional<Symbol<ParallelDesc>> parallel_desc;  // for consistent op
   Optional<Symbol<NdSbp>> nd_sbp;                // for consistent op
+  Optional<bool> pin_memory;                     // for pin_memory related op
   std::shared_ptr<user_op::OpKernelState> state;
 };
 

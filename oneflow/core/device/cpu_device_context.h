@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/vm/cpu_allocator.h"
+#include "oneflow/core/vm/cuda_host_allocator.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
@@ -37,6 +38,8 @@ class CpuDeviceCtx final : public DeviceCtx {
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
+
+  vm::Allocator* mut_pin_memory_allocator() { return Global<vm::CudaHostAllocator>::Get(); }
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
 
