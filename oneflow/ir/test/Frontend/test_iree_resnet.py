@@ -27,6 +27,7 @@ import time
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
 
+
 def _test_iree_resnet_cpu(test_case):
     model = resnet50(pretrained=True)
     model.eval()
