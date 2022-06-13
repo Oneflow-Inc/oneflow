@@ -2893,6 +2893,37 @@ class FusedDotFeatureInteractionFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
 };
 
+class FusedCrossFeatureInteractionFunctor {
+ public:
+  FusedCrossFeatureInteractionFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_cross_feature_interaction")
+                         .Input("x")
+                         .Input("weight")
+                         .Input("x0")
+                         .Input("bias")
+                         .Output("out")
+                         .Output("matmul_result")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& x0,
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const std::string& interaction_mode) const {
+    if (interaction_mode != "vector" && interaction_mode != "matrix") {
+      UNIMPLEMENTED_THEN_RETURN()
+          << "Fused Cross Interaction mode only support `vector` and `matrix`. ";
+    }
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("interaction_mode", interaction_mode));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight, x0, bias}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class OneEmbeddingIdShuffleFunctor {
  public:
   OneEmbeddingIdShuffleFunctor() {
@@ -3356,6 +3387,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
   m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
+  m.add_functor<impl::FusedCrossFeatureInteractionFunctor>("FusedCrossFeatureInteraction");
   m.add_functor<impl::OneEmbeddingIdShuffleFunctor>("OneEmbeddingIdShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
