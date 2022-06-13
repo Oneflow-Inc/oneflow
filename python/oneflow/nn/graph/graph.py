@@ -898,7 +898,6 @@ class Graph(object):
                     )
                 enable_mlir_inference_opt = False
                 del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
-            # if enable_mlir_inference_opt:
             oneflow._oneflow_internal.FillVariableTensorMgr(
                 state_op_names, self._state_tensor_tuple
             )
