@@ -26,6 +26,7 @@ import oneflow.core.job.job_pb2 as job_pb
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 from oneflow.framework.tensor import Tensor
 
+
 def _nd_sbp2repr(nd_sbp):
     dim_len = len(nd_sbp.sbp_parallel)
     nd_sbp_str = "sbp=("
