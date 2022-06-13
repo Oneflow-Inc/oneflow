@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+
+# dynamic memory allocation can't be tested in unittest
+os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
 import unittest
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
 import numpy as np
 import oneflow as flow
-import os
-
 
 parallel_num = 2
 max_id = 1000
@@ -161,8 +163,6 @@ def embedding_shuffle_quantize(np_data, np_dtype):
 
 
 def _test_embedding_shuffle(test_case, dtype, enable_quantize):
-    # dynamic memory allocation can't be tested in unittest
-    os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_tables = 26
@@ -221,8 +221,6 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
 
 
 def _test_embedding_gradient_shuffle(test_case, enable_quantize, fp16, embedding_size):
-    # dynamic memory allocation can't be tested in unittest
-    os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
     np_tolerance = 0
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
