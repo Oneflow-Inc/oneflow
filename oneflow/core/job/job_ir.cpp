@@ -19,6 +19,10 @@ namespace oneflow {
 
 #ifndef WITH_MLIR
 
+Maybe<std::string> ConvertJobToTosaIR(Job* job) {
+  UNIMPLEMENTED_THEN_RETURN() << "ConvertJobToTosaIR is only supported WITH_MLIR";
+}
+
 Maybe<void> SaveJobToIR(Job* job, const std::string& path) {
   UNIMPLEMENTED_THEN_RETURN() << "SaveJobToIR is only supported WITH_MLIR";
 }
