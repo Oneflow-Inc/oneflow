@@ -325,13 +325,6 @@ Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_
   return old_list_empty;
 }
 
-Maybe<bool> VirtualMachineEngine::Receive(
-    intrusive::shared_ptr<InstructionMsg>&& compute_instr_msg) {
-  InstructionMsgList instr_msg_list;
-  instr_msg_list.EmplaceBack(std::move(compute_instr_msg));
-  return Receive(&instr_msg_list);
-}
-
 bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
   return stream_type.OnSchedulerThread() || pthread_fork::IsForkedSubProcess();
 }
