@@ -45,7 +45,7 @@ def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
 
 def slice_update_op(
-    input, update, slice_tup_list: Sequence[Tuple[int, int, int]], inplace=False
+    input, update, slice_tup_list: Sequence[Tuple[int, int, int]]
 ):
     """Update a slice of tensor `x`. Like `x[start:stop:step] = update`.
 
@@ -53,7 +53,6 @@ def slice_update_op(
         x: A `Tensor`, whose slice will be updated.
         update: A `Tensor`, indicate the update content.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
-        inplace: inplace update or not.
 
     For example:
 
@@ -64,7 +63,7 @@ def slice_update_op(
 
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        >>> y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]], inplace=False)
+        >>> flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
         >>> input
         tensor([1., 2., 3., 4., 1.], dtype=oneflow.float32)
 
@@ -73,7 +72,7 @@ def slice_update_op(
     (start, stop, step) = parse_slice_tuple_list(slice_tup_list, input.shape)
     if update.dtype != input.dtype:
         update = update.to(dtype=input.dtype)
-    return flow._C.slice_update(input, update, start, stop, step, inplace)
+    return flow._C.slice_update(input, update, start, stop, step, inplace=True)
 
 
 if __name__ == "__main__":
