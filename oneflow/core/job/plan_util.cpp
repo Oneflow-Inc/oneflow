@@ -898,7 +898,6 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   };
   std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
 
-  // HashMap<int64_t, RankDeviceMemoryInfo> rank2memory_info;
   std::vector<RankDeviceMemoryInfo> rank_device_memory_infos(GlobalProcessCtx::WorldSize(),
                                                              RankDeviceMemoryInfo());
   HashMap<int64_t, MemBlockMemoryInfo> mem_block_id2info;
@@ -985,10 +984,131 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
         CHECK(mem_block_id2info.find(mem_block_id) != mem_block_id2info.end());
         const auto& mem_block_info = mem_block_id2info.at(mem_block_id);
         for (int64_t i = 0; i < mem_block_info.ordered_op_names.size(); ++i) {
-          VLOG(3) << " In MemBlock id: " << mem_block_id << " order: " << i
-                  << " op_name: " << mem_block_info.ordered_op_names.at(i);
+          VLOG(3) << " In Chunk id: " << chunk_id << " MemBlock id: " << mem_block_id
+                  << " order: " << i << " op_name: " << mem_block_info.ordered_op_names.at(i);
         }
       }
+    }
+  }
+}
+
+void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
+  std::vector<const TaskProto*> ordered_tasks;
+  for (const TaskProto& task : plan->task()) { ordered_tasks.push_back(&task); }
+  auto CompTask = [](const TaskProto* a, const TaskProto* b) {
+    return a->task_set_info().order_in_graph() < b->task_set_info().order_in_graph();
+  };
+  std::sort(ordered_tasks.begin(), ordered_tasks.end(), CompTask);
+
+  HashMap<int64_t, std::string> task_id2name;
+  HashMap<int64_t, const TaskProto*> task_id2proto;
+  HashMap<int64_t, std::string> regst_id2name;
+  HashMap<int64_t, const RegstDescProto&> regst_id2proto;
+  for (const auto* task : ordered_tasks) {
+    const auto& exec_seq = task->exec_sequence();
+    std::string name;
+    if (exec_seq.exec_node_size() >= 1) {
+      const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
+      if (kernel_conf.has_op_attribute_ref()) {
+        name = kernel_conf.op_attribute_ref();
+      } else {
+        name = kernel_conf.op_attribute().op_conf().name();
+      }
+    } else {
+      name = TaskType_Name(task->task_type());
+    }
+    task_id2name.emplace(task->task_id(), name);
+    task_id2proto.emplace(task->task_id(), task);
+    CHECK(!name.empty());
+    for (const auto& pair : task->produced_regst_desc()) {
+      std::string regst_name = name + "/" + pair.first;
+      regst_id2name.emplace(pair.second.regst_desc_id(), regst_name);
+      regst_id2proto.emplace(pair.second.regst_desc_id(), pair.second);
+    }
+  }
+
+  auto RegstId2TensorStr = [&](int64_t regst_id) {
+    std::string ret;
+    CHECK(regst_id2proto.find(regst_id) != regst_id2proto.end())
+        << " regst_id2proto cannot find: " << regst_id;
+    const RegstDescProto& regst = regst_id2proto.at(regst_id);
+    ret += " regst_num: " + std::to_string(regst.register_num());
+    std::string mem = ", cpu ";
+    if (regst.mem_case().has_device_cuda_mem()) { mem = ", cuda "; }
+    ret += mem;
+    if (regst.regst_desc_type().has_data_regst_desc()) {
+      const DataRegstDesc& data = regst.regst_desc_type().data_regst_desc();
+      ret += ", time_shape: " + Shape(data.time_shape()).ToString();
+      const BlobDescProto& blob = data.lbi2blob_desc(0).blob_desc();
+      ret += ", shape: " + Shape(blob.shape()).ToString()
+             + " , dtype: " + DataType_Name(blob.data_type());
+    } else {
+      ret += ", ctrl ";
+    }
+    return ret;
+  };
+  std::vector<std::vector<const TaskProto*>> rank2ordered_task(GlobalProcessCtx::WorldSize(),
+                                                               std::vector<const TaskProto*>());
+  for (const auto* task : ordered_tasks) {
+    CHECK_LT(task->machine_id(), rank2ordered_task.size());
+    rank2ordered_task.at(task->machine_id()).push_back(task);
+  }
+  for (int64_t rank = 0; rank < GlobalProcessCtx::WorldSize(); ++rank) {
+    auto file_stream =
+        TeePersistentLogStream::Create(plan_name + "_rank_" + std::to_string(rank) + "_light_plan");
+    file_stream << "rank : " << std::to_string(rank) << "\n";
+    CHECK_LT(rank, rank2ordered_task.size());
+    const auto& ordered_task_in_rank = rank2ordered_task.at(rank);
+    for (int64_t i = 0; i < ordered_task_in_rank.size(); ++i) {
+      CHECK_LT(i, ordered_task_in_rank.size());
+      const auto* task = ordered_task_in_rank.at(i);
+      int64_t task_id = task->task_id();
+      CHECK(task_id2name.find(task_id) != task_id2name.end())
+          << " task_id2name cannot find" << task_id;
+      int64_t thrd_id = task->thrd_id();
+      StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
+      file_stream << "order : " << std::to_string(i) << " , actor id : " << std::to_string(task_id)
+                  << " name : " << task_id2name.at(task_id) << " thrd : " << std::to_string(thrd_id)
+                  << " device_type : " << DeviceType_Name(stream_id.device_type())
+                  << " stream_index : " << std::to_string(stream_id.stream_index()) << " {\n";
+      for (const auto& key2consume_regst : task->consumed_regst_desc_id()) {
+        std::string key = key2consume_regst.first;
+        for (int64_t consume_regst_id : key2consume_regst.second.regst_desc_id()) {
+          std::string other_rank_str = "";
+          CHECK(regst_id2proto.find(consume_regst_id) != regst_id2proto.end())
+              << " regst_id2proto cannot find: " << consume_regst_id;
+          int64_t consume_task_id = regst_id2proto.at(consume_regst_id).producer_task_id();
+          CHECK(task_id2proto.find(consume_task_id) != task_id2proto.end())
+              << " task_id2proto cannot find: " << consume_task_id;
+          int64_t other_rank = task_id2proto.at(consume_task_id)->machine_id();
+          if (other_rank != rank) { other_rank_str = " , rank: " + std::to_string(other_rank); }
+          CHECK(regst_id2name.find(consume_regst_id) != regst_id2name.end())
+              << " regst_id2name cannot find: " << consume_regst_id;
+          file_stream << "  consume : " << key << " : <- [ " << regst_id2name.at(consume_regst_id)
+                      << " ] ( actor_id: " << std::to_string(consume_task_id) << other_rank_str
+                      << ", regst: " << RegstId2TensorStr(consume_regst_id) << " )\n";
+        }
+      }
+      for (const auto& key2produce_regst : task->produced_regst_desc()) {
+        const RegstDescProto& regst = key2produce_regst.second;
+        file_stream << "  produce : " << key2produce_regst.first
+                    << " regst: " << RegstId2TensorStr(regst.regst_desc_id()) << " {\n";
+        for (int64_t consumer_task_id : regst.consumer_task_id()) {
+          std::string other_rank_str = "";
+          CHECK(task_id2proto.find(consumer_task_id) != task_id2proto.end())
+              << " task_id2proto cannot find " << consumer_task_id;
+          CHECK(task_id2name.find(consumer_task_id) != task_id2name.end())
+              << " task_id2name cannot find " << consumer_task_id;
+          int64_t other_rank = task_id2proto.at(consumer_task_id)->machine_id();
+          if (other_rank != rank) { other_rank_str = " , rank: " + std::to_string(other_rank); }
+          file_stream << "    -> [ " << task_id2name.at(consumer_task_id)
+                      << " ] ( actor_id: " << std::to_string(consumer_task_id) << other_rank_str
+                      << " )\n";
+        }
+        file_stream << "  }\n";
+      }
+
+      file_stream << "}\n";
     }
   }
 }
