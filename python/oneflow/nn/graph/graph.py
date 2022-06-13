@@ -797,7 +797,7 @@ class Graph(object):
             ):
                 self._c_nn_graph.complie_and_init_runtime()
             # Get compiled job
-            compiled_job_str = self._c_nn_graph.get_compiled_job_str()
+            compiled_job_str = self._c_nn_graph.get_current_job_str()
             self._compiled_job_proto = job_pb.Job()
             self._compiled_job_proto.ParseFromString(compiled_job_str)
 
