@@ -170,8 +170,8 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
         zeros = JUST(functional::ConsistentConstant(*shape, 0, out_grads[0]->dtype(), parallel_desc,
                                                     *JUST(GetSbpList(in_nd_sbp))));
       }
-      (*in_grads)[0] =
-          JUST(functional::LogicalSliceAssign(zeros, out_grads[0], starts, ends, steps));
+      (*in_grads)[0] = JUST(
+          functional::SliceUpdate(zeros, out_grads[0], starts, ends, steps, /*inplace=*/false));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };

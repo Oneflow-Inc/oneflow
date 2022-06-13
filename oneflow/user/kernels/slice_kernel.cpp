@@ -293,10 +293,10 @@ DEFINE_STATIC_SWITCH_FUNC(
 #undef MAKE_WRITE_SLICE_SWITCH_ENTRY
 
 template<typename T>
-class LogicalSliceKernel final : public user_op::OpKernel {
+class SliceKernel final : public user_op::OpKernel {
  public:
-  LogicalSliceKernel() = default;
-  ~LogicalSliceKernel() = default;
+  SliceKernel() = default;
+  ~SliceKernel() = default;
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
@@ -338,10 +338,10 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class LogicalSliceAssignKernel final : public user_op::OpKernel {
+class SliceUpdateKernel final : public user_op::OpKernel {
  public:
-  LogicalSliceAssignKernel() = default;
-  ~LogicalSliceAssignKernel() = default;
+  SliceUpdateKernel() = default;
+  ~SliceUpdateKernel() = default;
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
@@ -401,23 +401,23 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(dtype)               \
+#define REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(dtype)                               \
   REGISTER_USER_KERNEL("logical_slice_assign")                                       \
-      .SetCreateFn<LogicalSliceAssignKernel<dtype>>()                                \
+      .SetCreateFn<SliceUpdateKernel<dtype>>()                                       \
       .SetIsMatchedHob(user_op::HobDataType("ref", 0) == GetDataType<dtype>::value); \
   REGISTER_USER_KERNEL("logical_slice")                                              \
-      .SetCreateFn<LogicalSliceKernel<dtype>>()                                      \
+      .SetCreateFn<SliceKernel<dtype>>()                                             \
       .SetIsMatchedHob(user_op::HobDataType("x", 0) == GetDataType<dtype>::value);
 
-REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float)
-REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(double)
-REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int32_t)
-REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int64_t)
-REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(int8_t)
-REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(uint8_t)
-REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(bool)
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float)
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(double)
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int32_t)
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int64_t)
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(int8_t)
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(uint8_t)
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(bool)
 #ifdef WITH_CUDA
-REGISTER_LOGICAL_SLICE_ASSIGN_AND_LOGICAL_SLICE_KERNELS(float16)
+REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float16)
 #endif
 
 }  // namespace oneflow

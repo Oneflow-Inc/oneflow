@@ -29,7 +29,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 }
 }  // namespace
 
-/*static*/ Maybe<void> LogicalSliceAssignOp::GetSbp(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> SliceUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("ref", 0).shape();
   const int64_t ndim = x_shape.NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
@@ -53,7 +53,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
       .Build();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> LogicalSliceAssignOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> SliceUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
@@ -73,10 +73,10 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   *y_desc->mut_is_dynamic() = ref_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> LogicalSliceAssignOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> SliceUpdateOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
-/*static*/ Maybe<void> LogicalSliceAssignOp::InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> SliceUpdateOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
   CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type());
@@ -85,7 +85,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> LogicalSliceOp::GetSbp(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> SliceOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, axis, 0, input_desc.shape().NumAxes()) {
     ctx->NewBuilder()
@@ -97,7 +97,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   ctx->NewBuilder().PartialSum(user_op::OpArg("x", 0)).PartialSum(user_op::OpArg("y", 0)).Build();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> LogicalSliceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> SliceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const int64_t ndim = x_shape.NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
@@ -108,27 +108,27 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
-    CHECK_GT_OR_RETURN(step, 0) << "LogicalSlice step must be greater than 0";
-    CHECK_GE_OR_RETURN(start, 0) << "LogicalSlice start must be greater or equal to 0";
-    CHECK_GT_OR_RETURN(stop, 0) << "LogicalSlice stop must be greater than 0";
-    CHECK_LT_OR_RETURN(start, stop) << "LogicalSlice start must be less than stop";
+    CHECK_GT_OR_RETURN(step, 0) << "Slice step must be greater than 0";
+    CHECK_GE_OR_RETURN(start, 0) << "Slice start must be greater or equal to 0";
+    CHECK_GT_OR_RETURN(stop, 0) << "Slice stop must be greater than 0";
+    CHECK_LT_OR_RETURN(start, stop) << "Slice start must be less than stop";
     const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
   *ctx->OutputShape("y", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> LogicalSliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> SliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
-/*static*/ Maybe<void> LogicalSliceOp::InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> SliceOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
 namespace {
 
-Maybe<void> GenLogicalSliceAssignGradOp(user_op::BackwardOpConfContext* ctx) {
+Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   const std::string update_grad_op_name = ctx->FwOp().op_name() + "_value_grad";
   ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("logical_slice")
@@ -167,7 +167,7 @@ Maybe<void> GenLogicalSliceAssignGradOp(user_op::BackwardOpConfContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenLogicalSliceGradOp(user_op::BackwardOpConfContext* ctx) {
+Maybe<void> GenSliceGradOp(user_op::BackwardOpConfContext* ctx) {
   const std::string zero_grad_op_name = ctx->FwOp().op_name() + "_zero_grad";
   ctx->DefineOp(zero_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("zero_like")
@@ -195,7 +195,7 @@ Maybe<void> GenLogicalSliceGradOp(user_op::BackwardOpConfContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP_GRAD("logical_slice_assign").SetBackwardOpConfGenFn(GenLogicalSliceAssignGradOp);
-REGISTER_USER_OP_GRAD("logical_slice").SetBackwardOpConfGenFn(GenLogicalSliceGradOp);
+REGISTER_USER_OP_GRAD("slice_update").SetBackwardOpConfGenFn(GenSliceUpdateGradOp);
+REGISTER_USER_OP_GRAD("slice").SetBackwardOpConfGenFn(GenSliceGradOp);
 
 }  // namespace oneflow
