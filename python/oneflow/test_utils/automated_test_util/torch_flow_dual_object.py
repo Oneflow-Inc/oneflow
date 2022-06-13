@@ -70,7 +70,6 @@ pytorch_value_args = []
 pytorch_value_kwargs = []
 vis_parameters = {}
 call_tensor_id = []
-extra_input_tensor = set()
 
 
 class PyTorchDoesNotSupportError(Exception):
@@ -113,8 +112,7 @@ tensor_size_limit_mb = int(os.getenv("ONEFLOW_TEST_TENSOR_SIZE_LIMIT_MB", 32))
 
 def check_memrory(x):
     tensor_size_mb = x.nelement() * x.element_size() * 1.0 / 1024 / 1024
-    # save < 0.0002MB Tensor for AutoTest debug in ci only in Eager mode.
-    return tensor_size_mb < 0.0002 and not is_global()
+    return id(x) not in call_tensor_id and tensor_size_mb < 2
 
 
 def get_tensor_shape(call_pytorch):
@@ -631,22 +629,26 @@ def get_pytorch_oneflow_res(
         pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
 
         if isinstance(pytorch_res, torch_original.Tensor):
-            if (
-                hasattr(pytorch, "__name__")
-                and pytorch.__name__ == "to"
-                and (
-                    (len(pytorch_args) > 0 and pytorch_args[0] == "cpu")
-                    or (len(pytorch_kwargs) > 0 and pytorch_kwargs["device"] == "cpu")
-                )
-            ):
-                extra_input_tensor.add(pytorch_res)
-            elif (
-                len(pytorch_args) > 0
-                and isinstance(pytorch_args[0], torch_original.Tensor)
-                and id(pytorch_args[0]) == id(pytorch_res)
-            ):
-                extra_input_tensor.add(pytorch_res)
-            else:
+            flag = False
+            for x in pytorch_args:
+                if isinstance(x, (tuple, list)):
+                    for y in x:
+                        if flow.is_tensor(y) and id(pytorch_res) != id(y):
+                            flag = True
+                            break
+                elif flow.is_tensor(x) and id(pytorch_res) != id(x):
+                    flag = True
+                    break
+            for x in pytorch_kwargs.values():
+                if isinstance(x, (tuple, list)):
+                    for y in x:
+                        if flow.is_tensor(y) and id(pytorch_res) != id(y):
+                            flag = True
+                            break
+                elif flow.is_tensor(x) and id(pytorch_res) != id(x):
+                    flag = True
+                    break
+            if flag:
                 call_tensor_id.append(id(pytorch_res))
 
     except Exception as e:
@@ -689,7 +691,9 @@ def get_pytorch_oneflow_tensor_res(
 ):
     try:
         pytorch_res = pytorch_method(*pytorch_args, **pytorch_kwargs)
-        if isinstance(pytorch_res, torch_original.Tensor):
+        if isinstance(pytorch_res, torch_original.Tensor) and id(pytorch_res) != id(
+            pytorch_method.__self__
+        ):
             call_tensor_id.append(id(pytorch_res))
     except Exception as e:
         if align_exception:
@@ -891,7 +895,6 @@ def clear_note_fake_program():
     pytorch_value_kwargs.clear()
     call_tensor_id.clear()
     vis_parameters.clear()
-    extra_input_tensor.clear()
     flow.set_printoptions(profile="full")
 
 
@@ -1202,7 +1205,6 @@ def autotest(
                                 getattr(x.oneflow, key),
                             )
                         )
-                        call_tensor_id.append(id(getattr(x.pytorch, key)))
                         dual_objects_to_test.append(
                             GetDualObject(
                                 "unused",
@@ -1210,7 +1212,6 @@ def autotest(
                                 getattr(x.oneflow, key).grad,
                             )
                         )
-                        call_tensor_id.append(id(getattr(x.pytorch, key).grad))
 
                 # check eager
                 for x in dual_objects_to_test:
