@@ -140,7 +140,7 @@ class TestFusedCrossFeatureInteraction(flow.unittest.TestCase):
 
     def test_fused_cross_feature_interaction_v2(test_case):
         args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_fused_cross_feature_interaction_v1]
+        args_dict["test_fun"] = [_test_fused_cross_feature_interaction_v2]
         args_dict["batchsize"] = [1, 2, 4]
         args_dict["in_feature"] = [32, 64, 96, 128]
         args_dict["dtype"] = [flow.float32]
