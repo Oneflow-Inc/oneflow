@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
@@ -370,12 +370,12 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<StatefulLocalOpKernel> StatefulLocalOpKernel::New(
+/* static */ Maybe<StatefulOpKernel> StatefulOpKernel::New(
     const std::shared_ptr<OperatorConf>& op_conf, const Symbol<Stream>& stream,
     const AttrMap& base_attrs, const std::shared_ptr<const ParallelDesc>& parallel_desc,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple) {
-  auto opkernel = std::shared_ptr<StatefulLocalOpKernel>(new StatefulLocalOpKernel());
+  auto opkernel = std::shared_ptr<StatefulOpKernel>(new StatefulOpKernel());
   opkernel->op_conf_ = op_conf;
   opkernel->user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf));
   opkernel->stream_ = stream;
@@ -419,9 +419,9 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   return opkernel;
 }
 
-StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
+StatefulOpKernel::~StatefulOpKernel() = default;
 
-Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
+Maybe<void> StatefulOpKernel::ChooseOpKernel(
     const user_op::OpKernel** user_opkernel, bool* need_temp_storage, const AttrMap& attrs,
     EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
@@ -463,7 +463,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
   return Maybe<void>::Ok();
 }
 
-void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
+void StatefulOpKernel::TryInitOpKernelStateAndCache(
     const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
     EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
@@ -490,24 +490,20 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
   }
 }
 
-const user_op::InferTmpSizeFn& StatefulLocalOpKernel::GetInferTmpSizeFn(
+const user_op::InferTmpSizeFn& StatefulOpKernel::GetInferTmpSizeFn(
     const user_op::OpKernel* op_kernel) const {
   return *infer_tmp_size_fn_map_.at(op_kernel);
 }
 
-vm::EagerBlobObject* StatefulLocalOpKernel::mut_temp_blob_object() {
-  return tmp_blob_object_.get();
-}
+vm::EagerBlobObject* StatefulOpKernel::mut_temp_blob_object() { return tmp_blob_object_.get(); }
 
-user_op::TensorDescInferFn StatefulLocalOpKernel::TensorDescInferFn() const {
+user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
   return tensor_desc_infer_fn_;
 }
 
-user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
-  return data_type_infer_fn_;
-}
+user_op::DataTypeInferFn StatefulOpKernel::DataTypeInferFn() const { return data_type_infer_fn_; }
 
-LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(
+LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(
     EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
     ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx) {
   compute_ctx_->Update(inputs, outputs, consistent_tensor_infer_result, device_ctx);

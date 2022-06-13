@@ -29,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"

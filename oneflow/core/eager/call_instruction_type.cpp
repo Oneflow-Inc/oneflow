@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -159,7 +159,7 @@ struct OpCallInstructionUtil final {
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
     }
     OF_PROFILER_RANGE_POP();
-    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
+    // tensor tuples are not allowed to be hold by StatefulOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
   }
 

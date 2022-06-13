@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_
-#define ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_
+#ifndef ONEFLOW_USER_KERNELS_STATEFUL_OPKERNEL_H_
+#define ONEFLOW_USER_KERNELS_STATEFUL_OPKERNEL_H_
 
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/tensor_meta.h"
@@ -384,15 +384,15 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   LocalUserKernelBaseContext base_ctx_;
 };
 
-class StatefulLocalOpKernel final {
+class StatefulOpKernel final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
-  static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
-                                          const Symbol<Stream>& stream, const AttrMap& base_attrs,
-                                          const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                                          const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple);
-  ~StatefulLocalOpKernel();
+  OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
+  static Maybe<StatefulOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
+                                     const Symbol<Stream>& stream, const AttrMap& base_attrs,
+                                     const std::shared_ptr<const ParallelDesc>& parallel_desc,
+                                     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                                     const std::shared_ptr<const ArgTuple>& output_arg_tuple);
+  ~StatefulOpKernel();
   const Symbol<Stream>& stream() const { return stream_; }
   const std::shared_ptr<MemoryCase>& mem_case() const { return stream_->device()->mem_case(); }
   const std::string& op_type_name() const { return op_conf_->user_conf().op_type_name(); }
@@ -432,7 +432,7 @@ class StatefulLocalOpKernel final {
 
  private:
   friend struct vm::OpCallInstructionUtil;
-  StatefulLocalOpKernel() = default;
+  StatefulOpKernel() = default;
   LocalUserKernelComputeContext* UpdateComputeContext(
       EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
       ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx);
@@ -489,4 +489,4 @@ class StatefulLocalOpKernel final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_
+#endif  // ONEFLOW_USER_KERNELS_STATEFUL_OPKERNEL_H_

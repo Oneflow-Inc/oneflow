@@ -357,7 +357,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoStrSetter(
   return GetScopeSymbol(*scope_proto);
 }
 
-Maybe<void> InstructionsBuilder::Call(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+Maybe<void> InstructionsBuilder::Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
                                       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
                                       const one::OpExprInterpContext& ctx, Symbol<Stream> stream) {
@@ -365,7 +365,7 @@ Maybe<void> InstructionsBuilder::Call(const std::shared_ptr<one::StatefulLocalOp
 }
 
 Maybe<void> InstructionsBuilder::Call(
-    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const std::shared_ptr<one::StatefulOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects,
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,

@@ -32,7 +32,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace one {
-class StatefulLocalOpKernel;
+class StatefulOpKernel;
 class TensorTuple;
 class MirroredTensor;
 class ConsistentTensorInferResult;
@@ -115,13 +115,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<Scope>& scope,
       const std::function<std::string(const std::string&)>& StrSetter);
 
-  Maybe<void> Call(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+  Maybe<void> Call(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
                    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
                    const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> Call(
-      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      const std::shared_ptr<one::StatefulOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,

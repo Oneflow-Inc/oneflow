@@ -29,7 +29,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/user/kernels/stateful_opkernel.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/tensor_consistent_id.h"
@@ -50,7 +50,7 @@ Maybe<Symbol<ParallelDesc>> GetParallelDesc(const TensorTuple& inputs,
 }
 
 std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_expr,
-                                                    const StatefulLocalOpKernel& kernel) {
+                                                    const StatefulOpKernel& kernel) {
   CHECK(!kernel.output_tuple_indexes4mut2_obns().empty());
   std::string plentysuffix = kernel.output_tuple_indexes4mut2_obns().size() == 1 ? "s" : "";
   std::stringstream ss;

@@ -30,7 +30,7 @@ class Stream;
 
 namespace one {
 
-class StatefulLocalOpKernel;
+class StatefulOpKernel;
 class ConsistentTensorInferResult;
 
 using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
@@ -60,7 +60,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
     return std::shared_ptr<OpCallPhyInstrOperand>(ptr);
   }
 
-  const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
+  const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
@@ -69,7 +69,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
     return dev_vm_dep_object_consume_mode_;
   }
 
-  one::StatefulLocalOpKernel* mut_opkernel() { return opkernel_.get(); }
+  one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
 
   template<typename DoEachT>
   Maybe<void> ForEachOutputTensor(const DoEachT& DoEach) {
@@ -96,7 +96,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
 
  private:
   OpCallPhyInstrOperand(
-      vm::Stream* vm_stream, const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
       const one::OpExprInterpContext& op_interp_ctx_,
@@ -120,7 +120,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   void InitStreamSequentialDependence();
 
   vm::Stream* vm_stream_;
-  std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
+  std::shared_ptr<one::StatefulOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;
   one::EagerBlobObjectListPtr outputs_;
   std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
