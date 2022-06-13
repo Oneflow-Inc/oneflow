@@ -65,7 +65,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
   CHECK_LT_OR_RETURN(padding[2], x_shape.At(h_idx));
   CHECK_LT_OR_RETURN(padding[3], x_shape.At(h_idx));
 
-
   Shape* y_shape = ctx->OutputShape("y", 0);
   y_shape->resize(x_shape.NumAxes());
   const int64_t h_x = x_shape.At(h_idx);

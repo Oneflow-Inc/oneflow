@@ -158,8 +158,8 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      (*in_grads)[0] = JUST(functional::SliceGrad(
-          JUST(VectorAt(out_grads, 0)), *input->shape(), starts, ends, steps));
+      (*in_grads)[0] = JUST(functional::SliceGrad(JUST(VectorAt(out_grads, 0)), *input->shape(),
+                                                  starts, ends, steps));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
@@ -245,8 +245,8 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::Reshape(
-          JUST(oneflow::VectorAt(out_grads, 0)), *input->shape()));
+      JUST(oneflow::VectorAt(*in_grads, 0)) =
+          JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *input->shape()));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
@@ -346,8 +346,8 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
-      auto like = JUST(functional::Empty(*input->shape(), input->dtype(),
-                                         JUST(input->device()), /*pin_memory=*/false));
+      auto like = JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device()),
+                                         /*pin_memory=*/false));
       in_grads->resize(1);
       (*in_grads)[0] = JUST(functional::NarrowGrad(out_grads[0], like, dim, start, length));
       return Maybe<void>::Ok();
@@ -373,8 +373,8 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
-      auto like = JUST(functional::Empty(*input->shape(), input->dtype(),
-                                         JUST(input->device()), /*pin_memory=*/false));
+      auto like = JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device()),
+                                         /*pin_memory=*/false));
       in_grads->resize(1);
       (*in_grads)[0] =
           JUST(functional::AsStridedGrad(out_grads[0], like, size, stride, storage_offset));

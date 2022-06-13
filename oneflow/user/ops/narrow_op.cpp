@@ -34,8 +34,7 @@ namespace oneflow {
   Shape shape;
   shape.insert(shape.end(), in.shape().dim_vec().cbegin(), in.shape().dim_vec().cbegin() + dim);
   shape.insert(shape.end(), length);
-  shape.insert(shape.end(), in.shape().dim_vec().cbegin() + dim + 1,
-                 in.shape().dim_vec().end());
+  shape.insert(shape.end(), in.shape().dim_vec().cbegin() + dim + 1, in.shape().dim_vec().end());
   *out->mut_shape() = shape;
   return Maybe<void>::Ok();
 }

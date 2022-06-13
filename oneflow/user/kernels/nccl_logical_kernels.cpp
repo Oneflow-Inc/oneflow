@@ -258,8 +258,8 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
         ctx->stream()->device_type(), shape.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream(), in->data_type(), shape.size(),
-                      shape.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
+    transpose->Launch(ctx->stream(), in->data_type(), shape.size(), shape.data(), unpack_from_ptr,
+                      perm.data(), out->mut_dptr());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override { return false; }
@@ -410,8 +410,7 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
           ctx->stream()->device_type(), transpose_in_shape.size());
       CHECK(transpose);
       transpose->Launch(ctx->stream(), in->data_type(), transpose_in_shape.size(),
-                        transpose_in_shape.data(), in->dptr(), perm.data(),
-                        tmp_buffer->mut_dptr());
+                        transpose_in_shape.data(), in->dptr(), perm.data(), tmp_buffer->mut_dptr());
     }
 
     if (in_split_axis != 0) {

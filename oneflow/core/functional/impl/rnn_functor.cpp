@@ -1340,9 +1340,7 @@ class PackPaddedSequenceFunctor {
       Shape step_shape;
       const auto& input_sizes = new_input->shape();
       step_shape.push_back(-1);
-      for (int i = 2; i < input_sizes->NumAxes(); ++i) {
-        step_shape.push_back(input_sizes->At(i));
-      }
+      for (int i = 2; i < input_sizes->NumAxes(); ++i) { step_shape.push_back(input_sizes->At(i)); }
       return step_shape;
     }();
 

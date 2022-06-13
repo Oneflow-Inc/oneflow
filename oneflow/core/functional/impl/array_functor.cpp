@@ -2877,8 +2877,7 @@ class RepeatFunctor {
             input_reshape.insert(input_reshape.begin(), 1);
             expand_shape.insert(expand_shape.begin(), input_shape_val);
             expand_shape.insert(expand_shape.begin(), repeat_shape_val);
-            output_reshape.insert(output_reshape.begin(),
-                                      repeat_shape_val * input_shape_val);
+            output_reshape.insert(output_reshape.begin(), repeat_shape_val * input_shape_val);
           } else {
             input_reshape.insert(input_reshape.begin(), input_shape_val);
             expand_shape.insert(expand_shape.begin(), repeat_shape_val);
