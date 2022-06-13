@@ -86,7 +86,7 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
     for (OpEdge* find_model_update_edge : op_node->out_edges()) {
       OpNode* find_model_update_update_node = find_model_update_edge->dst_node();
       if (!IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")
-          || !IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "adam_update")) {
+          && !IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "adam_update")) {
         continue;
       }
       const user_op::UserOpConfWrapper model_update_user_conf(
