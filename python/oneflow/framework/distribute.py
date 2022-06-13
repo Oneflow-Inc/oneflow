@@ -20,7 +20,7 @@ from contextlib import contextmanager
 import oneflow._oneflow_internal
 
 
-def split_sbp(*dim, **karg) -> oneflow._oneflow_internal.sbp.sbp:
+def split_sbp(*dim, **kwarg) -> oneflow._oneflow_internal.sbp.sbp:
     """Generate a split scheme in which op will be splitted at `dim`.
 
     Args:
@@ -35,15 +35,19 @@ def split_sbp(*dim, **karg) -> oneflow._oneflow_internal.sbp.sbp:
         ct2 = t1.to_global(sbp=flow.sbp.split(0), placement=("cuda", ranks=[0, 1, 2, 3]))
 
     """
-    if len(karg) != 0:
-        try:
-            dim = karg["dim"]
-        except:
-            dim = karg["axis"]
+    if len(kwarg) != 0:
+        if "dim" in kwarg:
+            dim = kwarg["dim"]
+        elif "axis" in kwarg:
+            dim = kwarg["axis"]
             warnings.warn(
-                "This 'axis' parameter of oneflow.sbp.split() will be updated to 'dim' in version 0.8."
+                "This 'axis' parameter of oneflow.sbp.split() has been updated to 'dim' since OneFlow version 0.8."
             )
+        else:
+            raise ValueError("Invalid keyword arguments, expected to be 'dim'.")
+
     else:
+        assert len(dim) == 1
         dim = dim[0]
 
     assert type(dim) is int
