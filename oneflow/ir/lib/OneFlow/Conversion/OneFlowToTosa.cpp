@@ -584,6 +584,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   RewritePatternSet patterns(context);
 
   const auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
+  // judge whether the pass is trigger by python through the existence of variable tensor manger
   if (mgr) {
     patterns.add<VariableOpLowering>(typeConverter, context);
   } else {
