@@ -57,3 +57,7 @@ def get_world_size():
 
     """
     return oneflow._oneflow_internal.GetWorldSize()
+
+
+def init_rdma():
+    oneflow._oneflow_internal.InitRdma()
