@@ -254,8 +254,16 @@ set(ROBIN_HOOD_HASHING_URL
 use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
 set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
 
-add_subdirectory(external)
+set(FMT_URL https://github.com/fmtlib/fmt/archive/48b7e3dafb27ece02cd6addc8bd1041c79d59c2c.zip)
+use_mirror(VARIABLE FMT_URL URL ${FMT_URL})
+set(FMT_MD5 45925a979ed7195e0c88a70be691de09)
+
+set(KINETO_URL https://github.com/pytorch/kineto/archive/ff8dba20499a660650632952be76450bd70a52a6.zip)
+use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
+set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
+
 include(third_party)
+add_subdirectory(external)
 
 if(BUILD_CUDA)
   # NOTE: if you want to use source PTX with a version different from produced PTX/binary, you should add flags

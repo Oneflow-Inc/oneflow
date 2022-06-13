@@ -16,7 +16,9 @@ limitations under the License.
 
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/profiler/kineto_shim.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/profiler/kineto_profiler.h"
 #ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
@@ -94,6 +96,8 @@ void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record
   CHECK_JUST(vm::ClusterSync());
   if (Global<ProfileMgr>::Get() == nullptr) {
     Global<ProfileMgr>::New(use_cpu, use_cuda, record_shapes, record_bandwidth);
+    prepareProfiler({ActivityType::CPU, ActivityType::CUDA});
+    enableProfiler({ActivityType::CPU, ActivityType::CUDA});
   }
 }
 
@@ -104,6 +108,7 @@ Maybe<std::string> DisableProfilerAndReturnResult() {
   auto* pmgr = JUST(GlobalMaybe<ProfileMgr>());
   std::string results = pmgr->DumpResultsJson();
   Global<ProfileMgr>::Delete();
+  disableProfiler();
   return results;
 }
 
