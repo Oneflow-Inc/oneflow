@@ -117,14 +117,7 @@ void ClearAllSymbol() {
 
 #if defined(__linux__) && defined(WITH_RDMA)
 
-bool CommNetIBEnabled() {
-  bool user_enabled = ParseBooleanFromEnv("ONEFLOW_COMM_NET_IB_ENABLE", false);
-  if (user_enabled) {
-    return ibv::IsAvailable();
-  } else {
-    return false;
-  }
-}
+bool CommNetIBEnabled() { return ibv::IsAvailable(); }
 
 #endif
 
@@ -202,16 +195,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Global<EpollCommNet>::New();
     Global<Transport>::New();
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-#ifdef WITH_RDMA
-      if (CommNetIBEnabled()) {
-        Global<IBVerbsCommNet>::New();
-        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
-      } else {
-        Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
-      }
-#else
       Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
-#endif  // WITH_RDMA
     }
 #endif  // __linux__
   }
@@ -276,5 +260,31 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   VLOG(2) << "Finish closing env global objects scope." << std::endl;
   google::ShutdownGoogleLogging();
 }
+
+Maybe<void> InitRdma() {
+  if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
+    if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
+#ifdef WITH_RDMA
+      if (CommNetIBEnabled()) {
+        Global<IBVerbsCommNet>::New();
+        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+      } else {
+        LOG(WARNING) << "Skip init RDMA because RDMA is unavailable";
+      }
+#else
+      LOG(WARNING) << "Skip init RDMA because RDMA is not compiled";
+#endif  // WITH_RDMA
+    } else {
+      LOG(WARNING) << "Skip init RDMA because only one process in this group!";
+    }
+#endif  // __linux__
+  } else {
+    LOG(WARNING) << "Skip init RDMA in dry run mode!";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<bool> RdmaInited() { return Global<IBVerbsCommNet>::Get() != nullptr; }
 
 }  // namespace oneflow

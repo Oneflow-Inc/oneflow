@@ -55,6 +55,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetWorldSize", &GetWorldSize);
   m.def("GetNodeSize", &GetNodeSize);
   m.def("GetLocalRank", &GetLocalRank);
+  m.def("InitRdma", &InitRdma);
+  m.def("RdmaInited", &RdmaInited);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
 #ifdef WITH_CUDA
   m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
