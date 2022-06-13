@@ -15,14 +15,19 @@ limitations under the License.
 */
 
 #include <Python.h>
+#include <longobject.h>
+#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
 namespace oneflow {
 namespace one {
@@ -679,23 +684,49 @@ static PyObject* PyTensorObject_flip(PyObject* self, PyObject* args, PyObject* k
 
 static PyObject* PyTensorObject_repeat(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  // PyObject* sizes = NULL;
-  // static const char* keywords[2] = {"sizes", NULL};
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(args));
-  std::vector<int64_t> shape_vec = functional::PyUnpackLongSequence<int64_t>(args);
-  DimVector shape(shape_vec.size());
-  for (int32_t i = 0; i < shape.size(); ++i) { shape[i] = ASSERT(VectorAt(shape_vec, i)); }
-  return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape))));
+  PyObject* shape_obj = NULL;
+  DimVector shape_vec;
+  if(PyTuple_Size(args) == 1) {
+    shape_obj = PyTuple_GetItem(args, 0);
+    CHECK_OR_THROW(PyLong_Check(shape_obj) || functional::PyLongSequenceCheck(shape_obj)) << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape_obj)));
+    if(PyLong_Check(shape_obj)) 
+      shape_vec.emplace_back(PyLong_AsLong(shape_obj));
+    else{
+      std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(shape_obj);
+      shape_vec = DimVector(shape.begin(), shape.end());
+    }
+    return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape_vec))));
+  }   
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(args)) << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
+    << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(args)));
+  std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
+  shape_vec = DimVector(shape.begin(), shape.end());
+  return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape_vec))));
   END_HANDLE_ERRORS
 }
 
 static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  CHECK_OR_THROW(functional::PyLongSequenceCheck(args));
-  std::vector<int64_t> dim_vec = functional::PyUnpackLongSequence<int64_t>(args);
-  DimVector dim(dim_vec.size());
-  for (int32_t i = 0; i < dim_vec.size(); ++i) { dim[i] = ASSERT(VectorAt(dim_vec, i)); }
-  return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim))));
+  PyObject* dim_obj = NULL;
+  DimVector dim_vec;
+  if(PyTuple_Size(args) == 1) {
+    dim_obj = PyTuple_GetItem(args, 0);
+    CHECK_OR_THROW(PyLong_Check(dim_obj) || functional::PyLongSequenceCheck(dim_obj)) << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
+    if(PyLong_Check(dim_obj)) 
+      dim_vec.emplace_back(PyLong_AsLong(dim_obj));
+    else{
+      std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(dim_obj);
+      dim_vec = DimVector(shape.begin(), shape.end());
+    }
+    return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
+  }   
+  CHECK_OR_THROW(functional::PyLongSequenceCheck(args)) << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
+    << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(args)));
+  std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
+  dim_vec = DimVector(shape.begin(), shape.end());
+  return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
   END_HANDLE_ERRORS
 }
 
