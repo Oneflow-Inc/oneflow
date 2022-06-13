@@ -52,20 +52,9 @@ def _test_iree_resnet_cpu(test_case):
     input = flow.ones([1, 3, 224, 224])
     f = GraphModuleForOFMLIR()
     for iter in range(2):
-        print("======== in cpu iter" + str(iter + 1))
         iree_output = func(input)
-        # start_time = time.time()
         graph_output = f(input)
-        # gap = time.time() - start_time
-        # print("graph cost: " + str(gap))
         graph_output = graph_output.cpu().detach().numpy()
-        rtol = np.abs((graph_output - iree_output) / iree_output)
-        np.set_printoptions(threshold=np.inf)
-        print(
-            np.transpose(
-                np.concatenate((graph_output, iree_output, rtol), axis=0), [1, 0]
-            )
-        )
         # the rtol accumulate layer by layer
         test_case.assertTrue(
             np.allclose(iree_output, graph_output, rtol=1.0e-1, atol=1e-3)
@@ -96,20 +85,9 @@ def _test_iree_resnet_cuda(test_case):
     input = flow.ones([1, 3, 224, 224]).cuda()
     f = GraphModuleForOFMLIR()
     for iter in range(2):
-        print("======== in cuda iter" + str(iter + 1))
         iree_output = func(input)
-        start_time = time.time()
         graph_output = f(input)
-        gap = time.time() - start_time
-        print("graph cost: " + str(gap))
         graph_output = graph_output.cpu().detach().numpy()
-        rtol = np.abs((graph_output - iree_output) / iree_output)
-        np.set_printoptions(threshold=np.inf)
-        print(
-            np.transpose(
-                np.concatenate((graph_output, iree_output, rtol), axis=0), [1, 0]
-            )
-        )
         # the rtol accumulate layer by layer
         test_case.assertTrue(
             np.allclose(iree_output, graph_output, rtol=1.0e-1, atol=1e-3)
