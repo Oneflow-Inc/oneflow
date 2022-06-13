@@ -86,7 +86,7 @@ add_docstr(
     Returns a view of the original tensor with its dimensions permuted.
 
     Args:
-        dims (tuple of python:ints): The desired ordering of dimensions
+        dims (tuple of ints): The desired ordering of dimensions
 
     For example:
 

@@ -19,23 +19,23 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/scope.h"
-#include "oneflow/core/job/scope.cfg.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<Scope> CreateScopeSymbol(int64_t symbol_id,
-                               const std::shared_ptr<cfg::ScopeProto>& symbol_conf) {
+Maybe<Scope> CreateScopeSymbol(int64_t symbol_id, const std::string& symbol_conf_str) {
   ScopeProto symbol_pb;
-  symbol_conf->ToProto(&symbol_pb);
+  if (!TxtString2PbMessage(symbol_conf_str, &symbol_pb)) {
+    THROW(RuntimeError) << "symbol conf parse failed.\n" << symbol_conf_str;
+  }
   return Scope::New(symbol_id, symbol_pb);
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Scope, std::shared_ptr<Scope>>(m, "ScopeSymbol")
-      .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::ScopeProto>& symbol_conf) {
-        return CreateScopeSymbol(symbol_id, symbol_conf).GetPtrOrThrow();
+      .def(py::init([](int64_t symbol_id, const std::string& symbol_conf_str) {
+        return CreateScopeSymbol(symbol_id, symbol_conf_str).GetPtrOrThrow();
       }))
       .def_property_readonly("symbol_id",
                              [](const Scope& x) {

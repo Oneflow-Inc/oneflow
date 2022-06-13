@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/to_contiguous_kernel.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
@@ -90,7 +90,9 @@ class ToContiguousKernel final : public user_op::OpKernel {
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
 
-    const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
+    const DimVector& stride_vec = in->stride().StrideVec();
+    std::vector<int64_t> in_stride(in->stride().NumAxes());
+    std::copy(stride_vec.begin(), stride_vec.end(), in_stride.begin());
 
     const char* in_dptr = static_cast<const char*>(in->raw_dptr());
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());

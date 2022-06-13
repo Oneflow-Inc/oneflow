@@ -59,7 +59,7 @@ Maybe<void> SplitLike::Capture(SplitLikeCaptureState* ctx, const TensorTuple& in
 
 Maybe<void> SplitLike::Apply(const SplitLikeCaptureState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
-  in_grads->resize(1);
+  in_grads->resize(out_grads.size() + 1);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   const auto& saved_tensors = ctx->SavedTensors();

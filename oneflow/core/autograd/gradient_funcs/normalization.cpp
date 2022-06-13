@@ -136,27 +136,29 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
       return Maybe<void>::Ok();
     }
 
-    DimVector dim_vec;
+    Shape shape;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
       if (i != ctx->axis) {
-        dim_vec.emplace_back(1);
+        shape.emplace_back(1);
       } else {
-        dim_vec.emplace_back(x->shape()->At(ctx->axis));
+        shape.emplace_back(x->shape()->At(ctx->axis));
       }
     }
-    Shape shape(dim_vec);
     const auto& reshaped_gamma = JUST(functional::Reshape(gamma, shape));
     const auto& reshaped_inv_variance = JUST(functional::Reshape(inv_variance, shape));
 
     std::shared_ptr<Tensor> y_grad_fp32 = y_grad;
     bool is_fp16 = y_grad->dtype()->data_type() == DataType::kFloat16;
-    if (is_fp16) { y_grad_fp32 = JUST(functional::Cast(y_grad, DType::Float())); }
+    if (is_fp16) {
+      y_grad_fp32 = JUST(functional::Cast(y_grad, DType::Float(), /*pin_memory=*/false));
+    }
     const auto& dy_mul_gamma = JUST(functional::Mul(reshaped_gamma, y_grad_fp32));
     const auto& dy_mul_inv_var = JUST(functional::Mul(dy_mul_gamma, reshaped_inv_variance));
     if (is_fp16) {
-      in_grads->at(0) = JUST(functional::Cast(dy_mul_inv_var, DType::Float16()));
+      (*in_grads)[0] =
+          JUST(functional::Cast(dy_mul_inv_var, DType::Float16(), /*pin_memory=*/false));
     } else {
-      in_grads->at(0) = dy_mul_inv_var;
+      (*in_grads)[0] = dy_mul_inv_var;
     }
     return Maybe<void>::Ok();
   }

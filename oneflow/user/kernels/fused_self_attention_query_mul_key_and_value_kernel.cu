@@ -141,7 +141,6 @@ SliceParams ConstructSliceParams4Value(int64_t seq_len, int64_t batch_size, int6
                                        int64_t head_size) {
   // slice (s, b, n, 3, h) to (s, b, n, 1, h)
   SliceParams params;
-  std::memset(&params, 0, sizeof(SliceParams));
   params.ndim = 4;
   params.dims[0] = seq_len;
   params.dims[1] = batch_size;

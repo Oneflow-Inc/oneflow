@@ -63,7 +63,7 @@ class Median : public OpExprGradFunction<MedianCaptureState> {
                    .call());
 
       in_grads->resize(1);
-      *JUST(VectorAt(in_grads, 0)) = JUST(functional::Mul(bcast_like_div, cast_like));
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::Mul(bcast_like_div, cast_like));
     }
     return Maybe<void>::Ok();
   }
@@ -92,7 +92,7 @@ class MedianWithIndices : public OpExprGradFunction<MedianWithIndicesCaptureStat
       const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
       const auto& indices = JUST(functional::Unsqueeze(JUST(VectorAt(ctx->SavedTensors(), 1)), -1));
       const auto& dout = JUST(functional::Unsqueeze(JUST(VectorAt(out_grads, 0)), -1));
-      *JUST(VectorAt(in_grads, 0)) = JUST(
+      JUST(VectorAt(*in_grads, 0)) = JUST(
           functional::DimScatter(JUST(functional::Constant(*(input->shape()), Scalar(0),
                                                            *dout->dtype(), JUST(dout->device()))),
                                  -1, indices, dout));

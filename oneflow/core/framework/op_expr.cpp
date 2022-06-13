@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <memory>
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -232,6 +233,25 @@ class UserOpExprInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+
+  const Stride& InputStride(const std::string& name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return tensor_meta4input_index_(tuple_index)->stride();
+  }
+
+  Stride* OutputStride(const std::string& name, int32_t index) override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return tensor_meta4output_index_(tuple_index)->mut_stride();
+  }
+
+  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  }
+
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
@@ -433,10 +453,12 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);
-  shape_infer_fn_ = registry->logical_tensor_desc_infer_fn;
-  CHECK_OR_RETURN(static_cast<bool>(shape_infer_fn_));
+  tensor_desc_infer_fn_ = registry->logical_tensor_desc_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(tensor_desc_infer_fn_))
+      << Error::RuntimeError() << "registry->logical_tensor_desc_infer_fn failed.";
   dtype_infer_fn_ = registry->data_type_infer_fn;
-  CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
+  CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_))
+      << Error::RuntimeError() << "registry->data_type_infer_fn failed.";
   if (registry->device_and_stream_infer_fn) {
     device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn;
   }
@@ -455,24 +477,24 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   return op_expr;
 }
 
-Maybe<void> UserOpExpr::InferPhysicalShapeAndDType(
+Maybe<void> UserOpExpr::InferPhysicalTensorDesc(
     const AttrMap& attrs, const std::string& device_tag,
     const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprPhysicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
                                            TensorMeta4OutputIndex);
-  JUST(shape_infer_fn_(&infer_ctx));
+  JUST(tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
+Maybe<void> UserOpExpr::InferLogicalTensorDesc(
     const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
     const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprLogicalInferContext infer_ctx(this, attrs, parallel_desc, TensorMeta4InputIndex,
                                           TensorMeta4OutputIndex);
-  JUST(shape_infer_fn_(&infer_ctx));
+  JUST(tensor_desc_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
