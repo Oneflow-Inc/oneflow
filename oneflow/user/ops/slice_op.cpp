@@ -55,6 +55,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 }
 /*static*/ Maybe<void> SliceUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
+  const Shape& value_shape = ctx->InputTensorDesc("value", 0).shape();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
@@ -65,8 +66,12 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     const int64_t stop = stop_vec.at(i);
     CHECK_GT_OR_RETURN(step, 0) << "slice_update step must be greater than 0";
     CHECK_GE_OR_RETURN(start, 0) << "slice_update start must be greater or equal to 0";
-    CHECK_GT_OR_RETURN(stop, 0) << "slice_update stop must be greater than 0";
-    CHECK_LT_OR_RETURN(start, stop) << "slice_update start must be less than stop";
+    CHECK_GE_OR_RETURN(stop, 0) << "slice_update stop must be greater or equal than 0";
+    CHECK_LE_OR_RETURN(start, stop) << "slice_update start must be less or equal than stop";
+    CHECK_EQ_OR_RETURN((stop - start + step - 1) / step, value_shape.At(i))
+        << "slice_update slice tuple size must equal to value tensor shape, but got " << start
+        << ":" << stop << ":" << step << " vs " << value_shape.At(i) << " at dim "
+        << "i";
   }
   auto* y_desc = ctx->OutputTensorDesc("y", 0);
   *y_desc->mut_shape() = ref_desc.shape();

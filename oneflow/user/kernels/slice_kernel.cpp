@@ -387,6 +387,7 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
+    if (y_tensor->shape().elem_cnt() == 0) { return; }
     // When eager executing, y_tensor shared the same memory with ref_tensor
     if (ref_tensor->dptr<T>() != y_tensor->dptr<T>()) {
       // lazy run
