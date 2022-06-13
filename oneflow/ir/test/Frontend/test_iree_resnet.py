@@ -25,7 +25,6 @@ import numpy as np
 import time
 
 
-
 def _test_iree_resnet_cpu(test_case):
     model = resnet50(pretrained=True)
     model.eval()
