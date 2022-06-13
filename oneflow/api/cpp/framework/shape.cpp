@@ -20,18 +20,11 @@ limitations under the License.
 namespace oneflow_api {
 
 namespace of = oneflow;
-namespace {
-
-of::DimVector ToOneflowDimVcetor(const std::vector<int64_t>& dim_vec) {
-  return of::DimVector(dim_vec.begin(), dim_vec.end());
-}
-
-}  // namespace
 
 Shape::Shape() : shape_(std::make_shared<of::Shape>(of::Shape({0}))) {}
 
 Shape::Shape(const std::vector<int64_t>& dim_vec)
-    : shape_(std::make_shared<of::Shape>(ToOneflowDimVcetor(dim_vec))) {}
+    : shape_(std::make_shared<of::Shape>(dim_vec.begin(), dim_vec.end())) {}
 
 Shape::Shape(const std::initializer_list<int64_t>& dim_vec)
     : shape_(std::make_shared<of::Shape>(dim_vec)) {}

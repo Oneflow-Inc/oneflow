@@ -29,12 +29,12 @@ Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
 
 Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) {
   CHECK_GE(ndims_left_extend_to, shape.NumAxes());
-  DimVector dim_vec(ndims_left_extend_to);
+  Shape new_shape(ndims_left_extend_to);
   const size_t left_ones_num = ndims_left_extend_to - shape.NumAxes();
   int i = 0;
-  for (; i < left_ones_num; ++i) { dim_vec.at(i) = 1LL; }
-  for (; i < ndims_left_extend_to; ++i) { dim_vec.at(i) = shape.At(i - left_ones_num); }
-  return Shape(std::move(dim_vec));
+  for (; i < left_ones_num; ++i) { new_shape.at(i) = 1LL; }
+  for (; i < ndims_left_extend_to; ++i) { new_shape.at(i) = shape.At(i - left_ones_num); }
+  return new_shape;
 }
 
 Shape ZeroDimCompatiableShape(const Shape& shape) {
@@ -136,22 +136,22 @@ AxisVector Shape::ShiftNegativeAxisVec(const AxisVector& axis_vec) const {
 }
 
 Shape Shape::RemoveOnes(const AxisVector& axis_vec) const {
-  DimVector dim_vec;
+  Shape new_shape;
   const AxisVector& axis_vec_shifted = ShiftNegativeAxisVec(axis_vec);
   for (int64_t i = 0; i < this->dim_vec().size(); i++) {
     if (std::find(axis_vec_shifted.begin(), axis_vec_shifted.end(), i) == axis_vec_shifted.end()) {
-      dim_vec.emplace_back(this->dim_vec().at(i));
+      new_shape.emplace_back(this->dim_vec().at(i));
     } else {
       CHECK_EQ(this->dim_vec().at(i), 1);
     }
   }
-  return Shape(dim_vec);
+  return new_shape;
 }
 
 Shape Shape::Ones(const int64_t num_axes) {
-  DimVector dim_vec(num_axes);
-  std::fill(dim_vec.begin(), dim_vec.end(), 1);
-  return Shape(dim_vec);
+  Shape shape(num_axes);
+  std::fill(shape.begin(), shape.end(), 1);
+  return shape;
 }
 
 AxisVector Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {

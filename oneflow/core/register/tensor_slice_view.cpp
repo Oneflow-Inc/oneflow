@@ -52,10 +52,9 @@ bool TensorSliceView::operator==(const TensorSliceView& rhs) const {
 bool TensorSliceView::operator!=(const TensorSliceView& rhs) const { return !(*this == rhs); }
 
 void TensorSliceView::UpdateShape() {
-  DimVector dim_vec(range_vec_.size());
-  std::transform(range_vec_.cbegin(), range_vec_.cend(), dim_vec.begin(),
+  shape_ = Shape(range_vec_.size());
+  std::transform(range_vec_.cbegin(), range_vec_.cend(), shape_.begin(),
                  [](const Range& range) { return range.size(); });
-  shape_ = Shape(dim_vec);
 }
 
 bool TensorSliceView::IsEmpty() const { return range_vec_.empty(); }
