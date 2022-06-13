@@ -299,4 +299,71 @@ namespace oneflow {
   return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
+
+/* static */ Maybe<void> _ncclLogicalSendOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> _ncclLogicalSendOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+
+/* static */ Maybe<void> _ncclLogicalSendOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  input_nd_sbp->clear_sbp_parallel();
+  output_nd_sbp->clear_sbp_parallel();
+
+  JUST(GetNcclLogicalNdSbpFromAttr(ctx, "nd_sbp", input_nd_sbp));
+  JUST(GetNcclLogicalNdSbpFromAttr(ctx, "nd_sbp", output_nd_sbp));
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> _ncclLogicalSendOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<Symbol<Stream>> _ncclLogicalSendOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+}
+
+/* static */ Maybe<void> _ncclLogicalRecvOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> _ncclLogicalRecvOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+
+/* static */ Maybe<void> _ncclLogicalRecvOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  input_nd_sbp->clear_sbp_parallel();
+  output_nd_sbp->clear_sbp_parallel();
+
+  JUST(GetNcclLogicalNdSbpFromAttr(ctx, "nd_sbp", input_nd_sbp));
+  JUST(GetNcclLogicalNdSbpFromAttr(ctx, "nd_sbp", output_nd_sbp));
+
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> _ncclLogicalRecvOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<Symbol<Stream>> _ncclLogicalRecvOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+}
+
+
 }  // namespace oneflow

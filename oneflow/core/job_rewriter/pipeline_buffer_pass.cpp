@@ -159,9 +159,10 @@ void TryInsertOrUseBufferOpBothSrcDst(
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::string lbn = GenLogicalBlobName(lbi);
     std::string src_buffer_op_name =
-        kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name();
+        kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name()
+        + "-src_stage_id_" + std::to_string(src_stage_id) + "";
     std::string dst_buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-"
-                                     + lbi.blob_name() + "-stage_id_"
+                                     + lbi.blob_name() + "-dst_stage_id_"
                                      + std::to_string(dst_stage_id);
 
     auto src_buffer_it = buffer_op_name2op_conf->find(src_buffer_op_name);

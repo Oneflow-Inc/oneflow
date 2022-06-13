@@ -481,6 +481,43 @@ size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   return ret;
 }
 
+
+class NcclLogicalSendKernel final : public user_op::OpKernel {
+ public:
+  NcclLogicalSendKernel() = default;
+  ~NcclLogicalSendKernel() override = default;
+
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+      user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<NcclLogicalKernelCommState>(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
+    auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    CHECK(nccl_comm != nullptr);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    CHECK_EQ(in->shape(), out->shape());
+    CHECK_EQ(in->data_type(), out->data_type());
+    VLOG(3) << "[NcclLogical][AllReduce] " << nccl_comm->stream_name() << " " << ctx->op_name()
+            << std::endl;
+    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
+    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
+    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape().elem_cnt(),
+                                GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
+                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+  };
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  // bool IsKernelLaunchSynchronized() const override { return false; }
+};
+
+
+
+
+
+
 }  // namespace
 
 REGISTER_USER_KERNEL("_nccl_logical_all_reduce")

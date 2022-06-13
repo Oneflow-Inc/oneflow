@@ -86,6 +86,11 @@ bool IsRepeatOpNode(const OpNode* node) {
          && node->op().op_conf().user_conf().op_type_name() == "repeat";
 }
 
+bool IsPipelineBufferOpNode(const OpNode* node) {
+  return node->op().op_conf().has_user_conf()
+         && node->op().op_conf().user_conf().op_type_name() == "identity_buffer";
+}
+
 std::shared_ptr<const Shape> GetOpNodeTimeShape(const OpNode* op_node) {
   return CHECK_JUST(op_node->op().GetOpTimeShape());
 }
@@ -116,6 +121,10 @@ bool IsForwardPass(const OpNode* node) {
 
 bool IsBackwardPass(const OpNode* node) {
   return Scope4OpNode(node).scope_proto().calculation_pass_name() == kBackwardPass;
+}
+
+int64_t GetStageIdHint(const OpNode* node) {
+  return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
 }
 
 void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>* ret,
@@ -1025,7 +1034,7 @@ void InsertNcclLogicalOpsInSubGraph(
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
-    int64_t nccl_compute_stream_id = *stream_offset;
+    uint32_t nccl_compute_stream_id = *stream_offset;
     if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
     }
@@ -1141,6 +1150,150 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   }
 }
 
+void TryInsertNcclSendRecvBetweenPipelineStage(
+    const OpGraph& op_graph, JobBuilder* job_builder,
+    const HashMap<const OpNode*, int64_t>& op_node2global_order) {
+  op_graph.ForEachEdge([&](const OpEdge* edge) {
+    const OpNode* src_node = edge->src_node();
+    const OpNode* dst_node = edge->dst_node();
+    if (IsPipelineBufferOpNode(src_node) && IsPipelineBufferOpNode(dst_node)
+      && OpNodeHasScope(src_node) && OpNodeHasScope(dst_node)) {
+      const int64_t src_stage_id = GetStageIdHint(src_node);
+      const int64_t dst_stage_id = GetStageIdHint(dst_node);
+      if (src_stage_id == dst_stage_id) { 
+        continue; 
+      }
+      OperatorConf consumer_op_conf = dst_node->op().op_conf();
+      const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
+      const ParallelDesc& dst_parallel_desc = dst_node->parallel_desc();
+      const std::string& src_op_name = src_node->op().op_name();
+      const std::string& dst_op_name = dst_node->op().op_name();
+      CHECK(!src_parallel_desc.EqualsIgnoringHierarchy(dst_parallel_desc))
+        << " Pipeline buffer pass meet ERROR! the src_op: " << src_op_name
+        << " -> dst_op: " << dst_op_name
+        << " with same placement: " << src_parallel_desc.parallel_conf().DebugString()
+        << " , but with different stage id: src_stage_id (" << src_stage_id << ") -> dst_stage_id ("
+        << dst_stage_id << "). Please check your stage id config for modules.";
+      for (const LogicalBlobId& lbi : op_edge->lbis()) {
+        ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
+        ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
+        NdSbp src_reduced_nd_sbp;
+        NdSbp dst_reduced_nd_sbp;
+        InOutParallelDimReduce(src_node->parallel_desc(), dst_node->parallel_desc(),
+                             src_node->NdSbp4Lbi(lbi), dst_node->NdSbp4Lbi(lbi),
+                             &src_reduced_parallel_desc, 
+                             &dst_reduced_parallel_desc, &src_reduced_nd_sbp,
+                             &dst_reduced_nd_sbp);
+
+        std::shared_ptr<Shape> src_reduced_hierarchy = src_reduced_parallel_desc->hierarchy();
+        std::shared_ptr<Shape> dst_reduced_hierarchy = dst_reduced_parallel_desc->hierarchy();
+        if (!(src_reduced_parallel_desc->parallel_num() == dst_reduced_parallel_desc->parallel_num()
+              && src_reduced_hierarchy == dst_reduced_hierarchy 
+              && src_reduced_nd_sbp == dst_reduced_nd_sbp) {
+          // NOTE(chengcheng): not one to one, cannot use copy.
+          continue;
+        }
+        if (src_node->LogicalBlobDesc4Lbi(lbi).is_dynamic()) { continue; }
+
+        std::string lbn = GenLogicalBlobName(lbi);
+        std::string src_buffer_op_name =
+            kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name()
+            + "-src_stage_id_" + std::to_string(src_stage_id) + "";
+        std::string dst_buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-"
+                                         + lbi.blob_name() + "-dst_stage_id_"
+                                         + std::to_string(dst_stage_id);
+
+        auto src_buffer_it = buffer_op_name2op_conf->find(src_buffer_op_name);
+        if (src_buffer_it == buffer_op_name2op_conf->end()) {
+          src_buffer_it = buffer_op_name2op_conf
+                              ->emplace(src_buffer_op_name,
+                                        user_op::UserOpConfWrapperBuilder(src_buffer_op_name)
+                                            .Op("identity_buffer")
+                                            .Input("in", lbn)
+                                            .Output("out")
+                                            .Attr<int64_t>("buffer_size", src_buffer_size)
+                                            .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
+                                            .Build()
+                                            .op_conf())
+                              .first;
+          CHECK(buffer_op_name2parallel_conf
+                    ->emplace(src_buffer_op_name, src_parallel_desc.parallel_conf())
+                    .second);
+        }
+        const OperatorConf& src_conf = src_buffer_it->second;
+        const std::string src_buffer_out = user_op::UserOpConfWrapper(src_conf).output("out", 0);
+
+        auto dst_buffer_it = buffer_op_name2op_conf->find(dst_buffer_op_name);
+        if (dst_buffer_it == buffer_op_name2op_conf->end()) {
+          dst_buffer_it = buffer_op_name2op_conf
+                              ->emplace(dst_buffer_op_name,
+                                        user_op::UserOpConfWrapperBuilder(dst_buffer_op_name)
+                                            .Op("identity_buffer")
+                                            .Input("in", src_buffer_out)
+                                            .Output("out")
+                                            .Attr<int64_t>("buffer_size", dst_buffer_size)
+                                            .ScopeSymbolId(dst_node->op().op_conf().scope_symbol_id())
+                                            .Build()
+                                            .op_conf())
+                              .first;
+          CHECK(buffer_op_name2parallel_conf
+                    ->emplace(dst_buffer_op_name, dst_parallel_desc.parallel_conf())
+                    .second);
+        }
+        const OperatorConf& dst_conf = dst_buffer_it->second;
+
+        auto mut_op_it = mut_op_name2conf->find(dst_op_name);
+        if (mut_op_it == mut_op_name2conf->end()) {
+          mut_op_it = mut_op_name2conf->emplace(dst_op_name, dst_node->op().op_conf()).first;
+        }
+
+        VLOG(3) << "\n Insert buffer op pair : src_buffer = <" << src_buffer_op_name
+                << ">(buffer_size:" << src_buffer_size << ") , dst_buffer = <" << dst_buffer_op_name
+                << ">(buffer_size:" << dst_buffer_size << ") \n from [" << src_node->op().op_name()
+                << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+                << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id) << ") \n";
+
+        const std::string dst_buffer_out = user_op::UserOpConfWrapper(dst_conf).output("out", 0);
+        for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
+          std::string old_lbn =
+              ReplaceInputLbnInOpCustomizedConf(&(mut_op_it->second), ibn, dst_buffer_out);
+          CHECK_EQ(old_lbn, lbn);
+        }
+    }
+    
+  });
+  // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
+  do {
+    uint32_t nccl_compute_stream_id = *stream_offset;
+    if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
+      break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
+    }
+    std::string stream_index_name = GetStreamIndexName(nccl_compute_stream_id);
+
+    // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
+    for (auto& pair : subgraph_op_name2conf) {
+      mut_op_names.insert(pair.first);
+      pair.second.set_stream_name_hint(stream_index_name);
+    }
+    for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_name_hint(stream_index_name); }
+    (*stream_offset)++;
+  } while (false);
+
+  std::vector<OperatorConf> mut_op_confs;
+  mut_op_confs.reserve(mut_op_names.size());
+  for (const std::string& mut_op_name : mut_op_names) {
+    mut_op_confs.emplace_back(subgraph_op_name2conf.at(mut_op_name));
+  }
+  job_builder->MutOpsOnlyOnce(mut_op_confs);
+
+  CHECK_EQ(nccl_op_confs.size(), nccl_op_parallel_confs.size());
+  for (int64_t i = 0; i < nccl_op_confs.size(); ++i) {
+    CHECK_JUST(job_builder->AddOp(nccl_op_parallel_confs.at(i), nccl_op_confs.at(i)));
+  }
+
+}
+
+
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   std::vector<const OpNode*> ordered_op_nodes;
   HashMap<const OpNode*, int64_t> op_node2global_order;
@@ -1232,14 +1385,15 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
   int k = 0;
   for (auto& pair : placement2subgraphs) {
+    const std::string& placement = pair.first;
     PlacementNcclSubGraghsInfo& info = pair.second;
     for (int i = 0; i < info.ordered_subgraph.size() - 1; i++) {
       CHECK_LT(info.ordered_subgraph.at(i)->end_op_global_order,
                info.ordered_subgraph.at(i + 1)->begin_op_global_order);
     }
 
-    // NOTE(chengcheng): insert nccl ops for each subgraph
     uint32_t stream_offset = 0;
+    // NOTE(chengcheng): insert nccl ops for each subgraph
     for (int i = 0; i < info.ordered_subgraph.size(); i++) {
       auto& ordered_op_nodes = info.ordered_subgraph.at(i)->ordered_op_nodes;
       for (int j = 0; j < ordered_op_nodes.size(); ++j) {
@@ -1259,6 +1413,12 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
           op_graph, job_builder, ordered_acc_op_nodes, op_node2global_order, bw_sink_op);
     }
     ++k;
+  }
+
+  bool user_enabled = ParseBooleanFromEnv("ONEFLOW_COPY_NET_USE_NCCL", true);
+  if (user_enabled) {
+    TryInsertNcclSendRecvBetweenPipelineStage(op_graph, job_builder, 
+      op_node2global_order);
   }
 
   return Maybe<void>::Ok();
