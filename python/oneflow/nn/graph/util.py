@@ -14,17 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import sys
-from collections import OrderedDict
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.job.job_pb2 as job_pb
-import oneflow
-from oneflow.framework.tensor import Tensor
-from typing import Callable, Dict, Union, List, Tuple
 from string import Template
+from collections import OrderedDict
+from typing import Callable, Dict, Union, List, Tuple
+
 import google.protobuf as protobuf
 from google.protobuf import text_format
-from typing import List, Tuple
 
+import oneflow
+import oneflow.core.job.job_pb2 as job_pb
+import oneflow.core.operator.op_conf_pb2 as op_conf_util
+from oneflow.framework.tensor import Tensor
 
 def _nd_sbp2repr(nd_sbp):
     dim_len = len(nd_sbp.sbp_parallel)
