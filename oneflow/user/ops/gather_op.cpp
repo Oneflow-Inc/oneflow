@@ -27,14 +27,14 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(indices.shape().NumAxes(), 0);  // NOLINT
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
-  DimVector dim_vec;
-  dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin(),
+  Shape out_shape;
+  out_shape.insert(out_shape.end(), in.shape().dim_vec().cbegin(),
                  in.shape().dim_vec().cbegin() + axis);
-  dim_vec.insert(dim_vec.end(), indices.shape().dim_vec().cbegin(),
+  out_shape.insert(out_shape.end(), indices.shape().dim_vec().cbegin(),
                  indices.shape().dim_vec().cend());
-  dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin() + axis + 1,
+  out_shape.insert(out_shape.end(), in.shape().dim_vec().cbegin() + axis + 1,
                  in.shape().dim_vec().end());
-  *out->mut_shape() = Shape(dim_vec);
+  *out->mut_shape() = out_shape;
   out->set_is_dynamic(indices.is_dynamic() || in.is_dynamic());
   return Maybe<void>::Ok();
 }

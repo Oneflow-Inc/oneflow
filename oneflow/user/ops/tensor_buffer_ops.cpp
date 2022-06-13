@@ -30,10 +30,10 @@ namespace oneflow {
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
   out->set_is_dynamic(in.is_dynamic());
   const auto& instance_shape = ctx->Attr<Shape>("instance_shape");
-  DimVector dim_vec;
-  dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin(), in.shape().dim_vec().cend());
-  dim_vec.insert(dim_vec.end(), instance_shape.dim_vec().cbegin(), instance_shape.dim_vec().cend());
-  *out->mut_shape() = Shape(dim_vec);
+  Shape out_shape;
+  out_shape.insert(out_shape.end(), in.shape().dim_vec().cbegin(), in.shape().dim_vec().cend());
+  out_shape.insert(out_shape.end(), instance_shape.dim_vec().cbegin(), instance_shape.dim_vec().cend());
+  *out->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TensorBufferToTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -63,10 +63,10 @@ namespace oneflow {
   CHECK_LT_OR_RETURN(instance_dims, in_shape.NumAxes());
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
   out->set_is_dynamic(in.is_dynamic());
-  DimVector out_dim_vec;
-  out_dim_vec.insert(out_dim_vec.end(), in_shape.dim_vec().cbegin(),
+  Shape out_shape;
+  out_shape.insert(out_shape.end(), in_shape.dim_vec().cbegin(),
                      in_shape.dim_vec().cend() - instance_dims);
-  *out->mut_shape() = Shape(out_dim_vec);
+  *out->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TensorToTensorBufferOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

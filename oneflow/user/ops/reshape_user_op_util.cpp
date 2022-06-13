@@ -66,17 +66,17 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
 
 Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
                                        HashMap<int, int>* squeezed_axis2origin_axis) {
-  DimVector dim_vec;
+  Shape new_shape;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
     CHECK_GE_OR_RETURN(dim, 0) << Error::RuntimeError()
                                << "Trying to suqeeze tensor with negative dimension " << dim
                                << " : " << origin.DebugStr();
     if (dim == 1) { continue; }
-    CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
-    dim_vec.emplace_back(dim);
+    CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(new_shape.size(), axis).second);
+    new_shape.emplace_back(dim);
   }
-  *shape = Shape(dim_vec);
+  *shape = new_shape;
   return Maybe<void>::Ok();
 }
 

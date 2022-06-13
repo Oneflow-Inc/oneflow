@@ -53,9 +53,9 @@ namespace oneflow {
 /*static*/ Maybe<void> UnpackOp::InferOutputBlobTimeShape(
     user_op::InferOutputBlobTimeShapeFnContext* ctx) {
   const int32_t unpack_num = ctx->user_op_conf().attr<int32_t>("unpack_num");
-  DimVector time_shape_dim_vec = ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec();
-  time_shape_dim_vec.emplace_back(unpack_num);
-  *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
+  Shape time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
+  time_shape.emplace_back(unpack_num);
+  *ctx->mut_output_blob_time_shape() = time_shape;
   return Maybe<void>::Ok();
 }
 

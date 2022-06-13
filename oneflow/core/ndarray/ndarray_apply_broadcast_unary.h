@@ -33,12 +33,12 @@ struct NdarrayApplyBroadcastUnary<
   static void Apply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                     const XpuVarNdarray<const T>& x) {
     CheckBroadcastable(y, x);
-    DimVector simplified_y_dim;
-    DimVector simplified_x_dim;
+    Shape simplified_y_dim;
+    Shape simplified_x_dim;
     SimplifyBroadcastShapes(y.shape(), x.shape(), &simplified_y_dim, &simplified_x_dim);
     SwitchApply(SwitchCase(simplified_y_dim.size()), stream,
-                XpuVarNdarray<T>(Shape(simplified_y_dim), y.ptr()),
-                XpuVarNdarray<const T>(Shape(simplified_x_dim), x.ptr()));
+                XpuVarNdarray<T>(simplified_y_dim, y.ptr()),
+                XpuVarNdarray<const T>(simplified_x_dim, x.ptr()));
   }
 
  private:

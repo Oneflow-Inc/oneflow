@@ -57,10 +57,10 @@ const int64_t GetNoDilationWindowedOutputShape(int64_t input_size, int32_t filte
   return output_size;
 }
 
-void GetNoDilation3DOutputShape(const DimVector& in, const std::vector<int32_t>& pool_size,
+void GetNoDilation3DOutputShape(const Shape& in, const std::vector<int32_t>& pool_size,
                                 const std::vector<int32_t>& strides,
                                 const std::vector<int32_t>& padding, const bool ceil_mode,
-                                DimVector* out) {
+                                Shape* out) {
   out->clear();
   out->resize(3);
   FOR_RANGE(size_t, i, 0, 3) {
@@ -103,25 +103,25 @@ void AvgPoolParams3D::Reset(const ShapeView& x_shape) {
 }
 
 Shape AvgPoolParams3D::GetYShape() const {
-  DimVector y_dim_vec;
+  Shape y_shape;
   if (dim_ == 1) {
-    y_dim_vec = {y_3d_.at(2)};
+    y_shape = {y_3d_.at(2)};
   } else if (dim_ == 2) {
-    y_dim_vec = {y_3d_.at(1), y_3d_.at(2)};
+    y_shape = {y_3d_.at(1), y_3d_.at(2)};
   } else if (dim_ == 3) {
-    y_dim_vec = {y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)};
+    y_shape = {y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)};
   } else {
     UNIMPLEMENTED();
   }
   if (data_format_ == "channels_first") {
-    y_dim_vec.insert(y_dim_vec.begin(), channel_num_);
+    y_shape.insert(y_shape.begin(), channel_num_);
   } else {
     CHECK_EQ(data_format_, "channels_last")
         << "data_format must be 'channels_first' or 'channels_last'";
-    y_dim_vec.insert(y_dim_vec.end(), channel_num_);
+    y_shape.insert(y_shape.end(), channel_num_);
   }
-  y_dim_vec.insert(y_dim_vec.begin(), batch_num_);
-  return Shape(y_dim_vec);
+  y_shape.insert(y_shape.begin(), batch_num_);
+  return y_shape;
 }
 
 Shape AvgPoolParams3D::GetXShape5D() const {

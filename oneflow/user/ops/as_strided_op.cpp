@@ -22,10 +22,8 @@ namespace oneflow {
   const auto& size = ctx->Attr<std::vector<int32_t>>("size");
   const auto& stride = ctx->Attr<std::vector<int32_t>>("stride");
   CHECK_EQ_OR_RETURN(size.size(), stride.size()) << "mismatch in length of strides and shape";
-  DimVector out_vec;
-  out_vec.insert(out_vec.end(), size.cbegin(), size.cend());
   user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
-  *output_desc->mut_shape() = Shape(out_vec);
+  *output_desc->mut_shape() = Shape(size.cbegin(), size.cend());
   return Maybe<void>::Ok();
 }
 /*static*/ auto AsStridedOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {

@@ -23,10 +23,10 @@ namespace oneflow {
   user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
   const Shape& static_shape = ctx->Attr<Shape>("static_shape");
-  DimVector dim_vec(1 + static_shape.NumAxes());
-  dim_vec[0] = in_tensor.shape().At(0);
-  FOR_RANGE(int64_t, i, 1, dim_vec.size()) { dim_vec[i] = static_shape.At(i - 1); }
-  *out_tensor->mut_shape() = Shape(dim_vec);
+  Shape out_shape(1 + static_shape.NumAxes());
+  out_shape[0] = in_tensor.shape().At(0);
+  FOR_RANGE(int64_t, i, 1, out_shape.size()) { out_shape[i] = static_shape.At(i - 1); }
+  *out_tensor->mut_shape() = out_shape;
   out_tensor->set_is_dynamic(ctx->Attr<bool>("is_dynamic"));
   return Maybe<void>::Ok();
 }

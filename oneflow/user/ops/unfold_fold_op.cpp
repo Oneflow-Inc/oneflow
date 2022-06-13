@@ -51,14 +51,14 @@ Maybe<void> UnfoldTensorDescInferFn(user_op::InferContext* ctx) {
         + 1;
   }
 
-  DimVector y_shape(3);
+  Shape y_shape(3);
   y_shape.at(0) = x_shape.At(0);
   y_shape.at(1) =
       x_shape.At(c_dim)
       * std::accumulate(kernel_size.begin(), kernel_size.end(), 1, std::multiplies<int>());
   y_shape.at(2) = std::accumulate(dhw_shape.begin(), dhw_shape.end(), 1, std::multiplies<int>());
 
-  *ctx->OutputShape("y", 0) = Shape(y_shape);
+  *ctx->OutputShape("y", 0) = y_shape;
   return Maybe<void>::Ok();
 }
 

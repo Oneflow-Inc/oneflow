@@ -45,18 +45,18 @@ namespace oneflow {
     user_op::InferOutputBlobTimeShapeFnContext* ctx) {
   const int32_t max_acc_num = ctx->user_op_conf().attr<int32_t>("max_acc_num");
   const Shape& in_time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
-  DimVector time_shape_dim_vec = in_time_shape.dim_vec();
-  CHECK_OR_RETURN(!time_shape_dim_vec.empty());
-  if (time_shape_dim_vec.back() == max_acc_num) {
-    time_shape_dim_vec.pop_back();
-  } else if (time_shape_dim_vec.back() % max_acc_num == 0) {
-    time_shape_dim_vec.back() /= max_acc_num;
+  Shape time_shape = in_time_shape;
+  CHECK_OR_RETURN(!time_shape.empty());
+  if (time_shape.back() == max_acc_num) {
+    time_shape.pop_back();
+  } else if (time_shape.back() % max_acc_num == 0) {
+    time_shape.back() /= max_acc_num;
   } else {
     const int64_t elem_cnt = in_time_shape.elem_cnt();
-    time_shape_dim_vec.resize(1);
-    time_shape_dim_vec.back() = elem_cnt / max_acc_num;
+    time_shape.resize(1);
+    time_shape.back() = elem_cnt / max_acc_num;
   }
-  *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
+  *ctx->mut_output_blob_time_shape() = time_shape;
   return Maybe<void>::Ok();
 }
 

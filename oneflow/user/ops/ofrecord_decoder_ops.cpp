@@ -24,10 +24,10 @@ namespace oneflow {
   user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
   Shape conf_shape = ctx->Attr<Shape>("shape");
-  DimVector dim_vec(1 + conf_shape.NumAxes());
-  dim_vec[0] = in_tensor.shape().At(0);
-  for (int i = 1; i < dim_vec.size(); ++i) { dim_vec[i] = conf_shape.At(i - 1); }
-  *out_tensor->mut_shape() = Shape(dim_vec);
+  Shape out_shape(1 + conf_shape.NumAxes());
+  out_shape[0] = in_tensor.shape().At(0);
+  for (int i = 1; i < out_shape.size(); ++i) { out_shape[i] = conf_shape.At(i - 1); }
+  *out_tensor->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 

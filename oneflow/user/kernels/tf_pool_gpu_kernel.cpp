@@ -56,9 +56,9 @@ class GPUPoolOpKernelCache final : public user_op::OpKernelCache {
   void Reset(const int32_t dim, const std::string& pooling_type, const ShapeView& x_shape,
              const ShapeView& y_shape, const std::string& data_format, const DataType& dtype,
              const Params3D& params_3d) {
-    FixedVector pool_size(dim);
-    FixedVector padding(dim);
-    FixedVector strides(dim);
+    small_vector<int32_t, 8> pool_size(dim);
+    small_vector<int32_t, 8> padding(dim);
+    small_vector<int32_t, 8> strides(dim);
     FOR_RANGE(int, i, 0, dim) {
       int32_t index_in_3d = i + 3 - dim;
       pool_size[i] = params_3d.pool_size_3d().at(index_in_3d);

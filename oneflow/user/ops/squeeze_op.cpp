@@ -31,10 +31,10 @@ Maybe<void> TransformNegativeAxesToPositive(const std::vector<int32_t>& axes_vec
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector* dim_vec) {
+Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, Shape* shape) {
   for (const auto& axis : axes) {
-    CHECK_EQ_OR_RETURN(dim_vec->at(axis), 1);
-    dim_vec->at(axis) = -1;
+    CHECK_EQ_OR_RETURN(shape->at(axis), 1);
+    shape->at(axis) = -1;
   }
   return Maybe<void>::Ok();
 }
@@ -47,11 +47,11 @@ Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector
   JUST(TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"),
                                        in_tensor.shape().NumAxes(), &fixed_axes_vec));
 
-  DimVector dim_vec = in_tensor.shape().dim_vec();
-  JUST(CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec));
+  Shape shape = in_tensor.shape();
+  JUST(CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &shape));
   int32_t out_axis = 0;
-  FOR_RANGE(int32_t, in_axis, 0, dim_vec.size()) {
-    if (dim_vec.at(in_axis) != -1) {
+  FOR_RANGE(int32_t, in_axis, 0, shape.size()) {
+    if (shape.at(in_axis) != -1) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("in", 0), in_axis)
           .Split(user_op::OpArg("out", 0), out_axis)
@@ -68,10 +68,10 @@ Maybe<void> CheckAndLabelAxesToSqueezeMinusOne(const AxisVector& axes, DimVector
   JUST(TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape.NumAxes(),
                                        &fixed_axes_vec));
 
-  DimVector dim_vec = in_shape.dim_vec();
-  JUST(CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec));
-  dim_vec.erase(std::remove(dim_vec.begin(), dim_vec.end(), -1), dim_vec.end());
-  *out_shape = Shape(dim_vec);
+  Shape shape = in_shape;
+  JUST(CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &shape));
+  shape.erase(std::remove(shape.begin(), shape.end(), -1), shape.end());
+  *out_shape = shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SqueezeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
