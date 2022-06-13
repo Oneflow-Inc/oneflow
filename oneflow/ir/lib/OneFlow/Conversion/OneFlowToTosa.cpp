@@ -204,7 +204,7 @@ struct VariableOpToConstLowering final : public OpConversionPattern<VariableOp> 
 
       rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
     } else {
-      op->emitError("variable op to const only support integer and float value now");
+      op->emitError("OneFlow variable op lower to TOSA const op only support integer and float value now");
     }
 
     return success();
