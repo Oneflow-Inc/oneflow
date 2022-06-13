@@ -129,6 +129,7 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
     float16* model_half_ptr = nullptr;
     bool fuse_update_cast = false;
     if (ctx->has_input("model_half", 0)) {
+      printf("=========== Here has model half =========== \n"); 
       user_op::Tensor* model_half = ctx->Tensor4ArgNameAndIndex("model_half", 0);
       fuse_update_cast = true;
       model_half_ptr = model_half->mut_dptr<float16>();

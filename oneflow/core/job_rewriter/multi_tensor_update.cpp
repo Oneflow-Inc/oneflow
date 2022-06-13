@@ -28,6 +28,7 @@ struct SGDOptimizerKey {
   float l2;
   float weight_decay;
   ParallelConf parallel_conf;
+  bool has_model_half; 
 };
 
 bool operator==(const SGDOptimizerKey& lhs, const SGDOptimizerKey& rhs) {
@@ -35,7 +36,8 @@ bool operator==(const SGDOptimizerKey& lhs, const SGDOptimizerKey& rhs) {
          && (lhs.scale_by_tensor_lbn == rhs.scale_by_tensor_lbn)
          && (lhs.skip_if_lbn == rhs.skip_if_lbn) && (lhs.scale == rhs.scale) && (lhs.l1 == rhs.l1)
          && (lhs.l2 == rhs.l2) && (lhs.weight_decay == rhs.weight_decay)
-         && (lhs.parallel_conf == rhs.parallel_conf);
+         && (lhs.parallel_conf == rhs.parallel_conf)
+         && (lhs.has_model_half == rhs.has_model_half);
 }
 
 struct AdamOptimizerKey {
@@ -54,6 +56,7 @@ struct AdamOptimizerKey {
   bool amsgrad;
   bool do_bias_correction;
   ParallelConf parallel_conf;
+  bool has_model_half; 
 };
 
 bool operator==(const AdamOptimizerKey& lhs, const AdamOptimizerKey& rhs) {
@@ -66,7 +69,8 @@ bool operator==(const AdamOptimizerKey& lhs, const AdamOptimizerKey& rhs) {
          && (lhs.beta2 == rhs.beta2) && (lhs.epsilon == rhs.epsilon)
          && (lhs.weight_decay == rhs.weight_decay) && (lhs.amsgrad == rhs.amsgrad)
          && (lhs.do_bias_correction == rhs.do_bias_correction)
-         && (lhs.parallel_conf == rhs.parallel_conf);
+         && (lhs.parallel_conf == rhs.parallel_conf)
+         && (lhs.has_model_half == rhs.has_model_half);
 }
 
 }  // namespace oneflow
@@ -80,11 +84,13 @@ struct hash<oneflow::SGDOptimizerKey> {
     const auto& double_hash = std::hash<float>();
     const auto& string_hash = std::hash<std::string>();
     const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
+    const auto& bool_hash = std::hash<bool>();
 
     return string_hash(key.learning_rate) ^ string_hash(key.scale_by_tensor_lbn)
            ^ string_hash(key.skip_if_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
            ^ float_hash(key.l2) ^ float_hash(key.weight_decay)
-           ^ parallel_conf_hash(key.parallel_conf);
+           ^ parallel_conf_hash(key.parallel_conf)
+           ^ bool_hash(key.has_model_half);
   }
 };
 
@@ -102,7 +108,8 @@ struct hash<oneflow::AdamOptimizerKey> {
            ^ string_hash(key.bias_correction2_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
            ^ float_hash(key.l2) ^ float_hash(key.beta1) ^ float_hash(key.beta2)
            ^ float_hash(key.epsilon) ^ float_hash(key.weight_decay) ^ bool_hash(key.amsgrad)
-           ^ bool_hash(key.do_bias_correction) ^ parallel_conf_hash(key.parallel_conf);
+           ^ bool_hash(key.do_bias_correction) ^ parallel_conf_hash(key.parallel_conf)
+           ^ bool_hash(key.has_model_half);
   }
 };
 
@@ -145,6 +152,7 @@ class MultiTensorUpdatePass final : public JobPass {
 };
 
 Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  printf("Here is Multi tensor update pass. \n"); 
   if (!job_builder->job().job_conf().has_train_conf()) { return Maybe<void>::Ok(); }
   std::vector<OperatorConf> delete_ops;
   ParallelConf parallel_conf{};
@@ -174,12 +182,17 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
       std::string scale_by_tensor_lbn = "";
       std::string skip_if_lbn = "";
+      bool has_model_half = false; 
       if (model_update_user_conf.has_input("scale_by_tensor", 0)) {
         scale_by_tensor_lbn = model_update_user_conf.input("scale_by_tensor", 0);
       }
       if (model_update_user_conf.has_input("skip_if", 0)) {
         skip_if_lbn = model_update_user_conf.input("skip_if", 0);
       }
+      if (model_update_user_conf.has_input("model_half", 0)) {
+        has_model_half = true;
+      }
+
       if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
         SGDOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
                             scale_by_tensor_lbn,
@@ -188,17 +201,22 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
                             model_update_user_conf.attr<float>("l1"),
                             model_update_user_conf.attr<float>("l2"),
                             model_update_user_conf.attr<float>("weight_decay"),
-                            parallel_conf};
+                            parallel_conf, 
+                            has_model_half};
         const auto& iter = multi_tensor_sgd_update_hashmap.find(key);
 
         if (iter != multi_tensor_sgd_update_hashmap.end()) {
           iter->second.Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0));
+          if(has_model_half){
+            iter->second.Input("model_half", model_update_user_conf.input("model_half", 0)); 
+          }
         } else {
           user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder(
-              "multi_tensor_update");
+              "multi_tensor_update" + NewUniqueId());
           std::string op_type_name = "multi_tensor_sgd_update"; 
-          if(model_update_user_conf.has_input("model_half", 0)){
+          if(has_model_half){
+            printf("Here has input model_half. \n"); 
             op_type_name = "multi_tensor_sgd_update_with_cast"; 
           }
           multi_tensor_update_sgd_op_builder.OpTypeName(op_type_name)
@@ -209,7 +227,7 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
               .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
               .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
               .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"));
-          if(model_update_user_conf.has_input("model_half", 0)){
+          if(has_model_half){
             multi_tensor_update_sgd_op_builder.Input("model_half", model_update_user_conf.input("model_half", 0)); 
           }
           AddScaleAndSkipLbn(multi_tensor_update_sgd_op_builder, model_update_user_conf);
@@ -219,66 +237,70 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
               model_update_user_conf.op_conf().scope_symbol_id());
           multi_tensor_sgd_update_hashmap.emplace(key, multi_tensor_update_sgd_op_builder);
         }
-      } else if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
-                                      "adam_update")) {
-        AdamOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
-                             scale_by_tensor_lbn,
-                             skip_if_lbn,
-                             model_update_user_conf.input("bias_correction1", 0),
-                             model_update_user_conf.input("bias_correction1", 0),
-                             model_update_user_conf.attr<double>("scale"),
-                             model_update_user_conf.attr<float>("l1"),
-                             model_update_user_conf.attr<float>("l2"),
-                             model_update_user_conf.attr<float>("beta1"),
-                             model_update_user_conf.attr<float>("beta2"),
-                             model_update_user_conf.attr<float>("epsilon"),
-                             model_update_user_conf.attr<float>("weight_decay"),
-                             model_update_user_conf.attr<bool>("amsgrad"),
-                             model_update_user_conf.attr<bool>("do_bias_correction"),
-                             parallel_conf};
-        if (key.amsgrad) {
-          UNIMPLEMENTED() << "Multi Tensor Adam update do not support amsgrad = True. ";
-        }
-        const auto& iter = multi_tensor_adam_update_hashmap.find(key);
+      } 
+      //   else if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
+      //                                 "adam_update")) {
+      //   // todo add multi tensor model update adam cast. 
+      //   AdamOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
+      //                        scale_by_tensor_lbn,
+      //                        skip_if_lbn,
+      //                        model_update_user_conf.input("bias_correction1", 0),
+      //                        model_update_user_conf.input("bias_correction1", 0),
+      //                        model_update_user_conf.attr<double>("scale"),
+      //                        model_update_user_conf.attr<float>("l1"),
+      //                        model_update_user_conf.attr<float>("l2"),
+      //                        model_update_user_conf.attr<float>("beta1"),
+      //                        model_update_user_conf.attr<float>("beta2"),
+      //                        model_update_user_conf.attr<float>("epsilon"),
+      //                        model_update_user_conf.attr<float>("weight_decay"),
+      //                        model_update_user_conf.attr<bool>("amsgrad"),
+      //                        model_update_user_conf.attr<bool>("do_bias_correction"),
+      //                        parallel_conf, 
+      //                        has_model_half};
+      //   if (key.amsgrad) {
+      //     UNIMPLEMENTED() << "Multi Tensor Adam update do not support amsgrad = True. ";
+      //   }
+      //   const auto& iter = multi_tensor_adam_update_hashmap.find(key);
 
-        if (iter != multi_tensor_adam_update_hashmap.end()) {
-          iter->second.Input("model", model_update_user_conf.input("model", 0))
-              .Input("model_diff", model_update_user_conf.input("model_diff", 0))
-              .Input("m", model_update_user_conf.input("m", 0))
-              .Input("v", model_update_user_conf.input("v", 0));
-        } else {
-          user_op::UserOpConfWrapperBuilder multi_tensor_update_adam_op_builder(
-              "multi_tensor_update");
-          multi_tensor_update_adam_op_builder.OpTypeName("multi_tensor_adam_update")
-              .Input("model", model_update_user_conf.input("model", 0))
-              .Input("model_diff", model_update_user_conf.input("model_diff", 0))
-              .Input("m", model_update_user_conf.input("m", 0))
-              .Input("v", model_update_user_conf.input("v", 0))
-              .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
-              .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
-              .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
-              .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
-              .Attr<float>("beta1", model_update_user_conf.attr<float>("beta1"))
-              .Attr<float>("beta2", model_update_user_conf.attr<float>("beta2"))
-              .Attr<float>("epsilon", model_update_user_conf.attr<float>("epsilon"))
-              .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"))
-              .Attr<bool>("amsgrad", model_update_user_conf.attr<bool>("amsgrad"))
-              .Attr<bool>("do_bias_correction",
-                          model_update_user_conf.attr<bool>("do_bias_correction"));
+      //   if (iter != multi_tensor_adam_update_hashmap.end()) {
+      //     iter->second.Input("model", model_update_user_conf.input("model", 0))
+      //         .Input("model_diff", model_update_user_conf.input("model_diff", 0))
+      //         .Input("m", model_update_user_conf.input("m", 0))
+      //         .Input("v", model_update_user_conf.input("v", 0));
+      //   } else {
+      //     user_op::UserOpConfWrapperBuilder multi_tensor_update_adam_op_builder(
+      //         "multi_tensor_update");
+      //     multi_tensor_update_adam_op_builder.OpTypeName("multi_tensor_adam_update")
+      //         .Input("model", model_update_user_conf.input("model", 0))
+      //         .Input("model_diff", model_update_user_conf.input("model_diff", 0))
+      //         .Input("m", model_update_user_conf.input("m", 0))
+      //         .Input("v", model_update_user_conf.input("v", 0))
+      //         .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
+      //         .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
+      //         .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
+      //         .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
+      //         .Attr<float>("beta1", model_update_user_conf.attr<float>("beta1"))
+      //         .Attr<float>("beta2", model_update_user_conf.attr<float>("beta2"))
+      //         .Attr<float>("epsilon", model_update_user_conf.attr<float>("epsilon"))
+      //         .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"))
+      //         .Attr<bool>("amsgrad", model_update_user_conf.attr<bool>("amsgrad"))
+      //         .Attr<bool>("do_bias_correction",
+      //                     model_update_user_conf.attr<bool>("do_bias_correction"));
 
-          if (model_update_user_conf.attr<bool>("do_bias_correction")) {
-            multi_tensor_update_adam_op_builder
-                .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
-                .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0));
-          }
-          AddScaleAndSkipLbn(multi_tensor_update_adam_op_builder, model_update_user_conf);
+      //     if (model_update_user_conf.attr<bool>("do_bias_correction")) {
+      //       multi_tensor_update_adam_op_builder
+      //           .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
+      //           .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0));
+      //     }
+      //     AddScaleAndSkipLbn(multi_tensor_update_adam_op_builder, model_update_user_conf);
 
-          CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
-          multi_tensor_update_adam_op_builder.ScopeSymbolId(
-              model_update_user_conf.op_conf().scope_symbol_id());
-          multi_tensor_adam_update_hashmap.emplace(key, multi_tensor_update_adam_op_builder);
-        }
-      } else {
+      //     CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
+      //     multi_tensor_update_adam_op_builder.ScopeSymbolId(
+      //         model_update_user_conf.op_conf().scope_symbol_id());
+      //     multi_tensor_adam_update_hashmap.emplace(key, multi_tensor_update_adam_op_builder);
+      //   }
+      // } 
+      else {
         UNIMPLEMENTED() << "Current Optimizer do not support multi tensor update. ";
       }
       break;
@@ -288,10 +310,10 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
     auto multi_tensor_update_sgd_op = op.second.Build();
     job_builder->AddOps(parallel_conf, {multi_tensor_update_sgd_op.op_conf()});
   }
-  for (auto& op : multi_tensor_adam_update_hashmap) {
-    auto multi_tensor_update_adam_op = op.second.Build();
-    job_builder->AddOps(parallel_conf, {multi_tensor_update_adam_op.op_conf()});
-  }
+  // for (auto& op : multi_tensor_adam_update_hashmap) {
+  //   auto multi_tensor_update_adam_op = op.second.Build();
+  //   job_builder->AddOps(parallel_conf, {multi_tensor_update_adam_op.op_conf()});
+  // }
   job_builder->DelOps(delete_ops);
   printf("Success pass \n"); 
   return Maybe<void>::Ok();

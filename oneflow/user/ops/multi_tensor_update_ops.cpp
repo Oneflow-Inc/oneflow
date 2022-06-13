@@ -247,8 +247,13 @@ Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
 
 Maybe<void> SgdWithCastInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                 const user_op::UserOpConfWrapper& conf) {
+  printf("Model input size is: %d \n", conf.input_size("model")); 
+  printf("Model half input size is: %d \n", conf.input_size("model_half")); 
+  
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
+  }
+  for (int64_t i = 0; i < conf.input_size("model_half"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_half", i));
   }
   return Maybe<void>::Ok();

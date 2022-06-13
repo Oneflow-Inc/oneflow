@@ -210,6 +210,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    printf("========= Enter Here with cast Kernel ========= \n"); 
     const int64_t n_tensor = ctx->input_size("model");
     const double scale = ctx->Attr<double>("scale");
     const float l1 = ctx->Attr<float>("l1");
