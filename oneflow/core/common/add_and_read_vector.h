@@ -24,7 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-// `at` is lock free
 template<typename T, int N = 20>
 class AddAndReadVector {
  public:
@@ -34,10 +33,10 @@ class AddAndReadVector {
   using value_type = const T;
   using size_type = size_t;
 
-  // not thread safe.
+  // thread safe.
   size_t size() const { return size_; }
 
-  // lock free.
+  // thread safe.
   const T& at(size_t index) const {
     CHECK_GE(index, 0);
     CHECK_LT(index, size_);
@@ -46,6 +45,7 @@ class AddAndReadVector {
     return granularity2vector_[gran].data()[index - start];
   }
 
+  // thread safe.
   const T& operator[](size_t index) const {
     int gran = GetGranularity(index);
     int start = (1 << gran) - 1;
