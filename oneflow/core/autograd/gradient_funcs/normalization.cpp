@@ -136,15 +136,14 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradCaptureStat
       return Maybe<void>::Ok();
     }
 
-    DimVector dim_vec;
+    Shape shape;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
       if (i != ctx->axis) {
-        dim_vec.emplace_back(1);
+        shape.emplace_back(1);
       } else {
-        dim_vec.emplace_back(x->shape()->At(ctx->axis));
+        shape.emplace_back(x->shape()->At(ctx->axis));
       }
     }
-    Shape shape(dim_vec);
     const auto& reshaped_gamma = JUST(functional::Reshape(gamma, shape));
     const auto& reshaped_inv_variance = JUST(functional::Reshape(inv_variance, shape));
 
