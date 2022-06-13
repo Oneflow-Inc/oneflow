@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/eager/call_phy_instr_operand.h"
+#include "oneflow/core/eager/op_call_phy_instr_operand.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/framework/stream_is_comm_net_stream.h"
@@ -22,13 +22,13 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-Maybe<void> CallPhyInstrOperand::Init() {
+Maybe<void> OpCallPhyInstrOperand::Init() {
   JUST(mut_opkernel()->ChooseOpKernel(&user_opkernel_, &need_temp_storage_, attrs(), inputs().get(),
                                       outputs().get(), consistent_tensor_infer_result().get()));
   return Maybe<void>::Ok();
 }
 
-void CallPhyInstrOperand::ForEachConstMirroredObject(
+void OpCallPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
@@ -37,7 +37,7 @@ void CallPhyInstrOperand::ForEachConstMirroredObject(
   }
 }
 
-void CallPhyInstrOperand::InitStreamSequentialDependence() {
+void OpCallPhyInstrOperand::InitStreamSequentialDependence() {
   auto* device_schedule_dep_object = vm_stream_->schedule_local_dep_object().get();
   if (IsCommNetStream::Visit(vm_stream_->stream_role())) {
     // Sequantialize nccl instructions to avoid deadlock
@@ -53,7 +53,7 @@ void CallPhyInstrOperand::InitStreamSequentialDependence() {
   }
 }
 
-void CallPhyInstrOperand::ForEachMutMirroredObject(
+void OpCallPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& opt_transport_dep_object = vm_stream_->transport_local_dep_object();
   if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)->get()); }
@@ -70,7 +70,7 @@ void CallPhyInstrOperand::ForEachMutMirroredObject(
   }
 }
 
-void CallPhyInstrOperand::ForEachMut2MirroredObject(
+void OpCallPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {

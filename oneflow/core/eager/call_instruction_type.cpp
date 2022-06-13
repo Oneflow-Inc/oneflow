@@ -23,8 +23,8 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/eager/call_instruction_type.h"
-#include "oneflow/core/eager/call_phy_instr_operand.h"
+#include "oneflow/core/eager/op_call_instruction_type.h"
+#include "oneflow/core/eager/op_call_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
@@ -40,10 +40,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-struct CallInstructionUtil final {
+struct OpCallInstructionUtil final {
   static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
     OF_PROFILER_RANGE_PUSH("ResetPrior");
-    auto* operand = CallInstructionUtil::GetCallPhyInstrOperand(instr_msg);
+    auto* operand = OpCallInstructionUtil::GetCallPhyInstrOperand(instr_msg);
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
     DeviceCtx* device_ctx = instr_msg.stream().device_ctx().get();
     OF_PROFILER_RANGE_POP();
@@ -69,13 +69,13 @@ struct CallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline CallPhyInstrOperand* GetCallPhyInstrOperand(const vm::InstructionMsg& instr_msg) {
+  static inline OpCallPhyInstrOperand* GetCallPhyInstrOperand(const vm::InstructionMsg& instr_msg) {
     auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
-    return CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(operand));
+    return CHECK_NOTNULL(dynamic_cast<OpCallPhyInstrOperand*>(operand));
   }
 
  private:
-  static inline void InferTempStorageBlobDesc(CallPhyInstrOperand* operand) {
+  static inline void InferTempStorageBlobDesc(OpCallPhyInstrOperand* operand) {
     const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
     auto* temp_eager_blob_object = operand->mut_opkernel()->mut_temp_blob_object();
     CHECK(temp_eager_blob_object->data_type() == DataType::kChar);
@@ -91,7 +91,7 @@ struct CallInstructionUtil final {
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
   }
 
-  static inline void TryInitOpKernelStateAndCache(CallPhyInstrOperand* operand,
+  static inline void TryInitOpKernelStateAndCache(OpCallPhyInstrOperand* operand,
                                                   DeviceCtx* device_ctx,
                                                   user_op::OpKernelState** state,
                                                   user_op::OpKernelCache** cache) {
@@ -106,7 +106,7 @@ struct CallInstructionUtil final {
         operand->consistent_tensor_infer_result().get(), state, cache);
   }
 
-  static inline Maybe<void> AllocateOutputBlobsMemory(CallPhyInstrOperand* operand,
+  static inline Maybe<void> AllocateOutputBlobsMemory(OpCallPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
     for (const auto& blob_object : *operand->outputs()) {
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
@@ -114,12 +114,12 @@ struct CallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> TryAllocateTempStorageBlobMemory(CallPhyInstrOperand* operand,
+  static inline Maybe<void> TryAllocateTempStorageBlobMemory(OpCallPhyInstrOperand* operand,
                                                              DeviceCtx* device_ctx) {
     return operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
   }
 
-  static inline void OpKernelCompute(CallPhyInstrOperand* operand, DeviceCtx* device_ctx,
+  static inline void OpKernelCompute(OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx,
                                      user_op::OpKernelState* state,
                                      const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
@@ -163,23 +163,23 @@ struct CallInstructionUtil final {
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
   }
 
-  static inline Maybe<void> DeallocateTempStorageBlobMemory(CallPhyInstrOperand* operand,
+  static inline Maybe<void> DeallocateTempStorageBlobMemory(OpCallPhyInstrOperand* operand,
                                                             DeviceCtx* device_ctx) {
     return operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
   }
 };
 
-void CallInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_JUST(CallInstructionUtil::Compute(instruction->instr_msg()));
+void OpCallInstructionType::Compute(vm::Instruction* instruction) const {
+  CHECK_JUST(OpCallInstructionUtil::Compute(instruction->instr_msg()));
 }
 
-void CallInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
-  CHECK_JUST(CallInstructionUtil::Compute(*instr_msg));
+void OpCallInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
+  CHECK_JUST(OpCallInstructionUtil::Compute(*instr_msg));
 }
 
-std::string CallInstructionType::DebugName(const vm::InstructionMsg& instr_msg) const {
+std::string OpCallInstructionType::DebugName(const vm::InstructionMsg& instr_msg) const {
   auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
-  return CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(operand))->opkernel().op_type_name()
+  return CHECK_NOTNULL(dynamic_cast<OpCallPhyInstrOperand*>(operand))->opkernel().op_type_name()
          + ":Call";
 }
 

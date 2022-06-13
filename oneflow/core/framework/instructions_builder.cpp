@@ -33,7 +33,7 @@ limitations under the License.
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/eager/release_tensor_instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
-#include "oneflow/core/eager/call_instruction_type.h"
+#include "oneflow/core/eager/op_call_instruction_type.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -373,11 +373,11 @@ Maybe<void> InstructionsBuilder::Call(
   JUST(SoftSyncStream(output_eager_blob_objects, stream));
   JUST(SoftSyncStream(input_eager_blob_objects, stream));
   auto* vm_stream = JUST(Global<VirtualMachine>::Get()->GetVmStream(stream));
-  auto phy_instr_operand = JUST(vm::CallPhyInstrOperand::New(
+  auto phy_instr_operand = JUST(vm::OpCallPhyInstrOperand::New(
       vm_stream, opkernel, input_eager_blob_objects, output_eager_blob_objects,
       consistent_tensor_infer_result, ctx, *one::CurrentDevVmDepObjectConsumeMode()));
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      vm_stream, SingletonPtr<vm::CallInstructionType>(), phy_instr_operand);
+      vm_stream, SingletonPtr<vm::OpCallInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
     if (!output->producer_stream().has_value()) { JUST(output->init_producer_stream(stream)); }
