@@ -44,9 +44,7 @@ def slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
     return flow._C.slice(input, start, stop, step)
 
 
-def slice_update_op(
-    input, update, slice_tup_list: Sequence[Tuple[int, int, int]]
-):
+def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     """Update a slice of tensor `x`. Like `x[start:stop:step] = update`.
 
     Args:
