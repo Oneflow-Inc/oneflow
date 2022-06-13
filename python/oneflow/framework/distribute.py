@@ -20,7 +20,7 @@ from contextlib import contextmanager
 import oneflow._oneflow_internal
 
 
-def split_sbp(*arg, **karg) -> oneflow._oneflow_internal.sbp.sbp:
+def split_sbp(*dim, **karg) -> oneflow._oneflow_internal.sbp.sbp:
     """Generate a split scheme in which op will be splitted at `dim`.
 
     Args:
@@ -44,7 +44,7 @@ def split_sbp(*arg, **karg) -> oneflow._oneflow_internal.sbp.sbp:
                 "This 'axis' parameter of oneflow.sbp.split() will be updated to 'dim' in version 0.8."
             )
     else:
-        dim = arg[0]
+        dim = dim[0]
 
     assert type(dim) is int
     return oneflow._oneflow_internal.sbp.split(dim)
