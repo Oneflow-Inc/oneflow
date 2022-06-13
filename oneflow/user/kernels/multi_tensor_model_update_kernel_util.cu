@@ -49,9 +49,7 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
     T* model_ptr = (T*)tensor_tuple_params.model_addresses[0][tensor_idx];
     G* model_diff_ptr = (G*)tensor_tuple_params.model_addresses[1][tensor_idx];
     half* model_half_ptr = nullptr;
-    if(N == 3){
-      model_half_ptr = (half*)tensor_tuple_params.model_addresses[2][tensor_idx];
-    }
+    if (N == 3) { model_half_ptr = (half*)tensor_tuple_params.model_addresses[2][tensor_idx]; }
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
@@ -81,11 +79,9 @@ __global__ void MultiTensorSGDUpdateGpu(int64_t num_tensor, T scale, const float
 #pragma unroll
       for (int32_t ilp = 0; ilp < kUnrollSize; ilp++) {
         int64_t actual_idx = i + ilp * blockDim.x;
-        if (actual_idx < tensor_elem_cnt) { 
-          *(model_ptr + actual_idx) = model_val[ilp]; 
-          if(N == 3){
-            *(model_half_ptr + actual_idx) = static_cast<half>(model_val[ilp]);
-          }
+        if (actual_idx < tensor_elem_cnt) {
+          *(model_ptr + actual_idx) = model_val[ilp];
+          if (N == 3) { *(model_half_ptr + actual_idx) = static_cast<half>(model_val[ilp]); }
         }
       }
     }
@@ -133,7 +129,6 @@ void MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float weight_decay, float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, TensorTupleParams<2> tensor_tuple_params) {
-
   MultiTensorSGDUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, learning_rate,
       scale_by_ptr, skip_if, tensor_tuple_params);
@@ -164,9 +159,7 @@ __global__ void MultiTensorAdamUpdateGpu(
     T* m_ptr = (T*)tensor_tuple_params.model_addresses[2][tensor_idx];
     T* v_ptr = (T*)tensor_tuple_params.model_addresses[3][tensor_idx];
     half* model_half_ptr = nullptr;
-    if(N == 5){
-      model_half_ptr = (half*)tensor_tuple_params.model_addresses[4][tensor_idx];
-    }
+    if (N == 5) { model_half_ptr = (half*)tensor_tuple_params.model_addresses[4][tensor_idx]; }
 
     for (int64_t i = v_block_id * blockDim.x * kUnrollSize + threadIdx.x; i < tensor_elem_cnt;
          i += blockDim.x * gridDim.x * kUnrollSize) {
@@ -210,9 +203,7 @@ __global__ void MultiTensorAdamUpdateGpu(
           *(model_ptr + actual_idx) = model_val[ilp];
           *(m_ptr + actual_idx) = m_val[ilp];
           *(v_ptr + actual_idx) = v_val[ilp];
-          if(N == 5){
-            *(model_half_ptr + actual_idx) = static_cast<half>(model_val[ilp]);
-          }
+          if (N == 5) { *(model_half_ptr + actual_idx) = static_cast<half>(model_val[ilp]); }
         }
       }
     }
@@ -262,8 +253,7 @@ struct MultiTensorAdamUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
                      float learning_rate_val, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1,
-                     const float* bias_correction2,
-                     TensorTupleParams<4> tensor_tuple_params);
+                     const float* bias_correction2, TensorTupleParams<4> tensor_tuple_params);
 };
 
 template<typename T>
@@ -324,7 +314,6 @@ void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, float
     ep::Stream* stream, const int64_t elem_cnt, const int64_t n_tensor, T scale, float l1, float l2,
     float weight_decay, float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, TensorTupleParams<3> tensor_tuple_params) {
-
   MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, weight_decay, learning_rate_val, learning_rate,
       scale_by_ptr, skip_if, tensor_tuple_params);
@@ -373,8 +362,7 @@ struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, fl
                      float learning_rate_val, float bias_correction1_val,
                      float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const float* bias_correction1,
-                     const float* bias_correction2,
-                     TensorTupleParams<5> tensor_tuple_params);
+                     const float* bias_correction2, TensorTupleParams<5> tensor_tuple_params);
 };
 
 template<typename T>
@@ -385,7 +373,6 @@ void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16, floa
     float bias_correction2_val, const float* learning_rate, const T* scale_by_ptr,
     const int64_t* skip_if, const float* bias_correction1, const float* bias_correction2,
     TensorTupleParams<5> tensor_tuple_params) {
-
   MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, half, half>::Update(
       stream, elem_cnt, n_tensor, scale, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad,
       do_bias_correction, learning_rate_val, bias_correction1_val, bias_correction2_val,

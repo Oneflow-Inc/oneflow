@@ -1062,10 +1062,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseCastScalePass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
-    bool do_fuse_optimizer_update_cast_pass = ParseBooleanFromEnv("ONEFLOW_FUSE_OPTIMIZER_UPDATE_CAST", false); 
-    if(do_fuse_optimizer_update_cast_pass){
-      JUST(DoPass("FuseUpdateCastOpsPass"));
-    }
+    bool do_fuse_optimizer_update_cast_pass =
+        ParseBooleanFromEnv("ONEFLOW_FUSE_OPTIMIZER_UPDATE_CAST", false);
+    if (do_fuse_optimizer_update_cast_pass) { JUST(DoPass("FuseUpdateCastOpsPass")); }
     bool do_multi_tensor_update_pass =
         ParseBooleanFromEnv("ONEFLOW_ENABLE_MULTI_TENSOR_UPDATE", false);
     if (do_multi_tensor_update_pass) { JUST(DoPass("MultiTensorUpdatePass")); }

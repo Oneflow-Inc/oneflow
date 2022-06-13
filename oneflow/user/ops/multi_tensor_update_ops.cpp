@@ -175,7 +175,7 @@ Maybe<void> InferSGDUpdateWithCastTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> SgdWithCastInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                const user_op::UserOpConfWrapper& conf) {
+                                        const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_half", i));
@@ -206,7 +206,7 @@ Maybe<void> InferAdamUpdateWithCastTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                const user_op::UserOpConfWrapper& conf) {
+                                         const user_op::UserOpConfWrapper& conf) {
   for (int64_t i = 0; i < conf.input_size("model"); i++) {
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", i));
     JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_half", i));
@@ -239,7 +239,6 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   }
   return Maybe<void>::Ok();
 }
-
 
 /* static */ Maybe<void> MultiTensorSgdUpdateOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
@@ -290,7 +289,8 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   return InferSGDUpdateTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> MultiTensorSgdUpdateWithCastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> MultiTensorSgdUpdateWithCastOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
@@ -322,7 +322,8 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   return InferAdamUpdateWithCastTensorDesc(ctx);
 }
 
-/*static*/ Maybe<void> MultiTensorAdamUpdateWithCastOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> MultiTensorAdamUpdateWithCastOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
@@ -343,13 +344,13 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
   return Maybe<void>::Ok();
 }
 
-
 /* static */ Maybe<void> MultiTensorAdamUpdateWithCastOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   return AdamWithCastInputArgModifyFn(GetInputArgModifierFn, conf);
 }
 
-/* static */ Maybe<void> MultiTensorAdamUpdateWithCastOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> MultiTensorAdamUpdateWithCastOp::InferDataType(
+    user_op::InferContext* ctx) {
   return InferAdamUpdateDataType(ctx);
 }
 

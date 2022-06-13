@@ -2,6 +2,21 @@
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except N compliance with the License.
 You may obtain a copy of the License at
 
@@ -27,7 +42,7 @@ constexpr int max_tensors[5] = {160, 80, 40, 20, 15};
 // template<typename T, typename G, int N>
 template<int N>
 struct TensorTupleParams {
-  void* model_addresses[N][max_tensors[N-1]]; 
+  void* model_addresses[N][max_tensors[N - 1]];
   int64_t sizes[max_tensors[N - 1]];
   int32_t block_offset[max_tensors[N - 1]];
 };
@@ -69,7 +84,6 @@ struct MultiTensorAdamUpdateWithCastKernelUtil {
                      const int64_t* skip_if, const float* bias_correction1,
                      const float* bias_correction2, TensorTupleParams<5> tensor_tuple_params);
 };
-
 
 }  // namespace oneflow
 

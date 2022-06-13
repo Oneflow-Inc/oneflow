@@ -59,7 +59,7 @@ void SGDUpdateKernelUtil<DeviceType::kCPU, T, G, H>::Update(
   for (int64_t i = 0; i != n; ++i) {
     if (fuse_update_cast) {
       FusedSGDUpdateFunctor<T, G, H>()(model_diff + i, model + i, model_half + i, scale, l1, l2,
-                                    weight_decay, learning_rate_val);
+                                       weight_decay, learning_rate_val);
     } else {
       SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
                                learning_rate_val);

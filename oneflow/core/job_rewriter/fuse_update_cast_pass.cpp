@@ -1,5 +1,20 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -45,7 +60,7 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
     LogicalBlobId model_half_lbi;
-    bool has_model_half_lbi = false; 
+    bool has_model_half_lbi = false;
 
     for (OpEdge* find_cast_edge : op_node->out_edges()) {
       OpNode* find_cast_node = find_cast_edge->dst_node();
@@ -79,15 +94,16 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
       const user_op::UserOpConfWrapper new_cast_user_conf(new_cast_op_conf);
       model_half_lbi = GenLogicalBlobId(new_cast_user_conf.output("out", 0));
-      has_model_half_lbi = true; 
+      has_model_half_lbi = true;
       break;
     }
 
-    if(has_model_half_lbi){
+    if (has_model_half_lbi) {
       for (OpEdge* find_model_update_edge : op_node->out_edges()) {
         OpNode* find_model_update_update_node = find_model_update_edge->dst_node();
         if (!IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")
-            && !IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "adam_update")) {
+            && !IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
+                                     "adam_update")) {
           continue;
         }
         const user_op::UserOpConfWrapper model_update_user_conf(
@@ -99,7 +115,7 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
         user_op::UserOpConfWrapperBuilder fused_model_update_op_builder(
             model_update_user_conf.op_name());
         if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
-          std::cout<<"model name is: " << model_update_user_conf.input("model", 0) <<std::endl; 
+          std::cout << "model name is: " << model_update_user_conf.input("model", 0) << std::endl;
           fused_model_update_op_builder.OpTypeName("sgd_update")
               .Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
