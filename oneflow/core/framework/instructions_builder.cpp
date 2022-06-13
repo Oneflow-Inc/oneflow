@@ -212,7 +212,7 @@ namespace {
 
 int64_t NewSymbolId() {
   static std::atomic<int64_t> cnt(0);
-  return ++cnt;
+  return cnt.fetch_add(1, std::memory_order_relaxed);
 }
 
 }  // namespace
