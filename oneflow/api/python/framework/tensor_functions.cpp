@@ -15,15 +15,11 @@ limitations under the License.
 */
 
 #include <Python.h>
-#include <longobject.h>
-#include <tupleobject.h>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
-#include "oneflow/core/common/throw.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/container_util.h"
@@ -759,6 +755,7 @@ static PyObject* PyTensorObject_split(PyObject* self, PyObject* args, PyObject* 
   }
   CHECK_OR_THROW(PyLong_Check(split_size_or_sections)
                  || functional::PyLongSequenceCheck(split_size_or_sections))
+                 << Error::TypeError() << "split(): argument 'split_size_or_sections' must be int or list of int, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(split_size_or_sections)));
   if (PyLong_Check(split_size_or_sections))
     return functional::CastToPyObject(
@@ -775,11 +772,12 @@ static PyObject* PyTensorObject_cumsum(PyObject* self, PyObject* args, PyObject*
   int64_t dim = 0;
   PyObject* dtype_obj = Py_None;
   static const char* keywords[3] = {"dim", "dtype", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O!:cumsum", const_cast<char**>(keywords), &dim,
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O:cumsum", const_cast<char**>(keywords), &dim,
                                    &dtype_obj)) {
     return NULL;
   }
-  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj));
+  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj)) << "cumsum(): argument 'dtype' must be data type, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype_obj)));
   if (dtype_obj == Py_None)
     return PyTensor_New(ASSERT_PTR(functional::Cumsum(PyTensor_Unpack(self), dim, NullOpt)));
   Symbol<DType> dtype = functional::PyUnpackDType(dtype_obj);
@@ -792,11 +790,12 @@ static PyObject* PyTensorObject_cumprod(PyObject* self, PyObject* args, PyObject
   int64_t dim = 0;
   PyObject* dtype_obj = Py_None;
   static const char* keywords[3] = {"dim", "dtype", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O!:cumprod", const_cast<char**>(keywords),
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O:cumprod", const_cast<char**>(keywords),
                                    &dim, &dtype_obj)) {
     return NULL;
   }
-  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj));
+  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj)) << "cumprod(): argument 'dtype' must be data type, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype_obj)));
   if (dtype_obj == Py_None)
     return PyTensor_New(ASSERT_PTR(functional::Cumprod(PyTensor_Unpack(self), dim, NullOpt)));
   Symbol<DType> dtype = functional::PyUnpackDType(dtype_obj);
