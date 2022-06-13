@@ -1354,6 +1354,7 @@ class Graph(object):
             # So it's safe to skip sync here.
             return
         oneflow._oneflow_internal.eager.Sync()
+        oneflow._oneflow_internal.ClearVariableTensorMgr()
 
     def __ensure_input_tensors_contiguous(self, *args, **kwargs):
         args_tree = ArgsTree((args, kwargs), False)
