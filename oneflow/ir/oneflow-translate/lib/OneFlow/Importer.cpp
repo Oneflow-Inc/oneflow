@@ -492,10 +492,7 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
     for (auto ctrl_in : ctrl_ins.getValue()) {
       op_conf.add_ctrl_in_op_name(
-          ctrl_in.getDefiningOp()
-              ->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-              .getValue()
-              .str());
+          OpTrait::IsOpConfCompatible<void>::getOpName(ctrl_in.getDefiningOp()).str());
     }
   }
   return success();
@@ -675,9 +672,8 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
       auto size = std::get<1>(name_size_tuple);
       if ((size_sum + size) > result_number) {
         const uint32_t bn_i = result_number - size_sum;
-        return def_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-                   .str()
-               + "/" + name + "_" + std::to_string(bn_i);
+        return OpTrait::IsOpConfCompatible<void>::getOpName(def_op).str() + "/" + name + "_"
+               + std::to_string(bn_i);
       }
       size_sum += size;
     }
@@ -946,7 +942,7 @@ LogicalResult ConvertVariableOpConf(VariableOp op, ::oneflow::OperatorConf* op_c
   // all operands are ctrl_inputs
   for (const auto& operand : op->getOperands()) {
     op_conf->add_ctrl_in_op_name(
-        operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+        OpTrait::IsOpConfCompatible<void>::getOpName(operand.getDefiningOp()).str());
   }
   if (auto floatInit = op.float_initializer()) {
     var_op_conf->mutable_initializer()->mutable_constant_conf()->set_value(
@@ -1002,7 +998,7 @@ LogicalResult ConvertInputOpConf(InputOp op, ::oneflow::OperatorConf* op_conf) {
   // operand 0 is block argument, others are ctrl_inputs
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
-        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+        OpTrait::IsOpConfCompatible<void>::getOpName(op->getOperand(i).getDefiningOp()).str());
   }
 
   return success();
@@ -1054,7 +1050,7 @@ LogicalResult ConvertOutputOpConf(OutputOp op, ::oneflow::OperatorConf* op_conf)
   output_op_conf->set_in(output_lbn);
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
-        op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
+        OpTrait::IsOpConfCompatible<void>::getOpName(op->getOperand(i).getDefiningOp()).str());
   }
   return success();
 }
