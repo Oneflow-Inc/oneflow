@@ -65,7 +65,15 @@ class SteadyVector {
   }
 
  private:
-  static int GetGranularity(size_t index) { return std::log2(index + 1); }
+#ifdef __GNUC__
+#define LOG2(x) ((unsigned)(8 * sizeof(unsigned long long) - __builtin_clzll((x)) - 1))
+#else
+#define LOG2(x) std::log2(x)
+#endif
+
+  static int GetGranularity(size_t index) { return LOG2(index + 1); }
+
+#undef LOG2
 
   std::atomic<size_t> size_;
   std::mutex mutex_;
