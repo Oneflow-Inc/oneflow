@@ -293,6 +293,7 @@ function(mark_targets_as_system)
   # and its following PRs are merged in cmake v3.25.
   foreach(target ${ARGV})
     get_target_property(include_dir ${target} INTERFACE_INCLUDE_DIRECTORIES)
-    set_target_properties(${target} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${include_dir}")
+    set_target_properties(${target} PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+                                               "${include_dir}")
   endforeach()
 endfunction()
