@@ -35,12 +35,7 @@ std::ostream& operator<<(std::ostream& out, ShapeView shape) {
   return out;
 }
 
-void MutShapeView::set_shape(const Shape& shape) {
-  CHECK_EQ(NumAxes(), shape.NumAxes());
-  std::copy(shape.dim_vec().data(), shape.dim_vec().data() + shape.NumAxes(), mut_ptr());
-}
-
-void MutShapeView::set_shape(const ShapeView& shape) {
+void MutShapeView::set_shape(ShapeView shape) {
   CHECK_EQ(NumAxes(), shape.NumAxes());
   std::copy(shape.ptr(), shape.ptr() + shape.NumAxes(), mut_ptr());
 }

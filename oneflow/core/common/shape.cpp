@@ -82,7 +82,22 @@ void ConstShapeMixIn<T>::ToProto(ShapeProto* ret) const {
   *(ret->mutable_dim()) = PbRf<int64_t>(tp()->begin(), tp()->end());
 }
 
-Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
+template<class T>
+bool ConstShapeMixIn<T>::operator==(const T& rhs) const {
+  if (this->NumAxes() != rhs.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, this->NumAxes()) {
+    if (this->At(i) != rhs.At(i)) { return false; }
+  }
+  return true;
+}
+
+template struct ConstShapeMixIn<Shape>;
+template struct MutShapeMixIn<Shape>;
+template struct ConstShapeMixIn<ShapeView>;
+template struct ConstShapeMixIn<MutShapeView>;
+template struct MutShapeMixIn<MutShapeView>;
+
+Shape CreateReducedShape(ShapeView shape, const AxisVector& axis_vec) {
   // For 0-dim Tensor
   if (axis_vec.empty()) { return Shape({}); }
   DimVector dim_vec;
@@ -91,7 +106,7 @@ Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
   return Shape(std::move(dim_vec));
 }
 
-Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) {
+Shape CreateLeftExtendedShape(ShapeView shape, int ndims_left_extend_to) {
   CHECK_GE(ndims_left_extend_to, shape.NumAxes());
   DimVector dim_vec(ndims_left_extend_to);
   const size_t left_ones_num = ndims_left_extend_to - shape.NumAxes();
@@ -110,7 +125,7 @@ Shape ZeroDimCompatiableShape(const Shape& shape) {
   return shape;
 }
 
-Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec) {
+Shape CreateReducedShapeOrOnesShape(ShapeView shape, const AxisVector& axis_vec) {
   if (axis_vec.empty()) { return Shape::Ones(shape.NumAxes()); }
   return CreateReducedShape(shape, axis_vec);
 }
@@ -127,13 +142,13 @@ Shape::Shape(DimVector&& dim_vec) : DimVector(std::move(dim_vec)), is_initialize
 Shape::Shape(const ShapeProto& shape_proto)
     : DimVector(shape_proto.dim().begin(), shape_proto.dim().end()), is_initialized_(true) {}
 
-Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
+Shape& Shape::CheckNumAxesIdenticalAndAssign(ShapeView shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
   std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), data());
   return *this;
 }
 
-Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
+Shape& Shape::LeftOnesExtendedAssign(ShapeView shape_view) {
   CHECK_GE(NumAxes(), shape_view.NumAxes());
   size_t left_ones_size = NumAxes() - shape_view.NumAxes();
   FOR_RANGE(int, i, 0, left_ones_size) { (*this)[i] = 1LL; }
@@ -174,14 +189,14 @@ Shape Shape::Ones(const int64_t num_axes) {
   return Shape(dim_vec);
 }
 
-AxisVector Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {
+AxisVector Shape::Axes4BroadcastTo(ShapeView broadcast_shape) const {
   AxisVector broadcast_axis_vec;
   CHECK_EQ(broadcast_shape.NumAxes(), NumAxes());
   for (int64_t i = 0; i < NumAxes(); i++) {
-    if (this->dim_vec().at(i) != broadcast_shape.dim_vec().at(i) && this->dim_vec().at(i) == 1) {
+    if (this->dim_vec().at(i) != broadcast_shape[i] && this->dim_vec().at(i) == 1) {
       broadcast_axis_vec.emplace_back(i);
     } else {
-      CHECK_EQ(this->dim_vec().at(i), broadcast_shape.dim_vec().at(i));
+      CHECK_EQ(this->dim_vec().at(i), broadcast_shape[i]);
     }
   }
   CHECK(!broadcast_axis_vec.empty());
@@ -197,10 +212,5 @@ Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { shape->emplace_back(this->At(i)); }
   return shape;
 }
-
-ShapeView Shape::ToShapeView() const { return ShapeView(data(), size()); }
-
-MutShapeView Shape::ToMutShapeView() { return MutShapeView(data(), size()); }
-
 
 }  // namespace oneflow

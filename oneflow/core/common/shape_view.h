@@ -43,16 +43,12 @@ std::ostream& operator<<(std::ostream& out, ShapeView shape);
 
 class MutShapeView final : public MutableArrayRef<int64_t>, public MutShapeMixIn<MutShapeView> {
  public:
-  MutShapeView() = default;
-  MutShapeView(const MutShapeView& rhs) = default;
-  ~MutShapeView() = default;
-
   using MutableArrayRef<DimType>::MutableArrayRef;
+  MutShapeView(Shape& shape): MutableArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()) {};  // NOLINT
 
   int64_t* mut_ptr() const { return this->data(); }
 
-  void set_shape(const Shape& val);
-  void set_shape(const ShapeView& shape);
+  void set_shape(ShapeView shape);
 };
 
 }  // namespace oneflow

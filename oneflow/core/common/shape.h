@@ -32,6 +32,33 @@ namespace cfg {
 class ShapeProto;
 }  // namespace cfg
 
+/**
+ * NOTE:
+ *
+ * There are two widely used shape-related classes: Shape and ShapeView.
+ * The differences are:
+ * 1. Shape owns the data, and ShapeView does not.
+ * 2. ShapeView is very lightweight, whose size is only 16 bytes (two int64_t).
+ *    So it should be passed by value.
+ *
+ * When adding new functions accepting a shape as a parameter, please follow
+ * the rules:
+ * 1. If your function doesn't modify the shape, prefer 
+ *    ShapeView. Shape can be implicitly converted to ShapeView so the method 
+ *    with ShapeView parameter can accept both Shape and ShapeView actually.
+ * 2. If your function modify the shape but doesn't affect
+ *    its rank, prefer MutShapeView. The reason is the same with rule 1.
+ * 3. Use Shape otherwise.
+ *
+ * When adding new member methods of Shape or ShapeView, please follow
+ * the rules:
+ * 1. If the method is shared between Shape and ShapeView (like `NumAxes()`)
+ *    please add it to ConstShapeMixIn.
+ * 2. If the method is shared between Shape and MutShapeView (like `Set()`)
+ *    please add it to MutShapeMixIn.
+ * 3. Otherwise, add it to a concrete class (Shape, ShapeView or MutShapeView).
+ *
+ */
 template<class T>
 struct ConstShapeMixIn {
   using DimType = int64_t;
@@ -54,7 +81,10 @@ struct ConstShapeMixIn {
     for (int64_t dim : *this) { out_stream << std::to_string(dim) << ' '; }
   }
 
+  bool operator==(const T& rhs) const;
+
  protected:
+  // tp means "this pointer"
   T* tp() { return static_cast<T*>(this); }
   const T* tp() const { return static_cast<const T*>(this); }
 };
@@ -81,6 +111,7 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
   // explicit constructor from ShapeView
   explicit Shape(ShapeView shape_view);
   ~Shape() = default;
+  using DimVector::operator==;
 
 #define OVERRIDE_ADD_DATA_FUNC(func)              \
   template<typename... Args>                      \
@@ -98,8 +129,8 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
 
 #undef OVERRIDE_ADD_DATA_FUNC
 
-  Shape& CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view);
-  Shape& LeftOnesExtendedAssign(const ShapeView& shape_view);
+  Shape& CheckNumAxesIdenticalAndAssign(ShapeView shape_view);
+  Shape& LeftOnesExtendedAssign(ShapeView shape_view);
 
   // Getters and Setters
   bool is_initialized() const { return is_initialized_; }
@@ -112,13 +143,9 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
   AxisVector ShiftNegativeAxisVec(const AxisVector& axis_vec) const;
   Shape RemoveOnes(const AxisVector& axis_vec) const;
   static Shape Ones(const int64_t num_axes);
-  AxisVector Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
+  AxisVector Axes4BroadcastTo(ShapeView broadcast_dim_vec) const;
 
   Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
-
-  ShapeView ToShapeView() const;
-
-  MutShapeView ToMutShapeView();
 
  private:
   // Set default value here because some constructors are inherited from DimVector
@@ -128,10 +155,10 @@ class Shape final : public DimVector, public MutShapeMixIn<Shape> {
 
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
-Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec);
-Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_extend_to);
+Shape CreateReducedShape(ShapeView shape, const AxisVector& axis_vec);
+Shape CreateLeftExtendedShape(ShapeView shape, int ndims_extend_to);
 Shape ZeroDimCompatiableShape(const Shape& shape);
-Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec);
+Shape CreateReducedShapeOrOnesShape(ShapeView shape, const AxisVector& axis_vec);
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape);
 
