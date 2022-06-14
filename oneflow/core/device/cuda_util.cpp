@@ -184,6 +184,7 @@ void InitCudaContextOnce(int device_id) {
   std::call_once(init_flags[device_id], [&]() {
     OF_CUDA_CHECK(cudaSetDevice(device_id));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
+    LOG(ERROR) << "success!";
   });
 }
 
@@ -220,21 +221,6 @@ cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active) {
 #else
   return cudaErrorNotSupported;
 #endif  // CUDA_VERSION < 11030
-}
-
-cudaDeviceProp* GetDevicePropeties(int device_index) {
-  static int device_count = GetCudaDeviceCount();
-  static std::vector<std::once_flag> once_flags(device_count);
-  static std::vector<cudaDeviceProp> cuda_device_props(device_count);
-  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
-  // CHECK_JUST(device_index >= 0 && device_index < device_count)
-  //     << "Invalid device index " << device_index;
-  std::call_once(once_flags[device_index], [&]() {
-    cudaDeviceProp device_prop;
-    OF_CUDA_CHECK(cudaGetDeviceProperties(&device_prop, device_index));
-    cuda_device_props[device_count] = device_prop;
-  });
-  return &cuda_device_props[device_index];
 }
 
 #endif  // WITH_CUDA

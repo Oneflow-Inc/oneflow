@@ -167,7 +167,6 @@ void InitCudaContextOnce(int device_id);
 
 cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 
-cudaDeviceProp* GetDevicePropeties(int device_index = -1);
 }  // namespace oneflow
 
 #endif  // WITH_CUDA

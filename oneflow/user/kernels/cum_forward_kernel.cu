@@ -102,8 +102,8 @@ void ScanOuterDim(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_
 // Refer from
 // https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/cuda/ScanKernels.cu
 template<typename T, int num_threads_x, int num_threads_y, template<typename> class BinaryFunc>
-__device__ void ScanInnerMostDimKernelImpl(T* row_buf, T* src_, T* tgt_, const int64_t num_rows,
-                                           const int64_t row_size, T init) {
+__device__ void ScanInnerMostDimKernelImpl(T* row_buf, T* src_, T* tgt_, const uint32_t num_rows,
+                                           const uint32_t row_size, T init) {
   for (uint32_t block_row = blockIdx.x * blockDim.y; block_row < num_rows;
        block_row += blockDim.y * gridDim.x) {
     uint32_t row = block_row + threadIdx.y;
@@ -178,7 +178,8 @@ template<typename T, template<typename> class BinaryFunctor>
 void ScanInnerMostDim(const T* in_ptr, T* out_ptr, const int64_t num_rows, const int64_t row_size,
                       const ep::CudaStream* cuda_stream) {
   dim3 block(16, 32);
-  const int64_t max_grid_dim = GetDevicePropeties()->maxGridSize[0];
+  // const int64_t max_grid_dim = GetDevicePropeties()->maxGridSize[0];
+  const int64_t max_grid_dim = cuda_stream->device()->properties().maxGridSize[0];
   dim3 grid(std::min(max_grid_dim, CeilDiv(num_rows, (int64_t)block.y)));
   ScanInnerMostDimKernel<T, 16, 32, BinaryFunctor>
       <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_rows, row_size, 0);
@@ -224,8 +225,8 @@ class GpuCumKernel : public user_op::OpKernel {
       CubInclusiveScan<T, BinaryFunc>(temp_buffer, in_ptr, out_ptr, elem_cnt, cuda_stream);
     } else if (dim == in_shape.NumAxes() - 1) {
       // Treat all outer dimension as a single dimension.
-      const int64_t row_sizes = elem_cnt / dim_size;
-      ScanInnerMostDim<T, BinaryFunc>(in_ptr, out_ptr, row_sizes, dim_size, cuda_stream);
+      const int64_t num_rows = elem_cnt / dim_size;
+      ScanInnerMostDim<T, BinaryFunc>(in_ptr, out_ptr, num_rows, dim_size, cuda_stream);
     } else {
       ScanOuterDim<T, BinaryFunc>(ctx->stream(), in_shape, dim, in_ptr, out_ptr);
     }
