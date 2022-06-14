@@ -54,24 +54,24 @@ class ValuesPtr {
   }
   uint32_t GetNumUnique(int iter) {
     std::unique_lock<std::mutex> lock(mutex_);
-    CHECK_EQ(iter, num_unique_counter_);
+    CHECK_EQ(iter, num_unique_iter_);
     return lookup_num_unique_;
   }
   void SetNumUnique(uint32_t num_unique, int iter) {
     std::unique_lock<std::mutex> lock(mutex_);
     lookup_num_unique_ = num_unique;
-    num_unique_counter_ = iter;
+    num_unique_iter_ = iter;
   }
   void* GetLookupValuesPtr(int iter) {
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_lookup_values_);
-    CHECK_EQ(lookup_values_counter_, iter);
+    CHECK_EQ(lookup_values_iter_, iter);
     return lookup_values_;
   }
   void* GetLookupEmbeddingsPtr(int iter) {
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_lookup_embeddings_);
-    CHECK_EQ(lookup_embeddings_counter_, iter);
+    CHECK_EQ(lookup_embeddings_iter_, iter);
     return lookup_embeddings_;
   }
   void* MallocLookupValuesPtr(int iter, size_t data_size, cudaStream_t cuda_stream) {
@@ -85,7 +85,7 @@ class ValuesPtr {
       has_lookup_values_ = true;
       lookup_values_size_ = data_size;
     }
-    lookup_values_counter_ = iter;
+    lookup_values_iter_ = iter;
     return lookup_values_;
 #else
     UNIMPLEMENTED();
@@ -105,7 +105,7 @@ class ValuesPtr {
       has_lookup_embeddings_ = true;
       lookup_embeddings_size_ = data_size;
     }
-    lookup_embeddings_counter_ = iter;
+    lookup_embeddings_iter_ = iter;
     return lookup_embeddings_;
 #else
     UNIMPLEMENTED();
@@ -119,7 +119,7 @@ class ValuesPtr {
     CHECK(!has_updated_values_);
     OF_CUDA_CHECK(cudaMallocAsync(&updated_values_, data_size, cuda_stream));
     has_updated_values_ = true;
-    updated_values_counter_ = iter;
+    updated_values_iter_ = iter;
     return updated_values_;
 #else
     UNIMPLEMENTED();
@@ -129,14 +129,14 @@ class ValuesPtr {
   void* GetUpdatedValuesPtr(int iter) {
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_updated_values_);
-    CHECK_EQ(updated_values_counter_, iter);
+    CHECK_EQ(updated_values_iter_, iter);
     return updated_values_;
   }
   void FreeUpdatedValuesPtr(int iter, cudaStream_t cuda_stream) {
 #if CUDA_VERSION >= 11020
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_updated_values_);
-    CHECK_EQ(updated_values_counter_, iter);
+    CHECK_EQ(updated_values_iter_, iter);
     OF_CUDA_CHECK(cudaFreeAsync(updated_values_, cuda_stream));
     has_updated_values_ = false;
 #else
@@ -146,21 +146,21 @@ class ValuesPtr {
 
  private:
   uint32_t lookup_num_unique_;
-  int num_unique_counter_;
+  int num_unique_iter_;
 
   void* lookup_values_;
   bool has_lookup_values_;
   size_t lookup_values_size_;
-  int lookup_values_counter_;
+  int lookup_values_iter_;
 
   void* lookup_embeddings_;
   bool has_lookup_embeddings_;
   size_t lookup_embeddings_size_;
-  int lookup_embeddings_counter_;
+  int lookup_embeddings_iter_;
 
   void* updated_values_;
   bool has_updated_values_;
-  int updated_values_counter_;
+  int updated_values_iter_;
   std::mutex mutex_;
 };
 
