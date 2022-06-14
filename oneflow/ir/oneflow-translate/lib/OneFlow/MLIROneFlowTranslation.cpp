@@ -850,6 +850,35 @@ void RoundTripOneFlowJob(
   }
 }
 
+std::string ConvertJobToTosaIR(RoundTripOneFlowJobWrapperInterface& job_wrapper) {
+  const ::oneflow::Job* job = job_wrapper.job();
+  mlir::MLIRContext context;
+  context.getOrLoadDialect<oneflow::OneFlowDialect>();
+  context.loadDialect<mlir::func::FuncDialect>();
+
+  OwningOpRef<ModuleOp> module(
+      ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
+  JobImporter imp(job_wrapper, &context, module.get());
+  if (succeeded(imp.ProcessJob())) {
+    mlir::PassManager pm(&context);
+    pm.addPass(createCanonicalizerPass());
+    pm.addPass(createLowerOneFlowToTosaPass());
+    if (mlir::failed(pm.run(*module))) {
+      module->emitError("Failed to run oneflow-to-tosa pass");
+      exit(EXIT_FAILURE);
+    }
+
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    return mlir;
+  } else {
+    const auto& job_name = job->job_conf().job_name();
+    llvm::errs() << "fail to convert job to IR, job_name: " << job_name << "\n";
+    exit(EXIT_FAILURE);
+  }
+}
+
 void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path) {
   const ::oneflow::Job* job = job_wrapper.job();
   mlir::MLIRContext context;
@@ -890,6 +919,10 @@ void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<mlir::func::FuncDialect>();
   OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(path, &context);
+  if (!module) {
+    llvm::errs() << "fail to parse file: " << path << "\n";
+    exit(EXIT_FAILURE);
+  }
   JobImporter imp(job_wrapper, &context, module.get());
   if (failed(imp.TryToUpdateJob())) {
     llvm::errs() << "fail to load job from IR";

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -299,8 +300,8 @@ Maybe<bool> JobBuilder::IsInMutOpTransaction(const std::string& op_name) const {
   return find_iter != mut_op_transaction_name2op_conf_.end();
 }
 
-Maybe<OperatorConf*> JobBuilder::MutOpTransactionGet(const std::string& op_name) {
-  return JUST(MapAt(&mut_op_transaction_name2op_conf_, op_name));
+Maybe<OperatorConf&> JobBuilder::MutOpTransactionGet(const std::string& op_name) {
+  return JUST(MapAt(mut_op_transaction_name2op_conf_, op_name));
 }
 
 Maybe<void> JobBuilder::MutOpTransactionMut(const OperatorConf& op_conf) {

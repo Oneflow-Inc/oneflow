@@ -19,7 +19,6 @@ from contextlib import contextmanager
 from google.protobuf import text_format
 
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 import oneflow.core.job.scope_pb2 as scope_pb2_util
 import oneflow.framework.attr_util as attr_util
 import oneflow.framework.session_context as session_ctx
@@ -29,19 +28,23 @@ from oneflow import oneflow_deprecate
 def api_scope_config(**kwargs):
     name2default = session_ctx.GetDefaultSession().scope_attr_name2default_val
 
-    def SetScopeProto(scope_proto):
+    def SetScopeProtoStr(serialized_scope_proto: str):
+        scope_proto = text_format.Parse(
+            serialized_scope_proto, scope_pb2_util.ScopeProto()
+        )
         for (attr_name, py_value) in kwargs.items():
             assert attr_name in name2default
-            attr_util.SetAttrValue(
-                scope_proto.mutable_attr_name2attr_value()[attr_name],
+            attr_util.SetProtoAttrValue(
+                scope_proto.attr_name2attr_value[attr_name],
                 py_value,
                 name2default[attr_name],
             )
+        return str(text_format.MessageToString(scope_proto))
 
     sess = session_ctx.GetDefaultSession()
     scope = MakeScope(
-        lambda old_scope, builder: builder.BuildScopeByProtoSetter(
-            old_scope, SetScopeProto
+        lambda old_scope, builder: builder.BuildScopeByProtoStrSetter(
+            old_scope, SetScopeProtoStr
         )
     )
     return ScopeContext(scope)
@@ -67,20 +70,6 @@ def MakeScope(build_func):
         assert scope is not None
 
     oneflow._oneflow_internal.deprecated.PhysicalRun(BuildScope)
-    return scope
-
-
-def MakeInitialScope(job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored):
-    scope = None
-
-    def BuildInitialScope(builder):
-        nonlocal scope
-        session_id = session_ctx.GetDefaultSession().id
-        scope = builder.BuildInitialScope(
-            session_id, job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored
-        )
-
-    oneflow._oneflow_internal.deprecated.PhysicalRun(BuildInitialScope)
     return scope
 
 

@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import oneflow._oneflow_internal
-from oneflow.profiler.profiler import profile, record_function
+from oneflow.profiler.profiler import profile, record_function, ProfilerActivity
 
 __all__ = [
     "range_push",
@@ -24,6 +24,7 @@ __all__ = [
     "profiler_stop",
     "profile",
     "record_function",
+    "ProfilerActivity",
 ]
 
 

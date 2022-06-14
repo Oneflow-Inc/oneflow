@@ -14,23 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+import torch
+from functools import reduce
+import operator
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False, rtol=1e-3, atol=1e-3)
+@autotest(n=1, check_graph=False)
 def _test_median(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
     return torch.median(x)
 
 
-@autotest(n=1, check_graph=False, rtol=1e-3, atol=1e-3)
+@autotest(n=1, check_graph=False)
 def _test_median_with_indices(test_case, placement, sbp, ndim):
     dim = random(1, ndim).to(int).value()
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
+    x = choice_tensor(
+        reduce(operator.mul, dim_list, 1),
+        dim_list,
+        replace=False,
+        dtype=float,
+        requires_grad=True,
+    ).to_global(placement, sbp)
     return torch.median(x, dim)
 
 

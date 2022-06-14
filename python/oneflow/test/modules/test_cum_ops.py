@@ -15,9 +15,11 @@ limitations under the License.
 """
 import unittest
 from collections import OrderedDict
+import numpy as np
 
 import oneflow as flow
 import oneflow.unittest
+import torch as ori_torch
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -63,6 +65,29 @@ class TestCumOp(flow.unittest.TestCase):
         y = torch.cumprod(x, dim)
         z = y * 2
         return z
+
+    def test_cumprod_with_zero(test_case):
+        np_arr = np.ones((5, 5))
+        np_arr_grad = np_arr
+        np_arr[2][3] = 0
+        np_arr[4][3] = 0
+        of_tensor = flow.tensor(np_arr, dtype=flow.float, requires_grad=True)
+        of_res = of_tensor.cumprod(dim=0)
+        of_res.backward(flow.tensor(np_arr_grad, dtype=flow.float))
+
+        torch_tensor = ori_torch.tensor(
+            np_arr, dtype=ori_torch.float, requires_grad=True
+        )
+        torch_res = torch_tensor.cumprod(dim=0)
+        torch_res.backward(ori_torch.tensor(np_arr_grad, dtype=ori_torch.float))
+        test_case.assertTrue(
+            np.allclose(
+                of_tensor.grad.numpy(),
+                torch_tensor.grad.numpy(),
+                rtol=0.0001,
+                atol=1e-05,
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -55,9 +55,11 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
     *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
-      CHECK_OR_RETURN(x_shape.At(i) == 1 || y_shape.At(i) == 1 || x_shape.At(i) == y_shape.At(i))
-          << "op: " << ctx->op_name() << ", type: " << ctx->op_type_name() << ", i: " << i
-          << ", x_shape: " << x_shape << ", y_shape: " << y_shape;
+      if (x_shape.At(i) != 1 && y_shape.At(i) != 1 && x_shape.At(i) != y_shape.At(i)) {
+        return Error::RuntimeError()
+               << "The size of tensor a (" << x_shape.At(i) << ") must match the size of tensor b ("
+               << y_shape.At(i) << ") at non-singleton dimension " << i;
+      }
       out_shape.Set(i, (x_shape.At(i) == 0 || y_shape.At(i) == 0)
                            ? 0
                            : std::max(x_shape.At(i), y_shape.At(i)));
@@ -75,7 +77,7 @@ Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
 Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
   *ctx->OutputDType("z", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
@@ -83,7 +85,7 @@ Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
 Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
   *ctx->OutputDType("z", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }

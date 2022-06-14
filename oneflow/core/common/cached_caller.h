@@ -24,6 +24,17 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/tuple_hash.h"
 
+// gcc 11 falsely reports error:
+// ‘void operator delete(void*, std::size_t)’ called on unallocated object ‘cache’
+// However, `DeleteAndClear` is only called after `cache` is allocated in
+// if (cache == nullptr) block.
+// The reason not to use #pragma GCC diagnostic push/pop is that gcc reports
+// the error on the caller of `ThreadLocalCachedCall`.
+// TODO: replace ThreadLocalCachedCall with ThreadLocalCached decorator?
+#if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 11
+#pragma GCC diagnostic ignored "-Wfree-nonheap-object"
+#endif
+
 namespace oneflow {
 
 template<typename T>

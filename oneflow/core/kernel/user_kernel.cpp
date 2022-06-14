@@ -51,10 +51,12 @@ namespace {
 void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_desc) {
   BlobDescProto proto;
   blob->blob_desc().shape().ToProto(proto.mutable_shape());
+  blob->blob_desc().stride().ToProto(proto.mutable_stride());
   proto.set_data_type(blob->blob_desc().data_type());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   *tensor_desc = proto;
   tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
+  tensor_desc->mut_stride()->CheckNumAxesIdenticalAndAssign(blob->stride());
 }
 
 }  // namespace
@@ -269,6 +271,15 @@ class UserKernelOpInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
+    return Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+  }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserKernelOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
@@ -316,6 +327,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
       CHECK_NOTNULL(blob);
       if (*arg_tensor_desc_ptr) {
         (*arg_tensor_desc_ptr)->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
+        (*arg_tensor_desc_ptr)->mut_stride()->CheckNumAxesIdenticalAndAssign(blob->stride());
       } else {
         arg_tensor_desc_ptr->reset(new user_op::NaiveTensorDesc());
         FillTensorDescWithBlob(blob, arg_tensor_desc_ptr->get());
