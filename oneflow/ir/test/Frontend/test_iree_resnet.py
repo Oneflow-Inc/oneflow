@@ -62,6 +62,8 @@ def _test_iree_resnet_cpu(test_case):
 
 
 def _test_iree_resnet_cuda(test_case):
+    if not flow.cuda.is_available():
+        return
     model = resnet50(pretrained=True).cuda()
     model.eval()
 
