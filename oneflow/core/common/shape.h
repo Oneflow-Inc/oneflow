@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_SHAPE_H_
 
 #include "oneflow/core/common/shape.pb.h"
-#include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape_vec.h"
@@ -26,13 +25,52 @@ limitations under the License.
 namespace oneflow {
 
 class ShapeView;
+class MutShapeView;
 class ShapeProto;
 
 namespace cfg {
 class ShapeProto;
 }  // namespace cfg
 
-class Shape final : public DimVector {
+template<class T>
+struct ConstShapeMixIn {
+  using DimType = int64_t;
+
+  int64_t NumAxes() const { return tp()->size(); }
+  int64_t elem_cnt() const;
+  int64_t At(int64_t index) const;
+  int64_t Count(int64_t begin_axis, int64_t end_axis) const;
+  int64_t Count(int64_t begin_axis) const;
+  bool Containing(ShapeView small_shape) const;
+  bool MatchBeforeLastDim(ShapeView next_shape) const;
+  std::string ToString() const;
+
+  std::string DebugStr() const;
+
+  void ToProto(ShapeProto* ret) const;
+
+  template<typename StreamT>
+  void SerializeWithTextFormat(StreamT& out_stream) const {
+    for (int64_t dim : *this) { out_stream << std::to_string(dim) << ' '; }
+  }
+
+ protected:
+  T* tp() { return static_cast<T*>(this); }
+  const T* tp() const { return static_cast<const T*>(this); }
+};
+
+template<class T>
+struct MutShapeMixIn : public ConstShapeMixIn<T> {
+  void Set(int64_t index, int64_t val) {
+    CHECK_GE(index, 0);
+    CHECK_LT(index, this->tp()->NumAxes())
+        << " Shape: " << this->tp()->DebugStr() << " visit index: " << index
+        << " > num_axes: " << this->tp()->NumAxes();
+    (*this->tp())[index] = val;
+  }
+};
+
+class Shape final : public DimVector, public MutShapeMixIn<Shape> {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
   using DimVector::DimVector;
@@ -63,43 +101,24 @@ class Shape final : public DimVector {
   Shape& CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view);
   Shape& LeftOnesExtendedAssign(const ShapeView& shape_view);
 
-  std::string DebugStr() const;
-  std::string ToString() const;
-
-  void ToProto(ShapeProto*) const;
-
-  template<typename StreamT>
-  void SerializeWithTextFormat(StreamT& out_stream) const;
-
   // Getters and Setters
   bool is_initialized() const { return is_initialized_; }
   const DimVector& dim_vec() const { return *this; }
   DimVector& dim_vec() { return *this; }
-  int64_t elem_cnt() const {
-    return std::accumulate(begin(), end(), int64_t(1), std::multiplies<>());
-  }
-  int64_t At(int64_t index) const;
-  void Set(int64_t index, int64_t val);
   int64_t NumAxes() const {
     CHECK(is_initialized());
-    return size();
+    return ConstShapeMixIn<Shape>::NumAxes();
   }
-  int64_t Count(int64_t begin_axis, int64_t end_axis) const;
-  int64_t Count(int64_t begin_axis) const;
-
   AxisVector ShiftNegativeAxisVec(const AxisVector& axis_vec) const;
   Shape RemoveOnes(const AxisVector& axis_vec) const;
   static Shape Ones(const int64_t num_axes);
   AxisVector Axes4BroadcastTo(const Shape& broadcast_dim_vec) const;
 
-  bool Containing(const Shape& small_shape) const;
-  bool MatchBeforeLastDim(const Shape& next_shape) const;
-
   Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
 
-  ShapeView ToShapeView() const { return ShapeView(data(), size()); }
+  ShapeView ToShapeView() const;
 
-  MutShapeView ToMutShapeView() { return MutShapeView(data(), size()); }
+  MutShapeView ToMutShapeView();
 
  private:
   // Set default value here because some constructors are inherited from DimVector
@@ -113,10 +132,6 @@ Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec);
 Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_extend_to);
 Shape ZeroDimCompatiableShape(const Shape& shape);
 Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec);
-template<typename StreamT>
-void Shape::SerializeWithTextFormat(StreamT& out_stream) const {
-  for (int64_t dim : *this) { out_stream << std::to_string(dim) << ' '; }
-}
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape);
 

@@ -19,6 +19,69 @@ limitations under the License.
 
 namespace oneflow {
 
+template<class T>
+int64_t ConstShapeMixIn<T>::elem_cnt() const {
+  return std::accumulate(tp()->begin(), tp()->end(), int64_t(1), std::multiplies<>());
+}
+
+template<class T>
+int64_t ConstShapeMixIn<T>::At(int64_t index) const {
+  CHECK_GE(index, 0);
+  CHECK_LT(index, tp()->NumAxes()) << " Shape: " << tp()->DebugStr() << " visit index: " << index
+                                   << " > num_axes: " << tp()->NumAxes();
+  return (*tp())[index];
+}
+
+template<class T>
+int64_t ConstShapeMixIn<T>::Count(int64_t begin_axis, int64_t end_axis) const {
+  CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= tp()->NumAxes())
+      << begin_axis << " " << end_axis;
+  int64_t cnt = 1;
+  for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
+  return cnt;
+}
+template<class T>
+int64_t ConstShapeMixIn<T>::Count(int64_t begin_axis) const { return Count(begin_axis, tp()->NumAxes()); }
+
+template<class T>
+bool ConstShapeMixIn<T>::Containing(ShapeView small_shape) const {
+  if (tp()->NumAxes() < small_shape.NumAxes()) { return false; }
+  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
+    if (tp()->At(i) != small_shape.At(i)) { return false; }
+  }
+  return true;
+}
+
+template<class T>
+bool ConstShapeMixIn<T>::MatchBeforeLastDim(ShapeView next_shape) const {
+  if (tp()->NumAxes() != next_shape.NumAxes()) { return false; }
+  for (int64_t i = 0; i < tp()->NumAxes() - 1; ++i) {
+    if (next_shape.At(i) != tp()->At(i)) { return false; }
+  }
+  return true;
+}
+
+template<class T>
+std::string ConstShapeMixIn<T>::ToString() const {
+  std::stringstream ss;
+  int32_t idx = 0;
+  ss << "(";
+  for (int64_t dim : *tp()) {
+    ss << dim;
+    if (++idx != tp()->size() || tp()->size() == 1) { ss << ","; }
+  }
+  ss << ")";
+  return ss.str();
+}
+
+template<class T>
+std::string ConstShapeMixIn<T>::DebugStr() const { return ToString(); }
+
+template<class T>
+void ConstShapeMixIn<T>::ToProto(ShapeProto* ret) const {
+  *(ret->mutable_dim()) = PbRf<int64_t>(tp()->begin(), tp()->end());
+}
+
 Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
   // For 0-dim Tensor
   if (axis_vec.empty()) { return Shape({}); }
@@ -78,48 +141,6 @@ Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
   return *this;
 }
 
-std::string Shape::ToString() const {
-  std::stringstream ss;
-  int32_t idx = 0;
-  ss << "(";
-  for (int64_t dim : *this) {
-    ss << dim;
-    if (++idx != size() || size() == 1) { ss << ","; }
-  }
-  ss << ")";
-  return ss.str();
-}
-
-std::string Shape::DebugStr() const { return ToString(); }
-
-void Shape::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<int64_t>(begin(), end());
-}
-
-int64_t Shape::At(int64_t index) const {
-  CHECK_GE(index, 0);
-  CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
-                                   << " > num_axes: " << this->NumAxes();
-  return (*this)[index];
-}
-
-void Shape::Set(int64_t index, int64_t val) {
-  CHECK_GE(index, 0);
-  CHECK_LT(index, this->NumAxes()) << " Shape: " << DebugStr() << " visit index: " << index
-                                   << " > num_axes: " << this->NumAxes();
-  (*this)[index] = val;
-}
-
-int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
-  CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
-      << begin_axis << " " << end_axis;
-  int64_t cnt = 1;
-  for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
-  return cnt;
-}
-
-int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
-
 std::ostream& operator<<(std::ostream& out, const Shape& shape) {
   out << shape.DebugStr();
   return out;
@@ -167,22 +188,6 @@ AxisVector Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {
   return broadcast_axis_vec;
 }
 
-bool Shape::Containing(const Shape& small_shape) const {
-  if (this->NumAxes() < small_shape.NumAxes()) { return false; }
-  FOR_RANGE(int, i, 0, small_shape.NumAxes()) {
-    if (this->At(i) != small_shape.At(i)) { return false; }
-  }
-  return true;
-}
-
-bool Shape::MatchBeforeLastDim(const Shape& next_shape) const {
-  if (this->NumAxes() != next_shape.NumAxes()) { return false; }
-  for (int64_t i = 0; i < this->NumAxes() - 1; ++i) {
-    if (next_shape.At(i) != this->At(i)) { return false; }
-  }
-  return true;
-}
-
 Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   CHECK_OR_RETURN(start_dim >= 0 && end_dim >= start_dim);
   int64_t ndims = this->NumAxes();
@@ -192,5 +197,10 @@ Maybe<Shape> Shape::Slice(int64_t start_dim, int64_t end_dim) const {
   for (int64_t i = start_dim; i < end_dim && i < ndims; ++i) { shape->emplace_back(this->At(i)); }
   return shape;
 }
+
+ShapeView Shape::ToShapeView() const { return ShapeView(data(), size()); }
+
+MutShapeView Shape::ToMutShapeView() { return MutShapeView(data(), size()); }
+
 
 }  // namespace oneflow
