@@ -286,8 +286,11 @@ Maybe<void> InitRdma() {
 }
 
 Maybe<bool> RDMAIsInitialized() {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
   return Global<IBVerbsCommNet>::Get() != nullptr;
-  ;  // NOLINT(use of undeclared identifier)
+#else
+  return false;
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
 }
 
 }  // namespace oneflow
