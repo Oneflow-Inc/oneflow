@@ -44,6 +44,7 @@ class FuseUpdateCastOpsPass final : public JobPass {
 };
 
 Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+  if (!job_builder->job().job_conf().has_train_conf()) { return Maybe<void>::Ok(); }
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
