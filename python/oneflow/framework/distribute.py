@@ -21,7 +21,8 @@ import oneflow._oneflow_internal
 
 
 def split_sbp(dim=None, **kwargs) -> oneflow._oneflow_internal.sbp.sbp:
-    """Generate a split signature which indicates the tensor will be split along `dim`.
+    """
+    Generate a split signature which indicates the tensor will be split along `dim`.
 
     Args:
         dim (int): The dimension in which the tensor is split. 
@@ -35,20 +36,37 @@ def split_sbp(dim=None, **kwargs) -> oneflow._oneflow_internal.sbp.sbp:
         ct2 = t1.to_global(sbp=flow.sbp.split(0), placement=("cuda", ranks=[0, 1, 2, 3]))
 
     """
-    if len(kwargs) != 0 and dim is None:
-        if "axis" in kwargs:
-            dim = kwargs["axis"]
-            warnings.warn(
-                "This 'axis' parameter of oneflow.sbp.split() has been updated to 'dim' since OneFlow version 0.8."
-            )
-        else:
-            raise TypeError(
-                "split_sbp() got an unexpected keyword argument '%s'."
-                % kwargs.keys()[0]
-            )
+    if dim is None:
+        for key, value in kwargs.items():
+            if key == "axis":
+                if not isinstance(value, int):
+                    raise TypeError(
+                        "split_sbp(): parameter must be int, not {}.".format(
+                            type(value)
+                        )
+                    )
+                warnings.warn(
+                    "This 'axis' parameter of oneflow.sbp.split() has been updated to 'dim' since OneFlow version 0.8."
+                )
+                dim = value
+            else:
+                raise TypeError(
+                    "split_sbp() got an unexpected keyword argument '%s'." % key
+                )
+
+        if dim is None:
+            raise TypeError("split_sbp() missing 1 required argument: 'dim'.")
 
     else:
-        assert len(kwargs) == 0
+        for key, value in kwargs.items():
+            if key == "axis":
+                raise TypeError(
+                    "split_sbp() received an invalid combination of arguments - duplicate argument `axis`"
+                )
+            else:
+                raise TypeError(
+                    "split_sbp() got an unexpected keyword argument '%s'." % key
+                )
 
     assert type(dim) is int
     return oneflow._oneflow_internal.sbp.split(dim)
