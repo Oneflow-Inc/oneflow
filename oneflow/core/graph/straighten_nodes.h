@@ -17,11 +17,24 @@ limitations under the License.
 #define STRAIGHTEN_NODES_H_
 
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/job/task.pb.h"
 
 namespace oneflow {
 
 class OpGraph;
 class Job;
+
+enum TaskClassifier : int {
+  kWaitingTransfer = 0,
+  kWaitingComputation = 1,
+  kRunASAP = 2,
+  kRunALAP = 3
+};
+
+bool IsTransferNode(TaskType task_type);
+
+// Classifier for the set according to the task type
+TaskClassifier GetTaskClassifier(const TaskNode* node);
 
 class TopoStruct {
  public:

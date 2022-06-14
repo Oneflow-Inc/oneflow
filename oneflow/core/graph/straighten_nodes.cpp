@@ -14,19 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/straighten_nodes.h"
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
 namespace {
-
-bool IsTransferNode(int32_t task_type) {
-  return task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64);
-}
 
 // The same order in the set
 // It is only run in the following situation because there are too many implicit conditions.
@@ -40,8 +38,8 @@ bool IsTransferNode(int32_t task_type) {
 // };
 
 // move the head from source to target
-void move_front_between_maps(std::map<int32_t, TopoStruct*>& source,
-                             std::map<int32_t, TopoStruct*>& target) {
+void MoveFrontBetweenMaps(std::map<int32_t, TopoStruct*>& source,
+                          std::map<int32_t, TopoStruct*>& target) {
   if (!source.empty()) {
     const auto& front = source.begin();
     target[front->first] = front->second;
@@ -49,17 +47,68 @@ void move_front_between_maps(std::map<int32_t, TopoStruct*>& source,
   }
 };
 
-// Classifier for the set according to the task type
-int32_t set_classifier(const TaskNode* node) {
-  // Check task.pb.h for detail
-  int32_t task_type = node->GetTaskType();
-  if (task_type == 1) { return 1; }
-  if (task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64)) { return 0; }
-  if (task_type == 47) { return 2; }
-  return 3;
-};
+bool ShouldRunASAP(TaskType task_type) {
+  // They are sorted according to frequency of occurrences
+  switch (task_type) {
+    // We mark the number of occurrences in bert
+    case TaskType::kDeviceTick:                  // 38
+    case TaskType::kTick:                        // 8
+    case TaskType::kSrcSubsetTick:               // 6
+    case TaskType::kDstSubsetTick:               // 6
+    case TaskType::kCriticalSectionWaitTick:     // 4
+    case TaskType::kWaitAndSendIds:              // 2
+    case TaskType::kPack:                        // 0
+    case TaskType::kUnpack:                      // 0
+    case TaskType::kRepeat:                      // 0
+    case TaskType::kAcc:                         // 0
+    case TaskType::kSourceTick:                  // 0
+    case TaskType::kAccTick:                     // 0
+    case TaskType::kCase:                        // 0
+    case TaskType::kEsac:                        // 0
+    case TaskType::kReentrantLock: return true;  // 0
+    default: return false;
+  }
+}
 
 }  // anonymous namespace
+
+bool IsTransferNode(TaskType task_type) {
+  // return task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64);
+  // They are sorted according to frequency of occurrences
+  switch (task_type) {
+    // We mark the number of occurrences in bert
+    case TaskType::kCollectiveBoxingGeneric:        // 76
+    case TaskType::kCopyHd:                         // 27
+    case TaskType::kSliceBoxing:                    // 16
+    case TaskType::kCopyCommNet:                    // 12
+    case TaskType::kCollectiveBoxingPack:           // 8
+    case TaskType::kCollectiveBoxingUnpack:         // 8
+    case TaskType::kBoxingZeros:                    // 3
+    case TaskType::kForeignInput:                   // 0
+    case TaskType::kForeignOutput:                  // 0
+    case TaskType::kDistributeConcat:               // 0
+    case TaskType::kDistributeSplit:                // 0
+    case TaskType::kBoxingIdentity:                 // 0
+    case TaskType::kDecodeH2D:                      // 0
+    case TaskType::kSspVariableProxy: return true;  // 0
+    default: return false;
+  }
+}
+
+// Classifier for the set according to the task type
+TaskClassifier GetTaskClassifier(const TaskNode* node) {
+  // Check task.pb.h for detail
+  // They are sorted according to frequency of judgement
+  // frequency of judgement = the number of occurrences / the times of judgement
+  TaskType task_type = node->GetTaskType();
+  if (task_type == TaskType::kNormalForward) { return TaskClassifier::kWaitingComputation; }
+  if (IsTransferNode(task_type)) { return TaskClassifier::kWaitingTransfer; }
+  if (task_type == TaskType::kCallbackNotify) { return TaskClassifier::kRunALAP; }
+  if (ShouldRunASAP(task_type)) { return TaskClassifier::kRunASAP; }
+  CHECK(false) << "Unclassified or invalid task type (" << task_type << ") showing up";
+  // Throw a kRunASAP which means ignoring this node in the algorithm
+  return TaskClassifier::kRunASAP;
+}
 
 // Drop down the maximum layer with the minimum layer form consumer
 void TopoStruct::DropTributaryLayer(int32_t upper_bound) {
@@ -113,7 +162,8 @@ int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task
     MinDistance2Transfer = 0;
     return MinDistance2Transfer;
   }
-  MinDistance2Transfer = 1000000;
+  // Otherwise, initialize it with a large number
+  MinDistance2Transfer = GetMaxVal<int32_t>();
   node->ForEachNodeOnOutEdge([&](TaskNode* out) {
     MinDistance2Transfer =
         std::min(MinDistance2Transfer,
@@ -146,6 +196,7 @@ void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
     if (max_MinLayer < pair.second.MinLayer) { max_MinLayer = pair.second.MinLayer; }
   }
   // All the nodes with MinLayer>=mainstem_end_id would be considered as mainstem nodes
+  // The last 5 layers would be considered as in mainstem anyway.
   int32_t mainstem_end_id = max_MinLayer - 4;
   for (auto& pair : *task_node2topo_struct) {
     auto& topo_struct = pair.second;
@@ -197,12 +248,11 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
           auto& machine_id2node_id2topo_structs = task_type7machine_id2node_id2topo_structs.second;
           // Initializing the smallest node id for each machine
           for (auto& machine_id7node_id2topo_structs : machine_id2node_id2topo_structs) {
-            move_front_between_maps(machine_id7node_id2topo_structs.second,
-                                    min_node_id2topo_struct);
+            MoveFrontBetweenMaps(machine_id7node_id2topo_structs.second, min_node_id2topo_struct);
           }
 
           while (!min_node_id2topo_struct.empty()) {
-            auto* topo_struct_min_node_id = min_node_id2topo_struct.begin()->second;
+            // auto* topo_struct_min_node_id = min_node_id2topo_struct.begin()->second;
             // Store the same nodes in different machines
             std::vector<TopoStruct*> same_nodes;
             for (auto& min_node_id7topo_struct : min_node_id2topo_struct) {
@@ -224,7 +274,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
               // Erase them from min_node_id2topo_struct
               min_node_id2topo_struct.erase(same_node_topo_struct->node->node_id());
               // Add new candidate
-              move_front_between_maps(
+              MoveFrontBetweenMaps(
                   machine_id2node_id2topo_structs[same_node_topo_struct->node->machine_id()],
                   min_node_id2topo_struct);
             }
@@ -266,13 +316,14 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   };
 
   // Classify sets for the task nodes
-  // std::set<TopoStruct*, comp> waiting_transfer; // 0
-  // std::set<TopoStruct*, comp> waiting_computation; // 1
-  // std::set<TopoStruct*, comp> run_asap;  // 2, run as soon as possible
-  // std::set<TopoStruct*, comp> run_alap;  // 3, run as late as possible
-  std::vector<std::set<TopoStruct*, comp>> waiting_lists(4);
+  // std::set<TopoStruct*, comp> waiting_transfer; // 0, TaskClassifier::kWaitingTransfer
+  // std::set<TopoStruct*, comp> waiting_computation; // 1, TaskClassifier::kWaitingComputation
+  // std::set<TopoStruct*, comp> run_asap;  // 2, TaskClassifier::kRunASAP , run as soon as possible
+  // std::set<TopoStruct*, comp> run_alap;  // 3, TaskClassifier::kRunALAP , run as late as possible
+  const int32_t num_classifier = 4;
+  std::vector<std::set<TopoStruct*, comp>> waiting_lists(num_classifier);
 
-  std::vector<int32_t> remain_task_nums(4, 0);
+  std::vector<int32_t> remain_task_nums(num_classifier, 0);
 
   auto SetOrderInGraph = [&](TaskNode* task_node) {
     task_node->set_order_in_graph(order_in_graph);
@@ -291,7 +342,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     }
     // Add all the same nodes at the same time
     curr_topo_struct = first_topo_struct;
-    auto& waiting_list = waiting_lists[set_classifier(node)];
+    auto& waiting_list = waiting_lists[GetTaskClassifier(node)];
     while (true) {
       waiting_list.insert(curr_topo_struct);
       // Reduce counter then this node will never be added again
@@ -307,7 +358,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
     int32_t count = node->in_edges().size();
     task_node2topo_struct[node].counter = count;
     if (count == 0) { wait(node); }
-    remain_task_nums[set_classifier(node)]++;
+    remain_task_nums[GetTaskClassifier(node)]++;
   });
 
   // Finish execution
@@ -340,7 +391,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   // Execute the first n nodes in the waiting list
   auto execute = [&](int32_t list_classifier, int32_t n, bool if_reverse = false) {
-    // n>=1
+    // n > 0
     if (n <= 0) { return; }
     auto& waiting_list = waiting_lists[list_classifier];
     std::vector<TaskNode*> execution_list;
@@ -361,34 +412,40 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
 
   // straightening
   while (true) {
-    if (waiting_lists[2].empty()) {
-      if (waiting_lists[0].empty()) {
-        if (waiting_lists[1].empty()) {
-          if (waiting_lists[3].empty()) {
+    if (waiting_lists[TaskClassifier::kRunASAP].empty()) {
+      if (waiting_lists[TaskClassifier::kWaitingTransfer].empty()) {
+        if (waiting_lists[TaskClassifier::kWaitingComputation].empty()) {
+          if (waiting_lists[TaskClassifier::kRunALAP].empty()) {
+            // All the waiting lists are empty
             break;
           } else {
-            execute(3, waiting_lists[3].size());
+            // Execute all the nodes left
+            execute(TaskClassifier::kRunALAP, waiting_lists[TaskClassifier::kRunALAP].size());
           }
         } else {
-          execute(1, 1);
+          // Execute one computation node
+          execute(TaskClassifier::kWaitingComputation, 1);
         }
       } else {
         int32_t computation_num =
-            std::min(int32_t(waiting_lists[1].size() / (waiting_lists[0].size())),
-                     remain_task_nums[1] / remain_task_nums[0]);
+            std::min(int32_t(waiting_lists[TaskClassifier::kWaitingComputation].size()
+                             / (waiting_lists[TaskClassifier::kWaitingTransfer].size())),
+                     remain_task_nums[TaskClassifier::kWaitingComputation]
+                         / remain_task_nums[TaskClassifier::kWaitingTransfer]);
         // Holding the transfer
         std::vector<TaskNode*> transfer_execution_list;
-        move2execution_list(waiting_lists[0], transfer_execution_list);
-        remain_task_nums[0] -= transfer_execution_list.size();
+        move2execution_list(waiting_lists[TaskClassifier::kWaitingTransfer],
+                            transfer_execution_list);
+        remain_task_nums[TaskClassifier::kWaitingTransfer] -= transfer_execution_list.size();
         for (auto* transfer_node : transfer_execution_list) { SetOrderInGraph(transfer_node); }
         // Overlap transfer with computation
-        execute(1, computation_num);
+        execute(TaskClassifier::kWaitingComputation, computation_num);
 
         // Release the transfer
         for (auto* transfer_node : transfer_execution_list) { finish_execution(transfer_node); }
       }
     } else {
-      execute(2, waiting_lists[2].size());
+      execute(TaskClassifier::kRunASAP, waiting_lists[TaskClassifier::kRunASAP].size());
     }
   }
 }
