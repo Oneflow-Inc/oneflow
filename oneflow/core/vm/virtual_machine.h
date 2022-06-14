@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
 #include "oneflow/core/common/stream_role.h"
-#include "oneflow/core/common/add_and_read_vector.h"
+#include "oneflow/core/common/steady_vector.h"
 
 namespace oneflow {
 
@@ -87,7 +87,7 @@ class VirtualMachine final {
   HashMap<std::pair<Symbol<Device>, StreamRole>, intrusive::shared_ptr<vm::MirroredObject>>
       device_stream_role2local_dep_object_;
   intrusive::shared_ptr<vm::MirroredObject> transport_local_dep_object_;
-  AddAndReadVector<vm::Stream*> unique_stream_id2vm_stream_;
+  SteadyVector<vm::Stream*> unique_stream_id2vm_stream_;
 
   std::thread schedule_thread_;
   Notifier pending_notifier_;

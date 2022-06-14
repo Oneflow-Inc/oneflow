@@ -14,25 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "gtest/gtest.h"
-#include "oneflow/core/common/add_and_read_vector.h"
+#include "oneflow/core/common/steady_vector.h"
 
 namespace oneflow {
 namespace test {
 
-TEST(AddAndReadVector, simple0) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple0) {
+  SteadyVector<int> vec;
   ASSERT_EQ(vec.size(), 0);
 }
 
-TEST(AddAndReadVector, simple1) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple1) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);
 }
 
-TEST(AddAndReadVector, simple2) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple2) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);
@@ -41,8 +41,8 @@ TEST(AddAndReadVector, simple2) {
   ASSERT_EQ(vec.size(), 2);
 }
 
-TEST(AddAndReadVector, simple3) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple3) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);
@@ -54,8 +54,8 @@ TEST(AddAndReadVector, simple3) {
   ASSERT_EQ(vec.size(), 3);
 }
 
-TEST(AddAndReadVector, simple4) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple4) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);
@@ -70,8 +70,8 @@ TEST(AddAndReadVector, simple4) {
   ASSERT_EQ(vec.size(), 4);
 }
 
-TEST(AddAndReadVector, simple5) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple5) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);
@@ -89,8 +89,8 @@ TEST(AddAndReadVector, simple5) {
   ASSERT_EQ(vec.size(), 5);
 }
 
-TEST(AddAndReadVector, simple6) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple6) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);
@@ -111,8 +111,8 @@ TEST(AddAndReadVector, simple6) {
   ASSERT_EQ(vec.size(), 6);
 }
 
-TEST(AddAndReadVector, simple7) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple7) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);
@@ -136,8 +136,8 @@ TEST(AddAndReadVector, simple7) {
   ASSERT_EQ(vec.size(), 7);
 }
 
-TEST(AddAndReadVector, simple8) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple8) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);
@@ -164,8 +164,8 @@ TEST(AddAndReadVector, simple8) {
   ASSERT_EQ(vec.size(), 8);
 }
 
-TEST(AddAndReadVector, simple9) {
-  AddAndReadVector<int> vec;
+TEST(SteadyVector, simple9) {
+  SteadyVector<int> vec;
   vec.push_back(0);
   ASSERT_EQ(vec.at(0), 0);
   ASSERT_EQ(vec.size(), 1);

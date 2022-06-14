@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_ADD_AND_READ_VECTOR_H_
-#define ONEFLOW_CORE_COMMON_ADD_AND_READ_VECTOR_H_
+#ifndef ONEFLOW_CORE_COMMON_STEADY_VECTOR_H_
+#define ONEFLOW_CORE_COMMON_STEADY_VECTOR_H_
 
 #include <vector>
 #include <array>
@@ -25,10 +25,10 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, int N = 20>
-class AddAndReadVector {
+class SteadyVector {
  public:
-  AddAndReadVector() : size_(0) {}
-  ~AddAndReadVector() = default;
+  SteadyVector() : size_(0) {}
+  ~SteadyVector() = default;
 
   using value_type = const T;
   using size_type = size_t;
@@ -74,4 +74,4 @@ class AddAndReadVector {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_ADD_AND_READ_VECTOR_H_
+#endif  // ONEFLOW_CORE_COMMON_STEADY_VECTOR_H_
