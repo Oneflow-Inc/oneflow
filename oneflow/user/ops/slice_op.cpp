@@ -35,6 +35,13 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim)
+      << "start_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim)
+      << "stop_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim)
+      << "step_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+
   FOR_RANGE(int64_t, axis, 0, ndim) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("ref", 0), axis)
@@ -115,8 +122,8 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     const int64_t stop = stop_vec.at(i);
     CHECK_GT_OR_RETURN(step, 0) << "Slice step must be greater than 0";
     CHECK_GE_OR_RETURN(start, 0) << "Slice start must be greater or equal to 0";
-    CHECK_GT_OR_RETURN(stop, 0) << "Slice stop must be greater than 0";
-    CHECK_LE_OR_RETURN(start, stop) << "Slice start must be less than stop";
+    CHECK_GE_OR_RETURN(stop, 0) << "Slice stop must be greater or equal to 0";
+    CHECK_LE_OR_RETURN(start, stop) << "Slice start must be less or equal to stop";
     const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
@@ -137,12 +144,15 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
-  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
-  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim)
+      << "start_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim)
+      << "stop_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim)
+      << "step_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
 
   FOR_RANGE(int, i, 0, ndim) {
-    if (IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), like_shape.At(i))) {
+    if (IsFullSlice(start_vec[i], stop_vec[i], step_vec[i], like_shape.At(i))) {
       ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
     }
   }
@@ -158,10 +168,12 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
 
   const int64_t ndim = dy_shape.NumAxes();
-  CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
-  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
-  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
-  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim)
+      << "start_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim)
+      << "stop_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim)
+      << "step_vec's dim not equal to ref shape's dim: " << start_vec.size() << " vs " << ndim;
   *ctx->OutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }
