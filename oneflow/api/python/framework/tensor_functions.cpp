@@ -847,8 +847,7 @@ static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject
   }
 
   // local to local
-  return PyTensor_New(
-      ASSERT_PTR(functional::To(tensor, target_tensor, false)));
+  return PyTensor_New(ASSERT_PTR(functional::To(tensor, target_tensor, false)));
   END_HANDLE_ERRORS
 }
 
