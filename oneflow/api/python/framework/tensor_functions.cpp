@@ -462,6 +462,10 @@ static PyObject* PyTensorObject_cuda(PyObject* self, PyObject* args, PyObject* k
                                    &device_obj)) {
     return NULL;
   }
+  CHECK_OR_THROW(functional::PyDeviceCheck(device_obj) || device_obj == Py_None
+                 || PyLong_Check(device_obj))
+      << Error::TypeError() << "cuda(): argument 'device' must be oneflow.device or int, not "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(device_obj)));
   auto tensor = PyTensor_Unpack(self);
   if (functional::PyDeviceCheck(device_obj)) {
     Optional<Symbol<Device>> device = functional::PyUnpackDevice(device_obj);
@@ -755,7 +759,8 @@ static PyObject* PyTensorObject_split(PyObject* self, PyObject* args, PyObject* 
   }
   CHECK_OR_THROW(PyLong_Check(split_size_or_sections)
                  || functional::PyLongSequenceCheck(split_size_or_sections))
-                 << Error::TypeError() << "split(): argument 'split_size_or_sections' must be int or list of int, not "
+      << Error::TypeError()
+      << "split(): argument 'split_size_or_sections' must be int or list of int, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(split_size_or_sections)));
   if (PyLong_Check(split_size_or_sections))
     return functional::CastToPyObject(
@@ -776,7 +781,8 @@ static PyObject* PyTensorObject_cumsum(PyObject* self, PyObject* args, PyObject*
                                    &dtype_obj)) {
     return NULL;
   }
-  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj)) << "cumsum(): argument 'dtype' must be data type, not "
+  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj))
+      << "cumsum(): argument 'dtype' must be data type, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype_obj)));
   if (dtype_obj == Py_None)
     return PyTensor_New(ASSERT_PTR(functional::Cumsum(PyTensor_Unpack(self), dim, NullOpt)));
@@ -790,11 +796,12 @@ static PyObject* PyTensorObject_cumprod(PyObject* self, PyObject* args, PyObject
   int64_t dim = 0;
   PyObject* dtype_obj = Py_None;
   static const char* keywords[3] = {"dim", "dtype", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O:cumprod", const_cast<char**>(keywords),
-                                   &dim, &dtype_obj)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "i|$O:cumprod", const_cast<char**>(keywords), &dim,
+                                   &dtype_obj)) {
     return NULL;
   }
-  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj)) << "cumprod(): argument 'dtype' must be data type, not "
+  CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj))
+      << "cumprod(): argument 'dtype' must be data type, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype_obj)));
   if (dtype_obj == Py_None)
     return PyTensor_New(ASSERT_PTR(functional::Cumprod(PyTensor_Unpack(self), dim, NullOpt)));
@@ -817,8 +824,31 @@ static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject
                                    PyTensorObject_Type, &target)) {
     return NULL;
   }
+  auto tensor = PyTensor_Unpack(self);
+  auto target_tensor = PyTensor_Unpack(target);
+  Optional<Symbol<DType>> dtype = target_tensor->dtype();
+
+  // local / global to global
+  if (target_tensor->is_consistent()) {
+    Symbol<ParallelDesc> placement = ASSERT(target_tensor->parallel_desc());
+    std::vector<Symbol<SbpParallel>> sbp(ASSERT(target_tensor->nd_sbp())->sbp_parallel_size());
+    for (int32_t i = 0; i < sbp.size(); i++)
+      sbp[i] = ASSERT(target_tensor->nd_sbp())->sbp_parallel(i);
+    std::vector<Symbol<SbpParallel>> grad_sbp;
+    std::shared_ptr<Tensor> global_tensor =
+        ASSERT_PTR(functional::ToConsistent(tensor, placement, sbp, grad_sbp, false));
+    return PyTensor_New(ASSERT_PTR(functional::To(global_tensor, dtype, false)));
+  }
+
+  // global to local
+  if (tensor->is_consistent()) {
+    std::shared_ptr<Tensor> local_tensor = ASSERT_PTR(functional::ConsistentToLocal(tensor));
+    return PyTensor_New(ASSERT_PTR(functional::To(local_tensor, dtype, false)));
+  }
+
+  // local to local
   return PyTensor_New(
-      ASSERT_PTR(functional::To(PyTensor_Unpack(self), PyTensor_Unpack(target), false)));
+      ASSERT_PTR(functional::To(tensor, target_tensor, false)));
   END_HANDLE_ERRORS
 }
 
