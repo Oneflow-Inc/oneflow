@@ -236,7 +236,7 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
               JUST(in_parallel_desc.ParallelId4MachineDeviceId(machine_id, device_index));
           ctx->task_graph()->ConnectWithLbi(sorted_in_tasks.at(in_id), node, lbi);
         } else {
-          //TODO: find nearest
+          // TODO: find nearest
           std::string regst_desc_name;
           first_in_node->BuildCtrlRegstDesc(node, &regst_desc_name);
           TaskEdge* edge = ctx->task_graph()->NewEdge();
