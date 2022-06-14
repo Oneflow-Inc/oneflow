@@ -54,7 +54,7 @@ def _test_graph_slice_update(test_case, placement, sbp):
     ref = random_tensor(2, 8, 16, requires_grad=True).oneflow
     value = random_tensor(2, 8, 8, requires_grad=True).oneflow
 
-    class LogicalSliceAssignWithGrad(flow.nn.Module):
+    class SliceUpdateWithGrad(flow.nn.Module):
         def __init__(self):
             super().__init__()
             self.ref_grad = flow.nn.Parameter(flow.zeros(8, 16))
@@ -68,18 +68,18 @@ def _test_graph_slice_update(test_case, placement, sbp):
             x[:, :8] = y
             return x
 
-    logical_slice_assign_with_grad = LogicalSliceAssignWithGrad().to_global(
+    slice_update_with_grad_m = SliceUpdateWithGrad().to_global(
         placement, [flow.sbp.broadcast,] * len(sbp)
     )
 
     of_sgd = flow.optim.SGD(
-        logical_slice_assign_with_grad.parameters(), lr=1.0, momentum=0.0
+        slice_update_with_grad_m.parameters(), lr=1.0, momentum=0.0
     )
 
-    class LogicalSliceAssignTrainGraph(flow.nn.Graph):
+    class SliceUpdateTrainGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            self.module = logical_slice_assign_with_grad
+            self.module = slice_update_with_grad_m
             self.add_optimizer(of_sgd)
 
         def build(self, x, y):
@@ -88,7 +88,7 @@ def _test_graph_slice_update(test_case, placement, sbp):
             z.backward()
             return out
 
-    graph = LogicalSliceAssignTrainGraph()
+    graph = SliceUpdateTrainGraph()
 
     x = ref.to_global(placement=placement, sbp=sbp)
     y = value.to_global(placement=placement, sbp=sbp)

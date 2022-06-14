@@ -29,7 +29,7 @@ def _test_global_stateful_kernel_with_inpersistent_state(test_case, placement, s
         .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
     )
     x = x.to_global(placement, sbp)
-    y = flow._C.logical_slice(x, [0, 0], [3, 1], [1, 1])
+    y = flow.slice(x, [0, 0], [3, 1], [1, 1])
     y_np = np.array([[0], [8], [16]])
     test_case.assertTrue(
         np.array_equal(
@@ -40,7 +40,7 @@ def _test_global_stateful_kernel_with_inpersistent_state(test_case, placement, s
         )
     )
     x = x.to_global(sbp=flow.sbp.split(1))
-    y = flow._C.logical_slice(x, [0, 0], [3, 1], [1, 1])
+    y = flow.slice(x, [0, 0], [3, 1], [1, 1])
     test_case.assertTrue(
         np.array_equal(
             y.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
@@ -55,9 +55,6 @@ class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
     @globaltest
     def test_global_stateful_kernel_with_inpersistent_state(test_case):
         for placement in all_placement():
-            # logical_slice only support 1d sbp
-            if len(placement.ranks.shape) != 1:
-                continue
             for sbp in all_sbp(placement, max_dim=2):
                 _test_global_stateful_kernel_with_inpersistent_state(
                     test_case, placement, sbp
