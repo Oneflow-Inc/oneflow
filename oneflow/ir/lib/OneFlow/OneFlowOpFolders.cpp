@@ -130,7 +130,7 @@ OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, functional::Sqrt);
 }
 
-OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult BroadcastMulOp::fold(ArrayRef<Attribute> operands) {
   return BinaryFold(getContext(), operands, functional::Mul);
 }
 
