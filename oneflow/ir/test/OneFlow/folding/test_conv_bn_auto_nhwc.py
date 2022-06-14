@@ -29,11 +29,14 @@ os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"] = "1"
 
 
-def _test_fuse_conv_bn(test_case):
-    data = flow.randn(1, 3, 224, 224).to("cuda")
+def _test_fuse_conv_bn(test_case, with_cuda):
+    data = flow.randn(1, 3, 224, 224)
+    if with_cuda:
+        data = data.to("cuda")
 
     model = resnet50(pretrained=True, progress=True)
-    model.to("cuda")
+    if with_cuda:
+        model.to("cuda")
     model.eval()
     eager_res = model(data)
 
@@ -56,7 +59,11 @@ def _test_fuse_conv_bn(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestFuseConvBn(oneflow.unittest.TestCase):
     def test_fuse_conv_bn(test_case):
-        _test_fuse_conv_bn(test_case)
+        _test_fuse_conv_bn(test_case, False)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_fuse_conv_bn_cuda(test_case):
+        _test_fuse_conv_bn(test_case, True)
 
 
 if __name__ == "__main__":
