@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_STEADY_VECTOR_H_
 #define ONEFLOW_CORE_COMMON_STEADY_VECTOR_H_
 
-#include <vector>
+#include <memory>
 #include <array>
 #include <mutex>
 #include <cmath>
@@ -40,16 +40,15 @@ class SteadyVector {
   const T& at(size_t index) const {
     CHECK_GE(index, 0);
     CHECK_LT(index, size_);
-    int gran = GetGranularity(index);
-    int start = (1 << gran) - 1;
-    return granularity2vector_[gran].data()[index - start];
+    return (*this)[index];
   }
 
   // thread safe.
   const T& operator[](size_t index) const {
-    int gran = GetGranularity(index);
-    int start = (1 << gran) - 1;
-    return granularity2vector_[gran].data()[index - start];
+    int gran = 0;
+    size_t start = 0;
+    GetGranularityAndStart(index, &gran, &start);
+    return granularity2data_[gran].get()[index - start];
   }
 
   void push_back(const T& elem) {
@@ -57,14 +56,25 @@ class SteadyVector {
     int granularity = GetGranularity(size_);
     if (size_ + 1 == (1 << granularity)) {
       CHECK_LT(granularity, N);
-      granularity2vector_[granularity].reserve(1 << granularity);
+      granularity2data_[granularity].reset(new T[1 << granularity]);
     }
-    auto* vec = &granularity2vector_[granularity];
-    vec->push_back(elem);
+    this->Mut(size_) = elem;
     ++size_;
   }
 
  private:
+  T& Mut(size_t index) {
+    int gran = 0;
+    size_t start = 0;
+    GetGranularityAndStart(index, &gran, &start);
+    return granularity2data_[gran].get()[index - start];
+  }
+
+  static void GetGranularityAndStart(size_t index, int* gran, size_t* start) {
+    *gran = GetGranularity(index);
+    *start = (1 << *gran) - 1;
+  }
+
 #ifdef __GNUC__
 #define LOG2(x) ((unsigned)(8 * sizeof(unsigned long long) - __builtin_clzll((x)) - 1))
 #else
@@ -77,7 +87,7 @@ class SteadyVector {
 
   std::atomic<size_t> size_;
   std::mutex mutex_;
-  std::array<std::vector<T>, N> granularity2vector_;
+  std::array<std::unique_ptr<T[]>, N> granularity2data_;
 };
 
 }  // namespace oneflow
