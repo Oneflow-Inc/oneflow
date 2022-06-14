@@ -53,12 +53,13 @@ class SteadyVector {
 
   void push_back(const T& elem) {
     std::unique_lock<std::mutex> lock(mutex_);
-    int granularity = GetGranularity(size_);
-    if (size_ + 1 == (1 << granularity)) {
+    size_t size = size_;
+    int granularity = GetGranularity(size);
+    if (size + 1 == (1 << granularity)) {
       CHECK_LT(granularity, N);
       granularity2data_[granularity].reset(new T[1 << granularity]);
     }
-    this->Mut(size_) = elem;
+    this->Mut(size) = elem;
     ++size_;
   }
 
