@@ -168,16 +168,51 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
   LogicalResult matchAndRewrite(VariableOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     const auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
-    // decide whether call by python or not
-    if (!mgr) op->emitError("oneflow variable op doesn't support pure mlir file conversion");
+    if (!mgr) op->emitError("global variable tensor manager miss");
 
     const auto tensor = mgr->Get(op.op_name().str());
+    if (!tensor) op->emitError("tensor is null");
     const auto value = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
     const auto output = op.output().getType();
 
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
     return success();
   }
+};
+
+struct VariableOpToConstLowering final : public OpConversionPattern<VariableOp> {
+ public:
+  VariableOpToConstLowering(TypeConverter& typeConverter, MLIRContext* context, int const_val)
+      : OpConversionPattern<VariableOp>(typeConverter, context), const_val_(const_val){};
+
+  using OpConversionPattern<VariableOp>::OpConversionPattern;
+  LogicalResult matchAndRewrite(VariableOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    const auto output = op.output().getType();
+    const auto type = output.cast<ShapedType>().getElementType();
+
+    // TODO: more control about this scope with flag
+    if (type.isa<FloatType>()) {
+      const auto float_attr = rewriter.getFloatAttr(type, const_val_);
+      auto value = DenseElementsAttr::get(output, float_attr);
+
+      rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
+    } else if (auto integerType = type.dyn_cast<IntegerType>()) {
+      const auto int_attr =
+          rewriter.getIntegerAttr(type, APInt(type.cast<IntegerType>().getWidth(), const_val_));
+      auto value = DenseElementsAttr::get(output, int_attr);
+
+      rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
+    } else {
+      op->emitError(
+          "OneFlow variable op lower to TOSA const op only support integer and float value now");
+    }
+
+    return success();
+  }
+
+ private:
+  int const_val_;
 };
 
 struct CastOpLowering final : public OpConversionPattern<CastOp> {
@@ -547,11 +582,20 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
   TypeConverter typeConverter;
   typeConverter.addConversion([](Type type) { return type; });
   RewritePatternSet patterns(context);
-  patterns.add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
-               AvgPool2DOpLowering, FlattenOpLowering, Add2OpLowering, MaxPool2DOpLowering,
-               MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering,
-               VariableOpLowering, InputOpLowering, OutputOpLowering, NormalizationOpLowering,
-               NormalizationInferenceOpLowering>(typeConverter, context);
+
+  const auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
+  // judge whether the pass is trigger by python through the existence of variable tensor manger
+  if (mgr) {
+    patterns.add<VariableOpLowering>(typeConverter, context);
+  } else {
+    patterns.add<VariableOpToConstLowering>(typeConverter, context, this->variableAsConstant);
+  }
+  patterns
+      .add<CastOpLowering, ScalarMulByTensorOpLowering, ReluOpLowering, Conv2DOpLowering,
+           AvgPool2DOpLowering, FlattenOpLowering, Add2OpLowering, MaxPool2DOpLowering,
+           MatmulOpLowering, BroadcastAddOpLowering, JobLowering, ReturnOpLowering, InputOpLowering,
+           OutputOpLowering, NormalizationOpLowering, NormalizationInferenceOpLowering>(
+          typeConverter, context);
   if (failed(applyPartialConversion(getOperation(), target, std::move(patterns)))) {
     getOperation()->dump();
     signalPassFailure();
