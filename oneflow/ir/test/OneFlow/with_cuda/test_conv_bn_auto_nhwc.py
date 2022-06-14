@@ -58,10 +58,7 @@ def _test_fuse_conv_bn(test_case, with_cuda):
 
 @flow.unittest.skip_unless_1n1d()
 class TestFuseConvBn(oneflow.unittest.TestCase):
-    def test_fuse_conv_bn(test_case):
-        _test_fuse_conv_bn(test_case, False)
-
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_fuse_conv_bn_cuda(test_case):
         _test_fuse_conv_bn(test_case, True)
 
