@@ -23,8 +23,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-namespace {}  // namespace
-
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *param_blob_objects_) {
