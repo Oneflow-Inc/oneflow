@@ -36,15 +36,16 @@ def split_sbp(dim=None, **kwargs) -> oneflow._oneflow_internal.sbp.sbp:
 
     """
     if len(kwargs) != 0 and dim is None:
-        if "dim" in kwargs:
-            dim = kwargs["dim"]
-        elif "axis" in kwargs:
+        if "axis" in kwargs:
             dim = kwargs["axis"]
             warnings.warn(
                 "This 'axis' parameter of oneflow.sbp.split() has been updated to 'dim' since OneFlow version 0.8."
             )
         else:
-            raise ValueError("Invalid keyword arguments, expected to be 'dim'.")
+            raise TypeError(
+                "split_sbp() got an unexpected keyword argument '%s'."
+                % kwargs.keys()[0]
+            )
 
     else:
         assert len(kwargs) == 0
