@@ -158,7 +158,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
         input = flow.tensor(x)
         update = flow.tensor(np.array([2, 3, 4]).astype(np.float32))
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-        flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]], inplace=True)
+        flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(input.numpy(), output))
 
     def test_slice_update_negative_index(test_case):
@@ -216,8 +216,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
             def forward(self, ref, value):
                 x = ref + self.ref_grad
                 y = value + self.value_grad
-                flow._C.slice_update(x, y, [1,], [4,], [1,], inplace=True)
-                return x
+                return flow._C.slice_update(x, y, [1,], [4,], [1,])
 
         test_m = TestModule()
         of_sgd = flow.optim.SGD(test_m.parameters(), lr=1.0, momentum=0.0)

@@ -152,26 +152,15 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   }
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
-  Symbol<NdSbp> in_nd_sbp;
-  if (input->is_consistent()) { in_nd_sbp = JUST(input->nd_sbp()); }
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    const Shape in_shape = *input->shape();
     auto backward_fn = std::make_shared<BackwardFunction>();
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                             bool create_graph) -> Maybe<void> {
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
-      std::shared_ptr<Tensor> zeros;
-      if (out_grads[0]->is_local()) {
-        zeros = JUST(
-            functional::Constant(*shape, 0, out_grads[0]->dtype(), JUST(out_grads[0]->device())));
-      } else {
-        const auto& parallel_desc = JUST(out_grads[0]->parallel_desc());
-        zeros = JUST(functional::ConsistentConstant(*shape, 0, out_grads[0]->dtype(), parallel_desc,
-                                                    *JUST(GetSbpList(in_nd_sbp))));
-      }
-      (*in_grads)[0] = JUST(
-          functional::SliceUpdate(zeros, out_grads[0], starts, ends, steps, /*inplace=*/false));
+      (*in_grads)[0] = JUST(functional::SliceGrad(out_grads[0], in_shape, starts, ends, steps));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };

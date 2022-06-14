@@ -421,4 +421,45 @@ REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(bool)
 REGISTER_SLICE_UPDATE_AND_SLICE_KERNELS(float16)
 #endif
 
+template<DeviceType device_type, typename T>
+class SliceGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  SliceGradKernel() = default;
+  ~SliceGradKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    size_t dx_byte_size = dx_tensor->shape().elem_cnt() * sizeof(T);
+    Memset<device_type>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0, dx_byte_size);
+    if (dy_tensor->shape().elem_cnt() == 0) { return; }
+    SliceParams params = ConstructSliceParams(ctx, dx_tensor, dy_tensor);
+    SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, dy_tensor->dptr<T>(),
+                                              dx_tensor->mut_dptr<T>());
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_SLICE_GRAD_KERNEL(device, dtype)           \
+  REGISTER_USER_KERNEL("slice_grad")                        \
+      .SetCreateFn<SliceGradKernel<device, dtype>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(device) \
+  REGISTER_SLICE_GRAD_KERNEL(device, bool)             \
+  REGISTER_SLICE_GRAD_KERNEL(device, float)            \
+  REGISTER_SLICE_GRAD_KERNEL(device, double)           \
+  REGISTER_SLICE_GRAD_KERNEL(device, int32_t)          \
+  REGISTER_SLICE_GRAD_KERNEL(device, int64_t)          \
+  REGISTER_SLICE_GRAD_KERNEL(device, int8_t)           \
+  REGISTER_SLICE_GRAD_KERNEL(device, uint8_t)
+
+REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+#ifdef WITH_CUDA
+REGISTER_SLICE_GRAD_KERNEL_WITH_DEVICE(DeviceType::kCUDA)
+REGISTER_SLICE_GRAD_KERNEL(DeviceType::kCUDA, float16)
+#endif
+
 }  // namespace oneflow

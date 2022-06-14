@@ -27,7 +27,6 @@ struct SliceCaptureState : public AutoGradCaptureState {
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
   std::vector<int64_t> step;
-  Symbol<NdSbp> in_sbp;
 };
 
 class Slice : public OpExprGradFunction<SliceCaptureState> {
@@ -49,24 +48,14 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
     ctx->like_shape = *(inputs[0]->shape());
-    if (inputs[0]->is_consistent()) { ctx->in_sbp = JUST(inputs[0]->nd_sbp()); }
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const SliceCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    std::shared_ptr<Tensor> zeros;
-    if (out_grads[0]->is_local()) {
-      zeros = JUST(functional::Constant(ctx->like_shape, 0, out_grads[0]->dtype(),
-                                        JUST(out_grads[0]->device())));
-    } else {
-      const auto& parallel_desc = JUST(out_grads[0]->parallel_desc());
-      zeros = JUST(functional::ConsistentConstant(ctx->like_shape, 0, out_grads[0]->dtype(),
-                                                  parallel_desc, *JUST(GetSbpList(ctx->in_sbp))));
-    }
-    (*in_grads)[0] = JUST(functional::SliceUpdate(zeros, out_grads[0], ctx->start, ctx->stop,
-                                                  ctx->step, /*inplace=*/false));
+    (*in_grads)[0] = JUST(
+        functional::SliceGrad(out_grads[0], ctx->like_shape, ctx->start, ctx->stop, ctx->step));
     return Maybe<void>::Ok();
   }
 
@@ -129,9 +118,8 @@ class SliceUpdate : public OpExprGradFunction<SliceUpdateCaptureState> {
             JUST(functional::ConsistentConstant(ctx->value_shape, 0, out_grads[0]->dtype(),
                                                 parallel_desc, *JUST(GetSbpList(ctx->value_sbp))));
       }
-      (*in_grads)[0] =
-          JUST(functional::SliceUpdate(JUST(functional::Identity(out_grads[0])), zeros, ctx->start,
-                                       ctx->stop, ctx->step, /*inplace=*/false));
+      (*in_grads)[0] = JUST(functional::SliceUpdate(out_grads[0], zeros, ctx->start, ctx->stop,
+                                                    ctx->step, /*inplace=*/false));
     }
     if (ctx->requires_grad_value) {
       (*in_grads)[1] = JUST(functional::Slice(out_grads[0], ctx->start, ctx->stop, ctx->step,

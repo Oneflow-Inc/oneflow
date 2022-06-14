@@ -131,9 +131,71 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> SliceGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const Shape& like_shape = ctx->Attr<Shape>("like_shape");
+  const int64_t ndim = like_shape.NumAxes();
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+
+  FOR_RANGE(int, i, 0, ndim) {
+    if (IsFullSlice(start_vec.at(i), stop_vec.at(i), step_vec.at(i), like_shape.At(i))) {
+      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+    }
+  }
+  ctx->NewBuilder().PartialSum(user_op::OpArg("dy", 0)).PartialSum(user_op::OpArg("dx", 0)).Build();
+  ctx->NewBuilder().Broadcast(user_op::OpArg("dy", 0)).Broadcast(user_op::OpArg("dx", 0)).Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SliceGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& like_shape = ctx->Attr<Shape>("like_shape");
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
+  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
+  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
+
+  const int64_t ndim = dy_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
+  CHECK_EQ_OR_RETURN(start_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
+  CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
+  *ctx->OutputShape("dx", 0) = like_shape;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SliceGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  Shape logical_shape = ctx->Attr<Shape>("like_shape");
+  const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
+  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  *dx_desc->mut_is_dynamic() = dy_desc.is_dynamic();
+
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dx", 0);
+  *(dx_desc->mut_shape()) =
+      *JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+  int dx_ndim = dx_desc->shape().NumAxes();
+  int dy_ndim = dy_desc.shape().NumAxes();
+  CHECK_EQ_OR_RETURN(dx_ndim, dy_ndim)
+      << "Output dimension (" << dx_ndim << ") should equal to the input dimension (" << dy_ndim
+      << ") for slice backward.";
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SliceGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SliceGradOp::ModifyInputArg(const GetInputArgModifier& GetInputArgModifierFn,
+                                                   const user_op::UserOpConfWrapper&) {
+  user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
+  dy_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
 namespace {
 
 Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
+  // value grad
   const std::string update_grad_op_name = ctx->FwOp().op_name() + "_value_grad";
   ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("slice")
@@ -148,6 +210,7 @@ Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
     return ctx->GetOp(update_grad_op_name).output("y", 0);
   });
 
+  // ref grad
   const std::string zero_grad_op_name = ctx->FwOp().op_name() + "_zero_grad";
   ctx->DefineOp(zero_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("zero_like")
@@ -173,28 +236,20 @@ Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
 }
 
 Maybe<void> GenSliceGradOp(user_op::BackwardOpConfContext* ctx) {
-  const std::string zero_grad_op_name = ctx->FwOp().op_name() + "_zero_grad";
-  ctx->DefineOp(zero_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("zero_like")
-        .InputBind("like", ctx->FwOp().input("x", 0))
-        .Output("out")
-        .Build();
-  });
-  const std::string x_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
-  ctx->DefineOp(x_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("slice_update")
-        .InputBind("ref", ctx->GetOp(zero_grad_op_name).output("out", 0))
-        .InputBind("value", ctx->FwOp().output_grad("y", 0))
+  const std::string ref_grad_op_name = ctx->FwOp().op_name() + "_x_grad";
+  ctx->DefineOp(ref_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("slice_grad")
+        .InputBind("dy", ctx->FwOp().output_grad("y", 0))
+        .Attr("like_shape", ctx->FwOp().arg_tensor_desc("x", 0).shape())
         .Attr("start", ctx->FwOp().attr<std::vector<int64_t>>("start"))
         .Attr("stop", ctx->FwOp().attr<std::vector<int64_t>>("stop"))
         .Attr("step", ctx->FwOp().attr<std::vector<int64_t>>("step"))
-        .Output("y")
+        .Output("dx")
         .Build();
   });
   ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
-    return ctx->GetOp(x_grad_op_name).output("y", 0);
+    return ctx->GetOp(ref_grad_op_name).output("dx", 0);
   });
-
   return Maybe<void>::Ok();
 }
 
