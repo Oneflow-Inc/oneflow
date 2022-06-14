@@ -20,11 +20,11 @@ from contextlib import contextmanager
 import oneflow._oneflow_internal
 
 
-def split_sbp(*dim, **kwarg) -> oneflow._oneflow_internal.sbp.sbp:
-    """Generate a split scheme in which op will be splitted at `dim`.
+def split_sbp(dim=None, **kwargs) -> oneflow._oneflow_internal.sbp.sbp:
+    """Generate a split signature which indicates the tensor will be split along `dim`.
 
     Args:
-        dim (int): At `dim` the op will be splitted.
+        dim (int): The dimension in which the tensor is split. 
 
     Returns:
         SbpParallel: Split scheme object, often required by `to_global` method of `Tensor`
@@ -35,11 +35,11 @@ def split_sbp(*dim, **kwarg) -> oneflow._oneflow_internal.sbp.sbp:
         ct2 = t1.to_global(sbp=flow.sbp.split(0), placement=("cuda", ranks=[0, 1, 2, 3]))
 
     """
-    if len(kwarg) != 0:
-        if "dim" in kwarg:
-            dim = kwarg["dim"]
-        elif "axis" in kwarg:
-            dim = kwarg["axis"]
+    if len(kwargs) != 0 and dim is None:
+        if "dim" in kwargs:
+            dim = kwargs["dim"]
+        elif "axis" in kwargs:
+            dim = kwargs["axis"]
             warnings.warn(
                 "This 'axis' parameter of oneflow.sbp.split() has been updated to 'dim' since OneFlow version 0.8."
             )
@@ -47,8 +47,7 @@ def split_sbp(*dim, **kwarg) -> oneflow._oneflow_internal.sbp.sbp:
             raise ValueError("Invalid keyword arguments, expected to be 'dim'.")
 
     else:
-        assert len(dim) == 1
-        dim = dim[0]
+        assert len(kwargs) == 0
 
     assert type(dim) is int
     return oneflow._oneflow_internal.sbp.split(dim)
