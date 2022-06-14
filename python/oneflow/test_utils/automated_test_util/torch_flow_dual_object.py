@@ -599,12 +599,18 @@ def get_pytorch_oneflow_res(
                     for y in x:
                         if torch_original.is_tensor(y):
                             source_flag = False
-                            if id(pytorch_res) == id(y) and pytorch_res.device.type == y.device.type:
+                            if (
+                                id(pytorch_res) == id(y)
+                                and pytorch_res.device.type == y.device.type
+                            ):
                                 call_flag = False
                                 break
                 elif torch_original.is_tensor(x):
                     source_flag = False
-                    if id(pytorch_res) == id(x) and pytorch_res.device.type == x.device.type:
+                    if (
+                        id(pytorch_res) == id(x)
+                        and pytorch_res.device.type == x.device.type
+                    ):
                         call_flag = False
                         break
             for x in pytorch_kwargs.values():
@@ -612,12 +618,18 @@ def get_pytorch_oneflow_res(
                     for y in x:
                         if torch_original.is_tensor(y):
                             source_flag = False
-                            if id(pytorch_res) == id(y) and pytorch_res.device.type == y.device.type:
+                            if (
+                                id(pytorch_res) == id(y)
+                                and pytorch_res.device.type == y.device.type
+                            ):
                                 call_flag = False
                                 break
                 elif torch_original.is_tensor(x):
                     source_flag = False
-                    if id(pytorch_res) == id(x) and pytorch_res.device.type == x.device.type:
+                    if (
+                        id(pytorch_res) == id(x)
+                        and pytorch_res.device.type == x.device.type
+                    ):
                         call_flag = False
                         break
             if source_flag and pytorch.__name__ != "to":
@@ -667,7 +679,10 @@ def get_pytorch_oneflow_tensor_res(
     try:
         pytorch_res = pytorch_method(*pytorch_args, **pytorch_kwargs)
         if isinstance(pytorch_res, torch_original.Tensor):
-            if id(pytorch_res) != id(pytorch_method.__self__) or pytorch_res.device.type == pytorch_method.__self__.device.type:
+            if (
+                id(pytorch_res) != id(pytorch_method.__self__)
+                or pytorch_res.device.type == pytorch_method.__self__.device.type
+            ):
                 call_tensor_id.append(id(pytorch_res))
     except Exception as e:
         if align_exception:
@@ -833,7 +848,9 @@ def print_note_fake_program(detail=False):
                 )
         print(f"\033[32m)\033[0m")
     if detail:
-        print(f"\033[32m-----------------------------------------------------------\033[0m")
+        print(
+            f"\033[32m-----------------------------------------------------------\033[0m"
+        )
         unique_vis_tensor = []
         flag_vis_input_tensor = [False for _ in range(len(vis_tensor))]
         for i in range(len(vis_tensor)):
@@ -842,7 +859,10 @@ def print_note_fake_program(detail=False):
             unique_vis_tensor.append(vis_tensor[i])
             flag_vis_input_tensor[i] = True
             for j in range(i + 1, len(vis_tensor)):
-                if id(vis_tensor[i]) == id(vis_tensor[j]) and flag_vis_input_tensor[j] == False:
+                if (
+                    id(vis_tensor[i]) == id(vis_tensor[j])
+                    and flag_vis_input_tensor[j] == False
+                ):
                     flag_vis_input_tensor[j] = True
         unique_extra_tensor = []
         flag_vis_extra_tensor = [False for _ in range(len(extra_input_tensor))]
@@ -852,7 +872,10 @@ def print_note_fake_program(detail=False):
             unique_extra_tensor.append(extra_input_tensor[i])
             flag_vis_extra_tensor[i] = True
             for j in range(i + 1, len(extra_input_tensor)):
-                if id(extra_input_tensor[i]) == id(extra_input_tensor[j]) and flag_vis_extra_tensor[j] == False:
+                if (
+                    id(extra_input_tensor[i]) == id(extra_input_tensor[j])
+                    and flag_vis_extra_tensor[j] == False
+                ):
                     flag_vis_extra_tensor[j] = True
 
         print(
