@@ -178,7 +178,6 @@ template<typename T, template<typename> class BinaryFunctor>
 void ScanInnerMostDim(const T* in_ptr, T* out_ptr, const int64_t num_rows, const int64_t row_size,
                       const ep::CudaStream* cuda_stream) {
   dim3 block(16, 32);
-  // const int64_t max_grid_dim = GetDevicePropeties()->maxGridSize[0];
   const int64_t max_grid_dim = cuda_stream->device()->properties().maxGridSize[0];
   dim3 grid(std::min(max_grid_dim, CeilDiv(num_rows, (int64_t)block.y)));
   ScanInnerMostDimKernel<T, 16, 32, BinaryFunctor>
