@@ -1063,7 +1063,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
     JUST(DoPass("FuseUpdateCastOpsPass"));
-    JUST(DoPass("MultiTensorUpdatePass")); 
+    JUST(DoPass("MultiTensorUpdatePass"));
     JUST(DoPass("FixPipelineStageIdPass"));
     JUST(DoPass("PipelineBufferPass"));
     JUST(DoPass("DumpVariableInfoPass"));

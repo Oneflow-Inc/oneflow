@@ -75,13 +75,14 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
         }
 
         const user_op::UserOpConfWrapper model_update_user_conf(
-              find_model_update_update_node->op().op_conf());
+            find_model_update_update_node->op().op_conf());
         // Currently only support for cuda, maybe remove this limit.
         if (find_model_update_update_node->parallel_desc().device_type() != DeviceType::kCUDA) {
           continue;
         }
 
-        // Here we find cast and model_update node, Replace cast as optim_fuse_cast, and add model_half to model_update node. 
+        // Here we find cast and model_update node, Replace cast as optim_fuse_cast, and add
+        // model_half to model_update node.
         user_op::UserOpConfWrapperBuilder fused_cast_op_builder(cast_user_conf.op_name());
         fused_cast_op_builder.OpTypeName("optim_fuse_cast")
             .Input("in", cast_user_conf.input("in", 0))
@@ -97,7 +98,7 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
         const user_op::UserOpConfWrapper new_cast_user_conf(new_cast_op_conf);
         model_half_lbi = GenLogicalBlobId(new_cast_user_conf.output("out", 0));
-        
+
         user_op::UserOpConfWrapperBuilder fused_model_update_op_builder(
             model_update_user_conf.op_name());
         if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
@@ -147,7 +148,7 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
         break;
       }
       break;
-    } 
+    }
   });
   return Maybe<void>::Ok();
 }
