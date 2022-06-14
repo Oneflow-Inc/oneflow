@@ -15,7 +15,6 @@ set(BUILD_SHARED_LIBS ON)
 set(CMAKE_POLICY_DEFAULT_CMP0079 NEW)
 
 FetchContent_MakeAvailable(tbb)
-set_property(GLOBAL PROPERTY TBB_INCLUDE_DIRS "${tbb_SOURCE_DIR}/include")
 
 install(TARGETS tbb tbbmalloc tbbmalloc_proxy COMPONENT OneFlowTBB)
 install(DIRECTORY ${tbb_SOURCE_DIR}/include DESTINATION ${ONETBB_INSTALL_DIR} COMPONENT OneFlowTBB)
