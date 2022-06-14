@@ -228,11 +228,11 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> N
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::TopoForEachNodeFast(
     std::function<void(NodeType*)> NodeHandler) const {
-  TopoForEachNodeFastMaybe(source_nodes(), &NodeType::ForEachNodeOnInEdge,
-                           &NodeType::ForEachNodeOnOutEdge, [&](NodeType* node) {
-                             NodeHandler(node);
-                             return Maybe<void>::Ok();
-                           });
+  CHECK_JUST(TopoForEachNodeFastMaybe(source_nodes(), &NodeType::ForEachNodeOnInEdge,
+                                      &NodeType::ForEachNodeOnOutEdge, [&](NodeType* node) {
+                                        NodeHandler(node);
+                                        return Maybe<void>::Ok();
+                                      }));
 }
 
 template<typename NodeType, typename EdgeType>
