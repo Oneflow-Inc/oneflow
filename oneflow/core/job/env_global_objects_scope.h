@@ -47,7 +47,7 @@ class EnvGlobalObjectsScope final {
 
 Maybe<void> InitRdma();
 
-Maybe<bool> RdmaInited();
+Maybe<bool> RDMAIsInitialized();
 
 }  // namespace oneflow
 

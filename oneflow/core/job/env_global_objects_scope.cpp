@@ -285,6 +285,9 @@ Maybe<void> InitRdma() {
   return Maybe<void>::Ok();
 }
 
-Maybe<bool> RdmaInited() { return Global<IBVerbsCommNet>::Get() != nullptr; }
+Maybe<bool> RDMAIsInitialized() {
+  return Global<IBVerbsCommNet>::Get() != nullptr;
+  ;  // NOLINT(use of undeclared identifier)
+}
 
 }  // namespace oneflow
