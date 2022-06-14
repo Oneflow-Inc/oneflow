@@ -93,7 +93,7 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2
 void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Skip it if this node is already judged.
   if (IfMainstem) { return; }
-  CHECK(MinLayer >= 0) << "TopoStruct not initialized!";
+  CHECK_GE(MinLayer, 0) << "TopoStruct not initialized!";
   IfMainstem = true;
   // If I am in the mainstem, then all the children with (MinLayer >= my layer id - 1) would be
   // considered as in the mainstem
