@@ -1122,17 +1122,17 @@ class NLLLossFunctor {
 
     const auto& input_shape = input->shape();
     const int64_t K = input_shape->NumAxes();
-    CHECK_GE_OR_RETURN(K, 2) << "Expected 2 or more dimensions";
+    CHECK_GE_OR_RETURN(K, 2) << Error::RuntimeError() << "Expected 2 or more dimensions";
     const int64_t N = input_shape->At(0);
     const int64_t C = input_shape->At(1);
 
     const auto& target_shape = target->shape();
     CHECK_EQ_OR_RETURN(target_shape->NumAxes(), K - 1)
-        << "Expected target dimensions (" << K - 1 << ") to match input dimensions (" << K
-        << "), got " << target_shape->NumAxes();
+        << Error::RuntimeError() << "Expected target dimensions (" << K - 1
+        << ") to match input dimensions (" << K << "), got " << target_shape->NumAxes();
     CHECK_EQ_OR_RETURN(target_shape->At(0), N)
-        << "Expected input batch_size (" << N << ") to match target batch_size ("
-        << target_shape->At(0) << ")";
+        << Error::RuntimeError() << "Expected input batch_size (" << N
+        << ") to match target batch_size (" << target_shape->At(0) << ")";
 
     std::shared_ptr<one::Tensor> input_;
     std::shared_ptr<one::Tensor> target_;
@@ -1142,8 +1142,8 @@ class NLLLossFunctor {
       for (int64_t i = 2; i < K; ++i) { idea_target_dim_vec.push_back(input_shape->At(i)); }
       Shape idea_target_shape(idea_target_dim_vec);
       CHECK_EQ_OR_RETURN(*target_shape, idea_target_shape)
-          << "Expected target shape " << idea_target_shape.ToString() << ", got "
-          << target_shape->ToString();
+          << Error::RuntimeError() << "Expected target shape " << idea_target_shape.ToString()
+          << ", got " << target_shape->ToString();
 
       std::vector<int> perm(input_shape->dim_vec().size(), 0);
       perm[perm.size() - 1] = 1;
@@ -1157,14 +1157,6 @@ class NLLLossFunctor {
       input_ = input;
       target_ = target;
     }
-
-    ////
-    CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5)
-        << Error::RuntimeError() << "The number of input's axis should be less equal to 5. ";
-    CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes())
-        << Error::RuntimeError()
-        << "The number of input's axis should be equal to the number of target's axis - 1. ";
-    ////
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
