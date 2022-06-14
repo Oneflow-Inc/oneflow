@@ -292,10 +292,7 @@ list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
 
 include(op_schema)
 
-get_property(EXTERNAL_INCLUDE_DIRS GLOBAL PROPERTY EXTERNAL_INCLUDE_DIRS)
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
-
-target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
 
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_op_schema)
