@@ -174,6 +174,18 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
         continue;
       }
 
+      // Multi Tensor update only support Data Parallel. 
+      bool if_data_parallel = true; 
+      for(const auto& pair : find_model_update_update_node->sbp_signature().bn_in_op2sbp_parallel()){
+        if(!pair.second.has_broadcast_parallel()){
+          if_data_parallel = false; 
+          break; 
+        }
+      }
+      if(!if_data_parallel){
+        continue; 
+      }
+
       delete_ops.emplace_back(find_model_update_update_node->op().op_conf());
       parallel_conf = find_model_update_update_node->parallel_desc().parallel_conf();
 
@@ -210,7 +222,9 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
           user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder("multi_tensor_update"
                                                                                + NewUniqueId());
           std::string op_type_name = "multi_tensor_sgd_update";
-          if (has_model_half) { op_type_name = "multi_tensor_sgd_update_with_cast"; }
+          if (has_model_half) { 
+            printf("Enter here is multi tensor sgd update cast. \n"); 
+            op_type_name = "multi_tensor_sgd_update_with_cast"; }
           multi_tensor_update_sgd_op_builder.OpTypeName(op_type_name)
               .Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
