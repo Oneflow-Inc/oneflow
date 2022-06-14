@@ -121,11 +121,15 @@ namespace oneflow {
   const int64_t num_ids = inverse_unique_partition_indices_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
   if (embedding::UseDynamicMemoryAllocation()) {
-    CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.elem_cnt(), 1);
+    CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.elem_cnt(), 1)
+        << "if use dynamic memory allocation, cur_rank_embeddings elem_cnt should be 1.";
   } else {
-    CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.At(0), parallel_num * num_ids);
-    CHECK_EQ_OR_RETURN(embedding_size, cur_rank_embeddings_shape.At(1));
+    CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.NumAxes(), 2)
+        << "cur_rank_embeddings num_axes should be 2.";
+    CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.At(0), parallel_num * num_ids)
+        << " got " << cur_rank_embeddings_shape.At(0) << " and " << parallel_num * num_ids;
+    CHECK_EQ_OR_RETURN(embedding_size, cur_rank_embeddings_shape.At(1))
+        << " got " << embedding_size << " and " << cur_rank_embeddings_shape.At(1);
   }
   CHECK_EQ_OR_RETURN(num_unique_matrix_shape.elem_cnt(), parallel_num * parallel_num);
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);

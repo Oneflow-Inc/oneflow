@@ -244,10 +244,13 @@ Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
   if (embedding::UseDynamicMemoryAllocation()) {
-    CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1);
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1)
+        << "if use dynamic memory allocation, unique_embeddings elem_cnt should be 1.";
   } else {
-    CHECK_EQ_OR_RETURN(unique_embeddings_shape.NumAxes(), 2);
-    CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(0), embedding_grad_shape.At(0));
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.NumAxes(), 2)
+        << "unique_embeddings num_axes should be 2.";
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(0), embedding_grad_shape.At(0))
+        << "got " << unique_embeddings_shape.At(0) << " and " << embedding_grad_shape.At(0);
   }
   return Maybe<void>::Ok();
 }

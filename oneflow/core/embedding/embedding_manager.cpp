@@ -75,15 +75,20 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   store->ReserveQueryLength(kDefaultMaxQueryLength);
   CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
+  if (UseDynamicMemoryAllocation()) {
+#if CUDA_VERSION >= 11020
+    CHECK(values_ptrs_map_.emplace(map_key, std::make_unique<ValuesPtr>()).second)
+        << "Can't create an embedding values with same name of an existing embedding, the name: "
+        << name;
 
-  CHECK(values_ptrs_map_.emplace(map_key, std::make_unique<ValuesPtr>()).second)
-      << "Can't create an embedding values with same name of an existing embedding, the name: "
-      << name;
-
-  cudaMemPool_t mempool;
-  cudaDeviceGetDefaultMemPool(&mempool, local_rank_id);
-  uint64_t threshold = UINT64_MAX;
-  cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
+    cudaMemPool_t mempool = nullptr;
+    cudaDeviceGetDefaultMemPool(&mempool, local_rank_id);
+    uint64_t threshold = UINT64_MAX;
+    cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
+#else
+    UNIMPLEMENTED();
+#endif
+  }
 }
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,

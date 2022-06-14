@@ -402,7 +402,11 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
     CHECK(values_ptr == nullptr);
     if (is_prefetch) {
       CHECK(ptrs == nullptr);
+#if CUDA_VERSION >= 11020
       OF_CUDA_CHECK(cudaMallocAsync(&store_values, values_size, cuda_stream));
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
       CHECK(ptrs != nullptr);
       void* lookup_values_ptr = ptrs->MallocLookupValuesPtr(current_iter, values_size, cuda_stream);
@@ -432,7 +436,11 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
   }
   if (is_prefetch) { store->Put(stream, num_unique, unique_ids, store_values); }
   if (is_prefetch && use_dynamic_memory_allocation) {
+#if CUDA_VERSION >= 11020
     OF_CUDA_CHECK(cudaFreeAsync(store_values, cuda_stream));
+#else
+    UNIMPLEMENTED();
+#endif
   }
   *return_num_unique = num_unique;
 }
