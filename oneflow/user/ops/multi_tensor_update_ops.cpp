@@ -228,15 +228,21 @@ Maybe<void> AdamWithCastInputArgModifyFn(const user_op::GetInputArgModifier& Get
 }
 
 /* static */ Maybe<void> MultiTensorSgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
-  FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-    auto builder = ctx->NewBuilder().Broadcast(ctx->inputs());
-    for (int i = 0; i < ctx->user_op_conf().input_size("model"); ++i) {
-      builder.Split(user_op::OpArg("model", i), axis);
-      builder.Split(user_op::OpArg("model_diff", i), axis);
-    }
-    builder.Build();
+  // const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
+  // FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
+  //   auto builder = ctx->NewBuilder().Broadcast(ctx->inputs());
+  //   for (int i = 0; i < ctx->user_op_conf().input_size("model"); ++i) {
+  //     builder.Split(user_op::OpArg("model", i), axis);
+  //     builder.Split(user_op::OpArg("model_diff", i), axis);
+  //   }
+  //   builder.Build();
+  // }
+  auto builder = ctx->NewBuilder().Broadcast(ctx->inputs());
+  for (int i = 0; i < ctx->user_op_conf().input_size("model"); ++i) {
+    builder.Split(user_op::OpArg("model", i), 0);
+    builder.Split(user_op::OpArg("model_diff", i), 0);
   }
+  builder.Build();
   return Maybe<void>::Ok();
 }
 
