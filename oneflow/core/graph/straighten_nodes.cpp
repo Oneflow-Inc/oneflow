@@ -30,14 +30,14 @@ bool IsTransferNode(int32_t task_type) {
 
 // The same order in the set
 // It is only run in the following situation because there are too many implicit conditions.
-bool should_run_simultaneously(TopoStruct* a, TopoStruct* b) {
-  // Normal node would have the same name
-  if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
-  // Otherwise they must have the same parameters with different machine ids and the closest node
-  // id. We only use Min Layer here, since Tributary Layer might be different due to asymmetry of
-  // graph.
-  return true;
-};
+// bool ShouldRunSimultaneously(TopoStruct* a, TopoStruct* b) {
+//   // Normal node would have the same name
+//   if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
+//   // Otherwise they must have the same parameters with different machine ids and the closest node
+//   // id. We only use Min Layer here, since Tributary Layer might be different due to asymmetry of
+//   // graph.
+//   return true;
+// };
 
 // move the head from source to target
 void move_front_between_maps(std::map<int32_t, TopoStruct*>& source,
@@ -200,17 +200,19 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
             move_front_between_maps(machine_id7node_id2topo_structs.second,
                                     min_node_id2topo_struct);
           }
-          //
+
           while (!min_node_id2topo_struct.empty()) {
             auto* topo_struct_min_node_id = min_node_id2topo_struct.begin()->second;
-            // Store the same nodes in different machine
+            // Store the same nodes in different machines
             std::vector<TopoStruct*> same_nodes;
             for (auto& min_node_id7topo_struct : min_node_id2topo_struct) {
               auto* curr_topo_struct = min_node_id7topo_struct.second;
               // Find out all the same nodes
-              if (should_run_simultaneously(topo_struct_min_node_id, curr_topo_struct)) {
-                same_nodes.push_back(curr_topo_struct);
-              }
+              // Stop using Visual string before we find a better key
+              // Currently we can use the topological structure and node id to decide the same nodes
+              // if (ShouldRunSimultaneously(topo_struct_min_node_id, curr_topo_struct)) {
+              same_nodes.push_back(curr_topo_struct);
+              // }
             }
             // Cyclize them
             for (int32_t i = 1; i < same_nodes.size(); i++) {
