@@ -72,9 +72,7 @@ def _test_graph_slice_update(test_case, placement, sbp):
         placement, [flow.sbp.broadcast,] * len(sbp)
     )
 
-    of_sgd = flow.optim.SGD(
-        slice_update_with_grad_m.parameters(), lr=1.0, momentum=0.0
-    )
+    of_sgd = flow.optim.SGD(slice_update_with_grad_m.parameters(), lr=1.0, momentum=0.0)
 
     class SliceUpdateTrainGraph(flow.nn.Graph):
         def __init__(self):
