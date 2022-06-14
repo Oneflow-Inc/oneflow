@@ -19,7 +19,7 @@ import time
 import inspect
 from collections import OrderedDict
 from functools import partial
-from typing import Dict, Optional, Union, List
+from typing import Dict, Optional, Union, List, Callable
 import weakref
 from google.protobuf import text_format
 
@@ -215,7 +215,9 @@ class Graph(object):
 
         if not self._is_compiled:
             self._compile(*args, **kwargs)
-            self.__print(0, 2, f"{self.name} with operators:\n" + self.__repr__())
+            self.__print(
+                0, 2, lambda: f"{self.name} with operators:\n" + self.__repr__()
+            )
 
         return self.__run(*args, **kwargs)
 
@@ -537,14 +539,17 @@ class Graph(object):
 
         return []
 
-    def __print(self, s_level=2, v_level=0, msg: str = ""):
+    def __print(self, s_level=2, v_level=0, msg=None):
         r"""Do print according to info level."""
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
-        assert isinstance(msg, str)
+        assert isinstance(msg, str) or isinstance(msg, Callable)
         if s_level >= self._debug_min_s_level:
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
-                print(msg, flush=True)
+                if isinstance(msg, str):
+                    print(msg, flush=True)
+                elif isinstance(msg, Callable):
+                    print(msg(), flush=True)
 
     @property
     def _config_proto(self):
