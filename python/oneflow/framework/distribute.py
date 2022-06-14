@@ -68,5 +68,5 @@ def split_sbp(dim=None, **kwargs) -> oneflow._oneflow_internal.sbp.sbp:
                     "split_sbp() got an unexpected keyword argument '%s'." % key
                 )
 
-    assert type(dim) is int
+    assert isinstance(dim, int)
     return oneflow._oneflow_internal.sbp.split(dim)
