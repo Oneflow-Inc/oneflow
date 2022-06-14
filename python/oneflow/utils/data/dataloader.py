@@ -176,7 +176,7 @@ class DataLoader(Generic[T_co]):
             consumed once. This allows to maintain the workers `Dataset` instances alive. 
             If you are using oneflow with RDMA support in distributed training, the
             ``persistent_workers`` must be ``True`` otherwise will encounter segmentation
-            fault.(default: ``False``)
+            fault. (default: ``False``)
 
 
     .. warning:: If the ``spawn`` start method is used, :attr:`worker_init_fn`
@@ -924,7 +924,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
         assert not flow.env.rdma_is_initialized(), (
             "RDMA inited! Could not create _MultiProcessingDataLoaderIter any more. "
             "Please make sure Dataloader is created before invoking oneflow.env.init_rdma(). "
-            "If this condition is met, You can pass the arg persistent_workers=True in "
+            "If this condition is met, you can pass the arg persistent_workers=True in "
             "Dataloader to avoid this error!"
         )
         assert self._num_workers > 0
