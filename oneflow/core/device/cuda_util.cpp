@@ -184,7 +184,6 @@ void InitCudaContextOnce(int device_id) {
   std::call_once(init_flags[device_id], [&]() {
     OF_CUDA_CHECK(cudaSetDevice(device_id));
     OF_CUDA_CHECK(cudaDeviceSynchronize());
-    LOG(ERROR) << "success!";
   });
 }
 
