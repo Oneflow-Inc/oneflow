@@ -40,18 +40,18 @@ class TopoStruct {
   // Drop down the tributary layer
   void DropTributaryLayer(int32_t upper_bound);
 
-  void SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
+  void SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
-  void SpreadMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
+  void SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // The minimum computation distance from the beginning of this op to the next transfer
-  int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
+  int32_t GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
   // deciding parameter
   int32_t GetDecidingParameter(int32_t i) const;
 };
 
-void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct);
+void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct);
 
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes);
 

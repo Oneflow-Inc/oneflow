@@ -68,7 +68,7 @@ void TopoStruct::DropTributaryLayer(int32_t upper_bound) {
 
 // Should initialize the counter to be the number of out edges
 // Compute maximum layer for tributaries
-void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
+void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   if (counter || MinLayer <= 0) { return; }
   int32_t producer_max_lay = 0;
   if (IfMainstem) {
@@ -79,11 +79,10 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>& task_node2
     // producer_max_lay = TributaryLayer - 1;
   }
   node->ForEachNodeOnInEdge([&](TaskNode* in) {
-    auto& topo_struct_in = task_node2topo_struct[in];
+    auto& topo_struct_in = task_node2topo_struct->at(in);
     topo_struct_in.DropTributaryLayer(producer_max_lay);
-    if (--topo_struct_in.counter == 0) {
-      topo_struct_in.SpreadTributaryLayer(task_node2topo_struct);
-    }
+    --topo_struct_in.counter;
+    if (topo_struct_in.counter == 0) { topo_struct_in.SpreadTributaryLayer(task_node2topo_struct); }
   });
   // Reduce counter to -1 to avoid visitting again
   counter--;
@@ -91,7 +90,7 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>& task_node2
 
 // Judge if this node is on the mainstem
 // If so, judge it for its producer/upstream nodes
-void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
+void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Skip it if this node is already judged.
   if (IfMainstem) { return; }
   CHECK(MinLayer >= 0) << "TopoStruct not initialized!";
@@ -99,7 +98,7 @@ void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_s
   // If I am in the mainstem, then all the children with (MinLayer >= my layer id - 1) would be
   // considered as in the mainstem
   node->ForEachNodeOnInEdge([&](TaskNode* in) {
-    auto& topo_struct_in = task_node2topo_struct[in];
+    auto& topo_struct_in = task_node2topo_struct->at(in);
     if (topo_struct_in.MinLayer == MinLayer - 1) {
       topo_struct_in.SpreadTributaryLayer(task_node2topo_struct);
     }
@@ -107,7 +106,7 @@ void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_s
 }
 
 // The minimum computation distance from the beginning of this op to the next transfer
-int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
+int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   if (MinDistance2Transfer >= 0) { return MinDistance2Transfer; }
   // if this node is a transfer node
   if (IsTransferNode(node->GetTaskType())) {
@@ -118,9 +117,10 @@ int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>& task
   node->ForEachNodeOnOutEdge([&](TaskNode* out) {
     MinDistance2Transfer =
         std::min(MinDistance2Transfer,
-                 task_node2topo_struct[out].GetMinDistance2Transfer(task_node2topo_struct));
+                 task_node2topo_struct->at(out).GetMinDistance2Transfer(task_node2topo_struct));
   });
-  return ++MinDistance2Transfer;
+  ++MinDistance2Transfer;
+  return MinDistance2Transfer;
 }
 
 // deciding parameter
@@ -139,15 +139,15 @@ int32_t TopoStruct::GetDecidingParameter(int32_t i) const {
 }
 
 // Find the mianstem of the task graph, then reduce the wait time for tributaries
-void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
+void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Find the maximum layer number
   int32_t max_MinLayer = -1;
-  for (const auto& pair : task_node2topo_struct) {
+  for (const auto& pair : *task_node2topo_struct) {
     if (max_MinLayer < pair.second.MinLayer) { max_MinLayer = pair.second.MinLayer; }
   }
   // All the nodes with MinLayer>=mainstem_end_id would be considered as mainstem nodes
   int32_t mainstem_end_id = max_MinLayer - 4;
-  for (auto& pair : task_node2topo_struct) {
+  for (auto& pair : *task_node2topo_struct) {
     auto& topo_struct = pair.second;
     // Initialize the counter and Tributary Layer
     topo_struct.counter = pair.first->out_edges().size();
@@ -158,7 +158,7 @@ void FindMainstem(HashMap<TaskNode*, TopoStruct>& task_node2topo_struct) {
     }
   }
 
-  for (auto& pair : task_node2topo_struct) {
+  for (auto& pair : *task_node2topo_struct) {
     // Compute maximum layer for tributaries
     pair.second.SpreadTributaryLayer(task_node2topo_struct);
     // Set the MinDistance2Transfer for each topological structure
@@ -238,7 +238,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   });
 
   // Generate other parameters in the topological data structure
-  FindMainstem(task_node2topo_struct);
+  FindMainstem(&task_node2topo_struct);
 
   LOG(INFO) << "Straightening order: " << 5 << ", " << 3;
 
@@ -311,7 +311,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   // Finish execution
   auto finish_execution = [&](TaskNode* node) {
     node->ForEachNodeOnOutEdge([&](TaskNode* out) {
-      if (--(task_node2topo_struct[out].counter) == 0) { wait(out); }
+      --(task_node2topo_struct[out].counter);
+      if (task_node2topo_struct[out].counter == 0) { wait(out); }
     });
   };
 
