@@ -71,6 +71,9 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
           << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
           << ", key = {" << key << "}\n";
   OF_NCCL_CHECK(ncclCommInitRank(comm, device_vec.size(), nccl_unique_id, rank));
+  VLOG(2) << " EagerNcclCommMgr::ncclCommInitRank succeed device_vec.size() = " << device_vec.size()
+          << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
+          << ", key = {" << key << "}\n";
 }
 
 }  // namespace
