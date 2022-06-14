@@ -55,7 +55,7 @@ OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
       attr_dict.get(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr()));
   const auto result = f(tensor).GetPtrOrThrow();
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
-  attrs.set("op_name", GenNewVariableOpName(ctx));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), GenNewVariableOpName(ctx));
 
   return attrs.getDictionary(ctx);
 }
@@ -80,7 +80,7 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   const auto result = f(lhs_tensor, rhs_tensor).GetPtrOrThrow();
 
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
-  attrs.set("op_name", GenNewVariableOpName(ctx));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), GenNewVariableOpName(ctx));
 
   return attrs.getDictionary(ctx);
 }
