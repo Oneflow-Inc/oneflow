@@ -4977,7 +4977,7 @@ def OneFlow_NLLOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMetho
   );
   let output = (outs
     OneFlow_Tensor:$output,
-    Optional<OneFlow_Tensor>:$total_weight
+    Optional<OneFlow_Tensor>:$out_weight
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$ignore_index

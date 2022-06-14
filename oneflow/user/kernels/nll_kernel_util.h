@@ -24,7 +24,7 @@ template<DeviceType device_type, typename T, typename K>
 struct NLLKernelUtil {
   static void Forward(ep::Stream* stream, const int32_t num_samples, const K num_classes,
                       const K class_start, const K ignore_index, const T* input, const K* target,
-                      const T* weight, T* out, T* total_weight);
+                      const T* weight, T* out, T* out_weight);
 
   static void Backward(ep::Stream* stream, const int32_t num_samples, const K num_classes,
                        const K class_start, const K ignore_index, const T* out_grad,

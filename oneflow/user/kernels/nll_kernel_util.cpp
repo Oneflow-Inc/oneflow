@@ -21,7 +21,7 @@ template<typename T, typename K>
 struct NLLKernelUtil<DeviceType::kCPU, T, K> {
     static void Forward(ep::Stream* stream, const int32_t num_samples, const K num_classes,
                       const K class_start, const K ignore_index, const T* input, const K* target,
-                      const T* weight, T* out, T* total_weight) {
+                      const T* weight, T* out, T* out_weight) {
     FOR_RANGE(int32_t, i, 0, num_samples) {
       K label = target[i];
       if (label != ignore_index) {
@@ -29,7 +29,7 @@ struct NLLKernelUtil<DeviceType::kCPU, T, K> {
         if (label >= 0 && label < num_classes) {
           const T w = weight ? weight[label] : T(1);
           out[i] = -(input[i * num_classes + label] * w);
-          *total_weight += w;
+          if (out_weight) { out_weight[i] = w; }
           continue;
         }
       }

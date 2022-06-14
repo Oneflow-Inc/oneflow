@@ -1162,13 +1162,13 @@ class NLLLossFunctor {
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
 
     std::shared_ptr<Tensor> output;
-    std::shared_ptr<Tensor> total_weight;
+    std::shared_ptr<Tensor> out_weight;
 
     if (weight) {
       auto result = JUST(
           OpInterpUtil::Dispatch<TensorTuple>(*op_weight_, {input_, target_, JUST(weight)}, attrs));
       output = result->at(0);
-      total_weight = result->at(1);
+      out_weight = result->at(1);
     } else {
       output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input_, target_}, attrs));
     }
@@ -1181,7 +1181,10 @@ class NLLLossFunctor {
 
     if (reduction == "sum") { return sum; }
 
-    if (weight) { return functional::Div(sum, total_weight); }
+    if (weight) {
+      auto total_weight = JUST(functional::ReduceSum(out_weight, {}, false));
+      return functional::Div(sum, total_weight);
+    }
 
     size_t reduce_count = output->shape()->Count(0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);

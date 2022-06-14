@@ -23,7 +23,7 @@ namespace {
 template<typename T, typename K>
 __global__ void NLLForward(const int32_t num_samples, const K num_classes, const K class_start,
                            const K ignore_index, const T* input, const K* target, const T* weight,
-                           T* out, T* total_weight) {
+                           T* out, T* out_weight) {
   const T zero = GetZeroVal<T>();
   const T one = GetOneVal<T>();
   CUDA_1D_KERNEL_LOOP(i, num_samples) {
@@ -33,7 +33,7 @@ __global__ void NLLForward(const int32_t num_samples, const K num_classes, const
       if (label >= 0 && label < num_classes) {
         const T w = weight ? weight[label] : one;
         out[i] = -(input[i * num_classes + label] * w);
-        if (total_weight) { cuda::atomic::Add(total_weight, w); }
+        if (out_weight) { out_weight[i] = w; }
         continue;
       }
     }
@@ -63,11 +63,11 @@ template<typename T, typename K>
 struct NLLKernelUtil<DeviceType::kCUDA, T, K> {
   static void Forward(ep::Stream* stream, const int32_t num_samples, const K num_classes,
                       const K class_start, const K ignore_index, const T* input, const K* target,
-                      const T* weight, T* out, T* total_weight) {
+                      const T* weight, T* out, T* out_weight) {
     NLLForward<<<BlocksNum4ThreadsNum(num_samples), kCudaThreadsNumPerBlock, 0,
                  stream->As<ep::CudaStream>()->cuda_stream()>>>(num_samples, num_classes,
                                                                 class_start, ignore_index, input,
-                                                                target, weight, out, total_weight);
+                                                                target, weight, out, out_weight);
   }
 
   static void Backward(ep::Stream* stream, const int32_t num_samples, const K num_classes,

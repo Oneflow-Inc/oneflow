@@ -32,7 +32,7 @@ namespace oneflow {
         << weight_dtype;
   }
 
-  if (ctx->has_output("total_weight", 0)) { *ctx->OutputDType("total_weight", 0) = input_dtype; }
+  if (ctx->has_output("out_weight", 0)) { *ctx->OutputDType("out_weight", 0) = input_dtype; }
 
   return Maybe<void>::Ok();
 }
@@ -67,9 +67,9 @@ namespace oneflow {
   *output_desc->mut_is_dynamic() = is_dynamic;
   *output_desc->mut_shape() = Shape({N});
 
-  if (ctx->has_output("total_weight", 0)) {
-    user_op::TensorDesc* total_weight_desc = ctx->OutputTensorDesc("total_weight", 0);
-    *total_weight_desc->mut_shape() = Shape({});
+  if (ctx->has_output("out_weight", 0)) {
+    user_op::TensorDesc* out_weight_desc = ctx->OutputTensorDesc("out_weight", 0);
+    *out_weight_desc->mut_shape() = Shape({N});
   }
 
   return Maybe<void>::Ok();
@@ -84,8 +84,8 @@ namespace oneflow {
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder1.Broadcast(user_op::OpArg("weight", 0));
   }
-  if (ctx->user_op_conf().has_output("total_weight", 0)) {
-    builder1.Broadcast(user_op::OpArg("total_weight", 0));
+  if (ctx->user_op_conf().has_output("out_weight", 0)) {
+    builder1.Split(user_op::OpArg("out_weight", 0), 0);
   }
   builder1.Build();
 
@@ -98,8 +98,8 @@ namespace oneflow {
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder2.Split(user_op::OpArg("weight", 0), 0);
   }
-  if (ctx->user_op_conf().has_output("total_weight", 0)) {
-    builder2.PartialSum(user_op::OpArg("total_weight", 0));
+  if (ctx->user_op_conf().has_output("out_weight", 0)) {
+    builder2.PartialSum(user_op::OpArg("out_weight", 0));
   }
   builder2.Build();
 

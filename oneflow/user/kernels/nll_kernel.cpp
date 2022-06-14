@@ -43,7 +43,7 @@ std::shared_ptr<user_op::OpKernelCache> CreateNLLKernelCache(user_op::KernelCach
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("input", 0);
   const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
   CHECK_EQ(nd_sbp.sbp_parallel_size(), hierarchy.NumAxes())
-      << "Expected input sbp " << NdSbpToString(nd_sbp) << " match hierarchy "
+      << ctx->op_name() << ": Expected input sbp " << NdSbpToString(nd_sbp) << " match hierarchy "
       << hierarchy.ToString();
 
   const Shape& shape = ctx->LogicalTensorDesc4ArgNameAndIndex("input", 0)->shape();
@@ -106,15 +106,15 @@ class NLLKernel final : public user_op::OpKernel {
     if (ctx->has_input("weight", 0)) {
       weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
     }
-    T* total_weight_dptr = nullptr;
-    if (ctx->has_output("total_weight", 0)) {
-      total_weight_dptr =
-          CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("total_weight", 0))->mut_dptr<T>();
+    T* out_weight_dptr = nullptr;
+    if (ctx->has_output("out_weight", 0)) {
+      out_weight_dptr =
+          CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("out_weight", 0))->mut_dptr<T>();
     }
 
     NLLKernelUtil<device_type, T, K>::Forward(
         ctx->stream(), static_cast<int32_t>(N), static_cast<K>(C), class_start, ignore_index,
-        input->dptr<T>(), target->dptr<K>(), weight_dptr, output->mut_dptr<T>(), total_weight_dptr);
+        input->dptr<T>(), target->dptr<K>(), weight_dptr, output->mut_dptr<T>(), out_weight_dptr);
   }
 };
 
