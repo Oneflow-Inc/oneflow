@@ -88,7 +88,12 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         def one_train_iter():
             out = linear_t_g(x)
             if flow.env.get_rank() == 0:
-                print(linear_t_g)
+                import traceback
+
+                try:
+                    print(linear_t_g)
+                except:
+                    print(traceback.format_exc())
 
         def one_eval_iter():
             out = linear_e_g(x)
