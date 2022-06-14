@@ -41,7 +41,9 @@ int64_t ConstShapeMixIn<T>::Count(int64_t begin_axis, int64_t end_axis) const {
   return cnt;
 }
 template<class T>
-int64_t ConstShapeMixIn<T>::Count(int64_t begin_axis) const { return Count(begin_axis, tp()->NumAxes()); }
+int64_t ConstShapeMixIn<T>::Count(int64_t begin_axis) const {
+  return Count(begin_axis, tp()->NumAxes());
+}
 
 template<class T>
 bool ConstShapeMixIn<T>::Containing(ShapeView small_shape) const {
@@ -75,7 +77,9 @@ std::string ConstShapeMixIn<T>::ToString() const {
 }
 
 template<class T>
-std::string ConstShapeMixIn<T>::DebugStr() const { return ToString(); }
+std::string ConstShapeMixIn<T>::DebugStr() const {
+  return ToString();
+}
 
 template<class T>
 void ConstShapeMixIn<T>::ToProto(ShapeProto* ret) const {

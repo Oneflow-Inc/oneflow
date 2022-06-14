@@ -43,8 +43,8 @@ class ShapeProto;
  *
  * When adding new functions accepting a shape as a parameter, please follow
  * the rules:
- * 1. If your function doesn't modify the shape, prefer 
- *    ShapeView. Shape can be implicitly converted to ShapeView so the method 
+ * 1. If your function doesn't modify the shape, prefer
+ *    ShapeView. Shape can be implicitly converted to ShapeView so the method
  *    with ShapeView parameter can accept both Shape and ShapeView actually.
  * 2. If your function modify the shape but doesn't affect
  *    its rank, prefer MutShapeView. The reason is the same with rule 1.

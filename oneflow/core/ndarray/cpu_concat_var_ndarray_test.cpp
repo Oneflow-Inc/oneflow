@@ -121,7 +121,8 @@ TEST(CpuConcatVarNdarray, 3d_concat) {
   CpuNdarrayBuilder<int32_t, 3> ndarray;
   auto x0 = ndarray.Var(Shape{2LL, 2LL, 3LL}, x0_data.data());
   auto x1 = ndarray.Var(Shape{2LL, 2LL, 2LL}, x1_data.data());
-  ndarray.Var(Shape{2LL, 2LL, 5LL}, buffer.data()).CopyFrom(ndarray.template Concatenate<2>({x0, x1}));
+  ndarray.Var(Shape{2LL, 2LL, 5LL}, buffer.data())
+      .CopyFrom(ndarray.template Concatenate<2>({x0, x1}));
   ASSERT_EQ(memcmp(buffer.data(), expected.data(), sizeof(int32_t) * 20), 0);
 }
 
