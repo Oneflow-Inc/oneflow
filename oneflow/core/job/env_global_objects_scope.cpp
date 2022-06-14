@@ -261,7 +261,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   google::ShutdownGoogleLogging();
 }
 
-Maybe<void> InitRdma() {
+Maybe<void> InitRDMA() {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {

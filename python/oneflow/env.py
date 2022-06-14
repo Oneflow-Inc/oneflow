@@ -74,7 +74,7 @@ def init_rdma():
 
 
     """
-    oneflow._oneflow_internal.InitRdma()
+    oneflow._oneflow_internal.InitRDMA()
 
 
 def rdma_is_initialized():
