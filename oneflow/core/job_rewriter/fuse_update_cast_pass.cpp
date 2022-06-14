@@ -44,12 +44,10 @@ class FuseUpdateCastOpsPass final : public JobPass {
 };
 
 Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  if (!job_builder->job().job_conf().has_train_conf()) { return Maybe<void>::Ok(); }
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
     LogicalBlobId model_half_lbi;
-    bool has_model_half_lbi = false;
 
     for (OpEdge* find_cast_edge : op_node->out_edges()) {
       OpNode* find_cast_node = find_cast_edge->dst_node();
@@ -68,26 +66,6 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
       // Currently only support for cuda, maybe remove this limit.
       if (find_cast_node->parallel_desc().device_type() != DeviceType::kCUDA) { continue; }
 
-      user_op::UserOpConfWrapperBuilder fused_cast_op_builder(cast_user_conf.op_name());
-      fused_cast_op_builder.OpTypeName("optim_fuse_cast")
-          .Input("in", cast_user_conf.input("in", 0))
-          .Attr<DataType>("dtype", cast_user_conf.attr<DataType>("dtype"))
-          .Output("out");
-
-      CHECK(cast_user_conf.op_conf().has_scope_symbol_id());
-      fused_cast_op_builder.ScopeSymbolId(cast_user_conf.op_conf().scope_symbol_id());
-
-      OperatorConf new_cast_op_conf = cast_user_conf.op_conf();
-      *new_cast_op_conf.mutable_user_conf() = fused_cast_op_builder.Build().op_conf().user_conf();
-      job_builder->MutOpsOnlyOnce({new_cast_op_conf});
-
-      const user_op::UserOpConfWrapper new_cast_user_conf(new_cast_op_conf);
-      model_half_lbi = GenLogicalBlobId(new_cast_user_conf.output("out", 0));
-      has_model_half_lbi = true;
-      break;
-    }
-
-    if (has_model_half_lbi) {
       for (OpEdge* find_model_update_edge : op_node->out_edges()) {
         OpNode* find_model_update_update_node = find_model_update_edge->dst_node();
         if (!IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")
@@ -95,12 +73,31 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
                                      "adam_update")) {
           continue;
         }
+
         const user_op::UserOpConfWrapper model_update_user_conf(
-            find_model_update_update_node->op().op_conf());
+              find_model_update_update_node->op().op_conf());
         // Currently only support for cuda, maybe remove this limit.
         if (find_model_update_update_node->parallel_desc().device_type() != DeviceType::kCUDA) {
           continue;
         }
+
+        // Here we find cast and model_update node, Replace cast as optim_fuse_cast, and add model_half to model_update node. 
+        user_op::UserOpConfWrapperBuilder fused_cast_op_builder(cast_user_conf.op_name());
+        fused_cast_op_builder.OpTypeName("optim_fuse_cast")
+            .Input("in", cast_user_conf.input("in", 0))
+            .Attr<DataType>("dtype", cast_user_conf.attr<DataType>("dtype"))
+            .Output("out");
+
+        CHECK(cast_user_conf.op_conf().has_scope_symbol_id());
+        fused_cast_op_builder.ScopeSymbolId(cast_user_conf.op_conf().scope_symbol_id());
+
+        OperatorConf new_cast_op_conf = cast_user_conf.op_conf();
+        *new_cast_op_conf.mutable_user_conf() = fused_cast_op_builder.Build().op_conf().user_conf();
+        job_builder->MutOpsOnlyOnce({new_cast_op_conf});
+
+        const user_op::UserOpConfWrapper new_cast_user_conf(new_cast_op_conf);
+        model_half_lbi = GenLogicalBlobId(new_cast_user_conf.output("out", 0));
+        
         user_op::UserOpConfWrapperBuilder fused_model_update_op_builder(
             model_update_user_conf.op_name());
         if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
@@ -149,7 +146,8 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
         job_builder->MutOpsOnlyOnce({new_model_update_op_conf});
         break;
       }
-    }
+      break;
+    } 
   });
   return Maybe<void>::Ok();
 }
