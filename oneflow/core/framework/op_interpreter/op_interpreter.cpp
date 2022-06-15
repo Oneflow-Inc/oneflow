@@ -106,9 +106,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   {
     autograd::AutoGradMode mode(false);
     const bool inplace = ctx.inplace.value_or(false);
-    if(inplace){
-      *outputs = *inputs_ptr;
-    }
+    if (inplace) { *outputs = *inputs_ptr; }
     JUST(internal_->Apply(op_expr, *inputs_ptr, outputs, ctx));
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.

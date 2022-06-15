@@ -33,7 +33,8 @@ namespace one {
 
 struct OpExprInterpContext {
   OpExprInterpContext(const AttrMap& attrs_arg) : attrs(attrs_arg) {}
-  OpExprInterpContext(const AttrMap& attrs_arg, const bool inplace) : attrs(attrs_arg), inplace(inplace) {}
+  OpExprInterpContext(const AttrMap& attrs_arg, const bool inplace)
+      : attrs(attrs_arg), inplace(inplace) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg)
       : attrs(attrs_arg), device(device_arg) {}
   OpExprInterpContext(const AttrMap& attrs_arg, Symbol<Device> device_arg, const bool pin_memory)
