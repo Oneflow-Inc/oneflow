@@ -70,10 +70,11 @@ if prefix is not None:
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument("model", type=str, help="model name like resnet50, unet etc.")
 parser.add_argument("bs", type=int)
 parser.add_argument("threshold", type=str)
 parser.add_argument("iters", type=int)
-parser.add_argument("exp_id", type=str)
+parser.add_argument("--exp_id", type=str)
 parser.add_argument("--no-dtr", action=NegativeArgAction, env_var_name="OF_DTR")
 parser.add_argument("--no-lr", action=NegativeArgAction, env_var_name="OF_DTR_LR")
 parser.add_argument("--no-fbip", action=NegativeArgAction, env_var_name="ONEFLOW_DTR_FBIP")
@@ -104,7 +105,6 @@ import flowvision
 import flowvision.transforms as transforms
 import flowvision.models as models
 
-# import resnet50_model as models
 # import resnet50
 
 # run forward, backward and update parameters
@@ -130,48 +130,16 @@ if args.dtr:
 seed = 20
 setup_seed(seed)
 
-writer = SummaryWriter("./tensorboard/" + args.exp_id)
+enable_tensorboard = args.exp_id is not None
+if enable_tensorboard:
+    writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
-# model = models.resnet50(fuse_bn_relu=False, fuse_bn_add_relu=False)
-import unet
-# model = models.resnet50()
-model = unet.UNet(n_channels=3, n_classes=2, bilinear=False)
 
-# flow.save(model.state_dict(), '/tmp/abcde')
-# weights = flow.load("/tmp/abcde")
-# model.load_state_dict(weights)
+def get_imagenet_imagefolder():
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
 
-criterion = nn.BCEWithLogitsLoss() # nn.CrossEntropyLoss()
-
-cuda0 = flow.device("cuda:0")
-
-model.to(cuda0)
-
-criterion.to(cuda0)
-
-learning_rate = 0.001
-optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
-
-normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225])
-
-if args.no_dataloader:
-    global data
-    global label
-    data = flow.ones(args.bs, 3, 460, 608)
-    # label = flow.ones(args.bs, dtype=flow.int64)
-    label = flow.ones(args.bs, 2, 460, 608)
-
-    class FixedDataset(flow.utils.data.Dataset):
-        def __len__(self):
-            return 999999999
-
-        def __getitem__(self, idx):
-            return data, label
-
-    train_data_loader = FixedDataset()
-else:
-    imagenet_data = flowvision.datasets.ImageFolder(
+    return flowvision.datasets.ImageFolder(
         "/dataset/imagenet_folder/train",
         transforms.Compose(
             [
@@ -182,8 +150,62 @@ else:
             ]
         ),
     )
+
+
+def resnet50_info():
+    model = models.resnet50()
+    criterion = nn.CrossEntropyLoss()
+    get_fixed_input = lambda bs: flow.ones(bs, 3, 224, 224)
+    get_fixed_label = lambda bs: flow.ones(bs, dtype=flow.int64)
+    return model, criterion, get_fixed_input, get_fixed_label, get_imagenet_imagefolder
+
+
+def densenet121_info():
+    model = models.densenet121()
+    criterion = nn.CrossEntropyLoss()
+    get_fixed_input = lambda bs: flow.ones(bs, 3, 224, 224)
+    get_fixed_label = lambda bs: flow.ones(bs, dtype=flow.int64)
+    return model, criterion, get_fixed_input, get_fixed_label, get_imagenet_imagefolder
+
+
+def unet_info():
+    import unet
+    model = unet.UNet(n_channels=3, n_classes=2, bilinear=False)
+    criterion = nn.BCEWithLogitsLoss()
+    get_fixed_input = lambda bs: flow.ones(bs, 3, 460, 608)
+    get_fixed_label = lambda bs: flow.ones(bs, 2, 460, 608)
+    def get_imagefolder():
+        raise NotImplementedError
+    return model, criterion, get_fixed_input, get_fixed_label, get_imagefolder
+
+
+model, criterion, get_fixed_input, get_fixed_label, get_imagefolder = eval(f"{args.model}_info()")
+
+model.to('cuda')
+criterion.to('cuda')
+
+learning_rate = 0.001
+optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
+
+
+if args.no_dataloader:
+    global data
+    global label
+    data = get_fixed_input(args.bs)
+    label = get_fixed_label(args.bs)
+
+    class FixedDataset(flow.utils.data.Dataset):
+        def __len__(self):
+            return 999999999
+
+        def __getitem__(self, idx):
+            return data, label
+
+    train_data_loader = FixedDataset()
+else:
+    imagefolder = get_imagefolder()
     train_data_loader = flow.utils.data.DataLoader(
-        imagenet_data, batch_size=args.bs, shuffle=True, num_workers=0
+        imagefolder, batch_size=args.bs, shuffle=True, num_workers=0
     )
 
 total_time = 0
@@ -191,14 +213,11 @@ total_time = 0
 if args.dtr:
     flow.nn.ContiguousGrad(model)
 for iter, (train_data, train_label) in enumerate(train_data_loader):
-# for iter in range(10000):
-    # train_data = data
-    # train_label = label
     if iter >= ALL_ITERS:
         break
 
-    train_data = train_data.to(cuda0)
-    train_label = train_label.to(cuda0)
+    train_data = train_data.to('cuda')
+    train_label = train_label.to('cuda')
 
     flow.comm.barrier()
     # print(f'iter {iter} start, all pieces:')
@@ -207,8 +226,9 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     logits = model(train_data)
     loss = criterion(logits, train_label)
     loss.backward()
-    writer.add_scalar("Loss/train/loss", loss.item(), iter)
-    writer.flush()
+    if enable_tensorboard:
+        writer.add_scalar("Loss/train/loss", loss.item(), iter)
+        writer.flush()
 
     optimizer.step()
     optimizer.zero_grad()
