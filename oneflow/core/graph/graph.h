@@ -68,7 +68,6 @@ class Graph {
       const std::function<Maybe<void>(NodeType*)>& Handler) const;
 
   Maybe<void> TopoForEachNodeFastMaybe(
-      const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
       const std::function<Maybe<void>(NodeType*)>& Handler) const;
@@ -228,7 +227,7 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> N
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::TopoForEachNodeFast(
     std::function<void(NodeType*)> NodeHandler) const {
-  CHECK_JUST(TopoForEachNodeFastMaybe(source_nodes(), &NodeType::ForEachNodeOnInEdge,
+  CHECK_JUST(TopoForEachNodeFastMaybe(&NodeType::ForEachNodeOnInEdge,
                                       &NodeType::ForEachNodeOnOutEdge, [&](NodeType* node) {
                                         NodeHandler(node);
                                         return Maybe<void>::Ok();
@@ -245,8 +244,8 @@ Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeWithErrorCaptured(
 template<typename NodeType, typename EdgeType>
 Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeFastMaybe(
     std::function<Maybe<void>(NodeType*)> NodeHandler) const {
-  return TopoForEachNodeFastMaybe(source_nodes(), &NodeType::ForEachNodeOnInEdge,
-                                  &NodeType::ForEachNodeOnOutEdge, NodeHandler);
+  return TopoForEachNodeFastMaybe(&NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge,
+                                  NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -564,7 +563,6 @@ Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeWithErrorCaptured(
 
 template<typename NodeType, typename EdgeType>
 Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeFastMaybe(
-    const std::list<NodeType*>& starts,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
     const std::function<Maybe<void>(NodeType*)>& Handler) const {
