@@ -470,7 +470,7 @@ class LocalToConsistentFunctor {
     CHECK_OR_RETURN(x->is_local())
         << Error::RuntimeError()
         << "Expected local tensor for local_to_global but got global tensor!";
-    std::shared_ptr<one::Tensor> input = x;
+    std::shared_ptr<one::Tensor> input = x->contiguous();
     // copy to right device first if input's device type is wrong
     if (JUST(input->device())->type() != parallel_desc->device_tag()) {
       VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "

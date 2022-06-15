@@ -119,12 +119,15 @@ class ScalarMathBaseFunctor {
     if (inplace) {
       JUST(CheckInplaceCastValid(x, casted_vec[0]));
       JUST(CheckInplaceValid(x));
-      // TODO(zhaoluyang): when elementwise scalar_math ops support strided tensor as input,
-      // should remove this InplaceToContiguous operation.
-      auto input = JUST(functional::InplaceToContiguous(x));
+      
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      (*outputs)[0] = input;
-      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), attrs));
+      (*outputs)[0] = x;
+      // TODO:(zhaoluyang)
+      // If the op need inplace operaton, and input tensor is non-contiguous,
+      // the interpreter will do input->contiguous() operaton for geting the correct result, 
+      // therefore, output tensor and input will not inplaced. When scalar_math op/kernel
+      // support strided tensor as input, the problem above will be solved!
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), OpExprInterpContext(attrs, /*inplace=*/true)));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
