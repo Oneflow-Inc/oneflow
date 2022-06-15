@@ -224,7 +224,6 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
               "multi_tensor_model_update" + NewUniqueId());
           std::string op_type_name = "multi_tensor_sgd_update";
           if (has_model_half) {
-            printf("Enter here is multi tensor sgd update cast. \n");
             op_type_name = "multi_tensor_sgd_update_with_cast";
           }
           multi_tensor_sgd_update_op_builder.OpTypeName(op_type_name)
