@@ -24,26 +24,28 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
   return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
 };
 
-class FuseUpdateCastOpsPass final : public JobPass {
+class FuseModelUpdateCastOpsPass final : public JobPass {
  public:
-  FuseUpdateCastOpsPass() = default;
-  ~FuseUpdateCastOpsPass() override = default;
+  FuseModelUpdateCastOpsPass() = default;
+  ~FuseModelUpdateCastOpsPass() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return ParseBooleanFromEnv("ONEFLOW_FUSE_OPTIMIZER_UPDATE_CAST", false)
+    return ParseBooleanFromEnv("ONEFLOW_FUSE_MODEL_UPDATE_CAST", false)
            && ctx.job_desc().enable_auto_mixed_precision();
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    LOG(INFO) << "Enable fuse model update cast pass. ";
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder);
   }
 };
 
-Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
+                                              JobBuilder* job_builder) const {
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
@@ -155,6 +157,6 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
 }  // namespace
 
-REGISTER_JOB_PASS("FuseUpdateCastOpsPass", FuseUpdateCastOpsPass);
+REGISTER_JOB_PASS("FuseModelUpdateCastOpsPass", FuseModelUpdateCastOpsPass);
 
 }  // namespace oneflow

@@ -144,6 +144,7 @@ class MultiTensorModelUpdatePass final : public JobPass {
 
   Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
+    LOG(INFO) << "Enable multi tensor model update pass. ";
     const OpGraph op_graph(*job);
     JobBuilder job_builder(job);
     return Apply(op_graph, &job_builder);
@@ -223,9 +224,7 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
           user_op::UserOpConfWrapperBuilder multi_tensor_sgd_update_op_builder(
               "multi_tensor_model_update" + NewUniqueId());
           std::string op_type_name = "multi_tensor_sgd_update";
-          if (has_model_half) {
-            op_type_name = "multi_tensor_sgd_update_with_cast";
-          }
+          if (has_model_half) { op_type_name = "multi_tensor_sgd_update_with_cast"; }
           multi_tensor_sgd_update_op_builder.OpTypeName(op_type_name)
               .Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
