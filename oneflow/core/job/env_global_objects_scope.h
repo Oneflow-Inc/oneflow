@@ -45,9 +45,9 @@ class EnvGlobalObjectsScope final {
   Optional<bool> is_normal_exit_;
 };
 
-Maybe<void> InitRdma();
+Maybe<void> InitRDMA();
 
-Maybe<bool> RdmaInited();
+Maybe<bool> RDMAIsInitialized();
 
 }  // namespace oneflow
 

@@ -261,19 +261,23 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   google::ShutdownGoogleLogging();
 }
 
-Maybe<void> InitRdma() {
+Maybe<void> InitRDMA() {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
 #ifdef WITH_RDMA
       if (CommNetIBEnabled()) {
-        Global<IBVerbsCommNet>::New();
-        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+        if (Global<IBVerbsCommNet>::Get() == nullptr) {
+          Global<IBVerbsCommNet>::New();
+          Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+        } else {
+          LOG(WARNING) << "Skip init RDMA because RDMA is already initialized!";
+        }
       } else {
-        LOG(WARNING) << "Skip init RDMA because RDMA is unavailable";
+        LOG(WARNING) << "Skip init RDMA because RDMA is unavailable!";
       }
 #else
-      LOG(WARNING) << "Skip init RDMA because RDMA is not compiled";
+      LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
 #endif  // WITH_RDMA
     } else {
       LOG(WARNING) << "Skip init RDMA because only one process in this group!";
@@ -285,6 +289,12 @@ Maybe<void> InitRdma() {
   return Maybe<void>::Ok();
 }
 
-Maybe<bool> RdmaInited() { return Global<IBVerbsCommNet>::Get() != nullptr; }
+Maybe<bool> RDMAIsInitialized() {
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
+  return Global<IBVerbsCommNet>::Get() != nullptr;
+#else
+  return false;
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
+}
 
 }  // namespace oneflow

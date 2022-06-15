@@ -74,14 +74,14 @@ def init_rdma():
 
 
     """
-    oneflow._oneflow_internal.InitRdma()
+    oneflow._oneflow_internal.InitRDMA()
 
 
-def rdma_inited():
-    """Returns whether RDMA is inited in the current envirment or not.
+def rdma_is_initialized():
+    """Returns whether RDMA is initialized in the current envirment or not.
 
     Returns:
-        Whether RDMA is inited or not.
+        Whether RDMA is initialized or not.
 
     """
-    return oneflow._oneflow_internal.RdmaInited()
+    return oneflow._oneflow_internal.RDMAIsInitialized()
