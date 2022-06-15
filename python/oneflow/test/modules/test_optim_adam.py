@@ -39,7 +39,8 @@ def compare_with_numpy_adam(
     amsgrad,
     reload_state_step,
     save_load_by_pickle,
-):
+):  
+    np.random.seed(0)
     random_grad_seq = []
     for _ in range(train_iters):
         random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))

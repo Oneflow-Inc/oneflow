@@ -24,14 +24,20 @@ from test_util import GenArgList
 import oneflow as flow
 
 os.environ["ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE"] = "1"
-os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "1"
+# os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "1"
 
 
-def compare_with_numpy_sgd(
-    test_case, device, x_shape, tensor_num, learning_rate, train_iters, weight_decay
+def compare_with_numpy_adam(
+    test_case, device, x_shape, tensor_num, learning_rate, train_iters,
+    betas,
+    weight_decay,
+    eps,
+    do_bias_correction,
+    amsgrad,
 ):
     random_weight_seq = []
     init_value_seq = []
+    np.random.seed(0)
 
     for _ in range(train_iters):
         random_grad_seq_per_iter = []
@@ -72,23 +78,27 @@ def compare_with_numpy_sgd(
     simp_module.to(device)
     simp_module.train()
 
-    sgd0 = flow.optim.SGD(
+    adam0 = flow.optim.Adam(
         [
             {
                 "params": simp_module.parameters(),
                 "lr": learning_rate,
+                "betas": betas,
+                "eps": eps,
                 "weight_decay": weight_decay,
-            }
+            }, 
         ],
+        do_bias_correction=do_bias_correction,
+        amsgrad=amsgrad,
     )
 
-    class CustomSGDGraph(flow.nn.Graph):
+    class CustomAdamGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
             self.m = simp_module
-            self.add_optimizer(sgd0)
-            self.config.enable_amp(True)
-            self.config.allow_fuse_model_update_ops(True)
+            self.add_optimizer(adam0)
+            # self.config.enable_amp(True)
+            # self.config.allow_fuse_model_update_ops(True)
 
         def build(self, mask_tensor_list):
             loss = flow.sum(self.m(mask_tensor_list))
@@ -96,7 +106,7 @@ def compare_with_numpy_sgd(
             return loss
 
     of_res_list = []
-    sgd_graph = CustomSGDGraph()
+    adam_graph = CustomAdamGraph()
     for i in range(train_iters):
         mask_tensor_list = []
         for idx in range(tensor_num):
@@ -108,7 +118,7 @@ def compare_with_numpy_sgd(
                     device=flow.device(device),
                 )
             )
-        sgd_x = sgd_graph(mask_tensor_list)
+        adam_x = adam_graph(mask_tensor_list)
         of_res_list.append([])
         for idx in range(tensor_num):
             of_res_list[i].append(copy.copy(simp_module.param(idx).numpy()))
@@ -117,18 +127,38 @@ def compare_with_numpy_sgd(
 
     def train_by_numpy():
         x = init_value_seq
+        m = []
+        v = []
+        for idx in range(tensor_num): 
+            m.append(np.zeros_like(x[idx]))
+            v.append(np.zeros_like(x[idx]))
+        beta1 = betas[0]
+        beta2 = betas[1]
+
         ones = np.ones(x_shape).astype(np.float32)
 
-        def train_one_iter(weight):
+        def train_one_iter(step, weight):
             for i in range(tensor_num):
                 transposed_weight = np.transpose(weight[i], (1, 0))
                 grad = np.matmul(ones, transposed_weight)
                 grad = grad + weight_decay * x[i]
-                x[i] = x[i] - learning_rate * grad
-            return x
 
-        for i in range(train_iters):
-            x = train_one_iter(random_weight_seq[i])
+                bias_correction1 = 1.0
+                bias_correction2 = 1.0
+
+                if do_bias_correction:
+                    bias_correction1 = 1.0 - np.power(beta1, step)
+                    bias_correction2 = 1.0 - np.power(beta2, step)
+
+                m[i] = beta1 * m[i] + (1 - beta1) * grad
+                v[i] = beta2 * v[i] + (1 - beta2) * grad * grad
+                denom = np.sqrt(v[i]) / np.sqrt(bias_correction2) + eps
+
+                x[i] = x[i] - ((learning_rate / bias_correction1) * m[i] / denom)
+            return (x, m, v)
+
+        for i in range(1, train_iters+1):
+            x, m, v = train_one_iter(i, random_weight_seq[i-1])
             np_res_list.append(copy.copy(x))
 
     train_by_numpy()
@@ -140,18 +170,54 @@ def compare_with_numpy_sgd(
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-class TestMultiTensorSGD(flow.unittest.TestCase):
-    def test_multi_tensor_sgd(test_case):
+class TestMultiTensorAdam(flow.unittest.TestCase):
+    def test_multi_tensor_adam(test_case):
+        # arg_dict = OrderedDict()
+        # arg_dict["device"] = ["cuda"]
+        # arg_dict["x_shape"] = [(4, 4)]
+        # arg_dict["tensor_num"] = [4, 6]
+        # arg_dict["learning_rate"] = [1, 1e-3]
+        # arg_dict["train_iters"] = [10]
+        # arg_dict["betas"] = [(0.99, 0.9)]
+        # arg_dict["weight_decay"] = [0.001, 0.0]
+        # arg_dict["eps"] = [1e-5]
+        # # arg_dict["do_bias_correction"] = [True, False]
+        # arg_dict["do_bias_correction"] = [False]
+        # arg_dict["amsgrad"] = [False] # Multi tensor update do not support amsgrad
+        # for arg in GenArgList(arg_dict):
+        #     compare_with_numpy_adam(test_case, *arg)
+
+
+        # arg_dict = OrderedDict()
+        # arg_dict["device"] = ["cuda"]
+        # arg_dict["x_shape"] = [(4, 4)]
+        # arg_dict["tensor_num"] = [1]
+        # arg_dict["learning_rate"] = [1]
+        # arg_dict["train_iters"] = [2]
+        # # arg_dict["betas"] = [(0.99, 0.9)]
+        # arg_dict["betas"] = [(0.0, 0.0)]
+
+        # arg_dict["weight_decay"] = [0.000]
+        # arg_dict["eps"] = [1e-5]
+        # arg_dict["do_bias_correction"] = [False]
+        # arg_dict["amsgrad"] = [False] # Multi tensor update do not support amsgrad
+        # for arg in GenArgList(arg_dict):
+        #     compare_with_numpy_adam(test_case, *arg)
+
+
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda"]
         arg_dict["x_shape"] = [(4, 4)]
-        arg_dict["tensor_num"] = [4, 6]
-        arg_dict["learning_rate"] = [1, 1e-3]
+        arg_dict["tensor_num"] = [1]
+        arg_dict["learning_rate"] = [1e-3]
         arg_dict["train_iters"] = [10]
-        arg_dict["weight_decay"] = [0.0, 1e-3]
+        arg_dict["betas"] = [(0.99, 0.9)]
+        arg_dict["weight_decay"] = [0.0]
+        arg_dict["eps"] = [1e-5]
+        arg_dict["do_bias_correction"] = [False]
+        arg_dict["amsgrad"] = [False] # Multi tensor update do not support amsgrad
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_sgd(test_case, *arg)
-
+            compare_with_numpy_adam(test_case, *arg)
 
 if __name__ == "__main__":
     unittest.main()

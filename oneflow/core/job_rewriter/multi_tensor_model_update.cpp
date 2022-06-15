@@ -19,6 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// Key加多一个Dtype，因为不一定所有model_diff是fp32/fp16. 
 struct SGDOptimizerKey {
   std::string learning_rate;
   std::string scale_by_tensor_lbn;
@@ -43,8 +44,6 @@ struct AdamOptimizerKey {
   std::string learning_rate;
   std::string scale_by_tensor_lbn;
   std::string skip_if_lbn;
-  std::string bias_correction1_lbn;
-  std::string bias_correction2_lbn;
   double scale;
   float l1;
   float l2;
@@ -62,8 +61,7 @@ bool operator==(const AdamOptimizerKey& lhs, const AdamOptimizerKey& rhs) {
   return (lhs.learning_rate == rhs.learning_rate)
          && (lhs.scale_by_tensor_lbn == rhs.scale_by_tensor_lbn)
          && (lhs.skip_if_lbn == rhs.skip_if_lbn)
-         && (lhs.bias_correction1_lbn == rhs.bias_correction1_lbn)
-         && (lhs.bias_correction2_lbn == rhs.bias_correction2_lbn) && (lhs.scale == rhs.scale)
+         && (lhs.scale == rhs.scale)
          && (lhs.l1 == rhs.l1) && (lhs.l2 == rhs.l2) && (lhs.beta1 == rhs.beta1)
          && (lhs.beta2 == rhs.beta2) && (lhs.epsilon == rhs.epsilon)
          && (lhs.weight_decay == rhs.weight_decay) && (lhs.amsgrad == rhs.amsgrad)
@@ -101,8 +99,7 @@ struct hash<oneflow::AdamOptimizerKey> {
     const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
 
     return string_hash(key.learning_rate) ^ string_hash(key.scale_by_tensor_lbn)
-           ^ string_hash(key.skip_if_lbn) ^ string_hash(key.bias_correction1_lbn)
-           ^ string_hash(key.bias_correction2_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
+           ^ string_hash(key.skip_if_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
            ^ float_hash(key.l2) ^ float_hash(key.beta1) ^ float_hash(key.beta2)
            ^ float_hash(key.epsilon) ^ float_hash(key.weight_decay) ^ bool_hash(key.amsgrad)
            ^ bool_hash(key.do_bias_correction) ^ parallel_conf_hash(key.parallel_conf)
@@ -225,6 +222,7 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
               "multi_tensor_model_update" + NewUniqueId());
           std::string op_type_name = "multi_tensor_sgd_update";
           if (has_model_half) { op_type_name = "multi_tensor_sgd_update_with_cast"; }
+
           multi_tensor_sgd_update_op_builder.OpTypeName(op_type_name)
               .Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
@@ -250,8 +248,6 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
         AdamOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
                              scale_by_tensor_lbn,
                              skip_if_lbn,
-                             model_update_user_conf.input("bias_correction1", 0),
-                             model_update_user_conf.input("bias_correction1", 0),
                              model_update_user_conf.attr<double>("scale"),
                              model_update_user_conf.attr<float>("l1"),
                              model_update_user_conf.attr<float>("l2"),
@@ -275,6 +271,10 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
               .Input("v", model_update_user_conf.input("v", 0));
           if (has_model_half) {
             iter->second.Input("model_half", model_update_user_conf.input("model_half", 0));
+          }
+          if(model_update_user_conf.attr<bool>("do_bias_correction")){
+            iter->second.Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
+                        .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0)); 
           }
         } else {
           user_op::UserOpConfWrapperBuilder multi_tensor_adam_update_op_builder(

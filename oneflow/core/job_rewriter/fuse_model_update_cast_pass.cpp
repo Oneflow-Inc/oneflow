@@ -76,12 +76,12 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
           continue;
         }
 
-        const user_op::UserOpConfWrapper model_update_user_conf(
-            find_model_update_update_node->op().op_conf());
         // Currently only support for cuda, maybe remove this limit.
         if (find_model_update_update_node->parallel_desc().device_type() != DeviceType::kCUDA) {
           continue;
         }
+
+        const user_op::UserOpConfWrapper model_update_user_conf(find_model_update_update_node->op().op_conf());
 
         // Here we find cast and model_update node, Replace cast as optim_fuse_cast, and add
         // model_half to model_update node.
@@ -118,8 +118,6 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
               .Input("m", model_update_user_conf.input("m", 0))
               .Input("v", model_update_user_conf.input("v", 0))
-              .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
-              .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0))
               .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
               .Attr<double>("scale", model_update_user_conf.attr<double>("scale"))
               .Attr<float>("l1", model_update_user_conf.attr<float>("l1"))
@@ -129,8 +127,14 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
               .Attr<float>("beta2", model_update_user_conf.attr<float>("beta2"))
               .Attr<float>("epsilon", model_update_user_conf.attr<float>("epsilon"))
               .Attr<bool>("amsgrad", model_update_user_conf.attr<bool>("amsgrad"))
-              .Attr<bool>("do_bias_correction",
-                          model_update_user_conf.attr<bool>("do_bias_correction"));
+              .Attr<bool>("do_bias_correction", model_update_user_conf.attr<bool>("do_bias_correction"));
+          if(model_update_user_conf.attr<bool>("do_bias_correction")){
+            printf("================ \n"); 
+          }
+          if(model_update_user_conf.attr<bool>("do_bias_correction")){
+            fused_model_update_op_builder.Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0));
+            fused_model_update_op_builder.Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0));
+          }
           if (model_update_user_conf.attr<bool>("amsgrad")) {
             fused_model_update_op_builder.Input("max_v", model_update_user_conf.input("max_v", 0));
           }
