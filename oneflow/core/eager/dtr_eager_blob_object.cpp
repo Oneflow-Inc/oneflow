@@ -367,6 +367,8 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
     return JUST(neighbor_cost());
   } else if (heuristic == "eq_compute_time_and_last_access") {
     return JUST(approx_neighbor_cost()) / time_since_last_access;
+  } else if (heuristic == "eq_compute_time") {
+    return JUST(approx_neighbor_cost());
   } else if (heuristic == "local_compute_time_and_last_access") {
     return compute_time_ / time_since_last_access;
   } else if (heuristic == "local_compute_time") {

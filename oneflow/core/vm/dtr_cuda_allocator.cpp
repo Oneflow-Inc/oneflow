@@ -137,8 +137,7 @@ void DtrCudaAllocator::ErasePieceFromPtrMap(Piece* piece) {
 
 double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
   if (ebo == nullptr) { return 0.; }
-  const std::string cost_type = "eq_compute_time_and_last_access";
-  double cost = CHECK_JUST(ebo->cost(cost_type));
+  double cost = CHECK_JUST(ebo->cost());
 
   if (!EnvBool<OF_DTR_O_ONE>()) {
     CHECK(!isinf(cost));
