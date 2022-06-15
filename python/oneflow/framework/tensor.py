@@ -71,30 +71,6 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 
-def _setitem(self, key, value):
-    if self.is_global:
-        if isinstance(value, (int, float)):
-            value = flow._C.global_constant(
-                [1],
-                value,
-                dtype=self.dtype,
-                placement=self.placement,
-                sbp=[flow.sbp.broadcast,] * len(self.sbp),
-            )
-        else:
-            value = value.to_global(
-                self.placement, sbp=[flow.sbp.broadcast,] * len(self.sbp)
-            )
-    else:
-        if isinstance(value, (int, float)):
-            value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
-        else:
-            value = value.to(device=self.device)
-
-    flow._C.tensor_setitem(self, key, value)
-    return self
-
-
 def _str(self):
     return self.__repr__()
 
@@ -641,10 +617,6 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
-def _to_local(self):
-    return flow.to_local(self)
-
-
 def _relu(self):
     return flow._C.relu(self)
 
@@ -920,24 +892,6 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *new_args, **kwargs)
 
 
-def _local_to_global(self, placement=None, sbp=None, *, check_meta=True):
-    return flow.local_to_global(self, placement, sbp, check_meta)
-
-
-def _global_to_global(
-    self, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
-):
-    return flow.global_to_global(self, placement, sbp, grad_sbp, check_meta)
-
-
-def _to_global(self, placement=None, sbp=None, **kwargs):
-    return flow.to_global(self, placement, sbp, **kwargs)
-
-
-def _to_local(self):
-    return flow.to_local(self)
-
-
 def _tolist(self):
     if self.numel() == 1 and self.ndim == 0:
         return self.item()
@@ -1144,7 +1098,6 @@ def RegisterMethods():
     Tensor.sub = _sub
     Tensor.sub_ = _sub_inplace
     Tensor.backward = _backward
-    Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
     Tensor.__bool__ = is_nonzero
@@ -1176,9 +1129,6 @@ def RegisterMethods():
     Tensor.new_zeros = _new_zeros
     Tensor.where = _where
     Tensor.norm = _norm
-    Tensor.local_to_global = _local_to_global
-    Tensor.global_to_global = _global_to_global
-    Tensor.to_global = _to_global
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
@@ -1189,7 +1139,6 @@ def RegisterMethods():
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
     Tensor.item = _item
-    Tensor.to_local = _to_local
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist

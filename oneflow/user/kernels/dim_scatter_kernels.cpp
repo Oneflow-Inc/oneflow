@@ -68,8 +68,8 @@ class DimScatterKernel final : public user_op::OpKernel {
     }();
 
     DimScatterFunctor<device_type, IN_T, IDX_T, Opt>()(
-        ctx->stream(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim,
-        index_shape.elem_cnt(), dim, upper_bound, index, src, output);
+        ctx->stream(), src_nd_helper, idx_nd_helper, output_nd_helper, ndim, index_shape.elem_cnt(),
+        dim, upper_bound, index, src, output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

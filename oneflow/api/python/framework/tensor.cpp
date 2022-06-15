@@ -125,26 +125,17 @@ static PyObject* PyTensorObject_subscript(PyObject* self, PyObject* item) {
   END_HANDLE_ERRORS
 }
 
-static int PyTensorObject_ass_subscript(PyObject* self, PyObject* item, PyObject* value) {
-  HANDLE_ERRORS
-  const auto& p = PyTensor_Unpack(self);
-  const auto& v = PyTensor_Unpack(value);
-  functional::PythonArg arg(item);
-  ASSERT(functional::TensorSetItem(p, arg.As<functional::TensorIndex>(), v));
-  return 0;
-  END_HANDLE_ERRORS_RET(-1)
-}
-
 static PySequenceMethods PyTensorObject_as_sequence = {
     (lenfunc)PyTensorObject_length, NULL, /*sq_concat*/
     NULL,                                 /*sq_repeat*/
     (ssizeargfunc)PyTensorObject_getitem, /*sq_item*/
 };
 
+extern int PyTensorObject_setitem(PyObject*, PyObject*, PyObject*);
 static PyMappingMethods PyTensorObject_as_mapping = {
     (lenfunc)PyTensorObject_length,
     (binaryfunc)PyTensorObject_subscript,
-    (objobjargproc)PyTensorObject_ass_subscript,
+    (objobjargproc)PyTensorObject_setitem,
 };
 
 static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused) {
@@ -156,9 +147,9 @@ static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused)
 static PyObject* PyTensorObject_stride(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& stride = ASSERT_PTR(PyTensor_Unpack(self)->stride());
-  PyObject* tup = PyTuple_New(stride->NumAxes());
-  for (int i = 0; i < stride->NumAxes(); ++i) {
-    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->At(i)));
+  PyObject* tup = PyTuple_New(stride->size());
+  for (int i = 0; i < stride->size(); ++i) {
+    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->at(i)));
   }
   return tup;
   END_HANDLE_ERRORS
