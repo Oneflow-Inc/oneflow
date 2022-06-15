@@ -28,10 +28,12 @@ class Shape;
 class ShapeView : public ArrayRef<int64_t>, public ConstShapeMixIn<ShapeView> {
  public:
   ShapeView() = default;
+  // NOLINTNEXTLINE
   ShapeView(const ShapeProto& shape_proto)
-      : ArrayRef<int64_t>(shape_proto.dim().data(), shape_proto.dim_size()){};  // NOLINT
+      : ArrayRef<int64_t>(shape_proto.dim().data(), shape_proto.dim_size()){};
+  // NOLINTNEXTLINE
   ShapeView(const Shape& shape)
-      : ArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};  // NOLINT
+      : ArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};
 
   using ArrayRef<DimType>::ArrayRef;
 
@@ -46,8 +48,9 @@ std::ostream& operator<<(std::ostream& out, ShapeView shape);
 class MutShapeView final : public MutableArrayRef<int64_t>, public MutShapeMixIn<MutShapeView> {
  public:
   using MutableArrayRef<DimType>::MutableArrayRef;
+  // NOLINTNEXTLINE
   MutShapeView(Shape& shape)
-      : MutableArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};  // NOLINT
+      : MutableArrayRef<int64_t>(shape.dim_vec().data(), shape.dim_vec().size()){};
 
   int64_t* mut_ptr() const { return this->data(); }
 
