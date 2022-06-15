@@ -304,8 +304,6 @@ static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwa
         ASSERT_PTR(functional::BroadcastEqual(PyTensor_Unpack(self), PyTensor_Unpack(other))));
   return PyTensor_New(ASSERT_PTR(
       functional::ScalarLogicalEqual(PyTensor_Unpack(self), functional::PyUnpackScalar(other))));
-  // // CHECK_OR_THROW()
-  // return PyTensor_New(ASSERT_PTR(functional::To(PyTensor_Unpack(self), DType::UInt8(), false)));
   END_HANDLE_ERRORS
 }
 
