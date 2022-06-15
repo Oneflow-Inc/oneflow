@@ -120,24 +120,25 @@ bool IsUserOpWithTypeName(const OperatorConf& op_conf, const std::string& op_typ
   return op_conf.has_user_conf() && op_conf.user_conf().op_type_name() == op_type_name;
 };
 
-void AddScaleAndSkipLbn(user_op::UserOpConfWrapperBuilder& multi_tensor_op_builder,
+void AddScaleAndSkipLbn(user_op::UserOpConfWrapperBuilder& multi_tensor_model_update_op_builder,
                         const user_op::UserOpConfWrapper& model_update_user_conf) {
   if (model_update_user_conf.has_input("scale_by_tensor", 0)) {
-    multi_tensor_op_builder.Input("scale_by_tensor",
-                                  model_update_user_conf.input("scale_by_tensor", 0));
+    multi_tensor_model_update_op_builder.Input("scale_by_tensor",
+                                               model_update_user_conf.input("scale_by_tensor", 0));
   }
   if (model_update_user_conf.has_input("skip_if", 0)) {
-    multi_tensor_op_builder.Input("skip_if", model_update_user_conf.input("skip_if", 0));
+    multi_tensor_model_update_op_builder.Input("skip_if",
+                                               model_update_user_conf.input("skip_if", 0));
   }
 }
 
-class MultiTensorUpdatePass final : public JobPass {
+class MultiTensorModelUpdatePass final : public JobPass {
  public:
-  MultiTensorUpdatePass() = default;
-  ~MultiTensorUpdatePass() override = default;
+  MultiTensorModelUpdatePass() = default;
+  ~MultiTensorModelUpdatePass() override = default;
 
   bool IsEnabled(const JobPassCtx& ctx) const {
-    return ParseBooleanFromEnv("ONEFLOW_ENABLE_MULTI_TENSOR_UPDATE", false);
+    return ParseBooleanFromEnv("ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE", false);
   }
   Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
 
@@ -149,7 +150,8 @@ class MultiTensorUpdatePass final : public JobPass {
   }
 };
 
-Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
+Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
+                                              JobBuilder* job_builder) const {
   if (!job_builder->job().job_conf().has_train_conf()) { return Maybe<void>::Ok(); }
   std::vector<OperatorConf> delete_ops;
   ParallelConf parallel_conf{};
@@ -218,14 +220,14 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
             iter->second.Input("model_half", model_update_user_conf.input("model_half", 0));
           }
         } else {
-          user_op::UserOpConfWrapperBuilder multi_tensor_update_sgd_op_builder("multi_tensor_update"
-                                                                               + NewUniqueId());
+          user_op::UserOpConfWrapperBuilder multi_tensor_sgd_update_op_builder(
+              "multi_tensor_model_update" + NewUniqueId());
           std::string op_type_name = "multi_tensor_sgd_update";
           if (has_model_half) {
             printf("Enter here is multi tensor sgd update cast. \n");
             op_type_name = "multi_tensor_sgd_update_with_cast";
           }
-          multi_tensor_update_sgd_op_builder.OpTypeName(op_type_name)
+          multi_tensor_sgd_update_op_builder.OpTypeName(op_type_name)
               .Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
               .Input("learning_rate", model_update_user_conf.input("learning_rate", 0))
@@ -234,16 +236,16 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
               .Attr<float>("l2", model_update_user_conf.attr<float>("l2"))
               .Attr<float>("weight_decay", model_update_user_conf.attr<float>("weight_decay"));
           if (has_model_half) {
-            multi_tensor_update_sgd_op_builder.Input("model_half",
+            multi_tensor_sgd_update_op_builder.Input("model_half",
                                                      model_update_user_conf.input("model_half", 0));
           }
 
-          AddScaleAndSkipLbn(multi_tensor_update_sgd_op_builder, model_update_user_conf);
+          AddScaleAndSkipLbn(multi_tensor_sgd_update_op_builder, model_update_user_conf);
 
           CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
-          multi_tensor_update_sgd_op_builder.ScopeSymbolId(
+          multi_tensor_sgd_update_op_builder.ScopeSymbolId(
               model_update_user_conf.op_conf().scope_symbol_id());
-          multi_tensor_sgd_update_hashmap.emplace(key, multi_tensor_update_sgd_op_builder);
+          multi_tensor_sgd_update_hashmap.emplace(key, multi_tensor_sgd_update_op_builder);
         }
       } else if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
                                       "adam_update")) {
@@ -277,11 +279,11 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
             iter->second.Input("model_half", model_update_user_conf.input("model_half", 0));
           }
         } else {
-          user_op::UserOpConfWrapperBuilder multi_tensor_update_adam_op_builder(
-              "multi_tensor_update" + NewUniqueId());
+          user_op::UserOpConfWrapperBuilder multi_tensor_adam_update_op_builder(
+              "multi_tensor_model_update" + NewUniqueId());
           std::string op_type_name = "multi_tensor_adam_update";
           if (has_model_half) { op_type_name = "multi_tensor_adam_update_with_cast"; }
-          multi_tensor_update_adam_op_builder.OpTypeName(op_type_name)
+          multi_tensor_adam_update_op_builder.OpTypeName(op_type_name)
               .Input("model", model_update_user_conf.input("model", 0))
               .Input("model_diff", model_update_user_conf.input("model_diff", 0))
               .Input("m", model_update_user_conf.input("m", 0))
@@ -299,20 +301,20 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
                           model_update_user_conf.attr<bool>("do_bias_correction"));
 
           if (model_update_user_conf.attr<bool>("do_bias_correction")) {
-            multi_tensor_update_adam_op_builder
+            multi_tensor_adam_update_op_builder
                 .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
                 .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0));
           }
           if (has_model_half) {
-            multi_tensor_update_adam_op_builder.Input(
+            multi_tensor_adam_update_op_builder.Input(
                 "model_half", model_update_user_conf.input("model_half", 0));
           }
-          AddScaleAndSkipLbn(multi_tensor_update_adam_op_builder, model_update_user_conf);
+          AddScaleAndSkipLbn(multi_tensor_adam_update_op_builder, model_update_user_conf);
 
           CHECK(model_update_user_conf.op_conf().has_scope_symbol_id());
-          multi_tensor_update_adam_op_builder.ScopeSymbolId(
+          multi_tensor_adam_update_op_builder.ScopeSymbolId(
               model_update_user_conf.op_conf().scope_symbol_id());
-          multi_tensor_adam_update_hashmap.emplace(key, multi_tensor_update_adam_op_builder);
+          multi_tensor_adam_update_hashmap.emplace(key, multi_tensor_adam_update_op_builder);
         }
       } else {
         UNIMPLEMENTED() << "Current Optimizer do not support multi tensor update. ";
@@ -321,12 +323,12 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
     }
   });
   for (auto& op : multi_tensor_sgd_update_hashmap) {
-    auto multi_tensor_update_sgd_op = op.second.Build();
-    job_builder->AddOps(parallel_conf, {multi_tensor_update_sgd_op.op_conf()});
+    auto multi_tensor_model_update_sgd_op = op.second.Build();
+    job_builder->AddOps(parallel_conf, {multi_tensor_model_update_sgd_op.op_conf()});
   }
   for (auto& op : multi_tensor_adam_update_hashmap) {
-    auto multi_tensor_update_adam_op = op.second.Build();
-    job_builder->AddOps(parallel_conf, {multi_tensor_update_adam_op.op_conf()});
+    auto multi_tensor_model_update_adam_op = op.second.Build();
+    job_builder->AddOps(parallel_conf, {multi_tensor_model_update_adam_op.op_conf()});
   }
   job_builder->DelOps(delete_ops);
   return Maybe<void>::Ok();
@@ -334,6 +336,6 @@ Maybe<void> MultiTensorUpdatePass::Apply(const OpGraph& op_graph, JobBuilder* jo
 
 }  // namespace
 
-REGISTER_JOB_PASS("MultiTensorUpdatePass", MultiTensorUpdatePass);
+REGISTER_JOB_PASS("MultiTensorModelUpdatePass", MultiTensorModelUpdatePass);
 
 }  // namespace oneflow

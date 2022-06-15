@@ -24,7 +24,6 @@ namespace oneflow {
 // Kernel arg size has 4K limit.
 constexpr int max_tensors[5] = {160, 80, 40, 20, 15};
 
-// template<typename T, typename G, int N>
 template<int N>
 struct TensorTupleParams {
   void* model_addresses[N][max_tensors[N - 1]];
