@@ -579,7 +579,8 @@ Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeFastMaybe(
     queue.pop();
     JUST(Handler(cur_node));
     ForEachOutNode(cur_node, [&](NodeType* out) {
-      if (--counter_in[out] == 0) { queue.push(out); }
+      --counter_in[out];
+      if (counter_in[out] == 0) { queue.push(out); }
     });
   }
   return Maybe<void>::Ok();

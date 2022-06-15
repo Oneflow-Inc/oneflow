@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/task.pb.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -112,20 +111,20 @@ TaskClassifier GetTaskClassifier(const TaskNode* node) {
 
 // Drop down the maximum layer with the minimum layer form consumer
 void TopoStruct::DropTributaryLayer(int32_t upper_bound) {
-  if (upper_bound < TributaryLayer || TributaryLayer < 0) { TributaryLayer = upper_bound; }
+  if (upper_bound < tributary_layer || tributary_layer < 0) { tributary_layer = upper_bound; }
 }
 
 // Should initialize the counter to be the number of out edges
 // Compute maximum layer for tributaries
 void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
-  if (counter || MinLayer <= 0) { return; }
+  if (counter || min_layer <= 0) { return; }
   int32_t producer_max_lay = 0;
-  if (IfMainstem) {
-    producer_max_lay = MinLayer - 1;
+  if (on_mainstem) {
+    producer_max_lay = min_layer - 1;
   } else {
     // On a tributary, the operator could be run later.
-    producer_max_lay = TributaryLayer;
-    // producer_max_lay = TributaryLayer - 1;
+    producer_max_lay = tributary_layer;
+    // producer_max_lay = tributary_layer - 1;
   }
   node->ForEachNodeOnInEdge([&](TaskNode* in) {
     auto& topo_struct_in = task_node2topo_struct->at(in);
@@ -141,14 +140,14 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2
 // If so, judge it for its producer/upstream nodes
 void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Skip it if this node is already judged.
-  if (IfMainstem) { return; }
-  CHECK_GE(MinLayer, 0) << "TopoStruct not initialized!";
-  IfMainstem = true;
-  // If I am in the mainstem, then all the children with (MinLayer >= my layer id - 1) would be
+  if (on_mainstem) { return; }
+  CHECK_GE(min_layer, 0) << "TopoStruct not initialized!";
+  on_mainstem = true;
+  // If I am in the mainstem, then all the children with (min_layer >= my layer id - 1) would be
   // considered as in the mainstem
   node->ForEachNodeOnInEdge([&](TaskNode* in) {
     auto& topo_struct_in = task_node2topo_struct->at(in);
-    if (topo_struct_in.MinLayer == MinLayer - 1) {
+    if (topo_struct_in.min_layer == min_layer - 1) {
       topo_struct_in.SpreadTributaryLayer(task_node2topo_struct);
     }
   });
@@ -156,24 +155,30 @@ void TopoStruct::SpreadMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_s
 
 // The minimum computation distance from the beginning of this op to the next transfer
 int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
-  if (MinDistance2Transfer >= 0) { return MinDistance2Transfer; }
+  if (min_distance2transfer >= 0) { return min_distance2transfer; }
   // if this node is a transfer node
   if (IsTransferNode(node->GetTaskType())) {
-    MinDistance2Transfer = 0;
-    return MinDistance2Transfer;
+    min_distance2transfer = 0;
+    return min_distance2transfer;
   }
   // Otherwise, initialize it with a large number
-  MinDistance2Transfer = GetMaxVal<int32_t>();
+  min_distance2transfer = GetMaxVal<int32_t>();
   node->ForEachNodeOnOutEdge([&](TaskNode* out) {
-    MinDistance2Transfer =
-        std::min(MinDistance2Transfer,
+    min_distance2transfer =
+        std::min(min_distance2transfer,
                  task_node2topo_struct->at(out).GetMinDistance2Transfer(task_node2topo_struct));
   });
-  ++MinDistance2Transfer;
-  return MinDistance2Transfer;
+  ++min_distance2transfer;
+  return min_distance2transfer;
 }
 
 // deciding parameter
+// i = 0: those with small tributary layers go first
+// i = 1: those with small minimum distance to transfer go first
+// i = 2: first in first out
+// i = 3: those with large tributary layers go first
+// i = 4: those with long distance to transfer go first
+// i = 5: last in first out
 int32_t TopoStruct::GetDecidingParameter(int32_t i) const {
   int32_t sign = 1;
   if (i >= 3) {
@@ -181,9 +186,9 @@ int32_t TopoStruct::GetDecidingParameter(int32_t i) const {
     sign = -1;
   }
   switch (i) {
-    case 0: return sign * TributaryLayer;
-    case 1: return sign * MinDistance2Transfer;
-    case 2: return sign * MinLayer;
+    case 0: return sign * tributary_layer;
+    case 1: return sign * min_distance2transfer;
+    case 2: return sign * min_layer;
   }
   return 0;
 }
@@ -191,20 +196,20 @@ int32_t TopoStruct::GetDecidingParameter(int32_t i) const {
 // Find the mianstem of the task graph, then reduce the wait time for tributaries
 void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Find the maximum layer number
-  int32_t max_MinLayer = -1;
+  int32_t max_min_layer = -1;
   for (const auto& pair : *task_node2topo_struct) {
-    if (max_MinLayer < pair.second.MinLayer) { max_MinLayer = pair.second.MinLayer; }
+    if (max_min_layer < pair.second.min_layer) { max_min_layer = pair.second.min_layer; }
   }
-  // All the nodes with MinLayer>=mainstem_end_id would be considered as mainstem nodes
+  // All the nodes with min_layer>=mainstem_end_id would be considered as mainstem nodes
   // The last 5 layers would be considered as in mainstem anyway.
-  int32_t mainstem_end_id = max_MinLayer - 4;
+  int32_t mainstem_end_id = max_min_layer - 4;
   for (auto& pair : *task_node2topo_struct) {
     auto& topo_struct = pair.second;
     // Initialize the counter and Tributary Layer
     topo_struct.counter = pair.first->out_edges().size();
-    topo_struct.TributaryLayer = max_MinLayer;
+    topo_struct.tributary_layer = max_min_layer;
     // Find out all the nodes on the mainstem.
-    if (topo_struct.MinLayer >= mainstem_end_id) {
+    if (topo_struct.min_layer >= mainstem_end_id) {
       topo_struct.SpreadMainstem(task_node2topo_struct);
     }
   }
@@ -212,7 +217,7 @@ void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   for (auto& pair : *task_node2topo_struct) {
     // Compute maximum layer for tributaries
     pair.second.SpreadTributaryLayer(task_node2topo_struct);
-    // Set the MinDistance2Transfer for each topological structure
+    // Set the min_distance2transfer for each topological structure
     pair.second.GetMinDistance2Transfer(task_node2topo_struct);
   }
 }
@@ -227,20 +232,20 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   HashMap<int32_t, HashMap<int32_t, std::map<int32_t, TopoStruct*>>>
       task_type2machine_id2node_id2topo_structs;
   std::map<int32_t, TopoStruct*> min_node_id2topo_struct;
-  int32_t previous_MinLayer = 0;
+  int32_t previous_min_layer = 0;
   task_graph->TopoForEachNodeFast([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
     if (node->in_edges().empty()) {
-      topo_struct.MinLayer = 0;
+      topo_struct.min_layer = 0;
     } else {
       int32_t max_min_layer = 0;
       node->ForEachNodeOnInEdge([&](TaskNode* in) {
-        max_min_layer = std::max(max_min_layer, task_node2topo_struct[in].MinLayer);
+        max_min_layer = std::max(max_min_layer, task_node2topo_struct[in].min_layer);
       });
-      topo_struct.MinLayer = max_min_layer + 1;
-      // Deal with all the nodes with MinLayer=previous_MinLayer
-      if (max_min_layer >= previous_MinLayer) {
+      topo_struct.min_layer = max_min_layer + 1;
+      // Deal with all the nodes with min_layer=previous_min_layer
+      if (max_min_layer >= previous_min_layer) {
         // Using "7" to represent "and"
         // a7b means a pair (a, b)
         for (auto& task_type7machine_id2node_id2topo_structs :
@@ -280,8 +285,8 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
             }
           }
         }
-        // Renew the previous MinLayer at the end
-        previous_MinLayer = topo_struct.MinLayer;
+        // Renew the previous min_layer at the end
+        previous_min_layer = topo_struct.min_layer;
       }
     }
     // Put the topo structure into the map, waiting for determine the same nodes
