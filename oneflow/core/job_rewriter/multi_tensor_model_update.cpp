@@ -155,6 +155,7 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
   ParallelConf parallel_conf{};
   HashMap<SGDOptimizerKey, user_op::UserOpConfWrapperBuilder> multi_tensor_sgd_update_hashmap;
   HashMap<AdamOptimizerKey, user_op::UserOpConfWrapperBuilder> multi_tensor_adam_update_hashmap;
+  HashSet<std::string> processed_variable_list{};
 
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
@@ -185,6 +186,7 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
       }
       if (!if_data_parallel) { continue; }
 
+
       delete_ops.emplace_back(find_model_update_update_node->op().op_conf());
       parallel_conf = find_model_update_update_node->parallel_desc().parallel_conf();
 
@@ -200,6 +202,11 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
       if (model_update_user_conf.has_input("model_half", 0)) { has_model_half = true; }
 
       if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
+        const auto& processed_iter = processed_variable_list.find(model_update_user_conf.input("model", 0)); 
+        if(processed_iter != processed_variable_list.end()){
+          continue; 
+        }
+
         SGDOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
                             scale_by_tensor_lbn,
                             skip_if_lbn,
@@ -245,6 +252,17 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
         }
       } else if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(),
                                       "adam_update")) {
+        const auto& processed_model_iter = processed_variable_list.find(model_update_user_conf.input("model", 0)); 
+        const auto& processed_m_iter = processed_variable_list.find(model_update_user_conf.input("m", 0)); 
+        const auto& processed_v_iter = processed_variable_list.find(model_update_user_conf.input("v", 0)); 
+        
+        if(processed_model_iter != processed_variable_list.end() && 
+           processed_m_iter != processed_variable_list.end() &&
+           processed_v_iter != processed_variable_list.end()){
+          continue; 
+        }
+
+
         AdamOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
                              scale_by_tensor_lbn,
                              skip_if_lbn,
@@ -316,6 +334,12 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
         }
       } else {
         UNIMPLEMENTED() << "Current Optimizer do not support multi tensor update. ";
+      }
+
+      processed_variable_list.emplace(model_update_user_conf.input("model", 0)); 
+      if(IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "adam_update")){
+        processed_variable_list.emplace(model_update_user_conf.input("m", 0)); 
+        processed_variable_list.emplace(model_update_user_conf.input("v", 0)); 
       }
       break;
     }
