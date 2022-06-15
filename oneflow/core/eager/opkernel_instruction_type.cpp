@@ -478,7 +478,7 @@ Maybe<void> _RecursivelyCompute(
         && Global<dtr::TensorPool>::Get()->need_eager_eviction_ebos_.count(input.get()) > 0) {
       if (dtr::debug_level() >= 2) {
         LOG(INFO) << "going to evict " << input << " in recomputation, whose dptr is "
-                  << input->dptr() << ", compute op: " << input->compute_op_type_name()
+                  << input->dptr() << ", id: " << input->id() << ", compute op: " << input->compute_op_type_name()
                   << ", size: " << input->ByteSizeOfBlobBody()
                   << ", is in memory: " << input->is_in_memory() << std::endl;
       }

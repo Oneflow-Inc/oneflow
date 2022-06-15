@@ -160,7 +160,7 @@ void DtrCudaAllocator::DisplayAllPieces() {
     int coeff = -1;
     if (piece->tensor) {
       ss << "ebo: " << piece->tensor << ", id: " << piece->tensor->id()
-         << ", cost: " << get_cost(piece->tensor, coeff)
+         // << ", cost: " << get_cost(piece->tensor, coeff)
          << ", pinned: " << piece->tensor->num_pinned()
          << ", evictable: " << piece->tensor->is_evictable()
          << ", compute op: " << piece->tensor->compute_op_type_name();

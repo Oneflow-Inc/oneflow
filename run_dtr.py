@@ -51,7 +51,7 @@ class PositiveArgAction(argparse.Action):
         os.environ[self.env_var_name] = "False"
 
     def __call__(self, parser, namespace, values, option_string=None):
-        setattr(namespace, self.dest, False)
+        setattr(namespace, self.dest, True)
         os.environ[self.env_var_name] = "True"
 
 
@@ -212,6 +212,8 @@ total_time = 0
 
 if args.dtr:
     flow.nn.ContiguousGrad(model)
+zero_grad_set_to_none = args.old_immutable
+
 for iter, (train_data, train_label) in enumerate(train_data_loader):
     if iter >= ALL_ITERS:
         break
@@ -231,7 +233,7 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
         writer.flush()
 
     optimizer.step()
-    optimizer.zero_grad()
+    optimizer.zero_grad(set_to_none=zero_grad_set_to_none)
     del logits
     del loss
 
@@ -247,7 +249,7 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     last_time = time.time()
     if iter == 0:
         pass
-        # print('iter 0 ok')
+        print('iter 0 ok')
     # print(f'iter {iter} end, all pieces:')
     # flow._oneflow_internal.dtr.display_all_pieces()
     flow._oneflow_internal.dtr.set_left(True)

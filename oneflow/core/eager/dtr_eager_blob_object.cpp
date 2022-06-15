@@ -118,6 +118,7 @@ Maybe<void> DTREagerBlobObject::evict(bool eager_evict) {
     LOG(INFO) << "evict (No." << c++ << "), id: " << id() << std::endl;
   }
   if (!is_evictable()) {
+    std::cout << "evict failed, " << id() << std::endl;
     Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces();
   }
   CHECK_OR_RETURN(is_evictable());
