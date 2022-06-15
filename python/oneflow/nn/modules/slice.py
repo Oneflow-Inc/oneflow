@@ -62,7 +62,6 @@ def slice_update_op(input, update, slice_tup_list: Sequence[Tuple[int, int, int]
         >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
-        >>> input
         tensor([1., 2., 3., 4., 1.], dtype=oneflow.float32)
 
     """
