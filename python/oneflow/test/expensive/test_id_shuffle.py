@@ -353,7 +353,7 @@ class DataShuffleTestCase(flow.unittest.TestCase):
         for kwargs in GenArgDict(arg_dict):
             _test_id_shuffle(test_case, **kwargs)
 
-    def test_embedding_shuffle(test_case):
+    def _test_embedding_shuffle(test_case):
         arg_dict = OrderedDict()
         arg_dict["dtype"] = [flow.float32, flow.float16]
         arg_dict["enable_quantize"] = [True, False]
@@ -361,7 +361,7 @@ class DataShuffleTestCase(flow.unittest.TestCase):
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_shuffle(test_case, **kwargs)
 
-    def test_embedding_gradient_shuffle(test_case):
+    def _test_embedding_gradient_shuffle(test_case):
         arg_dict = OrderedDict()
         arg_dict["enable_quantize"] = [True, False]
         arg_dict["fp16"] = [True, False]
@@ -369,7 +369,7 @@ class DataShuffleTestCase(flow.unittest.TestCase):
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_gradient_shuffle(test_case, **kwargs)
 
-    def test_unique_key_value(test_case):
+    def _test_unique_key_value(test_case):
         arg_dict = OrderedDict()
         arg_dict["has_table_id"] = [True, False]
         arg_dict["num_tables"] = [13, 26, 1]

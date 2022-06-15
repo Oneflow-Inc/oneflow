@@ -64,9 +64,9 @@ class DimScatterKernel final : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
     int64_t upper_bound = 0;
-    if (input_tensor) {
+    if (input_tensor && input_tensor->shape().NumAxes() > 0) {
       upper_bound = input_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
-    } else {
+    } else if (index_tensor->shape().NumAxes() > 0) {
       upper_bound = like_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
     }
 
