@@ -641,8 +641,8 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
   bool check_meta = true;
   static const char* keywords[4] = {"placement", "sbp", "check_meta", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!:local_to_global",
-                                   const_cast<char**>(keywords), &placement_obj, &sbp_obj, &PyBool_Type,
-                                   &check_meta)) {
+                                   const_cast<char**>(keywords), &placement_obj, &sbp_obj,
+                                   &PyBool_Type, &check_meta)) {
     return NULL;
   };
 
