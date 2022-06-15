@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/straighten_nodes.h"
-#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/job_desc.h"
@@ -162,7 +161,8 @@ int32_t TopoStruct::GetMinDistance2Transfer(HashMap<TaskNode*, TopoStruct>* task
     return min_distance2transfer;
   }
   // Otherwise, initialize it with a large number
-  min_distance2transfer = GetMaxVal<int32_t>();
+  // Well, the total number in the task graph is large enough
+  min_distance2transfer = task_node2topo_struct->size();
   node->ForEachNodeOnOutEdge([&](TaskNode* out) {
     min_distance2transfer =
         std::min(min_distance2transfer,
