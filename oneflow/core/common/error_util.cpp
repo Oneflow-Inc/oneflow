@@ -16,6 +16,7 @@ limitations under the License.
 #include <sstream>
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 
 namespace oneflow {
 
@@ -97,7 +98,9 @@ std::string FormatFunctionOfStackFrame(const std::string& function) {
 
 // msg in stack frame
 Maybe<std::string> FormatMsgOfStackFrame(std::string error_msg, bool is_last_stack_frame) {
-  if (!is_last_stack_frame) { error_msg = *JUST(ShortenMsg(error_msg)); }
+  const bool debug_mode = GetGraphDebugMode();
+  // only shorten the message if it is not the last stack frame AND not in debug mode
+  if (!is_last_stack_frame && !debug_mode) { error_msg = *JUST(ShortenMsg(error_msg)); }
   // error_msg of last stack frame come from "<<"
   if (is_last_stack_frame) { error_msg = StripSpace(error_msg); }
   std::stringstream ss;
