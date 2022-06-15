@@ -26,9 +26,7 @@ bool IsScalarTensor(const user_op::TensorDesc* tensor) {
   return tensor->shape().NumAxes() == 1 && tensor->shape().At(0) == 1;
 }
 
-bool IsZeroDimTensor(const user_op::TensorDesc* tensor) {
-  return tensor->shape().NumAxes() == 0 && tensor->shape().elem_cnt() == 1;
-}
+bool IsZeroDimTensor(const user_op::TensorDesc* tensor) { return tensor->shape().NumAxes() == 0; }
 
 Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
