@@ -1123,35 +1123,24 @@ def RegisterMethods():
     Tensor.argwhere = _argwhere
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
-    # Tensor.flip = _flip
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
     Tensor.where = _where
     Tensor.norm = _norm
-    # Tensor.repeat = _repeat
-    # Tensor.repeat_interleave = _repeat_interleave
-    # Tensor.tile = _tile
     Tensor.split = _split
     Tensor.to = _to
-    # Tensor.gather = _gather
     Tensor.T = property(_T)
     Tensor.masked_select = _masked_select
-    # Tensor.eq = _eq
     Tensor.item = _item
     Tensor.sort = _sort
-    # Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    # Tensor.is_floating_point = _is_floating_point
     Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
-    # Tensor.prod = _prod
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
     Tensor.new_tensor = _new_tensor
-    # Tensor.cumsum = _cumsum
-    # Tensor.cumprod = _cumprod
 
 
 def register_tensor_op(op_name):
