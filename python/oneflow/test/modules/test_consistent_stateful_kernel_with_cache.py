@@ -29,23 +29,19 @@ def _test_global_stateful_kernel_with_inpersistent_state(test_case, placement, s
         .to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
     )
     x = x.to_global(placement, sbp)
-    y = flow.slice(x, [0, 0], [3, 1], [1, 1])
+    y = x[0:3, 0:1]
     y_np = np.array([[0], [8], [16]])
     test_case.assertTrue(
         np.array_equal(
-            y.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-            .to_local()
-            .numpy(),
+            y.numpy(),
             y_np,
         )
     )
-    x = x.to_global(sbp=flow.sbp.split(1))
-    y = flow.slice(x, [0, 0], [3, 1], [1, 1])
+    x = x.to_global(flow.env.all_device_placement("cuda"), sbp=flow.sbp.split(1))
+    y = x[0:3, 0:1]
     test_case.assertTrue(
         np.array_equal(
-            y.to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-            .to_local()
-            .numpy(),
+            y.numpy(),
             y_np,
         )
     )
