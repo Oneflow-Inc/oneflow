@@ -38,7 +38,6 @@ class ConvNpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    
     // user_op::Tensor : /home/HDD/dck/oneflow/oneflow/core/framework/user_op_tensor.h
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
@@ -62,7 +61,8 @@ class ConvNpuKernel final : public user_op::OpKernel {
               .Attr("dilations", dilations_64)
               .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
               .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
   };
 };
 #define REGISTER_CONV_KERNEL(op_name, dtype, ndims)                                                \
@@ -109,7 +109,7 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
     std::vector<int64_t> paddings_64 = { padding[0], padding[0], padding[1], padding[1]};
     std::vector<int64_t> dilations_64 = {1, 1, dilation[0], dilation[1]};
     
-    std::vector<int32_t> x_shape;
+    std::vector<int> x_shape;
     for(size_t i=0; i<dx->shape().NumAxes();++i)
     {
       x_shape.push_back(dx->shape().ptr()[i]);
@@ -119,18 +119,19 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
     CHECK_EQ(tmp_buffer->shape().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
     std::string key = "ConvDataGradNpu" + ShapeToString(x_shape);
     if(!const_tensor_map.count(key))  const_tensor_map[key] = x_shape;
-    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
-                      ACL_INT32,
-                      shape_desc.size(),
-                      shape_desc.data(),
-                      ACL_FORMAT_ND,
-                      mulVector(shape_desc)*sizeof(int32_t),
-                      x_shape.data(),
-                      key);
+    if(!shape_map.count(key)) shape_map[key] = shape_desc;
+    // AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
+    //                   ACL_INT32,
+    //                   shape_desc.size(),
+    //                   shape_desc.data(),
+    //                   ACL_FORMAT_ND,
+    //                   mulVector(shape_desc)*sizeof(int32_t),
+    //                   x_shape.data(),
+    //                   key);
     int64_t groups = 1;
     NpuCommand npu_command;
     npu_command.OpName("Conv2DBackpropInput")
-               .Input(wrap)
+               .Input(key, x_shape.size(), ACL_INT32)
                .Input(filter, data_format, "filter")
                .Input(dy, data_format, "out_backprop")
                .Output(dx, data_format, "y")
@@ -141,7 +142,8 @@ class ConvDataGradNpuKernel final : public user_op::OpKernel {
                .Attr("data_format", data_format)
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(dx);
     //std::cout<<"ConvDataGrad Execute Over"<<std::endl; 
@@ -191,7 +193,7 @@ class ConvFilterGradNpuKernel final : public user_op::OpKernel {
     std::vector<int64_t> strides_64 = {1, 1, stride[0], stride[1]};
     std::vector<int64_t> paddings_64 = { padding[0], padding[0], padding[1], padding[1]};
     std::vector<int64_t> dilations_64 = {1, 1, dilation[0], dilation[1]};
-    std::vector<int32_t> filter_shape;
+    std::vector<int> filter_shape;
     for(size_t i=0; i<filter_diff->shape().NumAxes();++i)
     {
       filter_shape.push_back(filter_diff->shape().ptr()[i]);
@@ -202,20 +204,21 @@ class ConvFilterGradNpuKernel final : public user_op::OpKernel {
     CHECK_EQ(tmp_buffer->shape().elem_cnt(), mulVector(shape_desc)*sizeof(int32_t));
     std::string key = "ConvDataFilterNpu" + ShapeToString(filter_shape);
     if(!const_tensor_map.count(key)) const_tensor_map[key] = filter_shape;
-    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
-                      ACL_INT32,
-                      shape_desc.size(),
-                      shape_desc.data(),
-                      ACL_FORMAT_ND,
-                      mulVector(shape_desc)*sizeof(int32_t),
-                      filter_shape.data(),
-                      key);
+    if(!shape_map.count(key)) shape_map[key] = shape_desc;
+    // AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
+    //                   ACL_INT32,
+    //                   shape_desc.size(),
+    //                   shape_desc.data(),
+    //                   ACL_FORMAT_ND,
+    //                   mulVector(shape_desc)*sizeof(int32_t),
+    //                   filter_shape.data(),
+    //                   key);
     int64_t groups = 1;
 
     NpuCommand npu_command;
     npu_command.OpName("Conv2DBackpropFilter")
                .Input(x, data_format, "x")
-               .Input(wrap)
+               .Input(key, filter_shape.size(), ACL_INT32)
                .Input(dy, data_format, "out_backprop")
                .Output(filter_diff, data_format, "y")
                .Attr("strides", strides_64)
@@ -225,7 +228,8 @@ class ConvFilterGradNpuKernel final : public user_op::OpKernel {
                .Attr("data_format", data_format)
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(filter_diff);
     //std::cout<<"ConvFilterGrad Execute Over"<<std::endl; 

@@ -55,6 +55,13 @@ class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
+    def Eval(self, code):
+        try:
+            eval(code)
+        except Exception as e:
+            print(traceback.format_exc())
+            raise e
+
     def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
         try:
             return interpreter_callback.MakeScopeSymbol(

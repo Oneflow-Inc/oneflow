@@ -55,7 +55,9 @@ static std::map<std::string, std::string> attr_format_map ={
                 {"channels_first", "NCHW"},
             };
 std::string ShapeToString(std::vector<int> &v);
+std::string ShapeToString(std::vector<int64_t> &v);
 extern std::unordered_map<std::string, std::vector<int>> const_tensor_map;
+extern std::unordered_map<std::string, std::vector<int64_t>> shape_map;
 #define NOT_NULLPTR_CHECK(x) if(x==nullptr) {                                           \
           std::cout<<"Get nullptr error, create input "<<#x<<" failed"<<std::endl; \
         }
@@ -214,20 +216,16 @@ public:
     NpuCommand& Input(user_op::Tensor* input, std::string origin_format = "channels_nd", std::string desc_name = "",
                         std::string real_type = "");
     NpuCommand& Input(AclTensorWrapper& wrap);
+    NpuCommand& Input(std::string key, int64_t len, aclDataType type);
     NpuCommand& Input(MaxPoolTensorWrapper& wrap);
     NpuCommand& Input(HostTensorWrapper& wrap);
-    //NpuCommand& Input(BatchNormTensorWrapper& wrap);
-    //NpuCommand& Input(std::vector<int32_t> &v);
-    NpuCommand& Input();
-    //NpuCommand& Input( NpuCommandSimpleTensorDesc input);
+
     NpuCommand& Output( user_op::Tensor* output, std::string format = "channels_nd", std::string desc_name = "",
                         std::string real_type = "");
     NpuCommand& Output(AclTensorWrapper& wrap);
     NpuCommand& Output(MaxPoolTensorWrapper& wrap);
     NpuCommand& Output();
-    //NpuCommand& Output( NpuCommandSimpleTensorDesc output);
-    // NpuCommand& InputDesc(const user_op::TensorDesc* input, std::string format);
-    // NpuCommand& OutputDesc(const user_op::TensorDesc* output, std::string format);
+
     NpuCommand& Attr(std::string &&name, std::vector<int32_t> v);
     NpuCommand& Attr(std::string &&name, std::vector<int64_t> v);
     NpuCommand& Attr(std::string &&name, float f);
@@ -237,6 +235,7 @@ public:
     NpuCommand& Stream(aclrtStream stream);
     void Check();
     NpuCommand& Run();
+    NpuCommand& Realease();
 private:
     struct CommandParam
     {

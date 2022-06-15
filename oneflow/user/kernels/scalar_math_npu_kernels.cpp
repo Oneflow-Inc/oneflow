@@ -46,7 +46,8 @@ class ScalarMulNpuKernel final : public user_op::OpKernel {
                 .Output(out)
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

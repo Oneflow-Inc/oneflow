@@ -39,7 +39,8 @@ class OnesLikeNpuKernel final : public user_op::OpKernel {
                .Output(out,"channels_nd")
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(out);
     //std::cout<<"Oneslike Execute Over"<<std::endl; 

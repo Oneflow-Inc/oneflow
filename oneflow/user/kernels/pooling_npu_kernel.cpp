@@ -73,7 +73,8 @@ class MaxPool2dNpuKernel final : public user_op::OpKernel {
                .Attr("ceil_mode", ceil_mode)
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(y);
     
@@ -125,7 +126,8 @@ class MaxPool2dGradNpuKernel final : public user_op::OpKernel {
                .Attr("ceil_mode", ceil_mode)
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(dx);
     //std::cout<<"MaxPoolGrad Execute Over"<<std::endl; 

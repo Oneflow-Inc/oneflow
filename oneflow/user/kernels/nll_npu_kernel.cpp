@@ -63,7 +63,8 @@ class NllKernel final : public user_op::OpKernel {
                   .Output(total_weight_blob)
                   .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                   .Check();
-        npu_command.Run();
+        npu_command.Run()
+               .Realease();
       //   OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
       //   PrintResult(out_blob);
       //  std::cout<<"NllKernel Execute Over"<<std::endl;  
@@ -115,7 +116,8 @@ class NllGradKernel final : public user_op::OpKernel {
                 .Output(dx_blob)
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
-        npu_command.Run();
+        npu_command.Run()
+               .Realease();
         // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
         // PrintResult(dx_blob);
         // std::cout<<"NLLLossGrad over"<<std::endl;

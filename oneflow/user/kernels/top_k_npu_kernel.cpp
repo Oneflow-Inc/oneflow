@@ -42,15 +42,16 @@ class TopKNpuKernel final : public user_op::OpKernel {
     CHECK_EQ(tmp_buffer->shape().elem_cnt(), sizeof(int));
     std::string key = "TopKNpu" + ShapeToString(k_vec);
     if(!const_tensor_map.count(key))  const_tensor_map[key] = k_vec;
-    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_INT32, k_shape.size(), k_shape.data(), ACL_FORMAT_ND,
-                            sizeof(int), k_vec.data(), key);
+    if(!shape_map.count(key)) shape_map[key] = k_shape;
+    // AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_INT32, k_shape.size(), k_shape.data(), ACL_FORMAT_ND,
+    //                         sizeof(int), k_vec.data(), key);
     int64_t dim = static_cast<int64_t>(ctx->Attr<int32_t>("dim"));
     bool largest = ctx->Attr<bool>("largest");
     bool sorted = ctx->Attr<bool>("sorted");
     NpuCommand npu_command;
     npu_command.OpName("TopKV2")
                .Input(in)
-               .Input(wrap)
+               .Input(key, k_vec.size(), ACL_INT32)
                .Attr("sorted",sorted)
                .Attr("dim", dim)
                .Attr("largest", largest)
@@ -58,7 +59,8 @@ class TopKNpuKernel final : public user_op::OpKernel {
                .Output(indice)
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

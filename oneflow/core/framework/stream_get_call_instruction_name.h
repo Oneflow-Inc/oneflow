@@ -90,6 +90,7 @@ struct GetCallInstructionName {
     }
     static Maybe<std::string> SyncedLaunchedCommNet(DeviceType device_type) {
       if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+      if (device_type == kNPU) {return std::string("npu.LocalCallOpKernel");}
       CHECK_EQ_OR_RETURN(device_type, kCUDA);
       return std::string("gpu.LocalCallOpKernel");
     }
@@ -103,6 +104,7 @@ struct GetCallInstructionName {
     }    
     static Maybe<std::string> AsyncedLaunchedCommNet(DeviceType device_type) {
       if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+      if (device_type == kNPU) {return std::string("async.npu.LocalCallOpKernel");}
       CHECK_EQ_OR_RETURN(device_type, kCUDA);
       return std::string("async.gpu.LocalCallOpKernel");
     }

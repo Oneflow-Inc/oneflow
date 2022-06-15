@@ -38,9 +38,7 @@ class ForeignCallback {
     UNIMPLEMENTED();
   }
 
-  virtual void OfBlobCall(int64_t unique_id, int64_t ofblob_ptr) const { UNIMPLEMENTED(); }
-
-  virtual void RemoveForeignCallback(int64_t unique_id) const { UNIMPLEMENTED(); }
+  virtual void Eval(const std::string& code) const { UNIMPLEMENTED(); }
 
   // return scope_symbol_id
   virtual int64_t MakeScopeSymbol(const std::shared_ptr<cfg::JobConfigProto>& job_conf,

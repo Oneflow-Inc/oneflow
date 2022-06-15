@@ -30,6 +30,12 @@ namespace oneflow {
   for (aclError _of_npu_check_status = (condition); _of_npu_check_status != ACL_SUCCESS;) \
   LOG(FATAL) << "Check failed: " #condition " : " << " (" << _of_npu_check_status << ") "
 
+#define OF_HCCL_CHECK(condition)                                                                \
+  for (HcclResult  _of_hccl_check_status = (condition); _of_hccl_check_status != HCCL_SUCCESS;) \
+  LOG(FATAL) << "Check failed: " #condition " : "                                             \
+             << " (" << _of_hccl_check_status << "). "                                          \
+             << "To see more detail, please run OneFlow with system variable HCCL_DEBUG=INFO"
+
 const int32_t kNpuThreadsNumPerBlock = 512;
 const int32_t kNpuMaxBlocksNum = 8192;
 const int32_t kNpuWarpSize = 32;

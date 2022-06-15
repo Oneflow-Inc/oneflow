@@ -30,6 +30,10 @@
     ]
   bind_python: true
 
+- name: "add_npu"
+  signature: "Tensor (Tensor input, Tensor other, *, Scalar alpha=1, Bool inplace=True) => AddNpu"
+  bind_python: true
+
 - name: "sub"
   signature:
     [
@@ -1772,6 +1776,10 @@
   signature: "Tensor (Tensor in) => Identity"
   bind_python: True
 
+- name: "identity_eval"
+  signature: 'Tensor (Tensor in, String code="0") => IdentityEval'
+  bind_python: True
+  
 - name: "amp_white_identity"
   signature: "Tensor (Tensor in) => AmpWhiteIdentity"
   bind_python: True

@@ -26,11 +26,16 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/ep/npu/npu_stream.h"
 #include "oneflow/core/common/util.h"
-#endif  // WITH_NPU
+#include <acl/acl_op_compiler.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <ge/ge_api.h>
+
+#define GetCurrentDirPath getcwd
+#define Mkdir(path, mode) mkdir(path, mode)
 
 namespace oneflow {
-
-#ifdef WITH_NPU
 
 
 NpuCurrentDeviceGuard::NpuCurrentDeviceGuard(int32_t dev_id) {
@@ -63,6 +68,53 @@ int GetNpuDeviceCount() {
   return npu_device_count;
 }
 
+namespace {
+
+const size_t kMaxPathLen = 4096U;
+std::string GetCurDirPath() {
+  char buff[kMaxPathLen] = {'\0'};
+  GetCurrentDirPath(buff, kMaxPathLen);
+  return std::string(buff);
+}
+void MakeCompileCacheDirAndSetOption() {
+  auto compile_cache_dir = GetCurDirPath() + "/cache";
+  // mode : 750
+  auto ret = Mkdir(compile_cache_dir.c_str(), S_IRWXU | S_IRGRP | S_IXGRP);
+  if (ret == -1) {
+    if (errno != EEXIST) {
+      std::cout<<"make compile cache directory error: "<<strerror(errno)<<std::endl;
+      return;
+    }
+  }
+  std::string val = "enable";
+  std::cout<<val<<" "<<compile_cache_dir<<std::endl;
+  OF_NPU_CHECK(aclSetCompileopt(aclCompileOpt::ACL_OP_COMPILER_CACHE_MODE, val.c_str()));
+  OF_NPU_CHECK(aclSetCompileopt(aclCompileOpt::ACL_OP_COMPILER_CACHE_DIR, compile_cache_dir.c_str()));
+  std::cout<<"MakeCompileCacheDirAndSetOption Over"<<std::endl;
+}
+void InitNpuOtherOnce(int device_id_)
+{
+    auto npu_device_id = std::to_string(device_id_);
+    std::map<ge::AscendString, ge::AscendString> config = {
+        {ge::AscendString(ge::OPTION_EXEC_DEVICE_ID),
+         ge::AscendString(npu_device_id.data())},
+        {ge::AscendString(ge::OPTION_GRAPH_RUN_MODE), "0"},
+        {ge::AscendString(ge::PRECISION_MODE.data()), "allow_fp32_to_fp16"},
+        {ge::AscendString(ge::VARIABLE_MEMORY_MAX_SIZE), "1048576"},
+        {ge::AscendString(ge::OP_SELECT_IMPL_MODE.data()), "high_precision"}
+    };
+
+    config["ge.session_device_id"] = ge::AscendString(npu_device_id.data());
+    config["ge.exec.reuseZeroCopyMemory"] = ge::AscendString("1");
+  auto ge_ret = ge::GEInitialize(config);
+  if (ge_ret != ge::SUCCESS) {
+      std::cout<<("GE init failed!")<<std::endl;
+  }
+  //MakeCompileCacheDirAndSetOption();
+}
+
+} // namespace
+
 void InitNpuContextOnce(int device_id ) {
   static std::once_flag aclcontext;
   static aclrtContext context_;
@@ -70,6 +122,7 @@ void InitNpuContextOnce(int device_id ) {
     std::cout<<"Init && Create Context Once"<<std::endl;
     OF_NPU_CHECK(aclInit("/data/acl_test/acl.json"));
     OF_NPU_CHECK(aclrtCreateContext(&context_, device_id));
+    //InitNpuOtherOnce(device_id);
   });
   static int device_count = GetNpuDeviceCount();
   static std::vector<std::once_flag> init_flags = std::vector<std::once_flag>(device_count);
@@ -80,6 +133,7 @@ void InitNpuContextOnce(int device_id ) {
     OF_NPU_CHECK(aclrtSynchronizeDevice());
   });
 }
-#endif  // WITH_NPU
 
 } // namespace oneflow
+
+#endif  // WITH_NPU

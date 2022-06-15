@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_NPU
+#include "oneflow/core/job/eager_hccl_comm_manager.h"
+#endif // WITH_NPU
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -189,6 +192,10 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
   Global<embedding::EmbeddingManager>::New();
+#endif
+
+#ifdef WITH_NPU
+  Global<EagerHcclCommMgr>::New();
 #endif
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();

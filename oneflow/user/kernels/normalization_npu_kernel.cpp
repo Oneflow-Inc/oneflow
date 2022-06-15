@@ -59,7 +59,8 @@ class NormalizationInferenceNpuKernel final : public user_op::OpKernel {
                    .Attr("epsilon",epsilon)
                    .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                    .Check();
-        npu_command.Run();
+        npu_command.Run()
+               .Realease();
         //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     } else {  // TODO(Liang Depeng): NHWC format
     }
@@ -145,7 +146,8 @@ void NormalizationTrainKernel<T>::Compute(user_op::KernelComputeContext* ctx) co
                .Attr("epsilon", epsilon)
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    reduce_command.Run();
+    reduce_command.Run()
+               .Realease();
     user_op::Tensor* moving_mean = nullptr;
     user_op::Tensor* moving_variance = nullptr;
     if (ctx->has_input("moving_mean", 0)) {
@@ -172,7 +174,8 @@ void NormalizationTrainKernel<T>::Compute(user_op::KernelComputeContext* ctx) co
                   .Attr("factor",momentum)
                   .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                   .Check();
-    update_command.Run();
+    update_command.Run()
+               .Realease();
 }
 #define REGISTER_BN_TRAIN_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("normalization")                                                         \
@@ -241,7 +244,8 @@ class NormalizationGradNpuKernel final : public user_op::OpKernel {
                     .Attr("epsilon",epsilon)
                     .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                     .Check();
-      update_command.Run();
+      update_command.Run()
+               .Realease();
       NpuCommand reduce_command;
       reduce_command.OpName("BNTrainingReduceGrad")
                     .Input(dy,"channels_first")
@@ -255,7 +259,8 @@ class NormalizationGradNpuKernel final : public user_op::OpKernel {
                     .Attr("epsilon",epsilon)
                     .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                     .Check();
-      reduce_command.Run();        
+      reduce_command.Run()
+               .Realease();        
     } else {  // TODO(Liang Depeng): NHWC format
       UNIMPLEMENTED();
     }

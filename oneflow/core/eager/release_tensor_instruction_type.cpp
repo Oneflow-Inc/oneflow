@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/vm/npu_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/npu_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/npu_stream_type.h"
+#include "oneflow/core/vm/async_npu_stream_type.h"
 namespace oneflow {
 
 namespace vm {
@@ -77,6 +78,10 @@ COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuCopyH2DSt
     "npu_h2d.ReleaseTensor"));
 COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuCopyD2HStreamType>>(
     "npu_d2h.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<NpuStreamType>>(
+    "sync_launched_hccl.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<NpuReleaseTensorInstructionType<AsyncNpuStreamType>>(
+    "async_launched_hccl.ReleaseTensor"));
 #endif
 
 #ifdef WITH_CUDA

@@ -60,7 +60,8 @@ class BroadcastLikeNpuKernel final : public user_op::OpKernel {
                .Output(out_tensor,"channels_nd")
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
     //PrintResult(out_tensor);
     //std::cout<<"BroadcastTo over"<<std::endl;

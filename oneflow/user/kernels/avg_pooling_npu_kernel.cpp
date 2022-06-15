@@ -56,7 +56,8 @@ class AvgPool2dNpuKernel final : public user_op::OpKernel {
                 .Attr("exclusive", true)
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
-      npu_command.Run();
+      npu_command.Run()
+               .Realease();
       //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
       //PrintResult(y);
       //std::cout<<"AvgPool Execute Over"<<std::endl; 
@@ -107,6 +108,7 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
     CHECK_EQ(mulVector(shape_desc)*sizeof(int32_t), tmp_buffer->shape().elem_cnt());
     std::string key = "AvgPool2dNpu" + ShapeToString(dx_shape);
     if(!const_tensor_map.count(key)) const_tensor_map[key] = dx_shape;
+    if(!shape_map.count(key)) shape_map[key] = shape_desc;
     AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(),
                       ACL_INT32,
                       shape_desc.size(),
@@ -131,7 +133,8 @@ class AvgPool2dGradNpuKernel final : public user_op::OpKernel {
                .Attr("exclusive", exclusive)
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();     
+    npu_command.Run()
+               .Realease();     
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(dx);
     //std::cout<<"AvgPoolGrad Execute Over"<<std::endl; 

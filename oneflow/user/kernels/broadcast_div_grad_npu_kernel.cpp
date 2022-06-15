@@ -44,7 +44,8 @@ class BroadcastDivGradNpuKernel final : public user_op::OpKernel {
                 .Output(wrap)
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
-    div_command.Run();
+    div_command.Run()
+               .Realease();
 
     NpuCommand mul_command;
     mul_command.OpName("Mul")
@@ -53,7 +54,8 @@ class BroadcastDivGradNpuKernel final : public user_op::OpKernel {
                 .Output(dy)
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
-    div_command.Run();
+    div_command.Run()
+               .Realease();
     // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     // PrintResult(dy);
     // std::cout<<"DivGrad Execute Over"<<std::endl; 

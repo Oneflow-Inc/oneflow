@@ -39,7 +39,8 @@ class LogSoftmaxNpuKernel final : public user_op::OpKernel{
             .Attr("axes",axes)
             .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
             .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
     // PrintResult(prob);
     // std::cout<<"LogSoftmaxNpuKernel Execute Over"<<std::endl;  
@@ -69,7 +70,8 @@ class LogSoftmaxGradNpuKernel final : public user_op::OpKernel {
             .Output(dx)
             .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
             .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
     //PrintResult(dx);
     //std::cout<<"LogSoftmaxNpuGradKernel Execute Over"<<std::endl;  

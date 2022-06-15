@@ -120,7 +120,7 @@ class TORCH_SGD(Optimizer):
                         continue
                     d_p = p.grad
                     if weight_decay != 0:
-                        d_p = d_p.add(weight_decay * p)
+                        d_p.add_npu(p, alpha = weight_decay, inplace=True)
                     if momentum != 0:
                         param_state = self._state[p]
                         if 'momentum_buf' not in param_state:
@@ -130,6 +130,6 @@ class TORCH_SGD(Optimizer):
                             buf.mul_(momentum).add_(d_p)
                         d_p = buf
                     alpha=-group['lr']
-                    p.add_(alpha * d_p)
+                    p.add_npu(d_p, alpha=-group['lr'], inplace=True)
             self._state["step"] = self._state["step"] + 1
             return loss

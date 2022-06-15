@@ -62,16 +62,18 @@ class TransposeNpuKernel final : public OpKernel {
           std::vector<int64_t> shape_desc = {static_cast<int64_t>(perm.size())};
           std::string key = "TransposeNpu" + ShapeToString(perm);
           if(!const_tensor_map.count(key))  const_tensor_map[key] = perm;
-          AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_INT32, shape_desc.size(), shape_desc.data(), ACL_FORMAT_ND,
-                                  perm.size()*sizeof(int32_t), perm.data(), key);
+          if(!shape_map.count(key)) shape_map[key] = shape_desc;
+          // AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_INT32, shape_desc.size(), shape_desc.data(), ACL_FORMAT_ND,
+          //                         perm.size()*sizeof(int32_t), perm.data(), key);
           NpuCommand npu_command;
           npu_command.OpName("Transpose")
                     .Input(tensor_in)
-                    .Input(wrap)
+                    .Input(key, perm.size(), ACL_INT32)
                     .Output(tensor_out)
                     .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                     .Check();
-          npu_command.Run();
+          npu_command.Run()
+               .Realease();
           //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));
           //PrintResult(tensor_out);
           //std::cout<<"TransposeNpuKernel Execute Over"<<std::endl;  

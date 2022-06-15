@@ -27,7 +27,8 @@ class MathBinaryBroadcastAddKernel final : public user_op::OpKernel{
                    .Output(z,"channels_nd")
                    .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                    .Check();
-        npu_command.Run();
+        npu_command.Run()
+               .Realease();
        // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
         //PrintResult(out_tensor);
         //std::cout<<"MathBinaryBroadcastAddKernel Execute Over"<<std::endl; 
@@ -66,7 +67,8 @@ class MathBinaryBroadcastDivKernel final : public user_op::OpKernel{
                    .Output(z)
                    .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                    .Check();
-        npu_command.Run();
+        npu_command.Run()
+               .Realease();
         //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
     } else {
       // For 0-d Tensor
@@ -104,7 +106,8 @@ class MathBinaryBroadcastEqualKernel final : public user_op::OpKernel{
                    .Output(z)
                    .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                    .Check();
-        npu_command.Run();
+        npu_command.Run()
+               .Realease();
         //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
         // PrintResult(z);
         // std::cout<<"Div Execute Over"<<std::endl; 

@@ -8,12 +8,21 @@
 namespace oneflow
 {
 std::unordered_map<std::string, std::vector<int>> const_tensor_map = {};
+std::unordered_map<std::string, std::vector<int64_t>> shape_map = {};
 void testblock()
 {
   int a = 1;
   return;
 }
-
+std::string ShapeToString(std::vector<int64_t> & v)
+{
+    std::string r = "";
+    for(int64_t shape: v)
+    {
+        r += std::to_string(shape)+',';
+    }
+    return r;
+}
 std::string ShapeToString(std::vector<int> & v)
 {
     std::string r = "";
@@ -161,6 +170,15 @@ aclTensorDesc* getTensorDesc(HostTensorWrapper& wrap)
     NOT_NULLPTR_CHECK(desc);    
     return desc;
 }
+aclTensorDesc* getTensorDesc(std::string key, int64_t len, aclDataType type)
+{
+    aclTensorDesc* desc = aclCreateTensorDesc(type, 
+                                    shape_map[key].size(), 
+                                    shape_map[key].data(), 
+                                    ACL_FORMAT_ND);
+    NOT_NULLPTR_CHECK(desc);    
+    return desc;
+}
 // aclTensorDesc* getTensorDesc(BatchNormTensorWrapper& wrap)
 // {
 //     aclTensorDesc* desc = aclCreateTensorDesc(wrap.dataType, 
@@ -287,21 +305,13 @@ NpuCommand& NpuCommand::Input(HostTensorWrapper& wrap)
     command_param.in_buffers.push_back(getDataBuffer(wrap));
     return *this;     
 }
-// NpuCommand& NpuCommand::Input(BatchNormTensorWrapper& wrap)
-// {
-//     // fix : use NpuAllocator to malloc
-//     // generate DataBuffer
-//     command_param.in_buffers.push_back(getDataBuffer(wrap));
-//     // generate TensorDesc
-//     aclTensorDesc* desc = getTensorDesc(wrap);
-//     command_param.in_descs.push_back(desc);
-//     // setConsTensor
-//     return *this;
-// }
-NpuCommand& NpuCommand::Input()
+
+NpuCommand& NpuCommand::Input(std::string key, int64_t len, aclDataType type)
 {
-    command_param.in_descs.push_back(
-                            aclCreateTensorDesc(ACL_DT_UNDEFINED, 0, nullptr, ACL_FORMAT_UNDEFINED));
+    aclTensorDesc* desc = getTensorDesc(key, len, type);
+    OF_NPU_CHECK(aclSetTensorPlaceMent(desc, ACL_MEMTYPE_HOST));
+    command_param.in_descs.push_back(desc);
+    command_param.in_buffers.push_back(aclCreateDataBuffer(const_tensor_map[key].data(), len*sizeof(int)));
     return *this;
 }
 NpuCommand& NpuCommand::Output(user_op::Tensor* output, std::string format, std::string desc_name, std::string real_type)
@@ -337,26 +347,6 @@ NpuCommand& NpuCommand::Output()
     return *this;
     
 }
-// NpuCommand& NpuCommand::InputDesc(const user_op::TensorDesc* input, std::string format)
-// {
-//     aclTensorDesc* inputDescCast = aclCreateTensorDesc(dataTypeMap(input->data_type()), 
-//                                     input->shape().dim_vec().size(), 
-//                                     input->shape().dim_vec().data(), 
-//                                     format_map[format]);
-//     NOT_NULLPTR_CHECK(inputDescCast);
-//     command_param.in_descs.push_back(inputDescCast);
-//     return *this;
-// }
-// NpuCommand& NpuCommand::OutputDesc(const  user_op::TensorDesc* output, std::string format)
-// {
-//     aclTensorDesc* outputDescCast = aclCreateTensorDesc(dataTypeMap(output->data_type()), 
-//                                     output->shape().dim_vec().size(), 
-//                                     output->shape().dim_vec().data(), 
-//                                     format_map[format]);
-//     NOT_NULLPTR_CHECK(outputDescCast);
-//     command_param.out_descs.push_back(outputDescCast);
-//     return *this;
-// }
 NpuCommand& NpuCommand::Attr(std::string &&name, std::vector<int32_t> v)
 {
     std::vector<int64_t> temp;
@@ -410,42 +400,59 @@ void NpuCommand::Check()
 }
 NpuCommand& NpuCommand::Run()
 {
-
-    // std::cout<<"InDescSize1:"<<aclGetTensorDescSize(command_param.in_descs[0])<<std::endl;
-    // std::cout<<"InDescSize2:"<<aclGetTensorDescSize(command_param.in_descs[1])<<std::endl;
-    // std::cout<<"OutDescSize1:"<<aclGetTensorDescSize(command_param.out_descs[0])<<std::endl;
     if (PyGILState_Check()){
         Py_BEGIN_ALLOW_THREADS
-        OF_NPU_CHECK(aclopCompile(op_name.c_str(), 
+        OF_NPU_CHECK(aclopCompileAndExecute(op_name.c_str(), 
                                     command_param.in_descs.size(), 
                                     command_param.in_descs.data(), 
+                                    command_param.in_buffers.data(), 
                                     command_param.out_descs.size(), 
                                     command_param.out_descs.data(), 
+                                    command_param.out_buffers.data(), 
                                     op_attr,
                                     ACL_ENGINE_SYS, 
                                     ACL_COMPILE_SYS, 
-                                    NULL));
+                                    nullptr,
+                                    stream));
         Py_END_ALLOW_THREADS
     }else{
-        OF_NPU_CHECK(aclopCompile(op_name.c_str(), 
+        OF_NPU_CHECK(aclopCompileAndExecute(op_name.c_str(), 
                                     command_param.in_descs.size(), 
                                     command_param.in_descs.data(), 
+                                    command_param.in_buffers.data(), 
                                     command_param.out_descs.size(), 
                                     command_param.out_descs.data(), 
-                                    op_attr, 
+                                    command_param.out_buffers.data(), 
+                                    op_attr,
                                     ACL_ENGINE_SYS, 
                                     ACL_COMPILE_SYS, 
-                                    NULL));
+                                    nullptr,
+                                    stream));
     }
-    OF_NPU_CHECK(aclopExecuteV2(op_name.c_str(), 
-                                command_param.in_descs.size(), 
-                                command_param.in_descs.data(), 
-                                command_param.in_buffers.data(), 
-                                command_param.out_descs.size(), 
-                                command_param.out_descs.data(),  
-                                command_param.out_buffers.data(), 
-                                op_attr,  
-                                stream));
     return *this;
+}
+NpuCommand& NpuCommand::Realease()
+{
+    std::for_each(
+          command_param.in_descs.begin(),
+          command_param.in_descs.end(),
+          aclDestroyTensorDesc);
+      std::for_each(
+          command_param.out_descs.begin(),
+          command_param.out_descs.end(),
+          aclDestroyTensorDesc);
+      std::for_each(
+          command_param.in_buffers.begin(),
+          command_param.in_buffers.end(),
+          aclDestroyDataBuffer);
+      std::for_each(
+          command_param.out_buffers.begin(),
+          command_param.out_buffers.end(),
+          aclDestroyDataBuffer);
+      if (op_attr != nullptr) {
+        aclopDestroyAttr(op_attr);
+        op_attr = nullptr;
+      }
+      return *this;
 }
 } // namespace

@@ -46,7 +46,8 @@ class CastNpuKernel final : public OpKernel{
                .Attr("dst_type", (int64_t)dataTypeMap(output_tensor->data_type()))
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
    // OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(output_tensor);
     //std::cout<<"Cast Execute Over"<<std::endl;       

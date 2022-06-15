@@ -23,11 +23,11 @@ namespace user_op {
 
 namespace {
 
-class AddNNpuKernel : public OpKernel {
+class AddNpuKernel : public OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AddNNpuKernel);
-  AddNNpuKernel() = default;
-  ~AddNNpuKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(AddNpuKernel);
+  AddNpuKernel() = default;
+  ~AddNpuKernel() override = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
@@ -38,6 +38,7 @@ class AddNNpuKernel : public OpKernel {
     const size_t count = out->shape().elem_cnt();
     size_t in_num = ctx->inputs().size();
     CHECK_EQ(in_num, 2)<<"Current only support AddV2, so input num should be 2. ";
+    float alpha = ctx->Attr<float>("alpha");
     std::vector<const void*> srcs(in_num);
     NpuCommand npu_command;
     for (size_t i = 0; i < in_num; ++i) {
@@ -46,8 +47,9 @@ class AddNNpuKernel : public OpKernel {
       CHECK_EQ(in_i->data_type(), data_type);
       npu_command.Input(in_i, "channels_nd");
     }
-    npu_command.OpName("AddV2")
+    npu_command.OpName("Axpy")
                //.Attr("N", (int64_t)in_num)
+               .Attr("alpha", alpha)
                .Output(out, "channels_nd")
                .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                .Check();
@@ -59,8 +61,8 @@ class AddNNpuKernel : public OpKernel {
   }
 };
 
-REGISTER_USER_KERNEL("add_n")
-    .SetCreateFn<AddNNpuKernel>()
+REGISTER_USER_KERNEL("add_npu")
+    .SetCreateFn<AddNpuKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInplaceProposalFn([](const InferContext&,
                              const AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {

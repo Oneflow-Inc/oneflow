@@ -36,20 +36,22 @@ class ReduceSumLikeNpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("axis");
     NpuCommand npu_command;
-    std::vector<int64_t> axis_shape = {static_cast<int64_t>(axis.size())};
+    std::vector<int64_t> shape_desc = {static_cast<int64_t>(axis.size())};
     CHECK_EQ(tmp_buffer->shape().elem_cnt(), sizeof(int));
     std::string key = "ReduceSumLike" + ShapeToString(axis);
     if(!const_tensor_map.count(key)) const_tensor_map[key] = axis;
-    AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_INT32, axis_shape.size(), axis_shape.data(), 
-                          ACL_FORMAT_ND, sizeof(int32_t), axis.data(), key);
+    if(!shape_map.count(key)) shape_map[key] = shape_desc;
+    // AclTensorWrapper wrap(tmp_buffer->mut_dptr<void>(), ACL_INT32, shape_desc.size(), shape_desc.data(), 
+    //                       ACL_FORMAT_ND, sizeof(int32_t), axis.data(), key);
     npu_command.OpName("ReduceSum")
                 .Input(x)
-                .Input(wrap)
+                .Input(key, axis.size(), ACL_INT32)
                 .Output(y)
                 .Attr("keep_dims",false)
                 .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                 .Check();
-    npu_command.Run();
+    npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));  
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

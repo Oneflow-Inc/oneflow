@@ -238,6 +238,8 @@ def _addmm(self, mat1, mat2, alpha=1, beta=1):
 def _add_inplace(self, other):
     return flow._C.add(self, other, inplace=True)
 
+def _add_npu(self, other, alpha = 1.0, inplace=True):
+    return flow._C.add_npu(self, other, alpha=alpha, inplace=True)
 
 def _iadd(self, other):
     return self.add_(other)
@@ -1086,6 +1088,7 @@ def RegisterMethods():
     Tensor.log1p = _log1p
     Tensor.add = _add
     Tensor.add_ = _add_inplace
+    Tensor.add_npu = _add_npu
     Tensor.div = _truediv
     Tensor.div_ = _truediv_inplace
     Tensor.mul = _mul

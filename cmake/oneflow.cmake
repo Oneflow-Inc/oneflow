@@ -321,7 +321,8 @@ elseif(UNIX)
     -ldl
     -lrt
     -lascendcl 
-    -lacl_op_compiler)
+    -lacl_op_compiler
+    -lhccl)
   if(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()

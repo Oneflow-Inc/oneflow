@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/npu_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/npu_stream_type.h"
+#include "oneflow/core/vm/async_npu_stream_type.h"
 namespace oneflow {
 namespace vm {
 
@@ -55,6 +56,17 @@ class NpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstru
   using stream_type = vm::NpuStreamType;
 };
 COMMAND(vm::RegisterInstructionType<NpuLocalCallOpKernelInstructionType>("npu.LocalCallOpKernel"));
+
+class AsyncNpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  AsyncNpuLocalCallOpKernelInstructionType() = default;
+  ~AsyncNpuLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::AsyncNpuStreamType;
+};
+COMMAND(vm::RegisterInstructionType<AsyncNpuLocalCallOpKernelInstructionType>(
+    "async.npu.LocalCallOpKernel"));
+
 }  // namespace vm
 }  // namespace oneflow
 

@@ -135,7 +135,7 @@ struct LocalCallOpKernelUtil final {
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
-    operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    operand->user_opkernel()->ComputeIf(compute_ctx, state, cache);
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);

@@ -103,6 +103,7 @@ struct GetReleaseInstructionName {
     }
     static Maybe<std::string> AsyncedLaunchedCommNet(DeviceType device_type) {
       if (device_type == kCPU) { return std::string("comm_net.ReleaseTensor"); }
+      if (device_type == kNPU) { return std::string("async_launched_hccl.ReleaseTensor"); }
       CHECK_EQ_OR_RETURN(device_type, kCUDA);
       return std::string("async_launched_nccl.ReleaseTensor");
     }

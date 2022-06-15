@@ -29,6 +29,7 @@ Maybe<bool> SyncLaunched(user_op::DeviceAndStreamInferContext* ctx);
 Maybe<bool> IsAsyncLaunched(user_op::DeviceAndStreamInferContext* ctx);
 
 extern Maybe<Symbol<Stream>> (*GetNcclDevice)(bool is_async_launced);
+extern Maybe<Symbol<Stream>> (*GetHcclDevice)(bool is_async_launced);
 extern Maybe<Symbol<Stream>> (*GetCpuTransportDevice)();
 
 Maybe<Symbol<Device>> DefaultGetOutputDeivce(user_op::DeviceAndStreamInferContext* ctx);
@@ -47,7 +48,11 @@ Maybe<Symbol<Stream>> DeviceAndStreamInferFn(user_op::DeviceAndStreamInferContex
     return cuda_device;
   } else if (output_device->type() == "cpu") {
     return JUST(GetCpuTransportDevice());
-  } else {
+  } else if(output_device->type() == "npu"){
+    bool is_async_launched = JUST(GetIsAsyncLaunched(ctx));
+    const auto& npu_device = JUST(GetHcclDevice(is_async_launched));
+    return npu_device;    
+  }else {
     UNIMPLEMENTED_THEN_RETURN();
   }
 }

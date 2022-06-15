@@ -41,7 +41,8 @@ class ReluNpuKernel final : public user_op::OpKernel {
                  .Output(y, "channels_nd")
                  .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                  .Check();
-      npu_command.Run();
+      npu_command.Run()
+               .Realease();
     //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
     //PrintResult(y);
     //std::cout<<"Relu Execute Over"<<std::endl;       
@@ -77,7 +78,8 @@ class ReluGradNpuKernel final : public user_op::OpKernel {
                  .Output(dx, "channel_nd")
                  .Stream(ctx->stream()->As<ep::NpuStream>()->npu_stream())
                  .Check();
-      npu_command.Run();
+      npu_command.Run()
+               .Realease();
       //OF_NPU_CHECK(aclrtSynchronizeStream(ctx->stream()->As<ep::NpuStream>()->npu_stream()));   
       //PrintResult(dx);
       //std::cout<<"Execute Over"<<std::endl;       

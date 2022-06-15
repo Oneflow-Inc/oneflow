@@ -39,13 +39,13 @@ class MemcpyImpl : public Memcpy {
     auto aclRule = ACL_MEMCPY_HOST_TO_DEVICE;
     if(kind == MemcpyKind::kDtoH)
     {
+      OF_NPU_CHECK(aclrtSynchronizeStream(npu_stream));
       aclRule = ACL_MEMCPY_DEVICE_TO_HOST;
     } 
     else if(kind == MemcpyKind::kDtoD)
     {
       aclRule = ACL_MEMCPY_DEVICE_TO_DEVICE;
     }
-    OF_NPU_CHECK(aclrtSynchronizeStream(npu_stream));
     OF_NPU_CHECK(aclrtMemcpy(dst, 
                                   count, 
                                   src, 
