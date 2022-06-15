@@ -91,8 +91,6 @@ class FusedMLP(Module):
             if self.dropout_rate_list[i] != 0.0:
                 self.use_dropout = True
                 break
-        if not self.training:
-            self.use_dropout = False
 
     def add_parameters(self) -> None:
         """Register parameter in FusedMLP module. 
@@ -184,17 +182,17 @@ class FusedMLP(Module):
             flow.nn.init.uniform_(self.bias(layer_idx), -bound, bound)
 
     def forward(self, x):
-        if self.use_dropout:
+        if not self.training or not self.use_dropout:
+            return flow._C.fused_mlp(
+                x, self.weights(), self.biases(), self.skip_final_activation
+            )
+        else:
             return flow._C.fused_matmul_bias_add_relu_dropout(
                 x,
                 self.weights(),
                 self.biases(),
                 self.skip_final_activation,
                 self.dropout_rate_list,
-            )
-        else:
-            return flow._C.fused_mlp(
-                x, self.weights(), self.biases(), self.skip_final_activation
             )
 
     def extra_repr(self) -> str:
