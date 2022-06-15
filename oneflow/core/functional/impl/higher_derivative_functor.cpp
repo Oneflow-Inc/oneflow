@@ -71,7 +71,7 @@ class ExpGradGradFunctor {
 class LogGradGradFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
-                           const std::shared_ptr<Tensor>& dydx) const {                 
+                           const std::shared_ptr<Tensor>& dydx) const {
     auto res = sequence_function(functional::Square)
                    .then(functional::Negative)
                    .then(functional::Reciprocal)
