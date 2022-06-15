@@ -143,7 +143,7 @@ __device__ void ScanOutHighDimofMatrixKernelImpl(T* row_buf, T* src_, T* tgt_,
         if (threadIdx.x == 0) { row_buf[0] = BinaryFunc<T>()(row_buf[0], block_total); }
       }
       __syncthreads();
-      
+
       if (col < num_cols) { ParallelSweepScan<T, num_threads_x, BinaryFunc>(row_buf); }
 
       if (col < num_cols) {
@@ -213,7 +213,7 @@ __device__ void ScanInnerMostDimKernelImpl(T* row_buf, T* src_, T* tgt_, const u
       }
       __syncthreads();
 
-      if (row < num_rows) { SweepScan<T, num_threads_x, BinaryFunc>(row_buf); }
+      if (row < num_rows) { ParallelSweepScan<T, num_threads_x, BinaryFunc>(row_buf); }
 
       // Write back to output.
       if (row < num_rows) {
