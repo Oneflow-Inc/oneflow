@@ -23,7 +23,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1)
+@autotest(n=1, check_grad_use_random_data=False)
 def _test_nll_loss(
     test_case, has_weight=False, split_batch_dim=False, split_class_dim=False
 ):
