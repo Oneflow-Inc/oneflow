@@ -50,10 +50,6 @@ def _test_nccl_logical_send_recv(test_case, src_nd_sbp, dst_nd_sbp):
     ):
         return
 
-    # in this case, use 1d boxing
-    if src_nd_sbp[0] == src_nd_sbp[1] and dst_nd_sbp[0] == dst_nd_sbp[1]:
-        return
-
     # input
     placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
     local_np = np.arange(4 * 4 * 4).reshape(4, 4, 4)

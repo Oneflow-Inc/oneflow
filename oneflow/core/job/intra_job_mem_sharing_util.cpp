@@ -387,9 +387,13 @@ void GenRegstAllocFreeTimeLineAndRegstMutualExclusions(
         regst2mutual_exclusion_regsts->at(remain_regst).emplace_back(alloc_regst);
       }
       CHECK(remain_regsts.insert(alloc_regst).second);
+      // NOTE(chengcheng): insert time line to regst proto
+      alloc_regst->set_mem_block_total_actor_count(sorted_tasks.size());
+      alloc_regst->set_alloc_before_actor(i);
     }
     for (RegstDescProto* free_regst : free_regsts_timeline->at(i)) {
       CHECK_EQ(remain_regsts.erase(free_regst), 1);
+      free_regst->set_free_after_actor(i);
     }
   }
   CHECK(remain_regsts.empty());

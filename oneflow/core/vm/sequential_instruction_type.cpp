@@ -44,8 +44,16 @@ class ComputeRankFrontSeqCallbackInstructionType final
 
   using stream_type = ControlStreamType;
 
-  void Compute(Instruction* instruction) const override {}
-  void ComputeInFuseMode(InstructionMsg* instr_msg) const override {}
+  void Compute(Instruction* instruction) const override {
+    const auto* operand = instruction->instr_msg().phy_instr_operand().get();
+    const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+    CHECK_NOTNULL(barrier_operand)->callback();
+  }
+  void ComputeInFuseMode(InstructionMsg* instr_msg) const override {
+    const auto* operand = instr_msg->phy_instr_operand().get();
+    const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+    CHECK_NOTNULL(barrier_operand)->callback();
+  }
 };
 COMMAND(RegisterInstructionType<ComputeRankFrontSeqCallbackInstructionType>(
     "ComputeRankFrontSeqCallback"));
@@ -58,7 +66,11 @@ class CtrlComputeRankFrontSeqCallbackInstructionType final
 
   using stream_type = ControlStreamType;
 
-  void Compute(Instruction* instruction) const override {}
+  void Compute(Instruction* instruction) const override {
+    const auto* operand = instruction->instr_msg().phy_instr_operand().get();
+    const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+    CHECK_NOTNULL(barrier_operand)->callback();
+  }
 };
 COMMAND(RegisterInstructionType<CtrlComputeRankFrontSeqCallbackInstructionType>(
     "CtrlComputeRankFrontSeqCallback"));
@@ -79,7 +91,12 @@ class ComputeGlobalFrontSeqBarrierInstructionType final
   ComputeGlobalFrontSeqBarrierInstructionType() = default;
   ~ComputeGlobalFrontSeqBarrierInstructionType() override = default;
 
-  void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
+  void Compute(Instruction* instruction) const override {
+    OF_ENV_BARRIER();
+    const auto* operand = instruction->instr_msg().phy_instr_operand().get();
+    const auto* barrier_operand = dynamic_cast<const BarrierPhyInstrOperand*>(operand);
+    CHECK_NOTNULL(barrier_operand)->callback();
+  }
 };
 COMMAND(RegisterInstructionType<ComputeGlobalFrontSeqBarrierInstructionType>(
     "ComputeGlobalFrontSeqBarrier"));

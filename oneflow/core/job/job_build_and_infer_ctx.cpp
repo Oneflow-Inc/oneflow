@@ -196,7 +196,7 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(const OperatorConf& 
       (*module_name2module_conf)[module_name].set_name(scope.scope_proto().module_name());
     }
 
-    (*module_name2module_conf)[module_name].add_ops()->CopyFrom(operator_conf);
+    *((*module_name2module_conf)[module_name].add_ops()) = operator_conf.name();
   }
 }
 
@@ -997,16 +997,25 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     }
   };
   int32_t pass_cnt = 0;
+  const int64_t prev_v = FLAGS_v;
   auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
+    VLOG(1) << job_name << " start compiling with pass"
+            << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
+            << (cnt > 0 ? std::to_string(cnt) : "");
     if (unlikely(NeedLogJob(pass_name))) {
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
       LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-before");
+      FLAGS_v = 3;
     }
     JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
     if (unlikely(NeedLogJob(pass_name))) {
+      FLAGS_v = prev_v;
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
       LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-after");
     }
+    VLOG(1) << job_name << " finish compiling with pass"
+            << " pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name
+            << (cnt > 0 ? std::to_string(cnt) : "");
     ++pass_cnt;
     return Maybe<void>::Ok();
   };
@@ -1141,7 +1150,8 @@ Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(
   };
   const auto& maybe_ok =
       TRY(GenerateBackwardOpConfIf(op, &bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
-  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error());
+  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error())
+      << GetFormatedSerializedError(::oneflow::private_details::JustGetError(maybe_ok));
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();
   for (const auto& bw_op_conf : bw_op_confs) {
