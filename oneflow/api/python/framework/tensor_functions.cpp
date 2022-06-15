@@ -636,21 +636,21 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
   HANDLE_ERRORS
   auto tensor = PyTensor_Unpack(self);
   CHECK_OR_THROW(tensor->is_local()) << Error::RuntimeError() << "input must be a local tensor";
-  PyObject* placement = Py_None;
+  PyObject* placement_obj = Py_None;
   PyObject* sbp_obj = Py_None;
   bool check_meta = true;
   static const char* keywords[4] = {"placement", "sbp", "check_meta", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!:local_to_global",
-                                   const_cast<char**>(keywords), &placement, &sbp_obj, &PyBool_Type,
+                                   const_cast<char**>(keywords), &placement_obj, &sbp_obj, &PyBool_Type,
                                    &check_meta)) {
     return NULL;
   };
 
-  CHECK_OR_THROW(placement != Py_None && sbp_obj != Py_None) << Error::InvalidValueError(
+  CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None) << Error::InvalidValueError(
       "Converting a local tensor to global tensor must have placement and sbp parameters.");
-  CHECK_OR_THROW(functional::PyParallelDescCheck(placement))
+  CHECK_OR_THROW(functional::PyParallelDescCheck(placement_obj))
       << Error::TypeError() << "Invalid parameter placement with type "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(placement)));
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(placement_obj)));
 
   std::vector<Symbol<SbpParallel>> sbp;
   if (functional::PySbpParallelCheck(sbp_obj)) {
@@ -662,7 +662,7 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
   return PyTensor_New(ASSERT_PTR(functional::ToConsistent(
-      tensor, functional::PyUnpackParallelDesc(placement), sbp, {}, check_meta)));
+      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta)));
   END_HANDLE_ERRORS
 }
 
