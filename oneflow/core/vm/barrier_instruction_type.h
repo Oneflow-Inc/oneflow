@@ -38,11 +38,13 @@ class BarrierInstructionType : public InstructionType {
 
   std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "Barrier"; }
   void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
+  void ComputeInFuseMode(InstructionMsg* instr_msg) const override { Run(*instr_msg); }
 
  protected:
   void Run(const InstructionMsg& instr_msg) const {
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    CHECK_NOTNULL(dynamic_cast<const BarrierPhyInstrOperand*>(phy_instr_operand.get()));
+    const auto* operand =
+        dynamic_cast<const BarrierPhyInstrOperand*>(instr_msg.phy_instr_operand().get());
+    CHECK_NOTNULL(operand)->callback();
   }
 };
 
@@ -55,6 +57,7 @@ class GlobalSyncInstructionType : public InstructionType {
 
   std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "GlobalSync"; }
   void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
+  void ComputeInFuseMode(InstructionMsg* instr_msg) const override { OF_ENV_BARRIER(); }
 };
 
 }  // namespace vm

@@ -51,7 +51,7 @@ class DimScatterKernel final : public user_op::OpKernel {
     }
 
     const int ndim = src_tensor->shape().NumAxes();
-    fixed_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
+    small_vector<IDX_T, kDimGatherMaxDimCount> shape_vec(ndim);
     auto shape2dims = [&shape_vec, &ndim](const ShapeView& tensor_shape) -> void {
       std::transform(tensor_shape.ptr(), tensor_shape.ptr() + ndim, shape_vec.begin(),
                      [](int32_t dim) -> IDX_T { return static_cast<IDX_T>(dim); });
@@ -64,9 +64,9 @@ class DimScatterKernel final : public user_op::OpKernel {
     DimOpIndexNdHelper<IDX_T> output_nd_helper(shape_vec.data(), ndim);
 
     int64_t upper_bound = 0;
-    if (input_tensor) {
+    if (input_tensor && input_tensor->shape().NumAxes() > 0) {
       upper_bound = input_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
-    } else {
+    } else if (index_tensor->shape().NumAxes() > 0) {
       upper_bound = like_tensor->shape().At(dim);  // ensure the idx is smaller than upperbound
     }
 

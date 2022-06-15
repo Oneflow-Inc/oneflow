@@ -429,12 +429,6 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope);
 
-namespace cfg {
-
-class NdSbp;
-
-}
-
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx);
@@ -451,7 +445,7 @@ namespace std {
 
 template<>
 struct hash<oneflow::OperatorConf> final {
-  size_t operator()(const oneflow::OperatorConf& op_conf) {
+  size_t operator()(const oneflow::OperatorConf& op_conf) const {
     std::string serialized;
     op_conf.SerializeToString(&serialized);
     return std::hash<std::string>()(serialized);

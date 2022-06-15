@@ -135,7 +135,6 @@ class Instruction final : public intrusive::Base {
 
   // Getters
   const Stream& stream() const { return instr_msg_->stream(); }
-  Stream* mut_stream() { return instr_msg_->mut_stream(); }
   const InstructionMsg& instr_msg() const { return instr_msg_.Get(); }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
@@ -150,7 +149,9 @@ class Instruction final : public intrusive::Base {
   const DependenceAccessList& access_list() const { return access_list_; }
 
   // Setters
-  InstructionMsg* mut_instr_msg() { return instr_msg_.Mutable(); }
+  Stream* mut_stream() { return instr_msg_->mut_stream(); }
+  InstructionMsg* mut_instr_msg() { return CHECK_NOTNULL(instr_msg_.Mutable()); }
+  void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
   void clear_instr_msg() { instr_msg_.Reset(); }
   InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
   InEdgeList* mut_in_edges() { return &in_edges_; }

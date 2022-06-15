@@ -178,17 +178,21 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     )
 
 
-def _test_embedding_gradient_shuffle(test_case, enable_quantize):
+def _test_embedding_gradient_shuffle(test_case, enable_quantize, fp16, embedding_size):
     batch_size = 512
     num_tables = 26
-    embedding_size = 128
     ids = np.random.randint(0, 1000, (batch_size, num_tables), dtype=np.int64)
     enable_quantized_comm = enable_quantize and embedding_size < 1025
     if enable_quantized_comm:
+        np_tolerance = 0.5
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
         ids = np.arange(batch_size * num_tables, dtype=np.int64)
         np.random.shuffle(ids)
     else:
+        if fp16:
+            np_tolerance = 1e-2
+        else:
+            np_tolerance = 1e-4
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
 
     table_ids = (
@@ -216,12 +220,18 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
                 _,
                 cur_rank_inverse_indices,
             ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
+            if fp16:
+                embedding_grad = flow.cast(embedding_grad, flow.float16)
             cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
                 embedding_grad,
                 num_unique_matrix,
                 cur_rank_inverse_indices,
                 inverse_unique_partition_indices,
             )
+            if fp16:
+                cur_rank_unique_embedding_grad = flow.cast(
+                    cur_rank_unique_embedding_grad, flow.float32
+                )
             return (
                 cur_rank_unique_embedding_grad,
                 flow.cast(cur_rank_unique_ids, flow.int32),
@@ -243,6 +253,8 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     ).reshape(-1, embedding_size)
 
     embedding_grad = embedding_grad.reshape(-1, embedding_size)
+    if fp16:
+        embedding_grad = embedding_grad.astype(np.float16)
     for k in range(np_num_unique):
         np_data = sum(embedding_grad[np.where(ids.flatten() == np_unique_ids[k])[0]])
         # Quantize Embedding Gradient.
@@ -270,13 +282,15 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
         of_cur_rank_embedding_grad, (-1, embedding_size)
     )
     np_cur_rank_embedding_grad = np_cur_rank_unique_embedding_grad[np_inverse]
+    if fp16:
+        np_cur_rank_embedding_grad = np_cur_rank_embedding_grad.astype(np.float32)
 
     test_case.assertTrue(
         np.allclose(
             of_cur_rank_embedding_grad.numpy().flatten(),
             np_cur_rank_embedding_grad.flatten(),
-            atol=1e-4,
-            rtol=1e-4,
+            atol=np_tolerance,
+            rtol=np_tolerance,
         )
     )
 
@@ -337,7 +351,7 @@ class DataShuffleTestCase(flow.unittest.TestCase):
         for kwargs in GenArgDict(arg_dict):
             _test_id_shuffle(test_case, **kwargs)
 
-    def test_embedding_shuffle(test_case):
+    def _test_embedding_shuffle(test_case):
         arg_dict = OrderedDict()
         arg_dict["dtype"] = [flow.float32, flow.float16]
         arg_dict["enable_quantize"] = [True, False]
@@ -345,13 +359,15 @@ class DataShuffleTestCase(flow.unittest.TestCase):
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_shuffle(test_case, **kwargs)
 
-    def test_embedding_gradient_shuffle(test_case):
+    def _test_embedding_gradient_shuffle(test_case):
         arg_dict = OrderedDict()
         arg_dict["enable_quantize"] = [True, False]
+        arg_dict["fp16"] = [True, False]
+        arg_dict["embedding_size"] = [128, 17]
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_gradient_shuffle(test_case, **kwargs)
 
-    def test_unique_key_value(test_case):
+    def _test_unique_key_value(test_case):
         arg_dict = OrderedDict()
         arg_dict["has_table_id"] = [True, False]
         arg_dict["num_tables"] = [13, 26, 1]

@@ -125,7 +125,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class StatefulLocalOpKernel;
+class StatefulOpKernel;
 class ConsistentTensorInferCache;
 
 class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
@@ -139,7 +139,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
-  Maybe<StatefulLocalOpKernel> MutKernel4Stream(Symbol<Stream> stream) const;
+  Maybe<StatefulOpKernel> MutKernel4Stream(Symbol<Stream> stream) const;
 
   bool has_device_and_stream_infer_fn() const {
     return static_cast<bool>(device_and_stream_infer_fn_);
@@ -148,12 +148,12 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
     return device_and_stream_infer_fn_;
   }
 
-  Maybe<void> InferPhysicalShapeAndDType(
+  Maybe<void> InferPhysicalTensorDesc(
       const AttrMap& attrs, const std::string& device_tag,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
 
-  Maybe<void> InferLogicalShapeAndDType(
+  Maybe<void> InferLogicalTensorDesc(
       const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc,
       const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
@@ -169,10 +169,10 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
              const std::vector<std::string>& indexed_obns);
   Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
   AttrMap base_attrs_;
-  user_op::TensorDescInferFn shape_infer_fn_;
+  user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceAndStreamInferFn device_and_stream_infer_fn_;
-  mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulLocalOpKernel>> stream2kernel_;
+  mutable HashMap<Symbol<Stream>, std::shared_ptr<StatefulOpKernel>> stream2kernel_;
   std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };
 

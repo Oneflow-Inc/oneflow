@@ -61,13 +61,7 @@ __global__ void MomentumUpdateKernel(const int64_t line_size, const int64_t embe
                                      const T* unique_values, T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
-    CUDA_1D_KERNEL_LOOP(i, n) {
-      int64_t model_offset;
-      int64_t momentum_offset;
-      GetMomentumOffset(line_size, embedding_size, i, &model_offset, &momentum_offset);
-      updated_unique_values[model_offset] = unique_values[model_offset];
-      updated_unique_values[momentum_offset] = unique_values[momentum_offset];
-    }
+    CUDA_1D_KERNEL_LOOP(i, n) { updated_unique_values[i] = unique_values[i]; }
   } else {
     if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
     if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
@@ -108,13 +102,8 @@ __global__ void AdamUpdateKernel(const int32_t line_size, const int32_t embeddin
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
     CUDA_1D_KERNEL_LOOP(i, n) {
-      int64_t model_offset;
-      int64_t m_offset;
-      int64_t v_offset;
-      GetAdamOffset(line_size, embedding_size, i, &model_offset, &m_offset, &v_offset);
-      updated_unique_values[model_offset] = unique_values[model_offset];
-      updated_unique_values[m_offset] = unique_values[m_offset];
-      updated_unique_values[v_offset] = unique_values[v_offset];
+      // The n is the unique_values elem_cnt, so not need to use GetAdamOffset.
+      updated_unique_values[i] = unique_values[i];
     }
   } else {
     if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -125,6 +114,7 @@ __global__ void AdamUpdateKernel(const int32_t line_size, const int32_t embeddin
     if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
     float learning_rate_val = *learning_rate;
     const int64_t n = *num_unique_ids * embedding_size;
+    // The n is model_diff elem_cnt.
     CUDA_1D_KERNEL_LOOP(i, n) {
       int64_t model_offset;
       int64_t m_offset;
@@ -151,13 +141,7 @@ __global__ void AdagradUpdateKernel(const int64_t line_size, const int64_t embed
                                     const T* unique_values, T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
-    CUDA_1D_KERNEL_LOOP(i, n) {
-      int64_t model_offset;
-      int64_t sum_offset;
-      GetMomentumOffset(line_size, embedding_size, i, &model_offset, &sum_offset);
-      updated_unique_values[model_offset] = unique_values[model_offset];
-      updated_unique_values[sum_offset] = unique_values[sum_offset];
-    }
+    CUDA_1D_KERNEL_LOOP(i, n) { updated_unique_values[i] = unique_values[i]; }
   } else {
     int64_t train_step = *train_step_ptr + 1;
     if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
@@ -198,15 +182,7 @@ __global__ void FtrlUpdateKernel(const int32_t line_size, const int32_t embeddin
                                  T* updated_unique_values) {
   if (skip_if != nullptr && *skip_if != 0) {
     const int64_t n = *num_unique_ids * line_size;
-    CUDA_1D_KERNEL_LOOP(i, n) {
-      int64_t model_offset;
-      int64_t accumulate_offset;
-      int64_t z_offset;
-      GetFtrlOffset(line_size, embedding_size, i, &model_offset, &accumulate_offset, &z_offset);
-      updated_unique_values[model_offset] = unique_values[model_offset];
-      updated_unique_values[accumulate_offset] = unique_values[accumulate_offset];
-      updated_unique_values[z_offset] = unique_values[z_offset];
-    }
+    CUDA_1D_KERNEL_LOOP(i, n) { updated_unique_values[i] = unique_values[i]; }
   } else {
     if (down_scale_by_ptr != nullptr) { scale /= *down_scale_by_ptr; }
     float learning_rate_val = *learning_rate;

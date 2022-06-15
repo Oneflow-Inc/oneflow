@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/common/primitive/permute_impl.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/cpu/cpu_device.h"
+#include "oneflow/core/ep/common/onednn.h"
 
 namespace oneflow {
 
@@ -81,53 +82,49 @@ class OneDnnPermuteImpl : public Permute {
               const void* src, const int* permutation, void* dst) override {
     CHECK_LE(num_dims, kMaxNumDims);
     CHECK_GT(num_dims, 0);
-    CpuStream* cpu_stream = stream->As<CpuStream>();
-    size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();  // NOLINT
-    CpuNumThreadsGuard guard(num_threads);
 
-    dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
-    dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-    size_t onednn_num_dims = num_dims;
-    dnnl::memory::dims onednn_dims(kMaxNumDims + 1, 0);
-    dnnl::memory::dims onednn_permute(kMaxNumDims + 1, 0);
-    dnnl::memory::dims src_stride(kMaxNumDims + 1, 0);
-    dnnl::memory::dims dst_stride(kMaxNumDims + 1, 0);
-    for (int64_t dim = onednn_num_dims - 1; dim >= 0; dim--) {
-      onednn_dims[dim] = src_dims[dim];
-      onednn_permute[dim] = permutation[dim];
-    }
-    size_t movement_size = GetSizeOfDataType(data_type);
-    if (movement_size > kMaxOneDnnMovementSize) {
-      onednn_dims[onednn_num_dims] = movement_size / kMaxOneDnnMovementSize;
-      onednn_permute[onednn_num_dims] = onednn_num_dims;
-      onednn_num_dims = onednn_num_dims + 1;
-      movement_size = kMaxOneDnnMovementSize;
-    }
-    onednn_dims.resize(onednn_num_dims);
+    stream->As<CpuStream>()->onednn_executor()->Launch([&](dnnl::engine* onednn_engine,
+                                                           dnnl::stream* onednn_stream) {
+      size_t onednn_num_dims = num_dims;
+      dnnl::memory::dims onednn_dims(kMaxNumDims + 1, 0);
+      dnnl::memory::dims onednn_permute(kMaxNumDims + 1, 0);
+      dnnl::memory::dims src_stride(kMaxNumDims + 1, 0);
+      dnnl::memory::dims dst_stride(kMaxNumDims + 1, 0);
+      for (int64_t dim = onednn_num_dims - 1; dim >= 0; dim--) {
+        onednn_dims[dim] = src_dims[dim];
+        onednn_permute[dim] = permutation[dim];
+      }
+      size_t movement_size = GetSizeOfDataType(data_type);
+      if (movement_size > kMaxOneDnnMovementSize) {
+        onednn_dims[onednn_num_dims] = movement_size / kMaxOneDnnMovementSize;
+        onednn_permute[onednn_num_dims] = onednn_num_dims;
+        onednn_num_dims = onednn_num_dims + 1;
+        movement_size = kMaxOneDnnMovementSize;
+      }
+      onednn_dims.resize(onednn_num_dims);
 
-    src_stride[onednn_num_dims - 1] = 1;
-    dst_stride[onednn_permute[onednn_num_dims - 1]] = 1;
-    for (int64_t i = onednn_num_dims - 2; i >= 0; i--) {
-      src_stride[i] = src_stride[i + 1] * onednn_dims[i + 1];
-      dst_stride[onednn_permute[i]] =
-          dst_stride[onednn_permute[i + 1]] * onednn_dims[onednn_permute[i + 1]];
-    }
+      src_stride[onednn_num_dims - 1] = 1;
+      dst_stride[onednn_permute[onednn_num_dims - 1]] = 1;
+      for (int64_t i = onednn_num_dims - 2; i >= 0; i--) {
+        src_stride[i] = src_stride[i + 1] * onednn_dims[i + 1];
+        dst_stride[onednn_permute[i]] =
+            dst_stride[onednn_permute[i + 1]] * onednn_dims[onednn_permute[i + 1]];
+      }
 
-    dnnl::memory::data_type onednn_data_type =
-        static_cast<dnnl::memory::data_type>(OnednnDatatypeTagMap[movement_size]);
-    // The reorder primitive requires the source and destination tensors to have the same shape.
-    // Implicit broadcasting is not supported.
-    auto src_mem_desc = dnnl::memory::desc(onednn_dims, onednn_data_type, src_stride);
-    auto dst_mem_desc = dnnl::memory::desc(onednn_dims, onednn_data_type, dst_stride);
-    auto src_mem = dnnl::memory(src_mem_desc, *onednn_engine, const_cast<void*>(src));
-    auto dst_mem = dnnl::memory(dst_mem_desc, *onednn_engine, dst);
-    auto reorder_primitive_desc =
-        dnnl::reorder::primitive_desc(*onednn_engine, src_mem_desc, *onednn_engine, dst_mem_desc);
-    auto reorder_primitive = dnnl::reorder(reorder_primitive_desc);
-    std::unordered_map<int, dnnl::memory> reorder_args{{DNNL_ARG_SRC, src_mem},
-                                                       {DNNL_ARG_DST, dst_mem}};
-    reorder_primitive.execute(*onednn_stream, reorder_args);
-    onednn_stream->wait();
+      dnnl::memory::data_type onednn_data_type =
+          static_cast<dnnl::memory::data_type>(OnednnDatatypeTagMap[movement_size]);
+      // The reorder primitive requires the source and destination tensors to have the same shape.
+      // Implicit broadcasting is not supported.
+      auto src_mem_desc = dnnl::memory::desc(onednn_dims, onednn_data_type, src_stride);
+      auto dst_mem_desc = dnnl::memory::desc(onednn_dims, onednn_data_type, dst_stride);
+      auto src_mem = dnnl::memory(src_mem_desc, *onednn_engine, const_cast<void*>(src));
+      auto dst_mem = dnnl::memory(dst_mem_desc, *onednn_engine, dst);
+      auto reorder_primitive_desc =
+          dnnl::reorder::primitive_desc(*onednn_engine, src_mem_desc, *onednn_engine, dst_mem_desc);
+      auto reorder_primitive = dnnl::reorder(reorder_primitive_desc);
+
+      reorder_primitive.execute(*onednn_stream, {{DNNL_ARG_SRC, src_mem}, {DNNL_ARG_DST, dst_mem}});
+    });
   }
 };
 
@@ -142,11 +139,9 @@ class PermuteFactoryImpl : public PermuteFactory {
   std::unique_ptr<Permute> New(size_t max_num_dims) override {
     if (max_num_dims <= kMaxNumDims) {
 #ifdef WITH_ONEDNN
-      return std::unique_ptr<Permute>(new OneDnnPermuteImpl());
-#else
+      if (OneDnnIsEnabled()) { return std::unique_ptr<Permute>(new OneDnnPermuteImpl()); }
+#endif
       return std::unique_ptr<Permute>(new PermuteImpl());
-#endif  // WITH_ONEDNN
-
     } else {
       return nullptr;
     }

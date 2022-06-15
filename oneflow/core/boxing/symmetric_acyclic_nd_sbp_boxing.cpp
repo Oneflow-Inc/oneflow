@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/functional/functional.h"
@@ -67,6 +68,7 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symb
                                             out_parallel_desc));
 }
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                                 const Shape& logical_shape) {
   CHECK_OR_RETURN(in->placement() == out->placement());
@@ -76,6 +78,7 @@ Maybe<void> RawCheckSymmetricAcyclicNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<P
   JUST(CheckIsNdSbpBoxingAcyclicWithDecompose(in, out, logical_shape));
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckSymmetricAcyclicNdSbpBoxing =
     DECORATE(&RawCheckSymmetricAcyclicNdSbpBoxing, ThreadLocalCopiable);
@@ -84,10 +87,17 @@ static constexpr auto* CheckSymmetricAcyclicNdSbpBoxing =
 
 Maybe<one::Tensor> SymmetricAcyclicNdSbpBoxing(const std::shared_ptr<one::Tensor>& input,
                                                Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+  const auto& tensor_nd_sbp = JUST(input->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
+  const auto& tensor_placement = JUST(input->parallel_desc());
+  CHECK_OR_RETURN(tensor_placement == in->placement())
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in->placement())) << ")";
   const auto& out_nd_sbp = out->nd_sbp();
-  const auto& in_parallel_desc = in->placement();
   const auto& out_parallel_desc = out->placement();
-  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
   std::shared_ptr<one::Tensor> output;
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   if (out_parallel_id->has_value()) {

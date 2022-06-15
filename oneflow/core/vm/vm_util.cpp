@@ -39,6 +39,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 Maybe<void> ClusterSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
   JUST(PhysicalRun([bc](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->GlobalSync());
     JUST(builder->Barrier([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));

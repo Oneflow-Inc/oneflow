@@ -45,7 +45,7 @@ add_docstr(
         >>> input 
         tensor([[1, 2, 3],
                 [4, 5, 6]], dtype=oneflow.int32)
-        >>> index = flow.tensor([0,1], dtype=flow.int32)
+        >>> index = flow.tensor([0,1], dtype=flow.int64)
         >>> output = flow.index_select(input, 1, index)
         >>> output
         tensor([[1, 2],

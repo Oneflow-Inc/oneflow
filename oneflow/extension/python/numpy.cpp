@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/registry_error.h"
 #include "oneflow/extension/python/numpy_internal.h"
@@ -82,11 +83,11 @@ std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec) {
 }
 
 // NumPy strides use bytes. OneFlow strides use element counts.
-std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type) {
-  size_t ndim = fixed_vec.size();
+std::vector<size_t> OFStrideToNumpyStride(const Stride& stride, const DataType data_type) {
+  size_t ndim = stride.size();
   auto result = std::vector<size_t>(ndim);
   int byte_per_elem = GetSizeOfDataType(data_type);
-  for (int i = 0; i < ndim; i++) { result[i] = fixed_vec.at(i) * byte_per_elem; }
+  for (int i = 0; i < ndim; i++) { result[i] = stride.at(i) * byte_per_elem; }
   return result;
 }
 

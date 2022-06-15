@@ -16,14 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
 #define ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
 
+#include <memory>
+
 namespace oneflow {
 
 namespace private_detail {
 
 template<typename T>
 const T* GlobalSingletonPtr() {
-  static const T* value = new T();
-  return value;
+  static std::unique_ptr<const T> value(new T());
+  return value.get();
 }
 
 }  // namespace private_detail

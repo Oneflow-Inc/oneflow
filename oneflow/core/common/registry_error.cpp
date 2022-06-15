@@ -19,15 +19,15 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-std::shared_ptr<cfg::ErrorProto>* MutRegistryError() {
-  static std::shared_ptr<cfg::ErrorProto> registry_error;
+std::shared_ptr<ErrorProto>* MutRegistryError() {
+  static std::shared_ptr<ErrorProto> registry_error;
   return &registry_error;
 }
 }  // namespace
 
 Maybe<void> CheckAndClearRegistryFlag() {
   if (!*MutRegistryError()) { return Maybe<void>::Ok(); }
-  std::shared_ptr<cfg::ErrorProto> registry_error_old = *MutRegistryError();
+  std::shared_ptr<ErrorProto> registry_error_old = *MutRegistryError();
   *MutRegistryError() = nullptr;
   return registry_error_old;
 }

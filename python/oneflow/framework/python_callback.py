@@ -16,10 +16,6 @@ limitations under the License.
 import traceback
 
 import oneflow._oneflow_internal
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
-import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
-import oneflow._oneflow_internal.oneflow.core.job.scope as scope_cfg
-import oneflow._oneflow_internal.oneflow.core.operator.op_attribute as op_attribute_cfg
 import oneflow.framework.ofblob as ofblob
 
 
@@ -55,15 +51,6 @@ class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
-    def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
-        try:
-            return interpreter_callback.MakeScopeSymbol(
-                job_conf, parallel_conf, is_mirrored
-            )
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
 
 def _WatcherHandler(unique_id, of_blob_ptr):
     global unique_id2handler
@@ -75,4 +62,3 @@ def _WatcherHandler(unique_id, of_blob_ptr):
 
 unique_id2handler = {}
 global_python_callback = PythonCallback()
-interpreter_callback = None

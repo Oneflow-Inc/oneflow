@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/job/graph_scope_vars.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -53,7 +54,7 @@ inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
 inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
 inline Maybe<size_t> CudaGetDeviceCount() {
-  return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
+  return Global<ep::DeviceManagerRegistry>::Get()->GetDeviceCount(DeviceType::kCUDA);
 }
 inline Maybe<void> SetFLAGS_alsologtostderr(bool flag) {
   FLAGS_alsologtostderr = flag;

@@ -87,11 +87,13 @@ class EagerBlobObject final {
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_storage,
+                  const std::shared_ptr<Stride>& stride, DataType data_type,
+                  const std::shared_ptr<TensorStorage>& tensor_storage)
+      : EagerBlobObject(mem_case, shape, stride, data_type, tensor_storage,
                         intrusive::shared_ptr<LocalDepObject>()) {}
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
+                  const std::shared_ptr<Stride>& stride, DataType data_type,
+                  const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
   ~EagerBlobObject() { tensor_storage_.reset(); }
@@ -137,9 +139,16 @@ class EagerBlobObject final {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
+  void set_pin_memory(const bool pin_memory) { pin_memory_ = pin_memory; }
+
+  bool pin_memory() const { return pin_memory_; }
+
   std::shared_ptr<const Shape> shape_ptr() const { return shape_; }
   const Shape& shape() const { return *shape_; }
   Shape& mut_shape() { return *shape_; }
+  std::shared_ptr<const Stride> stride_ptr() const { return stride_; }
+  const Stride& stride() const { return *stride_; }
+  Stride& mut_stride() { return *stride_; }
 
   size_t ByteSizeOfBlobBody() const { return shape_->elem_cnt() * GetSizeOfDataType(data_type_); }
   size_t AlignedByteSizeOfBlobBody() const {
@@ -177,10 +186,11 @@ class EagerBlobObject final {
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
   std::shared_ptr<Shape> shape_;
-
+  std::shared_ptr<Stride> stride_;
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
+  bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 
   // NOTE: Will be removed soon. Avoid to use it whenever possible.
