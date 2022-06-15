@@ -4,8 +4,12 @@ Operators for initialization
 ----------------------------------
 .. currentmodule:: oneflow.nn.init
 
-.. autofunction:: oneflow.nn.init.xavier_uniform_
-.. autofunction:: oneflow.nn.init.xavier_normal_
-.. autofunction:: oneflow.nn.init.kaiming_uniform_
-.. autofunction:: oneflow.nn.init.kaiming_normal_
-.. autofunction:: oneflow.nn.init.orthogonal_
+.. autosummary::
+    :toctree: generated
+    :nosignatures:
+
+    xavier_uniform_
+    xavier_normal_
+    kaiming_uniform_
+    kaiming_normal_
+    orthogonal_
