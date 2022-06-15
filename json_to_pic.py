@@ -46,27 +46,28 @@ def get_threshold_from_json_file(fn):
 
 fig, ax = plt.subplots()
 
-draw_from_file(r"resnet152-normal-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'our')
-draw_from_file(r"resnet152-nlr-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'nlr')
-draw_from_file(r"resnet152-no-allo-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'no-allo')
-draw_from_file(r"resnet152-no-lr-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'no-lr')
+model_name = "unet"
+
+draw_from_file(rf"{model_name}-normal-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'our')
+draw_from_file(rf"{model_name}-nlr-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'nlr')
+draw_from_file(rf"{model_name}-no-allo-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'no-allo')
+draw_from_file(rf"{model_name}-no-lr-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'no-lr')
 # draw_from_file(r"no-lr-no-fbip-\d+.json", lambda fn: int(fn[14:-5]), get_theo_time_from_json_file, 'no-lr-no-fbip')
 # draw_from_file(r"nlr-no-fbip-\d+.json", lambda fn: int(fn[12:-5]), get_theo_time_from_json_file, 'nlr-no-fbip')
 
 ax.legend()
 
-plt.savefig('resnet152-theo-time.png')
+plt.savefig(f'{model_name}-theo-time.png')
 
 fig, ax = plt.subplots()
 
-draw_from_file(r"resnet152-normal-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'our')
-draw_from_file(r"resnet152-nlr-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'nlr')
-draw_from_file(r"resnet152-no-allo-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'no-allo')
-draw_from_file(r"resnet152-no-lr-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'no-lr')
+draw_from_file(rf"{model_name}-normal-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'our')
+draw_from_file(rf"{model_name}-nlr-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'nlr')
+draw_from_file(rf"{model_name}-no-allo-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'no-allo')
+draw_from_file(rf"{model_name}-no-lr-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'no-lr')
 # draw_from_file(r"no-lr-no-fbip-\d+.json", lambda fn: int(fn[14:-5]), get_real_time_from_json_file, 'no-lr-no-fbip')
 # draw_from_file(r"nlr-no-fbip-\d+.json", lambda fn: int(fn[12:-5]), get_real_time_from_json_file, 'nlr-no-fbip')
 
 ax.legend()
 
-plt.savefig('resnet152-real-time.png')
-
+plt.savefig(f'{model_name}-real-time.png')

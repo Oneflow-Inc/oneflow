@@ -12,7 +12,6 @@ bool is_enabled();
 size_t memory_threshold();
 bool is_enabled_and_debug();
 int debug_level();
-bool is_using_disjoint_set();
 bool is_check_enabled();
 
 }  // namespace dtr

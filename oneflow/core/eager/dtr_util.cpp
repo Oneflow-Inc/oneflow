@@ -27,8 +27,6 @@ bool is_check_enabled() {
   return EnvBool<OF_DTR_CHECK>();
 }
 
-bool is_using_disjoint_set() { return Global<DTRConfig>::Get()->heuristic == "eq"; }
-
 }  // namespace dtr
 
 namespace vm {

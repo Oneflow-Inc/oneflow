@@ -112,7 +112,10 @@ WARMUP_ITERS = 5
 ALL_ITERS = args.iters
 
 # NOTE: it has not effect for dtr allocator
-heuristic = "eq"
+if args.allocator:
+    heuristic = "eq_compute_time_and_last_access"
+else:
+    heuristic = "eq"
 
 if args.dtr:
     print(
@@ -130,13 +133,15 @@ setup_seed(seed)
 writer = SummaryWriter("./tensorboard/" + args.exp_id)
 
 # model = models.resnet50(fuse_bn_relu=False, fuse_bn_add_relu=False)
-model = models.densenet121()
+import unet
+# model = models.resnet50()
+model = unet.UNet(n_channels=3, n_classes=2, bilinear=False)
 
 # flow.save(model.state_dict(), '/tmp/abcde')
 # weights = flow.load("/tmp/abcde")
 # model.load_state_dict(weights)
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.BCEWithLogitsLoss() # nn.CrossEntropyLoss()
 
 cuda0 = flow.device("cuda:0")
 
@@ -153,8 +158,9 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
 if args.no_dataloader:
     global data
     global label
-    data = flow.ones(args.bs, 3, 224, 224)
-    label = flow.ones(args.bs, dtype=flow.int64)
+    data = flow.ones(args.bs, 3, 460, 608)
+    # label = flow.ones(args.bs, dtype=flow.int64)
+    label = flow.ones(args.bs, 2, 460, 608)
 
     class FixedDataset(flow.utils.data.Dataset):
         def __len__(self):
