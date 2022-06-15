@@ -157,7 +157,8 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
 Shape CreateReducedShape(ShapeView shape, const AxisVector& axis_vec);
 Shape CreateLeftExtendedShape(ShapeView shape, int ndims_extend_to);
-Shape ZeroDimCompatiableShape(const Shape& shape);
+Shape ExpandDimIf0D(const Shape& shape);
+Shape ExpandDimIf0D(ShapeView shape);
 Shape CreateReducedShapeOrOnesShape(ShapeView shape, const AxisVector& axis_vec);
 
 std::ostream& operator<<(std::ostream& out, const Shape& shape);

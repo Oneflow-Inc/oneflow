@@ -120,13 +120,14 @@ Shape CreateLeftExtendedShape(ShapeView shape, int ndims_left_extend_to) {
   return Shape(std::move(dim_vec));
 }
 
-Shape ZeroDimCompatiableShape(const Shape& shape) {
-  if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
-    DimVector dim_vec;
-    dim_vec.emplace_back(1);
-    return Shape(dim_vec);
-  }
+Shape ExpandDimIf0D(const Shape& shape) {
+  if (shape.NumAxes() == 0) { return {1}; }
   return shape;
+}
+
+Shape ExpandDimIf0D(ShapeView shape) {
+  if (shape.NumAxes() == 0) { return {1}; }
+  return Shape(shape);
 }
 
 Shape CreateReducedShapeOrOnesShape(ShapeView shape, const AxisVector& axis_vec) {
@@ -145,6 +146,8 @@ Shape::Shape(const DimVector& dim_vec) : DimVector(dim_vec), is_initialized_(tru
 Shape::Shape(DimVector&& dim_vec) : DimVector(std::move(dim_vec)), is_initialized_(true) {}
 Shape::Shape(const ShapeProto& shape_proto)
     : DimVector(shape_proto.dim().begin(), shape_proto.dim().end()), is_initialized_(true) {}
+Shape::Shape(ShapeView shape_view)
+    : DimVector(shape_view.begin(), shape_view.end()), is_initialized_(true) {}
 
 Shape& Shape::CheckNumAxesIdenticalAndAssign(ShapeView shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
