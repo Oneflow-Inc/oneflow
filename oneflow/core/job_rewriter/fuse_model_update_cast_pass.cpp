@@ -100,7 +100,6 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
 
         const user_op::UserOpConfWrapper new_cast_user_conf(new_cast_op_conf);
         model_half_lbi = GenLogicalBlobId(new_cast_user_conf.output("out", 0));
-
         user_op::UserOpConfWrapperBuilder fused_model_update_op_builder(
             model_update_user_conf.op_name());
         if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {

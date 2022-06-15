@@ -319,6 +319,7 @@ void MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Upda
       scale_by_ptr, skip_if, tensor_tuple_params);
 }
 
+template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float>;
 template struct MultiTensorSGDUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16>;
 
 template<typename T, typename G>
@@ -380,6 +381,7 @@ void MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, T, float16>::Upd
       tensor_tuple_params);
 }
 
+template struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float>;
 template struct MultiTensorAdamUpdateWithCastKernelUtil<DeviceType::kCUDA, float, float16>;
 
 }  // namespace oneflow

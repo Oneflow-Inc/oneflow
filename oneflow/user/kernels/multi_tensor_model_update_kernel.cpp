@@ -273,6 +273,7 @@ class MultiTensorSGDUpdateWithCastKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_half", 0) == GetDataType<float16>::value));
 
+REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_SGD_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
 
 template<DeviceType device_type, typename T, typename G>
@@ -379,6 +380,7 @@ class MultiTensorAdamUpdateWithCastKernel final : public user_op::OpKernel,
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value) \
                        && (user_op::HobDataType("model_half", 0) == GetDataType<float16>::value));
 
+REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_MULTI_TENSOR_UPDATE_ADAM_UPDATE_WITH_CAST_KERNEL(DeviceType::kCUDA, float, float16);
 
 }  // namespace
