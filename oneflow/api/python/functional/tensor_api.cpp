@@ -255,17 +255,16 @@ class LocalTensorSharedNumpyDataFunctor {
     Symbol<Device> device = JUST(Device::New("cpu"));
     const npy_intp* stride_ptr = PyArray_STRIDES(array);
     // stride
-    auto strides_vec = DimVector(stride_ptr, stride_ptr + dim);
+    auto strides = std::make_shared<Stride>(stride_ptr, stride_ptr + dim);
     auto element_size_in_bytes = PyArray_ITEMSIZE(array);
     // NumPy strides use bytes. OneFlow strides use element counts.
-    for (auto& stride : strides_vec) {
-      if (stride % element_size_in_bytes != 0) {
+    for (auto& stride_val : *strides) {
+      if (stride_val % element_size_in_bytes != 0) {
         return Error::RuntimeError() << "given numpy array strides not a multiple of the element "
                                         "byte size. Copy the numpy array to reallocate the memory.";
       }
-      stride /= element_size_in_bytes;
+      stride_val /= element_size_in_bytes;
     }
-    const auto strides = std::make_shared<Stride>(strides_vec);
     auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, strides, data_type, device, 0);
 
     // Build TensorBuffer
