@@ -31,20 +31,10 @@ def _test_global_stateful_kernel_with_inpersistent_state(test_case, placement, s
     x = x.to_global(placement, sbp)
     y = x[0:3, 0:1]
     y_np = np.array([[0], [8], [16]])
-    test_case.assertTrue(
-        np.array_equal(
-            y.numpy(),
-            y_np,
-        )
-    )
+    test_case.assertTrue(np.array_equal(y.numpy(), y_np,))
     x = x.to_global(flow.env.all_device_placement("cuda"), sbp=flow.sbp.split(1))
     y = x[0:3, 0:1]
-    test_case.assertTrue(
-        np.array_equal(
-            y.numpy(),
-            y_np,
-        )
-    )
+    test_case.assertTrue(np.array_equal(y.numpy(), y_np,))
 
 
 class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
