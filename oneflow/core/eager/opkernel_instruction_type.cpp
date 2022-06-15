@@ -35,7 +35,8 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/profiler/profile_manager.h"
+#include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
@@ -133,9 +134,6 @@ struct LocalCallOpKernelUtil final {
       auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
           opkernel->op_type_name(),
 #if defined(WITH_CUDA)
-          compute_ctx->device_type() == DeviceType::kCUDA
-              ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
-              : nullptr,
           [compute_ctx]() -> int64_t {
             const auto cal_memory_size = [compute_ctx](const one::ArgVec& args) -> int64_t {
               return std::accumulate(

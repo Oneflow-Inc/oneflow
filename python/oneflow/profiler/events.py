@@ -112,6 +112,7 @@ class Event:
 class Events(list):
     def __init__(self, events: str = "") -> None:
         list.__init__([])
+        print(events)
         if events != "":
             self.__init_events(events)
 

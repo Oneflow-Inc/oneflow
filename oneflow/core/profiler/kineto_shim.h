@@ -20,8 +20,7 @@ namespace profiler {
 
 enum class ActivityType {
   CPU = 0,
-  CUDA,                   // CUDA kernels, runtime
-  NUM_KINETO_ACTIVITIES,  // must be the last one
+  CUDA,
 };
 
 struct DeviceAndResource {
@@ -80,4 +79,4 @@ void recordThreadInfo();
 }  // namespace profiler
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_PROFILER_KINETO_SHIM_H_
+#endif  // ONEFLOW_CORE_PROFILER_KINETO_SHIM_H_

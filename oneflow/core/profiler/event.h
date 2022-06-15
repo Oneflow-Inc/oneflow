@@ -16,16 +16,21 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PROFILER_EVENT_H_
 #define ONEFLOW_CORE_PROFILER_EVENT_H_
 
+#include <bits/types/time_t.h>
+#include <functional>
+#include <memory>
+#include <vector>
 #include "nlohmann/json.hpp"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/shape.h"
-#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
+class Shape;
+
 namespace profiler {
 
-enum class EventType { kCustom, kKernel };
+enum class EventType { kCustom, kOneflowKernel };
+enum class CustomEventType { kDefault, kCudaKernel, kCudaRuntime };
 
 class IEvent {
  public:
@@ -37,8 +42,12 @@ class IEvent {
   virtual std::string Key() = 0;
   virtual nlohmann::json ToJson();
   virtual ~IEvent() = default;
+  // Make sure you know what you are doing when using StartedAt and FinishedAt
+  virtual void StartedAt(time_t t);
+  virtual void FinishedAt(time_t t);
   virtual void Start();
   virtual void Finish();
+  bool IsChildOf(const std::shared_ptr<IEvent>& e);
 
   const std::string& GetName() const;
   time_t GetDuration();
@@ -55,47 +64,14 @@ class CustomEvent final : public IEvent {
 
   nlohmann::json ToJson() override;
 
-  static std::shared_ptr<CustomEvent> Create(const std::string& name);
+  static std::shared_ptr<CustomEvent> Create(const std::string& name,
+                                             CustomEventType type = CustomEventType::kDefault);
 
  private:
-  explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
+  CustomEventType type_;
+  explicit CustomEvent(const std::string& custom_name, CustomEventType type)
+      : IEvent(custom_name), type_(type) {}
 };
-
-#if defined(WITH_CUDA)
-
-class CUDAEventPair {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CUDAEventPair);
-
-  explicit CUDAEventPair(cudaStream_t cuda_stream) : cuda_stream_(cuda_stream) {
-    OF_CUDA_CHECK(cudaEventCreate(&cuda_event_start_));
-    OF_CUDA_CHECK(cudaEventCreate(&cuda_event_finish_));
-  }
-
-  void Start() { OF_CUDA_CHECK(cudaEventRecord(cuda_event_start_, cuda_stream_)); }
-
-  void Finish() { OF_CUDA_CHECK(cudaEventRecord(cuda_event_finish_, cuda_stream_)); }
-
-  double ElapsedTime() const {
-    float elapsed_time_ms = 0;
-    OF_CUDA_CHECK(cudaEventSynchronize(cuda_event_start_));
-    OF_CUDA_CHECK(cudaEventSynchronize(cuda_event_finish_));
-    OF_CUDA_CHECK(cudaEventElapsedTime(&elapsed_time_ms, cuda_event_start_, cuda_event_finish_));
-    return elapsed_time_ms * 1000.0;  // convert to us
-  }
-
-  ~CUDAEventPair() {
-    if (cuda_event_start_) { OF_CUDA_CHECK(cudaEventDestroy(cuda_event_start_)); }
-    if (cuda_event_finish_) { OF_CUDA_CHECK(cudaEventDestroy(cuda_event_finish_)); }
-  }
-
- private:
-  cudaStream_t cuda_stream_ = nullptr;
-  cudaEvent_t cuda_event_start_ = nullptr;
-  cudaEvent_t cuda_event_finish_ = nullptr;
-};
-
-#endif  // WITH_CUDA
 
 class KernelEvent final : public IEvent {
  public:
@@ -108,15 +84,12 @@ class KernelEvent final : public IEvent {
 
   void RecordShape(const Shape& shape);
 
-  void Start() override;
-  void Finish() override;
-
 #if defined(WITH_CUDA)
-  void InitCudaEventPair(cudaStream_t cuda_stream) {
-    cuda_event_pair_ = std::make_shared<CUDAEventPair>(cuda_stream);
-  }
-
   void SetMemorySize(int64_t memory_size) { memory_size_ = memory_size; }
+  void AddChild(const std::shared_ptr<IEvent>& e) { children_.emplace_back(e); }
+  void WalkAmongChildren(const std::function<void(const std::shared_ptr<IEvent>& e)>& f) const {
+    for (const auto& x : children_) { f(x); }
+  }
 #endif  // WITH_CUDA
 
  private:
@@ -127,15 +100,23 @@ class KernelEvent final : public IEvent {
   }
 
 #if defined(WITH_CUDA)
-  std::shared_ptr<CUDAEventPair> cuda_event_pair_ = nullptr;
   int64_t memory_size_ = -1;
+  std::vector<std::shared_ptr<IEvent>> children_;
 #endif  // WITH_CUDA
 
   std::vector<Shape> input_shapes_;
-  std::string FormatShapes(size_t max_num_to_format = 4);
+  std::string GetFormatedInputShapes(size_t max_num_to_format = 4);
 };
 
 }  // namespace profiler
 }  // namespace oneflow
+
+namespace nlohmann {
+
+inline void to_json(json& j, const std::shared_ptr<::oneflow::profiler::IEvent>& event) {
+  j = event->ToJson();
+}
+
+}  // namespace nlohmann
 
 #endif  // ONEFLOW_CORE_PROFILER_EVENT_H_
