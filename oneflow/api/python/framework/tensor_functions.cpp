@@ -718,7 +718,7 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
     grad_sbp.emplace_back(functional::PyUnpackSbpParallel(grad_sbp_obj));
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
-  };
+  }
   return PyTensor_New(
       ASSERT_PTR(functional::ToConsistent(tensor, placement, sbp, grad_sbp, check_meta)));
   END_HANDLE_ERRORS
@@ -770,6 +770,9 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
           functional::ConsistentConstant({1}, value_scalar, tensor->dtype(), placement, sbp));
     } else {
       value_tensor = PyTensor_Unpack(value);
+      CHECK_OR_THROW(value_tensor->is_consistent())
+          << Error::RuntimeError()
+          << "tensor_setitem(): value must be a global tensor when self is global";
       value_tensor = ASSERT_PTR(functional::ToConsistent(value_tensor, placement, sbp, {}, true));
     }
   } else {
@@ -779,6 +782,9 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
           functional::Constant({1}, value_scalar, tensor->dtype(), ASSERT(tensor->device())));
     } else {
       value_tensor = PyTensor_Unpack(value);
+      CHECK_OR_THROW(value_tensor->is_local())
+          << Error::RuntimeError()
+          << "tensor_setitem(): value must be a local tensor when self is local";
       Optional<Symbol<Device>> device = ASSERT(tensor->device());
       value_tensor = ASSERT_PTR(functional::To(value_tensor, device, value_tensor->dtype(), false));
     }
