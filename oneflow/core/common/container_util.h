@@ -49,7 +49,7 @@ template<typename VecT>
 Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec,
                                                                  typename VecT::size_type index) {
   CHECK_LT_OR_RETURN(index, vec.size());
-  return vec.at(index);
+  return vec[index];
 }
 
 template<typename VecT>
