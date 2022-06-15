@@ -1469,7 +1469,11 @@ void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t 
     size_t buffer_size = GetCudaAlignedSize(num_unique * padded_embedding_size * sizeof(T));
     if (use_dynamic_memory_allocation) {
       CHECK(tmp_buffer == nullptr);
+#if CUDA_VERSION >= 11020
       OF_CUDA_CHECK(cudaMallocAsync(&unsorted_segment_sum_out, buffer_size, cuda_stream));
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
       unsorted_segment_sum_out = tmp_buffer;
     }
@@ -1493,7 +1497,11 @@ void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t 
                       dst_pos_vec.data(), unsorted_segment_sum_out, src_shape.data(),
                       src_pos_vec.data(), extent_vec.data());
     if (use_dynamic_memory_allocation) {
+#if CUDA_VERSION >= 11020
       OF_CUDA_CHECK(cudaFreeAsync(unsorted_segment_sum_out, cuda_stream));
+#else
+      UNIMPLEMENTED();
+#endif
     }
   }
 }
