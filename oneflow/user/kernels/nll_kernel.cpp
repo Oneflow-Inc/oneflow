@@ -108,8 +108,7 @@ class NLLKernel final : public user_op::OpKernel {
     }
     T* out_weight_dptr = nullptr;
     if (ctx->has_output("out_weight", 0)) {
-      out_weight_dptr =
-          CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("out_weight", 0))->mut_dptr<T>();
+      out_weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("out_weight", 0))->mut_dptr<T>();
     }
 
     NLLKernelUtil<device_type, T, K>::Forward(
@@ -152,8 +151,8 @@ class NLLGradKernel final : public user_op::OpKernel {
       class_start = spec_cache->class_start();
     }
 
-    Memset<DeviceType::kCPU>(ctx->stream(), in_grad->mut_dptr(), 0,
-                             GetCudaAlignedSize(N * C * sizeof(T)));
+    Memset<device_type>(ctx->stream(), in_grad->mut_dptr(), 0,
+                        GetCudaAlignedSize(N * C * sizeof(T)));
 
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
 

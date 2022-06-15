@@ -27,9 +27,8 @@ namespace oneflow {
 
   if (ctx->has_input("weight", 0)) {
     auto weight_dtype = ctx->InputDType("weight", 0);
-    CHECK_EQ_OR_RETURN(weight_dtype, input_dtype)
-        << ctx->op_name() << ": expected weight dtype " << input_dtype << ", but got "
-        << weight_dtype;
+    CHECK_EQ_OR_RETURN(weight_dtype, input_dtype) << ctx->op_name() << ": expected weight dtype "
+                                                  << input_dtype << ", but got " << weight_dtype;
   }
 
   if (ctx->has_output("out_weight", 0)) { *ctx->OutputDType("out_weight", 0) = input_dtype; }
@@ -111,8 +110,10 @@ namespace oneflow {
   user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
   CHECK_OR_RETURN(target_modifier != nullptr);
   target_modifier->set_requires_grad(false);
-  auto* weight_modifier = GetInputArgModifierFn("weight", 0);
-  if (weight_modifier) { weight_modifier->set_requires_grad(false); }
+  if (conf.has_input("weight", 0)) {
+    auto* weight_modifier = GetInputArgModifierFn("weight", 0);
+    if (weight_modifier) { weight_modifier->set_requires_grad(false); }
+  }
   return Maybe<void>::Ok();
 }
 
@@ -153,9 +154,9 @@ namespace oneflow {
       << out_grad_desc.shape().ToString();
 
   const int64_t C = input_desc.shape().At(input_desc.shape().NumAxes() - 1);
-  CHECK_EQ_OR_RETURN(out_grad_desc.shape().elem_cnt(), N * C)
-      << ctx->op_name() << ": expected out_grad size " << N * C << ", got "
-      << out_grad_desc.shape().ToString();
+  CHECK_EQ_OR_RETURN(input_desc.shape().elem_cnt(), N * C)
+      << ctx->op_name() << ": expected input size " << N << ", got "
+      << input_desc.shape().ToString();
 
   if (ctx->has_input("weight", 0)) {
     const auto& weight_desc = ctx->InputTensorDesc("weight", 0);

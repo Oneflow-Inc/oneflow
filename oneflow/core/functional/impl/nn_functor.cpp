@@ -1109,7 +1109,7 @@ class NLLLossFunctor {
                                 .Input("target")
                                 .Input("weight")
                                 .Output("output")
-                                .Output("total_weight")
+                                .Output("out_weight")
                                 .Build());
   }
 
@@ -1203,14 +1203,14 @@ class CrossEntropyFunctor {
                              .Input("input")
                              .Input("target")
                              .Output("out")
-                             .Output("total_weight")
+                             .Output("out_weight")
                              .Build());
     op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
                                     .Input("input")
                                     .Input("target")
                                     .Input("weight")
                                     .Output("out")
-                                    .Output("total_weight")
+                                    .Output("out_weight")
                                     .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
