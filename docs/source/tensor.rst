@@ -9,7 +9,7 @@ a single data type.
 Data types
 ----------
 
-Torch defines 10 tensor types with CPU and GPU variants which are as follows:
+OneFlow defines 8 tensor types with CPU and GPU variants which are as follows:
 
 ======================================= =============================================== =============================== ==================================
 Data type                               dtype                                           CPU tensor                      GPU tensor
