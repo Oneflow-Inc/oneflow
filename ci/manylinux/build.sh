@@ -28,6 +28,7 @@ cmake -S ${ONEFLOW_CI_SRC_DIR} -C ${ONEFLOW_CI_CMAKE_INIT_CACHE} -DPython3_EXECU
 cd ${ONEFLOW_CI_BUILD_DIR}
 cmake --build . --parallel ${ONEFLOW_CI_BUILD_PARALLEL}
 if [ ! -z "$ONEFLOW_CI_BUILD_RUN_LIT" ]; then
+    export PATH=$PATH:$(dirname $ONEFLOW_CI_PYTHON_EXE)
     cmake --build . -t c1
 fi
 
