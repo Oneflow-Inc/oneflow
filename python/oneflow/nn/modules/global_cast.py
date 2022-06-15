@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import warnings
+from collections import OrderedDict
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
-from oneflow.nn.graph.util import IONode
+from oneflow.nn.graph.util import ArgsTree
+from oneflow.framework.check_point_v2 import _broadcast_py_object
 
 
 def _check_sbp(sbp):
@@ -139,17 +141,24 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         True
         True
     """
+    # TODO:
+    rank = flow.env.get_rank()
+    if rank == 0 and type(input) == OrderedDict:
+        input = _broadcast_py_object(input, src=0)
+    if rank != 0 and input is None:
+        input = _broadcast_py_object(input, src=0)
+
     if isinstance(input, Tensor) or input is None:
         return _to_global_tensor(input, placement, sbp, **kwargs)
     else:
-        input_tree = IONode(value=input)
+        input_tree = ArgsTree(input)
 
         def leaf_fn(node):
-            if isinstance(node._value, Tensor):
-                return _to_global_tensor(node._value, placement, sbp, **kwargs)
+            if isinstance(node, Tensor):
+                return _to_global_tensor(node, placement, sbp, **kwargs)
             else:
-                warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(node._value)))
-                return node._value
+                warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(node)))
+                return node
 
         mapped_input = input_tree.map_leaf(leaf_fn)
         return mapped_input
@@ -204,14 +213,14 @@ def to_local_op(input):
     if isinstance(input, Tensor):
         return _to_local_tensor(input)
     else:
-        input_tree = IONode(value=input)
+        input_tree = ArgsTree(input)
 
         def leaf_fn(node):
-            if isinstance(node._value, Tensor):
-                return _to_local_tensor(node._value)
+            if isinstance(node, Tensor):
+                return _to_local_tensor(node)
             else:
-                warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(node._value)))
-                return node._value
+                warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(node)))
+                return node
 
         mapped_input = input_tree.map_leaf(leaf_fn)
         return mapped_input
