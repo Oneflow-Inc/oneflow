@@ -221,14 +221,8 @@ class Tanh(Module):
 
 
 class ELU(Module):
-    """Applies the element-wise function:
-
-    .. math::
-
-        \\text{ELU}(x) = \\begin{cases}
-				x & \\text{ if } x \\gt 0  \\\\
-                \\alpha*(exp(x)-1) & \\text{ if } x \\le 0 \\\\
-    		    \\end{cases}
+    """Applies the element-wise function 
+        :math:`\\text{ELU}(x) = \\begin{cases}x & \\text{ if } x \\gt 0  \\\\\\alpha*(exp(x)-1) & \\text{ if } x \\le 0 \\\\\\end{cases}`
 
     Args:
         alpha: the :math:`\\alpha` value for the ELU formulation. Default: 1.0

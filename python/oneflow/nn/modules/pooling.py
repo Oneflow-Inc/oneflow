@@ -43,7 +43,7 @@ class MaxPool1d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly padded with minimum value on both sides
     for :attr:`padding` number of points. :attr:`dilation` is the stride between the elements within the
-    sliding window. This `link`_ has a nice visualization of the pooling parameters.
+    sliding window. This link_ has a nice visualization of the pooling parameters.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
@@ -181,7 +181,7 @@ class MaxPool2d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly minimum value padded on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
-    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+    It is harder to describe, but this link_ has a nice visualization of what :attr:`dilation` does.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
@@ -296,7 +296,7 @@ class MaxPool3d(Module):
 
     If :attr:`padding` is non-zero, then the input is implicitly minimum value on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
-    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+    It is harder to describe, but this link_ has a nice visualization of what :attr:`dilation` does.
 
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
