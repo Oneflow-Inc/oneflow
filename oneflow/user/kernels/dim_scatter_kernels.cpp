@@ -60,7 +60,7 @@ class DimScatterKernel final : public user_op::OpKernel {
     const int64_t upper_bound = [&]() {
       if (input_tensor) {
         const Shape input_shape = ExpandDimIf0D(input_tensor->shape());
-        return index_shape.At(dim);
+        return input_shape.At(dim);
       } else {
         const Shape like_shape = ExpandDimIf0D(like_tensor->shape());
         return like_shape.At(dim);
