@@ -734,13 +734,10 @@ static PyObject* PyTensorObject_gather(PyObject* self, PyObject* args, PyObject*
   int64_t dim = 0;
   PyObject* index = NULL;
   static const char* keywords[3] = {"dim", "index", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iO:gather", const_cast<char**>(keywords), &dim,
-                                   &index)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "iO!:gather", const_cast<char**>(keywords), &dim,
+                                   PyTensorObject_Type, &index)) {
     return NULL;
   }
-  CHECK_OR_THROW(PyTensor_Check(index))
-      << "dim_gather(): argument 'index' must be tensor, not "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(index)));
   return PyTensor_New(
       ASSERT_PTR(functional::DimGather(PyTensor_Unpack(self), dim, PyTensor_Unpack(index), false)));
   END_HANDLE_ERRORS
