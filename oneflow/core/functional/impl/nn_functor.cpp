@@ -2983,9 +2983,14 @@ class OneEmbeddingEmbeddingShuffleFunctor {
       const std::shared_ptr<one::Tensor>& num_unique_matrix,
       const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
       const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+    MutableAttrMap attrs;
+    const int64_t num_axes = cur_rank_embeddings->shape()->NumAxes();
+    JUST(attrs.SetAttr<int64_t>("embedding_size", cur_rank_embeddings->shape()->At(num_axes - 1)));
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
-               inverse_unique_partition_indices});
+        *op_,
+        {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
+         inverse_unique_partition_indices},
+        attrs);
   }
 
  private:
@@ -3009,6 +3014,9 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
       const std::shared_ptr<one::Tensor>& num_unique_matrix,
       const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
       const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+    MutableAttrMap attrs;
+    const int64_t num_axes = embedding_grad->shape()->NumAxes();
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_grad->shape()->At(num_axes - 1)));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
                inverse_unique_partition_indices});

@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/embedding/embedding_manager.h"
 
 namespace oneflow {
 
@@ -151,14 +152,24 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   CHECK_NE_OR_RETURN(line_size, 0);
   CHECK_GE_OR_RETURN(line_size, embedding_size);
   CHECK_EQ_OR_RETURN(line_size % embedding_size, 0);
+  const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
   if (ctx->has_output("embeddings", 0)) {
-    DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
-    embeddings_dim_vec.push_back(embedding_size);
-    *ctx->OutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
+    if (use_dynamic_memory_allocation) {
+      *ctx->OutputShape("embeddings", 0) = Shape({1});
+    } else {
+      DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
+      embeddings_dim_vec.push_back(embedding_size);
+      *ctx->OutputShape("embeddings", 0) = Shape(embeddings_dim_vec);
+    }
   }
-  DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
-  unique_values_dim_vec.push_back(line_size);
-  *ctx->OutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
+  if (use_dynamic_memory_allocation) {
+    *ctx->OutputShape("unique_values", 0) = Shape({1});
+  } else {
+    DimVector unique_values_dim_vec = unique_ids_shape.dim_vec();
+    unique_values_dim_vec.push_back(line_size);
+    *ctx->OutputShape("unique_values", 0) = Shape(unique_values_dim_vec);
+  }
+
   return Maybe<void>::Ok();
 }
 
@@ -170,10 +181,22 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
                      .Split(user_op::OpArg("unique_ids", 0), 0)
-                     .Split(user_op::OpArg("table_ids", 0), 0)
-                     .Split(ctx->outputs(), 0);
+                     .Split(user_op::OpArg("table_ids", 0), 0);
   if (ctx->user_op_conf().has_input("context", 0)) {
     builder.Broadcast(user_op::OpArg("context", 0));
+  }
+  const bool use_dynamic_memory_allocation = embedding::UseDynamicMemoryAllocation();
+  if (use_dynamic_memory_allocation) {
+    builder.Broadcast(user_op::OpArg("unique_values", 0));
+  } else {
+    builder.Split(user_op::OpArg("unique_values", 0), 0);
+  }
+  if (ctx->user_op_conf().has_output("embeddings", 0)) {
+    if (use_dynamic_memory_allocation) {
+      builder.Broadcast(user_op::OpArg("embeddings", 0));
+    } else {
+      builder.Split(user_op::OpArg("embeddings", 0), 0);
+    }
   }
   builder.Build();
   return Maybe<void>::Ok();
@@ -196,11 +219,14 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
 }
 
 /* static */ Maybe<void> EmbeddingPutOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Build();
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(user_op::OpArg("num_unique_ids", 0))
+                     .Split(user_op::OpArg("unique_ids", 0), 0);
+  if (embedding::UseDynamicMemoryAllocation()) {
+    builder.Broadcast(user_op::OpArg("unique_embeddings", 0)).Build();
+  } else {
+    builder.Split(user_op::OpArg("unique_embeddings", 0), 0).Build();
+  }
   return Maybe<void>::Ok();
 }
 
@@ -217,8 +243,15 @@ Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
   const Shape& embedding_grad_shape = ctx->InputShape("embedding_grad", 0);
   CHECK_EQ_OR_RETURN(embedding_grad_shape.NumAxes(), 2);
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.NumAxes(), 2);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(0), embedding_grad_shape.At(0));
+  if (embedding::UseDynamicMemoryAllocation()) {
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.elem_cnt(), 1)
+        << "if use dynamic memory allocation, unique_embeddings elem_cnt should be 1.";
+  } else {
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.NumAxes(), 2)
+        << "unique_embeddings num_axes should be 2.";
+    CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(0), embedding_grad_shape.At(0))
+        << "got " << unique_embeddings_shape.At(0) << " and " << embedding_grad_shape.At(0);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -232,10 +265,26 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> GetEmbeddingUpdateSbp(user_op::SbpContext* ctx) {
+  auto builder = ctx->NewBuilder()
+                     .Broadcast(ctx->inputs())
+                     .Broadcast(user_op::OpArg("num_unique_ids", 0))
+                     .Split(user_op::OpArg("embedding_grad", 0), 0);
+  if (embedding::UseDynamicMemoryAllocation()) {
+    builder.Broadcast(user_op::OpArg("unique_embeddings", 0))
+        .Broadcast(user_op::OpArg("updated_unique_embeddings", 0))
+        .Build();
+  } else {
+    builder.Split(user_op::OpArg("unique_embeddings", 0), 0)
+        .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), ctx->InputShape("embedding_grad", 0).At(1));
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -245,13 +294,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> SgdEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -265,8 +308,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 2 * ctx->InputShape("embedding_grad", 0).At(1))
-      << "please adjust size_factor of MultiTableEmbedding's store_options to 2";
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -277,13 +318,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> MomentumEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -296,8 +331,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 3 * ctx->InputShape("embedding_grad", 0).At(1))
-      << "please adjust size_factor of MultiTableEmbedding's store_options to 3";
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -307,13 +340,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -327,8 +354,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 2 * ctx->InputShape("embedding_grad", 0).At(1))
-      << "please adjust size_factor of MultiTableEmbedding's store_options to 2";
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -339,13 +364,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> AdagradEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 
@@ -358,8 +377,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 3 * ctx->InputShape("embedding_grad", 0).At(1))
-      << "please adjust size_factor of MultiTableEmbedding's store_options to 3";
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -369,13 +386,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(ctx->inputs())
-      .Broadcast(user_op::OpArg("num_unique_ids", 0))
-      .Split(user_op::OpArg("unique_embeddings", 0), 0)
-      .Split(user_op::OpArg("embedding_grad", 0), 0)
-      .Split(user_op::OpArg("updated_unique_embeddings", 0), 0)
-      .Build();
+  JUST(GetEmbeddingUpdateSbp(ctx));
   return Maybe<void>::Ok();
 }
 

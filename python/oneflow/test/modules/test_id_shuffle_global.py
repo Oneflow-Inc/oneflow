@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
+
+# dynamic memory allocation can't be tested in unittest
+os.environ["ONEFLOW_ONE_EMBEDDING_USE_DYNAMIC_MEMORY_ALLOCATION"] = "0"
 import unittest
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
 import numpy as np
 import oneflow as flow
-
-from oneflow.test_utils.automated_test_util import *
 
 parallel_num = 2
 max_id = 1000
@@ -136,6 +138,7 @@ def round_half_away_from_zero(x):
 
 
 def embedding_shuffle_quantize(np_data, np_dtype):
+
     # When use float16, ComputeType is set to as Float.
     np_reduce_data = np_data.astype(np.float32)
     abs_max_factor = np.max(np.abs(np_reduce_data), axis=2)
