@@ -164,4 +164,7 @@ from oneflow.nn.qat.pooling import (
     QuantMaxPool1d,
     QuantMaxPool2d,
     QuantMaxPool3d,
+    QuantAvgPool1d,
+    QuantAvgPool2d,
+    QuantAvgPool3d,
 )

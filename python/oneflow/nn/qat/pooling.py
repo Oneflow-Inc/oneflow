@@ -83,13 +83,13 @@ class QuantMaxPool1d(nn.MaxPool1d):
 
     
     def forward(self, x):
-        fake_quan_input = get_fake_quantized(
+        fake_quant_input = get_fake_quantized(
             x,
             self.input_min_max_observer,
             self.current_train_step,
             self.fake_quantizer,
         )
-        return super().forward(fake_quan_input)
+        return super().forward(fake_quant_input)
 
 
 class QuantMaxPool2d(nn.MaxPool2d):
@@ -129,13 +129,13 @@ class QuantMaxPool2d(nn.MaxPool2d):
 
     
     def forward(self, x):
-        fake_quan_input = get_fake_quantized(
+        fake_quant_input = get_fake_quantized(
             x,
             self.input_min_max_observer,
             self.current_train_step,
             self.fake_quantizer,
         )
-        return super().forward(fake_quan_input)
+        return super().forward(fake_quant_input)
 
 
 class QuantMaxPool3d(nn.MaxPool3d):
@@ -175,10 +175,147 @@ class QuantMaxPool3d(nn.MaxPool3d):
 
     
     def forward(self, x):
-        fake_quan_input = get_fake_quantized(
+        fake_quant_input = get_fake_quantized(
             x,
             self.input_min_max_observer,
             self.current_train_step,
             self.fake_quantizer,
         )
-        return super().forward(fake_quan_input)
+        return super().forward(fake_quant_input)
+
+
+
+class QuantAvgPool1d(nn.AvgPool1d):
+    r"""Quantized 1D avg pool.
+    A AvgPool1d module attached with MinMaxObserver, MovingAverageMinMaxObserver and FakeQuantize modules for input,
+    used for quantization aware training.
+    The parameters of AvgPool1d are the same as :class:`~oneflow.nn.AvgPool1d` with some extra parameters for fake quantization.
+    """
+    def __init__(
+        self,
+        kernel_size: _size_1_t,
+        stride: Optional[_size_1_t] = None,
+        padding: _size_1_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: bool = True,
+        quantization_formula: str = "google",
+        quantization_bit: int = 8,
+        quantization_scheme: str = "symmetric",
+        input_quant_momentum: float = 0.95,
+    ):
+        super().__init__(
+            kernel_size,
+            stride,
+            padding,
+            ceil_mode,
+            count_include_pad
+        )
+        init_fake_quants(
+            self,
+            quantization_formula=quantization_formula,
+            quantization_bit=quantization_bit,
+            quantization_scheme=quantization_scheme,
+            input_quant_momentum=input_quant_momentum,
+        )
+
+    
+    def forward(self, x):
+        fake_quant_input = get_fake_quantized(
+            x,
+            self.input_min_max_observer,
+            self.current_train_step,
+            self.fake_quantizer,
+        )
+        return super().forward(fake_quant_input)
+
+
+class QuantAvgPool2d(nn.AvgPool2d):
+    r"""Quantized 2D avg pool.
+    A AvgPool2d module attached with MinMaxObserver, MovingAverageMinMaxObserver and FakeQuantize modules for input,
+    used for quantization aware training.
+    The parameters of AvgPool2d are the same as :class:`~oneflow.nn.AvgPool2d` with some extra parameters for fake quantization.
+    """
+    def __init__(
+        self,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: _size_2_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: bool = True,
+        divisor_override: int = 0,
+        quantization_formula: str = "google",
+        quantization_bit: int = 8,
+        quantization_scheme: str = "symmetric",
+        input_quant_momentum: float = 0.95,
+    ):
+        super().__init__(
+            kernel_size,
+            stride,
+            padding,
+            ceil_mode,
+            count_include_pad,
+            divisor_override
+        )
+        init_fake_quants(
+            self,
+            quantization_formula=quantization_formula,
+            quantization_bit=quantization_bit,
+            quantization_scheme=quantization_scheme,
+            input_quant_momentum=input_quant_momentum,
+        )
+
+    
+    def forward(self, x):
+        fake_quant_input = get_fake_quantized(
+            x,
+            self.input_min_max_observer,
+            self.current_train_step,
+            self.fake_quantizer,
+        )
+        return super().forward(fake_quant_input)
+
+
+class QuantAvgPool3d(nn.AvgPool3d):
+    r"""Quantized 3D max pool.
+    A AvgPool3d module attached with MinMaxObserver, MovingAverageMinMaxObserver and FakeQuantize modules for input,
+    used for quantization aware training.
+    The parameters of AvgPool3d are the same as :class:`~oneflow.nn.AvgPool1d` with some extra parameters for fake quantization.
+    """
+    def __init__(
+        self,
+        kernel_size: _size_3_t,
+        stride: Optional[_size_3_t] = None,
+        padding: _size_3_t = 0,
+        ceil_mode: bool = False,
+        count_include_pad: bool = True,
+        divisor_override: int = 0,
+        quantization_formula: str = "google",
+        quantization_bit: int = 8,
+        quantization_scheme: str = "symmetric",
+        input_quant_momentum: float = 0.95,
+    ):
+        super().__init__(
+            kernel_size,
+            stride,
+            padding,
+            ceil_mode,
+            count_include_pad,
+            divisor_override: int = 0
+        )
+        init_fake_quants(
+            self,
+            quantization_formula=quantization_formula,
+            quantization_bit=quantization_bit,
+            quantization_scheme=quantization_scheme,
+            input_quant_momentum=input_quant_momentum,
+        )
+
+    
+    def forward(self, x):
+        fake_quant_input = get_fake_quantized(
+            x,
+            self.input_min_max_observer,
+            self.current_train_step,
+            self.fake_quantizer,
+        )
+        return super().forward(fake_quant_input)
