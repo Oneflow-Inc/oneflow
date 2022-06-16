@@ -98,7 +98,7 @@ class CpuCumProdGradKernel final : public user_op::OpKernel {
     const auto* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t elem_cnt = dy->shape().elem_cnt();
+    const int64_t elem_cnt = dy->shape_view().elem_cnt();
     if (elem_cnt == 0) { return; }
 
     const auto* output_ptr = output->dptr<T>();
@@ -108,9 +108,9 @@ class CpuCumProdGradKernel final : public user_op::OpKernel {
 
     // data partition: up_space|space|down_space
     auto dim = ctx->Attr<int64_t>("dim");
-    auto up_space = elem_cnt / dx->shape().Count(dim);
-    auto space = dx->shape().At(dim);
-    auto down_space = dx->shape().Count(dim + 1);
+    auto up_space = elem_cnt / dx->shape_view().Count(dim);
+    auto space = dx->shape_view().At(dim);
+    auto down_space = dx->shape_view().Count(dim + 1);
     if (space == 1) {
       Memcpy<DeviceType::kCPU>(ctx->stream(), dx_ptr, dy_ptr, elem_cnt * sizeof(T));
       return;
