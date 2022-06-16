@@ -43,45 +43,9 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
 ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple,
                                          vm::EagerBlobObject* tmp_buffer)
-    : input_arg_tuple_(input_arg_tuple), output_arg_tuple_(output_arg_tuple) {
-  for (int i = 0; i < input_arg_tuple->size(); i++) {
-    input_tensor_views_.emplace_back(
-        std::make_unique<EagerBlobObjectTensorView>([i]() -> vm::EagerBlobObject* {
-          return eager::ThreadLocalCallContextScope::Current()->inputs->at(i).get();
-        }));
-    input_tensor_desc_views_.emplace_back(
-        std::make_unique<EagerBlobObjectTensorDescView>([i]() -> vm::EagerBlobObject* {
-          return eager::ThreadLocalCallContextScope::Current()->inputs->at(i).get();
-        }));
-    input_consistent_tensor_meta_views_.emplace_back(
-        std::make_unique<ConsistentTensorMetaTensorDescView>([i]() -> Symbol<ConsistentTensorMeta> {
-          return CHECK_NOTNULL(
-                     eager::ThreadLocalCallContextScope::Current()->consistent_tensor_infer_result)
-              ->input_tensor_metas()
-              .at(i);
-        }));
-  }
-  for (int i = 0; i < output_arg_tuple->size(); i++) {
-    output_tensor_views_.emplace_back(
-        std::make_unique<EagerBlobObjectTensorView>([i]() -> vm::EagerBlobObject* {
-          return eager::ThreadLocalCallContextScope::Current()->outputs->at(i).get();
-        }));
-    output_tensor_desc_views_.emplace_back(
-        std::make_unique<EagerBlobObjectTensorDescView>([i]() -> vm::EagerBlobObject* {
-          return eager::ThreadLocalCallContextScope::Current()->outputs->at(i).get();
-        }));
-    output_consistent_tensor_meta_views_.emplace_back(
-        std::make_unique<ConsistentTensorMetaTensorDescView>([i]() -> Symbol<ConsistentTensorMeta> {
-          return CHECK_NOTNULL(
-                     eager::ThreadLocalCallContextScope::Current()->consistent_tensor_infer_result)
-              ->output_tensor_metas()
-              .at(i);
-        }));
-  }
-  if (tmp_buffer != nullptr) {
-    tmp_buffer_view_.reset(new EagerBlobObjectTensorView([tmp_buffer]() { return tmp_buffer; }));
-  }
-}
+    : input_arg_tuple_(input_arg_tuple),
+      output_arg_tuple_(output_arg_tuple),
+      tmp_buffer_(tmp_buffer) {}
 
 Optional<Symbol<ParallelDesc>> ZeroCopyBaseContext::parallel_desc() const {
   const auto& consistent_tensor_infer_result =
@@ -127,32 +91,26 @@ const ParallelContext& ZeroCopyBaseContext::parallel_ctx() const {
 
 user_op::TensorDesc* ZeroCopyBaseContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                      const int32_t index) const {
-  RETURN_IF_FOUND(input_tensor_desc_views_, output_tensor_desc_views_, .get());
+  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
+  RETURN_IF_FOUND(*op_call_ctx->inputs, *op_call_ctx->outputs, .get());
   return nullptr;
 }
 
 user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
                                                              const int32_t index) const {
-  RETURN_IF_FOUND(input_tensor_views_, output_tensor_views_, .get());
-  if (arg_name == "tmp_buffer" && index == 0) { return CHECK_NOTNULL(tmp_buffer_view_.get()); }
+  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
+  RETURN_IF_FOUND(*op_call_ctx->inputs, *op_call_ctx->outputs, .get());
+  if (arg_name == "tmp_buffer" && index == 0) { return CHECK_NOTNULL(tmp_buffer_); }
   return nullptr;
 }
 
 const ConsistentTensorMeta* ZeroCopyBaseContext::ConsistentTensorMeta4ArgNameAndIndex(
     const std::string& arg_name, const int32_t index) const {
   const auto& consistent_tensor_infer_result =
-      eager::ThreadLocalCallContextScope::Current()->consistent_tensor_infer_result;
+      CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current())->consistent_tensor_infer_result;
   RETURN_IF_FOUND(consistent_tensor_infer_result->input_tensor_metas(),
                   consistent_tensor_infer_result->output_tensor_metas(),
                   .shared_from_symbol().get());
-  return nullptr;
-}
-
-const ConsistentTensorMetaTensorDescView*
-ZeroCopyBaseContext::ConsistentTensorMetaView4ArgNameAndIndex(const std::string& arg_name,
-                                                              const int32_t index) const {
-  RETURN_IF_FOUND(input_consistent_tensor_meta_views_, output_consistent_tensor_meta_views_,
-                  .get());
   return nullptr;
 }
 
@@ -166,8 +124,7 @@ LocalUserKernelBaseContext::LocalUserKernelBaseContext(
     const std::shared_ptr<const ArgTuple>& output_arg_tuple, vm::EagerBlobObject* tmp_buffer)
     : ZeroCopyBaseContext(input_arg_tuple, output_arg_tuple, tmp_buffer),
       device_tag_(device_tag),
-      device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))),
-      tmp_buffer_(tmp_buffer) {}
+      device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))) {}
 
 class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
@@ -227,7 +184,7 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
   }
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
-    return base_ctx_.ConsistentTensorMetaView4ArgNameAndIndex(arg_name, index);
+    return base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index);
   }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {

@@ -83,8 +83,8 @@ struct LocalCallOpKernelUtil final {
     one::LocalUserOpInferContext* op_infer_ctx =
         operand->opkernel().op_infer_ctx_for_scheduler_thread();
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
-    temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
-    temp_eager_blob_object->mut_stride() = Stride(temp_eager_blob_object->mut_shape());
+    *temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+    *temp_eager_blob_object->mut_stride() = Stride(*temp_eager_blob_object->mut_shape());
     temp_eager_blob_object->set_pin_memory(false);
     temp_eager_blob_object->set_is_dynamic(true);
   }

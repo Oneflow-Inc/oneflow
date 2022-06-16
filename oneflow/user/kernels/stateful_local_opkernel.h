@@ -54,7 +54,7 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
 
   ShapeView shape_view() const override { return mut_eager_blob_object_()->shape(); }
 
-  MutShapeView mut_shape_view() override { return mut_eager_blob_object_()->mut_shape(); }
+  MutShapeView mut_shape_view() override { return *mut_eager_blob_object_()->mut_shape(); }
 
   const Stride& stride() const override { return mut_eager_blob_object_()->stride(); }
 
@@ -68,72 +68,6 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
 
  private:
   const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
-};
-
-class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
- public:
-  EagerBlobObjectTensorDescView(const std::function<vm::EagerBlobObject*()>& mut_eager_blob_object)
-      : mut_eager_blob_object_(mut_eager_blob_object) {}
-
-  const Shape& shape() const override { return mut_eager_blob_object_()->shape(); }
-
-  Shape* mut_shape() override { return &mut_eager_blob_object_()->mut_shape(); }
-
-  const Stride& stride() const override { return mut_eager_blob_object_()->stride(); }
-
-  Stride* mut_stride() override { return &mut_eager_blob_object_()->mut_stride(); }
-
-  DataType data_type() const override { return mut_eager_blob_object_()->data_type(); }
-
-  DataType* mut_data_type() override { return mut_eager_blob_object_()->mut_data_type(); }
-
-  bool is_dynamic() const override { return mut_eager_blob_object_()->is_dynamic(); }
-
-  bool* mut_is_dynamic() override { return mut_eager_blob_object_()->mut_is_dynamic(); }
-
-  void set_is_dynamic(bool val) override { mut_eager_blob_object_()->set_is_dynamic(val); }
-
- private:
-  const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
-};
-
-class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
- public:
-  ConsistentTensorMetaTensorDescView(
-      const std::function<Symbol<ConsistentTensorMeta>()>& consistent_tensor_meta)
-      : consistent_tensor_meta_(consistent_tensor_meta) {}
-
-  const Shape& shape() const override { return consistent_tensor_meta_()->shape(); }
-
-  Shape* mut_shape() override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
-  const Stride& stride() const override { return consistent_tensor_meta_()->stride(); }
-
-  Stride* mut_stride() override { UNIMPLEMENTED(); }
-
-  DataType data_type() const override { return consistent_tensor_meta_()->data_type(); }
-
-  DataType* mut_data_type() override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
-  bool is_dynamic() const override { return false; }
-
-  bool* mut_is_dynamic() override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-
-  void set_is_dynamic(bool val) override { UNIMPLEMENTED(); }
-
-  Symbol<NdSbp> nd_sbp() { return consistent_tensor_meta_()->nd_sbp(); }
-
- private:
-  const std::function<Symbol<ConsistentTensorMeta>()> consistent_tensor_meta_;
 };
 
 class ZeroCopyBaseContext {
@@ -151,9 +85,6 @@ class ZeroCopyBaseContext {
   const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(const std::string& arg_name,
                                                                    const int32_t index) const;
 
-  const ConsistentTensorMetaTensorDescView* ConsistentTensorMetaView4ArgNameAndIndex(
-      const std::string& arg_name, const int32_t index) const;
-
   Optional<Symbol<ParallelDesc>> parallel_desc() const;
   const ParallelContext& parallel_ctx() const;
 
@@ -163,15 +94,7 @@ class ZeroCopyBaseContext {
  private:
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
-  std::vector<std::unique_ptr<EagerBlobObjectTensorView>> input_tensor_views_;
-  std::vector<std::unique_ptr<EagerBlobObjectTensorView>> output_tensor_views_;
-  std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> input_tensor_desc_views_;
-  std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> output_tensor_desc_views_;
-  std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
-  std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
-      input_consistent_tensor_meta_views_;
-  std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
-      output_consistent_tensor_meta_views_;
+  vm::EagerBlobObject* tmp_buffer_;
 };
 
 class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
@@ -195,7 +118,6 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
  private:
   const std::string device_tag_;
   const DeviceType device_type_;
-  vm::EagerBlobObject* tmp_buffer_;
 };
 
 class LocalUserOpInferContext : public user_op::InferContext {
