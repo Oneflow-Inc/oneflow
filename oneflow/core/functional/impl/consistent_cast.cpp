@@ -242,7 +242,7 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
     if (nd_sbp->sbp_parallel(i).has_split_parallel()) {
       int64_t concat_axis = nd_sbp->sbp_parallel(i).split_parallel().axis();
       int64_t group_size = parallel_hierarchy->Count(0, i);
-      int64_t stride = parallel_stride.At(i);
+      int64_t stride = parallel_stride.at(i);
       for (int group_id = 0; group_id < group_size; ++group_id) {
         int64_t parallel_num_in_group = parallel_hierarchy->At(i);
         for (int64_t stride_id = 0; stride_id < stride; ++stride_id) {

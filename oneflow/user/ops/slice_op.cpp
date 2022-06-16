@@ -48,7 +48,7 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& x_shape = ZeroDimCompatiableShape(ctx->InputShape("x", 0));
+  const Shape& x_shape = ExpandDimIf0D(ctx->InputShape("x", 0));
   const int64_t ndim = x_shape.NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");

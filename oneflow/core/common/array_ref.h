@@ -13,20 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <tuple>
-#include "oneflow/api/common/variable_tensor_mgr.h"
-#include "oneflow/api/python/of_api_registry.h"
+#ifndef ONEFLOW_CORE_COMMON_ARRAY_REF_H_
+#define ONEFLOW_CORE_COMMON_ARRAY_REF_H_
 
-namespace py = pybind11;
+#include "llvm/ADT/ArrayRef.h"
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("FillVariableTensorMgr", &FillVariableTensorMgr);
-  m.def("DumpVariableTensorMgr", &DumpVariableTensorMgr);
-  m.def("ClearVariableTensorMgr", &ClearVariableTensorMgr);
-}
+template<typename T>
+using ArrayRef = llvm::ArrayRef<T>;
+
+template<typename T>
+using MutableArrayRef = llvm::MutableArrayRef<T>;
 
 }  // namespace oneflow
+
+#endif

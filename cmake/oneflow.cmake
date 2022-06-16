@@ -184,13 +184,7 @@ relative_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROJECT_SOURCE_DIR} ${of_
 
 oneflow_add_library(of_protoobj SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj make_pyproto_dir protobuf)
-
-if(BUILD_SHARED_LIBS)
-  target_link_libraries(of_protoobj protobuf_imported)
-else()
-  # For some unknown reasons, when building static libraries, we have to link of_protoobj with oneflow_third_party_libs
-  target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-endif()
+target_link_libraries(of_protoobj protobuf_imported)
 
 include(functional)
 generate_functional_api_and_pybind11_cpp(FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS
@@ -292,10 +286,7 @@ list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
 
 include(op_schema)
 
-get_property(EXTERNAL_INCLUDE_DIRS GLOBAL PROPERTY EXTERNAL_INCLUDE_DIRS)
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
-
-target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
 
 if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_op_schema)
