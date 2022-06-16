@@ -147,9 +147,9 @@ static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused)
 static PyObject* PyTensorObject_stride(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& stride = ASSERT_PTR(PyTensor_Unpack(self)->stride());
-  PyObject* tup = PyTuple_New(stride->NumAxes());
-  for (int i = 0; i < stride->NumAxes(); ++i) {
-    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->At(i)));
+  PyObject* tup = PyTuple_New(stride->size());
+  for (int i = 0; i < stride->size(); ++i) {
+    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->at(i)));
   }
   return tup;
   END_HANDLE_ERRORS
