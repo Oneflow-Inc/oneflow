@@ -84,6 +84,7 @@ class CustomEvent(EventBase):
                 format_time(self.time),
                 self.count,
                 "-",
+                "-",
             )
         return (
             self.name,
@@ -93,20 +94,26 @@ class CustomEvent(EventBase):
             "-",
             self.count,
             "-",
+            "-",
         )
 
 
 class KernelEvent(EventBase):
-    def __init__(self, name: str, time: float, input_shapes: str) -> None:
+    def __init__(
+        self, name: str, time: float, memory_size: int, input_shapes: str
+    ) -> None:
         super().__init__(name, time, EventType.Kernel)
         self.children: List[CustomEvent] = []
+        self.memory_size = memory_size
         self.input_shapes = input_shapes
         self.cuda_time_total = 0.0
         self.cuda_time = 0.0
 
     @classmethod
     def from_dict(cls, d: dict):
-        kernel_event = cls(d.get("name"), d.get("time"), d.get("input_shapes"))
+        kernel_event = cls(
+            d.get("name"), d.get("time"), d.get("memory_size"), d.get("input_shapes")
+        )
         if "children" in d.keys():
             children_list = d.get("children")
             if len(children_list) > 0:
@@ -129,6 +136,13 @@ class KernelEvent(EventBase):
         return self.cuda_time_total > 0.0
 
     @property
+    def bandwidth(self):
+        if self.on_gpu and self.has_cuda_time:
+            if self.memory_size != -1:
+                return f"{self.memory_size / (1024.0 * 1024.0 * 1024.0) / (self.cuda_time / (1000 * 1000)):.3f}GB/s"
+        return "-"
+
+    @property
     def row(self):
         return (
             self.name,
@@ -138,6 +152,7 @@ class KernelEvent(EventBase):
             format_time(self.cuda_time) if self.has_cuda_time else "-",
             self.count,
             self.input_shapes,
+            self.bandwidth,
         )
 
     @property
@@ -216,6 +231,7 @@ class Events(list):
             "GPU time",
             "Number of calls",
             "Shapes of inputs",
+            "Bandwidth",
         ]
         for item in self:
             if isinstance(item, CustomEvent):

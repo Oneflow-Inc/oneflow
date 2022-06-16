@@ -65,6 +65,7 @@ nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kOneflowKernel;
   j["input_shapes"] = GetFormatedInputShapes();
+  j["memory_size"] = memory_size_;
   if (!children_.empty()) { j["children"] = children_; }
   return j;
 }
