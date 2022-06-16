@@ -119,9 +119,16 @@ class ScalarMathBaseFunctor {
     if (inplace) {
       JUST(CheckInplaceCastValid(x, casted_vec[0]));
       JUST(CheckInplaceValid(x));
+
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      (*outputs)[0] = x;
+      // TODO:(zhaoluyang)
+      // If the op need inplace operaton, and input tensor is non-contiguous,
+      // the interpreter will do input->contiguous() operaton for geting the correct result,
+      // therefore, output tensor and input will not inplaced. When scalar_math op/kernel
+      // support strided tensor as input, the problem above will be solved!
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(),
+                                  OpExprInterpContext(attrs, /*inplace=*/true)));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, casted_vec, attrs);
@@ -1654,7 +1661,7 @@ class SelectFunctor {
     int32_t pos_index = index >= 0 ? index : index + size;
 
     std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
-    const auto& stride = JUST(input->stride())->StrideVec();
+    const auto& stride = *JUST(input->stride());
     std::vector<int32_t> strides(stride.begin(), stride.end());
     auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
 
