@@ -238,7 +238,7 @@ void InplaceLbiGraph::Init(const InplaceObasInfo& obas_info,
   for (const auto& oba : obas_info.mut_in_obas.oba()) {
     const Operator& op = *Op4OpName(oba.op_name());
     std::string ibn = oba.bn_in_op();
-    std::string obn = ibn + "_updated"; // check here
+    std::string obn = ibn + "_updated";
     LogicalBlobId lbi;
     lbi.set_op_name(op.op_name());
     lbi.set_blob_name(obn);

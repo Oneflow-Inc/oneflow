@@ -28,7 +28,12 @@ os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "1"
 
 
 def compare_with_numpy_adam(
-    test_case, device, x_shape, tensor_num, learning_rate, train_iters,
+    test_case,
+    device,
+    x_shape,
+    tensor_num,
+    learning_rate,
+    train_iters,
     betas,
     weight_decay,
     eps,
@@ -86,7 +91,7 @@ def compare_with_numpy_adam(
                 "betas": betas,
                 "eps": eps,
                 "weight_decay": weight_decay,
-            }, 
+            },
         ],
         do_bias_correction=do_bias_correction,
         amsgrad=amsgrad,
@@ -97,8 +102,8 @@ def compare_with_numpy_adam(
             super().__init__()
             self.m = simp_module
             self.add_optimizer(adam0)
-            # self.config.enable_amp(True)
-            # self.config.allow_fuse_model_update_ops(True)
+            self.config.enable_amp(True)
+            self.config.allow_fuse_model_update_ops(True)
 
         def build(self, mask_tensor_list):
             loss = flow.sum(self.m(mask_tensor_list))
@@ -129,7 +134,7 @@ def compare_with_numpy_adam(
         x = init_value_seq
         m = []
         v = []
-        for idx in range(tensor_num): 
+        for idx in range(tensor_num):
             m.append(np.zeros_like(x[idx]))
             v.append(np.zeros_like(x[idx]))
         beta1 = betas[0]
@@ -157,8 +162,8 @@ def compare_with_numpy_adam(
                 x[i] = x[i] - ((learning_rate / bias_correction1) * m[i] / denom)
             return (x, m, v)
 
-        for i in range(1, train_iters+1):
-            x, m, v = train_one_iter(i, random_weight_seq[i-1])
+        for i in range(1, train_iters + 1):
+            x, m, v = train_one_iter(i, random_weight_seq[i - 1])
             np_res_list.append(copy.copy(x))
 
     train_by_numpy()
@@ -182,9 +187,10 @@ class TestMultiTensorAdam(flow.unittest.TestCase):
         arg_dict["weight_decay"] = [0.0, 1e-3]
         arg_dict["eps"] = [1e-5]
         arg_dict["do_bias_correction"] = [True, False]
-        arg_dict["amsgrad"] = [False] # Multi tensor update do not support amsgrad
+        arg_dict["amsgrad"] = [False]  # Multi tensor update do not support amsgrad
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()

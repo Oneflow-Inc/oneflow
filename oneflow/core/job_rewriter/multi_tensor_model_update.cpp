@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-// Key加多一个Dtype，因为不一定所有model_diff是fp32/fp16. 
+// Key加多一个Dtype，因为不一定所有model_diff是fp32/fp16.
 struct SGDOptimizerKey {
   std::string learning_rate;
   std::string scale_by_tensor_lbn;
@@ -60,12 +60,10 @@ struct AdamOptimizerKey {
 bool operator==(const AdamOptimizerKey& lhs, const AdamOptimizerKey& rhs) {
   return (lhs.learning_rate == rhs.learning_rate)
          && (lhs.scale_by_tensor_lbn == rhs.scale_by_tensor_lbn)
-         && (lhs.skip_if_lbn == rhs.skip_if_lbn)
-         && (lhs.scale == rhs.scale)
-         && (lhs.l1 == rhs.l1) && (lhs.l2 == rhs.l2) && (lhs.beta1 == rhs.beta1)
-         && (lhs.beta2 == rhs.beta2) && (lhs.epsilon == rhs.epsilon)
-         && (lhs.weight_decay == rhs.weight_decay) && (lhs.amsgrad == rhs.amsgrad)
-         && (lhs.do_bias_correction == rhs.do_bias_correction)
+         && (lhs.skip_if_lbn == rhs.skip_if_lbn) && (lhs.scale == rhs.scale) && (lhs.l1 == rhs.l1)
+         && (lhs.l2 == rhs.l2) && (lhs.beta1 == rhs.beta1) && (lhs.beta2 == rhs.beta2)
+         && (lhs.epsilon == rhs.epsilon) && (lhs.weight_decay == rhs.weight_decay)
+         && (lhs.amsgrad == rhs.amsgrad) && (lhs.do_bias_correction == rhs.do_bias_correction)
          && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_half == rhs.has_model_half);
 }
 
@@ -129,42 +127,44 @@ void AddScaleAndSkipLbn(user_op::UserOpConfWrapperBuilder& multi_tensor_model_up
   }
 }
 
-void AddProcessedVariable(HashSet<std::string>& processed_variable_list, 
+void AddProcessedVariable(HashSet<std::string>& processed_variable_list,
                           const user_op::UserOpConfWrapper& model_update_user_conf) {
   /*
-  Since each variable op will be processed in pass, for example, Adam optimizer has 3 variables: model, m, v. 
-  We replace to multi tensor optimizer and processed 3 variables at once, 
-  if we don't filter these variables, these variables will be repeated 3 times in multi_tensor_update kernel. 
+  Since each variable op will be processed in pass, for example, Adam optimizer has 3 variables:
+  model, m, v. We replace to multi tensor optimizer and processed 3 variables at once, if we don't
+  filter these variables, these variables will be repeated 3 times in multi_tensor_update kernel.
 
-  Here we use a HashSet to sign if the variable has been processed. 
+  Here we use a HashSet to sign if the variable has been processed.
   */
-  processed_variable_list.emplace(model_update_user_conf.input("model", 0)); 
-  if(model_update_user_conf.op_type_name() == "adam_update"){
-    processed_variable_list.emplace(model_update_user_conf.input("m", 0)); 
-    processed_variable_list.emplace(model_update_user_conf.input("v", 0)); 
+  processed_variable_list.emplace(model_update_user_conf.input("model", 0));
+  if (model_update_user_conf.op_type_name() == "adam_update") {
+    processed_variable_list.emplace(model_update_user_conf.input("m", 0));
+    processed_variable_list.emplace(model_update_user_conf.input("v", 0));
   }
 }
 
-bool IfVariableProcessed(const HashSet<std::string>& processed_variable_list, 
-                         const user_op::UserOpConfWrapper& model_update_user_conf){
+bool IfVariableProcessed(const HashSet<std::string>& processed_variable_list,
+                         const user_op::UserOpConfWrapper& model_update_user_conf) {
   if (model_update_user_conf.op_type_name() == "sgd_update") {
-    const auto& processed_model_iter = processed_variable_list.find(model_update_user_conf.input("model", 0)); 
-    if(processed_model_iter != processed_variable_list.end()){
-      return true;  
-    }
-  } else if (model_update_user_conf.op_type_name() == "adam_update"){
-    const auto& processed_model_iter = processed_variable_list.find(model_update_user_conf.input("model", 0)); 
-    const auto& processed_m_iter = processed_variable_list.find(model_update_user_conf.input("m", 0)); 
-    const auto& processed_v_iter = processed_variable_list.find(model_update_user_conf.input("v", 0)); 
-    if(processed_model_iter != processed_variable_list.end() && 
-        processed_m_iter != processed_variable_list.end() &&
-        processed_v_iter != processed_variable_list.end()){
-      return true;  
+    const auto& processed_model_iter =
+        processed_variable_list.find(model_update_user_conf.input("model", 0));
+    if (processed_model_iter != processed_variable_list.end()) { return true; }
+  } else if (model_update_user_conf.op_type_name() == "adam_update") {
+    const auto& processed_model_iter =
+        processed_variable_list.find(model_update_user_conf.input("model", 0));
+    const auto& processed_m_iter =
+        processed_variable_list.find(model_update_user_conf.input("m", 0));
+    const auto& processed_v_iter =
+        processed_variable_list.find(model_update_user_conf.input("v", 0));
+    if (processed_model_iter != processed_variable_list.end()
+        && processed_m_iter != processed_variable_list.end()
+        && processed_v_iter != processed_variable_list.end()) {
+      return true;
     }
   } else {
-    UNIMPLEMENTED() << "Current Optimizer do not support multi tensor update. "; 
+    UNIMPLEMENTED() << "Current Optimizer do not support multi tensor update. ";
   }
-  return false; 
+  return false;
 }
 
 class MultiTensorModelUpdatePass final : public JobPass {
@@ -224,10 +224,8 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
       }
       if (!if_data_parallel) { continue; }
 
-      // Check the variable has been processed before. 
-      if(IfVariableProcessed(processed_variable_list, model_update_user_conf)){
-        continue; 
-      }
+      // Check the variable has been processed before.
+      if (IfVariableProcessed(processed_variable_list, model_update_user_conf)) { continue; }
 
       delete_ops.emplace_back(find_model_update_update_node->op().op_conf());
       parallel_conf = find_model_update_update_node->parallel_desc().parallel_conf();
@@ -316,9 +314,10 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
           if (has_model_half) {
             iter->second.Input("model_half", model_update_user_conf.input("model_half", 0));
           }
-          if(model_update_user_conf.attr<bool>("do_bias_correction")){
-            iter->second.Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
-                        .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0)); 
+          if (model_update_user_conf.attr<bool>("do_bias_correction")) {
+            iter->second
+                .Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0))
+                .Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0));
           }
         } else {
           user_op::UserOpConfWrapperBuilder multi_tensor_adam_update_op_builder(
@@ -362,7 +361,7 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
         UNIMPLEMENTED() << "Current Optimizer do not support multi tensor update. ";
       }
 
-      AddProcessedVariable(processed_variable_list, model_update_user_conf); 
+      AddProcessedVariable(processed_variable_list, model_update_user_conf);
       break;
     }
   });

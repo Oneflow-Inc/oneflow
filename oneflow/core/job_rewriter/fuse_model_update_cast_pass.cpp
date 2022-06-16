@@ -81,7 +81,8 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
           continue;
         }
 
-        const user_op::UserOpConfWrapper model_update_user_conf(find_model_update_update_node->op().op_conf());
+        const user_op::UserOpConfWrapper model_update_user_conf(
+            find_model_update_update_node->op().op_conf());
 
         // Here we find cast and model_update node, Replace cast as optim_fuse_cast, and add
         // model_half to model_update node.
@@ -127,13 +128,13 @@ Maybe<void> FuseModelUpdateCastOpsPass::Apply(const OpGraph& op_graph,
               .Attr<float>("beta2", model_update_user_conf.attr<float>("beta2"))
               .Attr<float>("epsilon", model_update_user_conf.attr<float>("epsilon"))
               .Attr<bool>("amsgrad", model_update_user_conf.attr<bool>("amsgrad"))
-              .Attr<bool>("do_bias_correction", model_update_user_conf.attr<bool>("do_bias_correction"));
-          if(model_update_user_conf.attr<bool>("do_bias_correction")){
-            printf("================ \n"); 
-          }
-          if(model_update_user_conf.attr<bool>("do_bias_correction")){
-            fused_model_update_op_builder.Input("bias_correction1", model_update_user_conf.input("bias_correction1", 0));
-            fused_model_update_op_builder.Input("bias_correction2", model_update_user_conf.input("bias_correction2", 0));
+              .Attr<bool>("do_bias_correction",
+                          model_update_user_conf.attr<bool>("do_bias_correction"));
+          if (model_update_user_conf.attr<bool>("do_bias_correction")) {
+            fused_model_update_op_builder.Input(
+                "bias_correction1", model_update_user_conf.input("bias_correction1", 0));
+            fused_model_update_op_builder.Input(
+                "bias_correction2", model_update_user_conf.input("bias_correction2", 0));
           }
           if (model_update_user_conf.attr<bool>("amsgrad")) {
             fused_model_update_op_builder.Input("max_v", model_update_user_conf.input("max_v", 0));
