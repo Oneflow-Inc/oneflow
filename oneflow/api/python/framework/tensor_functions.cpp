@@ -686,9 +686,9 @@ static PyObject* PyTensorObject_repeat(PyObject* self, PyObject* args, PyObject*
     CHECK_OR_THROW(PyLong_Check(shape_obj) || functional::PyLongSequenceCheck(shape_obj))
         << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape_obj)));
-    if (PyLong_Check(shape_obj))
+    if (PyLong_Check(shape_obj)) {
       shape_vec.emplace_back(PyLong_AsLong(shape_obj));
-    else {
+    } else {
       std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(shape_obj);
       shape_vec = DimVector(shape.begin(), shape.end());
     }
@@ -712,9 +712,9 @@ static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* k
     CHECK_OR_THROW(PyLong_Check(dim_obj) || functional::PyLongSequenceCheck(dim_obj))
         << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
-    if (PyLong_Check(dim_obj))
+    if (PyLong_Check(dim_obj)) {
       dim_vec.emplace_back(PyLong_AsLong(dim_obj));
-    else {
+    } else {
       std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(dim_obj);
       dim_vec = DimVector(shape.begin(), shape.end());
     }
@@ -757,9 +757,10 @@ static PyObject* PyTensorObject_split(PyObject* self, PyObject* args, PyObject* 
       << Error::TypeError()
       << "split(): argument 'split_size_or_sections' must be int or list of int, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(split_size_or_sections)));
-  if (PyLong_Check(split_size_or_sections))
+  if (PyLong_Check(split_size_or_sections)) {
     return functional::CastToPyObject(
         functional::Split(PyTensor_Unpack(self), PyLong_AsLong(split_size_or_sections), dim));
+  }
   std::vector<int64_t> split_sections =
       functional::PyUnpackLongSequence<int64_t>(split_size_or_sections);
   return functional::CastToPyObject(
@@ -779,8 +780,9 @@ static PyObject* PyTensorObject_cumsum(PyObject* self, PyObject* args, PyObject*
   CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj))
       << "cumsum(): argument 'dtype' must be data type, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype_obj)));
-  if (dtype_obj == Py_None)
+  if (dtype_obj == Py_None) {
     return PyTensor_New(ASSERT_PTR(functional::Cumsum(PyTensor_Unpack(self), dim, NullOpt)));
+  }
   Symbol<DType> dtype = functional::PyUnpackDType(dtype_obj);
   return PyTensor_New(ASSERT_PTR(functional::Cumsum(PyTensor_Unpack(self), dim, dtype)));
   END_HANDLE_ERRORS
@@ -798,8 +800,9 @@ static PyObject* PyTensorObject_cumprod(PyObject* self, PyObject* args, PyObject
   CHECK_OR_THROW(dtype_obj == Py_None || functional::PyDTypeCheck(dtype_obj))
       << "cumprod(): argument 'dtype' must be data type, not "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dtype_obj)));
-  if (dtype_obj == Py_None)
+  if (dtype_obj == Py_None) {
     return PyTensor_New(ASSERT_PTR(functional::Cumprod(PyTensor_Unpack(self), dim, NullOpt)));
+  }
   Symbol<DType> dtype = functional::PyUnpackDType(dtype_obj);
   return PyTensor_New(ASSERT_PTR(functional::Cumprod(PyTensor_Unpack(self), dim, dtype)));
   END_HANDLE_ERRORS
@@ -828,7 +831,7 @@ static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject
     Symbol<ParallelDesc> placement = ASSERT(target_tensor->parallel_desc());
     std::vector<Symbol<SbpParallel>> sbp(ASSERT(target_tensor->nd_sbp())->sbp_parallel_size());
     for (int32_t i = 0; i < sbp.size(); i++)
-      ASSERT(VectorAt(sbp, i)) = ASSERT(target_tensor->nd_sbp())->sbp_parallel(i);
+      sbp[i] = ASSERT(target_tensor->nd_sbp())->sbp_parallel(i);
     std::vector<Symbol<SbpParallel>> grad_sbp;
     std::shared_ptr<Tensor> global_tensor =
         ASSERT_PTR(functional::ToConsistent(tensor, placement, sbp, grad_sbp, false));
@@ -942,9 +945,9 @@ static PyObject* PyTensorObject_to_global(PyObject* self, PyObject* args, PyObje
   HANDLE_ERRORS
   const auto& tensor = PyTensor_Unpack(self);
   PyObject* result = NULL;
-  if (tensor->is_consistent())
+  if (tensor->is_consistent()) {
     result = PyTensorObject_global_to_global(self, args, kwargs);
-  else {
+  } else {
     result = PyTensorObject_local_to_global(self, args, kwargs);
   }
   if (PyErr_Occurred()) { throw py::error_already_set(); }
