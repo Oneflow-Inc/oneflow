@@ -39,21 +39,32 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
     global_graph_model = None
 
     def _all_global(test_case, input, placement, sbp):
-        node_tree = ArgsTree(input)
-        for node in node_tree.iter_nodes():
-            if isinstance(node, Tensor):
-                test_case.assertTrue(node.is_global)
-                # check placement
-                test_case.assertEqual(placement.type, node.placement.type)
-                test_case.assertListEqual(list(placement.ranks), list(node.placement.ranks))
-                # check sbp
-                test_case.assertTupleEqual(sbp, node.sbp)
+        if type(input) == Tensor:
+            test_case.assertTrue(input.is_global)
+            # check placement
+            test_case.assertEqual(placement.type, input.placement.type)
+            test_case.assertListEqual(list(placement.ranks), list(input.placement.ranks))
+            # check sbp
+            test_case.assertTupleEqual(sbp, input.sbp)
+        elif isinstance(input, (dict, tuple, list)):
+            node_tree = ArgsTree(input)
+            for node in node_tree.iter_nodes():
+                if isinstance(node, Tensor):
+                    test_case.assertTrue(node.is_global)
+                    # check placement
+                    test_case.assertEqual(placement.type, node.placement.type)
+                    test_case.assertListEqual(list(placement.ranks), list(node.placement.ranks))
+                    # check sbp
+                    test_case.assertTupleEqual(sbp, node.sbp)
 
     def _all_local(test_case, input):
-        node_tree = ArgsTree(input)
-        for node in node_tree.iter_nodes():
-            if isinstance(node, Tensor):
-                test_case.assertFalse(node.is_global)
+        if type(input) == Tensor:
+            test_case.assertFalse(input.is_global)
+        elif isinstance(input, (dict, tuple, list)):
+            node_tree = ArgsTree(input)
+            for node in node_tree.iter_nodes():
+                if isinstance(node, Tensor):
+                    test_case.assertFalse(node.is_global)
 
     def test_any_input(test_case):
         tensor = flow.zeros((3, 4))
@@ -62,8 +73,8 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         tensor_dict = {'tensor': tensor, 'tensor_lt': tensor_list}
         random_combination = [None, 1, "test_str", tensor, tensor_list, tensor_tuple, tensor_dict]
 
-        # inputs = [None, 100, 'test_str', tensor, tensor_list, tensor_tuple, tensor_dict, random_combination]
-        inputs = [tensor_list, tensor_tuple, tensor_dict]
+        inputs = [None, 100, 'test_str', tensor, tensor_list, tensor_tuple, tensor_dict, random_combination]
+        # inputs = [tensor_list, tensor_tuple, tensor_dict]
         global_inputs = []
         for i in inputs:
             ret = flow.to_global(i, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)

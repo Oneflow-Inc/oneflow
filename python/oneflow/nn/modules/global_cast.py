@@ -142,15 +142,16 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         True
     """
     # TODO:
-    rank = flow.env.get_rank()
-    if rank == 0 and type(input) == OrderedDict:
-        input = _broadcast_py_object(input, src=0)
-    if rank != 0 and input is None:
-        input = _broadcast_py_object(input, src=0)
+    # rank = flow.env.get_rank()
+    # if rank == 0 and type(input) == OrderedDict:
+    #     input = _broadcast_py_object(input, src=0)
+    # if rank != 0 and input is None:
+    #     input = _broadcast_py_object(input, src=0)
+
 
     if isinstance(input, Tensor) or input is None:
         return _to_global_tensor(input, placement, sbp, **kwargs)
-    else:
+    elif isinstance(input, (dict, tuple, list)):
         input_tree = ArgsTree(input)
 
         def leaf_fn(node):
@@ -162,6 +163,9 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
 
         mapped_input = input_tree.map_leaf(leaf_fn)
         return mapped_input
+    else:
+        warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(input)))
+        return input
 
 
 def _to_local_tensor(input_tensor):
@@ -212,7 +216,7 @@ def to_local_op(input):
     """
     if isinstance(input, Tensor):
         return _to_local_tensor(input)
-    else:
+    elif isinstance(input, (dict, tuple, list)):
         input_tree = ArgsTree(input)
 
         def leaf_fn(node):
@@ -224,3 +228,6 @@ def to_local_op(input):
 
         mapped_input = input_tree.map_leaf(leaf_fn)
         return mapped_input
+    else:
+        warnings.warn("Non-Tensor type: {} encountered, it will remain the same.".format(type(input)))
+        return input
