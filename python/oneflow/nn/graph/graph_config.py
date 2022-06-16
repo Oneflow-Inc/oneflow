@@ -272,8 +272,8 @@ class GraphConfig(object):
     def enable_random_straighten_nodes(self, mode: bool = False):
         r""" Whether turn off the straighten algorithm.
 
-        If using nccl compute stream, turning it on will not speed up the training.
-        If not using nccl compute stream, turning it on will slow down data parallelism by 0.6% and slow down model parallelism by 6%.
+        If using nccl compute stream, turning it on might not speed up the training.
+        If not using nccl compute stream, turning it on might slow down data parallelism by 0.6% and slow down model parallelism by 6%.
 
         The switch is off by default (i.e. use the straighten algorithm by default).
         """
