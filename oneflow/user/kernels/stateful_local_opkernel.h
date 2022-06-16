@@ -174,7 +174,6 @@ class ZeroCopyBaseContext {
       input_consistent_tensor_meta_views_;
   std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
       output_consistent_tensor_meta_views_;
-  ;
 };
 
 class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
