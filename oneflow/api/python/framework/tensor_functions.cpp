@@ -695,8 +695,8 @@ static PyObject* PyTensorObject_repeat(PyObject* self, PyObject* args, PyObject*
     return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape_vec))));
   }
   CHECK_OR_THROW(functional::PyLongSequenceCheck(args))
-      << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(args)));
+      << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not list of "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(PyTuple_GetItem(args, 0))));
   std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
   shape_vec = DimVector(shape.begin(), shape.end());
   return PyTensor_New(ASSERT_PTR(functional::Repeat(PyTensor_Unpack(self), Shape(shape_vec))));
@@ -721,8 +721,8 @@ static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* k
     return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
   }
   CHECK_OR_THROW(functional::PyLongSequenceCheck(args))
-      << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
-      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(args)));
+      << Error::TypeError() << "tile(): argument 'dims' must be shape, not list of "
+      << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(PyTuple_GetItem(args, 0))));
   std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(args);
   dim_vec = DimVector(shape.begin(), shape.end());
   return PyTensor_New(ASSERT_PTR(functional::Tile(PyTensor_Unpack(self), Shape(dim_vec))));
