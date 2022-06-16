@@ -151,9 +151,6 @@ class NLLGradKernel final : public user_op::OpKernel {
       class_start = spec_cache->class_start();
     }
 
-    Memset<device_type>(ctx->stream(), in_grad->mut_dptr(), 0,
-                        GetCudaAlignedSize(N * C * sizeof(T)));
-
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
 
     const T* weight_dptr = nullptr;

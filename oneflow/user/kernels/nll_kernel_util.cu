@@ -33,7 +33,6 @@ __global__ void NLLForward(const int32_t num_samples, const K num_classes, const
     if (label != ignore_index) {
       label -= class_start;
       if (label >= 0 && label < num_classes) {
-        if (weight) { w = weight[label]; }
         w = weight ? weight[label] : one;
         y = -(input[i * num_classes + label] * w);
       }
@@ -48,13 +47,15 @@ __global__ void NLLBackward(const int32_t num_samples, const K num_classes, cons
                             const K ignore_index, const T* out_grad, const K* target,
                             const T* weight, T* in_grad) {
   const T one = GetOneVal<T>();
-  CUDA_1D_KERNEL_LOOP(i, num_samples) {
-    K label = target[i];
-    if (label == ignore_index) { continue; }
-    label -= class_start;
-    if (label >= 0 && label < num_classes) {
-      const T w = weight ? -weight[label] : -one;
-      in_grad[i * num_classes + label] = out_grad[i] * w;
+  const T zero = GetZeroVal<T>();
+  CUDA_1D_KERNEL_LOOP_T(K, i, num_samples * num_classes) {
+    const K n = i / num_classes;
+    const K idx = i - n * num_classes;
+    const K label = target[n];
+    if (label != ignore_index && idx == label - class_start) {
+      in_grad[i] = out_grad[n] * (weight ? -weight[idx] : -one);
+    } else {
+      in_grad[i] = zero;
     }
   }
 }

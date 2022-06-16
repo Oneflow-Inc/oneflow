@@ -41,6 +41,8 @@ struct NLLKernelUtil<DeviceType::kCPU, T, K> {
   static void Backward(ep::Stream* stream, const int32_t num_samples, const K num_classes,
                        const K class_start, const K ignore_index, const T* out_grad,
                        const K* target, const T* weight, T* in_grad) {
+    Memset<DeviceType::kCPU>(stream, in_grad, 0,
+                             RoundUp(num_samples * num_classes * sizeof(T), kBlobBodyAlignSize));
     FOR_RANGE(int32_t, i, 0, num_samples) {
       K label = target[i];
       if (label == ignore_index) { continue; }
