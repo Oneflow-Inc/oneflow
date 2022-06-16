@@ -1234,7 +1234,7 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop, const std::vector<int64_t>& step,
                            const Optional<bool>& enable_view_slice) const {
-    if (view::IsViewApplicable(x) && enable_view_slice.value_or(false)) {
+    if (view::IsViewApplicable(x) && enable_view_slice.value_or(true)) {
       return view::Slice(x, start, stop, step);
     }
 
@@ -2030,7 +2030,7 @@ class TensorGetItemFunctor {
     if (is_identity) {
       result = expand_input;
     } else {
-      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/false));
+      result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
     }
 
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
@@ -2998,20 +2998,8 @@ class RepeatInterLeaveTensorFunctor {
     std::shared_ptr<one::Tensor> cumsum = JUST(Cumsum(repeats, 0, DType::Int32()));
     const int64_t& output_size_value =
         std::accumulate(repeats_value.begin(), repeats_value.end(), 0);
-    std::shared_ptr<one::Tensor> res;
-    if (output_size_value > 0) {
-      res = JUST(IndexSelect(input, dim_,
-                             JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
-    } else {
-      // Deal with 0-size Tensor.
-      DimVector new_input_shape(input_shape->dim_vec().begin(), input_shape->dim_vec().end());
-      new_input_shape[dim_] = 0;
-      std::shared_ptr<one::Tensor> new_input =
-          JUST(Constant(Shape{new_input_shape}, Scalar(0), input->dtype(), JUST(input->device())));
-      res = JUST(IndexSelect(new_input, dim_,
-                             JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
-    }
-    return res;
+    return JUST(
+        IndexSelect(input, dim_, JUST(RepeatInterLeaveIndex(repeats, cumsum, output_size_value))));
   }
 };
 
