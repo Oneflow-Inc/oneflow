@@ -27,6 +27,7 @@ Base class for running neural networks in Static Graph Mode.
             set_zero_redundancy_optimizer_mode,
             set_zero_redundancy_optimizer_min_size_after_split,
             enable_cudnn_conv_heuristic_search_algo,
+            enable_random_straighten_nodes,
     :member-order: bysource
 
 

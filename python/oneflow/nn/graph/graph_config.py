@@ -269,7 +269,7 @@ class GraphConfig(object):
         """
         self.proto.cudnn_conv_heuristic_search_algo = mode
 
-    def set_random_straighten_nodes(self, mode: bool = False):
+    def enable_random_straighten_nodes(self, mode: bool = False):
         r""" Whether turn off the straighten algorithm.
 
         If using nccl compute stream, turning it on will not speed up the training.
