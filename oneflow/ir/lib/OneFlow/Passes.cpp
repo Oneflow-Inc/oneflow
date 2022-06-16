@@ -349,9 +349,9 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
 
 NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
   NamedAttrList attrs;
-  attrs.set("op_name", StringAttr::get(ctx, op_name));
-  attrs.set("device_tag", StringAttr::get(ctx, "cpu"));
-  attrs.set("device_name",
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), StringAttr::get(ctx, op_name));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(), StringAttr::get(ctx, "cpu"));
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
             ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(ArrayRef<StringRef>({"@0:0"}),
                                                                    [&](StringRef v) -> Attribute {
                                                                      return StringAttr::get(ctx, v);
@@ -569,7 +569,8 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
                                                              PatternRewriter& rewriter) {
   std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
                                + "_transpose_input_" + std::to_string(num_transposed_operand);
-  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  transpose_attributes.set(llvm::StringRef(OpTrait::IsOpConfCompatible<void>::getOpNameAttr()),
+                           rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
   auto res = rewriter
@@ -583,7 +584,8 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
                                  int num_transposed_result, PatternRewriter& rewriter) {
   std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
                                + "_transpose_output_" + std::to_string(num_transposed_result);
-  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  transpose_attributes.set(llvm::StringRef(OpTrait::IsOpConfCompatible<void>::getOpNameAttr()),
+                           rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
   TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(op.getLoc(), val.getType(),
