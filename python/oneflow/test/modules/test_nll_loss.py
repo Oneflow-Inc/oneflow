@@ -23,15 +23,13 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_grad_use_random_data=False, check_graph=True)
+@autotest(n=1)
 def _test_nll_loss(
     test_case, has_weight=False, split_batch_dim=False, split_class_dim=False
 ):
-    # N = random(1, 4) * 2
-    # C = random(1, 10) * 2
-    N = 4
-    C = 10
-    ndim = random(2, 3).to(int).value()
+    N = random(1, 4) * 2
+    C = random(1, 10) * 2
+    ndim = random(2, 5).to(int).value()
     dims = [random(2, 10) for i in range(ndim - 2)]
     input_dims = [N, C] + dims
     target_dims = [N] + dims
@@ -43,8 +41,7 @@ def _test_nll_loss(
     if has_weight:
         weight = random_tensor(1, C, requires_grad=False)
 
-    # device = random_device().value()
-    device = "cpu"
+    device = random_device().value()
     if not split_class_dim and not split_batch_dim:
         input = input.to(device)
         target = target.to(device)
@@ -81,11 +78,10 @@ def _test_nll_loss(
         #     f"**[{rank}] target: {target.oneflow.shape} {target.oneflow.placement} {target.oneflow.sbp}"
         # )
         if has_weight:
-            print(f"**[{rank}] weight: {weight.oneflow.numpy()}")
+            # print(f"**[{rank}] weight: {weight.oneflow.numpy()}")
             weight = weight.to_global(placement=placement, sbp=weight_sbp)
 
-    # reduction = oneof("none", "sum", "mean")
-    reduction = "mean"
+    reduction = oneof("none", "sum", "mean")
     if has_weight:
         nll = torch.nn.NLLLoss(weight=weight, reduction=reduction)
     else:
