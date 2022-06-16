@@ -42,7 +42,6 @@ def compare_with_numpy_adam(
 ):
     random_weight_seq = []
     init_value_seq = []
-    np.random.seed(0)
 
     for _ in range(train_iters):
         random_grad_seq_per_iter = []
