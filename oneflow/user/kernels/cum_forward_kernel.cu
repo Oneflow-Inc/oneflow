@@ -95,20 +95,22 @@ void ScanOuterDim(ep::Stream* ep_stream, const ShapeView& in_shape, const int64_
 }
 
 template<typename T, int num_threads_x, template<typename> class BinaryFunc>
-__inline__ __device__ void ParallelSweepScan(T* row_buf) {
+__inline__ __device__ void UpSweep(T* row_buf) {
   for (uint32_t s = num_threads_x, d = 1; s >= 1; s >>= 1, d <<= 1) {
     if (threadIdx.x < s) {
       uint32_t offset = (2 * threadIdx.x + 1) * d - 1;
       row_buf[offset + d] = BinaryFunc<T>()(row_buf[offset], row_buf[offset + d]);
     }
-    __syncthreads();
   }
+}
+
+template<typename T, int num_threads_x, template<typename> class BinaryFunc>
+__inline__ __device__ void DownSweep(T* row_buf) {
   for (uint32_t s = 2, d = num_threads_x / 2; d >= 1; s <<= 1, d >>= 1) {
     if (threadIdx.x < s - 1) {
       uint32_t offset = 2 * (threadIdx.x + 1) * d - 1;
       row_buf[offset + d] = BinaryFunc<T>()(row_buf[offset], row_buf[offset + d]);
     }
-    __syncthreads();
   }
 }
 
@@ -144,7 +146,11 @@ __device__ void ScanOutHighDimofMatrixKernelImpl(T* row_buf, T* src_, T* tgt_,
       }
       __syncthreads();
 
-      if (col < num_cols) { ParallelSweepScan<T, num_threads_x, BinaryFunc>(row_buf); }
+      if (col < num_cols) { UpSweep<T, num_threads_x, BinaryFunc>(row_buf); }
+      __syncthreads();
+
+      if (col < num_cols) { DownSweep<T, num_threads_x, BinaryFunc>(row_buf); }
+      __syncthreads();
 
       if (col < num_cols) {
         if (row1 < col_size) { col_tgt[offset1] = row_buf[threadIdx.x]; };
@@ -213,7 +219,11 @@ __device__ void ScanInnerMostDimKernelImpl(T* row_buf, T* src_, T* tgt_, const u
       }
       __syncthreads();
 
-      if (row < num_rows) { ParallelSweepScan<T, num_threads_x, BinaryFunc>(row_buf); }
+      if (row < num_rows) { UpSweep<T, num_threads_x, BinaryFunc>(row_buf); }
+      __syncthreads();
+
+      if (row < num_rows) { DownSweep<T, num_threads_x, BinaryFunc>(row_buf); }
+      __syncthreads();
 
       // Write back to output.
       if (row < num_rows) {
