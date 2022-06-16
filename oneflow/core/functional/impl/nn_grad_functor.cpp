@@ -943,17 +943,20 @@ class CublasBiasAddReluMatmulGradFunctor {
                          .Input("dy")
                          .Input("weight")
                          .Input("aux")
+                         .Input("hidden")
                          .Output("d_grad")
                          .Output("d_bias")
+                         .Output("d_weight")
                          .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                                 const std::shared_ptr<one::Tensor>& weight,
                                 const std::shared_ptr<one::Tensor>& aux,
+                                const std::shared_ptr<one::Tensor>& hidden,
                                 const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux, hidden}, attrs);
   }
 
  private:

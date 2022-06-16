@@ -22,6 +22,33 @@ namespace oneflow {
 
 namespace {
 
+ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
+  return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;
+}
+
+std::unique_ptr<ep::primitive::Matmul> NewMatmulGradPrimitive(DeviceType device_type,
+                                                          DataType data_type, bool transpose_a,
+                                                          bool transpose_b) {
+  const auto trans_a = GetBlasTransposeType(transpose_a);
+  const auto trans_b = GetBlasTransposeType(transpose_b);
+  return ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(device_type, data_type, trans_a,
+                                                                    trans_b);
+}
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Matmul> NewMatmulGradPrimitive(Context* ctx) {
+  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("hidden", 0)->data_type();
+  return NewMatmulGradPrimitive(ctx->device_type(), data_type, /*transpose_a=*/true,
+                            /*transpose_b=*/false);
+}
+
+auto MatmulGradPrimitiveExists() {
+  return hob::make_custom("MatmulGradPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewMatmulGradPrimitive(&ctx).operator bool();
+  });
+}
+
+
 template<typename T>
 class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                                                 public user_op::CudaGraphSupport {
@@ -41,8 +68,12 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
+    const user_op::Tensor* hidden = ctx->Tensor4ArgNameAndIndex("hidden", 0);
+
     user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", 0);
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
+    user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", 0);
+
     const auto* matmul_grad_cache =
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
@@ -85,6 +116,16 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                        matmul_grad_cache->cublas_c_desc, d_grad->mut_dptr(),
                        matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+
+    // compute dw
+    size_t m = 0, n = 0, k = 0;
+    InferMatmulMNK(dy->shape(), hidden->shape(), /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
+    const double alpha = 1.0;
+    double beta = 0.0;
+    auto matmul = NewMatmulGradPrimitive(ctx);
+    CHECK(matmul);
+    matmul->Launch(ctx->stream(), m, n, k, alpha, dy->dptr(), hidden->dptr(), beta,
+                   d_weight->mut_dptr());
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -94,7 +135,8 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
   REGISTER_USER_KERNEL("cublas_bias_add_relu_matmul_grad")             \
       .SetCreateFn<CublasBiasAddReluMatmulGradKernel<dtype>>()         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value)
+                       && MatmulGradPrimitiveExists());
 
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(float)
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(double)
