@@ -28,16 +28,18 @@ __global__ void NLLForward(const int32_t num_samples, const K num_classes, const
   const T one = GetOneVal<T>();
   CUDA_1D_KERNEL_LOOP(i, num_samples) {
     K label = target[i];
+    T w = zero;
+    T y = zero;
     if (label != ignore_index) {
       label -= class_start;
       if (label >= 0 && label < num_classes) {
-        const T w = weight ? weight[label] : one;
-        out[i] = -(input[i * num_classes + label] * w);
-        if (out_weight) { out_weight[i] = w; }
-        continue;
+        if (weight) { w = weight[label]; }
+        w = weight ? weight[label] : one;
+        y = -(input[i * num_classes + label] * w);
       }
     }
-    out[i] = zero;
+    if (out_weight) { out_weight[i] = w; }
+    out[i] = y;
   }
 }
 
