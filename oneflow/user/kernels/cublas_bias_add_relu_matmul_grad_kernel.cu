@@ -122,6 +122,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     a = dy, b = weight
     cublas_a=weight, cublas_b=dy
     */
+    OF_CUDA_CHECK(cudaEventRecord(stream1_event, cuda_stream->cuda_stream())); 
     OF_CUBLAS_CHECK(
         cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                        &sp_alpha, weight->dptr(), matmul_grad_cache->cublas_a_desc, dy->dptr(),
@@ -129,7 +130,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                        matmul_grad_cache->cublas_c_desc, d_grad->mut_dptr(),
                        matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-    OF_CUDA_CHECK(cudaEventRecord(stream1_event, cuda_stream->cuda_stream())); 
+    
 
     alpha = 1.0;
     sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
