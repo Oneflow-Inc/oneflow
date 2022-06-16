@@ -58,13 +58,10 @@ def setup_seed(seed):
 
 
 prefix = os.getenv("ONEFLOW_DTR_SUMMARY_FILE_PREFIX")
-if prefix is not None:
-    model_name = os.getenv("ONEFLOW_DTR_MODEL_NAME")
-    assert model_name is not None
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("model", type=str, help="model name like resnet50, unet etc.")
+parser.add_argument("model_name", type=str, help="model name like resnet50, unet etc.")
 parser.add_argument("bs", type=int)
 parser.add_argument("threshold", type=str)
 parser.add_argument("iters", type=int)
@@ -115,10 +112,10 @@ else:
 
 if args.dtr:
     print(
-        f"model: {args.model}, dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}"
+        f"model_name: {args.model_name}, dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}"
     )
 else:
-    print(f"model: {args.model}, dtr_enabled: {args.dtr}")
+    print(f"model_name: {args.model_name}, dtr_enabled: {args.dtr}")
 
 if args.dtr:
     flow.enable_dtr(args.dtr, args.threshold, args.debug_level, heuristic)
@@ -179,7 +176,7 @@ def unet_info():
 
 
 model, criterion, get_fixed_input, get_fixed_label, get_imagefolder = eval(
-    f"{args.model}_info()"
+    f"{args.model_name}_info()"
 )
 
 model.to("cuda")
@@ -265,7 +262,7 @@ if prefix is not None:
             {
                 "real time": time_per_run,
                 "threshold": args.threshold,
-                "model_name": model_name,
+                "model_name": args.model_name,
                 "batch_size": args.bs,
             },
             f,
