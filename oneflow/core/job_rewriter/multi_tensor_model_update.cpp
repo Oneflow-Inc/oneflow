@@ -19,7 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-// Key加多一个Dtype，因为不一定所有model_diff是fp32/fp16.
 struct SGDOptimizerKey {
   std::string learning_rate;
   std::string scale_by_tensor_lbn;
@@ -30,6 +29,12 @@ struct SGDOptimizerKey {
   float weight_decay;
   ParallelConf parallel_conf;
   bool has_model_half;
+  /*
+  In fuse_model_update_cast pass, not all the cast fp16 model_diff kernel can be fused,
+  it may cause some model diff type is float16, some is float32.
+  So here we need to use model_diff datatype as key to group.
+  */
+  DataType model_diff_dtype;
 };
 
 bool operator==(const SGDOptimizerKey& lhs, const SGDOptimizerKey& rhs) {
@@ -37,7 +42,8 @@ bool operator==(const SGDOptimizerKey& lhs, const SGDOptimizerKey& rhs) {
          && (lhs.scale_by_tensor_lbn == rhs.scale_by_tensor_lbn)
          && (lhs.skip_if_lbn == rhs.skip_if_lbn) && (lhs.scale == rhs.scale) && (lhs.l1 == rhs.l1)
          && (lhs.l2 == rhs.l2) && (lhs.weight_decay == rhs.weight_decay)
-         && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_half == rhs.has_model_half);
+         && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_half == rhs.has_model_half)
+         && (lhs.model_diff_dtype == rhs.model_diff_dtype);
 }
 
 struct AdamOptimizerKey {
@@ -55,6 +61,7 @@ struct AdamOptimizerKey {
   bool do_bias_correction;
   ParallelConf parallel_conf;
   bool has_model_half;
+  DataType model_diff_dtype;
 };
 
 bool operator==(const AdamOptimizerKey& lhs, const AdamOptimizerKey& rhs) {
@@ -64,7 +71,8 @@ bool operator==(const AdamOptimizerKey& lhs, const AdamOptimizerKey& rhs) {
          && (lhs.l2 == rhs.l2) && (lhs.beta1 == rhs.beta1) && (lhs.beta2 == rhs.beta2)
          && (lhs.epsilon == rhs.epsilon) && (lhs.weight_decay == rhs.weight_decay)
          && (lhs.amsgrad == rhs.amsgrad) && (lhs.do_bias_correction == rhs.do_bias_correction)
-         && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_half == rhs.has_model_half);
+         && (lhs.parallel_conf == rhs.parallel_conf) && (lhs.has_model_half == rhs.has_model_half)
+         && (lhs.model_diff_dtype == rhs.model_diff_dtype);
 }
 
 }  // namespace oneflow
@@ -79,11 +87,13 @@ struct hash<oneflow::SGDOptimizerKey> {
     const auto& string_hash = std::hash<std::string>();
     const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
     const auto& bool_hash = std::hash<bool>();
+    const auto& dtype_hash = std::hash<oneflow::DataType>();
 
     return string_hash(key.learning_rate) ^ string_hash(key.scale_by_tensor_lbn)
            ^ string_hash(key.skip_if_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
            ^ float_hash(key.l2) ^ float_hash(key.weight_decay)
-           ^ parallel_conf_hash(key.parallel_conf) ^ bool_hash(key.has_model_half);
+           ^ parallel_conf_hash(key.parallel_conf) ^ bool_hash(key.has_model_half)
+           ^ dtype_hash(key.model_diff_dtype);
   }
 };
 
@@ -95,13 +105,14 @@ struct hash<oneflow::AdamOptimizerKey> {
     const auto& string_hash = std::hash<std::string>();
     const auto& bool_hash = std::hash<bool>();
     const auto& parallel_conf_hash = std::hash<oneflow::ParallelConf>();
+    const auto& dtype_hash = std::hash<oneflow::DataType>();
 
     return string_hash(key.learning_rate) ^ string_hash(key.scale_by_tensor_lbn)
            ^ string_hash(key.skip_if_lbn) ^ double_hash(key.scale) ^ float_hash(key.l1)
            ^ float_hash(key.l2) ^ float_hash(key.beta1) ^ float_hash(key.beta2)
            ^ float_hash(key.epsilon) ^ float_hash(key.weight_decay) ^ bool_hash(key.amsgrad)
            ^ bool_hash(key.do_bias_correction) ^ parallel_conf_hash(key.parallel_conf)
-           ^ bool_hash(key.has_model_half);
+           ^ bool_hash(key.has_model_half) ^ dtype_hash(key.model_diff_dtype);
   }
 };
 
@@ -241,6 +252,10 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
       }
       if (model_update_user_conf.has_input("model_half", 0)) { has_model_half = true; }
 
+      const BlobDesc& model_diff_blob_desc = op_graph.GetLogicalBlobDesc(
+          GenLogicalBlobId(model_update_user_conf.input("model_diff", 0)));
+      const DataType model_diff_dtype = model_diff_blob_desc.data_type();
+
       if (IsUserOpWithTypeName(find_model_update_update_node->op().op_conf(), "sgd_update")) {
         SGDOptimizerKey key{model_update_user_conf.input("learning_rate", 0),
                             scale_by_tensor_lbn,
@@ -250,7 +265,8 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
                             model_update_user_conf.attr<float>("l2"),
                             model_update_user_conf.attr<float>("weight_decay"),
                             parallel_conf,
-                            has_model_half};
+                            has_model_half,
+                            model_diff_dtype};
         const auto& iter = multi_tensor_sgd_update_hashmap.find(key);
 
         if (iter != multi_tensor_sgd_update_hashmap.end()) {
@@ -300,7 +316,8 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
                              model_update_user_conf.attr<bool>("amsgrad"),
                              model_update_user_conf.attr<bool>("do_bias_correction"),
                              parallel_conf,
-                             has_model_half};
+                             has_model_half,
+                             model_diff_dtype};
         if (key.amsgrad) {
           UNIMPLEMENTED() << "Multi Tensor Adam update do not support amsgrad = True. ";
         }
