@@ -1,29 +1,13 @@
 # coding=utf-8
 
+import argparse
 import time
 import os
 import json
 
 import numpy as np
 from numpy import random
-from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-
-
-# resnet50 bs 32, use_disjoint_set=False: threshold ~800MB
-
-# memory policy:
-# 1: only reuse the memory block with exactly the same size
-# 2: reuse the memory block with the same size or larger
-
-# os.environ["OF_DTR"] = "1"
-# os.environ["OF_DTR_THRESHOLD"] = "3500mb"
-# os.environ["OF_DTR_DEBUG"] = "0"
-# os.environ["OF_DTR_LR"] = "1"
-# os.environ["OF_DTR_BS"] = "80"
-# os.environ["OF_ITERS"] = "40"
-
-import argparse
 
 
 class NegativeArgAction(argparse.Action):
@@ -33,7 +17,11 @@ class NegativeArgAction(argparse.Action):
         dest = dest[3:]
         super(NegativeArgAction, self).__init__(
             # default value is True
-            option_strings, dest, nargs=0, default=True, **kwargs
+            option_strings,
+            dest,
+            nargs=0,
+            default=True,
+            **kwargs,
         )
         self.env_var_name = env_var_name
         os.environ[self.env_var_name] = "True"
@@ -47,7 +35,11 @@ class PositiveArgAction(argparse.Action):
     def __init__(self, option_strings, dest, env_var_name, **kwargs):
         super(PositiveArgAction, self).__init__(
             # default value is False
-            option_strings, dest, nargs=0, default=False, **kwargs
+            option_strings,
+            dest,
+            nargs=0,
+            default=False,
+            **kwargs,
         )
         self.env_var_name = env_var_name
         os.environ[self.env_var_name] = "False"
@@ -79,8 +71,14 @@ parser.add_argument("iters", type=int)
 parser.add_argument("--exp_id", type=str)
 parser.add_argument("--no-dtr", action=NegativeArgAction, env_var_name="OF_DTR")
 parser.add_argument("--no-lr", action=NegativeArgAction, env_var_name="OF_DTR_LR")
-parser.add_argument("--no-fbip", action=NegativeArgAction, env_var_name="ONEFLOW_DTR_FBIP")
-parser.add_argument("--old-immutable", action=PositiveArgAction, env_var_name="ONEFLOW_DTR_OLD_IMMUTABLE")
+parser.add_argument(
+    "--no-fbip", action=NegativeArgAction, env_var_name="ONEFLOW_DTR_FBIP"
+)
+parser.add_argument(
+    "--old-immutable",
+    action=PositiveArgAction,
+    env_var_name="ONEFLOW_DTR_OLD_IMMUTABLE",
+)
 parser.add_argument("--no-o-one", action=NegativeArgAction, env_var_name="OF_DTR_O_ONE")
 parser.add_argument("--no-ee", action=NegativeArgAction, env_var_name="OF_DTR_EE")
 parser.add_argument(
@@ -94,7 +92,7 @@ parser.add_argument(
     "--high-add-n", action=PositiveArgAction, env_var_name="OF_DTR_HIGH_ADD_N"
 )
 parser.add_argument("--debug-level", type=int, default=0)
-parser.add_argument("--no-dataloader", action='store_true')
+parser.add_argument("--no-dataloader", action="store_true")
 
 args = parser.parse_args()
 
@@ -107,13 +105,9 @@ import flowvision
 import flowvision.transforms as transforms
 import flowvision.models as models
 
-# import resnet50
-
-# run forward, backward and update parameters
 WARMUP_ITERS = 5
 ALL_ITERS = args.iters
 
-# NOTE: it has not effect for dtr allocator
 if args.allocator:
     heuristic = "eq_compute_time_and_last_access"
 else:
@@ -121,16 +115,15 @@ else:
 
 if args.dtr:
     print(
-        f"dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}"
+        f"model: {args.model}, dtr_enabled: {args.dtr}, dtr_allo: {args.allocator}, threshold: {args.threshold}, batch size: {args.bs}, eager eviction: {args.ee}, left and right: {args.lr}, debug_level: {args.debug_level}, heuristic: {heuristic}, o_one: {args.o_one}"
     )
 else:
-    print(f"dtr_enabled: {args.dtr}")
+    print(f"model: {args.model}, dtr_enabled: {args.dtr}")
 
 if args.dtr:
     flow.enable_dtr(args.dtr, args.threshold, args.debug_level, heuristic)
 
-seed = 20
-setup_seed(seed)
+setup_seed(20)
 
 enable_tensorboard = args.exp_id is not None
 if enable_tensorboard:
@@ -138,8 +131,9 @@ if enable_tensorboard:
 
 
 def get_imagenet_imagefolder():
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+    normalize = transforms.Normalize(
+        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+    )
 
     return flowvision.datasets.ImageFolder(
         "/dataset/imagenet_folder/train",
@@ -172,19 +166,24 @@ def densenet121_info():
 
 def unet_info():
     import unet
+
     model = unet.UNet(n_channels=3, n_classes=2, bilinear=False)
     criterion = nn.BCEWithLogitsLoss()
     get_fixed_input = lambda bs: flow.ones(bs, 3, 460, 608)
     get_fixed_label = lambda bs: flow.ones(bs, 2, 460, 608)
+
     def get_imagefolder():
         raise NotImplementedError
+
     return model, criterion, get_fixed_input, get_fixed_label, get_imagefolder
 
 
-model, criterion, get_fixed_input, get_fixed_label, get_imagefolder = eval(f"{args.model}_info()")
+model, criterion, get_fixed_input, get_fixed_label, get_imagefolder = eval(
+    f"{args.model}_info()"
+)
 
-model.to('cuda')
-criterion.to('cuda')
+model.to("cuda")
+criterion.to("cuda")
 
 learning_rate = 0.001
 optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.0)
@@ -220,8 +219,8 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     if iter >= ALL_ITERS:
         break
 
-    train_data = train_data.to('cuda')
-    train_label = train_label.to('cuda')
+    train_data = train_data.to("cuda")
+    train_label = train_label.to("cuda")
 
     flow.comm.barrier()
     # print(f'iter {iter} start, all pieces:')
@@ -257,12 +256,18 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     flow._oneflow_internal.dtr.set_left(True)
 
 time_per_run = total_time / (ALL_ITERS - WARMUP_ITERS)
-print(
-f"{ALL_ITERS - WARMUP_ITERS} iters: avg {time_per_run}s"
-)
+print(f"{ALL_ITERS - WARMUP_ITERS} iters: avg {time_per_run}s")
 
 if prefix is not None:
-    fn = f'{prefix}.json'
-    with open(fn, 'w') as f:
-        json.dump({"real time": time_per_run, "threshold": args.threshold, "model_name": model_name, "batch_size": args.bs}, f)
+    fn = f"{prefix}.json"
+    with open(fn, "w") as f:
+        json.dump(
+            {
+                "real time": time_per_run,
+                "threshold": args.threshold,
+                "model_name": model_name,
+                "batch_size": args.bs,
+            },
+            f,
+        )
 
