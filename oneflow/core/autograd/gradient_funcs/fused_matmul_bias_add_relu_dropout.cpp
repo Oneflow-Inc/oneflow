@@ -158,7 +158,9 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
     */
     const auto& matmul_relu_bias_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
         cublas_dy, JUST(VectorAt(weights, hidden_layer_idx)),
-        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)), /*alpha=*/scale));
+        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)), 
+        JUST(VectorAt(hiddens, hidden_layer_idx - 1)), 
+        /*alpha=*/scale));
 
     // dgrad
     dgrad.at(hidden_layer_idx) = matmul_relu_bias_bgrad->at(0);  // NOLINT
@@ -168,11 +170,17 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
       JUST(VectorAt(*in_grads, weight_num + hidden_layer_idx)) =
           matmul_relu_bias_bgrad->at(1);  // NOLINT
     }
+
     // dw
     if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))) {
-      JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = JUST(functional::MatMul(
-          cublas_dy, JUST(VectorAt(hiddens, hidden_layer_idx - 1)), true, false, 1.0));
+      JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = matmul_relu_bias_bgrad->at(2);;
     }
+
+    // // dw
+    // if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))) {
+    //   JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = JUST(functional::MatMul(
+    //       cublas_dy, JUST(VectorAt(hiddens, hidden_layer_idx - 1)), true, false, 1.0));
+    // }
   }
 
   // For the first layer, we need to use 2 matmul to get grads.

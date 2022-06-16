@@ -180,9 +180,11 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Input("dy", cublas_dy)
                 .Input("weight", op.input("weights", hidden_layer_idx))
                 .Input("aux", op.output("cublas_aux", hidden_layer_idx - 1))
+                .Input("hidden", op.output("hidden", hidden_layer_idx - 1))
                 .Attr<double>("alpha", 1.0)
                 .Output("d_grad")
                 .Output("d_bias")
+                .Output("d_weight")
                 .Build();
         AddOp(cublas_bias_add_relu_matmul_grad_op);
         if (op.NeedGenGradTensor4OpInput("biases", hidden_layer_idx - 1)) {
@@ -190,23 +192,27 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                        "biases",
                                        hidden_layer_idx - 1);  // previous layers bias grad
         }
-
-        user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
-            op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
-        user_op::UserOpConfWrapper matmul_weight_grad_op =
-            matmul_weight_grad_builder.Op("matmul")
-                .Input("a", cublas_dy)
-                .Input("b", op.output("hidden", hidden_layer_idx - 1))
-                .Output("out")
-                .Attr<bool>("transpose_a", true)
-                .Attr<bool>("transpose_b", false)
-                .Attr<double>("alpha", 1.0)
-                .Build();
-        AddOp(matmul_weight_grad_op);
         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
-          op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights",
+          op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_weight", 0), "weights",
                                        hidden_layer_idx);
         }
+
+        // user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
+        //     op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
+        // user_op::UserOpConfWrapper matmul_weight_grad_op =
+        //     matmul_weight_grad_builder.Op("matmul")
+        //         .Input("a", cublas_dy)
+        //         .Input("b", op.output("hidden", hidden_layer_idx - 1))
+        //         .Output("out")
+        //         .Attr<bool>("transpose_a", true)
+        //         .Attr<bool>("transpose_b", false)
+        //         .Attr<double>("alpha", 1.0)
+        //         .Build();
+        // AddOp(matmul_weight_grad_op);
+        // if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
+        //   op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights",
+        //                                hidden_layer_idx);
+        // }
         // update dgrad
         cublas_dy = cublas_bias_add_relu_matmul_grad_op.output("d_grad", 0);
       }

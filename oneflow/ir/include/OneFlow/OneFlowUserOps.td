@@ -4576,11 +4576,13 @@ def OneFlow_CublasBiasAddReluMatmulGradOp : OneFlow_BaseOp<"cublas_bias_add_relu
   let input = (ins
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$weight,
-    OneFlow_Tensor:$aux
+    OneFlow_Tensor:$aux, 
+    OneFlow_Tensor:$hidden
   );
   let output = (outs
     OneFlow_Tensor:$d_grad, 
-    OneFlow_Tensor:$d_bias
+    OneFlow_Tensor:$d_bias, 
+    OneFlow_Tensor:$d_weight
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$alpha
