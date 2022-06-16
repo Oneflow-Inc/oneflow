@@ -551,6 +551,16 @@ def nccl_enable_mixed_fusion(val):
     sess.config_proto.resource.collective_boxing_conf.nccl_enable_mixed_fusion = val
 
 
+def api_random_straighten_nodes(val: bool) -> None:
+    """Disable straighten algorithm and random sorting task nodes.
+
+    Args:
+        val (bool): True or False
+    """
+    assert type(val) is bool
+    _set_attr_to_resource("random_straighten_nodes", val)
+
+
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
 def do_nothing(*args, **kwargs):
     print("This action donot working because session is initialized.", file=sys.stderr)

@@ -46,9 +46,9 @@ message Resource {
   optional bool enable_thread_local_cache = 16 [default = true];
   optional int64 thread_local_cache_max_size = 17 [default = 67108864]; // 64M
   optional bool enable_debug_mode = 18 [default = false];
-  optional bool enable_tensor_float_32_compute = 20 [default = true];
   // NOTE(chengcheng): mem chain merge has an implicit correctness bug under boundary conditions.
   optional bool enable_mem_chain_merge = 21 [default = false];
+  optional bool enable_tensor_float_32_compute = 20 [default = true];
   
   optional CollectiveBoxingConf collective_boxing_conf = 19;
 
@@ -57,4 +57,6 @@ message Resource {
   optional bool disable_group_boxing_by_dst_parallel = 31 [default = false];
 
   optional CudnnConfig cudnn_conf = 32;
+
+  optional bool random_straighten_nodes = 40 [default = false];
 }

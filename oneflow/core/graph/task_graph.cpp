@@ -451,7 +451,7 @@ TaskGraph::TaskGraph() {
     }
   });
 
-  if (ParseBooleanFromEnv("ONEFLOW_RANDOM_STRAIGHTEN_NODES", false)) {
+  if (Global<ResourceDesc, ForSession>::Get()->random_straighten_nodes()) {
     SetOrderInGraphForEachNode();
   } else {
     StraightenNodes(this, &ordered_task_nodes_);

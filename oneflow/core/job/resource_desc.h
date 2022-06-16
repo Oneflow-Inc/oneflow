@@ -48,6 +48,7 @@ class ResourceDesc final {
   bool enable_dry_run() const;
   CollectiveBoxingConf collective_boxing_conf() const;
   bool nccl_use_compute_stream() const;
+  bool random_straighten_nodes() const { return resource_.random_straighten_nodes(); }
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }

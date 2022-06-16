@@ -119,6 +119,9 @@ void ResourceDesc::Update(const Resource& reso_conf) {
     resource_.set_disable_group_boxing_by_dst_parallel(
         reso_conf.disable_group_boxing_by_dst_parallel());
   }
+  if (reso_conf.has_random_straighten_nodes()) {
+    resource_.set_random_straighten_nodes(reso_conf.random_straighten_nodes());
+  }
 }
 
 }  // namespace oneflow
