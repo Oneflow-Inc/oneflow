@@ -30,7 +30,7 @@ class ArgWhereKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    int64_t ndims = ctx->Tensor4ArgNameAndIndex("input", 0)->shape().NumAxes();
+    int64_t ndims = ctx->Tensor4ArgNameAndIndex("input", 0)->shape_view().NumAxes();
     if (ndims == 0) { return; }
     SwitchNdimCompute(SwitchCase(ndims), ctx);
   }
@@ -47,9 +47,9 @@ class ArgWhereKernel final : public user_op::OpKernel {
     user_op::Tensor* output_size = ctx->Tensor4ArgNameAndIndex("output_size", 0);
     user_op::Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
-    size_t tmp_size = tmp ? tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
+    size_t tmp_size = tmp ? tmp->shape_view().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
     ArgWhereKernelUtil<device_type, IN_T, OUT_T, NDIM>::ArgWhere(
-        ctx->stream(), input->shape(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
+        ctx->stream(), input->shape_view(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
         output->mut_dptr<OUT_T>(), output_size->mut_dptr<OUT_T>());
   }
 };

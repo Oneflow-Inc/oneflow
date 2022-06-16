@@ -52,9 +52,9 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
   EagerBlobObjectTensorView(const std::function<vm::EagerBlobObject*()>& mut_eager_blob_object)
       : mut_eager_blob_object_(mut_eager_blob_object) {}
 
-  ShapeView shape() const override { return mut_eager_blob_object_()->shape(); }
+  ShapeView shape_view() const override { return mut_eager_blob_object_()->shape(); }
 
-  MutShapeView mut_shape() override { return mut_eager_blob_object_()->mut_shape(); }
+  MutShapeView mut_shape_view() override { return mut_eager_blob_object_()->mut_shape(); }
 
   const Stride& stride() const override { return mut_eager_blob_object_()->stride(); }
 

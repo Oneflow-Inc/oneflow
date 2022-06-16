@@ -124,9 +124,9 @@ class NllKernel final : public user_op::OpKernel {
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
 
-    const int64_t num_instances = target_blob->shape().elem_cnt();
-    CHECK_EQ(input_blob->shape().elem_cnt() % num_instances, 0);
-    const K num_classes = static_cast<K>(input_blob->shape().elem_cnt() / num_instances);
+    const int64_t num_instances = target_blob->shape_view().elem_cnt();
+    CHECK_EQ(input_blob->shape_view().elem_cnt() % num_instances, 0);
+    const K num_classes = static_cast<K>(input_blob->shape_view().elem_cnt() / num_instances);
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
 
     const T* input = input_blob->dptr<T>();
@@ -159,8 +159,8 @@ class NllGradKernel final : public user_op::OpKernel {
     auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     auto* total_weight_blob = ctx->Tensor4ArgNameAndIndex("total_weight", 0);
 
-    const int64_t num_instances = target_blob->shape().elem_cnt();
-    const int64_t input_elem_cnt = input_blob->shape().elem_cnt();
+    const int64_t num_instances = target_blob->shape_view().elem_cnt();
+    const int64_t input_elem_cnt = input_blob->shape_view().elem_cnt();
     CHECK_EQ(input_elem_cnt % num_instances, 0);
     const K num_classes = static_cast<K>(input_elem_cnt / num_instances);
     const K ignore_index = static_cast<K>(ctx->Attr<int64_t>("ignore_index"));
