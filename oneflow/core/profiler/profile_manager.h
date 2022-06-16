@@ -25,8 +25,8 @@ class ProfileManager {
     std::set<ActivityType> activities{};
     if (use_cpu) { activities.insert(ActivityType::CPU); }
     if (use_cuda) { activities.insert(ActivityType::CUDA); }
-    prepareTrace(!activities.count(ActivityType::CUDA), activities);
-    startTrace();
+    PrepareTrace(!activities.count(ActivityType::CUDA), activities);
+    StartTrace();
   }
 
   std::string RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,

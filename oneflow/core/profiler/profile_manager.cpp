@@ -31,7 +31,7 @@ std::string ProfileManager::DumpResultsJson() {
 }
 
 std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
-  auto trace = stopTrace();
+  auto trace = StopTrace();
   const auto& kineto_events = *(trace.get()->activities());
   std::set<std::shared_ptr<IEvent>> custom_events;
   std::unordered_map<std::shared_ptr<IEvent>, int64_t> corr_ids;
