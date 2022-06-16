@@ -830,8 +830,9 @@ static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject
   if (target_tensor->is_consistent()) {
     Symbol<ParallelDesc> placement = ASSERT(target_tensor->parallel_desc());
     std::vector<Symbol<SbpParallel>> sbp(ASSERT(target_tensor->nd_sbp())->sbp_parallel_size());
-    for (int32_t i = 0; i < sbp.size(); i++)
+    for (int32_t i = 0; i < sbp.size(); i++) {
       sbp[i] = ASSERT(target_tensor->nd_sbp())->sbp_parallel(i);
+    }
     std::vector<Symbol<SbpParallel>> grad_sbp;
     std::shared_ptr<Tensor> global_tensor =
         ASSERT_PTR(functional::ToConsistent(tensor, placement, sbp, grad_sbp, false));
@@ -912,8 +913,9 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   } else if (functional::PySbpParallelSequenceCheck(sbp_obj)) {
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   } else {
-    for (int32_t i = 0; i < ASSERT(tensor->nd_sbp())->sbp_parallel_size(); i++)
+    for (int32_t i = 0; i < ASSERT(tensor->nd_sbp())->sbp_parallel_size(); i++) {
       sbp.emplace_back(ASSERT(tensor->nd_sbp())->sbp_parallel(i));
+    }
   }
 
   // placement
