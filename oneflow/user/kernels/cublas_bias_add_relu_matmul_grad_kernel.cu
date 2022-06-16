@@ -70,6 +70,23 @@ auto MatmulGradPrimitiveExists() {
   });
 }
 
+class MatmulGradKernelState final : public user_op::OpKernelState {
+public:
+  MatmulGradKernelState(){
+    OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
+    OF_CUBLAS_CHECK(cublasLtCreate(&cublas_lt_handle_));
+  }
+  ~MatmulGradKernelState(){
+    OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
+    OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
+    OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
+  }
+  cudaStream_t cuda_stream() const { return cuda_stream_; }
+  cublasLtHandle_t cublas_lt_handle() const { return cublas_lt_handle_; }
+private:
+  cudaStream_t cuda_stream_{};
+  cublasLtHandle_t cublas_lt_handle_{}; 
+};
 
 template<typename T>
 class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
@@ -83,9 +100,14 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     return CreateCublasFusedMLPKernelCache();
   }
 
+  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+    user_op::KernelInitContext* ctx) const override {
+    return std::make_shared<MatmulGradKernelState>();
+  }
+
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
@@ -99,6 +121,8 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     const auto* matmul_grad_cache =
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+    
+    auto* kernel_state = dynamic_cast<MatmulGradKernelState*>(state);
 
     const DataType data_type = dy->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
@@ -106,10 +130,10 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0;
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0;
 
-    const double alpha = ctx->Attr<double>("alpha");
-    const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
-    const double beta = 0.0;
-    const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
+    double alpha = ctx->Attr<double>("alpha");
+    auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
+    double beta = 0.0;
+    auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
     // currently only support 2D matmul.
     DimVector dy_shape(2);
@@ -140,14 +164,43 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
 
     // compute dw
-    size_t m = 0, n = 0, k = 0;
-    InferMatmulMNK(dy->shape(), hidden->shape(), /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
-    const double grad_alpha = 1.0;
-    double grad_beta = 0.0;
-    auto matmul = NewMatmulGradPrimitive(ctx);
-    CHECK(matmul);
-    matmul->Launch(ctx->stream(), m, n, k, grad_alpha, dy->dptr(), hidden->dptr(), grad_beta,
-                   d_weight->mut_dptr());
+    // size_t m = 0, n = 0, k = 0;
+    // InferMatmulMNK(dy->shape(), hidden->shape(), /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
+    // const double grad_alpha = 1.0;
+    // double grad_beta = 0.0;
+    // auto matmul = NewMatmulGradPrimitive(ctx);
+    // CHECK(matmul);
+    // matmul->Launch(ctx->stream(), m, n, k, grad_alpha, dy->dptr(), hidden->dptr(), grad_beta,
+    //                d_weight->mut_dptr());
+    
+
+    alpha = 1.0;
+    sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
+    beta = 0.0;
+    sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
+
+    // currently only support 2D matmul.
+    DimVector hidden_shape(2);
+    hidden->shape().ToDimVector(&hidden_shape);
+    epilogue = CUBLASLT_EPILOGUE_DEFAULT;
+
+    InferMatmulCublasMNK(dy_shape, hidden_shape,
+                         /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
+                         &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+
+    SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
+                  /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+                  /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr,
+                  nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+    OF_CUBLAS_CHECK(
+        cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
+                       &sp_alpha, hidden->dptr(), matmul_grad_cache->cublas_a_desc, dy->dptr(),
+                       matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
+                       matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
+                       matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
+                       cuda_stream->cublas_workspace_size(), kernel_state->cuda_stream()));
+    
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -157,8 +210,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
   REGISTER_USER_KERNEL("cublas_bias_add_relu_matmul_grad")             \
       .SetCreateFn<CublasBiasAddReluMatmulGradKernel<dtype>>()         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value) \
-                       && MatmulGradPrimitiveExists());
+                       && (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(float)
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(double)
