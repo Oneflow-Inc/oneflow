@@ -399,10 +399,11 @@ void CacheImpl<Key, Elem, Index>::Test(ep::Stream* stream, uint32_t n_keys, cons
   constexpr uint32_t block_size = 128;
   uint32_t grid_size = (n_keys + block_size - 1) / block_size;
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  EncodeLookupKernel<Key, Elem, Index, block_size><<<grid_size, block_size, 0, stream>>>(
-      num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
-      encoding_buffer_, nullptr, n_missing, static_cast<Key*>(missing_keys), missing_indices,
-      encoder_.TableCapacity(), encoder_.table_keys(), encoder_.table_indices());
+  EncodeLookupKernel<Key, Elem, Index, block_size>
+      <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
+          encoding_buffer_, nullptr, n_missing, static_cast<Key*>(missing_keys), missing_indices,
+          encoder_.TableCapacity(), encoder_.table_keys(), encoder_.table_indices());
 }
 
 template<typename Key, typename Elem, typename Index>
