@@ -109,6 +109,7 @@ class TestNcclLogicalSendRecv2D(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_nccl_logical_send_recv_2d(test_case, *arg)
 
+
 def _test_nccl_logical_send_recv_1d(test_case, src_nd_sbp, dst_nd_sbp):
     # can not process p in dst
     if flow.sbp.partial_sum() in dst_nd_sbp:
@@ -139,11 +140,11 @@ def _test_nccl_logical_send_recv_1d(test_case, src_nd_sbp, dst_nd_sbp):
             return y
 
     graph = TestNcclLogicalSendRecv1DGraph()
-    #graph.debug(0)
+    # graph.debug(0)
     y = graph(x)
     out_np = y.numpy()
     in_np = x.numpy()
-    #if flow.env.get_rank() == 0:
+    # if flow.env.get_rank() == 0:
     #    print("src sbp ", src_nd_sbp, ", dst sbp ", dst_nd_sbp)
     #    print(graph)
     #    equal = np.array_equal(out_np, in_np)
@@ -164,7 +165,9 @@ def gen_1d_sbp():
     ]
     nd_sbp_list = []
     for sbp0 in sbp_list:
-        nd_sbp_list.append([sbp0,])
+        nd_sbp_list.append(
+            [sbp0,]
+        )
     return nd_sbp_list
 
 
@@ -177,6 +180,7 @@ class TestNcclLogicalSendRecv1D(flow.unittest.TestCase):
         arg_dict["dst_nd_sbp"] = gen_1d_sbp()
         for arg in GenArgList(arg_dict):
             _test_nccl_logical_send_recv_1d(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()
