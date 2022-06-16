@@ -32,6 +32,7 @@ class NegativeArgAction(argparse.Action):
         assert "--no-" in option_strings[0]
         dest = dest[3:]
         super(NegativeArgAction, self).__init__(
+            # default value is True
             option_strings, dest, nargs=0, default=True, **kwargs
         )
         self.env_var_name = env_var_name
@@ -45,7 +46,8 @@ class NegativeArgAction(argparse.Action):
 class PositiveArgAction(argparse.Action):
     def __init__(self, option_strings, dest, env_var_name, **kwargs):
         super(PositiveArgAction, self).__init__(
-            option_strings, dest, nargs=0, default=True, **kwargs
+            # default value is False
+            option_strings, dest, nargs=0, default=False, **kwargs
         )
         self.env_var_name = env_var_name
         os.environ[self.env_var_name] = "False"
@@ -249,7 +251,7 @@ for iter, (train_data, train_label) in enumerate(train_data_loader):
     last_time = time.time()
     if iter == 0:
         pass
-        print('iter 0 ok')
+        # print('iter 0 ok')
     # print(f'iter {iter} end, all pieces:')
     # flow._oneflow_internal.dtr.display_all_pieces()
     flow._oneflow_internal.dtr.set_left(True)
