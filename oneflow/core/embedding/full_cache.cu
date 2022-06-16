@@ -155,6 +155,66 @@ __global__ void LookupKernel(uint32_t value_length, const Elem* cache_values,
   }
 }
 
+template<typename Key, typename Elem, typename Index, uint32_t block_size>
+__global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_values,
+                                   uint32_t values_elem_cnt, const Key* keys, const Index* context,
+                                   Elem* values, uint32_t* n_missing, Key* missing_keys,
+                                   uint32_t* missing_indices, const size_t capacity,
+                                   Key* table_keys, Index* table_indices) {
+  constexpr uint32_t warp_size = 32;
+  constexpr uint32_t n_warp_per_block = block_size / warp_size;
+  const uint32_t warp_id = threadIdx.x / warp_size;
+  const uint32_t lane_id = threadIdx.x % warp_size;
+  const uint32_t global_warp_id = blockIdx.x * n_warp_per_block + warp_id;
+  const uint32_t global_n_warp = gridDim.x * n_warp_per_block;
+  const uint32_t n_keys = values_elem_cnt / value_length;
+  __shared__ Key batch_keys[n_warp_per_block][warp_size];
+  __shared__ Index batch_row_ids[n_warp_per_block][warp_size];
+  __shared__ Key batch_missing_keys[n_warp_per_block][warp_size];
+  __shared__ uint32_t batch_missing_indices[n_warp_per_block][warp_size];
+  __shared__ uint32_t batch_n_missing[n_warp_per_block];
+  for (uint32_t batch_start = global_warp_id * warp_size; batch_start < n_keys;
+       batch_start += global_n_warp * warp_size) {
+    const uint32_t batch_n_key = n_keys - batch_start;
+    if (lane_id == 0) { batch_n_missing[warp_id] = 0; }
+    __syncwarp();
+    const uint32_t key_offset = batch_start + lane_id;
+    if (key_offset < n_keys) {
+      const Key key = keys[batch_start + lane_id];
+      const uint64_t hash = FullCacheHash()(key);
+      Index row;
+      GetOne<Key, Index>(capacity, table_keys, table_indices, key, hash, &row);
+      batch_row_ids[warp_id][lane_id] = row;
+      if (row == 0) {
+        const uint32_t batch_missing_idx = atomicAdd(batch_n_missing + warp_id, 1);
+        batch_missing_keys[warp_id][batch_missing_idx] = key;
+        batch_missing_indices[warp_id][batch_missing_idx] = key_offset;
+      }
+    }
+    __syncwarp();
+    const uint32_t batch_n_missing_t = batch_n_missing[warp_id];
+    if (lane_id == 0) {
+      const uint32_t old_n_missing =
+          cuda::atomic::Add(n_missing, static_cast<uint32_t>(batch_n_missing_t));
+      batch_n_missing[warp_id] = old_n_missing;
+    }
+    __syncwarp();
+    if (lane_id < batch_n_missing_t) {
+      missing_keys[batch_n_missing[warp_id] + lane_id] = batch_missing_keys[warp_id][lane_id];
+      missing_indices[batch_n_missing[warp_id] + lane_id] = batch_missing_indices[warp_id][lane_id];
+    }
+    for (int i = 0; i < batch_n_key; ++i) {
+      const Key key = batch_keys[warp_id][i];
+      const Index row = batch_row_ids[warp_id][lane_id];
+      if (row == 0) { continue; }
+      for (int col = lane_id; col < value_length; col += warp_size) {
+        values[i] = cache_values[row * value_length + col];
+      }
+    }
+    __syncwarp();
+  }
+}
+
 template<typename Elem, typename Index>
 __global__ void UpdateKernel(uint32_t value_length, Elem* cache_values, uint32_t values_elem_cnt,
                              const Index* context, const Elem* values) {
@@ -234,6 +294,10 @@ class OrdinalEncoder {
   }
 
   uint64_t TableCapacity() const { return table_capacity_; }
+
+  Key* table_keys() const { return table_keys_; }
+
+  Index* table_indices() const { return table_indices_; }
 
  private:
   int device_index_{};
@@ -332,12 +396,13 @@ void CacheImpl<Key, Elem, Index>::Test(ep::Stream* stream, uint32_t n_keys, cons
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  constexpr uint32_t block_size = 128;
+  uint32_t grid_size = (n_keys + block_size - 1) / block_size;
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  RUN_CUDA_KERNEL((LookupKernel<Key, Elem, Index, false>), stream, values_elem_cnt,
-                  num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
-                  encoding_buffer_, nullptr, n_missing, static_cast<Key*>(missing_keys),
-                  missing_indices);
+  EncodeLookupKernel<Key, Elem, Index, block_size><<<grid_size, block_size, 0, stream>>>(
+      num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
+      encoding_buffer_, nullptr, n_missing, static_cast<Key*>(missing_keys), missing_indices,
+      encoder_.TableCapacity(), encoder_.table_keys(), encoder_.table_indices());
 }
 
 template<typename Key, typename Elem, typename Index>
