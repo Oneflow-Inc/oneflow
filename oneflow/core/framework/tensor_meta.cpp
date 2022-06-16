@@ -72,7 +72,7 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
     // https://stackoverflow.com/questions/31681324/identify-contiguous-segments-of-a-non-contiguous-numpy-array
     if (shape.At(i) == 0) { return true; }
     if (contig_if_nonempty && shape.At(i) != 1) {
-      if (stride.At(i) != expected_stride) { contig_if_nonempty = false; }
+      if (stride.at(i) != expected_stride) { contig_if_nonempty = false; }
       expected_stride *= shape.At(i);
     }
   }

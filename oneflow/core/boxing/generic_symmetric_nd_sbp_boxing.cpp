@@ -46,9 +46,10 @@ Maybe<Symbol<SbpParallel>> GetBroadcastSbp() {
 
 auto* CachedGetBroadcastSbp = DECORATE(&GetBroadcastSbp, ThreadLocalCached);
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<Shape> CalcLogicalShape4Axis(const Shape& logical_shape, int axis,
                                    Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
-  CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());  // NOLINT(maybe-need-error-msg)
+  CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());  // Always true
   std::shared_ptr<Shape> sub_logical_shape = std::make_shared<Shape>(logical_shape);
 
   const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
@@ -81,8 +82,8 @@ static constexpr auto* GetLogicalShape4Axis =
     DECORATE(&CalcLogicalShape4Axis, ThreadLocalCachedCopiable);
 
 Maybe<int> CalcTheFirstDiffAxisBetweenTwoNdSbp(Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp) {
-  CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(),    // NOLINT(maybe-need-error-msg)
-                     out_nd_sbp->sbp_parallel_size());  // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(),
+                     out_nd_sbp->sbp_parallel_size());  // Always true
   int dim = 0;
   for (; dim < in_nd_sbp->sbp_parallel_size(); ++dim) {
     if (in_nd_sbp->sbp_parallel(dim) != out_nd_sbp->sbp_parallel(dim)) { break; }
@@ -105,13 +106,13 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symb
 
 Maybe<void> RawCheckGenericSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                                 const Shape& logical_shape) {
-  CHECK_OR_RETURN(in->placement() == out->placement());      // NOLINT(maybe-need-error-msg)
-  CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());            // NOLINT(maybe-need-error-msg)
-  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(),      // NOLINT(maybe-need-error-msg)
-                     out->nd_sbp()->sbp_parallel_size());    // NOLINT(maybe-need-error-msg)
-  CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(in->placement() == out->placement());
+  CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), out->nd_sbp()->sbp_parallel_size());
+  CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckGenericSymmetricNdSbpBoxing =
     DECORATE(&RawCheckGenericSymmetricNdSbpBoxing, ThreadLocalCachedCopiable);

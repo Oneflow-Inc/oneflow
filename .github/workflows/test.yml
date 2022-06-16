@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/get-oneflow/priority-pr@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow/priority-pr@support-cuda-1106
         name: Check priority PR closed
         id: save-cache
         timeout-minutes: 5
@@ -159,7 +159,7 @@ jobs:
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
       - name: Wait for GPU slot
-        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@single-matrix-for-efficiency
+        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@support-cuda-1106
         if: env.is_secrets_accessible == '1'
         timeout-minutes: 90
         continue-on-error: true
@@ -183,7 +183,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cuda-1106
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -230,7 +230,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cuda-1106
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -244,7 +244,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow@support-cuda-1106
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -265,7 +265,7 @@ jobs:
           python-versions: |
             3.6
             3.7
-      - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow@support-cuda-1106
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu102' && !matrix.cache-hit }}
@@ -285,7 +285,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
-      - uses: Oneflow-Inc/get-oneflow@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow@support-cuda-1106
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm13' && !matrix.cache-hit }}
         with:
@@ -324,7 +324,7 @@ jobs:
             })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@single-matrix-for-efficiency
+        uses: Oneflow-Inc/get-oneflow/digest/upload@support-cuda-1106
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -335,7 +335,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@single-matrix-for-efficiency
+        uses: Oneflow-Inc/get-oneflow/digest/upload@support-cuda-1106
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -347,7 +347,7 @@ jobs:
 
   find-test-cache-distributed:
     name: "Find test cache (distributed)"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need-test-distributed')
     runs-on: ubuntu-latest
     needs: [build-oneflow]
     env:
@@ -360,7 +360,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-cuda-1106
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -391,7 +391,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-cuda-1106
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -411,10 +411,10 @@ jobs:
 
   test-distributed:
     name: Distributed test suite
-    needs: [wait_for_gpu_slot, find-test-cache-distributed]
+    needs: [wait_for_gpu_slot, find-test-cache-distributed, test]
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && false
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.labels.*.name, 'need-test-distributed')
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
       cancel-in-progress: false
@@ -439,12 +439,28 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Checkout Oneflow-Inc/vision
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/vision
+          # please use a commit here
+          ref: ${{ env.FLOW_VISION_COMMIT}}
+          path: ${{ env.FLOW_VISION_SRC}}
+      - name: Checkout Oneflow-Inc/libai
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/libai
+          # please use a commit here
+          ref: ${{ env.LIBAI_COMMIT}}
+          path: ${{ env.LIBAI_SRC}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cuda-1106
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -460,7 +476,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@single-matrix-for-efficiency
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-cuda-1106
         id: download-digest
         timeout-minutes: 10
         with:
@@ -470,7 +486,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Get primary node
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/master-address@single-matrix-for-efficiency
+        uses: Oneflow-Inc/get-oneflow/master-address@support-cuda-1106
         id: get-primary-node
         with:
           rank: ${{ matrix.rank }}
@@ -537,6 +553,12 @@ jobs:
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+      - name: Install downstream libs
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
       - name: Module API test (distributed)
         timeout-minutes: 90
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
@@ -631,7 +653,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cuda-1106
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -647,7 +669,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@single-matrix-for-efficiency
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-cuda-1106
         id: download-digest
         timeout-minutes: 10
         with:
@@ -886,7 +908,7 @@ jobs:
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
-        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@single-matrix-for-efficiency
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@support-cuda-1106
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -939,7 +961,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@single-matrix-for-efficiency
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cuda-1106
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
