@@ -52,16 +52,6 @@ class ValuesPtr {
     if (has_lookup_values_) { OF_CUDA_CHECK(cudaFree(lookup_values_)); }
     if (has_lookup_embeddings_) { OF_CUDA_CHECK(cudaFree(lookup_embeddings_)); }
   }
-  uint32_t GetNumUnique(int iter) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    CHECK_EQ(iter, num_unique_iter_);
-    return lookup_num_unique_;
-  }
-  void SetNumUnique(uint32_t num_unique, int iter) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    lookup_num_unique_ = num_unique;
-    num_unique_iter_ = iter;
-  }
   void* GetLookupValuesPtr(int iter) {
     std::unique_lock<std::mutex> lock(mutex_);
     CHECK(has_lookup_values_);
@@ -145,9 +135,6 @@ class ValuesPtr {
   }
 
  private:
-  uint32_t lookup_num_unique_;
-  int num_unique_iter_;
-
   void* lookup_values_;
   bool has_lookup_values_;
   size_t lookup_values_size_;
@@ -164,6 +151,60 @@ class ValuesPtr {
   std::mutex mutex_;
 };
 
+class NumUniques {
+ public:
+  NumUniques() {
+    num_unique_matrix_0_iter_ = -1;
+    num_unique_matrix_1_iter_ = -1;
+  }
+  ~NumUniques() = default;
+  uint32_t GetNumUnique(int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    CHECK_EQ(iter, num_unique_iter_);
+    return lookup_num_unique_;
+  }
+  void SetNumUnique(uint32_t num_unique, int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    lookup_num_unique_ = num_unique;
+    num_unique_iter_ = iter;
+  }
+  void SetNumUniqueMatrix(const std::vector<uint32_t>& num_unique_matrix, int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (last_use_ptr != 0) {
+      num_unique_matrix_0_ = num_unique_matrix;
+      num_unique_matrix_0_iter_ = iter;
+      last_use_ptr = 0;
+    } else {
+      num_unique_matrix_1_ = num_unique_matrix;
+      num_unique_matrix_1_iter_ = iter;
+      last_use_ptr = 1;
+    }
+  }
+  const std::vector<uint32_t>& GetNumUniqueMatrix(int iter) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (num_unique_matrix_0_iter_ == iter) {
+      return num_unique_matrix_0_;
+    } else if (num_unique_matrix_1_iter_ == iter) {
+      return num_unique_matrix_1_;
+    } else {
+      LOG(ERROR) << "iter " << iter << " num_unique_matrix_0_iter_ " << num_unique_matrix_0_iter_
+                 << " num_unique_matrix_1_iter_ " << num_unique_matrix_1_iter_;
+      UNIMPLEMENTED();
+      return num_unique_matrix_0_;
+    }
+  }
+
+ private:
+  uint32_t lookup_num_unique_;
+  int num_unique_iter_;
+  std::vector<uint32_t> num_unique_matrix_0_;
+  int num_unique_matrix_0_iter_;
+  std::vector<uint32_t> num_unique_matrix_1_;
+  int num_unique_matrix_1_iter_;
+  int last_use_ptr;
+  std::mutex mutex_;
+};
+
 class EmbeddingManager final {
  public:
   EmbeddingManager() = default;
@@ -175,6 +216,8 @@ class EmbeddingManager final {
                     const std::string& snapshot_name);
   ValuesPtr* GetValuesPtr(const std::string& embedding_name, int64_t rank_id);
 
+  NumUniques* GetNumUniques(const std::string& embedding_name, int64_t rank_id);
+
   KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t rank_id);
 
   void CreateKeyValueStore(const KeyValueStoreOptions& options, int64_t local_rank_id,
@@ -184,6 +227,7 @@ class EmbeddingManager final {
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<KeyValueStore>> key_value_store_map_;
   std::mutex mutex_;
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<ValuesPtr>> values_ptrs_map_;
+  HashMap<std::pair<std::string, int64_t>, std::unique_ptr<NumUniques>> num_uniques_map_;
 };
 
 #endif  // WITH_CUDA

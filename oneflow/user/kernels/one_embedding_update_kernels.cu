@@ -212,7 +212,15 @@ void GetUniqueValueAndUpdatedPtr(user_op::KernelComputeContext* ctx, const int64
     embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    const int64_t num_unique = ptrs->GetNumUnique(current_iter);
+    uint32_t num_unique;
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_SAVE_NUM_UNIQUE_MATRIX", true)) {
+      embedding::NumUniques* num_uniques =
+          Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
+              ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+      num_unique = num_uniques->GetNumUnique(current_iter);
+    } else {
+      UNIMPLEMENTED();
+    }
     void* updated_values_ptr = ptrs->MallocUpdatedValuesPtr(
         current_iter, GetCudaAlignedSize(num_unique * line_size * sizeof(T)),
         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
@@ -281,13 +289,20 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
     T* updated_unique_embeddings_ptr;
     GetUniqueValueAndUpdatedPtr<T>(ctx, current_iter_, &unique_embeddings_ptr,
                                    &updated_unique_embeddings_ptr);
-    SGDUpdateKernel<T, G, IDX>
-        <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            embedding_size, scale, l1, l2, weight_decay,
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
-            updated_unique_embeddings_ptr);
+    int64_t grad_elem_cnt = embedding_grad->shape().elem_cnt();
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_SAVE_NUM_UNIQUE_MATRIX", true)) {
+      embedding::NumUniques* num_uniques =
+          Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
+              ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+      uint32_t num_unique = num_uniques->GetNumUnique(current_iter_);
+      grad_elem_cnt = num_unique * embedding_size;
+    }
+    SGDUpdateKernel<T, G, IDX><<<BlocksNum4ThreadsNum(grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        embedding_size, scale, l1, l2, weight_decay,
+        reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
+        down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
+        updated_unique_embeddings_ptr);
     current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

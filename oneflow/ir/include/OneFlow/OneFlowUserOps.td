@@ -9339,7 +9339,8 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
     OneFlow_Tensor:$cur_rank_inverse_indices
   );
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "1">:$num_tables
+    DefaultValuedAttr<SI32Attr, "1">:$num_tables,
+    StrAttr:$embedding_name
   );
   let same_output_regst_num = 2;
   let has_logical_tensor_desc_infer_fn = 1;

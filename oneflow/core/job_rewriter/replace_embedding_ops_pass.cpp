@@ -376,6 +376,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
         .Output("cur_rank_inverse_indices")
         .Output("num_unique_matrix")
         .Attr<int32_t>("num_tables", num_tables)
+        .Attr<std::string>("embedding_name", embedding_name)
         .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
     if (embedding_op.has_input("table_ids", 0)) {
       id_shuffle_op_builder.Input("table_ids", embedding_op.input("table_ids", 0));

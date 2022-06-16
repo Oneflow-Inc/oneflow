@@ -35,6 +35,15 @@ ValuesPtr* EmbeddingManager::GetValuesPtr(const std::string& embedding_name, int
   return it->second.get();
 }
 
+NumUniques* EmbeddingManager::GetNumUniques(const std::string& embedding_name, int64_t rank_id) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
+  std::unique_lock<std::mutex> lock(mutex_);
+  auto it = num_uniques_map_.find(map_key);
+  CHECK(it != num_uniques_map_.end())
+      << "Can not find embedding: " << embedding_name << "-" << rank_id;
+  return it->second.get();
+}
+
 KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
                                                   int64_t rank_id) {
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
@@ -75,6 +84,10 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   store->ReserveQueryLength(kDefaultMaxQueryLength);
   CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
       << "Can't create an embedding with same name of an existing embedding, the name: " << name;
+
+  CHECK(num_uniques_map_.emplace(map_key, std::make_unique<NumUniques>()).second)
+      << "Can't create an embedding values with same name of an existing embedding, the name: "
+      << name;
   if (UseDynamicMemoryAllocation()) {
 #if CUDA_VERSION >= 11020
     CHECK(values_ptrs_map_.emplace(map_key, std::make_unique<ValuesPtr>()).second)
