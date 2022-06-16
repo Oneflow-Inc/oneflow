@@ -71,7 +71,7 @@ std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
     ranges[i].mut_begin() = 0;
     ranges[i].mut_end() = shape.At(i);
   }
-  if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
+  if (shape.NumAxes() == 0) {
     // NOTE(chengcheng): For Scalar Tensor.
     ranges.emplace_back(0, 1);
   }
@@ -105,7 +105,7 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
     ranges[i].mut_begin() = 0;
     ranges[i].mut_end() = logical_shape.At(i);
   }
-  if (logical_shape.NumAxes() == 0 && logical_shape.elem_cnt() == 1) {
+  if (logical_shape.NumAxes() == 0) {
     // NOTE(chengcheng): For Scalar Tensor.
     ranges.emplace_back(0, 1);
   }

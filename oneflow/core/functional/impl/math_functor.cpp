@@ -1654,7 +1654,7 @@ class SelectFunctor {
     int32_t pos_index = index >= 0 ? index : index + size;
 
     std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
-    const auto& stride = JUST(input->stride())->StrideVec();
+    const auto& stride = *JUST(input->stride());
     std::vector<int32_t> strides(stride.begin(), stride.end());
     auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
 
