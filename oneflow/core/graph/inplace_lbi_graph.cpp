@@ -389,7 +389,7 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstIntraOpRefConflictMutRefEdge(
   const auto* root = GetRoot(nodes, IsValidEdge);
   auto ForEachInNode = GetForEachValidInNode(&nodes, IsValidEdge);
   auto ForEachOutNode = GetForEachValidOutNode(&nodes, IsValidEdge);
-  TopoForEachNodeDynamic({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
+  TopoForEachNode({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
     if (ret != nullptr) { return; }
     if (node->IsMutRef(IsValidEdge) && IsOtherIbnBoundToOneOfLbis(lbis, node->SoleInEdge())) {
       ret = node->SoleInEdge();
@@ -427,7 +427,7 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstConstRefConflictMutRefEdge(
   auto ForEachInNode = GetForEachValidInNode(&nodes, IsValidEdge);
   auto ForEachOutNode = GetForEachValidOutNode(&nodes, IsValidEdge);
   const InplaceLbiEdge* ret = nullptr;
-  TopoForEachNodeDynamic({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
+  TopoForEachNode({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
     if (ret != nullptr) { return; }
     if (node->IsMutRef(IsValidEdge)
         && IsConstRefConflictMutRefNode(node, nodes, IsValidEdge,
@@ -449,7 +449,7 @@ const InplaceLbiEdge* InplaceLbiGraph::FindFirstInterOpRefConflictMutRefEdge(
     const InplaceLbiNode* root = GetRoot(nodes, IsValidEdge);
     auto ForEachInNode = GetForEachValidInNode(&nodes, IsValidEdge);
     auto ForEachOutNode = GetForEachValidOutNode(&nodes, IsValidEdge);
-    TopoForEachNodeDynamic({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
+    TopoForEachNode({root}, ForEachInNode, ForEachOutNode, [&](const InplaceLbiNode* node) {
       if (node->IsMutRef(IsValidEdge)) { mut_ref_nodes.insert(node); }
       size_t in_edges_size_check = 0;
       ForEachInNode(node, [&](const InplaceLbiNode* in_node) {

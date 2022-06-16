@@ -768,13 +768,13 @@ void PlanUtil::GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     };
     HashSet<const PlanTaskNode*> visited;
     std::vector<const PlanTaskNode*> collective_boxing_nodes;
-    plan_task_graph.TopoForEachNodeDynamic(src_nodes, ForEachNodeOnInEdge, ForEachNodeOnOutEdge,
-                                           [&](const PlanTaskNode* node) {
-                                             visited.insert(node);
-                                             if (IsCollectiveBoxingNode(node)) {
-                                               collective_boxing_nodes.emplace_back(node);
-                                             }
-                                           });
+    plan_task_graph.TopoForEachNode(src_nodes, ForEachNodeOnInEdge, ForEachNodeOnOutEdge,
+                                    [&](const PlanTaskNode* node) {
+                                      visited.insert(node);
+                                      if (IsCollectiveBoxingNode(node)) {
+                                        collective_boxing_nodes.emplace_back(node);
+                                      }
+                                    });
     if (collective_boxing_nodes.empty()) { break; }
     HashMap<std::string, CollectiveBoxingRequestInfo> name2request_info;
     for (const PlanTaskNode* node : collective_boxing_nodes) {

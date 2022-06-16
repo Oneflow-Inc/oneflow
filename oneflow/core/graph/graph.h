@@ -59,9 +59,13 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
       const std::function<void(NodeType*)>& Handler) const;
 
-  // Another reason to keep TopoForEachNodeDynamic is that we can start from a subset of source
-  // nodes.
   void TopoForEachNodeDynamic(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<void(NodeType*)>& Handler) const;
+
+  void TopoForEachNode(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
@@ -73,6 +77,12 @@ class Graph {
       const std::function<void(NodeType*)>& Handler) const;
 
   Maybe<void> TopoForEachNodeDynamicWithErrorCaptured(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<Maybe<void>(NodeType*)>& Handler) const;
+
+  Maybe<void> TopoForEachNodeWithErrorCaptured(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
@@ -542,6 +552,19 @@ void Graph<NodeType, EdgeType>::TopoForEachNodeDynamic(
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::TopoForEachNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+    const std::function<void(NodeType*)>& Handler) const {
+  CHECK_JUST(
+      TopoForEachNodeWithErrorCaptured(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
+        Handler(node);
+        return Maybe<void>::Ok();
+      }));
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::TopoForEachNode(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
     const std::function<void(NodeType*)>& Handler) const {
@@ -577,6 +600,39 @@ Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeDynamicWithErrorCaptured(
         queue.push(out);
         has_queued[out] = true;
       }
+    });
+  }
+  return Maybe<void>::Ok();
+}
+
+template<typename NodeType, typename EdgeType>
+Maybe<void> Graph<NodeType, EdgeType>::TopoForEachNodeWithErrorCaptured(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+    const std::function<Maybe<void>(NodeType*)>& Handler) const {
+  HashMap<NodeType*, int32_t> counter_in;
+  std::queue<NodeType*> queue;
+  for (NodeType* start : starts) {
+    queue.push(start);
+    counter_in[start] = 0;
+    ForEachInNode(start, [&](NodeType*) { LOG(FATAL) << "not a source"; });
+  }
+  while (!queue.empty()) {
+    NodeType* cur_node = queue.front();
+    queue.pop();
+    JUST(Handler(cur_node));
+    ForEachOutNode(cur_node, [&](NodeType* out) {
+      auto it = counter_in.find(out);
+      // Move the initialization here
+      if (it == counter_in.end()) {
+        int32_t count = 0;
+        ForEachInNode(out, [&](NodeType* out_in) { count++; });
+        counter_in[out] = count;
+        it = counter_in.find(out);
+      }
+      it->second--;
+      if (it->second == 0) { queue.push(out); }
     });
   }
   return Maybe<void>::Ok();

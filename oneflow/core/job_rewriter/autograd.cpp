@@ -909,8 +909,8 @@ Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_b
   HashMap<OpBlobArg, LogicalBlobId> in_oba2in_diff_lbi;
   HashMap<OpBlobArg, LogicalBlobId> out_oba2clone_bw_add_out_lbi;
   std::list<OpNode*> topo_nodes;
-  op_graph.TopoForEachNodeDynamic(loss_nodes, ForEachOutNode, ForEachInNode,
-                                  [&](OpNode* op_node) { topo_nodes.emplace_back(op_node); });
+  op_graph.TopoForEachNode(loss_nodes, ForEachOutNode, ForEachInNode,
+                           [&](OpNode* op_node) { topo_nodes.emplace_back(op_node); });
   for (OpNode* op_node : topo_nodes) {
     const auto& op_name = op_node->op().op_name();
     auto DiffLbi4BnInOp = [&](const std::string& bn) -> LogicalBlobId* {
