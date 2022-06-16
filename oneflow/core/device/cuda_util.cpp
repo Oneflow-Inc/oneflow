@@ -51,8 +51,8 @@ const char* CublasGetErrorString(cublasStatus_t error) {
 #if CUDA_VERSION >= 6050
     case CUBLAS_STATUS_LICENSE_ERROR: return "CUBLAS_STATUS_LICENSE_ERROR";
 #endif
+    default: return "Unknown cublas status";
   }
-  return "Unknown cublas status";
 }
 
 const char* CurandGetErrorString(curandStatus_t error) {
@@ -70,8 +70,8 @@ const char* CurandGetErrorString(curandStatus_t error) {
     case CURAND_STATUS_INITIALIZATION_FAILED: return "CURAND_STATUS_INITIALIZATION_FAILED";
     case CURAND_STATUS_ARCH_MISMATCH: return "CURAND_STATUS_ARCH_MISMATCH";
     case CURAND_STATUS_INTERNAL_ERROR: return "CURAND_STATUS_INTERNAL_ERROR";
+    default: return "Unknown curand status";
   }
-  return "Unknown curand status";
 }
 
 #if CUDA_VERSION >= 10020
@@ -89,8 +89,8 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error) {
     case NVJPEG_STATUS_INTERNAL_ERROR: return "NVJPEG_STATUS_INTERNAL_ERROR";
     case NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED:
       return "NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED";
+    default: return "Unknown nvjpeg status";
   }
-  return "Unknown nvjpeg status";
 }
 
 #endif
