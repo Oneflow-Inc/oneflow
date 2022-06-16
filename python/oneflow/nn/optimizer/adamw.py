@@ -231,7 +231,7 @@ class AdamW(Optimizer):
     def _generate_conf_for_graph(self, train_conf, vars_conf):
         new_opt_confs = []
         for param_group in self.param_groups:
-            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+            optimizer_conf = train_conf.optimizer_conf.add()
             lr = (
                 param_group["initial_lr"]
                 if "initial_lr" in param_group
@@ -244,25 +244,21 @@ class AdamW(Optimizer):
             do_bias_correction = param_group["do_bias_correction"]
             amsgrad = param_group["amsgrad"]
 
-            optimizer_conf.set_base_learning_rate(lr)
+            optimizer_conf.base_learning_rate = lr
 
-            optimizer_conf.mutable_adam_conf().set_beta1(beta1)
-            optimizer_conf.mutable_adam_conf().set_beta2(beta2)
-            optimizer_conf.mutable_adam_conf().set_epsilon(epsilon)
-            optimizer_conf.mutable_adam_conf().set_do_bias_correction(
-                do_bias_correction
-            )
-            optimizer_conf.mutable_adam_conf().set_amsgrad(amsgrad)
+            optimizer_conf.adam_conf.beta1 = beta1
+            optimizer_conf.adam_conf.beta2 = beta2
+            optimizer_conf.adam_conf.epsilon = epsilon
+            optimizer_conf.adam_conf.do_bias_correction = do_bias_correction
+            optimizer_conf.adam_conf.amsgrad = amsgrad
 
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
-                weight_decay
-            )
+            optimizer_conf.weight_decay_conf.weight_decay_rate = weight_decay
 
             self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
 
             for param in param_group.parameters:
                 if param.requires_grad:
-                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+                    optimizer_conf.variable_op_names.append(vars_conf[param].name)
 
             new_opt_confs.append(optimizer_conf)
         return new_opt_confs

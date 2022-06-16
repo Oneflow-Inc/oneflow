@@ -1,7 +1,7 @@
 black==19.10b0; python_version >= "3.6"
 click==8.0.0; python_version >= "3.6" # https://github.com/psf/black/issues/2964
 numpy>=1.17.0
-protobuf
+protobuf>=3.9.2, <4.0
 wheel
 tqdm
 requests

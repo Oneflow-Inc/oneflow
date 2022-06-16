@@ -141,6 +141,7 @@ class GpuCumSumKernel final : public GpuCumKernel<T, BinaryFuncAdd> {
       (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_CUMSUM_KERNEL(int32_t)
 REGISTER_CUDA_CUMSUM_KERNEL(int64_t)
 REGISTER_CUDA_CUMSUM_KERNEL(float)
 REGISTER_CUDA_CUMSUM_KERNEL(double)
@@ -158,6 +159,7 @@ class GpuCumProdKernel final : public GpuCumKernel<T, BinaryFuncMul> {
       (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_CUMPROD_KERNEL(int32_t)
 REGISTER_CUDA_CUMPROD_KERNEL(int64_t)
 REGISTER_CUDA_CUMPROD_KERNEL(float)
 REGISTER_CUDA_CUMPROD_KERNEL(double)

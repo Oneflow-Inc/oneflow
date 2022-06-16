@@ -29,8 +29,8 @@ struct TanhCaptureState : public AutoGradCaptureState {
 class TanhGrad : public OpExprGradFunction<TanhCaptureState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
-  Maybe<void> Capture(TanhCaptureState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+  Maybe<void> Capture(TanhCaptureState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override {
     ctx->x_requires_grad = inputs.at(0)->requires_grad();
     ctx->SaveTensorForBackward(outputs.at(0));
     return Maybe<void>::Ok();
@@ -40,9 +40,8 @@ class TanhGrad : public OpExprGradFunction<TanhCaptureState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     const auto& y = ctx->SavedTensors().at(0);
-    const auto& a = functional::Mul(y, y);
-    const auto& aa = functional::ScalarSub(1, JUST(a));
-    in_grads->at(0) = JUST(functional::Mul(out_grads.at(0), JUST(aa)));
+    in_grads->at(0) = JUST(functional::Mul(
+        out_grads.at(0), JUST(functional::ScalarSub(1, JUST(functional::Mul(y, y)), 1))));
     return Maybe<void>::Ok();
   }
 };

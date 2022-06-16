@@ -24,6 +24,7 @@ namespace oneflow {
 
 namespace {
 
+// NOLINTBEGIN(maybe-need-error-msg)
 Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                   const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->placement()->parallel_num(), 1);
@@ -32,6 +33,7 @@ Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   CHECK_OR_RETURN(in->placement() != out->placement());
   return Maybe<void>::Ok();
 }
+// NOLINTEND(maybe-need-error-msg)
 
 static constexpr auto* CheckNaiveOneToOne =
     DECORATE(&RawCheckNaiveOneToOne, ThreadLocalCachedCopiable);
@@ -41,9 +43,14 @@ static constexpr auto* CheckNaiveOneToOne =
 Maybe<one::Tensor> NaiveOneToOne(const std::shared_ptr<one::Tensor>& tensor, Symbol<PlacedNdSbp> in,
                                  Symbol<PlacedNdSbp> out) {
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in->placement());
+  CHECK_OR_RETURN(tensor_placement == in->placement())
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in->placement())) << ")";
 
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   int64_t src = JUST(tensor_placement->MachineId4ParallelId(0));

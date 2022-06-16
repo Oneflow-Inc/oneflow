@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -141,25 +141,27 @@ Maybe<void> RegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
-                                      const Optional<Symbol<Device>>& device, bool requires_grad);
+                                      const Optional<Symbol<Device>>& device,
+                                      const bool requires_grad, const bool pin_memory);
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
                                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                           bool requires_grad);
+                                           const bool requires_grad);
 
-Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
+Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
+                                        const bool pin_memory);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Optional<Symbol<Device>>& device,
-                                        const bool& requires_grad);
+                                        const bool requires_grad, const bool pin_memory);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Symbol<ParallelDesc>& placement,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                        const bool& requires_grad);
+                                        const bool requires_grad);
 
 }  // namespace one
 }  // namespace oneflow

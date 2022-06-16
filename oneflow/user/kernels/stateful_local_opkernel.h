@@ -58,6 +58,8 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
     return mut_eager_blob_object_()->mut_shape().ToMutShapeView();
   }
 
+  const Stride& stride() const override { return mut_eager_blob_object_()->stride(); }
+
   DataType data_type() const override { return mut_eager_blob_object_()->data_type(); }
 
   const MemoryCase& mem_case() const override { return mut_eager_blob_object_()->mem_case(); }
@@ -78,6 +80,10 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
   const Shape& shape() const override { return mut_eager_blob_object_()->shape(); }
 
   Shape* mut_shape() override { return &mut_eager_blob_object_()->mut_shape(); }
+
+  const Stride& stride() const override { return mut_eager_blob_object_()->stride(); }
+
+  Stride* mut_stride() override { return &mut_eager_blob_object_()->mut_stride(); }
 
   DataType data_type() const override { return mut_eager_blob_object_()->data_type(); }
 
@@ -105,6 +111,10 @@ class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
     UNIMPLEMENTED();
     return nullptr;
   }
+
+  const Stride& stride() const override { return consistent_tensor_meta_()->stride(); }
+
+  Stride* mut_stride() override { UNIMPLEMENTED(); }
 
   DataType data_type() const override { return consistent_tensor_meta_()->data_type(); }
 
@@ -230,6 +240,15 @@ class LocalUserOpInferContext : public user_op::InferContext {
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  }
+  const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<LocalUserOpInferContext*>(this)->Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
+    return Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
   }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return *const_cast<LocalUserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);

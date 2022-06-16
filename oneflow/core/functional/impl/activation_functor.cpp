@@ -226,9 +226,7 @@ class GluFunctor {
     const auto ndim = input->ndim();
     CHECK_GT_OR_RETURN(ndim, 0) << Error::RuntimeError()
                                 << "glu does not support scalars because halving size must be even";
-    CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-        << ", " << ndim - 1 << "], but got " << dim << ")";
+    dim = JUST(maybe_wrap_dim(dim, ndim));
     if (dim < 0) { dim += ndim; }
     int64_t nc = input->dim(dim);
     CHECK_EQ_OR_RETURN(nc % 2, 0) << Error::RuntimeError()
@@ -285,9 +283,9 @@ class HardShrinkFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
@@ -332,10 +330,7 @@ class SoftmaxFunctorBase {
     int64_t dim_ = dim ? JUST(dim) : get_dim();
     if (dim_ < 0) { dim_ += num_axes; }
 
-    CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
-        << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-        << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
-
+    dim_ = JUST(maybe_wrap_dim(dim_, num_axes));
     if (dim_ != num_axes - 1) {
       std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
       for (size_t i = 1; i < input_perm.size(); ++i) { input_perm[i] = i; }
@@ -415,9 +410,9 @@ class LeakyReluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
@@ -544,9 +539,9 @@ class SoftShrinkFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(oneflow::VectorAt(*outputs, 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+      return JUST(oneflow::VectorAt(*outputs, 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }

@@ -120,6 +120,9 @@ Maybe<std::vector<detail::Slice>> RemoveExpandDimSlice(
 Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
                                     const TensorTuple& indices);
 
+Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
+                                  const TensorIndex& index);
+
 Maybe<void> UnifyLocalTensorAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
                                                TensorTuple& tensor_indices);
 

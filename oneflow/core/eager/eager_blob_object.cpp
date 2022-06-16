@@ -24,19 +24,22 @@ namespace oneflow {
 namespace vm {
 
 EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                                 const std::shared_ptr<Shape>& shape, DataType data_type,
+                                 const std::shared_ptr<Shape>& shape,
+                                 const std::shared_ptr<Stride>& stride, DataType data_type,
                                  const std::shared_ptr<TensorStorage>& tensor_storage,
                                  const intrusive::shared_ptr<LocalDepObject>& dep_object)
     : is_dynamic_(false),
       mem_case_(mem_case),
       data_type_(data_type),
       shape_(shape),
+      stride_(stride),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
       is_shape_synced_(true),
       compute_local_dep_object_(dep_object),
-      blob_desc_(shape, data_type) {
+      blob_desc_(shape, stride, data_type) {
   CHECK(static_cast<bool>(shape));
+  CHECK(static_cast<bool>(stride));
   CHECK(static_cast<bool>(tensor_storage));
 }
 

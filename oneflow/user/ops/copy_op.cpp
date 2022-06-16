@@ -24,11 +24,11 @@ namespace {
 
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
                                      const Symbol<Device>& out_device) {
-  if (in_device->type() == "cuda" && out_device->type() == "cpu") {
-    const auto device = JUST(Device::New("cuda", in_device->device_id()));
+  if (in_device->type() != "cpu" && out_device->type() == "cpu") {
+    const auto device = JUST(Device::New(in_device->type(), in_device->device_id()));
     return Stream::New(device, StreamRole::kDevice2Host);
-  } else if (in_device->type() == "cpu" && out_device->type() == "cuda") {
-    const auto device = JUST(Device::New("cuda", out_device->device_id()));
+  } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
+    const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
     return Stream::New(device, StreamRole::kHost2Device);
   } else {
     CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());
@@ -41,6 +41,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
 
 /* static */ Maybe<void> CopyOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputStride("out", 0) = ctx->InputStride("in", 0);
   *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
   return Maybe<void>::Ok();
 }

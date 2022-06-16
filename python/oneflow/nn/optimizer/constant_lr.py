@@ -70,6 +70,7 @@ class ConstantLR(LRScheduler):
         return base_lr
 
     def _generate_conf_for_graph(self, lr_conf):
-        constant_lr_conf = lr_conf.mutable_constant_lr_conf()
-        constant_lr_conf.set_factor(self.factor)
-        constant_lr_conf.set_total_iters(self.total_iters)
+        lr_conf.constant_lr_conf.SetInParent()
+        constant_lr_conf = lr_conf.constant_lr_conf
+        constant_lr_conf.factor = self.factor
+        constant_lr_conf.total_iters = self.total_iters

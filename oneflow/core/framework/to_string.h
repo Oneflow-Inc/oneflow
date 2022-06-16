@@ -33,7 +33,7 @@ inline std::string ToString(const DataType& data_type) {
 
 template<>
 inline std::string ToString(const DeviceType& device_type) {
-  return *CHECK_JUST(DeviceTag4DeviceType(device_type));
+  return DeviceType_Name(device_type);
 }
 
 template<>

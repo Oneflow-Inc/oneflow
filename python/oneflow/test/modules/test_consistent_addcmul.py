@@ -22,7 +22,7 @@ import oneflow.unittest
 
 @autotest(n=1, check_graph=False)
 def _test_addcmul(test_case, ndim, placement, sbp):
-    shape = [random(low=2, high=4) * 8 for i in range(ndim)]
+    shape = [random(low=2, high=3) * 8 for i in range(ndim)]
 
     input = random_tensor(ndim, *shape).to_global(placement=placement, sbp=sbp)
     tensor1 = random_tensor(len(shape), *shape).to_global(placement=placement, sbp=sbp)
@@ -35,7 +35,7 @@ def _test_addcmul(test_case, ndim, placement, sbp):
 class TestModule(flow.unittest.TestCase):
     @globaltest
     def test_addcmul(test_case):
-        ndim = random(low=2).to(int).value()
+        ndim = random(low=2, high=5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 _test_addcmul(test_case, ndim, placement, sbp)

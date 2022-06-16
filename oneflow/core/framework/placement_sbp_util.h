@@ -21,19 +21,14 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 
 class Shape;
+class Stride;
 class ParallelDesc;
 class PlacedNdSbp;
-
-namespace cfg {
-
-class NdSbp;
-
-}
 
 namespace one {
 

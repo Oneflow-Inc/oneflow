@@ -30,60 +30,9 @@ void to_json(json& j, const std::shared_ptr<::oneflow::profiler::IEvent>& event)
 }
 
 }  // namespace nlohmann
-
 namespace oneflow {
 
 namespace profiler {
-
-nlohmann::json IEvent::ToJson() {
-  return json{{"name", name_}, {"cpu_time", GetDuration() / 1000}, {"input_shapes", "-"}};
-}
-void IEvent::Start() { started_at_ = GetTimeNow(); }
-void IEvent::Finish() { finished_at_ = GetTimeNow(); }
-const std::string& IEvent::GetName() const { return name_; }
-time_t IEvent::GetDuration() { return finished_at_ - started_at_; }
-
-std::shared_ptr<IEvent> IEvent::Create(EventType type, const std::string& name) {
-  if (type == EventType::kCustom) { return std::make_shared<CustomEvent>(name); }
-  if (type == EventType::kKernel) { return std::make_shared<KernelEvent>(name); }
-  return nullptr;
-}
-
-nlohmann::json KernelEvent::ToJson() {
-  auto j = IEvent::ToJson();
-  j["type"] = EventType::kKernel;
-  j["input_shapes"] = FormatShapes();
-  return j;
-}
-
-std::string KernelEvent::Key() { return name_ + "." + FormatShapes(); }
-
-std::string KernelEvent::FormatShapes(size_t max_num_to_format) {
-  if (input_shapes_.size() == 0) { return "-"; }
-  std::string result("[");
-  for (size_t i = 0; i < std::min(input_shapes_.size(), max_num_to_format); ++i) {
-    if (i != 0) { result += ", "; }
-    const std::string current_shape = input_shapes_[i].ToString();
-    if (current_shape == "()") {
-      result += "scalar";
-    } else {
-      result += current_shape;
-    }
-  }
-  if (input_shapes_.size() > max_num_to_format) { result += ", ..."; }
-  result += "]";
-  return result;
-}
-
-void KernelEvent::RecordShape(const Shape& shape) { input_shapes_.emplace_back(shape); }
-
-nlohmann::json CustomEvent::ToJson() {
-  auto j = IEvent::ToJson();
-  j["type"] = EventType::kKernel;
-  return j;
-}
-
-std::string CustomEvent::Key() { return name_; }
 
 std::string ProfileMgr::RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,
                                               const std::string& name) {
@@ -122,17 +71,36 @@ std::string ProfileMgr::GetNextEventRecorderKey(const std::string& name) {
 }
 
 std::shared_ptr<EventRecorder> EventRecorder::CreateCustomEventRecorder(const std::string& name) {
-  return std::make_shared<EventRecorder>(IEvent::Create(EventType::kCustom, name));
+  return std::make_shared<EventRecorder>(CustomEvent::Create(name));
 }
 
-std::shared_ptr<EventRecorder> EventRecorder::CreateKernelEventRecorder(
-    const std::string& name, const ShapeGetterFuncType& shape_getter) {
-  auto event = IEvent::Create(EventType::kKernel, name);
-  auto kernel_event = std::dynamic_pointer_cast<KernelEvent>(event);
-  if (shape_getter) {
-    for (const auto& x : shape_getter()) { kernel_event->RecordShape(x); }
+Maybe<EventRecorder> EventRecorder::CreateKernelEventRecorder(
+    const std::string& name,
+#if defined(WITH_CUDA)
+    cudaStream_t cuda_stream, const std::function<int64_t()>& memory_size_getter,
+#endif
+    const ShapeGetterFuncType& shape_getter) {
+  auto pmgr = Global<ProfileMgr>::Get();
+  if (pmgr) {
+#if defined(WITH_CUDA)
+    if ((pmgr->use_cpu_ && (!cuda_stream)) || (pmgr->use_cuda_ && cuda_stream)) {
+      auto event = KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr);
+      if (pmgr->use_cuda_ && cuda_stream) {
+        event->InitCudaEventPair(cuda_stream);
+        if (pmgr->record_bandwidth_) { event->SetMemorySize(memory_size_getter()); }
+      }
+      return std::make_shared<EventRecorder>(event);
+    }
+#else  // WITH_CUDA
+    if (pmgr->use_cpu_) {
+      return std::make_shared<EventRecorder>(
+          KernelEvent::Create(name, pmgr->record_shapes_ ? shape_getter : nullptr));
+    }
+#endif  // WITH_CUDA
   }
-  return std::make_shared<EventRecorder>(event);
+
+  std::shared_ptr<EventRecorder> null_recorder;
+  return null_recorder;
 }
 
 }  // namespace profiler

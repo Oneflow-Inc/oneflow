@@ -15,17 +15,17 @@ limitations under the License.
 """
 import json
 import copy
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Optional
 from collections import OrderedDict
 from prettytable import PrettyTable
 from oneflow.profiler.util import format_time
 
 
-def format_event_type(event_type):
+def format_event_type(event_type, on_gpu: bool):
     if event_type == 0:
         return "custom"
     if event_type == 1:
-        return "kernel"
+        return "kernel" + ("@gpu" if on_gpu else "@cpu")
     raise ValueError(f"Undefined event type {event_type}.")
 
 
@@ -33,31 +33,64 @@ class Event:
     def __init__(
         self,
         name: str,
-        cpu_time: int,
-        cpu_time_total: int,
+        cpu_time: float,
+        gpu_time: Optional[float],
+        bandwidth: Optional[int],
         count: int,
         input_shapes: str,
         event_type: int,
     ) -> None:
         self.name = name
         self.cpu_time = cpu_time
-        self.cpu_time_total = cpu_time_total
+        self.cpu_time_total = cpu_time * count
+
+        self.gpu_time = gpu_time
+        self.gpu_time_total = gpu_time * count if self.on_gpu else None
+        self.bandwidth = bandwidth
+        self.bandwidth_total = bandwidth * count if self.bandwidth_is_recorded else None
+
         self.count = count
         self.input_shapes = input_shapes
         self.event_type = event_type
+        if self.event_type == 0:
+            assert not self.on_gpu, "custom events are only supported on CPU."
+
+    @property
+    def on_gpu(self) -> bool:
+        return self.gpu_time is not None
+
+    @property
+    def bandwidth_is_recorded(self) -> bool:
+        return self.on_gpu and self.bandwidth is not None
 
     def update(self, event):
-        self.cpu_time_total += event.cpu_time
+        assert self.event_type == event.event_type
+        assert self.on_gpu == event.on_gpu
+
         self.count += 1
+        self.cpu_time_total += event.cpu_time
         self.cpu_time = self.cpu_time_total / self.count
+        if self.on_gpu:
+            self.gpu_time_total += event.gpu_time
+            self.gpu_time = self.gpu_time_total / self.count
+            if self.bandwidth_is_recorded:
+                self.bandwidth_total += event.bandwidth
+                self.bandwidth = self.bandwidth_total / self.count
 
     def __eq__(self, other):
         if not isinstance(other, type(self)):
             return NotImplemented
+
         return (
             self.name == other.name
+            and self.on_gpu == other.on_gpu
+            and self.bandwidth_is_recorded == other.bandwidth_is_recorded
             and self.cpu_time == other.cpu_time
             and self.cpu_time_total == other.cpu_time_total
+            and self.gpu_time == other.gpu_time
+            and self.gpu_time_total == other.gpu_time_total
+            and self.bandwidth == other.bandwidth
+            and self.bandwidth_total == other.bandwidth_total
             and self.count == other.count
             and self.input_shapes == other.input_shapes
             and self.event_type == other.event_type
@@ -66,7 +99,13 @@ class Event:
     @classmethod
     def from_dict(cls, d: dict):
         return cls(
-            d["name"], d["cpu_time"], d["cpu_time"], 1, d["input_shapes"], d["type"]
+            d.get("name"),
+            d.get("cpu_time"),
+            d.get("gpu_time"),
+            d.get("bandwidth"),
+            1,
+            d.get("input_shapes"),
+            d.get("type"),
         )
 
 
@@ -104,8 +143,11 @@ class Events(list):
         t = PrettyTable()
         t.field_names = [
             "Name",
-            "Cpu time total",
-            "Cpu time",
+            "CPU time total",
+            "CPU time",
+            "GPU time total",
+            "GPU time",
+            "Bandwidth",
             "Number of calls",
             "Event type",
             "Shapes of inputs",
@@ -115,9 +157,12 @@ class Events(list):
                 [
                     item.name,
                     format_time(item.cpu_time_total),
-                    format_time(item.cpu_time_total),
+                    format_time(item.cpu_time),
+                    format_time(item.gpu_time_total) if item.on_gpu else "-",
+                    format_time(item.gpu_time) if item.on_gpu else "-",
+                    f"{item.bandwidth:.3f}GB/s" if item.bandwidth_is_recorded else "-",
                     item.count,
-                    format_event_type(item.event_type),
+                    format_event_type(item.event_type, item.on_gpu),
                     item.input_shapes,
                 ]
             )
