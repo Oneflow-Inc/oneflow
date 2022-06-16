@@ -22,54 +22,6 @@ namespace oneflow {
 
 namespace {
 
-void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, bool transpose_a,
-    bool transpose_b, size_t* m, size_t* n, size_t* k) {
-  const int64_t num_a_axes = a_shape.NumAxes();
-  CHECK_GE(num_a_axes, 2);
-  const int64_t num_b_axes = b_shape.NumAxes();
-  CHECK_GE(num_b_axes, 2);
-  if (!transpose_a) {
-  *m = a_shape.At(num_a_axes - 2);
-  *k = a_shape.At(num_a_axes - 1);
-  } else {
-  *m = a_shape.At(num_a_axes - 1);
-  *k = a_shape.At(num_a_axes - 2);
-  }
-  if (!transpose_b) {
-  CHECK_EQ(b_shape.At(num_b_axes - 2), *k);
-  *n = b_shape.At(num_b_axes - 1);
-  } else {
-  CHECK_EQ(b_shape.At(num_b_axes - 1), *k);
-  *n = b_shape.At(num_b_axes - 2);
-  }
-}
-
-ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
-  return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;
-}
-
-std::unique_ptr<ep::primitive::Matmul> NewMatmulGradPrimitive(DeviceType device_type,
-                                                          DataType data_type, bool transpose_a,
-                                                          bool transpose_b) {
-  const auto trans_a = GetBlasTransposeType(transpose_a);
-  const auto trans_b = GetBlasTransposeType(transpose_b);
-  return ep::primitive::NewPrimitive<ep::primitive::MatmulFactory>(device_type, data_type, trans_a,
-                                                                    trans_b);
-}
-
-template<typename Context>
-std::unique_ptr<ep::primitive::Matmul> NewMatmulGradPrimitive(Context* ctx) {
-  const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("hidden", 0)->data_type();
-  return NewMatmulGradPrimitive(ctx->device_type(), data_type, /*transpose_a=*/true,
-                            /*transpose_b=*/false);
-}
-
-auto MatmulGradPrimitiveExists() {
-  return hob::make_custom("MatmulGradPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-    return NewMatmulGradPrimitive(&ctx).operator bool();
-  });
-}
-
 class MatmulGradKernelState final : public user_op::OpKernelState {
 public:
   MatmulGradKernelState(){
@@ -162,17 +114,6 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                        matmul_grad_cache->cublas_c_desc, d_grad->mut_dptr(),
                        matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-
-    // compute dw
-    // size_t m = 0, n = 0, k = 0;
-    // InferMatmulMNK(dy->shape(), hidden->shape(), /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
-    // const double grad_alpha = 1.0;
-    // double grad_beta = 0.0;
-    // auto matmul = NewMatmulGradPrimitive(ctx);
-    // CHECK(matmul);
-    // matmul->Launch(ctx->stream(), m, n, k, grad_alpha, dy->dptr(), hidden->dptr(), grad_beta,
-    //                d_weight->mut_dptr());
-    
 
     alpha = 1.0;
     sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
