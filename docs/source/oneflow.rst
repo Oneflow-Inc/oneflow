@@ -197,7 +197,8 @@ oneflow
             set_rng_state,
             isnan,
             isinf,
-            searchsorted
+            searchsorted,
+            random_straighten_nodes
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads
