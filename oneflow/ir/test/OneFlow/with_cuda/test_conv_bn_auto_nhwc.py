@@ -34,7 +34,7 @@ def _test_fuse_conv_bn(test_case, with_cuda):
     if with_cuda:
         data = data.to("cuda")
 
-    model = resnet50(pretrained=True, progress=True)
+    model = resnet50(pretrained=False, progress=True)
     if with_cuda:
         model.to("cuda")
     model.eval()
@@ -52,7 +52,7 @@ def _test_fuse_conv_bn(test_case, with_cuda):
     lazy_res = graph(data)
 
     test_case.assertTrue(
-        np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-5, atol=1e-5)
+        np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-4, atol=1e-4)
     )
 
 
