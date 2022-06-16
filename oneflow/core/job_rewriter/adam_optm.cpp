@@ -117,11 +117,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
   } else {
     UNIMPLEMENTED();
   }
-  if(do_bias_correction){
-    printf("here adam optm is do bias correct \n"); 
-  } else {
-    printf("here adam optm no do bias correct \n"); 
-  }
   OperatorConf m_var(GenerateAdamHelperVariableOpConf(*var_op, "m", 0.f));
   OperatorConf v_var(GenerateAdamHelperVariableOpConf(*var_op, "v", 0.f));
   OperatorConf max_v_var{};
@@ -148,11 +143,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
         .Attr<bool>("amsgrad", amsgrad)
         .Attr<bool>("do_bias_correction", do_bias_correction)
         .ScopeSymbolId(var_op->op_conf().scope_symbol_id());
-  if(do_bias_correction){
-    printf("here adam_update_op_builder is do bias correct \n"); 
-  } else {
-    printf("here adam_update_op_builder no do bias correct \n"); 
-  }
   if (do_bias_correction) {
     const std::string& job_pass_state_key = "adam_bias_correction_factor";
     const bool has_state = CHECK_JUST(ctx->HasState<BiasCorrectionFactorState>(job_pass_state_key));
@@ -194,10 +184,6 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                       AddAdamBiasCorrectionFactorOp);
     adam_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
         .Input("bias_correction2", bias_correction2_lbn); 
-    printf("Here has bias_correction1 lbn \n"); 
-    std::cout<<"bias_correction1 lbn is: "<<bias_correction1_lbn<<std::endl; 
-    std::cout<<"bias_correction2 lbn is: "<<bias_correction2_lbn<<std::endl; 
-
   } 
   if (amsgrad) { adam_update_op_builder.Input("max_v", GenVariableOutputLbn(max_v_var)); }
 
