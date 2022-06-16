@@ -31,13 +31,15 @@ namespace profiler {
 
 enum class EventType { kCustom, kOneflowKernel };
 enum class CustomEventType { kDefault, kCudaKernel, kCudaRuntime };
+enum class EventTimeUnit { kNS, kUS };
 
 class IEvent {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IEvent);
 
   IEvent() = delete;
-  explicit IEvent(const std::string& name) : name_(name) {}
+  explicit IEvent(const std::string& name, EventTimeUnit time_unit)
+      : name_(name), time_unit_(time_unit) {}
 
   virtual std::string Key() = 0;
   virtual nlohmann::json ToJson();
@@ -47,16 +49,62 @@ class IEvent {
   virtual void FinishedAt(time_t t);
   virtual void Start();
   virtual void Finish();
-  bool IsChildOf(const std::shared_ptr<IEvent>& e);
+  bool IsChildOf(const IEvent* e);
 
   const std::string& GetName() const;
-  time_t GetDuration();
+  template<typename T>
+  const T GetDuration(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
+  template<typename T>
+  const T StartedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
+  template<typename T>
+  const T FinishedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
 
  protected:
   std::string name_;
+  EventTimeUnit time_unit_;
   time_t started_at_ = 0;
   time_t finished_at_ = 0;
 };
+
+inline double ConvertTime(double time_, EventTimeUnit src_time_unit, EventTimeUnit dst_time_unit) {
+  if (src_time_unit == EventTimeUnit::kNS && dst_time_unit == EventTimeUnit::kUS) {
+    return time_ / 1000;
+  }
+  if (src_time_unit == EventTimeUnit::kUS && dst_time_unit == EventTimeUnit::kNS) {
+    return time_ * 1000;
+  }
+  return time_;
+}
+
+template<>
+const inline double IEvent::StartedAt<double>(EventTimeUnit time_unit) const {
+  return ConvertTime(started_at_, time_unit_, time_unit);
+}
+
+template<>
+const inline time_t IEvent::StartedAt<time_t>(EventTimeUnit time_unit) const {
+  return static_cast<time_t>(StartedAt<double>(time_unit));
+}
+
+template<>
+const inline double IEvent::FinishedAt<double>(EventTimeUnit time_unit) const {
+  return ConvertTime(finished_at_, time_unit_, time_unit);
+}
+
+template<>
+const inline time_t IEvent::FinishedAt<time_t>(EventTimeUnit time_unit) const {
+  return static_cast<time_t>(FinishedAt<double>(time_unit));
+}
+
+template<>
+const inline double IEvent::GetDuration<double>(EventTimeUnit time_unit) const {
+  return FinishedAt<double>(time_unit) - StartedAt<double>(time_unit);
+}
+
+template<>
+const inline time_t IEvent::GetDuration<time_t>(EventTimeUnit time_unit) const {
+  return static_cast<time_t>(GetDuration<double>(time_unit));
+}
 
 class CustomEvent final : public IEvent {
  public:
@@ -70,7 +118,9 @@ class CustomEvent final : public IEvent {
  private:
   CustomEventType type_;
   explicit CustomEvent(const std::string& custom_name, CustomEventType type)
-      : IEvent(custom_name), type_(type) {}
+      : IEvent(custom_name,
+               type == CustomEventType::kDefault ? EventTimeUnit::kNS : EventTimeUnit::kUS),
+        type_(type) {}
 };
 
 class KernelEvent final : public IEvent {
@@ -86,7 +136,15 @@ class KernelEvent final : public IEvent {
 
 #if defined(WITH_CUDA)
   void SetMemorySize(int64_t memory_size) { memory_size_ = memory_size; }
-  void AddChild(const std::shared_ptr<IEvent>& e) { children_.emplace_back(e); }
+  void AddChildEvent(const std::shared_ptr<IEvent>& e) { children_.emplace(e); }
+  bool AddChildEventIfSo(const std::shared_ptr<IEvent>& e) {
+    if (e->IsChildOf(dynamic_cast<IEvent*>(this))) {
+      children_.emplace(e);
+      return true;
+    }
+    return false;
+  }
+  bool HasChildEvent(const std::shared_ptr<IEvent>& e) { return children_.count(e); }
   void WalkAmongChildren(const std::function<void(const std::shared_ptr<IEvent>& e)>& f) const {
     for (const auto& x : children_) { f(x); }
   }
@@ -95,13 +153,13 @@ class KernelEvent final : public IEvent {
  private:
   explicit KernelEvent(const std::string& kernel_name,
                        const std::function<std::vector<Shape>(void)>& shape_getter)
-      : IEvent(kernel_name) {
+      : IEvent(kernel_name, EventTimeUnit::kNS) {
     if (shape_getter) { input_shapes_ = shape_getter(); }
   }
 
 #if defined(WITH_CUDA)
   int64_t memory_size_ = -1;
-  std::vector<std::shared_ptr<IEvent>> children_;
+  std::set<std::shared_ptr<IEvent>> children_;
 #endif  // WITH_CUDA
 
   std::vector<Shape> input_shapes_;

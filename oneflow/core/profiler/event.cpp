@@ -26,10 +26,7 @@ namespace oneflow {
 
 namespace profiler {
 nlohmann::json IEvent::ToJson() {
-  return json{{"name", name_},
-              {"time", static_cast<double>(GetDuration())
-                           / 1000},  // convert to us, the unit of GetDuration is ns
-              {"input_shapes", "-"}};
+  return json{{"name", name_}, {"time", GetDuration<double>()}, {"input_shapes", "-"}};
 }
 
 std::string CustomEvent::Key() { return name_; }
@@ -53,14 +50,14 @@ void IEvent::Start() { StartedAt(GetTimeNow()); }
 
 void IEvent::Finish() { FinishedAt(GetTimeNow()); }
 
-bool IEvent::IsChildOf(const std::shared_ptr<IEvent>& e) {
-  if (this == e.get()) { return false; }
-  return started_at_ > e->started_at_ && finished_at_ < e->finished_at_;
+bool IEvent::IsChildOf(const IEvent* e) {
+  if (!e) { return false; }
+  if (this == e) { return false; }
+  return StartedAt<time_t>() > e->StartedAt<time_t>()
+         && FinishedAt<time_t>() < e->FinishedAt<time_t>();
 }
 
 const std::string& IEvent::GetName() const { return name_; }
-
-time_t IEvent::GetDuration() { return finished_at_ - started_at_; }
 
 std::string KernelEvent::Key() { return fmt::format("{}.{}", name_, GetFormatedInputShapes()); }
 
