@@ -23,7 +23,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_grad_use_random_data=False)
+@autotest(n=1, check_grad_use_random_data=False, check_graph=True)
 def _test_nll_loss(
     test_case, has_weight=False, split_batch_dim=False, split_class_dim=False
 ):
@@ -43,13 +43,15 @@ def _test_nll_loss(
     if has_weight:
         weight = random_tensor(1, C, requires_grad=False)
 
-    device = random_device().value()
+    # device = random_device().value()
+    device = "cpu"
     if not split_class_dim and not split_batch_dim:
         input = input.to(device)
         target = target.to(device)
         if has_weight:
             weight = weight.to(device)
     else:
+        rank = flow.env.get_rank()
         world_size = flow.env.get_world_size()
         assert world_size % 2 == 0
         ranks = np.array(range(world_size))
@@ -72,13 +74,15 @@ def _test_nll_loss(
 
         input = input.to_global(placement=placement, sbp=input_sbp)
         target = target.to_global(placement=placement, sbp=target_sbp)
+        # print(
+        #     f"**[{rank}] input: {input.oneflow.shape} {input.oneflow.placement} {input.oneflow.sbp}"
+        # )
+        # print(
+        #     f"**[{rank}] target: {target.oneflow.shape} {target.oneflow.placement} {target.oneflow.sbp}"
+        # )
         if has_weight:
+            print(f"**[{rank}] weight: {weight.oneflow.numpy()}")
             weight = weight.to_global(placement=placement, sbp=weight_sbp)
-
-        print(
-            f"** input: {input.oneflow.shape} {input.oneflow.placement} {input.oneflow.sbp}"
-            f", target: {target.oneflow.shape} {target.oneflow.placement} {target.oneflow.sbp}"
-        )
 
     # reduction = oneof("none", "sum", "mean")
     reduction = "mean"
@@ -119,9 +123,9 @@ class ParallelNLLLossTestCase(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n4d()
 class TowDParallelNLLLossTestCase(flow.unittest.TestCase):
-    # @globaltest
-    # def test_2d_parallel(test_case):
-    #     _test_nll_loss(test_case, split_batch_dim=True, split_class_dim=True)
+    @globaltest
+    def test_2d_parallel(test_case):
+        _test_nll_loss(test_case, split_batch_dim=True, split_class_dim=True)
 
     @globaltest
     def test_2d_parallel_weighted(test_case):
