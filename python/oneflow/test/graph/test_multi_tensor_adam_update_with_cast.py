@@ -24,7 +24,7 @@ from test_util import GenArgList
 import oneflow as flow
 
 os.environ["ONEFLOW_ENABLE_MULTI_TENSOR_MODEL_UPDATE"] = "1"
-# os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "1"
+os.environ["ONEFLOW_FUSE_MODEL_UPDATE_CAST"] = "1"
 
 
 def compare_with_numpy_adam(
@@ -172,49 +172,16 @@ def compare_with_numpy_adam(
 @flow.unittest.skip_unless_1n1d()
 class TestMultiTensorAdam(flow.unittest.TestCase):
     def test_multi_tensor_adam(test_case):
-        # arg_dict = OrderedDict()
-        # arg_dict["device"] = ["cuda"]
-        # arg_dict["x_shape"] = [(4, 4)]
-        # arg_dict["tensor_num"] = [4, 6]
-        # arg_dict["learning_rate"] = [1, 1e-3]
-        # arg_dict["train_iters"] = [10]
-        # arg_dict["betas"] = [(0.99, 0.9)]
-        # arg_dict["weight_decay"] = [0.001, 0.0]
-        # arg_dict["eps"] = [1e-5]
-        # # arg_dict["do_bias_correction"] = [True, False]
-        # arg_dict["do_bias_correction"] = [False]
-        # arg_dict["amsgrad"] = [False] # Multi tensor update do not support amsgrad
-        # for arg in GenArgList(arg_dict):
-        #     compare_with_numpy_adam(test_case, *arg)
-
-
-        # arg_dict = OrderedDict()
-        # arg_dict["device"] = ["cuda"]
-        # arg_dict["x_shape"] = [(4, 4)]
-        # arg_dict["tensor_num"] = [1]
-        # arg_dict["learning_rate"] = [1]
-        # arg_dict["train_iters"] = [2]
-        # # arg_dict["betas"] = [(0.99, 0.9)]
-        # arg_dict["betas"] = [(0.0, 0.0)]
-
-        # arg_dict["weight_decay"] = [0.000]
-        # arg_dict["eps"] = [1e-5]
-        # arg_dict["do_bias_correction"] = [False]
-        # arg_dict["amsgrad"] = [False] # Multi tensor update do not support amsgrad
-        # for arg in GenArgList(arg_dict):
-        #     compare_with_numpy_adam(test_case, *arg)
-
-
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda"]
         arg_dict["x_shape"] = [(4, 4)]
-        arg_dict["tensor_num"] = [1]
-        arg_dict["learning_rate"] = [1e-3]
+        arg_dict["tensor_num"] = [4, 6]
+        arg_dict["learning_rate"] = [1, 1e-3]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9)]
-        arg_dict["weight_decay"] = [0.0]
+        arg_dict["weight_decay"] = [0.0, 1e-3]
         arg_dict["eps"] = [1e-5]
-        arg_dict["do_bias_correction"] = [False]
+        arg_dict["do_bias_correction"] = [True, False]
         arg_dict["amsgrad"] = [False] # Multi tensor update do not support amsgrad
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
