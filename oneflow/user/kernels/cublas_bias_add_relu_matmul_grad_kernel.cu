@@ -22,6 +22,28 @@ namespace oneflow {
 
 namespace {
 
+void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, bool transpose_a,
+    bool transpose_b, size_t* m, size_t* n, size_t* k) {
+  const int64_t num_a_axes = a_shape.NumAxes();
+  CHECK_GE(num_a_axes, 2);
+  const int64_t num_b_axes = b_shape.NumAxes();
+  CHECK_GE(num_b_axes, 2);
+  if (!transpose_a) {
+  *m = a_shape.At(num_a_axes - 2);
+  *k = a_shape.At(num_a_axes - 1);
+  } else {
+  *m = a_shape.At(num_a_axes - 1);
+  *k = a_shape.At(num_a_axes - 2);
+  }
+  if (!transpose_b) {
+  CHECK_EQ(b_shape.At(num_b_axes - 2), *k);
+  *n = b_shape.At(num_b_axes - 1);
+  } else {
+  CHECK_EQ(b_shape.At(num_b_axes - 1), *k);
+  *n = b_shape.At(num_b_axes - 2);
+  }
+}
+
 ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
   return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;
 }
@@ -120,11 +142,11 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     // compute dw
     size_t m = 0, n = 0, k = 0;
     InferMatmulMNK(dy->shape(), hidden->shape(), /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
-    const double alpha = 1.0;
-    double beta = 0.0;
+    const double grad_alpha = 1.0;
+    double grad_beta = 0.0;
     auto matmul = NewMatmulGradPrimitive(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream(), m, n, k, alpha, dy->dptr(), hidden->dptr(), beta,
+    matmul->Launch(ctx->stream(), m, n, k, grad_alpha, dy->dptr(), hidden->dptr(), grad_beta,
                    d_weight->mut_dptr());
   };
 
@@ -135,7 +157,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
   REGISTER_USER_KERNEL("cublas_bias_add_relu_matmul_grad")             \
       .SetCreateFn<CublasBiasAddReluMatmulGradKernel<dtype>>()         \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value)
+                       && (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value) \
                        && MatmulGradPrimitiveExists());
 
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(float)

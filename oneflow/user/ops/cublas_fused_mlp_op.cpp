@@ -193,7 +193,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                        hidden_layer_idx - 1);  // previous layers bias grad
         }
         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
-          op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("d_weight", 0), "weights",
+          op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_weight", 0), "weights",
                                        hidden_layer_idx);
         }
 
