@@ -16,6 +16,8 @@ env:
   FLOW_VISION_COMMIT: ca8ebc663b58667cf8cd1b6ef0c861522780b7bb
   LIBAI_SRC: libai
   LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
+  ONEFLOW_IREE_SRC: oneflow_iree
+  ONEFLOW_IREE_COMMIT: fd9c9feec234ca63f0e8862539314311a2049966
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:afaf913e02a4ba02db92260daee22f99121cef62
   MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
@@ -455,6 +457,14 @@ jobs:
           # please use a commit here
           ref: ${{ env.LIBAI_COMMIT}}
           path: ${{ env.LIBAI_SRC}}
+      - name: Checkout Oneflow-Inc/oneflow_iree
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/oneflow_iree
+          # please use a commit here
+          ref: ${{ env.ONEFLOW_IREE_COMMIT}}
+          path: ${{ env.ONEFLOW_IREE_SRC}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -559,6 +569,7 @@ jobs:
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
       - name: Module API test (distributed)
         timeout-minutes: 90
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
@@ -648,6 +659,14 @@ jobs:
           # please use a commit here
           ref: ${{ env.LIBAI_COMMIT}}
           path: ${{ env.LIBAI_SRC}}
+      - name: Checkout Oneflow-Inc/oneflow_iree
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/oneflow_iree
+          # please use a commit here
+          ref: ${{ env.ONEFLOW_IREE_COMMIT}}
+          path: ${{ env.ONEFLOW_IREE_SRC}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -781,6 +800,7 @@ jobs:
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
