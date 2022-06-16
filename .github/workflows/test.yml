@@ -17,7 +17,7 @@ env:
   LIBAI_SRC: libai
   LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
   ONEFLOW_IREE_SRC: oneflow_iree
-  ONEFLOW_IREE_COMMIT: fd9c9feec234ca63f0e8862539314311a2049966
+  ONEFLOW_IREE_COMMIT: 7331468d8806ca9beb54fdac6e9c40cbcb0cf366
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:afaf913e02a4ba02db92260daee22f99121cef62
   MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
 
@@ -903,6 +903,11 @@ jobs:
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_gpt.py
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_t5.py
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_vit.py
+      - name: oneflow_iree test
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
+        run: |
+          docker exec -w $PWD/${{ env.ONEFLOW_IREE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m pytest examples
       - name: Expensive tests (models, cases require exclusive access to GPU)
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
