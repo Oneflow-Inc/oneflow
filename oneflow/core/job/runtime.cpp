@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -72,7 +73,10 @@ Runtime::Runtime(
           Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan);
     }
     collective_boxing_scheduler_plan_token_ =
-          Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
+        Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
+#ifdef WITH_CUDA
+    Global<EagerNcclCommMgr>::Get()->CreateCommFromPlan(plan);
+#endif  // WITH_CUDA
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());
