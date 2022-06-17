@@ -19,17 +19,6 @@ limitations under the License.
 namespace oneflow {
 
 template<>
-struct EluFunctor<half> {
-  OF_DEVICE_FUNC explicit EluFunctor(float alpha)
-      : alpha(alpha), float_functor(EluFunctor<float>(alpha)) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  const float alpha;
-  EluFunctor<float> float_functor;
-};
-
-template<>
 struct EluGradFunctor<half> {
   OF_DEVICE_FUNC explicit EluGradFunctor(float alpha)
       : alpha(alpha), float_functor(EluGradFunctor<float>(alpha)) {}
@@ -41,16 +30,6 @@ struct EluGradFunctor<half> {
 };
 
 template<>
-struct LeakyReluFunctor<half> {
-  OF_DEVICE_FUNC explicit LeakyReluFunctor(float alpha) : alpha(alpha) {}
-  __device__ half operator()(half x) const {
-    half zero = __float2half(0);
-    return (x > zero) ? x : __float2half(alpha) * x;
-  }
-  const float alpha;
-};
-
-template<>
 struct LeakyReluGradFunctor<half> {
   OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha) : alpha(alpha) {}
   __device__ half operator()(half x, half dy) const {
@@ -58,16 +37,6 @@ struct LeakyReluGradFunctor<half> {
     return (x > zero) ? dy : __float2half(alpha) * dy;
   }
   const float alpha;
-};
-
-template<>
-struct SoftplusFunctor<half> {
-  OF_DEVICE_FUNC explicit SoftplusFunctor(float beta, float threshold)
-      : beta(beta), threshold(threshold), float_functor(SoftplusFunctor<float>(beta, threshold)) {}
-  __device__ half operator()(half x) const { return __float2half(float_functor(__half2float(x))); }
-  const float beta;
-  const float threshold;
-  SoftplusFunctor<float> float_functor;
 };
 
 template<>
@@ -85,17 +54,6 @@ struct SoftplusGradFunctor<half> {
 };
 
 template<>
-struct CeluFunctor<half> {
-  OF_DEVICE_FUNC explicit CeluFunctor(float alpha)
-      : alpha(alpha), float_functor(CeluFunctor<float>(alpha)) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  const float alpha;
-  CeluFunctor<float> float_functor;
-};
-
-template<>
 struct CeluGradFunctor<half> {
   OF_DEVICE_FUNC explicit CeluGradFunctor(float alpha)
       : alpha(alpha), float_functor(CeluGradFunctor<float>(alpha)) {}
@@ -107,30 +65,11 @@ struct CeluGradFunctor<half> {
 };
 
 template<>
-struct HardswishFunctor<half> {
-  HardswishFunctor<float> float_functor;
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-};
-
-template<>
 struct HardswishGradFunctor<half> {
   HardswishGradFunctor<float> float_functor;
   OF_DEVICE_FUNC half operator()(half x, half dy) const {
     return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
-};
-
-template<>
-struct HardShrinkFunctor<half> {
-  OF_DEVICE_FUNC explicit HardShrinkFunctor(float lambd)
-      : lambd(lambd), float_functor(HardShrinkFunctor<float>(lambd)) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  const float lambd;
-  HardShrinkFunctor<float> float_functor;
 };
 
 template<>
@@ -146,30 +85,12 @@ struct HardShrinkGradFunctor<half> {
 };
 
 template<>
-struct MishFunctor<half> {
-  OF_DEVICE_FUNC explicit MishFunctor() : float_functor(MishFunctor<float>()) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  MishFunctor<float> float_functor;
-};
-
-template<>
 struct MishGradFunctor<half> {
   OF_DEVICE_FUNC explicit MishGradFunctor() : float_functor(MishGradFunctor<float>()) {}
   OF_DEVICE_FUNC half operator()(half x, half dy) const {
     return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
   MishGradFunctor<float> float_functor;
-};
-
-template<>
-struct SiluFunctor<half> {
-  OF_DEVICE_FUNC explicit SiluFunctor() : float_functor(SiluFunctor<float>()) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  SiluFunctor<float> float_functor;
 };
 
 template<>
@@ -182,15 +103,6 @@ struct SiluGradFunctor<half> {
 };
 
 template<>
-struct SeluFunctor<half> {
-  OF_DEVICE_FUNC explicit SeluFunctor() : float_functor(SeluFunctor<float>()) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  SeluFunctor<float> float_functor;
-};
-
-template<>
 struct SeluGradFunctor<half> {
   OF_DEVICE_FUNC explicit SeluGradFunctor() : float_functor(SeluGradFunctor<float>()) {}
   OF_DEVICE_FUNC half operator()(half x, half dy) const {
@@ -200,35 +112,12 @@ struct SeluGradFunctor<half> {
 };
 
 template<>
-struct SoftSignFunctor<half> {
-  OF_DEVICE_FUNC explicit SoftSignFunctor() : float_functor(SoftSignFunctor<float>()) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  SoftSignFunctor<float> float_functor;
-};
-
-template<>
 struct SoftSignGradFunctor<half> {
   OF_DEVICE_FUNC explicit SoftSignGradFunctor() : float_functor(SoftSignGradFunctor<float>()) {}
   OF_DEVICE_FUNC half operator()(half x, half dy) const {
     return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
   SoftSignGradFunctor<float> float_functor;
-};
-
-template<>
-struct ThresholdFunctor<half> {
-  OF_DEVICE_FUNC explicit ThresholdFunctor(float threshold, float value)
-      : threshold(threshold),
-        value(value),
-        float_functor(ThresholdFunctor<float>(threshold, value)) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  const float threshold;
-  const float value;
-  ThresholdFunctor<float> float_functor;
 };
 
 template<>
@@ -257,17 +146,6 @@ struct ReluGradFunctor<half> {
 };
 
 template<>
-struct SoftShrinkFunctor<half> {
-  OF_DEVICE_FUNC explicit SoftShrinkFunctor(float alpha)
-      : alpha(alpha), float_functor(SoftShrinkFunctor<float>(alpha)) {}
-  OF_DEVICE_FUNC half operator()(half x) const {
-    return __float2half(float_functor(__half2float(x)));
-  }
-  const float alpha;
-  SoftShrinkFunctor<float> float_functor;
-};
-
-template<>
 struct SoftShrinkGradFunctor<half> {
   OF_DEVICE_FUNC explicit SoftShrinkGradFunctor(float alpha)
       : alpha(alpha), float_functor(SoftShrinkGradFunctor<float>(alpha)) {}
@@ -279,21 +157,21 @@ struct SoftShrinkGradFunctor<half> {
   SoftShrinkGradFunctor<float> float_functor;
 };
 
-#define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)                  \
-  REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);                \
-  REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);               \
-  REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);          \
-  REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype);        \
-  REGISTER_HARDSHRINK_KERNEL(DeviceType::kCUDA, dtype);         \
-  REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);           \
-  REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);               \
-  REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);               \
-  REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);               \
-  REGISTER_SOFTSHRINK_KERNEL(DeviceType::kCUDA, dtype);         \
-  REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);           \
-  REGISTER_LEAKYRELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype); \
-  REGISTER_THRESHOLD_KERNEL(DeviceType::kCUDA, dtype);          \
-  REGISTER_SOFTPLUS_KERNEL(DeviceType::kCUDA, dtype);           \
+#define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)                    \
+  REGISTER_ELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);         \
+  REGISTER_CELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_HARDSWISH_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);   \
+  REGISTER_HARDSIGMOID_BACKWARD_KERNEL(DeviceType::kCUDA, dtype); \
+  REGISTER_HARDSHRINK_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);  \
+  REGISTER_HARDTANH_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);    \
+  REGISTER_MISH_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_SILU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_SELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_SOFTSHRINK_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);  \
+  REGISTER_SOFTSIGN_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);    \
+  REGISTER_LEAKYRELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);   \
+  REGISTER_THRESHOLD_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);   \
+  REGISTER_SOFTPLUS_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);    \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);
 
 namespace {

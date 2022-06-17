@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/symbol_id_cache.h"
-#include "oneflow/core/common/util.h"
+#ifndef ONEFLOW_CORE_COMMON_ARRAY_REF_H_
+#define ONEFLOW_CORE_COMMON_ARRAY_REF_H_
+
+#include "llvm/ADT/ArrayRef.h"
 
 namespace oneflow {
 
-namespace symbol {
+template<typename T>
+using ArrayRef = llvm::ArrayRef<T>;
 
-COMMAND(Global<IdCache<JobConfigProto>>::SetAllocated(new IdCache<JobConfigProto>()));
-COMMAND(Global<IdCache<ParallelConf>>::SetAllocated(new IdCache<ParallelConf>()));
-COMMAND(Global<IdCache<ScopeProto>>::SetAllocated(new IdCache<ScopeProto>()));
-COMMAND(Global<IdCache<std::string>>::SetAllocated(new IdCache<std::string>()));
-COMMAND(Global<IdCache<OperatorConf>>::SetAllocated(new IdCache<OperatorConf>()));
-
-}  // namespace symbol
+template<typename T>
+using MutableArrayRef = llvm::MutableArrayRef<T>;
 
 }  // namespace oneflow
+
+#endif

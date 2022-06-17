@@ -936,6 +936,37 @@ class TestTensorNumpy(flow.unittest.TestCase):
         y = x.swapdims(random(0, 3).to(int), random(0, 3).to(int))
         return y
 
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_int_repeat_interleave_dim_none(test_case):
+        x = random_tensor(ndim=2, dim0=1, dim1=2)
+        y = x.repeat_interleave(2)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_int_repeat_interleave_with_dim(test_case):
+        x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
+        dim = random(low=0, high=2).to(int)
+        y = x.repeat_interleave(2, dim)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_tensor_repeat_interleave_dim(test_case):
+        x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
+        y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
+        z = x.repeat_interleave(y, 1)
+        return z
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5)
+    def test_tensor_tensor_repeat_interleave_dim_with_output_size(test_case):
+        x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
+        y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
+        z = x.repeat_interleave(y, 1, output_size=2)
+        return z
+
 
 if __name__ == "__main__":
     unittest.main()

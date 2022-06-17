@@ -34,7 +34,7 @@ add_docstr(
         step (int): the gap between each pair of adjacent points. Default: ``1``.
 
     Keyword args:
-        dtype(flow.dtype, optional): If `dtype` is not given, the `dtype` is inferred to be `flow.int64`.
+        dtype(flow.dtype, optional): If `dtype` is not given, infer the `dtype` from the other input arguments. If any of start, end, or step are floating-point, the `dtype` is inferred to be the floating-point data type. Otherwise, the `dtype` is inferred to be `flow.int64`.
         device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
 

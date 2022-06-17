@@ -125,26 +125,17 @@ static PyObject* PyTensorObject_subscript(PyObject* self, PyObject* item) {
   END_HANDLE_ERRORS
 }
 
-static int PyTensorObject_ass_subscript(PyObject* self, PyObject* item, PyObject* value) {
-  HANDLE_ERRORS
-  const auto& p = PyTensor_Unpack(self);
-  const auto& v = PyTensor_Unpack(value);
-  functional::PythonArg arg(item);
-  ASSERT(functional::TensorSetItem(p, arg.As<functional::TensorIndex>(), v));
-  return 0;
-  END_HANDLE_ERRORS_RET(-1)
-}
-
 static PySequenceMethods PyTensorObject_as_sequence = {
     (lenfunc)PyTensorObject_length, NULL, /*sq_concat*/
     NULL,                                 /*sq_repeat*/
     (ssizeargfunc)PyTensorObject_getitem, /*sq_item*/
 };
 
+extern int PyTensorObject_setitem(PyObject*, PyObject*, PyObject*);
 static PyMappingMethods PyTensorObject_as_mapping = {
     (lenfunc)PyTensorObject_length,
     (binaryfunc)PyTensorObject_subscript,
-    (objobjargproc)PyTensorObject_ass_subscript,
+    (objobjargproc)PyTensorObject_setitem,
 };
 
 static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused) {
@@ -156,9 +147,9 @@ static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused)
 static PyObject* PyTensorObject_stride(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   const auto& stride = ASSERT_PTR(PyTensor_Unpack(self)->stride());
-  PyObject* tup = PyTuple_New(stride->NumAxes());
-  for (int i = 0; i < stride->NumAxes(); ++i) {
-    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->At(i)));
+  PyObject* tup = PyTuple_New(stride->size());
+  for (int i = 0; i < stride->size(); ++i) {
+    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->at(i)));
   }
   return tup;
   END_HANDLE_ERRORS
@@ -173,6 +164,13 @@ static PyObject* PyTensorObject_is_contiguous(PyObject* self, PyObject* unused) 
 static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   return PyTensor_New(PyTensor_Unpack(self)->contiguous());
+  END_HANDLE_ERRORS
+}
+
+static PyObject* PyTensorObject_contiguous_(PyObject* self, PyObject* unused) {
+  // NOTE: inplace version of contiguous
+  HANDLE_ERRORS
+  return PyTensor_New(ASSERT_PTR(functional::InplaceToContiguous(PyTensor_Unpack(self))));
   END_HANDLE_ERRORS
 }
 
@@ -330,6 +328,7 @@ static PyObject* PyTensorObject_type(PyObject* self, PyObject* args, PyObject* k
     ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), copied,            \
                                                 BlobNumpyCopyUtil<T>::From, "mut",        \
                                                 /*block_host_until_done=*/false));        \
+    Py_DECREF(copied);                                                                    \
     Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
   }
@@ -380,6 +379,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"stride", PyTensorObject_stride, METH_NOARGS, NULL},
     {"is_contiguous", PyTensorObject_is_contiguous, METH_NOARGS, NULL},
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
+    {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
@@ -587,6 +587,8 @@ static PyHeapTypeObject* MakeTensorMetaclass() {
   return heap_type;
 }
 
+extern PyNumberMethods PyTensorObject_as_number;
+extern PyObject* PyTensorObject_richcompare(PyObject*, PyObject*, int);
 extern PyMethodDef PyTensorObject_extra_methods[];
 
 static PyHeapTypeObject* TensorMetaclass_Type = MakeTensorMetaclass();
@@ -606,14 +608,16 @@ static PyTypeObject* MakeTensorType() {
   type->tp_init = PyTensorObject_init;
   type->tp_dealloc = PyTensorObject_dealloc;
   type->tp_getset = PyTensorObject_properties;
-  type->tp_as_number = &heap_type->as_number;
 
   static std::vector<PyMethodDef> total_methods =
       concat_method_def(PyTensorObject_methods, PyTensorObject_extra_methods);
   type->tp_methods = total_methods.data();
 
+  type->tp_as_number = &PyTensorObject_as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
+  type->tp_richcompare = PyTensorObject_richcompare;
+  type->tp_hash = (hashfunc)_Py_HashPointer;
 
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
