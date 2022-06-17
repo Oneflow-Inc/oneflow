@@ -51,12 +51,12 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                                                 public user_op::CudaGraphSupport {
  public:
   CublasBiasAddReluMatmulGradKernel() {
-    OF_CUDA_CHECK(cudaEventCreate(&stream1_event));
-    OF_CUDA_CHECK(cudaEventCreate(&stream2_event));
+    OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
+    OF_CUDA_CHECK(cudaEventCreate(&async_matmul_grad_event));
   };
   ~CublasBiasAddReluMatmulGradKernel() override {
-    OF_CUDA_CHECK(cudaEventDestroy(stream1_event));
-    OF_CUDA_CHECK(cudaEventDestroy(stream2_event));
+    OF_CUDA_CHECK(cudaEventDestroy(main_stream_event));
+    OF_CUDA_CHECK(cudaEventDestroy(async_matmul_grad_event));
   };
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
@@ -70,8 +70,8 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
   }
 
  private:
-  cudaEvent_t stream1_event;
-  cudaEvent_t stream2_event;
+  cudaEvent_t main_stream_event;
+  cudaEvent_t async_matmul_grad_event;
 
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
@@ -122,7 +122,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     a = dy, b = weight
     cublas_a=weight, cublas_b=dy
     */
-    OF_CUDA_CHECK(cudaEventRecord(stream1_event, cuda_stream->cuda_stream()));
+    OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
     OF_CUBLAS_CHECK(
         cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                        &sp_alpha, weight->dptr(), matmul_grad_cache->cublas_a_desc, dy->dptr(),
@@ -150,7 +150,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                   /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                   /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
                   cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
-    OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), stream1_event));
+    OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
     OF_CUBLAS_CHECK(
         cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                        &sp_alpha, hidden->dptr(), matmul_grad_cache->cublas_a_desc, dy->dptr(),
@@ -158,8 +158,8 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
                        matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
                        matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
                        kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
-    OF_CUDA_CHECK(cudaEventRecord(stream2_event, kernel_state->cuda_stream()));
-    OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), stream2_event));
+    OF_CUDA_CHECK(cudaEventRecord(async_matmul_grad_event, kernel_state->cuda_stream()));
+    OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_matmul_grad_event));
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
