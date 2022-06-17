@@ -381,8 +381,7 @@ def get_functional_graph_res(
             # nn.Graph donot deal with Parameter creation.
             test_g_res = oneflow_res
         else:
-            test_g = TestGraphOfFunctional()
-            test_g_res = test_g()
+            test_g_res = TestGraphOfFunctional()
     except Exception as e:
         if not verbose:
             get_fake_program_more_detail(
@@ -421,7 +420,6 @@ def get_tensor_graph_res(
 
     try:
         test_g = TestGraphOfTensorMethod()
-        test_g_res = test_g()
     except Exception as e:
         if not verbose:
             get_fake_program_more_detail(

@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_chunk(test_case, ndim, placement, sbp):
     dims = [random(1, 3).to(int) * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
