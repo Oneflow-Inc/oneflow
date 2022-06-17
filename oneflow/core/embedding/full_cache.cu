@@ -208,7 +208,7 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
       const Index row = batch_row_ids[warp_id][lane_id];
       if (row == 0) { continue; }
       for (int col = lane_id; col < value_length; col += warp_size) {
-        values[i] = cache_values[row * value_length + col];
+        values[i] = cache_values[(row - 1) * value_length + col];
       }
     }
     __syncwarp();
