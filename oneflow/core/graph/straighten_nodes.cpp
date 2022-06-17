@@ -33,7 +33,7 @@ enum TaskClassifier : int {
 
 class TopoStruct {
  public:
-  TaskNode* node;
+  TaskNode* node = nullptr;
   int32_t min_layer = -1;
   int32_t tributary_layer = -1;
   bool on_mainstem = false;
