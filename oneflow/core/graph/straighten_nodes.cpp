@@ -233,7 +233,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
       task_type2machine_id2node_id2topo_structs;
   std::map<int32_t, TopoStruct*> min_node_id2topo_struct;
   int32_t previous_min_layer = 0;
-  task_graph->TopoForEachNodeFast([&](TaskNode* node) {
+  task_graph->TopoForEachNode([&](TaskNode* node) {
     auto& topo_struct = task_node2topo_struct[node];
     topo_struct.node = node;
     if (node->in_edges().empty()) {
