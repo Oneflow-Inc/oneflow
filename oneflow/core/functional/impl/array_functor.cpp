@@ -2057,7 +2057,7 @@ class TensorSetItemFunctor {
         std::vector<int64_t> starts(1, 0);
         std::vector<int64_t> stops(1, 1);
         std::vector<int64_t> steps(1, 1);
-        JUST(SliceUpdate(input_tensor, value_tensor, starts, stops, steps, /*inplace=*/false));
+        JUST(SliceUpdate(input_tensor, value_tensor, starts, stops, steps, /*inplace=*/true));
       } else {
         // advance indexing
         std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
@@ -3012,7 +3012,8 @@ class ReshapeLikeFunctor {
 class PinMemoryFunctor {
  public:
   PinMemoryFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("slice_update").Input("x").Input("update").Output("y").Build());
+    op_ =
+        CHECK_JUST(one::OpBuilder("slice_update").Input("ref").Input("value").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     // TODO:(zhaoluyang) support consistent tensor.pin_memory()
