@@ -295,13 +295,14 @@ static PyObject* PyTensorObject_eq(PyObject* self, PyObject* args, PyObject* kwa
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O:eq", const_cast<char**>(keywords), &other)) {
     return NULL;
   }
-  if (other == Py_None) return Py_False;
+  if (other == Py_None) { return Py_False; }
   CHECK_OR_THROW(functional::PyScalarCheck(other) || PyTensor_Check(other))
       << Error::TypeError() << "eq(): argument 'other' must be tensor or scalar, but found "
       << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(other)));
-  if (PyTensor_Check(other))
+  if (PyTensor_Check(other)) {
     return PyTensor_New(
         ASSERT_PTR(functional::BroadcastEqual(PyTensor_Unpack(self), PyTensor_Unpack(other))));
+  }
   return PyTensor_New(ASSERT_PTR(
       functional::ScalarLogicalEqual(PyTensor_Unpack(self), functional::PyUnpackScalar(other))));
   END_HANDLE_ERRORS
@@ -349,7 +350,7 @@ static PyObject* PyTensorObject_size(PyObject* self, PyObject* args, PyObject* k
     return NULL;
   }
   auto shape = PyTensor_Unpack(self)->shape();
-  if (idx_obj == NULL || idx_obj == Py_None) return TensorSize_NewFromShape(*shape);
+  if (idx_obj == NULL || idx_obj == Py_None) { return TensorSize_NewFromShape(*shape); }
   int64_t idx = PyLong_AsLongLong(idx_obj);
   int64_t ndim = shape->NumAxes();
   idx = CHECK_JUST(maybe_wrap_dim(idx, ndim));
@@ -687,7 +688,7 @@ static PyObject* PyTensorObject_repeat(PyObject* self, PyObject* args, PyObject*
         << Error::TypeError() << "repeat(): argument 'repeat_shape' must be shape, not "
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(shape_obj)));
     if (PyLong_Check(shape_obj)) {
-      shape_vec.emplace_back(PyLong_AsLong(shape_obj));
+      shape_vec.emplace_back(PyLong_AsLongLong(shape_obj));
     } else {
       std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(shape_obj);
       shape_vec = DimVector(shape.begin(), shape.end());
@@ -713,7 +714,7 @@ static PyObject* PyTensorObject_tile(PyObject* self, PyObject* args, PyObject* k
         << Error::TypeError() << "tile(): argument 'dims' must be shape, not "
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(dim_obj)));
     if (PyLong_Check(dim_obj)) {
-      dim_vec.emplace_back(PyLong_AsLong(dim_obj));
+      dim_vec.emplace_back(PyLong_AsLongLong(dim_obj));
     } else {
       std::vector<int64_t> shape = functional::PyUnpackLongSequence<int64_t>(dim_obj);
       dim_vec = DimVector(shape.begin(), shape.end());
