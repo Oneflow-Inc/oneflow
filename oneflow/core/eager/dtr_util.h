@@ -13,6 +13,7 @@ size_t memory_threshold();
 bool is_enabled_and_debug();
 int debug_level();
 bool is_check_enabled();
+double append_memory_frag_info_and_get(size_t free_mem, size_t threshold);
 
 }  // namespace dtr
 

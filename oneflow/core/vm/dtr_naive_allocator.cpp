@@ -194,19 +194,14 @@ bool DtrNaiveCudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   size_t total_bytes = -1;
   OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
   size_t available_bytes = -1;
-  if (dtr::is_enabled()) {
-    if (total_memory_bytes_ < dtr::memory_threshold()) {
-      available_bytes = dtr::memory_threshold() - total_memory_bytes_;
-      if (dtr::debug_level() >= 2) {
-        LOG(INFO) << "available_bytes: " << available_bytes / 1024. / 1024.
-                  << ", total_memory_bytes: " << total_memory_bytes_ / 1024. / 1024.;
-      }
-    } else {
-      return false;
+  if (total_memory_bytes_ < dtr::memory_threshold()) {
+    available_bytes = dtr::memory_threshold() - total_memory_bytes_;
+    if (dtr::debug_level() >= 2) {
+      LOG(INFO) << "available_bytes: " << available_bytes / 1024. / 1024.
+                << ", total_memory_bytes: " << total_memory_bytes_ / 1024. / 1024.;
     }
   } else {
-    const size_t remain_bytes = 50 * 1048576;  // remain at least 50MiB memory
-    available_bytes = free_bytes - remain_bytes;
+    return false;
   }
 
   size_t allocate_bytes = aligned_size;
@@ -337,27 +332,37 @@ void DtrNaiveCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   // size_t r_memory = oneflow::GetDTRRemainMemory();
   // std::cout << r_memory << std::endl;
 
-  if (dtr::is_enabled()) {
-    // if (oneflow::DTRDebugEnabled()) { std::cout << "dtr enabled condition" << std::endl; }
-    // int it = 0;   // evict iteration times
-    while (piece == nullptr
-           && CHECK_JUST(Global<dtr::TensorPool>::Get()->find_best_tensor_and_evict())) {
-      if (dtr::debug_level() >= 2) {
-        LOG(INFO) << "total_memory_bytes after find best tensor and evict: "
-                  << total_memory_bytes_ / 1024. / 1024.;
-      }
-      piece = FindPiece(aligned_size);
-      if (piece == nullptr) {
-        if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
-      }
-      if (piece == nullptr) {
-        if (DeallocateFreeBlockForGarbageCollection()
-            && AllocateBlockToExtendTotalMem(aligned_size)) {
-          piece = FindPiece(aligned_size);
-        }
-      }
-      // it++;
+  // if (oneflow::DTRDebugEnabled()) { std::cout << "dtr enabled condition" << std::endl; }
+  // int it = 0;   // evict iteration times
+  while (piece == nullptr
+         && CHECK_JUST(Global<dtr::TensorPool>::Get()->find_best_tensor_and_evict())) {
+    if (dtr::debug_level() >= 2) {
+      LOG(INFO) << "total_memory_bytes after find best tensor and evict: "
+                << total_memory_bytes_ / 1024. / 1024.;
     }
+    piece = FindPiece(aligned_size);
+    if (piece == nullptr) {
+      if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
+    }
+    if (piece == nullptr) {
+      if (DeallocateFreeBlockForGarbageCollection()
+          && AllocateBlockToExtendTotalMem(aligned_size)) {
+        piece = FindPiece(aligned_size);
+      }
+    }
+    // it++;
+  }
+
+
+  if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
+    size_t free_mem = 0;
+    for (const auto& pair : ptr2piece_) {
+      Piece* piece = pair.second;
+      if (piece->is_free) {
+        free_mem += piece->size;
+      }
+    }
+    dtr::append_memory_frag_info_and_get(free_mem, dtr::memory_threshold());
   }
 
   if (piece == nullptr) {

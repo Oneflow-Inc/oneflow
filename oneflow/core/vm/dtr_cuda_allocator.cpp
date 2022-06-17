@@ -160,7 +160,7 @@ void DtrCudaAllocator::DisplayAllPieces() {
     int coeff = -1;
     if (piece->tensor) {
       ss << "ebo: " << piece->tensor << ", id: " << piece->tensor->id()
-         // << ", cost: " << get_cost(piece->tensor, coeff)
+         << ", cost: " << get_cost(piece->tensor, coeff)
          << ", pinned: " << piece->tensor->num_pinned()
          << ", evictable: " << piece->tensor->is_evictable()
          << ", compute op: " << piece->tensor->compute_op_type_name();
@@ -478,6 +478,17 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
       first_time = false;
     }
     piece = EvictAndFindPiece(aligned_size);
+    if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
+      size_t free_mem = 0;
+      for (const auto& pair : ptr2piece_) {
+        Piece* piece = pair.second;
+        if (piece->is_free) {
+          CHECK_ISNULL(piece->tensor);
+          free_mem += piece->size;
+        }
+      }
+      dtr::append_memory_frag_info_and_get(free_mem, dtr::memory_threshold());
+    }
   }
 
   if (piece == nullptr) { DisplayAllPieces(); }

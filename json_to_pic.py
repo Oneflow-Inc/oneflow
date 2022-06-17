@@ -15,7 +15,7 @@ no_lr_times = []
 cwd = Path.cwd()
 
 
-def draw_from_file(fn_pattern, threshold_fn, time_fn, label):
+def draw_from_file(ax, fn_pattern, threshold_fn, time_fn, label):
     fns = list(filter(re.compile(fn_pattern).match, (str(x.name) for x in cwd.iterdir())))
     data = []
     for fn in fns:
@@ -38,6 +38,15 @@ def get_real_time_from_json_file(fn):
         return float(j["real time"])
 
 
+def get_mem_frag_rate_from_json_file(fn):
+    with open(fn) as f:
+        j = json.load(f)
+        mem_frag_rate = j["mem frag rate"]
+        if mem_frag_rate is not None:
+            mem_frag_rate = float(mem_frag_rate)
+        return mem_frag_rate
+
+
 def get_threshold_from_json_file(fn):
     with open(fn) as f:
         j = json.load(f)
@@ -46,28 +55,20 @@ def get_threshold_from_json_file(fn):
 
 fig, ax = plt.subplots()
 
-model_name = "unet"
+model_name = sys.argv[1]
 
-draw_from_file(rf"{model_name}-normal-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'our')
-draw_from_file(rf"{model_name}-nlr-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'nlr')
-draw_from_file(rf"{model_name}-no-allo-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'no-allo')
-draw_from_file(rf"{model_name}-no-lr-\d+.json", get_threshold_from_json_file, get_theo_time_from_json_file, 'no-lr')
-# draw_from_file(r"no-lr-no-fbip-\d+.json", lambda fn: int(fn[14:-5]), get_theo_time_from_json_file, 'no-lr-no-fbip')
-# draw_from_file(r"nlr-no-fbip-\d+.json", lambda fn: int(fn[12:-5]), get_theo_time_from_json_file, 'nlr-no-fbip')
+def draw_from_files_and_draw(get_y, pic_name):
+    _, ax = plt.subplots()
 
-ax.legend()
+    draw_from_file(ax, rf"{model_name}-normal-\d+.json", get_threshold_from_json_file, get_y, 'our')
+    draw_from_file(ax, rf"{model_name}-nlr-\d+.json", get_threshold_from_json_file, get_y, 'nlr')
+    draw_from_file(ax, rf"{model_name}-no-allo-\d+.json", get_threshold_from_json_file, get_y, 'no-allo')
+    draw_from_file(ax, rf"{model_name}-no-lr-\d+.json", get_threshold_from_json_file, get_y, 'no-lr')
+    draw_from_file(ax, rf"{model_name}-old-immutable-\d+.json", get_threshold_from_json_file, get_y, 'old-immutable')
 
-plt.savefig(f'{model_name}-theo-time.png')
+    ax.legend()
+    plt.savefig(pic_name)
 
-fig, ax = plt.subplots()
-
-draw_from_file(rf"{model_name}-normal-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'our')
-draw_from_file(rf"{model_name}-nlr-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'nlr')
-draw_from_file(rf"{model_name}-no-allo-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'no-allo')
-draw_from_file(rf"{model_name}-no-lr-\d+.json", get_threshold_from_json_file, get_real_time_from_json_file, 'no-lr')
-# draw_from_file(r"no-lr-no-fbip-\d+.json", lambda fn: int(fn[14:-5]), get_real_time_from_json_file, 'no-lr-no-fbip')
-# draw_from_file(r"nlr-no-fbip-\d+.json", lambda fn: int(fn[12:-5]), get_real_time_from_json_file, 'nlr-no-fbip')
-
-ax.legend()
-
-plt.savefig(f'{model_name}-real-time.png')
+draw_from_files_and_draw(get_theo_time_from_json_file, f'{model_name}-theo-time.png')
+draw_from_files_and_draw(get_real_time_from_json_file, f'{model_name}-real-time.png')
+draw_from_files_and_draw(get_mem_frag_rate_from_json_file, f'{model_name}-mem-frag.png')

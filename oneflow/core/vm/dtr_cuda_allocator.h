@@ -43,7 +43,6 @@ class DtrCudaAllocator final : public Allocator {
  private:
   ptrdiff_t get_offset(const char* mem_ptr) const;
 
-
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
 

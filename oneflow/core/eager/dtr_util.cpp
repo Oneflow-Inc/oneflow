@@ -27,6 +27,17 @@ bool is_check_enabled() {
   return EnvBool<OF_DTR_CHECK>();
 }
 
+double append_memory_frag_info_and_get(size_t free_mem, size_t threshold) {
+  static size_t num = 0;
+  // maintain a summation of memory frag rate
+  static double memory_frag_rate_sum = 0;
+  if (threshold > 0) {
+    memory_frag_rate_sum += (1. * free_mem / threshold);
+    num++;
+  }
+  return memory_frag_rate_sum / num;
+}
+
 }  // namespace dtr
 
 namespace vm {

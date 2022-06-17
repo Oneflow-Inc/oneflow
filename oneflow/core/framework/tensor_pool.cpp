@@ -53,6 +53,7 @@ TensorPool::~TensorPool() {
                  {"eager eviction", num_eager_eviction_},
                  {"recomputation", num_recomputation_},
                  {"destruction", num_destruction_},
+                 {"mem frag rate", dtr::append_memory_frag_info_and_get(0, 0)},
                  {"theoretically time", duration_}};
 
     json full_json;
