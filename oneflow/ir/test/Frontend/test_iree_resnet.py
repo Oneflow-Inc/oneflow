@@ -99,6 +99,7 @@ class TestIreeResnet(oneflow.unittest.TestCase):
     def test_iree_resnet_cpu(test_case):
         _test_iree_resnet_cpu(test_case)
 
+    @unittest.skipUnless(oneflow.sysconfig.with_cuda(), "only test cpu cases")
     def test_iree_resnet_cuda(test_case):
         _test_iree_resnet_cuda(test_case)
 
