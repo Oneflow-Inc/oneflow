@@ -175,7 +175,7 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
   __shared__ uint32_t batch_n_missing[n_warp_per_block];
   for (uint32_t batch_start = global_warp_id * warp_size; batch_start < n_keys;
        batch_start += global_n_warp * warp_size) {
-    const uint32_t batch_n_key = n_keys - batch_start;
+    const uint32_t batch_n_key = min(n_keys - batch_start, warp_size);
     if (lane_id == 0) { batch_n_missing[warp_id] = 0; }
     __syncwarp();
     const uint32_t key_offset = batch_start + lane_id;
