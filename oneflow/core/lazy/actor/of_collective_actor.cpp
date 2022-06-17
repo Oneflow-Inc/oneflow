@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/runtime_job_descs.h"
 #include "oneflow/core/stream/include/stream_context.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -126,10 +127,6 @@ void CheckInplaceRegstDescId(const TaskProto& task_proto) {
 
 }  // namespace
 
-// void OfCollectiveActor::Act() {
-//   AsyncLaunchKernel([&](int64_t regst_desc_id) -> Regst* { return nullptr; });
-// }
-
 void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_ctx_ = actor_ctx;
   const TaskProto& task_proto = actor_ctx->task_proto();
@@ -146,6 +143,8 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   auto* request_entry = Global<CollectiveMgr>::Get()->GetOfRequestEntry(token);
   Global<CollectiveMgr>::Get()->DestroyOfRequestEntryToken(token);
   nego_tree_info_ = std::move(request_entry->nego_tree_topo()[actor_id_]);
+  received_downstream_ready_cnt_ = 0;
+  can_act_ = false;
 
   ek_.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
   ek_.kernel = ConstructKernel(node.kernel_conf(), ek_.kernel_ctx.get());
@@ -344,6 +343,17 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     ActUntilFail();
+  } else if (msg.msg_type() == ActorMsgType::kCollectiveMsg) {
+    if (msg.collective_status() == CollectiveStatus::kCollectiveReady) {
+      if (IsInDebugMode()) {
+        int64_t src_actor_id = msg.src_actor_id();
+        CHECK(std::find(nego_tree_info_.downstream_id.begin(), nego_tree_info_.downstream_id.end(), src_actor_id) != nego_tree_info_.downstream_id.end());
+      }
+      ++received_downstream_ready_cnt_;
+    } else if (msg.collective_status() == CollectiveStatus::kCollectiveStart) {
+      can_act_ = true;
+    }
+    ActUntilFail();
   } else {
     UNIMPLEMENTED();
   }
@@ -382,8 +392,179 @@ int OfCollectiveActor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
-void OfCollectiveActor::ActUntilFail() {
+bool OfCollectiveActor::IsReadReady() const {
+  return naive_consumed_rs_.IsCurSlotReady() && inplace_consumed_rs_.IsCurSlotReady();
+}
 
+bool OfCollectiveActor::IsWriteReady() const {
+  return naive_produced_rs_.IsCurSlotReady() && inplace_produced_rs_.IsCurSlotReady();
+}
+
+bool OfCollectiveActor::IsDownstreamReady() const {
+  // can also handle NO DOWNSTREAM, where downstream_id.size() is 0
+  return received_downstream_ready_cnt_ == nego_tree_info_.downstream_id.size();
+}
+
+void OfCollectiveActor::ActUntilFail() {
+  while (IsReadReady() && IsWriteReady()) {
+    if (!IsDownstreamReady()) {
+      return;
+    }
+    if (HasUpstream()) {
+      // send ready msg to upstream.
+      auto ready_msg = ActorMsg::BuildCollectiveMsg(actor_id_, nego_tree_info_.upstream_id, 
+        CollectiveStatus::kCollectiveReady);
+      SyncSendMsg(std::move(ready_msg));
+    } else {
+      // only root comes here
+      can_act_ = true;
+    }
+    if (!CanAct()) {
+      return;
+    }
+    if (HasDownstream()) {
+      FOR_EACH(downstream_id, nego_tree_info_.downstream_id) {
+        auto start_msg = ActorMsg::BuildCollectiveMsg(*downstream_id, actor_id_,
+         CollectiveStatus::kCollectiveStart);
+        SyncSendMsg(std::move(start_msg));
+      }
+    }
+    Act();
+    
+    AsyncSendNaiveProducedRegstMsgToConsumer();
+    // no inplace ctrl regst
+    HandleProducedInplaceDataRegstToConsumer();
+
+    AsyncSendNaiveConsumedRegstMsgToProducer();
+    // inplace regst with further consumer is handled in HandlerNormal
+    AsyncRetInplaceConsumedRegstIfNoConsumer();
+
+    AsyncSendQueuedMsg();
+  }
+  // NOTE(liujuncheng): return inplace consumed
+  AsyncSendQueuedMsg();
+}
+
+void OfCollectiveActor::Act() {
+
+
+  // Act means perform the collective communication, reset received_downstream_ready_cnt_
+  // after finish.
+  received_downstream_ready_cnt_ = 0;
+  return;
+}
+
+void OfCollectiveActor::SyncSendMsg(const ActorMsg& msg) {
+  Global<ActorMsgBus>::Get()->SendMsg(msg);
+}
+
+void OfCollectiveActor::AsyncSendNaiveProducedRegstMsgToConsumer() {
+  HandleProducedNaiveDataRegstToConsumer();
+  AsyncSendProducedCtrlRegstMsgToConsumer();
+}
+
+void OfCollectiveActor::HandleProducedNaiveDataRegstToConsumer() {
+  tmp_regst_desc_id_vec_.clear();
+  naive_produced_rs_.ForEachFrontRegst([&](Regst* regst){
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+      int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
+      if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
+    }
+  });
+  naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
+}
+
+int64_t OfCollectiveActor::HandleRegstToConsumer(Regst* regst) {
+  auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
+  CHECK_EQ(regst_reading_cnt_it->second, 0);
+
+  int64_t real_consumer_cnt = 0;
+  for (int64_t consumer : regst->consumers_actor_id()) {
+    EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
+    real_consumer_cnt += 1;
+  }
+  total_reading_cnt_ += real_consumer_cnt;
+  regst_reading_cnt_it->second += real_consumer_cnt;
+  return real_consumer_cnt;
+}
+
+void OfCollectiveActor::AsyncSendProducedCtrlRegstMsgToConsumer() {
+  auto IsChosenRegstDescId = [this](int64_t regst_desc_id) {
+    return IsProducedCtrlRegstDescId(regst_desc_id) && ProducedCtrlRegstValid(regst_desc_id);
+  };
+  tmp_regst_desc_id_vec_.clear();
+  naive_produced_rs_.ForChosenFrontRegst(IsChosenRegstDescId, [&](Regst* regst) {
+    CHECK(regst->regst_desc()->regst_desc_type().has_ctrl_regst_desc());
+    int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
+    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
+  });
+  naive_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
+}
+
+void OfCollectiveActor::HandleProducedInplaceDataRegstToConsumer() {
+  tmp_regst_desc_id_vec_.clear();
+  inplace_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
+    CHECK(regst->regst_desc()->regst_desc_type().has_data_regst_desc());
+    int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
+    if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
+  });
+  inplace_produced_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
+}
+
+void OfCollectiveActor::AsyncSendNaiveConsumedRegstMsgToProducer() {
+  HandleConsumedNaiveDataRegstToProducer();
+  AsyncSendConsumedCtrlRegstMsgToProducer();
+}
+
+void OfCollectiveActor::HandleConsumedNaiveDataRegstToProducer() {
+  tmp_regst_desc_id_vec_.clear();
+  naive_consumed_rs_.ForEachFrontRegst([&](int64_t regst_desc_id, Regst* regst) {
+    if (IsConsumedCtrlRegstDescId(regst_desc_id)) { return; }
+    if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+      // must access regst before sending it to producer
+      tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id());
+      EnqueueAsyncMsg(
+          ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+    }
+  });
+  naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
+}
+
+void OfCollectiveActor::AsyncSendConsumedCtrlRegstMsgToProducer() {
+  auto IsChosenRegstDescId = [this](int64_t regst_desc_id) {
+    return IsConsumedCtrlRegstDescId(regst_desc_id) && ConsumedCtrlRegstValid(regst_desc_id);
+  };
+
+  tmp_regst_desc_id_vec_.clear();
+  naive_consumed_rs_.ForChosenRegstDeq(
+      IsChosenRegstDescId, [&](int64_t regst_desc_id, const std::deque<Regst*>& reg_deq) {
+        CHECK(reg_deq.empty() == false);
+        auto producer_task_id = Global<RegstMgr>::Get()->ProducerTaskId4RegstDescId(regst_desc_id);
+        Regst* regst = reg_deq.front();
+        CHECK_GE(reg_deq.size(), 1);
+        // must access regst before sending it to producer
+        tmp_regst_desc_id_vec_.emplace_back(regst_desc_id);
+        EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer_task_id, regst));
+      });
+  naive_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
+}
+
+void OfCollectiveActor::AsyncRetInplaceConsumedRegstIfNoConsumer() {
+  tmp_regst_desc_id_vec_.clear();
+  inplace_consumed_rs_.ForChosenRegstDeq(
+      [&](int64_t regst_desc_id) {
+        return inplace_in_ids_with_no_out_consumed_.find(regst_desc_id)
+               != inplace_in_ids_with_no_out_consumed_.end();
+      },
+      [&](const std::deque<Regst*>& deq) {
+        if (!deq.empty()) {
+          Regst* in_regst = deq.front();
+          CHECK(in_regst);
+          AsyncSendRegstMsgToProducer(in_regst);
+          tmp_regst_desc_id_vec_.emplace_back(in_regst->regst_desc_id());
+        }
+      });
+  inplace_consumed_rs_.PopFrontRegsts(tmp_regst_desc_id_vec_);
 }
 
 void OfCollectiveActor::EnqueueAsyncMsg(const ActorMsg& msg) {

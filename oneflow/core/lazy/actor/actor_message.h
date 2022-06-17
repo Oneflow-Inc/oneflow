@@ -27,7 +27,9 @@ enum class ActorCmd {
   kConstructActor
 };
 
-enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
+enum class CollectiveStatus { kCollectiveReady = 0, kCollectiveStart };
+
+enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg, kCollectiveMsg };
 
 constexpr uint8_t kActorMsgUserDataMaxSize = 32;
 
@@ -41,6 +43,7 @@ class ActorMsg final {
   static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer, Regst*);
   static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
+  static ActorMsg BuildCollectiveMsg(int64_t srd_actor_id, int64_t dst_actor_id, CollectiveStatus collective_status);
 
   // Getters
   int64_t SrcMachineId() const;
@@ -60,6 +63,7 @@ class ActorMsg final {
   bool IsDataRegstMsgToConsumer() const;
   int64_t comm_net_sequence_number() const;
   void set_comm_net_sequence_number(int64_t sequence_number);
+  CollectiveStatus collective_status() const;
 
   // Serialize
   template<typename StreamT>
@@ -88,6 +92,7 @@ class ActorMsg final {
     ActorCmd actor_cmd_;
     RegstWrapper regst_wrapper_;
     int64_t eord_regst_desc_id_;
+    CollectiveStatus collective_status_;
   };
   uint8_t user_data_size_;
   unsigned char user_data_[kActorMsgUserDataMaxSize];

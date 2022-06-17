@@ -60,13 +60,6 @@ class OfCollectiveActor final: public ActorBase {
   };
   enum class RegstNameType { kNaive = 0, kCustomized };
 
-  bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
-    return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
-  }
-  bool IsProducedCtrlRegstDescId(int64_t regst_desc_id) {
-    return produced_ctrl_regst_desc_ids_.find(regst_desc_id) != produced_ctrl_regst_desc_ids_.end();
-  }
-
   // Msg Handler
   using MsgHandler = int (OfCollectiveActor::*)(const ActorMsg&);
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -83,16 +76,45 @@ class OfCollectiveActor final: public ActorBase {
   bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) { return false; }
   int TryUpdtStateAsProducedRegst(Regst* regst);
 
+  // ready
+  bool IsReadReady() const;
+  bool IsWriteReady() const;
+  bool IsDownstreamReady() const;
+  bool HasUpstream() const { return nego_tree_info_.upstream_id != -1; }
+  bool HasDownstream() const { return nego_tree_info_.downstream_id.size() > 0; }
+  bool CanAct() const { return can_act_; }
+
   // Act
+  void Act();
   void ActUntilFail();
+  void AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId);
 
   // Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
+  void SyncSendMsg(const ActorMsg&);
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncSendQueuedMsg();
   void AddCallback(std::function<void()> callback);
   void AsyncSendEORDMsgForAllProducedRegstDesc();
+  // transmit regsts after act
+  void AsyncSendNaiveProducedRegstMsgToConsumer();
+  void HandleProducedNaiveDataRegstToConsumer();
+  int64_t HandleRegstToConsumer(Regst* regst);
+  void AsyncSendProducedCtrlRegstMsgToConsumer();
+  bool IsProducedCtrlRegstDescId(int64_t regst_desc_id) {
+    return produced_ctrl_regst_desc_ids_.find(regst_desc_id) != produced_ctrl_regst_desc_ids_.end();
+  }
+  bool ProducedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+  void HandleProducedInplaceDataRegstToConsumer();
+  void AsyncSendNaiveConsumedRegstMsgToProducer();
+  void HandleConsumedNaiveDataRegstToProducer();
+  void AsyncSendConsumedCtrlRegstMsgToProducer();
+  bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
+    return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
+  }
+  bool ConsumedCtrlRegstValid(int64_t regst_desc_id) const { return true; }
+  void AsyncRetInplaceConsumedRegstIfNoConsumer();
 
   // Util
   void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
@@ -114,19 +136,14 @@ class OfCollectiveActor final: public ActorBase {
   }
   void InitBnInOp2BlobInfo(const TaskProto& task_proto);
 
-
-
-  // Act
-  // void Act();
-  // void ActUntilFail();
-  // void AsyncLaunchKernel(std::function<Regst*(int64_t)> Regst4RegstDescId);
-
   ActorContext* actor_ctx_;  
   int64_t actor_id_;
   int64_t thrd_id_;
   int64_t job_id_;
   std::string op_name_;
   boxing::of_collective::RuntimeNegoTreeInfo nego_tree_info_;
+  int64_t received_downstream_ready_cnt_;
+  bool can_act_;
 
   MsgHandler msg_handler_;
 
@@ -155,6 +172,7 @@ class OfCollectiveActor final: public ActorBase {
   HashSet<int64_t> produced_ctrl_regst_desc_ids_;
   HashSet<int64_t> consumed_ctrl_regst_desc_ids_;
 
+  std::vector<int64_t> tmp_regst_desc_id_vec_;
 
   int64_t total_reading_cnt_;
 
