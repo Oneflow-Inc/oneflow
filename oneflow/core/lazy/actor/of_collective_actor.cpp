@@ -136,7 +136,7 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   actor_id_ = task_proto.task_id();
   thrd_id_ = ThrdId4ActorId(actor_id_);
   job_id_ = task_proto.job_id();
-  CHECK_EQ(task_proto.exec_sequence().exec_node().size(), 1);
+  CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
   const ExecNodeProto& node = actor_ctx->task_proto().exec_sequence().exec_node()[0];
   op_name_ = node.kernel_conf().op_attribute_ref();
 
@@ -150,8 +150,10 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   ek_.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
   ek_.kernel = ConstructKernel(node.kernel_conf(), ek_.kernel_ctx.get());
 
-  // TODO: (Panlichen) what is this for??
   is_kernel_launch_synchronized_ = ek_.kernel->IsKernelLaunchSynchronized();
+
+  remaining_eord_cnt_ = 0;
+  eord_regst_desc_ids_.clear();
 
   for (const auto& pair : task_proto.produced_regst_desc()) {
     Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
@@ -159,7 +161,9 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
-    CHECK(!pair.second.regst_desc_type().has_ctrl_regst_desc());
+    if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
+      produced_ctrl_regst_desc_ids_.insert(regst_desc_id);
+    }
   }
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) { produced_regst2reading_cnt_[regst.get()] = 0; }
@@ -172,17 +176,22 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
       regst_desc_id_vec.emplace_back(regst_desc_id);
     }
     remaining_eord_cnt_ += pair.second.regst_desc_id_size();
-    CHECK(pair.first != "in_ctrl");
+    if (pair.first == "in_ctrl") {
+      consumed_ctrl_regst_desc_ids_.insert(regst_desc_id_vec.begin(), regst_desc_id_vec.end());
+    }
   }
 
-  // TODO: (Panlichen) remain some member variables: total_reading_cnt_, is_inplace_consumed_eord_, is_naive_consumed_eord_
+  total_reading_cnt_ = 0;
+
+  is_inplace_consumed_eord_ = false;
+  is_naive_consumed_eord_ = false;
 
   CheckInplaceRegstDescId(task_proto);
   TakeOverInplaceConsumedAndProduced(task_proto.produced_regst_desc());
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   TakeOverNaiveProduced(task_proto.produced_regst_desc());
   InitBnInOp2BlobInfo(task_proto);
-  
+
   OF_SET_MSG_HANDLER(&OfCollectiveActor::HandlerNormal);
 }
 
@@ -273,12 +282,176 @@ void OfCollectiveActor::InitBnInOp2BlobInfo(const TaskProto& task_proto) {
   }
 }
 
-int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    CHECK_EQ(msg.SrcMachineId(), GlobalProcessCtx::Rank());
+int64_t OfCollectiveActor::ReadingCnt4ProducedRegst(Regst* regst) const {
+  return produced_regst2reading_cnt_.at(regst);
+}
 
+void OfCollectiveActor::IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val) {
+  produced_regst2reading_cnt_.at(regst) += val;
+}
+
+int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    remaining_eord_cnt_ -= 1;
+    CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
+    if (naive_consumed_rs_.HasRegstDescId(msg.eord_regst_desc_id())) {
+      is_naive_consumed_eord_ = true;
+    } else if (inplace_consumed_rs_.HasRegstDescId(msg.eord_regst_desc_id())) {
+      is_inplace_consumed_eord_ = true;
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    if (msg.SrcMachineId() == GlobalProcessCtx::Rank()) {
+      Regst* regst = msg.regst();
+      if (naive_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
+        CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst));
+        const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(regst->regst_desc_id());
+        CHECK(rdeq.empty() == false);
+
+        if (rdeq.front()->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+          // TODO: (Panlichen) currently do nothing, maybe useless for us.
+          NormalProcessNaiveReadableDataRegstMsg(rdeq);
+        }
+
+      } else if (inplace_consumed_rs_.HasRegstDescId(regst->regst_desc_id())) {
+        CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
+        int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
+        CHECK(regst->GetSoleBlob()->dptr()
+                == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
+      } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
+        // do nothing
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else  {
+      // can only process ctrl msg from other processes
+      if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
+        // process ctrl msg from other rank
+        if (IsConsumedCtrlRegstDescId(msg.regst_desc_id())) {
+          Regst* regst = msg.regst();
+          CHECK(naive_consumed_rs_.HasRegstDescId(msg.regst_desc_id()));
+          CHECK(Global<RegstMgr>::Get()->HasProducerTaskId4RegstDescId(msg.regst_desc_id()));
+          CHECK_EQ(0, naive_consumed_rs_.TryPushBackRegst(regst, msg.regst_desc_id()));
+          const auto& rdeq = naive_consumed_rs_.RegstDeq4RegstDescId(msg.regst_desc_id());
+          CHECK(rdeq.empty() == false);
+        } else {
+          CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+        }
+      }            
+    }
+    ActUntilFail();
+  } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+    ActUntilFail();
+  } else {
+    UNIMPLEMENTED();
+  }
+  // all consumed regsts get eord
+  bool naive_or_inplace_gets_eord_and_both_empty = 
+      (is_naive_consumed_eord_ || is_inplace_consumed_eord_)
+      && (naive_consumed_rs_.available_regst_desc_cnt() == 0
+          && inplace_consumed_rs_.available_regst_desc_cnt() == 0);
+  if (naive_or_inplace_gets_eord_and_both_empty) {
+    CHECK_EQ(naive_consumed_rs_.available_regst_desc_cnt(), 0);
+    AsyncSendEORDMsgForAllProducedRegstDesc();
+    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
+      OF_SET_MSG_HANDLER(nullptr);
+      return 1;
+    } else {
+      OF_SET_MSG_HANDLER(&OfCollectiveActor::HandlerZombie);
+      return 0;
+    }
   }
   return 0;
+}
+
+int OfCollectiveActor::HandlerZombie(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    CHECK_GE(remaining_eord_cnt_, 1);
+    remaining_eord_cnt_ -= 1;
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) { AsyncSendRegstMsgToProducer(msg.regst()); }
+  } else {
+    UNIMPLEMENTED();
+  }
+  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
+    msg_handler_ = nullptr;
+    return 1;
+  }
+  return 0;
+}
+
+void OfCollectiveActor::ActUntilFail() {
+
+}
+
+void OfCollectiveActor::EnqueueAsyncMsg(const ActorMsg& msg) {
+  if (is_kernel_launch_synchronized_ && thrd_id_ == ThrdId4ActorId(msg.dst_actor_id())) {
+    Global<ActorMsgBus>::Get()->SendMsg(msg);
+  } else {
+    async_msg_queue_.emplace_back(msg);
+  }
+}
+
+void OfCollectiveActor::AsyncSendEORDMsgForAllProducedRegstDesc() {
+  for (auto& pair : produced_regsts_) {
+    CHECK(!pair.second.empty());
+    const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
+    AddCallback([regst_desc]() {
+      for (int64_t consumer : regst_desc->consumers_actor_id()) {
+        Global<ActorMsgBus>::Get()->SendMsg(
+            ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
+      }
+    });
+  }
+}
+
+void OfCollectiveActor::AsyncSendRegstMsgToProducer(Regst* regst) {
+  AsyncSendRegstMsgToProducer(regst, regst->producer_actor_id());
+}
+
+void OfCollectiveActor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
+  // must access regst before sending it to producer
+  int64_t regst_desc_id = regst->regst_desc_id();
+  EnqueueAsyncMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
+  // only naive needs to pop here.
+  naive_consumed_rs_.TryPopFrontRegst(regst_desc_id);
+}
+
+int OfCollectiveActor::TryUpdtStateAsProducedRegst(Regst* regst) {
+  auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
+  if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
+  CHECK(produced_regsts_.find(regst->regst_desc_id()) != produced_regsts_.end());
+  CHECK_GE(reading_cnt_it->second, 1);
+  reading_cnt_it->second -= 1;
+  total_reading_cnt_ -= 1;
+  if (reading_cnt_it->second != 0) { return 0; }
+
+  if (inplace_produced_rs_.TryPushBackRegst(regst) == 0) {
+    int64_t in_regst_desc_id = inplace_regst_desc_id_out2in_.at(regst->regst_desc_id());
+    Regst* in_regst = inplace_consumed_rs_.Front(in_regst_desc_id);
+    CHECK(in_regst);
+    AsyncSendRegstMsgToProducer(in_regst);
+    CHECK_EQ(0, inplace_consumed_rs_.TryPopFrontRegst(in_regst_desc_id));
+  } else if (naive_produced_rs_.TryPushBackRegst(regst) != 0) {
+    UNIMPLEMENTED();
+  }
+  return 0;
+}
+
+void OfCollectiveActor::AsyncSendQueuedMsg() {
+  if (!async_msg_queue_.empty()) {
+    std::deque<ActorMsg> msgs;
+    msgs.swap(async_msg_queue_);
+    AddCallback([msgs]() {
+      for (const ActorMsg& msg : msgs) { Global<ActorMsgBus>::Get()->SendMsg(msg); }
+    });
+  }
+}
+
+void OfCollectiveActor::AddCallback(std::function<void()> callback) {
+  actor_ctx_->AddCallback(std::move(callback));
 }
 
 REGISTER_ACTOR(TaskType::kOfCollectiveBoxingGeneric, OfCollectiveActor);

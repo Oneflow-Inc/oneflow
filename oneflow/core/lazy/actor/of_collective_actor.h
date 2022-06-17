@@ -60,6 +60,12 @@ class OfCollectiveActor final: public ActorBase {
   };
   enum class RegstNameType { kNaive = 0, kCustomized };
 
+  bool IsConsumedCtrlRegstDescId(int64_t regst_desc_id) {
+    return consumed_ctrl_regst_desc_ids_.find(regst_desc_id) != consumed_ctrl_regst_desc_ids_.end();
+  }
+  bool IsProducedCtrlRegstDescId(int64_t regst_desc_id) {
+    return produced_ctrl_regst_desc_ids_.find(regst_desc_id) != produced_ctrl_regst_desc_ids_.end();
+  }
 
   // Msg Handler
   using MsgHandler = int (OfCollectiveActor::*)(const ActorMsg&);
@@ -71,12 +77,31 @@ class OfCollectiveActor final: public ActorBase {
   } while (0)
 
   int HandlerNormal(const ActorMsg& msg);
+  int HandlerZombie(const ActorMsg& msg);
+
+  void NormalProcessNaiveReadableDataRegstMsg(const std::deque<Regst*>&) {}
+  bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) { return false; }
+  int TryUpdtStateAsProducedRegst(Regst* regst);
+
+  // Act
+  void ActUntilFail();
+
+  // Send Msg
+  void EnqueueAsyncMsg(const ActorMsg&);
+  void AsyncSendRegstMsgToProducer(Regst*);
+  void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
+  void AsyncSendQueuedMsg();
+  void AddCallback(std::function<void()> callback);
+  void AsyncSendEORDMsgForAllProducedRegstDesc();
 
   // Util
+  void IncreaseTotalReadingCnt(int64_t val) { total_reading_cnt_ += val; }
+  int64_t ReadingCnt4ProducedRegst(Regst* regst) const;
+  void IncreaseReadingCnt4ProducedRegst(Regst* regst, int64_t val);
+  bool ReceiveAllEordMsg() const { return remaining_eord_cnt_ == 0; }
 
 
-
-  // Naive, Inplace Or Customized
+  // manage registers
   virtual void TakeOverInplaceConsumedAndProduced(
       const PbMap<std::string, RegstDescProto>& produced_ids);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
@@ -112,16 +137,28 @@ class OfCollectiveActor final: public ActorBase {
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
+  // eord
   int64_t remaining_eord_cnt_;
+  HashSet<int64_t> eord_regst_desc_ids_;
   // inplace
   HashMap<int64_t, int64_t> inplace_regst_desc_id_in2out_;
   HashMap<int64_t, int64_t> inplace_regst_desc_id_out2in_;
   RegstSlot inplace_consumed_rs_;
   RegstSlot inplace_produced_rs_;
+  bool is_inplace_consumed_eord_;
   HashSet<int64_t> inplace_in_ids_with_no_out_consumed_;
   // naive
   RegstSlot naive_produced_rs_;
   RegstSlot naive_consumed_rs_;
+  bool is_naive_consumed_eord_;
+  // ctrl
+  HashSet<int64_t> produced_ctrl_regst_desc_ids_;
+  HashSet<int64_t> consumed_ctrl_regst_desc_ids_;
+
+
+  int64_t total_reading_cnt_;
+
+  std::deque<ActorMsg> async_msg_queue_;
 
 };
 
