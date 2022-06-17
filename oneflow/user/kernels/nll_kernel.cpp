@@ -85,6 +85,7 @@ class NLLKernel final : public user_op::OpKernel {
     const auto* input = ctx->Tensor4ArgNameAndIndex("input", 0);
     const auto* target = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* output = ctx->Tensor4ArgNameAndIndex("output", 0);
+    auto* out_weight = ctx->Tensor4ArgNameAndIndex("out_weight", 0);
 
     const int64_t N = target->shape().elem_cnt();
     const int64_t C = input->shape().At(input->shape().NumAxes() - 1);
@@ -106,14 +107,11 @@ class NLLKernel final : public user_op::OpKernel {
     if (ctx->has_input("weight", 0)) {
       weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("weight", 0))->dptr<T>();
     }
-    T* out_weight_dptr = nullptr;
-    if (ctx->has_output("out_weight", 0)) {
-      out_weight_dptr = CHECK_NOTNULL(ctx->Tensor4ArgNameAndIndex("out_weight", 0))->mut_dptr<T>();
-    }
 
-    NLLKernelUtil<device_type, T, K>::Forward(
-        ctx->stream(), static_cast<int32_t>(N), static_cast<K>(C), class_start, ignore_index,
-        input->dptr<T>(), target->dptr<K>(), weight_dptr, output->mut_dptr<T>(), out_weight_dptr);
+    NLLKernelUtil<device_type, T, K>::Forward(ctx->stream(), static_cast<int32_t>(N),
+                                              static_cast<K>(C), class_start, ignore_index,
+                                              input->dptr<T>(), target->dptr<K>(), weight_dptr,
+                                              output->mut_dptr<T>(), out_weight->mut_dptr<T>());
   }
 };
 

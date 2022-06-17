@@ -33,8 +33,8 @@ struct NLLKernelUtil<DeviceType::kCPU, T, K> {
           y = -(input[i * num_classes + label] * w);
         }
       }
-      if (out_weight) { out_weight[i] = w; }
       out[i] = y;
+      out_weight[i] = w;
     }
   }
 

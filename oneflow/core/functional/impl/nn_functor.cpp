@@ -1102,7 +1102,12 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
 class NLLLossFunctor {
  public:
   NLLLossFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("nll").Input("input").Input("target").Output("output").Build());
+    op_ = CHECK_JUST(one::OpBuilder("nll")
+                         .Input("input")
+                         .Input("target")
+                         .Output("output")
+                         .Output("out_weight")
+                         .Build());
 
     op_weight_ = CHECK_JUST(one::OpBuilder("nll")
                                 .Input("input")
@@ -1161,17 +1166,14 @@ class NLLLossFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
 
-    std::shared_ptr<Tensor> output;
-    std::shared_ptr<Tensor> out_weight;
-
+    std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
-      auto result = JUST(
+      nll_result = JUST(
           OpInterpUtil::Dispatch<TensorTuple>(*op_weight_, {input_, target_, JUST(weight)}, attrs));
-      output = result->at(0);
-      out_weight = result->at(1);
     } else {
-      output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input_, target_}, attrs));
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {input_, target_}, attrs));
     }
+    auto output = nll_result->at(0);
 
     if (K > 2) { output = JUST(functional::Reshape(output, *target_shape)); }
 
@@ -1181,13 +1183,8 @@ class NLLLossFunctor {
 
     if (reduction == "sum") { return sum; }
 
-    if (weight) {
-      auto total_weight = JUST(functional::ReduceSum(out_weight, {}, false));
-      return functional::Div(sum, total_weight);
-    }
-
-    size_t reduce_count = output->shape()->Count(0);
-    return functional::ScalarMul(sum, 1.0 / reduce_count, false);
+    auto total_weight = JUST(functional::ReduceSum(nll_result->at(1), {}, false));
+    return functional::Div(sum, total_weight);
   }
 
  private:
@@ -1199,17 +1196,19 @@ class CrossEntropyFunctor {
  public:
   CrossEntropyFunctor() {
     op_log_softmax_ = CHECK_JUST(one::OpBuilder("log_softmax").Input("in").Output("prob").Build());
+
     op_nll_ = CHECK_JUST(one::OpBuilder("nll")
                              .Input("input")
                              .Input("target")
-                             .Output("out")
+                             .Output("output")
                              .Output("out_weight")
                              .Build());
+
     op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
                                     .Input("input")
                                     .Input("target")
                                     .Input("weight")
-                                    .Output("out")
+                                    .Output("output")
                                     .Output("out_weight")
                                     .Build());
   }
@@ -1221,8 +1220,6 @@ class CrossEntropyFunctor {
         << Error::RuntimeError() << "Reduction should be none, sum or mean.";
     const auto& input_shape = input->shape();
     const auto& target_shape = target->shape();
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
 
     std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
     input_perm[input_perm.size() - 1] = 1;
@@ -1238,21 +1235,26 @@ class CrossEntropyFunctor {
 
     const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
 
-    std::shared_ptr<TensorTuple> kernel_result;
-    std::shared_ptr<Tensor> result;
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
+
+    std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
-      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
           *op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
     } else {
-      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
+      nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
-    result = JUST(functional::Reshape((*kernel_result)[0], *target_shape));
-    if (reduction == "none") { return result; }
 
-    result = JUST(functional::ReduceSum(result, {}, false));
-    if (reduction == "sum") { return result; }
+    auto output = nll_result->at(0);
+    output = JUST(functional::Reshape(output, *target_shape));
+    if (reduction == "none") { return output; }
 
-    return functional::Div(result, kernel_result->at(1));
+    auto sum = JUST(functional::ReduceSum(output, {}, false));
+    if (reduction == "sum") { return sum; }
+
+    auto total_weight = JUST(functional::ReduceSum(nll_result->at(1), {}, false));
+    return functional::Div(sum, total_weight);
   }
 
  private:

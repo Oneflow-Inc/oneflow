@@ -63,8 +63,8 @@ Maybe<void> NLLGradFunction::Apply(const NLLCaptureState* ctx, const TensorTuple
                                    TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  CHECK_OR_RETURN((out_grads.size() == 1 && ctx->SavedTensors().size() == 2)
-                  || (out_grads.size() == 2 && ctx->SavedTensors().size() == 3));
+  CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+  CHECK_GE_OR_RETURN(ctx->SavedTensors().size(), 2);
   const auto& out_grad = out_grads.at(0);
   const auto& input = ctx->SavedTensors().at(0);
   const auto& target = ctx->SavedTensors().at(1);
@@ -76,6 +76,7 @@ Maybe<void> NLLGradFunction::Apply(const NLLCaptureState* ctx, const TensorTuple
         JUST(functional::NLLGrad(out_grad, input, target, NullOpt, ctx->ignore_index));
 
   } else {
+    // has weight
     const auto& weight = ctx->SavedTensors().at(2);
     in_grads->at(0) = JUST(functional::NLLGrad(out_grad, input, target, weight, ctx->ignore_index));
   }

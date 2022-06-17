@@ -23,15 +23,14 @@ namespace oneflow {
       << ctx->op_name() << ": expected target being integer type";
 
   auto input_dtype = ctx->InputDType("input", 0);
-  *ctx->OutputDType("output", 0) = input_dtype;
-
   if (ctx->has_input("weight", 0)) {
     auto weight_dtype = ctx->InputDType("weight", 0);
     CHECK_EQ_OR_RETURN(weight_dtype, input_dtype) << ctx->op_name() << ": expected weight dtype "
                                                   << input_dtype << ", but got " << weight_dtype;
   }
 
-  if (ctx->has_output("out_weight", 0)) { *ctx->OutputDType("out_weight", 0) = input_dtype; }
+  *ctx->OutputDType("output", 0) = input_dtype;
+  *ctx->OutputDType("out_weight", 0) = input_dtype;
 
   return Maybe<void>::Ok();
 }
@@ -66,10 +65,9 @@ namespace oneflow {
   *output_desc->mut_is_dynamic() = is_dynamic;
   *output_desc->mut_shape() = Shape({N});
 
-  if (ctx->has_output("out_weight", 0)) {
-    user_op::TensorDesc* out_weight_desc = ctx->OutputTensorDesc("out_weight", 0);
-    *out_weight_desc->mut_shape() = Shape({N});
-  }
+  user_op::TensorDesc* out_weight_desc = ctx->OutputTensorDesc("out_weight", 0);
+  *out_weight_desc->mut_is_dynamic() = is_dynamic;
+  *out_weight_desc->mut_shape() = Shape({N});
 
   return Maybe<void>::Ok();
 }
@@ -79,12 +77,10 @@ namespace oneflow {
   auto builder1 = ctx->NewBuilder()
                       .Split(user_op::OpArg("input", 0), 0)
                       .Split(user_op::OpArg("target", 0), 0)
-                      .Split(user_op::OpArg("output", 0), 0);
+                      .Split(user_op::OpArg("output", 0), 0)
+                      .Split(user_op::OpArg("out_weight", 0), 0);
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder1.Broadcast(user_op::OpArg("weight", 0));
-  }
-  if (ctx->user_op_conf().has_output("out_weight", 0)) {
-    builder1.Split(user_op::OpArg("out_weight", 0), 0);
   }
   builder1.Build();
 
@@ -93,12 +89,10 @@ namespace oneflow {
   auto builder2 = ctx->NewBuilder()
                       .Split(user_op::OpArg("input", 0), shape.NumAxes() - 1)
                       .Broadcast(user_op::OpArg("target", 0))
-                      .PartialSum(user_op::OpArg("output", 0));
+                      .PartialSum(user_op::OpArg("output", 0))
+                      .PartialSum(user_op::OpArg("out_weight", 0));
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder2.Split(user_op::OpArg("weight", 0), 0);
-  }
-  if (ctx->user_op_conf().has_output("out_weight", 0)) {
-    builder2.PartialSum(user_op::OpArg("out_weight", 0));
   }
   builder2.Build();
 
