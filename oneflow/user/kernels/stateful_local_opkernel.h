@@ -37,9 +37,10 @@ namespace one {
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-class UserKernelRegContext;
-class UserOpInferContext;
-class UserKernelComputeContext;
+class UserKernelRegContextHelper;
+class UserOpInferContextHelper;
+class UserKernelInitAndCacheContextHelper;
+class UserKernelComputeContextHelper;
 
 class StatefulLocalOpKernel final {
  public:
@@ -68,8 +69,7 @@ class StatefulLocalOpKernel final {
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
-  void OpInferCtxForSchedulerThread(
-      const std::function<void(user_op::InferContext*)>& Callback) const;
+  void WithOpInferCtx(const std::function<void(user_op::InferContext*)>& Callback) const;
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
@@ -104,9 +104,10 @@ class StatefulLocalOpKernel final {
   AttrMap base_attrs_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   Symbol<Stream> stream_;
-  std::unique_ptr<UserKernelRegContext> reg_ctx_;
-  std::unique_ptr<UserOpInferContext> op_infer_ctx_for_scheduler_thread_;
-  std::unique_ptr<UserKernelComputeContext> compute_ctx_;
+  std::unique_ptr<const UserKernelRegContextHelper> reg_ctx_helper_;
+  std::unique_ptr<const UserOpInferContextHelper> op_infer_ctx_helper_;
+  std::unique_ptr<const UserKernelInitAndCacheContextHelper> init_and_cache_ctx_helper_;
+  std::unique_ptr<const UserKernelComputeContextHelper> compute_ctx_helper_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
   bool need_check_mem_case_;

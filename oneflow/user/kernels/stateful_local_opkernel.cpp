@@ -35,15 +35,15 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 using EagerBlobObjectListRawPtr = const std::vector<std::shared_ptr<vm::EagerBlobObject>>*;
 using ConsistentTensorInferResultRawPtr = const ConsistentTensorInferResult*;
 
-class ZeroCopyBaseContext {
+class ZeroCopyBaseContextHelper {
  public:
-  ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                      const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : ZeroCopyBaseContext(input_arg_tuple, output_arg_tuple, nullptr) {}
+  ZeroCopyBaseContextHelper(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                            const std::shared_ptr<const ArgTuple>& output_arg_tuple)
+      : ZeroCopyBaseContextHelper(input_arg_tuple, output_arg_tuple, nullptr) {}
 
-  ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                      const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-                      vm::EagerBlobObject* tmp_buffer)
+  ZeroCopyBaseContextHelper(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                            const std::shared_ptr<const ArgTuple>& output_arg_tuple,
+                            vm::EagerBlobObject* tmp_buffer)
       : input_arg_tuple_(input_arg_tuple),
         output_arg_tuple_(output_arg_tuple),
         tmp_buffer_(tmp_buffer) {}
@@ -56,34 +56,32 @@ class ZeroCopyBaseContext {
                              index);                                                              \
   if (i >= 0) { return (outputs).at(i) post_action; }
 
-  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                  const std::string& arg_name,
                                                   const int32_t index) const {
-    auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
-    RETURN_IF_FOUND(*op_call_ctx->inputs, *op_call_ctx->outputs, .get());
+    RETURN_IF_FOUND(*call_ctx->inputs, *call_ctx->outputs, .get());
     return nullptr;
   }
 
-  user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, const int32_t index) const {
-    auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
-    RETURN_IF_FOUND(*op_call_ctx->inputs, *op_call_ctx->outputs, .get());
+  user_op::Tensor* Tensor4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                          const int32_t index) const {
+    RETURN_IF_FOUND(*call_ctx->inputs, *call_ctx->outputs, .get());
     if (arg_name == "tmp_buffer" && index == 0) { return CHECK_NOTNULL(tmp_buffer_); }
     return nullptr;
   }
 
-  const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(const std::string& arg_name,
+  const ConsistentTensorMeta* ConsistentTensorMeta4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                                   const std::string& arg_name,
                                                                    const int32_t index) const {
-    const auto& consistent_tensor_infer_result =
-        CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current())
-            ->consistent_tensor_infer_result;
+    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result;
     RETURN_IF_FOUND(consistent_tensor_infer_result->input_tensor_metas(),
                     consistent_tensor_infer_result->output_tensor_metas(),
                     .shared_from_symbol().get());
     return nullptr;
   }
 
-  Optional<Symbol<ParallelDesc>> parallel_desc() const {
-    const auto& consistent_tensor_infer_result =
-        eager::ThreadLocalCallContextScope::Current()->consistent_tensor_infer_result;
+  Optional<Symbol<ParallelDesc>> parallel_desc(eager::CallContext* call_ctx) const {
+    const auto& consistent_tensor_infer_result = call_ctx->consistent_tensor_infer_result;
     if (!consistent_tensor_infer_result) { return Optional<Symbol<ParallelDesc>>(); }
     if (!consistent_tensor_infer_result->input_tensor_metas().empty()) {
       return consistent_tensor_infer_result->input_tensor_metas().at(0)->parallel_desc();
@@ -95,8 +93,8 @@ class ZeroCopyBaseContext {
     }
   }
 
-  const ParallelContext& parallel_ctx() const {
-    const auto& parallel_desc = this->parallel_desc();
+  const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
+    const auto& parallel_desc = this->parallel_desc(call_ctx);
     if (parallel_desc.has_value()) {
       const auto& parallel_desc_symbol = CHECK_JUST(parallel_desc);
       return *CHECK_JUST(GetParallelContext4CurrentProcessCtx(parallel_desc_symbol));
@@ -130,22 +128,22 @@ class ZeroCopyBaseContext {
   vm::EagerBlobObject* tmp_buffer_;
 };
 
-class UserKernelBaseContext : public ZeroCopyBaseContext {
+class UserKernelBaseContextHelper final : public ZeroCopyBaseContextHelper {
  public:
-  UserKernelBaseContext(const std::string& device_tag,
-                        const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                        const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : UserKernelBaseContext(device_tag, input_arg_tuple, output_arg_tuple, nullptr) {}
+  UserKernelBaseContextHelper(const std::string& device_tag,
+                              const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                              const std::shared_ptr<const ArgTuple>& output_arg_tuple)
+      : UserKernelBaseContextHelper(device_tag, input_arg_tuple, output_arg_tuple, nullptr) {}
 
-  UserKernelBaseContext(const std::string& device_tag,
-                        const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                        const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-                        vm::EagerBlobObject* tmp_buffer)
-      : ZeroCopyBaseContext(input_arg_tuple, output_arg_tuple, tmp_buffer),
+  UserKernelBaseContextHelper(const std::string& device_tag,
+                              const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                              const std::shared_ptr<const ArgTuple>& output_arg_tuple,
+                              vm::EagerBlobObject* tmp_buffer)
+      : ZeroCopyBaseContextHelper(input_arg_tuple, output_arg_tuple, tmp_buffer),
         device_tag_(device_tag),
         device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))) {}
 
-  ~UserKernelBaseContext() = default;
+  ~UserKernelBaseContextHelper() = default;
 
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return device_tag_; }
@@ -159,270 +157,527 @@ class UserKernelBaseContext : public ZeroCopyBaseContext {
   const DeviceType device_type_;
 };
 
+class UserOpInferContextHelper final {
+ public:
+  UserOpInferContextHelper(const user_op::UserOpConfWrapper* user_op_conf,
+                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                           const std::shared_ptr<const ArgTuple>& output_arg_tuple)
+      : user_op_conf_(user_op_conf),
+        zero_copy_base_ctx_helper_(input_arg_tuple, output_arg_tuple) {}
+
+  ~UserOpInferContextHelper() = default;
+
+  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                               const std::string& arg_name,
+                                                               int32_t index) const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  const user_op::TensorDesc& InputTensorDesc(eager::CallContext* call_ctx,
+                                             const std::string& arg_name, int32_t index) const {
+    return *CHECK_NOTNULL(TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index));
+  }
+
+  user_op::TensorDesc* OutputTensorDesc(eager::CallContext* call_ctx, const std::string& arg_name,
+                                        int32_t index) const {
+    return TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                  const std::string& arg_name,
+                                                  int32_t index) const {
+    return zero_copy_base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+
+  const Shape& InputShape(eager::CallContext* call_ctx, const std::string& arg_name,
+                          int32_t index) const {
+    return *Shape4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  Shape* OutputShape(eager::CallContext* call_ctx, const std::string& arg_name,
+                     int32_t index) const {
+    return Shape4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  Shape* Shape4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                               int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_shape();
+  }
+  const Stride& InputStride(eager::CallContext* call_ctx, const std::string& arg_name,
+                            int32_t index) const {
+    return *Stride4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  Stride* OutputStride(eager::CallContext* call_ctx, const std::string& arg_name,
+                       int32_t index) const {
+    return Stride4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  Stride* Stride4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                 int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_stride();
+  }
+  const DataType& InputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+                             int32_t index) const {
+    return *Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  DataType* OutputDType(eager::CallContext* call_ctx, const std::string& arg_name,
+                        int32_t index) const {
+    return Dtype4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  DataType* Dtype4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                  int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_data_type();
+  }
+  bool InputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
+                      int32_t index) const {
+    return *IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  bool* OutputIsDynamic(eager::CallContext* call_ctx, const std::string& arg_name,
+                        int32_t index) const {
+    return IsDynamic4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  bool* IsDynamic4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                  int32_t index) const {
+    return NonNullTensorDesc4ArgNameAndIndex(call_ctx, arg_name, index)->mut_is_dynamic();
+  }
+
+  const ArgVec& inputs() const { return zero_copy_base_ctx_helper_.inputs(); }
+  const ArgVec& outputs() const { return zero_copy_base_ctx_helper_.outputs(); }
+  const JobDesc* job_desc() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+  const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
+    return zero_copy_base_ctx_helper_.parallel_ctx(call_ctx);
+  }
+  const ParallelDesc& parallel_desc(eager::CallContext* call_ctx) const {
+    return *CHECK_JUST(zero_copy_base_ctx_helper_.parallel_desc(call_ctx));
+  }
+  const SbpParallel& SbpParallel4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                 const std::string& arg_name, int32_t index) const {
+    const auto& nd_sbp = NdSbp4ArgNameAndIndex(call_ctx, arg_name, index);
+    CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
+    return nd_sbp.sbp_parallel(0);
+  }
+  const NdSbp& NdSbp4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                     int32_t index) const {
+    return *CHECK_NOTNULL(zero_copy_base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(
+                              call_ctx, arg_name, index))
+                ->nd_sbp();
+  }
+
+  int64_t parallel_num(eager::CallContext* call_ctx) const {
+    return parallel_ctx(call_ctx).parallel_num();
+  }
+
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+  const std::string& op_loc() const { return user_op_conf_->op_conf().loc(); }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(eager::CallContext* call_ctx,
+                                                           const std::string& attr_name) const {
+    return call_ctx->composed_attrs.Attr4Name(attr_name);
+  }
+
+ private:
+  user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                         const std::string& arg_name,
+                                                         int32_t index) const {
+    user_op::TensorDesc* tensor_desc = TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+    if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
+    return tensor_desc;
+  }
+
+  const user_op::UserOpConfWrapper* user_op_conf_;
+  ZeroCopyBaseContextHelper zero_copy_base_ctx_helper_;
+};
+
 class UserOpInferContext : public user_op::InferContext {
  public:
-  UserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
-                     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                     const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : user_op_conf_(user_op_conf), zero_copy_base_ctx_(input_arg_tuple, output_arg_tuple) {}
+  UserOpInferContext(const UserOpInferContextHelper* helper, eager::CallContext* call_ctx)
+      : helper_(helper), call_ctx_(call_ctx) {}
 
   ~UserOpInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
-    UNIMPLEMENTED();
-    return nullptr;
+    return helper_->LogicalTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
                                              int32_t index) const override {
-    auto out = const_cast<UserOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
-    CHECK_NOTNULL(out);
-    return *out;
+    return helper_->InputTensorDesc(call_ctx_, arg_name, index);
   }
   user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index);
+    return helper_->OutputTensorDesc(call_ctx_, arg_name, index);
   }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) {
-    return zero_copy_base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+    return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+    return helper_->InputShape(call_ctx_, arg_name, index);
   }
   Shape* OutputShape(const std::string& arg_name, int32_t index) override {
-    return Shape4ArgNameAndIndex(arg_name, index);
+    return helper_->OutputShape(call_ctx_, arg_name, index);
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+    return helper_->Shape4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpInferContext*>(this)->Stride4ArgNameAndIndex(arg_name, index);
+    return helper_->InputStride(call_ctx_, arg_name, index);
   }
   Stride* OutputStride(const std::string& arg_name, int32_t index) override {
-    return Stride4ArgNameAndIndex(arg_name, index);
+    return helper_->OutputStride(call_ctx_, arg_name, index);
   }
   Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_stride();
+    return helper_->Stride4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+    return helper_->InputDType(call_ctx_, arg_name, index);
   }
   DataType* OutputDType(const std::string& arg_name, int32_t index) override {
-    return Dtype4ArgNameAndIndex(arg_name, index);
+    return helper_->OutputDType(call_ctx_, arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+    return helper_->Dtype4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
-    return *const_cast<UserOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
+    return helper_->InputIsDynamic(call_ctx_, arg_name, index);
   }
   bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
-    return IsDynamic4ArgNameAndIndex(arg_name, index);
+    return helper_->OutputIsDynamic(call_ctx_, arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
+    return helper_->IsDynamic4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
-  const ArgVec& inputs() const override { return zero_copy_base_ctx_.inputs(); }
-  const ArgVec& outputs() const override { return zero_copy_base_ctx_.outputs(); }
-  const JobDesc* job_desc() const override {
-    UNIMPLEMENTED();
-    return nullptr;
-  }
-  const ParallelContext& parallel_ctx() const override {
-    return zero_copy_base_ctx_.parallel_ctx();
-  }
-  const ParallelDesc& parallel_desc() const override {
-    return *CHECK_JUST(zero_copy_base_ctx_.parallel_desc());
-  }
+  const ArgVec& inputs() const override { return helper_->inputs(); }
+  const ArgVec& outputs() const override { return helper_->outputs(); }
+  const JobDesc* job_desc() const override { return helper_->job_desc(); }
+  const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
+  const ParallelDesc& parallel_desc() const override { return helper_->parallel_desc(call_ctx_); }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
-    const auto& nd_sbp = NdSbp4ArgNameAndIndex(arg_name, index);
-    CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
-    return nd_sbp.sbp_parallel(0);
+    return helper_->SbpParallel4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
-    return *CHECK_NOTNULL(zero_copy_base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
-                ->nd_sbp();
+    return helper_->NdSbp4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
-  int64_t parallel_num() const override { return parallel_ctx().parallel_num(); }
+  int64_t parallel_num() const override { return helper_->parallel_num(call_ctx_); }
 
   const std::string& input(const std::string& arg_name, int32_t index) const override {
-    return user_op_conf().input(arg_name, index);
+    return helper_->input(arg_name, index);
   }
   const std::string& output(const std::string& arg_name, int32_t index) const override {
-    return user_op_conf().output(arg_name, index);
+    return helper_->output(arg_name, index);
   }
   bool has_input(const std::string& arg_name, int32_t index) const override {
-    return user_op_conf().has_input(arg_name, index);
+    return helper_->has_input(arg_name, index);
   }
   bool has_output(const std::string& arg_name, int32_t index) const override {
-    return user_op_conf().has_output(arg_name, index);
+    return helper_->has_output(arg_name, index);
   }
   int32_t input_size(const std::string& arg_name) const override {
-    return user_op_conf().input_size(arg_name);
+    return helper_->input_size(arg_name);
   }
   int32_t output_size(const std::string& arg_name) const override {
-    return user_op_conf().output_size(arg_name);
+    return helper_->output_size(arg_name);
   }
-  const std::string& op_name() const override { return user_op_conf().op_name(); }
-  const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
-  const std::string& op_loc() const override { return user_op_conf_->op_conf().loc(); }
+  const std::string& op_name() const override { return helper_->op_name(); }
+  const std::string& op_type_name() const override { return helper_->op_type_name(); }
+  const std::string& device_tag() const override { return helper_->device_tag(); }
+  const std::string& op_loc() const override { return helper_->op_loc(); }
 
  private:
-  user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(const std::string& arg_name,
-                                                         int32_t index) {
-    user_op::TensorDesc* tensor_desc = TensorDesc4ArgNameAndIndex(arg_name, index);
-    if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
-    return tensor_desc;
-  }
-  const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
+    return helper_->Attr4Name(call_ctx_, attr_name);
   }
 
+  const UserOpInferContextHelper* helper_;
+  eager::CallContext* call_ctx_;
+};
+
+class UserKernelComputeContextHelper final {
+ public:
+  UserKernelComputeContextHelper(const std::string& device_tag,
+                                 const user_op::UserOpConfWrapper* user_op_conf,
+                                 const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                                 const std::shared_ptr<const ArgTuple>& output_arg_tuple,
+                                 vm::EagerBlobObject* tmp_buffer)
+      : user_op_conf_(user_op_conf),
+        base_ctx_helper_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
+
+  ~UserKernelComputeContextHelper() = default;
+
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                        const std::string& arg_name,
+                                                        int32_t index) const {
+    return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+
+  user_op::Tensor* Tensor4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                          int32_t index) const {
+    return base_ctx_helper_.Tensor4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  ep::Stream* stream(DeviceCtx* device_ctx) const {
+    CHECK(device_ctx);
+    return device_ctx->stream();
+  }
+
+  DeviceType device_type() const { return base_ctx_helper_.device_type(); }
+  const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
+    return base_ctx_helper_.parallel_ctx(call_ctx);
+  }
+
+  const ArgVec& inputs() const { return base_ctx_helper_.inputs(); }
+  const ArgVec& outputs() const { return base_ctx_helper_.outputs(); }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(eager::CallContext* call_ctx,
+                                                           const std::string& attr_name) const {
+    return call_ctx->composed_attrs.Attr4Name(attr_name);
+  }
+
+ private:
   const user_op::UserOpConfWrapper* user_op_conf_;
-  ZeroCopyBaseContext zero_copy_base_ctx_;
+  UserKernelBaseContextHelper base_ctx_helper_;
 };
 
 class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit UserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
-                                    const user_op::UserOpConfWrapper* user_op_conf,
-                                    const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                                    const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-                                    vm::EagerBlobObject* tmp_buffer)
-      : user_op_conf_(user_op_conf),
-        device_ctx_(device_ctx),
-        base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
+  UserKernelComputeContext(const UserKernelComputeContextHelper* helper,
+                           eager::CallContext* call_ctx, DeviceCtx* device_ctx)
+      : helper_(helper), call_ctx_(call_ctx), device_ctx_(device_ctx) {}
 
   ~UserKernelComputeContext() = default;
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+    return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   user_op::Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
-  }
-  ep::Stream* stream() override {
-    CHECK(device_ctx_);
-    return device_ctx_->stream();
+    return helper_->Tensor4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
-  DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
+  ep::Stream* stream() override { return helper_->stream(device_ctx_); }
 
-  const ArgVec& inputs() const override { return base_ctx_.inputs(); };
-  const ArgVec& outputs() const override { return base_ctx_.outputs(); };
+  DeviceType device_type() const override { return helper_->device_type(); }
 
-  void Update(DeviceCtx* device_ctx) { device_ctx_ = device_ctx; }
+  const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
+
+  const ArgVec& inputs() const override { return helper_->inputs(); }
+  const ArgVec& outputs() const override { return helper_->outputs(); }
 
  private:
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
+  const user_op::UserOpConfWrapper& user_op_conf() const override {
+    return helper_->user_op_conf();
   }
 
-  const user_op::UserOpConfWrapper* user_op_conf_;
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return helper_->Attr4Name(call_ctx_, attr_name);
+  }
+
+  const UserKernelComputeContextHelper* helper_;
+  eager::CallContext* call_ctx_;
   DeviceCtx* device_ctx_;
-  UserKernelBaseContext base_ctx_;
+};
+
+class UserKernelRegContextHelper final {
+ public:
+  UserKernelRegContextHelper(const std::string& device_tag,
+                             const user_op::UserOpConfWrapper* user_op_conf,
+                             const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                             const std::shared_ptr<const ArgTuple>& output_arg_tuple)
+      : user_op_conf_(user_op_conf),
+        base_ctx_helper_(device_tag, input_arg_tuple, output_arg_tuple) {}
+  ~UserKernelRegContextHelper() = default;
+
+  DeviceType device_type() const { return base_ctx_helper_.device_type(); }
+  const std::string& device_tag() const { return base_ctx_helper_.device_tag(); }
+  const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
+    return base_ctx_helper_.parallel_ctx(call_ctx);
+  }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                        const std::string& arg_name,
+                                                        int32_t index) const {
+    return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const ArgVec& inputs() const { return base_ctx_helper_.inputs(); }
+  const ArgVec& outputs() const { return base_ctx_helper_.outputs(); }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(eager::CallContext* call_ctx,
+                                                           const std::string& attr_name) const {
+    return call_ctx->composed_attrs.Attr4Name(attr_name);
+  }
+
+ private:
+  const user_op::UserOpConfWrapper* user_op_conf_;
+  UserKernelBaseContextHelper base_ctx_helper_;
 };
 
 class UserKernelRegContext final : public user_op::KernelRegContext {
  public:
-  explicit UserKernelRegContext(const std::string& device_tag,
-                                const user_op::UserOpConfWrapper* user_op_conf,
-                                const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                                const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : user_op_conf_(user_op_conf), base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
+  UserKernelRegContext(const UserKernelRegContextHelper* helper, eager::CallContext* call_ctx)
+      : helper_(helper), call_ctx_(call_ctx) {}
   ~UserKernelRegContext() = default;
 
-  DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const std::string& device_tag() const override { return base_ctx_.device_tag(); }
-  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
+  DeviceType device_type() const override { return helper_->device_type(); }
+  const std::string& device_tag() const override { return helper_->device_tag(); }
+  const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+    return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
-  const ArgVec& inputs() const override { return base_ctx_.inputs(); }
-  const ArgVec& outputs() const override { return base_ctx_.outputs(); }
+  const ArgVec& inputs() const override { return helper_->inputs(); }
+  const ArgVec& outputs() const override { return helper_->outputs(); }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const override {
+    return helper_->user_op_conf();
+  }
+
+ private:
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return helper_->Attr4Name(call_ctx_, attr_name);
+  }
+
+  const UserKernelRegContextHelper* helper_;
+  eager::CallContext* call_ctx_;
+};
+
+class UserKernelInitAndCacheContextHelper final {
+ public:
+  UserKernelInitAndCacheContextHelper(const std::string& device_tag,
+                                      const user_op::UserOpConfWrapper* user_op_conf,
+                                      const std::shared_ptr<const ArgTuple>& input_arg_tuple,
+                                      const std::shared_ptr<const ArgTuple>& output_arg_tuple)
+      : user_op_conf_(user_op_conf),
+        base_ctx_helper_(device_tag, input_arg_tuple, output_arg_tuple) {}
+
+  ~UserKernelInitAndCacheContextHelper() = default;
+
+  ep::Stream* stream(DeviceCtx* device_ctx) const {
+    CHECK(device_ctx);
+    return device_ctx->stream();
+  }
+
+  DeviceType device_type() const { return base_ctx_helper_.device_type(); }
+  const ParallelContext& parallel_ctx(eager::CallContext* call_ctx) const {
+    return base_ctx_helper_.parallel_ctx(call_ctx);
+  }
+  const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                        const std::string& arg_name,
+                                                        int32_t index) const {
+    return base_ctx_helper_.TensorDesc4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                               const std::string& arg_name,
+                                                               int32_t index) const {
+    return base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index);
+  }
+  const SbpParallel& SbpParallel4ArgNameAndIndex(eager::CallContext* call_ctx,
+                                                 const std::string& arg_name, int32_t index) const {
+    const auto& nd_sbp = NdSbp4ArgNameAndIndex(call_ctx, arg_name, index);
+    CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
+    return nd_sbp.sbp_parallel(0);
+  }
+
+  const NdSbp& NdSbp4ArgNameAndIndex(eager::CallContext* call_ctx, const std::string& arg_name,
+                                     int32_t index) const {
+    return *CHECK_NOTNULL(
+                base_ctx_helper_.ConsistentTensorMeta4ArgNameAndIndex(call_ctx, arg_name, index))
+                ->nd_sbp();
+  }
+
+  const ArgVec& inputs() const { return base_ctx_helper_.inputs(); }
+  const ArgVec& outputs() const { return base_ctx_helper_.outputs(); }
+  const ParallelDesc& parallel_desc(eager::CallContext* call_ctx) const {
+    return *CHECK_JUST(base_ctx_helper_.parallel_desc(call_ctx));
+  }
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(eager::CallContext* call_ctx,
+                                                           const std::string& attr_name) const {
+    return call_ctx->composed_attrs.Attr4Name(attr_name);
+  }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
 
  private:
   const user_op::UserOpConfWrapper* user_op_conf_;
-  UserKernelBaseContext base_ctx_;
-
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
-  }
+  UserKernelBaseContextHelper base_ctx_helper_;
 };
 
 class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
                                             public user_op::KernelCacheContext {
  public:
-  explicit UserKernelInitAndCacheContext(DeviceCtx* device_ctx, const std::string& device_tag,
-                                         const user_op::UserOpConfWrapper* user_op_conf,
-                                         const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                                         const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : user_op_conf_(user_op_conf),
-        device_ctx_(device_ctx),
-        base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
+  UserKernelInitAndCacheContext(const UserKernelInitAndCacheContextHelper* helper,
+                                eager::CallContext* call_ctx, DeviceCtx* device_ctx)
+      : helper_(helper), call_ctx_(call_ctx), device_ctx_(device_ctx) {}
 
   ~UserKernelInitAndCacheContext() override = default;
 
-  ep::Stream* stream() override {
-    CHECK(device_ctx_);
-    return device_ctx_->stream();
-  }
+  ep::Stream* stream() override { return helper_->stream(device_ctx_); }
 
-  DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); }
+  DeviceType device_type() const override { return helper_->device_type(); }
+  const ParallelContext& parallel_ctx() const override { return helper_->parallel_ctx(call_ctx_); }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
-    return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
+    return helper_->TensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                int32_t index) const override {
-    return base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index);
+    return helper_->LogicalTensorDesc4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
-    const auto& nd_sbp = NdSbp4ArgNameAndIndex(arg_name, index);
-    CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
-    return nd_sbp.sbp_parallel(0);
+    return helper_->SbpParallel4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
   const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
-    return *CHECK_NOTNULL(base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
-                ->nd_sbp();
+    return helper_->NdSbp4ArgNameAndIndex(call_ctx_, arg_name, index);
   }
 
-  const ArgVec& inputs() const override { return base_ctx_.inputs(); }
-  const ArgVec& outputs() const override { return base_ctx_.outputs(); }
-  const ParallelDesc& parallel_desc() const override {
-    return *CHECK_JUST(base_ctx_.parallel_desc());
-  }
+  const ArgVec& inputs() const override { return helper_->inputs(); }
+  const ArgVec& outputs() const override { return helper_->outputs(); }
+  const ParallelDesc& parallel_desc() const override { return helper_->parallel_desc(call_ctx_); }
 
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
+    return helper_->Attr4Name(call_ctx_, attr_name);
   }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const override {
+    return helper_->user_op_conf();
+  }
 
-  const user_op::UserOpConfWrapper* user_op_conf_;
+  const UserKernelInitAndCacheContextHelper* helper_;
+  eager::CallContext* call_ctx_;
   DeviceCtx* device_ctx_;
-  UserKernelBaseContext base_ctx_;
 };
 
 namespace {
@@ -515,13 +770,17 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
-  opkernel->op_infer_ctx_for_scheduler_thread_.reset(
-      new UserOpInferContext(user_op_conf, input_arg_tuple, output_arg_tuple));
-  opkernel->compute_ctx_.reset(new UserKernelComputeContext(nullptr, device_tag, user_op_conf,
-                                                            input_arg_tuple, output_arg_tuple,
-                                                            opkernel->mut_temp_blob_object()));
-  opkernel->reg_ctx_.reset(
-      new UserKernelRegContext(device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
+  opkernel->op_infer_ctx_helper_.reset(
+      new UserOpInferContextHelper(user_op_conf, input_arg_tuple, output_arg_tuple));
+
+  opkernel->init_and_cache_ctx_helper_.reset(new UserKernelInitAndCacheContextHelper(
+      opkernel->op_conf_->device_tag(), opkernel->user_op_conf_.get(), opkernel->input_arg_tuple_,
+      opkernel->output_arg_tuple_));
+  opkernel->compute_ctx_helper_.reset(
+      new UserKernelComputeContextHelper(device_tag, user_op_conf, input_arg_tuple,
+                                         output_arg_tuple, opkernel->mut_temp_blob_object()));
+  opkernel->reg_ctx_helper_.reset(
+      new UserKernelRegContextHelper(device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -543,9 +802,11 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
 StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 
-void StatefulLocalOpKernel::OpInferCtxForSchedulerThread(
+void StatefulLocalOpKernel::WithOpInferCtx(
     const std::function<void(user_op::InferContext*)>& Callback) const {
-  return Callback(op_infer_ctx_for_scheduler_thread_.get());
+  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
+  UserOpInferContext op_infer_ctx(op_infer_ctx_helper_.get(), op_call_ctx);
+  return Callback(&op_infer_ctx);
 }
 
 Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user_opkernel,
@@ -562,8 +823,10 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user
     // do nothing
   }
 
+  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
+  UserKernelRegContext reg_ctx(reg_ctx_helper_.get(), op_call_ctx);
   for (const auto& pair : dtype2cached_kernels_[primary_dtype]) {
-    if (likely(pair.first->is_matched_hob->get(*reg_ctx_))) {
+    if (likely(pair.first->is_matched_hob->get(reg_ctx))) {
       *need_temp_storage = pair.first->need_temp_storage;
       *user_opkernel = pair.second.get();
       return Maybe<void>::Ok();
@@ -574,7 +837,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user
 
   const auto& op_type_name = user_op_conf_->op_type_name();
   const auto* kernel_reg_val =
-      JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
+      JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, reg_ctx));
   CHECK_NOTNULL(kernel_reg_val);
   auto* kernel = kernel_reg_val->create_fn();
   dtype2cached_kernels_[primary_dtype].push_back(
@@ -590,8 +853,9 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(const user_op::OpKernel
                                                          DeviceCtx* device_ctx,
                                                          user_op::OpKernelState** state,
                                                          user_op::OpKernelCache** cache) {
-  UserKernelInitAndCacheContext init_and_cache_ctx(
-      device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_);
+  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
+  UserKernelInitAndCacheContext init_and_cache_ctx(init_and_cache_ctx_helper_.get(), op_call_ctx,
+                                                   device_ctx);
   if (state != nullptr) {
     auto it = op_kernel_state_map_.find(op_kernel);
     if (it != op_kernel_state_map_.end()) {
@@ -630,9 +894,9 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
 
 void StatefulLocalOpKernel::WithComputeContext(
     DeviceCtx* device_ctx, const std::function<void(user_op::KernelComputeContext*)>& Callback) {
-  compute_ctx_->Update(device_ctx);
-  Callback(compute_ctx_.get());
-  compute_ctx_->Update(nullptr);
+  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
+  UserKernelComputeContext compute_ctx(compute_ctx_helper_.get(), op_call_ctx, device_ctx);
+  Callback(&compute_ctx);
 }
 
 }  // namespace one
