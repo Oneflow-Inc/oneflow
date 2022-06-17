@@ -205,10 +205,11 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
     }
     for (int i = 0; i < batch_n_key; ++i) {
       const Key key = batch_keys[warp_id][i];
-      const Index row = batch_row_ids[warp_id][lane_id];
+      const Index row = batch_row_ids[warp_id][i];
       if (row == 0) { continue; }
       for (int col = lane_id; col < value_length; col += warp_size) {
-        values[i] = cache_values[(row - 1) * value_length + col];
+        values[(batch_start + i) * value_length + col] =
+            cache_values[(row - 1) * value_length + col];
       }
     }
     __syncwarp();
