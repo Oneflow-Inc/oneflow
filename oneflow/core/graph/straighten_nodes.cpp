@@ -151,7 +151,6 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2
   } else {
     // On a tributary, the operator could be run later.
     producer_max_lay = tributary_layer;
-    // producer_max_lay = tributary_layer - 1;
   }
   node->ForEachNodeOnInEdge([&](TaskNode* in) {
     auto& topo_struct_in = task_node2topo_struct->at(in);
@@ -159,7 +158,7 @@ void TopoStruct::SpreadTributaryLayer(HashMap<TaskNode*, TopoStruct>* task_node2
     --topo_struct_in.counter;
     if (topo_struct_in.counter == 0) { topo_struct_in.SpreadTributaryLayer(task_node2topo_struct); }
   });
-  // Reduce counter to -1 to avoid visitting again
+  // Reduce counter to -1 to avoid visiting again
   counter--;
 }
 
@@ -221,7 +220,7 @@ int32_t TopoStruct::GetDecidingParameter(int32_t i) const {
   return 0;
 }
 
-// Find the mianstem of the task graph, then reduce the wait time for tributaries
+// Find the mainstem of the task graph, then reduce the wait time for tributaries
 void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
   // Find the maximum layer number
   int32_t max_min_layer = -1;
