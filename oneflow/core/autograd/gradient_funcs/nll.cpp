@@ -83,7 +83,7 @@ Maybe<void> NLLGradFunction::Apply(const NLLCaptureState* ctx, const TensorTuple
         JUST(functional::NLLGrad(out_grad, input, target, NullOpt, ctx->ignore_index));
   } else {
     // has weight
-    const auto& weight = ctx->SavedTensors().at(2);
+    auto weight = JUST(VectorAt(ctx->SavedTensors(), 2));
     JUST(VectorAt(*in_grads, 0)) =
         JUST(functional::NLLGrad(out_grad, input, target, weight, ctx->ignore_index));
   }
