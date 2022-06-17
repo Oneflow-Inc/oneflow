@@ -47,29 +47,6 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 using EagerBlobObjectListRawPtr = const std::vector<std::shared_ptr<vm::EagerBlobObject>>*;
 using ConsistentTensorInferResultRawPtr = const ConsistentTensorInferResult*;
 
-class EagerBlobObjectTensorView final : public user_op::Tensor {
- public:
-  EagerBlobObjectTensorView(const std::function<vm::EagerBlobObject*()>& mut_eager_blob_object)
-      : mut_eager_blob_object_(mut_eager_blob_object) {}
-
-  ShapeView shape_view() const override { return mut_eager_blob_object_()->shape(); }
-
-  MutShapeView mut_shape_view() override { return *mut_eager_blob_object_()->mut_shape(); }
-
-  const Stride& stride() const override { return mut_eager_blob_object_()->stride(); }
-
-  DataType data_type() const override { return mut_eager_blob_object_()->data_type(); }
-
-  const MemoryCase& mem_case() const override { return mut_eager_blob_object_()->mem_case(); }
-
-  const void* raw_dptr() const override { return mut_eager_blob_object_()->dptr(); }
-
-  void* mut_raw_dptr() override { return mut_eager_blob_object_()->mut_dptr(); }
-
- private:
-  const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
-};
-
 class ZeroCopyBaseContext {
  public:
   ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
