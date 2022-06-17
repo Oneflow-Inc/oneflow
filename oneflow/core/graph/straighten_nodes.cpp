@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
 enum TaskClassifier : int {
   kWaitingTransfer = 0,
   kWaitingComputation = 1,
@@ -63,8 +65,6 @@ class TopoStruct {
   int32_t GetDecidingParameter(int32_t i) const;
 };
 
-namespace {
-
 // move the head from source to target
 void MoveFrontBetweenMaps(std::map<int32_t, TopoStruct*>& source,
                           std::map<int32_t, TopoStruct*>& target) {
@@ -97,8 +97,6 @@ bool ShouldRunASAP(TaskType task_type) {
     default: return false;
   }
 }
-
-}  // anonymous namespace
 
 bool IsTransferNode(TaskType task_type) {
   // return task_type == 12 || task_type == 13 || (48 <= task_type && task_type <= 64);
@@ -251,6 +249,8 @@ void FindMainstem(HashMap<TaskNode*, TopoStruct>* task_node2topo_struct) {
     pair.second.GetMinDistance2Transfer(task_node2topo_struct);
   }
 }
+
+}  // anonymous namespace
 
 void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes) {
   // The function for settle the order in the graph
