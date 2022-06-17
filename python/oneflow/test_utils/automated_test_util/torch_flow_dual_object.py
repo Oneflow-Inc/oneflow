@@ -419,7 +419,7 @@ def get_tensor_graph_res(
             return graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
 
     try:
-        test_g = TestGraphOfTensorMethod()
+        test_g_res = TestGraphOfTensorMethod()
     except Exception as e:
         if not verbose:
             get_fake_program_more_detail(
