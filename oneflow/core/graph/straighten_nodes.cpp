@@ -24,17 +24,6 @@ namespace oneflow {
 
 namespace {
 
-// The same order in the set
-// It is only run in the following situation because there are too many implicit conditions.
-// bool ShouldRunSimultaneously(TopoStruct* a, TopoStruct* b) {
-//   // Normal node would have the same name
-//   if (a->node->GetTaskType() == 1) { return a->node->VisualStr() == b->node->VisualStr(); }
-//   // Otherwise they must have the same parameters with different machine ids and the closest node
-//   // id. We only use Min Layer here, since Tributary Layer might be different due to asymmetry of
-//   // graph.
-//   return true;
-// };
-
 // move the head from source to target
 void MoveFrontBetweenMaps(std::map<int32_t, TopoStruct*>& source,
                           std::map<int32_t, TopoStruct*>& target) {
@@ -265,9 +254,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
               // Find out all the same nodes
               // Stop using Visual string before we find a better key
               // Currently we can use the topological structure and node id to decide the same nodes
-              // if (ShouldRunSimultaneously(topo_struct_min_node_id, curr_topo_struct)) {
               same_nodes.push_back(curr_topo_struct);
-              // }
             }
             // Cyclize them
             for (int32_t i = 1; i < same_nodes.size(); i++) {
@@ -297,7 +284,7 @@ void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task
   // Generate other parameters in the topological data structure
   FindMainstem(&task_node2topo_struct);
 
-  LOG(INFO) << "Straightening order: " << 5 << ", " << 3;
+  VLOG(3) << "Straightening order: " << 5 << ", " << 3;
 
   // Order in the waiting sets
   // Decide which node should run first

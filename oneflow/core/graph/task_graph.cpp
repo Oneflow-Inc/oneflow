@@ -420,7 +420,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
 
 }  // namespace
 
-TaskGraph::TaskGraph(bool random_straighten_nodes) {
+TaskGraph::TaskGraph(bool disable_straighten_algorithm) {
   OpGraph* op_graph = Global<OpGraph>::Get();
   sub_tsk_gph_builder_ctx_.reset(new SubTskGphBuilderCtx(this));
   boxing_logger_ = CreateBoxingLogger();
@@ -451,7 +451,7 @@ TaskGraph::TaskGraph(bool random_straighten_nodes) {
     }
   });
 
-  if (random_straighten_nodes) {
+  if (disable_straighten_algorithm) {
     SetOrderInGraphForEachNode();
   } else {
     StraightenNodes(this, &ordered_task_nodes_);
