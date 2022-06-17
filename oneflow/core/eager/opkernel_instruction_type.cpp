@@ -80,9 +80,9 @@ struct LocalCallOpKernelUtil final {
     const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
     auto* temp_eager_blob_object = operand->mut_opkernel()->mut_temp_blob_object();
     CHECK(temp_eager_blob_object->data_type() == DataType::kChar);
-    one::LocalUserOpInferContext* op_infer_ctx =
-        operand->opkernel().op_infer_ctx_for_scheduler_thread();
-    size_t temp_size = InferTmpSizeFn(op_infer_ctx);
+    size_t temp_size = 0;
+    operand->opkernel().OpInferCtxForSchedulerThread(
+        [&](user_op::InferContext* op_infer_ctx) { temp_size = InferTmpSizeFn(op_infer_ctx); });
     *temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     *temp_eager_blob_object->mut_stride() = Stride(*temp_eager_blob_object->mut_shape());
     temp_eager_blob_object->set_pin_memory(false);
@@ -120,9 +120,8 @@ struct LocalCallOpKernelUtil final {
                                      DeviceCtx* device_ctx, user_op::OpKernelState* state,
                                      const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
-    auto* compute_ctx = opkernel->UpdateComputeContext(device_ctx);
-    OF_PROFILER_RANGE_PUSH("Compute");
-    {
+    opkernel->WithComputeContext(device_ctx, [&](user_op::KernelComputeContext* compute_ctx) {
+      OF_PROFILER_RANGE_PUSH("Compute");
       auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
           opkernel->op_type_name(),
 #if defined(WITH_CUDA)
@@ -152,10 +151,8 @@ struct LocalCallOpKernelUtil final {
             return shapes;
           }));
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
-    }
-    OF_PROFILER_RANGE_POP();
-    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
-    opkernel->UpdateComputeContext(nullptr);
+      OF_PROFILER_RANGE_POP();
+    });
   }
 
   static inline Maybe<void> DeallocateTempStorageBlobMemory(
