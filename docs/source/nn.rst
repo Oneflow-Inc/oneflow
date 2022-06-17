@@ -10,8 +10,6 @@ These are the basic building blocks for graphs:
     :backlinks: top
 
 
-
-
 Containers
 ----------------------------------
 .. currentmodule:: oneflow.nn

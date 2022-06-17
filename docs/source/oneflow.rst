@@ -21,6 +21,14 @@ Tensor
 
 Creation Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+    Random sampling creation ops are listed under :ref:`random-sampling` and
+    include:
+    :func:`oneflow.rand`
+    :func:`oneflow.randn`
+    :func:`oneflow.randint`
+    :func:`oneflow.randperm`
     
 .. autosummary::
     :toctree: generated
@@ -41,7 +49,7 @@ Creation Ops
     full
 
 Indexing, Slicing, Joining, Mutating Ops
--------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
     :toctree: generated
@@ -89,12 +97,22 @@ Random sampling
     manual_seed
     initial_seed
     get_rng_state
+    set_rng_state
     bernoulli
+    normal
     rand
     randint
     randn
     randperm
-    set_rng_state
+    
+In-place random sampling
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+There are a few more in-place random sampling functions defined on Tensors as well. Click through to refer to their documentation:
+- :func:`oneflow.Tensor.normal_` - in-place version of :func:`oneflow.normal`
+- :func:`oneflow.Tensor.uniform_` - numbers sampled from the continuous uniform distribution
+
+
 
 Serialization
 -------------------------------------------
@@ -115,8 +133,38 @@ Parallelism
 
     set_num_threads
 
+
 Locally disabling gradient computation
 -------------------------------------------
+The context managers :func:`oneflow.no_grad`, :func:`oneflow.enable_grad`, and
+:func:`oneflow.set_grad_enabled` are helpful for locally disabling and enabling
+gradient computation. See :ref:`locally-disable-grad` for more details on
+their usage.  These context managers are thread local, so they won't
+work if you send work to another thread using the ``threading`` module, etc.
+
+Examples::
+
+  >>> x = oneflow.zeros(1, requires_grad=True)
+  >>> with oneflow.no_grad():
+  ...     y = x * 2
+  >>> y.requires_grad
+  False
+
+  >>> is_train = False
+  >>> with oneflow.set_grad_enabled(is_train):
+  ...     y = x * 2
+  >>> y.requires_grad
+  False
+
+  >>> oneflow.set_grad_enabled(True)  # this can also be used as a function
+  >>> y = x * 2
+  >>> y.requires_grad
+  True
+
+  >>> oneflow.set_grad_enabled(False)
+  >>> y = x * 2
+  >>> y.requires_grad
+  False
 
 .. autosummary::
     :toctree: generated
@@ -142,7 +190,9 @@ Pointwise Ops
     acos 
     acosh 
     arccos 
+    arccosh
     add 
+    addcmul
     asin 
     asinh 
     arcsin 
@@ -201,9 +251,13 @@ Reduction Ops
     
     argmax  
     argmin  
+    amax
+    amin
+    any
+    max
     min  
     mean  
-    prod
+    median
     prod
     std  
     sum  
@@ -240,6 +294,7 @@ Other Ops
     broadcast_like 
     cumprod 
     cumsum 
+    clone
     diag 
     diagonal 
     einsum 
@@ -247,6 +302,8 @@ Other Ops
     flip 
     meshgrid 
     roll 
+    searchsorted
+    tensordot
     tril
 
 BLAS and LAPACK Operations
