@@ -37,9 +37,9 @@ namespace one {
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-class LocalUserKernelRegContext;
-class LocalUserOpInferContext;
-class LocalUserKernelComputeContext;
+class UserKernelRegContext;
+class UserOpInferContext;
+class UserKernelComputeContext;
 
 class StatefulLocalOpKernel final {
  public:
@@ -104,9 +104,9 @@ class StatefulLocalOpKernel final {
   AttrMap base_attrs_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   Symbol<Stream> stream_;
-  std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
-  std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
+  std::unique_ptr<UserKernelRegContext> reg_ctx_;
+  std::unique_ptr<UserOpInferContext> op_infer_ctx_for_scheduler_thread_;
+  std::unique_ptr<UserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
   bool need_check_mem_case_;
