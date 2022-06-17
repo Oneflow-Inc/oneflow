@@ -175,7 +175,7 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
   __shared__ uint32_t batch_n_missing[n_warp_per_block];
   for (uint32_t batch_start = global_warp_id * warp_size; batch_start < n_keys;
        batch_start += global_n_warp * warp_size) {
-    const uint32_t batch_n_key = n_keys - batch_start;
+    const uint32_t batch_n_key = min(n_keys - batch_start, warp_size);
     if (lane_id == 0) { batch_n_missing[warp_id] = 0; }
     __syncwarp();
     const uint32_t key_offset = batch_start + lane_id;
@@ -205,10 +205,11 @@ __global__ void EncodeLookupKernel(uint32_t value_length, const Elem* cache_valu
     }
     for (int i = 0; i < batch_n_key; ++i) {
       const Key key = batch_keys[warp_id][i];
-      const Index row = batch_row_ids[warp_id][lane_id];
+      const Index row = batch_row_ids[warp_id][i];
       if (row == 0) { continue; }
       for (int col = lane_id; col < value_length; col += warp_size) {
-        values[i] = cache_values[row * value_length + col];
+        values[(batch_start + i) * value_length + col] =
+            cache_values[(row - 1) * value_length + col];
       }
     }
     __syncwarp();
@@ -396,13 +397,12 @@ void CacheImpl<Key, Elem, Index>::Test(ep::Stream* stream, uint32_t n_keys, cons
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  constexpr uint32_t block_size = 128;
-  uint32_t grid_size = (n_keys + block_size - 1) / block_size;
+  encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  EncodeLookupKernel<Key, Elem, Index, block_size><<<grid_size, block_size, 0, stream>>>(
-      num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
-      encoding_buffer_, nullptr, n_missing, static_cast<Key*>(missing_keys), missing_indices,
-      encoder_.TableCapacity(), encoder_.table_keys(), encoder_.table_indices());
+  RUN_CUDA_KERNEL((LookupKernel<Key, Elem, Index, false>), stream, values_elem_cnt,
+                  num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
+                  encoding_buffer_, nullptr, n_missing, static_cast<Key*>(missing_keys),
+                  missing_indices);
 }
 
 template<typename Key, typename Elem, typename Index>
@@ -413,12 +413,15 @@ void CacheImpl<Key, Elem, Index>::Get(ep::Stream* stream, uint32_t n_keys, const
       cudaMemsetAsync(n_missing, 0, sizeof(uint32_t), stream->As<ep::CudaStream>()->cuda_stream()));
   if (n_keys == 0) { return; }
   CHECK_LE(n_keys, max_query_length_);
-  encoder_.template Encode<false>(stream, n_keys, static_cast<const Key*>(keys), encoding_buffer_);
+  constexpr uint32_t block_size = 128;
+  uint32_t grid_size = (n_keys + block_size - 1) / block_size;
   const uint32_t values_elem_cnt = n_keys * num_elem_per_value_;
-  RUN_CUDA_KERNEL((LookupKernel<Key, Elem, Index, true>), stream, values_elem_cnt,
-                  num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
-                  encoding_buffer_, static_cast<Elem*>(values), n_missing,
-                  static_cast<Key*>(missing_keys), missing_indices);
+  EncodeLookupKernel<Key, Elem, Index, block_size>
+      <<<grid_size, block_size, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          num_elem_per_value_, values_, values_elem_cnt, static_cast<const Key*>(keys),
+          encoding_buffer_, static_cast<Elem*>(values), n_missing, static_cast<Key*>(missing_keys),
+          missing_indices, encoder_.TableCapacity(), encoder_.table_keys(),
+          encoder_.table_indices());
 }
 
 template<typename Key, typename Elem, typename Index>
