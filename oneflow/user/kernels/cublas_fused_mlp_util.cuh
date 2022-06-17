@@ -169,7 +169,8 @@ void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cu
 void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEpilogue_t epilogue,
                        const void* bias_ptr, const void* aux_ptr) {
   // Set epilogue
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
+  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+      matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
   if (epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS
       || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD
       || epilogue == CUBLASLT_EPILOGUE_BGRADB) {
@@ -181,8 +182,8 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
     // unset
     bias_ptr = nullptr;
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
-      CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
-      sizeof(bias_ptr)));
+                                                   CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
+                                                   sizeof(bias_ptr)));
     // Error::UnimplementedError() << "Unsupported Epilogue. ";
   }
 

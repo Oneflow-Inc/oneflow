@@ -158,8 +158,8 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
     */
     const auto& matmul_relu_bias_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
         cublas_dy, JUST(VectorAt(weights, hidden_layer_idx)),
-        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)), 
-        JUST(VectorAt(hiddens, hidden_layer_idx - 1)), 
+        JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1)),
+        JUST(VectorAt(hiddens, hidden_layer_idx - 1)),
         /*alpha=*/scale));
 
     // dgrad
@@ -173,7 +173,8 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
 
     // dw
     if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))) {
-      JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = matmul_relu_bias_bgrad->at(2);;
+      JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = matmul_relu_bias_bgrad->at(2);
+      ;
     }
 
     // // dw

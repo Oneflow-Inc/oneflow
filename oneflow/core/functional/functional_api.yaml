@@ -983,6 +983,11 @@
     "TensorTuple (Tensor dy, Tensor x) => CublasMatmulBiasAddGrad"
   bind_python: False
 
+- name: "matmul_async_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor x, Tensor weight) => MatmulAsyncGrad"
+  bind_python: False
+
 - name: "fused_matmul_bias_add_relu_dropout"
   signature:
     "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, FloatList dropout_rate_list, Generator generator=None) => FusedMatmulBiasAddReluDropout"
