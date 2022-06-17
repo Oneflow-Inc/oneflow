@@ -27,7 +27,7 @@ class MatmulAsyncGradKernelState final : public user_op::OpKernelState {
   MatmulAsyncGradKernelState() {
     OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
     OF_CUBLAS_CHECK(cublasLtCreate(&cublas_lt_handle_));
-    OF_CUDA_CHECK(cudaMalloc(&workspace_, 4 * 1024 * 1024));
+    OF_CUDA_CHECK(cudaMalloc(&workspace_, 8 * 1024 * 1024));
   }
   ~MatmulAsyncGradKernelState() {
     OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
@@ -37,7 +37,7 @@ class MatmulAsyncGradKernelState final : public user_op::OpKernelState {
   }
   cudaStream_t cuda_stream() const { return cuda_stream_; }
   cublasLtHandle_t cublas_lt_handle() const { return cublas_lt_handle_; }
-  size_t cublas_workspace_size() const { return 4 * 1024 * 1024; }
+  size_t cublas_workspace_size() const { return 8 * 1024 * 1024; }
   void* cublas_workspace() const { return workspace_; }
 
  private:
