@@ -33,6 +33,10 @@ namespace vm {
 struct LocalCallOpKernelUtil;
 }  // namespace vm
 
+namespace eager {
+struct CallContext;
+}
+
 namespace one {
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
@@ -69,11 +73,12 @@ class StatefulLocalOpKernel final {
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
-  void WithOpInferCtx(const std::function<void(user_op::InferContext*)>& Callback) const;
+  void WithOpInferContext(const std::function<void(user_op::InferContext*)>& Callback) const;
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
-  Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel, bool* need_temp_storage);
+  Maybe<void> ChooseOpKernel(eager::CallContext* call_ctx, const user_op::OpKernel** user_opkernel,
+                             bool* need_temp_storage);
 
   const OperatorConf& op_conf() const { return *op_conf_; }
 

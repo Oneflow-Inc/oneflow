@@ -81,7 +81,7 @@ struct LocalCallOpKernelUtil final {
     auto* temp_eager_blob_object = operand->mut_opkernel()->mut_temp_blob_object();
     CHECK(temp_eager_blob_object->data_type() == DataType::kChar);
     size_t temp_size = 0;
-    operand->opkernel().WithOpInferCtx(
+    operand->opkernel().WithOpInferContext(
         [&](user_op::InferContext* op_infer_ctx) { temp_size = InferTmpSizeFn(op_infer_ctx); });
     *temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     *temp_eager_blob_object->mut_stride() = Stride(*temp_eager_blob_object->mut_shape());

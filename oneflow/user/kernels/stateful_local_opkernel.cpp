@@ -802,19 +802,20 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
 StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 
-void StatefulLocalOpKernel::WithOpInferCtx(
+void StatefulLocalOpKernel::WithOpInferContext(
     const std::function<void(user_op::InferContext*)>& Callback) const {
   auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
   UserOpInferContext op_infer_ctx(op_infer_ctx_helper_.get(), op_call_ctx);
   return Callback(&op_infer_ctx);
 }
 
-Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user_opkernel,
+Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
+                                                  const user_op::OpKernel** user_opkernel,
                                                   bool* need_temp_storage) {
   OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
   DataType primary_dtype = kInvalidDataType;
-  const auto& inputs = eager::ThreadLocalCallContextScope::Current()->inputs;
-  const auto& outputs = eager::ThreadLocalCallContextScope::Current()->outputs;
+  const auto& inputs = call_ctx->inputs;
+  const auto& outputs = call_ctx->outputs;
   if (likely(!inputs->empty())) {
     primary_dtype = (*inputs)[0]->data_type();
   } else if (likely(!outputs->empty())) {
@@ -823,8 +824,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user
     // do nothing
   }
 
-  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
-  UserKernelRegContext reg_ctx(reg_ctx_helper_.get(), op_call_ctx);
+  UserKernelRegContext reg_ctx(reg_ctx_helper_.get(), call_ctx);
   for (const auto& pair : dtype2cached_kernels_[primary_dtype]) {
     if (likely(pair.first->is_matched_hob->get(reg_ctx))) {
       *need_temp_storage = pair.first->need_temp_storage;
