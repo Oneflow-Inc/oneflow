@@ -35,7 +35,7 @@ struct StrideParam {
 };
 
 int64_t compute_offset(int64_t out_offset, const StrideParam& in_stride,
-                      const StrideParam& out_stride);
+                       const StrideParam& out_stride);
 
 class Stride final : public DimVector {
  public:

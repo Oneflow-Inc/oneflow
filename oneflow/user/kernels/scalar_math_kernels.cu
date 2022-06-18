@@ -71,9 +71,9 @@ template<template<typename> class BIN_OP, typename T>
 struct StridedScalarMathFunctor<DeviceType::kCUDA, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
                   const StrideParam& out_stride, const T scalar, const T* in, T* out) {
-    OF_CUDA_CHECK(cuda::elementwise::StridedUnary(UnaryByScalarFunctor<BIN_OP, T>(scalar),
-                                                     elem_cnt, in_stride, out_stride, out, in,
-                                                     stream->As<ep::CudaStream>()->cuda_stream()));
+    OF_CUDA_CHECK(cuda::elementwise::StridedUnary(UnaryByScalarFunctor<BIN_OP, T>(scalar), elem_cnt,
+                                                  in_stride, out_stride, out, in,
+                                                  stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 

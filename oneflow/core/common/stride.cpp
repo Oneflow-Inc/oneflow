@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 int64_t compute_offset(int64_t out_offset, const StrideParam& in_stride,
-                      const StrideParam& out_stride) {
+                       const StrideParam& out_stride) {
   int64_t in_offset = 0;
   int64_t remaining = out_offset;
   for (size_t i = 0; i < in_stride.ndim; ++i) {

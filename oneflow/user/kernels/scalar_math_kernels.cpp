@@ -59,7 +59,7 @@ class ScalarMathKernel final : public user_op::OpKernel {
     }
     const T* in_ptr = in->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
-    
+
     const int64_t elem_cnt = out->shape().elem_cnt();
     const int32_t ndim = in->shape().NumAxes();
     const bool contiguous = oneflow::one::IsContiguous(in->shape(), in->stride());
