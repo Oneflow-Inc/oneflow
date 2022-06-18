@@ -1275,6 +1275,37 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.mm,
+    r"""
+    Performs a matrix multiplication of the matrices :attr:`input` and :attr:`mat2`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`mat2` is a
+    :math:`(m \times p)` tensor, :attr:`out` will be a :math:`(n \times p)` tensor.
+
+    .. note:: This function does not :ref:`broadcast <broadcasting-semantics>`.
+            For broadcasting matrix products, see :func:`oneflow.matmul`.
+
+    Args:
+        input (oneflow.Tensor): the first matrix to be matrix multiplied
+        mat2 (oneflow.Tensor): the second matrix to be matrix multiplied
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> mat1 = flow.randn(2, 3)
+        >>> mat2 = flow.randn(3, 3)
+        >>> of_out = flow.mm(mat1, mat2)
+        >>> of_out.shape
+        oneflow.Size([2, 3])
+    """
+)
+
+add_docstr(
     oneflow.round,
     r"""This operator rounds the value of Blob to the nearest integer.
     Args:

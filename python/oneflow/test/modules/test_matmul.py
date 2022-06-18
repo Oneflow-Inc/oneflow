@@ -49,6 +49,14 @@ class TestModule(flow.unittest.TestCase):
         y = random_tensor(ndim=2, dim0=k).to(device)
         return x.matmul(y)
 
+    @autotest(check_graph=True)
+    def test_flow_mm_with_random_data(test_case):
+        device = random_device()
+        k = random(1, 6)
+        x = random_tensor(ndim=2, dim1=k).to(device)
+        y = random_tensor(ndim=2, dim0=k).to(device)
+        z = torch.mm(x, y)
+        return z
 
 if __name__ == "__main__":
     unittest.main()

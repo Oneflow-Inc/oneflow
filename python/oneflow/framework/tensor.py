@@ -600,6 +600,9 @@ def _unsqueeze(self, dim):
 def _matmul(self, other):
     return flow.matmul(self, other)
 
+def _mm(self, mat2):
+    return flow._C.mm(self, mat2)
+
 
 def _round(self):
     return flow.round(self)
@@ -1128,6 +1131,7 @@ def RegisterMethods():
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
     Tensor.where = _where
+    Tensor.mm = _mm
     Tensor.norm = _norm
     Tensor.repeat = _repeat
     Tensor.repeat_interleave = _repeat_interleave

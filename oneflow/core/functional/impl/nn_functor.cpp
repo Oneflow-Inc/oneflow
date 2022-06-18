@@ -267,6 +267,31 @@ class EmbeddingFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MatMulNoBroadCastFunctor {
+ public:
+  MatMulNoBroadCastFunctor() {
+    matmul_op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& mat2) const {
+    const auto& input_shape = input->shape();
+    const auto& mat2_shape = mat2->shape();
+    CHECK_EQ_OR_RETURN(input_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "self must be a matrix";
+    CHECK_EQ_OR_RETURN(mat2_shape->NumAxes(), 2)
+        << Error::RuntimeError() << "mat2 must be a matrix";
+    CHECK_EQ_OR_RETURN(input_shape->at(1), mat2_shape->at(0))
+        << Error::RuntimeError() << "mat1 and mat2 shapes cannot be multiplied ("
+        << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
+        << " and " << std::to_string(mat2_shape->at(0)) << "x" << std::to_string(mat2_shape->at(1))
+        << ")";
+    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {input, mat2}, {});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> matmul_op_;
+};
+
 class MatMulFunctor {
  public:
   MatMulFunctor() {
@@ -3323,6 +3348,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::EmbeddingReNormFunctor>("EmbeddingReNorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::MatMulFunctor>("MatMul");
+  m.add_functor<impl::MatMulNoBroadCastFunctor>("MatMulNoBroadCast");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");

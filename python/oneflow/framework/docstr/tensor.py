@@ -604,6 +604,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.mm,
+    """
+    See :func:`oneflow.mm`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.narrow,
     """
     See :func:`oneflow.narrow`
