@@ -43,6 +43,7 @@ Maybe<void> GetSbp4ScalarMul(user_op::SbpContext* ctx) {
   /*static*/ Maybe<void> op_name##Op::GetSbp(user_op::SbpContext* ctx) { return get_sbp_fn(ctx); } \
   /*static*/ Maybe<void> op_name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {         \
     *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);                                        \
+    *ctx->OutputStride("out", 0) = ctx->InputStride("in", 0);                                      \
     *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);                                \
     return Maybe<void>::Ok();                                                                      \
   }                                                                                                \

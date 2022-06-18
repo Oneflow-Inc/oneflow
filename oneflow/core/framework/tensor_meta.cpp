@@ -79,5 +79,10 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
   return contig_if_nonempty;
 }
 
+bool IsContiguous(const ShapeView& shape_view, const Stride& stride) {
+  Shape shape(shape_view);
+  return IsContiguous(shape, stride);
+}
+
 }  // namespace one
 }  // namespace oneflow
