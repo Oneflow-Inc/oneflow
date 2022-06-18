@@ -2191,8 +2191,8 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
 #endif // GET_ONEFLOW_EAGER_OP_DEFINITIONS
 
 // Group: FUSED
-// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad
-// Total: 18
+// cudnn_fused_normalization_add_relu, cudnn_fused_normalization_add_relu_grad, fused_bias_add_gelu, fused_bias_add_gelu_grad, fused_bias_add_mask_scale, fused_cast_scale, fused_scale_mask_softmax, fused_scale_mask_softmax_dropout, fused_scale_mask_softmax_dropout_grad, fused_scale_mask_softmax_grad, fused_scale_tril, fused_self_attention_query_mul_key_and_value, fused_self_attention_query_mul_key_and_value_grad, fused_tril_scale_softmax_mask_scale, fused_tril_scale_softmax_mask_scale_grad, normalization_add_relu_grad, fused_dot_feature_interaction, fused_dot_feature_interaction_grad, fused_cross_feature_interaction, fused_cross_feature_interaction_grad_v1, fused_cross_feature_interaction_grad_v2
+// Total: 21
 
 #ifdef GET_ONEFLOW_FUSED_OP_DEFINITIONS
 
@@ -2566,6 +2566,68 @@ def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature
     DefaultValuedAttr<BoolAttr, "false">:$self_interaction,
     DefaultValuedAttr<SI32Attr, "0">:$output_concat_grad_dim,
     DefaultValuedAttr<StrAttr, "\"none\"">:$pooling
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedCrossFeatureInteractionOp : OneFlow_BaseOp<"fused_cross_feature_interaction", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$bias,
+    OneFlow_Tensor:$x0
+  );
+  let output = (outs
+    OneFlow_Tensor:$out, 
+    OneFlow_Tensor:$matmul_result
+  );
+  let attrs = (ins
+    StrAttr:$interaction_mode
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+
+def OneFlow_FusedCrossFeatureInteractionV1GradOp : OneFlow_BaseOp<"fused_cross_feature_interaction_v1_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, NoGrad]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$x0, 
+    OneFlow_Tensor:$x, 
+    OneFlow_Tensor:$matmul_result
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx0, 
+    OneFlow_Tensor:$dw, 
+    OneFlow_Tensor:$dx, 
+    OneFlow_Tensor:$dbias 
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedCrossFeatureInteractionV2GradOp : OneFlow_BaseOp<"fused_cross_feature_interaction_v2_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, NoGrad]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$bias,
+    OneFlow_Tensor:$x0, 
+    OneFlow_Tensor:$x, 
+    OneFlow_Tensor:$matmul_result
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx0, 
+    OneFlow_Tensor:$dw, 
+    OneFlow_Tensor:$dx, 
+    OneFlow_Tensor:$dbias 
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4344,8 +4406,8 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoSideEffect, DeclareOpInterfac
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 // Group: MATMUL
-// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul, cublas_fused_mlp, cublas_bias_add_relu_matmul_grad, cublas_matmul_bias_add_grad
-// Total: 11
+// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul, cublas_fused_mlp, cublas_bias_add_relu_matmul_grad, cublas_matmul_bias_add_grad, fused_matmul_bias_add_relu_dropout, fused_relu_dropout_grad
+// Total: 13
 
 #ifdef GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
@@ -4520,6 +4582,9 @@ def OneFlow_CublasBiasAddReluMatmulGradOp : OneFlow_BaseOp<"cublas_bias_add_relu
     OneFlow_Tensor:$d_grad, 
     OneFlow_Tensor:$d_bias
   );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "1.">:$alpha
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4534,6 +4599,44 @@ def OneFlow_CublasMatmulBiasAddGradOp : OneFlow_BaseOp<"cublas_matmul_bias_add_g
   let output = (outs
     OneFlow_Tensor:$w_grad, 
     OneFlow_Tensor:$b_grad
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedMatmulBiasAddReluDropoutOp : OneFlow_BaseOp<"fused_matmul_bias_add_relu_dropout", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Variadic<OneFlow_Tensor>:$weights, 
+    Variadic<OneFlow_Tensor>:$biases
+  );
+  let output = (outs
+    OneFlow_Tensor:$out, 
+    Variadic<OneFlow_Tensor>:$cublas_aux, 
+    Variadic<OneFlow_Tensor>:$hidden
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$skip_final_activation, 
+    F32ArrayAttr:$dropout_rate_list
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FusedReluDropoutGradOp : OneFlow_BaseOp<"fused_relu_dropout_grad", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$mask
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$scale
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -4866,44 +4969,41 @@ def OneFlow_LocalMultiReduceMinAbsOp : OneFlow_BaseOp<"local_multi_reduce_min_ab
   let has_get_sbp_fn = 1;
 }
 
-def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NLLOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
     Optional<OneFlow_Tensor>:$weight
   );
   let output = (outs
-    OneFlow_Tensor:$out,
-    OneFlow_Tensor:$total_weight
+    OneFlow_Tensor:$output,
+    OneFlow_Tensor:$out_weight
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$ignore_index
   );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_NllGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_NLLGradOp : OneFlow_BaseOp<"nll_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
+    OneFlow_Tensor:$out_grad,
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
-    OneFlow_Tensor:$total_weight,
-    Optional<OneFlow_Tensor>:$weight,
-    OneFlow_Tensor:$dy
+    Optional<OneFlow_Tensor>:$weight
   );
   let output = (outs
-    OneFlow_Tensor:$dx
+    OneFlow_Tensor:$in_grad
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$ignore_index
   );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
 }
 
 def OneFlow_PowXGradOp : OneFlow_BaseOp<"pow_x_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {

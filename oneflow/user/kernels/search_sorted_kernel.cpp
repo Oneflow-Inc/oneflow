@@ -35,7 +35,7 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
     const T* sequence_ptr = sorted_sequence->dptr<T>();
     K* out_ptr = out->mut_dptr<K>();
     const int32_t instance_num = values->shape().elem_cnt();
-    bool is_values_scalar = (values->shape().elem_cnt() == 1 && values->shape().NumAxes() == 0);
+    bool is_values_scalar = values->shape().NumAxes() == 0;
     bool is_sequence_1d = (sorted_sequence->shape().NumAxes() == 1);
     K values_shape_last = is_values_scalar ? 1 : values->shape().At(values->shape().NumAxes() - 1);
     K sequence_shape_last = sorted_sequence->shape().At(sorted_sequence->shape().NumAxes() - 1);
