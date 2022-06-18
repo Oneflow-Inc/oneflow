@@ -363,39 +363,37 @@ class KLDivLossGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class NllLossGradFunctor {
+class NLLGradFunctor {
  public:
-  NllLossGradFunctor() {
+  NLLGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("nll_grad")
+                         .Input("out_grad")
                          .Input("input")
                          .Input("target")
-                         .Input("total_weight")
-                         .Input("dy")
-                         .Output("dx")
+                         .Output("in_grad")
                          .Build());
+
     op_weight_ = CHECK_JUST(one::OpBuilder("nll_grad")
+                                .Input("out_grad")
                                 .Input("input")
                                 .Input("target")
-                                .Input("total_weight")
                                 .Input("weight")
-                                .Input("dy")
-                                .Output("dx")
+                                .Output("in_grad")
                                 .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& total_weight,
-                           const int64_t ignore_index) const {
+                           const Optional<one::Tensor>& weight, const int64_t ignore_index) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
 
     if (weight) {
-      return OpInterpUtil::Dispatch<one::Tensor>(
-          *op_weight_, {input, target, total_weight, JUST(weight), dy}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_weight_,
+                                                 {out_grad, input, target, JUST(weight)}, attrs);
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {input, target, total_weight, dy}, attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {out_grad, input, target}, attrs);
     }
   }
 
@@ -1120,7 +1118,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TFPoolNdGradFunctor>("TFPoolNdGrad");
   m.add_functor<impl::AdaptivePoolNdGradFunctor>("AdaptivePoolNdGrad");
   m.add_functor<impl::KLDivLossGradFunctor>("KLDivLossGrad");
-  m.add_functor<impl::NllLossGradFunctor>("NllLossGrad");
+  m.add_functor<impl::NLLGradFunctor>("NLLGrad");
   m.add_functor<impl::BinaryCrossEntropyLossGradFunctor>("BinaryCrossEntropyLossGrad");
   m.add_functor<impl::BinaryCrossEntropyWithLogitsLossGradFunctor>(
       "BinaryCrossEntropyWithLogitsLossGrad");
