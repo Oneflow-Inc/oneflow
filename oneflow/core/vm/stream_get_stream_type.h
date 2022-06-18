@@ -52,7 +52,7 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
   static Maybe<const vm::StreamType*> VisitHost2Device(DeviceType device_type) {
     if (device_type == DeviceType::kCUDA) {
       if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
-        return SingletonPtr<vm::EpStreamType>();
+        return SingletonPtr<vm::EventRecordedEpStreamType>();
       } else {
 #ifdef WITH_CUDA
         return SingletonPtr<vm::CudaCopyH2DStreamType>();
@@ -61,7 +61,7 @@ struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
 #endif
       }
     } else {
-      return SingletonPtr<vm::EpStreamType>();
+      return SingletonPtr<vm::EventRecordedEpStreamType>();
     }
   }
   static Maybe<const vm::StreamType*> VisitDevice2Host(DeviceType device_type) {
