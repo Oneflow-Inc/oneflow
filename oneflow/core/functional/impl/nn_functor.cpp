@@ -1173,7 +1173,7 @@ class NLLLossFunctor {
     } else {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {input_, target_}, attrs));
     }
-    auto output = nll_result->at(0);
+    auto output = JUST(VectorAt(*nll_result, 0));
 
     if (K > 2) { output = JUST(functional::Reshape(output, *target_shape)); }
 
@@ -1183,7 +1183,7 @@ class NLLLossFunctor {
 
     if (reduction == "sum") { return sum; }
 
-    auto total_weight = JUST(functional::ReduceSum(nll_result->at(1), {}, false));
+    auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
     return functional::Div(sum, total_weight);
   }
 
@@ -1246,14 +1246,14 @@ class CrossEntropyFunctor {
       nll_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
 
-    auto output = nll_result->at(0);
+    auto output = JUST(VectorAt(*nll_result, 0));
     output = JUST(functional::Reshape(output, *target_shape));
     if (reduction == "none") { return output; }
 
     auto sum = JUST(functional::ReduceSum(output, {}, false));
     if (reduction == "sum") { return sum; }
 
-    auto total_weight = JUST(functional::ReduceSum(nll_result->at(1), {}, false));
+    auto total_weight = JUST(functional::ReduceSum(JUST(VectorAt(*nll_result, 1)), {}, false));
     return functional::Div(sum, total_weight);
   }
 
