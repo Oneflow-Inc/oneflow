@@ -278,6 +278,16 @@ class GraphConfig(object):
         """
         self.proto.cudnn_conv_heuristic_search_algo = mode
 
+    def disable_straighten_algorithm(self, mode: bool = False):
+        r""" Whether we disable the straighten algorithm.
+
+        If using nccl compute stream, turning it on might not speed up the training.
+        If not using nccl compute stream, turning it on might slow down data parallelism by 0.6% and slow down model parallelism by 6%.
+
+        The switch is off by default (i.e. use the straighten algorithm by default).
+        """
+        self.proto.disable_straighten_algorithm_in_task_graph = mode
+
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):
