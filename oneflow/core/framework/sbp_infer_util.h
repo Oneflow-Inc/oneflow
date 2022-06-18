@@ -27,7 +27,7 @@ enum SbpInferRuleTag : int {
   kMinCost = 3     // Lowest cost
 };
 
-enum PartialInConsumerTag : int {
+enum Penalty4PartialInConsumerTag : int {
   kSlight = 1,  // Slight penalty
   kMiddle = 2,  // Make sure we do not select P in the consumer
   kStrict = 3   // Not allow a transfer to P

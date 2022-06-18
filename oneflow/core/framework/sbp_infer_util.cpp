@@ -45,10 +45,11 @@ bool CheckNdSbp(const NdSbp& nd_sbp) {
 
 double Penalty4PartialInConsumer(double logical_blob_size, int32_t producer_parallel_num,
                                  int32_t consumer_parallel_num) {
-  static const int64_t PartialInConsumerType = ParseIntegerFromEnv("PartialInConsumerTag", 2);
-  if (PartialInConsumerType == PartialInConsumerTag::kSlight) {
+  static const int64_t penalty4partial_in_consumer_tag =
+      ParseIntegerFromEnv("ONEFLOW_PENALTY_FOR_PARTIAL_IN_CONSUMER_POLICY", 2);
+  if (penalty4partial_in_consumer_tag == Penalty4PartialInConsumerTag::kSlight) {
     return 1.0;
-  } else if (PartialInConsumerType == PartialInConsumerTag::kMiddle) {
+  } else if (penalty4partial_in_consumer_tag == Penalty4PartialInConsumerTag::kMiddle) {
     return 4 * logical_blob_size * (producer_parallel_num + consumer_parallel_num);
   } else {
     return kUnsupportedBoxing;
