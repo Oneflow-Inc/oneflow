@@ -43,8 +43,8 @@ class EventBase:
 
     def update(self, event):
         assert self.event_type == event.event_type
-        self.count += 1
-        self.time_total += event.time
+        self.count += event.count
+        self.time_total += event.time_total
         self.time = self.time_total / self.count
 
     @property

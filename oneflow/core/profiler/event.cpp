@@ -53,8 +53,8 @@ void IEvent::Finish() { FinishedAt(GetTimeNow()); }
 bool IEvent::IsChildOf(const IEvent* e) {
   if (!e) { return false; }
   if (this == e) { return false; }
-  return StartedAt<time_t>() > e->StartedAt<time_t>()
-         && FinishedAt<time_t>() < e->FinishedAt<time_t>();
+  return StartedAt<double>() >= e->StartedAt<double>()
+         && FinishedAt<double>() <= e->FinishedAt<double>();
 }
 
 const std::string& IEvent::GetName() const { return name_; }

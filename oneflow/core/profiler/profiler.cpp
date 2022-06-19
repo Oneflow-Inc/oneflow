@@ -102,6 +102,7 @@ void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record
 // DisableProfilerAndReturnResult will return a json of profile results.
 Maybe<std::string> DisableProfilerAndReturnResult() {
   JUST(vm::ClusterSync());
+  OF_CUDA_CHECK(cudaDeviceSynchronize());
   auto* pmgr = JUST(GlobalMaybe<ProfileManager>());
   std::string results = pmgr->DumpResultsJson();
   Global<ProfileManager>::Delete();
