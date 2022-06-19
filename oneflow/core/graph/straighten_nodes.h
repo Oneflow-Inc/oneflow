@@ -13,14 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/multiply_kernel.h"
+#ifndef ONEFLOW_CORE_GRAPH_STRAIGHTEN_NODES_H_
+#define ONEFLOW_CORE_GRAPH_STRAIGHTEN_NODES_H_
+
+#include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
 
-#define REGISTER_MULTIPLY_CPU_KERNEL(cpp_type, proto_type) \
-  REGISTER_MULTIPLY_KERNEL(DeviceType::kCPU, cpp_type)
-
-OF_PP_FOR_EACH_TUPLE(REGISTER_MULTIPLY_CPU_KERNEL,
-                     ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes);
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_GRAPH_STRAIGHTEN_NODES_H_
