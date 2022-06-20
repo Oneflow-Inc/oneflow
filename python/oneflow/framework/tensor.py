@@ -71,36 +71,6 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 
-def _setitem(self, key, value):
-    if self.is_global:
-        if isinstance(value, (int, float)):
-            value = flow._C.global_constant(
-                [1],
-                value,
-                dtype=self.dtype,
-                placement=self.placement,
-                sbp=flow.sbp.broadcast,
-            )
-        else:
-            if value.is_global:
-                value = value.to_global(sbp=flow.sbp.broadcast)
-                # TODO: remove these lines after asymmetric boxing is ready
-                local_tensor = value.to_local()
-                if local_tensor.nelement() == 0:
-                    local_tensor = flow.zeros(*value.shape)
-                value = local_tensor.to_global(self.placement, sbp=flow.sbp.broadcast)
-            else:
-                value = value.to_global(self.placement, sbp=flow.sbp.broadcast)
-    else:
-        if isinstance(value, (int, float)):
-            value = flow._C.constant([1], value, dtype=self.dtype, device=self.device)
-        else:
-            value = value.to(device=self.device)
-
-    flow._C.tensor_setitem(self, key, value)
-    return self
-
-
 def _str(self):
     return self.__repr__()
 
@@ -156,20 +126,6 @@ def _cuda(self, device: Union[int, str, flow.device] = None):
 
 def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
     return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
-
-
-def _transpose(self, dim0, dim1):
-    return flow._C.transpose(self, dim0, dim1)
-
-
-def _permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, new_dims)
 
 
 def is_nonzero(input):
@@ -276,7 +232,7 @@ def _rtruediv(self, other):
 
 
 def _floor_divide(self, other):
-    return flow.floor_divide(self, other)
+    return flow._C.floor_divide(self, other)
 
 
 def _floor(self):
@@ -661,10 +617,6 @@ def _triu(self, diagonal=0):
     return flow.triu(self, diagonal=diagonal)
 
 
-def _to_local(self):
-    return flow.to_local(self)
-
-
 def _relu(self):
     return flow._C.relu(self)
 
@@ -862,22 +814,44 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
 
 
 def _copy(self, other: Union[Tensor, np.ndarray]):
+    # Possibility 1: self and other are tensors on the same device/placement and have the same sbp.
+    if isinstance(other, Tensor):
+        if self.is_global:
+            assert (
+                other.is_global
+            ), "Only global tensor can be assigned to global tensor."
+            if self.placement == other.placement and self.sbp == other.sbp:
+                flow._C.assign_local_tensor(self.to_local(), other.to_local())
+                return
+        else:
+            assert (
+                not other.is_global
+            ), "Only local tensor can be assigned to local tensor."
+            if self.device == other.device:
+                flow._C.assign_local_tensor(self, other)
+                return
+
+    # Possibility 2: `other` is a numpy array, or `self` and `other` are tensors on different devices/placements.
+    # In this case, we run boxing through cpu to avoid extra gpu memory usage.
     if self.is_global:
-        if not isinstance(other, Tensor):
-            assert isinstance(other, np.ndarray)
-            other = flow.tensor(
-                other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
+        self_cpu_placement = flow.placement("cpu", self.placement.ranks)
+        if isinstance(other, Tensor):
+            other_cpu_placement = flow.placement("cpu", other.placement.ranks)
+            other = other.to_global(placement=other_cpu_placement).to_global(
+                placement=self_cpu_placement, sbp=self.sbp
             )
         else:
-            assert other.is_global
-            other = other.to_global(placement=self.placement, sbp=self.sbp)
-        flow._C.assign_local_tensor(self.to_local(), other.to_local())
+            other = flow.tensor(
+                other, dtype=self.dtype, placement=self_cpu_placement, sbp=self.sbp
+            )
+        _copy_from_numpy_to_eager_local_tensor(
+            self.to_local(), other.to_local().numpy()
+        )
     else:
-        if not isinstance(other, (Tensor)):
-            assert isinstance(other, np.ndarray)
-            _copy_from_numpy_to_eager_local_tensor(self, other)
-        else:
-            flow._C.assign_local_tensor(self, other.to(device=self.device))
+        if isinstance(other, Tensor):
+            other = other.numpy()
+
+        _copy_from_numpy_to_eager_local_tensor(self, other)
 
 
 def _flip(self, dims):
@@ -918,24 +892,6 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *new_args, **kwargs)
 
 
-def _local_to_global(self, placement=None, sbp=None, *, check_meta=True):
-    return flow.local_to_global(self, placement, sbp, check_meta)
-
-
-def _global_to_global(
-    self, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
-):
-    return flow.global_to_global(self, placement, sbp, grad_sbp, check_meta)
-
-
-def _to_global(self, placement=None, sbp=None, **kwargs):
-    return flow.to_global(self, placement, sbp, **kwargs)
-
-
-def _to_local(self):
-    return flow.to_local(self)
-
-
 def _tolist(self):
     if self.numel() == 1 and self.ndim == 0:
         return self.item()
@@ -954,6 +910,10 @@ def _repeat(self, *sizes):
     else:
         new_sizes = sizes
     return flow._C.repeat(self, new_sizes)
+
+
+def _repeat_interleave(self, *args, **kwargs):
+    return flow._C.repeat_interleave(self, *args, **kwargs)
 
 
 def _tile(self, *dims):
@@ -1016,34 +976,6 @@ def _masked_fill(self, mask, fill_value):
 
 def _masked_select(self, mask):
     return flow.masked_select(self, mask)
-
-
-def _reshape(self, *shape):
-    if len(shape) == 1:
-        new_shape = shape[0]
-        if isinstance(new_shape, int):
-            new_shape = (new_shape,)
-    else:
-        new_shape = shape
-    return flow._C.reshape(self, new_shape)
-
-
-def _reshape_as(self, other):
-    return _reshape(self, other.size())
-
-
-def _view(self, *shape):
-    if len(shape) == 1:
-        new_shape = shape[0]
-        if isinstance(new_shape, int):
-            new_shape = (new_shape,)
-    else:
-        new_shape = shape
-    return flow._C.view(self, new_shape)
-
-
-def _view_as(self, other):
-    return _view(self, *other.size())
 
 
 def _sort(self, dim: int = -1, descending: bool = False):
@@ -1159,52 +1091,20 @@ def _cumprod(self, dim, dtype=None):
 
 
 def RegisterMethods():
-    Tensor.__mul__ = lambda self, other: self.mul(other)
-    Tensor.__rmul__ = lambda self, other: self.mul(other)
-    Tensor.__add__ = lambda self, other: self.add(other)
-    Tensor.__iadd__ = lambda self, other: self.add_(other)
-    Tensor.__matmul__ = lambda self, other: self.matmul(other)
-    Tensor.byte = _byte
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
-    Tensor.size = _size
-    Tensor.dim = _ndim
-    Tensor.ndimension = _ndim
-    Tensor.nelement = _nelement
-    Tensor.numel = _numel
-    Tensor.element_size = _element_size
+    Tensor.add = _add
+    Tensor.add_ = _add_inplace
+    Tensor.sub = _sub
+    Tensor.sub_ = _sub_inplace
     Tensor.backward = _backward
-    Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
-    Tensor.__eq__ = _eq
-    Tensor.__ne__ = _ne
     Tensor.__bool__ = is_nonzero
-    Tensor.__gt__ = _gt
-    Tensor.__lt__ = _lt
-    Tensor.__ge__ = _ge
-    Tensor.__le__ = _le
-    Tensor.__and__ = _and
-    Tensor.__or__ = _or
-    Tensor.__xor__ = _xor
-    Tensor.__mul__ = _mul
-    Tensor.__rmul__ = _rmul
-    Tensor.__add__ = _add
     Tensor.__iadd__ = _iadd
-    Tensor.__radd__ = _radd
     Tensor.addmm = _addmm
-    Tensor.__sub__ = _sub
-    Tensor.__rsub__ = _rsub
-    Tensor.__truediv__ = _truediv
-    Tensor.__rtruediv__ = _rtruediv
-    Tensor.__neg__ = _neg
-    Tensor.__pow__ = _pow
-    Tensor.__rpow__ = _rpow
     Tensor.__format__ = _format
-    Tensor.__floordiv__ = _floor_divide
-    Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
-    Tensor.__invert__ = _invert
     Tensor.__float__ = _scalar_float
     Tensor.__int__ = _scalar_int
     Tensor.__array__ = _numpy
@@ -1218,170 +1118,37 @@ def RegisterMethods():
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
     Tensor.copy_ = _copy
-    Tensor.get_device = _get_device
     Tensor._meta_repr = _meta_repr
-    Tensor.abs = _abs
-    Tensor.exp = _exp
-    Tensor.floor_divide = _floor_divide
-    Tensor.floor = _floor
-    Tensor.floor_ = _floor_inplace_
-    Tensor.argmax = _argmax
-    Tensor.argmin = _argmin
     Tensor.argsort = _argsort
     Tensor.argwhere = _argwhere
-    Tensor.acos = _acos
-    Tensor.arccos = _arccos
-    Tensor.acosh = _acosh
-    Tensor.amin = _amin
-    Tensor.arccosh = _arccosh
-    Tensor.atanh = _atanh
-    Tensor.atan2 = _atan2
-    Tensor.arctanh = _arctanh
-    Tensor.sign = _sign
-    Tensor.sinh = _sinh
-    Tensor.tan = _tan
-    Tensor.gt = _gt
-    Tensor.ge = _ge
-    Tensor.gelu = _gelu
-    Tensor.mish = _mish
-    Tensor.negative = _negative
-    Tensor.neg = _neg
-    Tensor.sigmoid = _sigmoid
-    Tensor.tanh = _tanh
-    Tensor.silu = _silu
-    Tensor.selu = _selu
-    Tensor.softsign = _softsign
-    Tensor.cast = _cast
-    Tensor.diag = _diag
-    Tensor.diagonal = _diagonal
-    Tensor.log1p = _log1p
-    Tensor.log2 = _log2
-    Tensor.add = _add
-    Tensor.add_ = _add_inplace
-    Tensor.addcmul = _addcmul
-    Tensor.addcmul_ = _addcmul_
-    Tensor.div = _truediv
-    Tensor.div_ = _truediv_inplace
-    Tensor.mul = _mul
-    Tensor.mul_ = _mul_
-    Tensor.reciprocal = _reciprocal
-    Tensor.sub = _sub
-    Tensor.sub_ = _sub_inplace
-    Tensor.asin = _asin
-    Tensor.arcsin = _arcsin
-    Tensor.asinh = _asinh
-    Tensor.arcsinh = _arcsinh
-    Tensor.atan = _atan
-    Tensor.arctan = _arctan
-    Tensor.ceil = _ceil
-    Tensor.clamp = _clamp
-    Tensor.clamp_ = _clamp_
-    Tensor.clip = _clip
-    Tensor.clip_ = _clip_
-    Tensor.cos = _cos
-    Tensor.cosh = _cosh
-    Tensor.cpu = _cpu
-    Tensor.cuda = _cuda
     Tensor.expand = _expand
     Tensor.expand_as = _expand_as
-    Tensor.erf = _erf
-    Tensor.erfc = _erfc
-    Tensor.erfinv = _erfinv
-    Tensor.erfinv_ = _erfinv_inplace
-    Tensor.expm1 = _expm1
-    Tensor.fmod = _fmod
-    Tensor.flatten = _flatten
     Tensor.flip = _flip
-    Tensor.in_top_k = _in_top_k
-    Tensor.index_select = _index_select
-    Tensor.log = _log
-    Tensor.minimum = _minimum
-    Tensor.maximum = _maximum
     Tensor.new_empty = _new_empty
     Tensor.new_ones = _new_ones
     Tensor.new_zeros = _new_zeros
-    Tensor.pow = _pow
-    Tensor.rsqrt = _rsqrt
-    Tensor.sqrt = _sqrt
-    Tensor.square = _square
-    Tensor.var = _var
-    Tensor.std = _std
-    Tensor.matmul = _matmul
-    Tensor.round = _round
-    Tensor.softplus = _softplus
-    Tensor.tril = _tril
-    Tensor.triu = _triu
     Tensor.where = _where
     Tensor.norm = _norm
-    Tensor.transpose = _transpose
-    Tensor.permute = _permute
-    Tensor.local_to_global = _local_to_global
-    Tensor.global_to_global = _global_to_global
-    Tensor.to_global = _to_global
-    Tensor.relu = _relu
-    Tensor.relu_ = _relu_inplace
-    Tensor.softmax = _softmax
-    Tensor.log_softmax = _log_softmax
-    Tensor.logical_and = _and
-    Tensor.logical_or = _or
-    Tensor.logical_not = _not
-    Tensor.logical_xor = _xor
-    Tensor.roll = _roll
-    Tensor.bmm = _bmm
-    Tensor.chunk = _chunk
     Tensor.repeat = _repeat
+    Tensor.repeat_interleave = _repeat_interleave
     Tensor.tile = _tile
     Tensor.split = _split
-    Tensor.unbind = _unbind
-    Tensor.squeeze = _squeeze
-    Tensor.swapaxes = _swapaxes
-    Tensor.amax = _amax
-    Tensor.swapdims = _swapdims
-    Tensor.unfold = _unfold
-    Tensor.narrow = _narrow
-    Tensor.unsqueeze = _unsqueeze
     Tensor.to = _to
-    Tensor.half = _half
     Tensor.gather = _gather
-    Tensor.all = _all
-    Tensor.any = _any
     Tensor.T = property(_T)
-    Tensor.t = _t
-    Tensor.masked_fill = _masked_fill
     Tensor.masked_select = _masked_select
     Tensor.eq = _eq
-    Tensor.ne = _ne
     Tensor.item = _item
-    Tensor.lt = _lt
-    Tensor.le = _le
-    Tensor.to_local = _to_local
-    Tensor.reshape = _reshape
-    Tensor.reshape_as = _reshape_as
-    Tensor.view = _view
-    Tensor.view_as = _view_as
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
-    Tensor.int = _int
-    Tensor.long = _long
-    Tensor.float = _float
-    Tensor.double = _double
     Tensor.is_floating_point = _is_floating_point
     Tensor.topk = _topk
     Tensor.nms = _nms
     Tensor.nonzero = _nonzero
-    Tensor.max = _max
-    Tensor.min = _min
-    Tensor.median = _median
-    Tensor.sum = _sum
-    Tensor.mean = _mean
     Tensor.prod = _prod
-    Tensor.sin = _sin
-    Tensor.sin_ = _sin_inplace
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
-    Tensor.isnan = _isnan
-    Tensor.isinf = _isinf
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod

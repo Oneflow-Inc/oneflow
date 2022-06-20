@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EP_COMMON_PRIMITIVE_UTIL_H_
 #define ONEFLOW_CORE_EP_COMMON_PRIMITIVE_UTIL_H_
 
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -119,6 +120,14 @@ inline void SimplifyBroadcastDims(size_t num_src0_dims, const int64_t* src0_dims
   for (int64_t i = 0; i < *simplified_num_dims; ++i) {
     CHECK_EQ(broadcast_dims[i], simplified_dst_dims[i]);
   }
+}
+
+template<typename T, typename D>
+std::unique_ptr<T> NewPrimitiveFromHandlers(
+    const std::map<D, std::function<std::unique_ptr<T>()>>& handlers, const D& key) {
+  const auto iter = handlers.find(key);
+  if (iter != handlers.end()) { return iter->second(); }
+  return nullptr;
 }
 
 }  // namespace primitive

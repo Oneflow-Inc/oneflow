@@ -22,7 +22,7 @@ def string_to_bool(env_str):
     return False
 
 
-def parse_boolean_form_env(env_var, defalut_value):
+def parse_boolean_from_env(env_var, defalut_value):
     # This function aligns with ParseBooleanFromEnv() in oneflow/core/common/util.cpp
     assert isinstance(env_var, str), "env variable must be string, but got: " + type(
         env_var

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/vm/symbol_storage.h"
 

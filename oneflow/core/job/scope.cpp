@@ -98,13 +98,12 @@ Maybe<int64_t> NewScopeSymbolId(
   const Scope& old_scope = Global<symbol::Storage<Scope>>::Get()->Get(old_scope_symbol_id);
   std::shared_ptr<ScopeProto> new_scope = JUST(old_scope.MakeChildScopeProto());
   InitNewScopeProto(new_scope);
-  int64_t symbol_id = 0;
+  std::shared_ptr<Scope> new_scope_symbol;
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    symbol_id = JUST(builder->FindOrCreateSymbolId(*new_scope));
+    new_scope_symbol = JUST(builder->GetScopeSymbol(*new_scope));
     return Maybe<void>::Ok();
   }));
-  JUST(Global<symbol::Storage<Scope>>::Get()->TryAdd(symbol_id, *new_scope));
-  return symbol_id;
+  return JUST(new_scope_symbol->symbol_id());
 }
 
 }  // namespace oneflow

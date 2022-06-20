@@ -35,7 +35,12 @@ class Embedding(Module):
                                     i.e. it remains as a fixed "pad". For a newly constructed Embedding,
                                     the embedding vector at :attr:`padding_idx` will default to all zeros,
                                     but can be updated to another value to be used as the padding vector.
-    
+        max_norm (float, optional): If given, each embedding vector with norm larger than :attr:`max_norm` is renormalized to have 
+                                    norm :attr:`max_norm`
+        norm_type (float, optional): The p of the p-norm to compute for the :attr:`max_norm` option. Default :attr:`2`.
+        scale_grad_by_freq (boolean, optional): If given, this will scale gradients by the inverse of 
+                                                frequency of the words in the mini-batch. Default :attr:`False`
+
     For example:
 
     .. code-block:: python
@@ -46,6 +51,57 @@ class Embedding(Module):
         >>> indices = flow.tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
         >>> m = flow.nn.Embedding(10, 3)
         >>> y = m(indices)
+        
+    ..
+        Feature Stage of Operator [Embedding].
+        - Maintainer List [@EsdeathYZH]
+        - Current Stage [ ]
+        - Alpha Stage Check List [ ]
+          - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[Yes]
+          - Doc(API Doc must be provided and showed normally on the web page.)[Yes]
+          - Functionality and its' Test [ ]
+            - Functionality is highly compatiable with PyTorch 1.11. [Yes]
+            - eager local [Yes] [@EsdeathYZH]
+              - forward [Yes]
+              - backward [Yes]
+              - gpu [Yes]
+              - cpu [Yes]
+            - graph local [ ] [@BBuf, @strint, @hjchen2]
+              - forward [Yes]
+              - backward [ ]
+              - gpu [Yes]
+              - cpu [Yes]
+          - Exception Handling
+            - Exception Message and Hint must be provided [ ]
+        - Beta Stage Check List [ ]
+          - API(High compatibility with PyTorch 1.11, shouldn't have anything incompatible for a naive reason.)[ ]
+          - Doc(Same standard as Alpha Stage)[ ]
+          - Functionality and its' Test [ ]
+            - eager global [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+            - graph gloal [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+            - CUDA kernel [ ]
+            - CPU kernel [ ]
+            - N nodes M devices [ ]
+          - Exception Handling [ ]
+            - Exception Message and Hint must be provided [ ]
+            - Try you best to do Exception Recovery [ ]
+        - Stable Stage Check List [ ]
+          - API(Same standard as Beta Stage)[ ]
+          - Doc(Same standard as Beta Stage)[ ]
+          - Functionality and its' Test [ ]
+            - fp16 and AMP [ ]
+            - NHWC [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+          - Exception Handling [ ]
 
     """
 
@@ -55,7 +111,7 @@ class Embedding(Module):
         embedding_dim: int,
         padding_idx: Optional[int] = None,
         max_norm: Optional[float] = None,
-        norm_type: Optional[float] = None,
+        norm_type: float = 2.0,
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
         _weight: Optional[Tensor] = None,
@@ -74,9 +130,9 @@ class Embedding(Module):
                 ), "Padding_idx must be within num_embeddings"
                 padding_idx = self.num_embeddings + padding_idx
         self.padding_idx = padding_idx
-        assert max_norm is None, "Not support max_norm yet!"
-        assert norm_type is None, "Not support norm_type yet!"
-        assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+        self.max_norm = max_norm
+        self.norm_type = norm_type
+        self.scale_grad_by_freq = scale_grad_by_freq
         assert sparse is False, "Not support sparse=True yet!"
         if _weight is None:
             self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
@@ -96,11 +152,20 @@ class Embedding(Module):
     def _fill_padding_idx_with_zero(self) -> None:
         if self.padding_idx is not None:
             with flow.no_grad():
-                self.weight[self.padding_idx].fill_(0)
+                self.weight[self.padding_idx] = 0
 
     def forward(self, indices):
-        res = flow._C.gather(self.weight, indices, axis=0)
-        return res
+        if self.max_norm is not None:
+            with flow.no_grad():
+                flow._C.embedding_renorm_(
+                    self.weight, indices, self.max_norm, self.norm_type
+                )
+        if self.padding_idx is None and not self.scale_grad_by_freq:
+            return flow._C.gather(self.weight, indices, axis=0)
+        else:
+            return flow._C.embedding(
+                self.weight, indices, self.padding_idx, self.scale_grad_by_freq
+            )
 
 
 def embedding(
@@ -108,7 +173,7 @@ def embedding(
     weight,
     padding_idx=None,
     max_norm=None,
-    norm_type=None,
+    norm_type=2.0,
     scale_grad_by_freq=False,
     sparse=False,
 ):
@@ -121,12 +186,17 @@ def embedding(
     See :class:`oneflow.nn.Embedding` for more details.
 
     Args:
-        input (LongTensor): Tensor containing indices into the embedding matrix
+        input (oneflow.LongTensor): Tensor containing indices into the embedding matrix
         weight (Tensor): The embedding matrix with number of rows equal to the maximum possible index + 1,
             and number of columns equal to the embedding size
         padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
                                      therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
                                      i.e. it remains as a fixed "pad".
+        max_norm (float, optional): If given, each embedding vector with norm larger than max_norm is renormalized to have 
+                                    norm max_norm
+        norm_type (float, optional): The p of the p-norm to compute for the max_norm option. Default 2.
+        scale_grad_by_freq (boolean, optional): If given, this will scale gradients by the inverse of 
+                                                frequency of the words in the mini-batch. Default False
 
     For example:
 
@@ -148,14 +218,27 @@ def embedding(
         >>> output.shape
         oneflow.Size([1, 4, 3])
     """
-    assert max_norm is None, "Not support max_norm yet!"
-    assert norm_type is None, "Not support norm_type yet!"
-    assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+
     assert sparse is False, "Not support sparse=True yet!"
     if padding_idx is not None:
-        weight[padding_idx].fill_(0)
-    res = flow._C.gather(weight, input, axis=0)
-    return res
+        if padding_idx > 0:
+            assert padding_idx < weight.size(
+                0
+            ), "Padding_idx must be within num_embeddings"
+        elif padding_idx < 0:
+            assert padding_idx >= -weight.size(
+                0
+            ), "Padding_idx must be within num_embeddings"
+            padding_idx = weight.size(0) + padding_idx
+
+    if max_norm is not None:
+        with flow.no_grad():
+            weight = flow._C.embedding_renorm_(weight, input, max_norm, norm_type)
+
+    if padding_idx is None and not scale_grad_by_freq:
+        return flow._C.gather(weight, input, axis=0)
+    else:
+        return flow._C.embedding(weight, input, padding_idx, scale_grad_by_freq)
 
 
 if __name__ == "__main__":

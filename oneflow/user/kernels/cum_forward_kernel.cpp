@@ -79,6 +79,7 @@ class CpuCumSumKernel final : public CpuCumKernel<T, BinaryFuncAdd> {
       (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUMSUM_KERNEL(int32_t)
 REGISTER_CUMSUM_KERNEL(int64_t)
 REGISTER_CUMSUM_KERNEL(float)
 REGISTER_CUMSUM_KERNEL(double)
@@ -96,6 +97,7 @@ class CpuCumProdKernel final : public CpuCumKernel<T, BinaryFuncMul> {
       (user_op::HobDeviceType() == DeviceType::kCPU)                                      \
       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUMPROD_KERNEL(int32_t)
 REGISTER_CUMPROD_KERNEL(int64_t)
 REGISTER_CUMPROD_KERNEL(float)
 REGISTER_CUMPROD_KERNEL(double)
