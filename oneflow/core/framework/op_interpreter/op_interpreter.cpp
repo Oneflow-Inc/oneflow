@@ -90,6 +90,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
+
 // NOTE: if this op not support stride, then need to tensor->contiguous()
 #define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
   TensorTuple tmp_inputs;                                                                   \
@@ -104,6 +105,8 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
 
   {
     autograd::AutoGradMode mode(false);
+    const bool inplace = ctx.inplace.value_or(false);
+    if (inplace) { *outputs = *inputs_ptr; }
     JUST(internal_->Apply(op_expr, *inputs_ptr, outputs, ctx));
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
@@ -152,6 +155,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
           requires_grad && IsSupportRequireGradDataType(output->dtype()->data_type())));
     }
   }
+
   if (requires_grad && !LazyMode::is_enabled()) {
     // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
     // node has been attached to them.
