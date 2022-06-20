@@ -69,7 +69,7 @@ class TestTensor(flow.unittest.TestCase):
             device
         )
         return x
-    
+
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, auto_backward=True, check_graph=False)
     def test_tensor_is_pinned(test_case):
