@@ -9,15 +9,15 @@ namespace {
 const std::set<libkineto::ActivityType> cpuTypes{
     libkineto::ActivityType::CPU_OP,          libkineto::ActivityType::CPU_INSTANT_EVENT,
     libkineto::ActivityType::USER_ANNOTATION, libkineto::ActivityType::EXTERNAL_CORRELATION,
-    libkineto::ActivityType::CUDA_RUNTIME,    libkineto::ActivityType::PYTHON_FUNCTION,
+    libkineto::ActivityType::CUDA_RUNTIME,  // something like cudaLaunchKernel
+    libkineto::ActivityType::PYTHON_FUNCTION,
 };
 
 const std::set<libkineto::ActivityType> cudaTypes = {
-    libkineto::ActivityType::GPU_MEMCPY,
-    libkineto::ActivityType::GPU_MEMSET,
-    libkineto::ActivityType::CONCURRENT_KERNEL,
+    libkineto::ActivityType::GPU_MEMCPY, libkineto::ActivityType::GPU_MEMSET,
+    libkineto::ActivityType::CONCURRENT_KERNEL,  // cuda kernel
     // CUDA_RUNTIME appears in both cpuTypes and cudaTypes.
-    libkineto::ActivityType::CUDA_RUNTIME,
+    libkineto::ActivityType::CUDA_RUNTIME,  // something like cudaLaunchKernel
 };
 }  // namespace
 
