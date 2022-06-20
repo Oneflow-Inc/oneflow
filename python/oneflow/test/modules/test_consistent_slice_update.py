@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_logical_slice_assign(test_case, placement, sbp):
+def _test_slice_update(test_case, placement, sbp):
     input = random_tensor(2, 8, 16, requires_grad=True).oneflow
     value = random_tensor(2, 8, 8, requires_grad=True).oneflow
     x = (input + 0).to_global(
@@ -50,11 +50,11 @@ def _test_logical_slice_assign(test_case, placement, sbp):
     test_case.assertTrue(np.array_equal(value.grad.numpy(), value_grad_np))
 
 
-def _test_graph_logical_slice_assign(test_case, placement, sbp):
+def _test_graph_slice_update(test_case, placement, sbp):
     ref = random_tensor(2, 8, 16, requires_grad=True).oneflow
     value = random_tensor(2, 8, 8, requires_grad=True).oneflow
 
-    class LogicalSliceAssignWithGrad(flow.nn.Module):
+    class SliceUpdateWithGrad(flow.nn.Module):
         def __init__(self):
             super().__init__()
             self.ref_grad = flow.nn.Parameter(flow.zeros(8, 16))
@@ -68,18 +68,16 @@ def _test_graph_logical_slice_assign(test_case, placement, sbp):
             x[:, :8] = y
             return x
 
-    logical_slice_assign_with_grad = LogicalSliceAssignWithGrad().to_global(
+    slice_update_with_grad_m = SliceUpdateWithGrad().to_global(
         placement, [flow.sbp.broadcast,] * len(sbp)
     )
 
-    of_sgd = flow.optim.SGD(
-        logical_slice_assign_with_grad.parameters(), lr=1.0, momentum=0.0
-    )
+    of_sgd = flow.optim.SGD(slice_update_with_grad_m.parameters(), lr=1.0, momentum=0.0)
 
-    class LogicalSliceAssignTrainGraph(flow.nn.Graph):
+    class SliceUpdateTrainGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            self.module = logical_slice_assign_with_grad
+            self.module = slice_update_with_grad_m
             self.add_optimizer(of_sgd)
 
         def build(self, x, y):
@@ -88,7 +86,7 @@ def _test_graph_logical_slice_assign(test_case, placement, sbp):
             z.backward()
             return out
 
-    graph = LogicalSliceAssignTrainGraph()
+    graph = SliceUpdateTrainGraph()
 
     x = ref.to_global(placement=placement, sbp=sbp)
     y = value.to_global(placement=placement, sbp=sbp)
@@ -117,15 +115,18 @@ def _test_graph_logical_slice_assign(test_case, placement, sbp):
     )
 
 
-class TestGlobalLogicalSliceAssign(flow.unittest.TestCase):
+class TestGlobalSliceUpdate(flow.unittest.TestCase):
     @globaltest
-    def test_logical_slice_assign(test_case):
+    def test_slice_update(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
+                # TODO(wyg): It will be infer all broadcast sbp when 1n1d,
+                #            slice_update will get error when doing inplace operator.
+                #            Remove this judgement after refactor sbp infer method in Operator class.
                 if placement.ranks.size == 1:
                     continue
-                _test_logical_slice_assign(test_case, placement, sbp)
-                _test_graph_logical_slice_assign(test_case, placement, sbp)
+                _test_slice_update(test_case, placement, sbp)
+                _test_graph_slice_update(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
