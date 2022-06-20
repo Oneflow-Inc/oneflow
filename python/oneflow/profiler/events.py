@@ -18,7 +18,9 @@ import copy
 from enum import Enum
 from typing import Tuple, List, Dict
 from collections import OrderedDict
-from prettytable import PrettyTable
+from rich import box
+from rich.console import Console
+from rich.table import Table
 from oneflow.profiler.util import format_time
 
 
@@ -173,14 +175,12 @@ class KernelEvent(EventBase):
     def to_dict(self):
         result = {
             "name": self.name,
-            "cpu_time_total": format_time(self.time_total),
-            "cpu_time": format_time(self.time),
+            "time_total": format_time(self.time_total),
+            "time": format_time(self.time),
             "count": self.count,
             "input_shapes": self.input_shapes,
             "bandwidth": self.bandwidth,
         }
-        if len(self.children) > 0:
-            result.update({"children": [x.to_dict() for x in self.children]})
         if self.has_cuda_time():
             result.update(
                 {
@@ -246,17 +246,19 @@ class Events(list):
         return results
 
     def table(self):
-        t = PrettyTable()
-        t.field_names = [
-            "Name",
-            "CPU time total",
-            "CPU time",
-            "GPU time total",
-            "GPU time",
-            "Number of calls",
-            "Shapes of inputs",
-            "Bandwidth",
-        ]
+        t = Table(
+            *(
+                "Name",
+                "CPU time total",
+                "CPU time",
+                "GPU time total",
+                "GPU time",
+                "Number of calls",
+                "Shapes of inputs",
+                "Bandwidth",
+            ),
+            box=box.SIMPLE,
+        )
         field_keys = [
             "name",
             "time_total",
@@ -269,14 +271,18 @@ class Events(list):
         ]
 
         def build_row(data: dict):
-            return tuple(data.get(key, "-") for key in field_keys)
+            return tuple(str(data.get(key, "-")) for key in field_keys)
 
         for item in self:
             if isinstance(item, CustomEvent):
-                t.add_row(build_row(item.to_dict()))
+                t.add_row(*build_row(item.to_dict()))
             if isinstance(item, KernelEvent):
-                event_dict = item.to_dict()
-                t.add_row(build_row(event_dict))
+                t.add_row(*build_row(item.to_dict()))
                 if len(item.children) > 0:
-                    t.add_rows([build_row(x) for x in event_dict["children"]])
-        return t.get_string()
+                    for child in item.children:
+                        t.add_row(*build_row(child.to_dict()))
+        console = Console()
+        with console.capture() as capture:
+            console.print(t)
+        return capture.get()
+
