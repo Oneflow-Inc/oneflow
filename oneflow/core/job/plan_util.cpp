@@ -905,7 +905,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     int64_t rank_id = chunk.machine_id();
     auto& info = rank_device_memory_infos[rank_id];
     info.rank_id = rank_id;
-    if (!IsHostMem(chunk.mem_case())) { info.device_id = chunk.mem_case().device_id(); }
+    if (!memory::IsHostMem(chunk.mem_case())) { info.device_id = chunk.mem_case().device_id(); }
     info.total_mem_size += chunk.mem_size();
     info.chunk_info.chunk_id = chunk.chunk_id();
     info.chunk_info.chunk_mem_size = chunk.mem_size();
@@ -918,7 +918,7 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
     info.mem_block_id = mem_block_id;
     info.mem_block_mem_size = mem_block.mem_size();
     auto& rank_memory_info = rank_device_memory_infos.at(mem_block.machine_id());
-    if (!IsHostMem(chunk.mem_case())) {
+    if (!memory::IsHostMem(mem_block.mem_case())) {
       if (mem_block.has_chunk_id()) {
         rank_memory_info.chunk_info.mem_block_ids.push_back(mem_block_id);
         info.is_reused = true;
@@ -1034,8 +1034,20 @@ void PlanUtil::GenLightPlan(Plan* plan, const std::string& plan_name) {
         << " regst_id2proto cannot find: " << regst_id;
     const RegstDescProto& regst = regst_id2proto.at(regst_id);
     ret += " regst_num: " + std::to_string(regst.register_num());
-    std::string mem = ", cpu ";
-    if (regst.mem_case().has_device_cuda_mem()) { mem = ", cuda "; }
+    std::string mem;
+    switch (regst.mem_case().device_type()) {
+      case DeviceType::kCPU: {
+        mem = ", cpu ";
+        break;
+      }
+      case DeviceType::kCUDA: {
+        mem = ", cuda ";
+        break;
+      }
+      default: {
+        UNIMPLEMENTED() << "Unsupported device_type " << regst.mem_case().device_type();
+      }
+    }
     ret += mem;
     if (regst.regst_desc_type().has_data_regst_desc()) {
       const DataRegstDesc& data = regst.regst_desc_type().data_regst_desc();
