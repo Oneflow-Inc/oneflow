@@ -1,5 +1,7 @@
 .. currentmodule:: oneflow
 
+.. _tensor-attributes-doc:
+
 Tensor Attributes
 =============================================================
 Each local ``oneflow.Tensor`` has a :class:`oneflow.dtype`, :class:`oneflow.device`, and global ``oneflow.Tensor`` has a :class:`oneflow.dtype`, :class:`oneflow.placement`, :class:`oneflow.sbp`.
