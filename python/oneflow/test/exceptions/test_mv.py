@@ -19,7 +19,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestMV(flow.unittest.TestCase):
+class TestMv(flow.unittest.TestCase):
     def test_mv_not_matrix(test_case):
         with test_case.assertRaises(Exception) as exp:
             mat = flow.randn(2, 3, 3)
