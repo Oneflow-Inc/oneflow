@@ -26,7 +26,7 @@ import oneflow.support.enable_if as enable_if
 
 
 def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
-    
+
     if isinstance(attrs_chain, str):
         attrs_chain = [attrs_chain]
 
@@ -37,13 +37,20 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
         for att in _attrs_chain:
             last_obj = getattr(last_obj, att)
         return last_obj
-            
+
     if session.status_ == session.Status.INITED:
         resource_config = resource_util.Resource()
-        setattr(__get_obj(resource_config, attrs_chain[0:-1]), attrs_chain[-1], attr_value)
+        setattr(
+            __get_obj(resource_config, attrs_chain[0:-1]), attrs_chain[-1], attr_value
+        )
         session.update_resource_eagerly(resource_config)
     else:
-        setattr(__get_obj(session.config_proto.resource, attrs_chain[0:-1]), attrs_chain[-1], attr_value)
+        setattr(
+            __get_obj(session.config_proto.resource, attrs_chain[0:-1]),
+            attrs_chain[-1],
+            attr_value,
+        )
+
 
 def api_machine_num(val: int) -> None:
     """Set available number of machine/node for  running job .
@@ -142,7 +149,7 @@ def api_reserved_device_mem_mbyte(val: int) -> None:
         val (int):  memory size, e.g. 1024(mb)
     """
     assert type(val) is int
-    _set_resource_attr("reserved_device_mem_mbyte", val) 
+    _set_resource_attr("reserved_device_mem_mbyte", val)
 
 
 def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
@@ -152,7 +159,7 @@ def api_enable_cudnn_fused_normalization_add_relu(val: bool) -> None:
         val (bool): whether enable or not
     """
     assert type(val) is bool
-    _set_resource_attr(["cudnn_conf", "enable_cudnn_fused_normalization_add_relu"], val) 
+    _set_resource_attr(["cudnn_conf", "enable_cudnn_fused_normalization_add_relu"], val)
 
 
 def api_enable_debug_mode(val: bool) -> None:
@@ -162,8 +169,7 @@ def api_enable_debug_mode(val: bool) -> None:
         val (bool):  True or False
     """
     assert type(val) is bool
-    _set_resource_attr("enable_debug_mode", val) 
-
+    _set_resource_attr("enable_debug_mode", val)
 
 
 def api_legacy_model_io_enabled():
@@ -178,17 +184,17 @@ def api_enable_legacy_model_io(val: bool = True):
         val ([type]): True or False
     """
     assert type(val) is bool
-    _set_resource_attr("enable_legacy_model_io", val) 
+    _set_resource_attr("enable_legacy_model_io", val)
 
 
-def api_enable_model_io_v2(val:bool):
+def api_enable_model_io_v2(val: bool):
     """Whether or not use version2  of model input/output function.
 
     Args:
         val ([type]): True or False
     """
     assert type(val) is bool
-    _set_resource_attr("enable_legacy_model_io", val) 
+    _set_resource_attr("enable_legacy_model_io", val)
 
 
 def api_enable_fusion(val: bool = True) -> None:
@@ -198,7 +204,7 @@ def api_enable_fusion(val: bool = True) -> None:
         val (bool, optional): True or False. Defaults to True.
     """
     assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "enable_fusion"], val) 
+    _set_resource_attr(["collective_boxing_conf", "enable_fusion"], val)
 
 
 def api_num_callback_threads(val: int) -> None:
@@ -209,7 +215,7 @@ def api_num_callback_threads(val: int) -> None:
         val (int): number of  callback threads
     """
     assert type(val) is int
-    _set_resource_attr(["collective_boxing_conf", "num_callback_threads"], val) 
+    _set_resource_attr(["collective_boxing_conf", "num_callback_threads"], val)
 
 
 def api_enable_tensor_float_32_compute(val: bool = True) -> None:
@@ -219,9 +225,10 @@ def api_enable_tensor_float_32_compute(val: bool = True) -> None:
         val (bool, optional): True or False. Defaults to True.
     """
     assert type(val) is bool
-    _set_resource_attr("enable_tensor_float_32_compute", val) 
+    _set_resource_attr("enable_tensor_float_32_compute", val)
     if not val:
         os.environ["ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION"] = "0"
+
 
 def api_enable_mem_chain_merge(val: bool = True) -> None:
     """Whether or not to enable MemChain merge.
@@ -230,7 +237,7 @@ def api_enable_mem_chain_merge(val: bool = True) -> None:
         val (bool, optional): True or False. Defaults to True.
     """
     assert type(val) is bool
-    _set_resource_attr("enable_mem_chain_merge", val) 
+    _set_resource_attr("enable_mem_chain_merge", val)
 
 
 def api_nccl_use_compute_stream(val: bool = False) -> None:
@@ -280,7 +287,9 @@ def api_nccl_fusion_all_reduce_use_buffer(val: bool) -> None:
         val (bool): True or False
     """
     assert type(val) is bool
-    _set_resource_attr(["collective_boxing_conf", "nccl_fusion_all_reduce_use_buffer"], val)
+    _set_resource_attr(
+        ["collective_boxing_conf", "nccl_fusion_all_reduce_use_buffer"], val
+    )
 
 
 def api_nccl_fusion_all_reduce(val: bool) -> None:
