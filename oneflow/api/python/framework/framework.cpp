@@ -48,7 +48,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         });
 
   m.def("EagerExecutionEnabled", EagerExecutionEnabled);
-  m.def("LoadLibraryNow", &LoadLibraryNow);
 }
 
 }  // namespace oneflow

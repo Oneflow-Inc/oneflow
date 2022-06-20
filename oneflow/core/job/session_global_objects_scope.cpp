@@ -58,19 +58,6 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<JobSetCompileCtx>::New();
     Global<RuntimeBufferManagersScope>::New();
   }
-  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
-  {
-    // NOTE(chengcheng): Init Global Runtime objects.
-    Global<RuntimeCtx>::New();
-    Global<MemoryAllocator>::New();
-    Global<ChunkMgr>::New();
-    Global<RegstMgr>::New();
-    Global<ActorMsgBus>::New();
-    Global<ThreadMgr>::New();
-    Global<RuntimeJobDescs>::New();
-    Global<summary::EventsWriter>::New();
-    Global<boxing::collective::Scheduler>::New();
-  }
 
   return Maybe<void>::Ok();
 }
@@ -80,7 +67,6 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Global<ResourceDesc, ForSession>::New(config_proto.resource());
-  for (const std::string& lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
 }
 
