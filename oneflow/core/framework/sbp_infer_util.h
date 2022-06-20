@@ -33,6 +33,15 @@ enum Penalty4PartialInConsumerTag : int {
   kStrict = 3   // Not allow a transfer to P
 };
 
+void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp);
+
+void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
+                            const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
+                            const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
+                            ParallelDesc* reduced_out_parallel_desc, NdSbp* reduced_in_nd_sbp,
+                            NdSbp* reduced_out_nd_sbp);
+
 double GetValidMaxCopyCost();
 
 double GetTransferCost();
@@ -84,7 +93,6 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 // 2.0: Penality, the same as infinity
 double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
                                const NdSbp& consumer_sbp_parallel,
-                               const BlobDesc& logical_blob_desc,
                                const ParallelDesc& producer_parallel_desc,
                                const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp);
 
