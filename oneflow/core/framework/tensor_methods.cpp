@@ -75,7 +75,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
       tensor_meta, JUST(input->tensor_storage()), requires_grad,
       /*is_leaf=*/!requires_grad);
-  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory();
+  const bool pin_memory = JUST(JUST(other->AsMirroredTensor())->is_pinned()); 
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()),
                                         /*pin_memory=*/pin_memory));
 
