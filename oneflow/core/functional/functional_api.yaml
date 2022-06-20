@@ -1297,14 +1297,6 @@
   signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
   bind_python: True
 
-- name: "slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => Slice"
-  bind_python: True
-
-- name: "slice_grad"
-  signature: "Tensor (Tensor dy, Shape like, Int64List start, Int64List stop, Int64List step) => SliceGrad"
-  bind_python: False
-
 - name: "narrow"
   signature: "Tensor (Tensor input, Int64 dim, Int64 start, Int64 length) => Narrow"
   bind_python: True
@@ -1313,17 +1305,17 @@
   signature: "Tensor (Tensor dy, Tensor like, Int64 dim, Int64 start, Int64 length) => NarrowGrad"
   bind_python: False
 
+- name: "slice"
+  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => Slice"
+  bind_python: True
+
 - name: "slice_update"
-  signature: "Tensor (Tensor x, Tensor update, Int64List start, Int64List stop, Int64List step, *, Bool inplace=False) => SliceUpdate"
+  signature: "Tensor (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step, Bool inplace=False) => SliceUpdate"
   bind_python: True
 
-- name: "logical_slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => LogicalSlice"
-  bind_python: True
-
-- name: "logical_slice_assign"
-  signature: "Tensor (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
-  bind_python: True
+- name: "slice_grad"
+  signature: "Tensor (Tensor dy, Shape like_shape, Int64List start, Int64List stop, Int64List step) => SliceGrad"
+  bind_python: False
 
 - name: "copy"
   signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
