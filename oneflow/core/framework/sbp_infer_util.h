@@ -84,9 +84,13 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
 // 2.0: Penality, the same as infinity
 double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
                                const NdSbp& consumer_sbp_parallel,
-                               const BlobDesc& logical_blob_desc,
                                const ParallelDesc& producer_parallel_desc,
                                const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp);
+
+// Check if two sbp is actually the same
+double IsPhysicalSameNdSbp(const NdSbp& producer_sbp_parallel, const NdSbp& consumer_sbp_parallel,
+                           const ParallelDesc& producer_parallel_desc,
+                           const ParallelDesc& consumer_parallel_desc);
 
 }  // namespace oneflow
 
