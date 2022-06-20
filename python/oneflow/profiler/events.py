@@ -36,17 +36,16 @@ class CustomEventType(Enum):
 class EventBase:
     MAX_NAME_LENGTH = 55
 
-    def __init__(self, name: str, time: float, event_type: EventType) -> None:
+    def __init__(self, name: str, time_total: float, event_type: EventType) -> None:
         self._name: str = name
-        self._time: float = time
+        self._time_total: float = time_total
         self.count: int = 1
         self.event_type: EventType = event_type
 
     def update(self, event):
         assert self.event_type == event.event_type
-        self_time_total = self.time_total
+        self.time_total += event.time_total
         self.count += event.count
-        self.time = (self_time_total + event.time_total) / self.count
 
     @property
     def name(self):
@@ -56,29 +55,29 @@ class EventBase:
 
     @property
     def time_total(self):
-        return self._time * self.count
+        return self._time_total
+
+    @time_total.setter
+    def time_total(self, new_time):
+        self._time_total = new_time
 
     @property
     def time(self):
-        return self._time
-
-    @time.setter
-    def time(self, new_time):
-        self._time = new_time
+        return self._time_total / self.count
 
     @property
     def cuda_time_total(self):
-        if self.cuda_time is None:
-            return None
-        return self.cuda_time * self.count
+        return None
+
+    @cuda_time_total.setter
+    def cuda_time_total(self, new_time):
+        pass
 
     @property
     def cuda_time(self):
-        return None
-
-    @cuda_time.setter
-    def cuda_time(self, new_time):
-        pass
+        if self.cuda_time_total is None:
+            return None
+        return self.cuda_time_total / self.count
 
     def has_cuda_time(self):
         return self.cuda_time is not None
@@ -86,9 +85,9 @@ class EventBase:
 
 class CustomEvent(EventBase):
     def __init__(
-        self, name: str, time: float, custom_event_type: CustomEventType
+        self, name: str, time_total: float, custom_event_type: CustomEventType
     ) -> None:
-        super().__init__(name, time, EventType.Custom)
+        super().__init__(name, time_total, EventType.Custom)
         self.custom_event_type = custom_event_type
 
     @classmethod
@@ -100,9 +99,9 @@ class CustomEvent(EventBase):
         return self.name, self.custom_event_type
 
     @property
-    def cuda_time(self):
+    def cuda_time_total(self):
         if self.custom_event_type == CustomEventType.CudaKernel:
-            return self.time
+            return self.time_total
         return None
 
     def to_dict(self):
@@ -119,18 +118,18 @@ class CustomEvent(EventBase):
 
 class KernelEvent(EventBase):
     def __init__(
-        self, name: str, time: float, memory_size: int, input_shapes: str
+        self, name: str, time_total: float, memory_size: int, input_shapes: str
     ) -> None:
-        super().__init__(name, time, EventType.Kernel)
+        super().__init__(name, time_total, EventType.Kernel)
         self.children: List[CustomEvent] = []
         self.memory_size = memory_size
         self.input_shapes = input_shapes
-        self._cuda_time = 0.0
+        self._cuda_time_total = 0.0
 
     def add_child(self, event: CustomEvent):
         self.children.append(event)
         if event.has_cuda_time():
-            self._cuda_time += event.cuda_time
+            self._cuda_time_total += event.cuda_time
 
     @classmethod
     def from_dict(cls, d: dict):
@@ -155,14 +154,14 @@ class KernelEvent(EventBase):
         )
 
     @property
-    def cuda_time(self):
-        if self._cuda_time > 0.0:
-            return self._cuda_time
+    def cuda_time_total(self):
+        if self._cuda_time_total > 0.0:
+            return self._cuda_time_total
         return None
 
-    @cuda_time.setter
-    def cuda_time(self, new_time):
-        self._cuda_time = new_time
+    @cuda_time_total.setter
+    def cuda_time_total(self, new_time):
+        self._cuda_time_total = new_time
 
     @property
     def bandwidth(self):
@@ -199,13 +198,8 @@ class KernelEvent(EventBase):
         assert self.has_cuda_time() == event.has_cuda_time()
         assert self.key == event.key
 
-        if self.has_cuda_time():
-            self_cuda_time_total = self.cuda_time_total
-            super().update(event)
-            self.cuda_time = (self_cuda_time_total + event.cuda_time_total) / self.count
-
-        else:
-            super().update(event)
+        super().update(event)
+        self.cuda_time_total += event.cuda_time_total
 
         for i in range(len(self.children)):
             self.children[i].update(event.children[i])
