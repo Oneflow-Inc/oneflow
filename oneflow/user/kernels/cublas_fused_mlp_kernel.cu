@@ -103,7 +103,7 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                     cublas_aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb,
-                    cublas_ldc);
+                    cublas_ldc, 16 * 1024 * 1024);
 
       OF_CUBLAS_CHECK(cublasLtMatmul(
           cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),

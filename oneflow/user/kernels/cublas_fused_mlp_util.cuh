@@ -47,17 +47,20 @@ class CublasFusedMLPKernelCache final : public user_op::OpKernelCache {
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&cublas_preference)); 
   }
   ~CublasFusedMLPKernelCache() override {
     OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operation_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_c_desc));
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceDestroy(cublas_preference));
   }
   cublasLtMatmulDesc_t operation_desc;
   cublasLtMatrixLayout_t cublas_a_desc;
   cublasLtMatrixLayout_t cublas_b_desc;
   cublasLtMatrixLayout_t cublas_c_desc;
+  cublasLtMatmulPreference_t cublas_preference;
 };
 
 std::shared_ptr<CublasFusedMLPKernelCache> CreateCublasFusedMLPKernelCache() {
@@ -208,7 +211,8 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
                    ep::primitive::BlasTransposeType transpose_a,
                    ep::primitive::BlasTransposeType transpose_b, cublasLtEpilogue_t epilogue,
                    const void* d_bias_ptr, const void* aux_ptr, size_t cublas_m, size_t cublas_n,
-                   size_t cublas_k, int64_t cublas_lda, int64_t cublas_ldb, int64_t cublas_ldc) {
+                   size_t cublas_k, int64_t cublas_lda, int64_t cublas_ldb, int64_t cublas_ldc, 
+                   size_t cublas_workspace_size) {
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
       matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
       sizeof(cublas_compute_dtype)));
@@ -216,9 +220,21 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
   // For best performance when using the bias vector, specify beta == 0 and
   // CUBLASLT_POINTER_MODE_HOST.(from
   // https://docs.nvidia.com/cuda/cublas/index.html#cublasLtPointerMode_t)
-  cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-      matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+  // cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
+  // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+  //     matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+  
+
+  OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(
+    matmul_grad_cache->cublas_preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, 
+    &cublas_workspace_size,
+    sizeof(cublas_workspace_size)));
+  
+  uint32_t pointer_mode = CUBLASLT_POINTER_MODE_MASK_HOST;
+  OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(matmul_grad_cache->cublas_preference,
+                                                       CUBLASLT_MATMUL_PREF_POINTER_MODE_MASK,
+                                                       &pointer_mode, sizeof(pointer_mode)));
+
 
   // transpose_a = False, transpose_b = True. But in cublas is reversed.
   const cublasOperation_t cublas_trans_a =

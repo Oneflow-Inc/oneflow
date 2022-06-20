@@ -114,7 +114,7 @@ class MatmulAsyncGradKernel final : public user_op::OpKernel, public user_op::Cu
     SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                   /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                   /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
-                  cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+                  cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
     /*
     a = dy, b = weight
     cublas_a=weight, cublas_b=dy
@@ -139,7 +139,7 @@ class MatmulAsyncGradKernel final : public user_op::OpKernel, public user_op::Cu
     SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                   /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                   /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
-                  cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+                  cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
     OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
     OF_CUBLAS_CHECK(cublasLtMatmul(
         kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha, x->dptr(),
