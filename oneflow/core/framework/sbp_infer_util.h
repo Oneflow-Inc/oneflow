@@ -33,6 +33,15 @@ enum Penalty4PartialInConsumerTag : int {
   kStrict = 3   // Not allow a transfer to P
 };
 
+void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp);
+
+void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
+                            const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
+                            const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
+                            ParallelDesc* reduced_out_parallel_desc, NdSbp* reduced_in_nd_sbp,
+                            NdSbp* reduced_out_nd_sbp);
+
 double GetValidMaxCopyCost();
 
 double GetTransferCost();
