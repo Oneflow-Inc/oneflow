@@ -34,24 +34,54 @@ class CustomEventType(Enum):
 
 
 class EventBase:
+    MAX_NAME_LENGTH = 55
+
     def __init__(self, name: str, time: float, event_type: EventType) -> None:
-        self._name = name
-        self.time = time
-        self.time_total = self.time
-        self.count = 1
-        self.event_type = event_type
+        self._name: str = name
+        self._time: float = time
+        self.count: int = 1
+        self.event_type: EventType = event_type
 
     def update(self, event):
         assert self.event_type == event.event_type
+        self_time_total = self.time_total
         self.count += event.count
-        self.time_total += event.time_total
-        self.time = self.time_total / self.count
+        self.time = (self_time_total + event.time_total) / self.count
 
     @property
     def name(self):
-        if len(self._name) > 55:
-            return self._name[:52] + "..."
+        if len(self._name) > self.MAX_NAME_LENGTH:
+            return self._name[: self.MAX_NAME_LENGTH - 3] + "..."
         return self._name
+
+    @property
+    def time_total(self):
+        return self._time * self.count
+
+    @property
+    def time(self):
+        return self._time
+
+    @time.setter
+    def time(self, new_time):
+        self._time = new_time
+
+    @property
+    def cuda_time_total(self):
+        if self.cuda_time is None:
+            return None
+        return self.cuda_time * self.count
+
+    @property
+    def cuda_time(self):
+        return None
+
+    @cuda_time.setter
+    def cuda_time(self, new_time):
+        pass
+
+    def has_cuda_time(self):
+        return self.cuda_time is not None
 
 
 class CustomEvent(EventBase):
@@ -70,32 +100,21 @@ class CustomEvent(EventBase):
         return self.name, self.custom_event_type
 
     @property
-    def time_is_on_cuda(self):
-        return self.custom_event_type == CustomEventType.CudaKernel
+    def cuda_time(self):
+        if self.custom_event_type == CustomEventType.CudaKernel:
+            return self.time
+        return None
 
-    @property
-    def row(self):
-        if self.time_is_on_cuda:
-            return (
-                self.name,
-                "_",
-                "_",
-                format_time(self.time_total),
-                format_time(self.time),
-                self.count,
-                "-",
-                "-",
-            )
-        return (
-            self.name,
-            format_time(self.time_total),
-            format_time(self.time),
-            "-",
-            "-",
-            self.count,
-            "-",
-            "-",
-        )
+    def to_dict(self):
+        device_prefix = "cuda_" if self.has_cuda_time() else ""
+        time_attrs = [f"{device_prefix}{suffix}" for suffix in ["time", "time_total"]]
+        result = {
+            "name": self.name,
+            "count": self.count,
+        }
+        for time_attr in time_attrs:
+            result[time_attr] = format_time(getattr(self, time_attr))
+        return result
 
 
 class KernelEvent(EventBase):
@@ -106,8 +125,12 @@ class KernelEvent(EventBase):
         self.children: List[CustomEvent] = []
         self.memory_size = memory_size
         self.input_shapes = input_shapes
-        self.cuda_time_total = 0.0
-        self.cuda_time = 0.0
+        self._cuda_time = 0.0
+
+    def add_child(self, event: CustomEvent):
+        self.children.append(event)
+        if event.has_cuda_time():
+            self._cuda_time += event.cuda_time
 
     @classmethod
     def from_dict(cls, d: dict):
@@ -118,12 +141,12 @@ class KernelEvent(EventBase):
             children_list = d.get("children")
             if len(children_list) > 0:
                 for child_dict in children_list:
-                    kernel_event.children.append(CustomEvent.from_dict(child_dict))
+                    kernel_event.add_child(CustomEvent.from_dict(child_dict))
         return kernel_event
 
     @property
     def key(self):
-        if not self.on_gpu:
+        if len(self.children) == 0:
             return (self.name, self.input_shapes)
         return (
             self.name,
@@ -132,47 +155,58 @@ class KernelEvent(EventBase):
         )
 
     @property
-    def has_cuda_time(self):
-        return self.cuda_time_total > 0.0
+    def cuda_time(self):
+        if self._cuda_time > 0.0:
+            return self._cuda_time
+        return None
+
+    @cuda_time.setter
+    def cuda_time(self, new_time):
+        self._cuda_time = new_time
 
     @property
     def bandwidth(self):
-        if self.on_gpu and self.has_cuda_time:
+        if len(self.children) > 0 and self.has_cuda_time():
             if self.memory_size != -1:
                 return f"{self.memory_size / (1024.0 * 1024.0 * 1024.0) / (self.cuda_time / (1000 * 1000)):.3f}GB/s"
-        return "-"
+        return None
 
-    @property
-    def row(self):
-        return (
-            self.name,
-            format_time(self.time_total),
-            format_time(self.time),
-            format_time(self.cuda_time_total) if self.has_cuda_time else "-",
-            format_time(self.cuda_time) if self.has_cuda_time else "-",
-            self.count,
-            self.input_shapes,
-            self.bandwidth,
-        )
+    def to_dict(self):
+        result = {
+            "name": self.name,
+            "cpu_time_total": format_time(self.time_total),
+            "cpu_time": format_time(self.time),
+            "count": self.count,
+            "input_shapes": self.input_shapes,
+            "bandwidth": self.bandwidth,
+        }
+        if len(self.children) > 0:
+            result.update({"children": [x.to_dict() for x in self.children]})
+        if self.has_cuda_time():
+            result.update(
+                {
+                    "cuda_time_total": format_time(self.cuda_time_total),
+                    "cuda_time": format_time(self.cuda_time),
+                }
+            )
 
-    @property
-    def children_rows(self):
-        results = []
-        for item in self.children:
-            results.append(item.row)
-        return results
-
-    @property
-    def on_gpu(self) -> bool:
-        return len(self.children) > 0
+        return result
 
     def update(self, event):
+        assert id(self) != id(event)
         assert isinstance(event, type(self))
-        assert self.on_gpu == event.on_gpu
+        assert len(self.children) == len(event.children)
+        assert self.has_cuda_time() == event.has_cuda_time()
         assert self.key == event.key
-        super().update(event)
-        self.cuda_time_total += event.cuda_time_total
-        self.cuda_time = self.cuda_time_total / self.count
+
+        if self.has_cuda_time():
+            self_cuda_time_total = self.cuda_time_total
+            super().update(event)
+            self.cuda_time = (self_cuda_time_total + event.cuda_time_total) / self.count
+
+        else:
+            super().update(event)
+
         for i in range(len(self.children)):
             self.children[i].update(event.children[i])
 
@@ -184,10 +218,6 @@ class KernelEvent(EventBase):
             else:
                 stats[event.key] = copy.deepcopy(event)
         self.children = list(stats.values())
-        for event in self.children:
-            if event.time_is_on_cuda:
-                self.cuda_time += event.time
-        self.cuda_time_total = self.cuda_time
         self.children.sort(key=lambda x: x.name)
 
 
@@ -210,7 +240,7 @@ class Events(list):
         stats: Dict[Tuple[str, ...], EventBase] = OrderedDict()
 
         for event in self:
-            if isinstance(event, KernelEvent) and event.on_gpu:
+            if isinstance(event, KernelEvent) and len(event.children) != 0:
                 event.make_children_average()
             key = event.key
             if key in stats:
@@ -233,11 +263,26 @@ class Events(list):
             "Shapes of inputs",
             "Bandwidth",
         ]
+        field_keys = [
+            "name",
+            "time_total",
+            "time",
+            "cuda_time_total",
+            "cuda_time",
+            "count",
+            "input_shapes",
+            "bandwidth",
+        ]
+
+        def build_row(data: dict):
+            return tuple(data.get(key, "-") for key in field_keys)
+
         for item in self:
             if isinstance(item, CustomEvent):
-                t.add_row(item.row)
+                t.add_row(build_row(item.to_dict()))
             if isinstance(item, KernelEvent):
-                t.add_row(item.row)
-                if item.on_gpu:
-                    t.add_rows(item.children_rows)
+                event_dict = item.to_dict()
+                t.add_row(build_row(event_dict))
+                if len(item.children) > 0:
+                    t.add_rows([build_row(x) for x in event_dict["children"]])
         return t.get_string()
