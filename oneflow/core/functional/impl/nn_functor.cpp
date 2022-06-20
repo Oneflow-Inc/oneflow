@@ -3346,14 +3346,13 @@ class MvFunctor {
                            const std::shared_ptr<one::Tensor>& vec) const {
     const auto& input_shape = input->shape();
     const auto& vec_shape = vec->shape();
-    CHECK_EQ_OR_RETURN(input_shape->NumAxes(), 2)
-        << Error::RuntimeError() << "self must be a matrix";
-    CHECK_EQ_OR_RETURN(vec_shape->NumAxes(), 1)
-        << Error::RuntimeError() << "vec must be a 1-D tensor ";
+    CHECK_OR_RETURN(input_shape->NumAxes() == 2 && vec_shape->NumAxes() == 1)
+        << Error::RuntimeError() << "vector + matrix @ vector expected, got "
+        << "1, " << input_shape->NumAxes() << ", " << vec_shape->NumAxes();
     CHECK_EQ_OR_RETURN(input_shape->at(1), vec_shape->at(0))
-        << Error::RuntimeError() << "mat and vec shapes cannot be multiplied ("
-        << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
-        << " and " << std::to_string(vec_shape->at(0)) << ")";
+        << Error::RuntimeError() << "size mismatch, got " << std::to_string(input_shape->at(0))
+        << ", " << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
+        << ", " << std::to_string(vec_shape->at(0));
     const std::shared_ptr<Tensor> reshape_vec =
         JUST(Reshape(vec, Shape(DimVector{vec_shape->at(0), 1})));
     std::shared_ptr<Tensor> out = JUST(MatMul(input, reshape_vec, false, false, 1.0));

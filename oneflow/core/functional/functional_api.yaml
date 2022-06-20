@@ -970,7 +970,7 @@
 
 - name: "mv"
   signature:
-    "Tensor (Tensor input, Tensor mat2) => Mv"
+    "Tensor (Tensor input, Tensor vec) => Mv"
   bind_python: True
 
 - name: "fused_mlp"

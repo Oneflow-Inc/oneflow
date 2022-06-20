@@ -601,8 +601,8 @@ def _matmul(self, other):
     return flow.matmul(self, other)
 
 
-def _mv(self, other):
-    return flow.mv(self, other)
+def _mv(self, vec):
+    return flow.mv(self, vec)
 
 
 def _round(self):

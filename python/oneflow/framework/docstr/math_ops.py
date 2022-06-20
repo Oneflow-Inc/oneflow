@@ -1279,11 +1279,15 @@ add_docstr(
     r"""
     mv(input, vec) -> Tensor
 
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mv.html.
+
     Performs a matrix-vector product of the matrix :attr:`input` and the vector :attr:`vec`.
 
     If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`vec` is a
     1-D tensor of size `m`, :attr:`out` will be a 1-D tensor of size `n`.
+    
     .. note:: This function does not :ref:`broadcast <broadcasting-semantics>`.
+
     Args:
         input (oneflow.Tensor): matrix to be matrix multiplied
         vec (oneflow.Tensor): vector to be matrix multiplied
@@ -1291,13 +1295,15 @@ add_docstr(
         oneflow.Tensor: the output Tensor
     
     For example:
+
     .. code-block:: python
+    
         >>> import oneflow as flow
-        >>> mat = flow.tensor([[1,2,3],
-                   [4,5,6]])
-        >>> vec = flow.tensor([1,2,3])
-        >>> flow.mv(mat, vec)
-        tensor([14, 32])
+        >>> mat = flow.randn(2, 3)
+        >>> vec = flow.randn(3)
+        >>> out = flow.mv(mat, vec)
+        >>> out.shape
+        oneflow.Size([2])
     """,
 )
 

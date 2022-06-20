@@ -417,6 +417,16 @@ class TestTensor(flow.unittest.TestCase):
         return a @ b
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=True)
+    def test_mm_with_random_data(test_case):
+        device = random_device()
+        dim0 = random(low=2, high=10).to(int)
+        dim1 = random(low=3, high=20).to(int)
+        a = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
+        b = random_tensor(ndim=1, dim0=dim1).to(device)
+        return a.mv(b)
+
+    @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_list(test_case):
         list_data = [[1.0, 3.0], [5.0, 6.0]]
         input = flow.Tensor(list_data)
