@@ -54,18 +54,26 @@ class Sequential(get_seq(Module)):
 
 
 class ModuleList(get_list(Module)):
+    """Holds submodules in a list.
+    """
     pass
 
 
 class ModuleDict(get_dict(Module)):
+    """Holds submodules in a dictionary.
+    """
     pass
 
 
 class ParameterList(get_para_list(Module)):
+    """Holds parameters in a list.
+    """
     pass
 
 
 class ParameterDict(get_para_dict(Module)):
+    """Holds parameters in a dictionary.
+    """
     pass
 
 

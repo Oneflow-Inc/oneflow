@@ -29,10 +29,10 @@ from oneflow.nn.modules.utils import (
 
 
 class MaxPool1d(Module):
-    r"""The interface is consistent with PyTorch.
+    r"""Applies a 1D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool1d.html.
-
-    Applies a 1D max pooling over an input signal composed of several input planes.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, L)`
     and output :math:`(N, C, L_{out})` can be precisely described as:
@@ -163,10 +163,10 @@ def calc_pool_padding(padding, dhw_offset, ndims):
 
 
 class MaxPool2d(Module):
-    r"""The interface is consistent with PyTorch.
+    r"""Applies a 2D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool2d.html.
-
-    Applies a 2D max pooling over an input signal composed of several input planes.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
     output :math:`(N, C, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kH, kW)`
@@ -278,10 +278,10 @@ class MaxPool2d(Module):
 
 
 class MaxPool3d(Module):
-    r"""The interface is consistent with PyTorch.
+    r"""Applies a 3D max pooling over an input signal composed of several input planes.
+    
+    The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.MaxPool3d.html.
-
-    Applies a 3D max pooling over an input signal composed of several input planes.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, D, H, W)`,
     output :math:`(N, C, D_{out}, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kD, kH, kW)`
