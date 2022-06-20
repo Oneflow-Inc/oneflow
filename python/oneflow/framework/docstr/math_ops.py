@@ -1275,6 +1275,33 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.mv,
+    r"""
+    mv(input, vec) -> Tensor
+
+    Performs a matrix-vector product of the matrix :attr:`input` and the vector :attr:`vec`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`vec` is a
+    1-D tensor of size `m`, :attr:`out` will be a 1-D tensor of size `n`.
+    .. note:: This function does not :ref:`broadcast <broadcasting-semantics>`.
+    Args:
+        input (oneflow.Tensor): matrix to be matrix multiplied
+        vec (oneflow.Tensor): vector to be matrix multiplied
+    Returns:
+        oneflow.Tensor: the output Tensor
+    
+    For example:
+    .. code-block:: python
+        >>> import oneflow as flow
+        >>> mat = flow.tensor([[1,2,3],
+                   [4,5,6]])
+        >>> vec = flow.tensor([1,2,3])
+        >>> flow.mv(mat, vec)
+        tensor([14, 32])
+    """,
+)
+
+add_docstr(
     oneflow.round,
     r"""This operator rounds the value of Blob to the nearest integer.
     Args:

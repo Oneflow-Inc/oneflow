@@ -601,6 +601,10 @@ def _matmul(self, other):
     return flow.matmul(self, other)
 
 
+def _mv(self, other):
+    return flow.mv(self, other)
+
+
 def _round(self):
     return flow.round(self)
 
@@ -1152,6 +1156,7 @@ def RegisterMethods():
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
+    Tensor.mv = _mv
 
 
 def register_tensor_op(op_name):
