@@ -44,7 +44,7 @@ class EventBase:
         self.count: int = 1
         self.event_type: EventType = event_type
 
-    def update(self, event):
+    def update(self, event) -> None:
         assert self.event_type == event.event_type
         self.time_total += event.time_total
         self.count += event.count
@@ -81,8 +81,16 @@ class EventBase:
             return None
         return self.cuda_time_total / self.count
 
-    def has_cuda_time(self):
-        return self.cuda_time is not None
+    def has_cuda_time(self) -> bool:
+        return self.cuda_time_total is not None
+
+    def __eq__(self, __o: object) -> bool:
+        return (
+            self.name == __o.name
+            and self.count == __o.count
+            and self.time_total == __o.time_total
+            and self.cuda_time_total == __o.cuda_time_total
+        )
 
 
 class CustomEvent(EventBase):
@@ -116,6 +124,13 @@ class CustomEvent(EventBase):
         for time_attr in time_attrs:
             result[time_attr] = format_time(getattr(self, time_attr))
         return result
+
+    def __eq__(self, __o: object) -> bool:
+        return (
+            super().__eq__(__o)
+            and isinstance(__o, type(self))
+            and self.custom_event_type == __o.custom_event_type
+        )
 
 
 class KernelEvent(EventBase):
@@ -199,7 +214,8 @@ class KernelEvent(EventBase):
         assert self.key == event.key
 
         super().update(event)
-        self.cuda_time_total += event.cuda_time_total
+        if self.has_cuda_time():
+            self.cuda_time_total += event.cuda_time_total
 
         for i in range(len(self.children)):
             self.children[i].update(event.children[i])
@@ -213,6 +229,15 @@ class KernelEvent(EventBase):
                 stats[event.key] = copy.deepcopy(event)
         self.children = list(stats.values())
         self.children.sort(key=lambda x: x.name)
+
+    def __eq__(self, __o: object) -> bool:
+        return (
+            super().__eq__(__o)
+            and isinstance(__o, type(self))
+            and self.children == __o.children
+            and self.memory_size == __o.memory_size
+            and self.input_shapes == __o.input_shapes
+        )
 
 
 class Events(list):

@@ -25,7 +25,7 @@ class ProfileManager {
     std::set<ActivityType> activities{};
     if (use_cpu) { activities.insert(ActivityType::CPU); }
     if (use_cuda) { activities.insert(ActivityType::CUDA); }
-    PrepareTrace(!activities.count(ActivityType::CUDA), activities);
+    PrepareTrace(false, activities);
     StartTrace();
   }
 
@@ -52,4 +52,4 @@ class ProfileManager {
 }  // namespace profiler
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_PROFILER_PROFILE_MANAGER_H_
+#endif // ONEFLOW_CORE_PROFILER_PROFILE_MANAGER_H_
