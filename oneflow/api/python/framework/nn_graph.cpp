@@ -41,6 +41,11 @@ Maybe<py::object> APINNGraphAdditionalVarTensors(const std::shared_ptr<NNGraph>&
   py::list tensor_list = py::cast(tensors);
   return py::cast<py::object>(tensor_list);
 }
+
+Maybe<py::bytes> APINNGraphGetCurrentSerializedJob(const std::shared_ptr<NNGraph>& graph) {
+  const auto job = graph->job();
+  return py::bytes(job.SerializeAsString());
+}
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
@@ -75,17 +80,24 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
            &NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded)
       .def_property_readonly("additional_var_names", &APINNGraphAdditionalVarNames)
       .def_property_readonly("additional_var_tensors", &APINNGraphAdditionalVarTensors)
-      .def("complie_and_init_runtime", &NNGraph::CompileAndInitRuntime);
+      .def("complie_and_init_runtime", &NNGraph::CompileAndInitRuntime)
+      .def("get_current_job_str", &APINNGraphGetCurrentSerializedJob);
 
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
   m.def("AddTensorAsGraphLoss", &AddTensorAsGraphLoss);
+  m.def("ConvertJobToTosaIR", [](const std::string& serialized_job) -> Maybe<std::string> {
+    Job job;
+    CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job))
+        << "serialized job conversion failed.";
+    return ConvertJobToTosaIR(&job);
+  });
   m.def("SaveJobToIR",
         [](const std::string& serialized_job, const std::string& path) -> Maybe<void> {
           Job job;
-          CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job));
+          CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job))
+              << "serialized job conversion failed.";
           return SaveJobToIR(&job, path);
-          ;
         });
   m.def("LoadSerializedJobFromIR", [](const std::string& path) -> Maybe<py::bytes> {
     Job job;
