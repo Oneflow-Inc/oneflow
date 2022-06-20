@@ -1028,6 +1028,11 @@ def _numpy(self):
     return self.to_numpy()
 
 
+def is_pinned(self):
+    assert self.is_local, "self.is_pinned only support local tensor."
+    return self.is_pinned()
+
+
 def zero_(self):
     self.zero_()
     return self

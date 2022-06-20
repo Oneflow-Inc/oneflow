@@ -122,6 +122,11 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
   return Maybe<void>::Ok();
 }
 
+Maybe<bool> EagerMirroredTensorImpl::is_pinned() const {
+  if(!eager_blob_object_) { return false; }
+  return eager_blob_object_->pin_memory();
+}
+
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;
