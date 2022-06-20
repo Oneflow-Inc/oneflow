@@ -19,6 +19,8 @@ Tensor
     numel
     set_printoptions
 
+.. _tensor-creation-ops:
+
 Creation Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -47,6 +49,8 @@ Creation Ops
     eye
     empty
     full
+
+.. _indexing-slicing-joining:
 
 Indexing, Slicing, Joining, Mutating Ops
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

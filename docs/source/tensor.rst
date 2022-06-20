@@ -14,21 +14,14 @@ OneFlow defines 8 tensor types with CPU and GPU variants which are as follows:
 ======================================= =============================================== =============================== ==================================
 Data type                               dtype                                           CPU tensor                      GPU tensor
 ======================================= =============================================== =============================== ==================================
-32-bit floating point                   ``oneflow.float32`` or ``oneflow.float``        :class:`oneflow.FloatTensor`    :class:`oneflow.cuda.FloatTensor`
-64-bit floating point                   ``oneflow.float64`` or ``oneflow.double``       :class:`oneflow.DoubleTensor`   :class:`oneflow.cuda.DoubleTensor`
-16-bit floating point                   ``oneflow.float16`` or ``oneflow.half``         :class:`oneflow.HalfTensor`     :class:`oneflow.cuda.HalfTensor`
-32-bit complex                          ``oneflow.complex32`` or ``oneflow.chalf``
-64-bit complex                          ``oneflow.complex64`` or ``oneflow.cfloat``
-128-bit complex                         ``oneflow.complex128`` or ``oneflow.cdouble``
+Boolean                                 ``oneflow.bool``                                :class:`oneflow.BoolTensor`     :class:`oneflow.cuda.BoolTensor`
 8-bit integer (unsigned)                ``oneflow.uint8``                               :class:`oneflow.ByteTensor`     :class:`oneflow.cuda.ByteTensor`
 8-bit integer (signed)                  ``oneflow.int8``                                :class:`oneflow.CharTensor`     :class:`oneflow.cuda.CharTensor`
+64-bit floating point                   ``oneflow.float64`` or ``oneflow.double``       :class:`oneflow.DoubleTensor`   :class:`oneflow.cuda.DoubleTensor`
+32-bit floating point                   ``oneflow.float32`` or ``oneflow.float``        :class:`oneflow.FloatTensor`    :class:`oneflow.cuda.FloatTensor`
+16-bit floating point                   ``oneflow.float16`` or ``oneflow.half``         :class:`oneflow.HalfTensor`     :class:`oneflow.cuda.HalfTensor`
 32-bit integer (signed)                 ``oneflow.int32`` or ``oneflow.int``            :class:`oneflow.IntTensor`      :class:`oneflow.cuda.IntTensor`
 64-bit integer (signed)                 ``oneflow.int64`` or ``oneflow.long``           :class:`oneflow.LongTensor`     :class:`oneflow.cuda.LongTensor`
-Boolean                                 ``oneflow.bool``                                :class:`oneflow.BoolTensor`     :class:`oneflow.cuda.BoolTensor`
-quantized 8-bit integer (unsigned)      ``oneflow.quint8``                              :class:`oneflow.ByteTensor`     /
-quantized 8-bit integer (signed)        ``oneflow.qint8``                               :class:`oneflow.CharTensor`     /
-quantized 32-bit integer (signed)       ``oneflow.qint32``                              :class:`oneflow.IntTensor`      /
-quantized 4-bit integer (unsigned)      ``oneflow.quint4x2``                            :class:`oneflow.ByteTensor`     /
 ======================================= =============================================== =============================== ==================================
 
 Initializing and basic operations
@@ -45,6 +38,74 @@ A tensor can be constructed from a Python :class:`list` or sequence using the
     >>> oneflow.tensor(np.array([[1, 2, 3], [4, 5, 6]]))
     tensor([[ 1,  2,  3],
             [ 4,  5,  6]])
+
+.. warning::
+
+    :func:`oneflow.tensor` always copies :attr:`data`. If you have a Tensor
+    :attr:`data` and just want to change its ``requires_grad`` flag, use
+    :meth:`~oneflow.Tensor.requires_grad_` or
+    :meth:`~oneflow.Tensor.detach` to avoid a copy.
+    If you have a numpy array and want to avoid a copy, use
+    :func:`oneflow.as_tensor`.
+A tensor of specific data type can be constructed by passing a
+:class:`oneflow.dtype` and/or a :class:`oneflow.device` to a
+constructor or tensor creation op:
+
+::
+
+    >>> oneflow.zeros([2, 4], dtype=oneflow.int32)
+    tensor([[ 0,  0,  0,  0],
+            [ 0,  0,  0,  0]], dtype=oneflow.int32)
+    >>> cuda0 = oneflow.device('cuda:0')
+    >>> oneflow.ones([2, 4], dtype=oneflow.float64, device=cuda0)
+    tensor([[ 1.0000,  1.0000,  1.0000,  1.0000],
+            [ 1.0000,  1.0000,  1.0000,  1.0000]], dtype=oneflow.float64, device='cuda:0')
+
+For more information about building Tensors, see :ref:`tensor-creation-ops`
+
+The contents of a tensor can be accessed and modified using Python's indexing
+and slicing notation:
+
+::
+
+    >>> x = oneflow.tensor([[1, 2, 3], [4, 5, 6]])
+    >>> print(x[1][2])
+    tensor(6, dtype=oneflow.int64)
+    >>> x[0][1] = 8
+    >>> print(x)
+    tensor([[1, 8, 3],
+            [4, 5, 6]], dtype=oneflow.int64)
+
+Use :meth:`oneflow.Tensor.item` to get a Python number from a tensor containing a
+single value:
+
+::
+
+    >>> x = oneflow.tensor([[1]])
+    >>> x
+    tensor([[1]], dtype=oneflow.int64)
+    >>> x.item()
+    1
+    >>> x = oneflow.tensor(2.5)
+    >>> x
+    tensor(2.5000, dtype=oneflow.float32)
+    >>> x.item()
+    2.5
+
+For more information about indexing, see :ref:`indexing-slicing-joining`
+
+A tensor can be created with :attr:`requires_grad=True` so that
+:mod:`oneflow.autograd` records operations on them for automatic differentiation.
+
+::
+
+    >>> x = oneflow.tensor([[1., -1.], [1., 1.]], requires_grad=True)
+    >>> out = x.pow(2).sum()
+    >>> out.backward()
+    >>> x.grad
+    tensor([[ 2., -2.],
+            [ 2.,  2.]], dtype=oneflow.float32)
+
 
 .. autoclass:: oneflow.Tensor
     :members: abs, 

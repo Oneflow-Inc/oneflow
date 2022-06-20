@@ -29,7 +29,6 @@ OneFlow upholds the core concept and architecture of static compilation and stre
     linalg
     nn.init
     optim
-    module
     graph
     image
     utils
