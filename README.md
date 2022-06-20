@@ -1,5 +1,5 @@
 # OneFlow
-
+# test
 **OneFlow is a performance-centered and open-source deep learning framework.**
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
@@ -237,12 +237,13 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 ## Communication
 
 - [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues): any install, bug, feature issues.
+
 - [www.oneflow.org](http://www.oneflow.org): brand related information.
 
 - ### 中文
 
   - QQ 群: 331883
-  - 微信号（加好友入交流群）: OneFlowXZS
+  - 微信号（加好友入交流群，审批后通过）: OneFlowXZS
   - [知乎](https://www.zhihu.com/org/oneflow-17)
 
 - ### International
