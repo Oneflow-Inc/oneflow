@@ -158,6 +158,13 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
   return Maybe<void>::Ok();
 }
 
+// Call at main thread;
+// call sync to finish all instruction;
+// call ClearMemCache to release all cached memory.
+Maybe<void> VirtualMachine::ClearMemCache() {
+  vm_->GC();
+}
+
 VirtualMachine::~VirtualMachine() {
   if (!vm_threads_closed_) { CHECK_JUST(CloseVMThreads()); }
   CHECK(vm_->SchedulerEmpty());

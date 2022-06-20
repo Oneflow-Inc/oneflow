@@ -331,6 +331,7 @@ void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(stream_desc, &vm_desc.stream_type2desc()) {
     if (stream_desc->num_threads() == 0) { continue; }
     auto stream_rt_desc = intrusive::make_shared<StreamRtDesc>(stream_desc);
+    // VM add stream_rt_desc
     mut_stream_type2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
     BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
     for (int64_t i = 0, rel_global_device_id = 0; i < stream_desc->num_threads(); ++i) {
@@ -340,6 +341,9 @@ void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
         StreamId stream_id;
         stream_id.__Init__(&stream_desc->stream_type(),
                            this_start_global_device_id() + rel_global_device_id);
+        // stream_rt_desc add stream
+        // stream has device context
+        // device context has allocator
         auto stream = intrusive::make_shared<Stream>(
             thread_ctx.Mutable(), stream_id, vm_resource_desc().max_device_num_per_machine());
         stream_rt_desc->add_stream(stream);
@@ -347,6 +351,10 @@ void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
       }
     }
   }
+}
+
+void VirtualMachineEngine::GC() {
+  // Trigger all device context's allocator to do DeallocateFreeBlockForGarbageCollection.
 }
 
 void VirtualMachineEngine::GetCachedInstrTypeIdAndPhyInstrStream(const std::string& instr_type_name,
