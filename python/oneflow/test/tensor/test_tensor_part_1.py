@@ -415,7 +415,7 @@ class TestTensor(flow.unittest.TestCase):
         a = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
         b = random_tensor(ndim=2, dim0=dim1, dim1=dim2).to(device)
         return a @ b
-    
+
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
     def test_mm_with_random_data(test_case):

@@ -1306,7 +1306,7 @@ add_docstr(
         >>> of_out = flow.mm(mat1, mat2)
         >>> of_out.shape
         oneflow.Size([2, 3])
-    """
+    """,
 )
 
 add_docstr(

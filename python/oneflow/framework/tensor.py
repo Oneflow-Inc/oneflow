@@ -600,6 +600,7 @@ def _unsqueeze(self, dim):
 def _matmul(self, other):
     return flow.matmul(self, other)
 
+
 def _mm(self, mat2):
     return flow._C.mm(self, mat2)
 
