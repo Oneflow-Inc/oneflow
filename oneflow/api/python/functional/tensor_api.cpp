@@ -121,9 +121,7 @@ class TensorWithOtherCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     bool is_pinned = false;
-    if (other->is_local()) {
-      is_pinned = JUST(JUST(input->AsMirroredTensor())->is_pinned());
-    }
+    if (other->is_local()) { is_pinned = JUST(JUST(input->AsMirroredTensor())->is_pinned()); }
     return MakeTensorFromOtherTensor(other, pin_memory);
   }
 };
@@ -145,9 +143,7 @@ class TensorWithDataCtorFunctor {
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
-          other->is_local()
-              ? JUST(JUST(other->AsMirroredTensor())->is_pinned())
-              : false;
+          other->is_local() ? JUST(JUST(other->AsMirroredTensor())->is_pinned()) : false;
       return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
