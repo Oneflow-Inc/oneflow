@@ -611,7 +611,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool retain_grad() const override { return impl_->retain_grad(); }
   bool is_contiguous() const override { return impl_->is_contiguous(); }
   Maybe<bool> is_pinned() const override {
-    OF_RUNTIME_ERROR() << "ConsistentTensor has no is_pinned method";
+    OF_RUNTIME_ERROR() << "Global tensor has no is_pinned method";
   }
 
   // Setters for autograd

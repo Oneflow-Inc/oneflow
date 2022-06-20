@@ -121,8 +121,8 @@ class TensorWithOtherCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     bool is_pinned = false;
-    if (other->is_local()) { is_pinned = JUST(JUST(input->AsMirroredTensor())->is_pinned()); }
-    return MakeTensorFromOtherTensor(other, pin_memory);
+    if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsMirroredTensor())->is_pinned()); }
+    return MakeTensorFromOtherTensor(other, is_pinned);
   }
 };
 
