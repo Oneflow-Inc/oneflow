@@ -170,7 +170,7 @@ class KernelEvent(EventBase):
         if len(self.children) > 0 and self.has_cuda_time():
             if self.memory_size != -1:
                 return f"{self.memory_size / (1024.0 * 1024.0 * 1024.0) / (self.cuda_time / (1000 * 1000)):.3f}GB/s"
-        return None
+        return "-"
 
     def to_dict(self):
         result = {

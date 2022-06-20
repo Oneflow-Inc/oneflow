@@ -19,6 +19,7 @@ std::string ProfileManager::RegisterEventRecorder(
   event_recorders_.emplace(recorder_key, event_recorder);
   return recorder_key;
 }
+
 void ProfileManager::UnregisterEventRecorder(const std::string& event_recorder_key) {
   if (event_recorders_.find(event_recorder_key) != event_recorders_.end()) {
     event_recorders_.erase(event_recorder_key);
@@ -35,49 +36,49 @@ std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
   const auto& kineto_events = *(trace.get()->activities());
   std::set<std::shared_ptr<IEvent>> custom_events;
   std::unordered_map<std::shared_ptr<IEvent>, int64_t> corr_ids;
-  for (const auto& ev_ptr : kineto_events) {
-    if (ev_ptr == nullptr) { continue; }
-    const auto& activity = *ev_ptr;
-    // TODO: refine below codes
-    if (activity.type() == libkineto::ActivityType::CUDA_RUNTIME) {
-      auto ee = CustomEvent::Create(activity.name(), CustomEventType::kCudaRuntime);
-      ee->StartedAt(static_cast<time_t>(activity.timestamp()));
-      ee->FinishedAt(static_cast<time_t>(activity.timestamp()) + activity.duration());
-      custom_events.emplace(ee);
-      corr_ids[ee] = activity.correlationId();
-    }
-    if (activity.type() == libkineto::ActivityType::CONCURRENT_KERNEL) {
-      auto ee = CustomEvent::Create(activity.name(), CustomEventType::kCudaKernel);
-      ee->StartedAt(static_cast<time_t>(activity.timestamp()));
-      ee->FinishedAt(static_cast<time_t>(activity.timestamp()) + activity.duration());
-      custom_events.emplace(ee);
-      corr_ids[ee] = activity.correlationId();
+
+  const std::vector<std::pair<libkineto::ActivityType, CustomEventType>> type_pairs = {
+      {libkineto::ActivityType::CUDA_RUNTIME, CustomEventType::kCudaRuntime},
+      {libkineto::ActivityType::CONCURRENT_KERNEL, CustomEventType::kCudaKernel}};
+
+  for (const auto& evt_ptr : kineto_events) {
+    if (evt_ptr == nullptr) { continue; }
+    const auto& activity = *evt_ptr;
+    for (auto& pair : type_pairs) {
+      if (activity.type() == pair.first) {
+        auto custom_event = CustomEvent::Create(activity.name(), pair.second);
+        custom_event->SetStartedAt(static_cast<time_t>(activity.timestamp()));
+        custom_event->SetFinishedAt(static_cast<time_t>(activity.timestamp())
+                                    + activity.duration());
+        custom_events.emplace(custom_event);
+        corr_ids[custom_event] = activity.correlationId();
+      }
     }
   }
 
   std::vector<std::shared_ptr<IEvent>> events;
   while (!events_.empty()) {
-    auto e = events_.front();
+    auto evt = events_.front();
     events_.pop();
 #if defined(WITH_CUDA)
-    auto e_kernel = std::dynamic_pointer_cast<KernelEvent>(e);
-    if (e_kernel) {
+    auto evt_kernel = std::dynamic_pointer_cast<KernelEvent>(evt);
+    if (evt_kernel) {
       std::set<int64_t> current_corr_ids;
       if (!custom_events.empty()) {
         for (const auto& x : custom_events) {
-          if (e_kernel->AddChildEventIfSo(x)) { current_corr_ids.insert(corr_ids[x]); }
+          if (evt_kernel->AddChildEventIfSo(x)) { current_corr_ids.insert(corr_ids[x]); }
         }
         for (const auto& x : custom_events) {
-          if (!e_kernel->HasChildEvent(x) && current_corr_ids.count(corr_ids[x])) {
-            e_kernel->AddChildEvent(x);
+          if (!evt_kernel->HasChildEvent(x) && current_corr_ids.count(corr_ids[x])) {
+            evt_kernel->AddChildEvent(x);
           }
         }
-        e_kernel->WalkAmongChildren(
+        evt_kernel->WalkAmongChildren(
             [&custom_events](const std::shared_ptr<IEvent>& child) { custom_events.erase(child); });
       }
     }
 #endif
-    events.emplace_back(e);
+    events.emplace_back(evt);
   }
   return events;
 }

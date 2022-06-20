@@ -42,19 +42,19 @@ std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, Custom
   return std::shared_ptr<CustomEvent>(new CustomEvent(name, type));
 }
 
-void IEvent::StartedAt(time_t t) { started_at_ = t; }
+void IEvent::SetStartedAt(time_t t) { started_at_ = t; }
 
-void IEvent::FinishedAt(time_t t) { finished_at_ = t; }
+void IEvent::SetFinishedAt(time_t t) { finished_at_ = t; }
 
-void IEvent::Start() { StartedAt(GetTimeNow()); }
+void IEvent::Start() { SetStartedAt(GetTimeNow()); }
 
-void IEvent::Finish() { FinishedAt(GetTimeNow()); }
+void IEvent::Finish() { SetFinishedAt(GetTimeNow()); }
 
 bool IEvent::IsChildOf(const IEvent* e) {
   if (!e) { return false; }
   if (this == e) { return false; }
-  return StartedAt<double>() >= e->StartedAt<double>()
-         && FinishedAt<double>() <= e->FinishedAt<double>();
+  return GetStartedAt<double>() >= e->GetStartedAt<double>()
+         && GetFinishedAt<double>() <= e->GetFinishedAt<double>();
 }
 
 const std::string& IEvent::GetName() const { return name_; }

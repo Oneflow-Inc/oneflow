@@ -45,8 +45,8 @@ class IEvent {
   virtual nlohmann::json ToJson();
   virtual ~IEvent() = default;
   // Make sure you know what you are doing when using StartedAt and FinishedAt
-  virtual void StartedAt(time_t t);
-  virtual void FinishedAt(time_t t);
+  virtual void SetStartedAt(time_t t);
+  virtual void SetFinishedAt(time_t t);
   virtual void Start();
   virtual void Finish();
   bool IsChildOf(const IEvent* e);
@@ -55,9 +55,9 @@ class IEvent {
   template<typename T>
   const T GetDuration(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
   template<typename T>
-  const T StartedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
+  const T GetStartedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
   template<typename T>
-  const T FinishedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
+  const T GetFinishedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
 
  protected:
   std::string name_;
@@ -77,28 +77,28 @@ inline double ConvertTime(double time_, EventTimeUnit src_time_unit, EventTimeUn
 }
 
 template<>
-const inline double IEvent::StartedAt<double>(EventTimeUnit time_unit) const {
+const inline double IEvent::GetStartedAt<double>(EventTimeUnit time_unit) const {
   return ConvertTime(started_at_, time_unit_, time_unit);
 }
 
 template<>
-const inline time_t IEvent::StartedAt<time_t>(EventTimeUnit time_unit) const {
-  return static_cast<time_t>(StartedAt<double>(time_unit));
+const inline time_t IEvent::GetStartedAt<time_t>(EventTimeUnit time_unit) const {
+  return static_cast<time_t>(GetStartedAt<double>(time_unit));
 }
 
 template<>
-const inline double IEvent::FinishedAt<double>(EventTimeUnit time_unit) const {
+const inline double IEvent::GetFinishedAt<double>(EventTimeUnit time_unit) const {
   return ConvertTime(finished_at_, time_unit_, time_unit);
 }
 
 template<>
-const inline time_t IEvent::FinishedAt<time_t>(EventTimeUnit time_unit) const {
-  return static_cast<time_t>(FinishedAt<double>(time_unit));
+const inline time_t IEvent::GetFinishedAt<time_t>(EventTimeUnit time_unit) const {
+  return static_cast<time_t>(GetFinishedAt<double>(time_unit));
 }
 
 template<>
 const inline double IEvent::GetDuration<double>(EventTimeUnit time_unit) const {
-  return FinishedAt<double>(time_unit) - StartedAt<double>(time_unit);
+  return GetFinishedAt<double>(time_unit) - GetStartedAt<double>(time_unit);
 }
 
 template<>
