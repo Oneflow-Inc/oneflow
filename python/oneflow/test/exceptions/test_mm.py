@@ -17,11 +17,10 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 import oneflow.nn.functional as F
-import torch
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestMM(flow.unittest.TestCase):
+class TestMm(flow.unittest.TestCase):
     def test_mm_not_2dim(test_case):
         with test_case.assertRaises(Exception) as exp:
             mat1 = flow.randn(2, 3, 3)
@@ -45,7 +44,6 @@ class TestMM(flow.unittest.TestCase):
             mat1 = flow.randn(2, 3)
             mat2 = flow.randn(4, 3)
             out = flow.mm(mat1, mat2)
-        print(str(exp.exception))
         test_case.assertTrue(
             "mat1 and mat2 shapes cannot be multiplied (2x3 and 4x3)"
             in str(exp.exception)

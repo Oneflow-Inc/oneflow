@@ -1277,6 +1277,10 @@ add_docstr(
 add_docstr(
     oneflow.mm,
     r"""
+    mm(input, mat2) -> Tensor
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mm.html.
+    
     Performs a matrix multiplication of the matrices :attr:`input` and :attr:`mat2`.
 
     If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`mat2` is a

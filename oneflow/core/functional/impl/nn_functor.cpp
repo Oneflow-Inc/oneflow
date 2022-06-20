@@ -269,9 +269,6 @@ class EmbeddingFunctor {
 
 class MatMulNoBroadCastFunctor {
  public:
-  MatMulNoBroadCastFunctor() {
-    matmul_op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
-  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& mat2) const {
     const auto& input_shape = input->shape();
@@ -285,11 +282,8 @@ class MatMulNoBroadCastFunctor {
         << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
         << " and " << std::to_string(mat2_shape->at(0)) << "x" << std::to_string(mat2_shape->at(1))
         << ")";
-    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {input, mat2}, {});
+    return JUST(functional::MatMul(input, mat2, false, false, 1.0));
   }
-
- private:
-  std::shared_ptr<OpExpr> matmul_op_;
 };
 
 class MatMulFunctor {
