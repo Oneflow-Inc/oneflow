@@ -206,9 +206,7 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return true;
   }
-  Maybe<bool> is_pinned() const override { 
-    RETURN_ERROR_WITH_BUG_PROMPT();
-  }
+  Maybe<bool> is_pinned() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
@@ -613,7 +611,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
   bool is_contiguous() const override { return impl_->is_contiguous(); }
-  Maybe<bool> is_pinned() const override { 
+  Maybe<bool> is_pinned() const override {
     OF_RUNTIME_ERROR() << "ConsistentTensor has no is_pinned method";
   }
 
