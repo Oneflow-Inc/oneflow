@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/registry_error.h"
@@ -75,10 +76,10 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array) {
   return NumpyTypeToOFDataType(np_array_type);
 }
 
-std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec) {
-  size_t ndim = fixed_vec.size();
+std::vector<size_t> OFShapeToNumpyShape(const Shape& shape) {
+  size_t ndim = shape.size();
   auto result = std::vector<size_t>(ndim);
-  for (int i = 0; i < ndim; i++) { result[i] = fixed_vec.at(i); }
+  for (int i = 0; i < ndim; i++) { result[i] = shape.at(i); }
   return result;
 }
 

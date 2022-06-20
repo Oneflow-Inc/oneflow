@@ -57,14 +57,14 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
-  DimVector dim_vec(ndim);
-  FOR_RANGE(size_t, i, 0, dim_vec.size()) {
+  Shape shape(ndim);
+  FOR_RANGE(size_t, i, 0, shape.size()) {
     const int64_t dim_size = x_shape.At(i);
     const int64_t step = step_vec.at(i);
     int64_t start = start_vec.at(i);
     int64_t stop = stop_vec.at(i);
     if (dim_size == 0 || start == stop) {
-      dim_vec[i] = 0;
+      shape[i] = 0;
       continue;
     }
     CHECK_NE_OR_RETURN(step, 0) << "slice step cannot be 0";
@@ -78,9 +78,9 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
                                          ", otherwise empty result will be outputted.";
     }
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
-    dim_vec[i] = diff / step + 1;
+    shape[i] = diff / step + 1;
   }
-  *ctx->OutputShape("y", 0) = Shape(dim_vec);
+  *ctx->OutputShape("y", 0) = shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> SliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
@@ -227,8 +227,8 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  DimVector dim_vec(ndim);
-  FOR_RANGE(size_t, i, 0, dim_vec.size()) {
+  Shape shape(ndim);
+  FOR_RANGE(size_t, i, 0, shape.size()) {
     const int64_t step = step_vec.at(i);
     const int64_t start = start_vec.at(i);
     const int64_t stop = stop_vec.at(i);
@@ -237,9 +237,9 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
     CHECK_GT_OR_RETURN(stop, 0) << "LogicalSlice stop must be greater than 0";
     CHECK_LT_OR_RETURN(start, stop) << "LogicalSlice start must be less than stop";
     const int64_t diff = stop - start - 1;
-    dim_vec[i] = diff / step + 1;
+    shape[i] = diff / step + 1;
   }
-  *ctx->OutputShape("y", 0) = Shape(dim_vec);
+  *ctx->OutputShape("y", 0) = shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> LogicalSliceOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

@@ -89,9 +89,7 @@ class ReflectionPad2dKernel final : public OpKernel {
 
     IN_T* dest = y->mut_dptr<IN_T>();
     const IN_T* src = x->dptr<IN_T>();
-    DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
-    NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
+    NdIndexOffsetHelper<int64_t, 4> index_helper(y->shape().ptr());
 
     ReflectionPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
                                                 n_channel, y_height, y_width, x_height, x_width,
@@ -130,9 +128,7 @@ class ReflectionPad2dGradKernel final : public OpKernel {
 
     const IN_T* src = dy->dptr<IN_T>();
     IN_T* dest = dx->mut_dptr<IN_T>();
-    DimVector dy_vector;
-    dy->shape().ToDimVector(&dy_vector);
-    NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
+    NdIndexOffsetHelper<int64_t, 4> index_helper(dy->shape().ptr());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
@@ -195,9 +191,7 @@ class ReplicationPad2dKernel final : public OpKernel {
 
     IN_T* dest = y->mut_dptr<IN_T>();
     const IN_T* src = x->dptr<IN_T>();
-    DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
-    NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
+    NdIndexOffsetHelper<int64_t, 4> index_helper(y->shape().ptr());
 
     ReplicationPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
                                                  n_channel, y_height, y_width, x_height, x_width,
@@ -236,9 +230,7 @@ class ReplicationPad2dGradKernel final : public OpKernel {
 
     const IN_T* src = dy->dptr<IN_T>();
     IN_T* dest = dx->mut_dptr<IN_T>();
-    DimVector dy_vector;
-    dy->shape().ToDimVector(&dy_vector);
-    NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
+    NdIndexOffsetHelper<int64_t, 4> index_helper(dy->shape().ptr());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);

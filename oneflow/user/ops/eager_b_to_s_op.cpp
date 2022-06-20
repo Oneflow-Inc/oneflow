@@ -30,16 +30,16 @@ namespace oneflow {
   const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
   const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
   Symbol<ParallelDesc> out_parallel_desc = JUST(TxtStringToPlacement(out_parallel_conf_txt));
-  DimVector dim_vec{shape.dim_vec()};
+  Shape out_shape{shape};
   int64_t out_parallel_num = out_parallel_desc->parallel_num();
   if (out_parallel_num > 1) {
     CHECK_LT_OR_RETURN(out_split_axis, shape.NumAxes());
     BalancedSplitter bs(shape.At(out_split_axis), out_parallel_num);
     const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
     int64_t parallel_id = opt_parallel_id->value_or(0);
-    dim_vec[out_split_axis] = bs.At(parallel_id).size();
+    out_shape[out_split_axis] = bs.At(parallel_id).size();
   }
-  *ctx->OutputShape("out", 0) = Shape(dim_vec);
+  *ctx->OutputShape("out", 0) = out_shape;
   return Maybe<void>::Ok();
 }
 

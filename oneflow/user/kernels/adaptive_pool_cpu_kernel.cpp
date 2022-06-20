@@ -31,9 +31,8 @@ inline int64_t end_index(int64_t a, int64_t b, int64_t c) {
 }
 
 inline Shape GetShape5D(const Shape& shape, const std::string& data_format, int32_t dim) {
-  FixedDimVector shape_3d = {GetInDim(shape, data_format, 0, dim),
-                             GetInDim(shape, data_format, 1, dim),
-                             GetInDim(shape, data_format, 2, dim)};
+  Shape shape_3d = {GetInDim(shape, data_format, 0, dim), GetInDim(shape, data_format, 1, dim),
+                    GetInDim(shape, data_format, 2, dim)};
   return Shape({shape.At(0), shape.At(1), shape_3d.at(0), shape_3d.at(1), shape_3d.at(2)});
 }
 

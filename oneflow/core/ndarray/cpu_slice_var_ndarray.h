@@ -93,12 +93,12 @@ class CpuSliceVarNdarray : public CpuNdarray<typename XT::dtype, XT::ndims> {
     return std::move(slices);
   }
   static Shape BoundedSlices2Shape(const std::array<Slice, XT::ndims>& bounded_slices) {
-    DimVector dim_vec;
+    Shape shape;
     for (const Slice& slice : bounded_slices) {
       CHECK_GT(slice.Size(), 0);
-      dim_vec.emplace_back(slice.Size());
+      shape.emplace_back(slice.Size());
     }
-    return Shape(dim_vec);
+    return shape;
   }
   void SetContiguousLength(const std::array<Slice, XT::ndims>& bounded_slices) {
     contiguous_len_ = 1;

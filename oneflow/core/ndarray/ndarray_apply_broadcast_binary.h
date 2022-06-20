@@ -39,15 +39,15 @@ struct NdarrayApplyBroadcastBinary<
     }
     if (TryInplaceApply<std::is_same<RetT, T>::value>(stream, y, a, b)) { return; }
     CheckBroadcastable(y, a, b);
-    DimVector simplified_y_dim;
-    DimVector simplified_a_dim;
-    DimVector simplified_b_dim;
+    Shape simplified_y_dim;
+    Shape simplified_a_dim;
+    Shape simplified_b_dim;
     SimplifyBroadcastShapes(y.shape(), a.shape(), b.shape(), &simplified_y_dim, &simplified_a_dim,
                             &simplified_b_dim);
     return SwitchApply(SwitchCase(simplified_y_dim.size()), stream,
-                       XpuVarNdarray<RetT>(Shape(simplified_y_dim), y.ptr()),
-                       XpuVarNdarray<const T>(Shape(simplified_a_dim), a.ptr()),
-                       XpuVarNdarray<const T>(Shape(simplified_b_dim), b.ptr()));
+                       XpuVarNdarray<RetT>(simplified_y_dim, y.ptr()),
+                       XpuVarNdarray<const T>(simplified_a_dim, a.ptr()),
+                       XpuVarNdarray<const T>(simplified_b_dim, b.ptr()));
   }
 
   template<bool enabled>
@@ -72,12 +72,12 @@ struct NdarrayApplyBroadcastBinary<
       return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(stream, y, x);
     }
     CheckBroadcastable(y, reinterpret_cast<const XpuVarNdarray<const T>&>(y), x);
-    DimVector simplified_y_dim;
-    DimVector simplified_x_dim;
+    Shape simplified_y_dim;
+    Shape simplified_x_dim;
     SimplifyBroadcastShapes(y.shape(), x.shape(), &simplified_y_dim, &simplified_x_dim);
     return SwitchInplaceApply(SwitchCase(simplified_y_dim.size()), stream,
-                              XpuVarNdarray<T>(Shape(simplified_y_dim), y.ptr()),
-                              XpuVarNdarray<const T>(Shape(simplified_x_dim), x.ptr()));
+                              XpuVarNdarray<T>(simplified_y_dim, y.ptr()),
+                              XpuVarNdarray<const T>(simplified_x_dim, x.ptr()));
   }
 
  private:

@@ -41,8 +41,6 @@ namespace oneflow {
 
 #define POOL_DATA_TYPE_CUDA_SEQ POOL_DATA_TYPE_SEQ
 
-typedef small_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
-
 template<typename T>
 struct DeviceAdd {
   OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
@@ -79,8 +77,8 @@ class MaxPoolParams3D {
 
  private:
   int32_t dim_;
-  FixedDimVector x_3d_;
-  FixedDimVector y_3d_;
+  Shape x_3d_;
+  Shape y_3d_;
   std::string data_format_;
   std::vector<int32_t> padding_;
   std::vector<int32_t> pool_size_3d_;

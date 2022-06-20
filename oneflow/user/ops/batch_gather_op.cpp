@@ -35,9 +35,9 @@ namespace oneflow {
     }
   }
 
-  DimVector dim_vec(in.shape().dim_vec());
-  dim_vec.at(indices.shape().NumAxes() - 1) = indices.shape().dim_vec().back();
-  *out->mut_shape() = Shape(dim_vec);
+  Shape out_shape(in.shape());
+  out_shape.at(indices.shape().NumAxes() - 1) = indices.shape().dim_vec().back();
+  *out->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 

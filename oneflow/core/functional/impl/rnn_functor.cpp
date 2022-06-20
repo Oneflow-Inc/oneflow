@@ -1336,17 +1336,13 @@ class PackPaddedSequenceFunctor {
       }
     }
 
-    std::vector<int64_t> step_shape_vec;  // == [-1, *input.shape[2:]]
-    {
+    const Shape step_shape = [&]() {
+      Shape step_shape;
       const auto& input_sizes = new_input->shape();
-      step_shape_vec.push_back(-1);
-      for (int i = 2; i < input_sizes->NumAxes(); ++i) {
-        step_shape_vec.push_back(input_sizes->At(i));
-      }
-    }
-    DimVector rsv(step_shape_vec.size());
-    for (int i = 0; i < step_shape_vec.size(); ++i) { rsv[i] = step_shape_vec[i]; }
-    const Shape step_shape(rsv);
+      step_shape.push_back(-1);
+      for (int i = 2; i < input_sizes->NumAxes(); ++i) { step_shape.push_back(input_sizes->At(i)); }
+      return step_shape;
+    }();
 
     // To understand what's going on in this loop imagine that the input is a padded 2D
     // array that looks like this (x = valid entry, . = padding)
@@ -1389,9 +1385,7 @@ class PackPaddedSequenceFunctor {
           << "PackPaddedSequenceFunctor: `lengths` array must be sorted in decreasing order.";
     }
 
-    DimVector lsv(1);
-    lsv[0] = lengths_vec[0];
-    const Shape ls(lsv);
+    const Shape ls{lengths_vec[0]};
     std::shared_ptr<Tensor> batch_sizes_t =
         JUST(functional::Empty(ls, lengths->dtype(), JUST(lengths->device()), false));
     const auto& callback2 = [&](uint64_t of_blob_ptr) {

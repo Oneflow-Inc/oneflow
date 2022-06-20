@@ -31,12 +31,11 @@ namespace oneflow {
   if (start == 0 && length > in.shape().At(dim)) { length = in.shape().At(dim); }
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
-  DimVector dim_vec;
-  dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin(), in.shape().dim_vec().cbegin() + dim);
-  dim_vec.insert(dim_vec.end(), length);
-  dim_vec.insert(dim_vec.end(), in.shape().dim_vec().cbegin() + dim + 1,
-                 in.shape().dim_vec().end());
-  *out->mut_shape() = Shape(dim_vec);
+  Shape shape;
+  shape.insert(shape.end(), in.shape().dim_vec().cbegin(), in.shape().dim_vec().cbegin() + dim);
+  shape.insert(shape.end(), length);
+  shape.insert(shape.end(), in.shape().dim_vec().cbegin() + dim + 1, in.shape().dim_vec().end());
+  *out->mut_shape() = shape;
   return Maybe<void>::Ok();
 }
 

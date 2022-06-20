@@ -57,12 +57,12 @@ namespace oneflow {
 /*static*/ Maybe<void> PackOp::InferOutputBlobTimeShape(
     user_op::InferOutputBlobTimeShapeFnContext* ctx) {
   const int32_t pack_num = ctx->user_op_conf().attr<int32_t>("pack_num");
-  DimVector time_shape_dim_vec = ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec();
-  CHECK_OR_RETURN(!time_shape_dim_vec.empty());
-  CHECK_EQ_OR_RETURN(time_shape_dim_vec.back(), pack_num);
-  time_shape_dim_vec.pop_back();
-  if (time_shape_dim_vec.empty()) { time_shape_dim_vec.emplace_back(1); }
-  *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
+  Shape time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
+  CHECK_OR_RETURN(!time_shape.empty());
+  CHECK_EQ_OR_RETURN(time_shape.back(), pack_num);
+  time_shape.pop_back();
+  if (time_shape.empty()) { time_shape.emplace_back(1); }
+  *ctx->mut_output_blob_time_shape() = time_shape;
   return Maybe<void>::Ok();
 }
 

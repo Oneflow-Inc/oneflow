@@ -36,11 +36,11 @@ namespace oneflow {
   const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
   CHECK_EQ_OR_RETURN(padding_before.size(), x_shape.NumAxes());
   CHECK_EQ_OR_RETURN(padding_after.size(), x_shape.NumAxes());
-  DimVector y_dim_vec(x_shape.NumAxes());
+  Shape y_shape(x_shape.NumAxes());
   FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
-    y_dim_vec[i] = x_shape.At(i) + padding_before[i] + padding_after[i];
+    y_shape[i] = x_shape.At(i) + padding_before[i] + padding_after[i];
   }
-  *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
+  *ctx->OutputShape("y", 0) = y_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> PadOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

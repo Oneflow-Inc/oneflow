@@ -85,11 +85,11 @@ namespace oneflow {
         CHECK_EQ_OR_RETURN(in_desc.shape().At(j), like_i_desc.shape().At(j));
       }
     }
-    DimVector out_i_dim_vec = like_i_desc.shape().dim_vec();
+    Shape out_i_shape = like_i_desc.shape();
     FOR_RANGE(int64_t, j, like_num_axes, in_num_axes) {
-      out_i_dim_vec.emplace_back(in_desc.shape().At(j));
+      out_i_shape.emplace_back(in_desc.shape().At(j));
     }
-    *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
+    *out_i_desc->mut_shape() = out_i_shape;
     out_i_desc->set_is_dynamic(like_i_desc.is_dynamic());
   }
   if (dynamic_dim_size == 0) {

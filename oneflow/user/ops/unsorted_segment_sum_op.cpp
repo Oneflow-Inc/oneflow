@@ -55,13 +55,10 @@ namespace oneflow {
   Shape* out_shape = ctx->OutputShape("out", 0);
   const Shape& segment_ids_shape = ctx->InputShape("segment_ids", 0);
 
-  DimVector dim_vec;
-  dim_vec.insert(dim_vec.end(), data_shape.dim_vec().cbegin(),
-                 data_shape.dim_vec().cbegin() + axis);
-  dim_vec.emplace_back(num_segments);
-  dim_vec.insert(dim_vec.end(), data_shape.dim_vec().cbegin() + axis + segment_ids_shape.NumAxes(),
-                 data_shape.dim_vec().end());
-  *out_shape = Shape(dim_vec);
+  out_shape->insert(out_shape->end(), data_shape.cbegin(), data_shape.cbegin() + axis);
+  out_shape->emplace_back(num_segments);
+  out_shape->insert(out_shape->end(), data_shape.cbegin() + axis + segment_ids_shape.NumAxes(),
+                    data_shape.dim_vec().end());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedSegmentSumOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

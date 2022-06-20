@@ -82,25 +82,25 @@ void Params3D::Reset(const ShapeView& x_shape) {
 }
 
 Shape Params3D::GetYShape() const {
-  DimVector y_dim_vec;
+  Shape shape;
   if (dim_ == 1) {
-    y_dim_vec = {y_3d_.at(2)};
+    shape = {y_3d_.at(2)};
   } else if (dim_ == 2) {
-    y_dim_vec = {y_3d_.at(1), y_3d_.at(2)};
+    shape = {y_3d_.at(1), y_3d_.at(2)};
   } else if (dim_ == 3) {
-    y_dim_vec = {y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)};
+    shape = {y_3d_.at(0), y_3d_.at(1), y_3d_.at(2)};
   } else {
     UNIMPLEMENTED();
   }
   if (data_format_ == "channels_first") {
-    y_dim_vec.insert(y_dim_vec.begin(), channel_num_);
+    shape.insert(shape.begin(), channel_num_);
   } else {
     CHECK_EQ(data_format_, "channels_last")
         << "data_format must be 'channels_first' or 'channels_last'";
-    y_dim_vec.insert(y_dim_vec.end(), channel_num_);
+    shape.insert(shape.end(), channel_num_);
   }
-  y_dim_vec.insert(y_dim_vec.begin(), batch_num_);
-  return Shape(y_dim_vec);
+  shape.insert(shape.begin(), batch_num_);
+  return shape;
 }
 
 Shape Params3D::GetXShape5D() const {

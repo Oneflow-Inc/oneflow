@@ -47,7 +47,7 @@ namespace oneflow {
   CHECK_LE_OR_RETURN(size, max_size);
   CHECK_GT_OR_RETURN(step, 0);
 
-  DimVector out_shape(in_dim + 1);
+  Shape out_shape(in_dim + 1);
   out_shape[in_dim] = size;
   FOR_RANGE(int32_t, d, 0, in_dim) {
     int32_t in_size_at_d = in.shape().At(d);
@@ -57,7 +57,7 @@ namespace oneflow {
       out_shape.at(d) = in_size_at_d;
     }
   }
-  *ctx->OutputShape("y", 0) = Shape(out_shape);
+  *ctx->OutputShape("y", 0) = out_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnfoldTensorOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

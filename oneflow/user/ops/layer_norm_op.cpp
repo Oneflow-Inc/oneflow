@@ -28,10 +28,9 @@ int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
 }
 
 Shape InferBnParamShape(const Shape& x_shape, const int64_t begin_norm_axis) {
-  DimVector bn_param_shape_dim_vec;
-  bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x_shape.dim_vec().cbegin(),
-                                x_shape.dim_vec().cbegin() + begin_norm_axis);
-  const Shape bn_param_shape(bn_param_shape_dim_vec);
+  Shape bn_param_shape;
+  bn_param_shape.insert(bn_param_shape.end(), x_shape.dim_vec().cbegin(),
+                        x_shape.dim_vec().cbegin() + begin_norm_axis);
   return bn_param_shape;
 }
 
@@ -52,11 +51,9 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
       ShiftNegativeAxisIfNeed(x.shape(), ctx->Attr<int64_t>("begin_params_axis"));
   *y->mut_shape() = x.shape();
   *y->mut_is_dynamic() = x.is_dynamic();
-  DimVector param_shape_dim_vec;
-  param_shape_dim_vec.insert(param_shape_dim_vec.end(),
-                             x.shape().dim_vec().cbegin() + begin_params_axis,
-                             x.shape().dim_vec().cend());
-  const Shape param_shape(param_shape_dim_vec);
+  Shape param_shape;
+  param_shape.insert(param_shape.end(), x.shape().dim_vec().cbegin() + begin_params_axis,
+                     x.shape().dim_vec().cend());
   if (center) {
     const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
     CHECK_EQ_OR_RETURN(beta.shape(), param_shape);
@@ -194,11 +191,9 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const bool has_gamma_diff = has_tensor("gamma_diff");
   CHECK_GE_OR_RETURN(begin_params_axis, 1);
   CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes());
-  DimVector param_shape_dim_vec;
-  param_shape_dim_vec.insert(param_shape_dim_vec.end(),
-                             dy.shape().dim_vec().cbegin() + begin_params_axis,
-                             dy.shape().dim_vec().cend());
-  const Shape param_shape(param_shape_dim_vec);
+  Shape param_shape;
+  param_shape.insert(param_shape.end(), dy.shape().dim_vec().cbegin() + begin_params_axis,
+                     dy.shape().dim_vec().cend());
   if (has_beta_diff) {
     user_op::TensorDesc* beta_diff = ctx->OutputTensorDesc("beta_diff", 0);
     *beta_diff->mut_shape() = param_shape;

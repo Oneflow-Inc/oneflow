@@ -34,6 +34,7 @@ limitations under the License.
 
 namespace oneflow {
 
+class Shape;
 class Stride;
 
 namespace numpy {
@@ -60,7 +61,7 @@ Maybe<DataType> NumpyTypeToOFDataType(int np_array_type);
 
 Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
 
-std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec);
+std::vector<size_t> OFShapeToNumpyShape(const Shape& shape);
 
 std::vector<size_t> OFStrideToNumpyStride(const Stride& stride, const DataType data_type);
 

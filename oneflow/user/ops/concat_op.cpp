@@ -52,8 +52,8 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   const int64_t axis = ctx->Attr<int64_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0);
   CHECK_LT_OR_RETURN(axis, first_in_desc.shape().NumAxes());
-  DimVector out_dim_vec = first_in_desc.shape().dim_vec();
-  out_dim_vec.at(axis) = 0;
+  Shape out_shape = first_in_desc.shape();
+  out_shape.at(axis) = 0;
   int64_t dynamic_dim_size = 0;
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc& in_desc =
@@ -64,24 +64,24 @@ Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
         if (in_desc.is_dynamic()) {
           dynamic_dim_size += in_desc.shape().At(i);
         } else {
-          out_dim_vec.at(axis) += in_desc.shape().At(i);
+          out_shape.at(axis) += in_desc.shape().At(i);
         }
       } else {
-        CHECK_EQ_OR_RETURN(in_desc.shape().At(i), out_dim_vec.at(i));
+        CHECK_EQ_OR_RETURN(in_desc.shape().At(i), out_shape.at(i));
       }
     }
   }
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   const int64_t max_dim_size = ctx->Attr<int64_t>("max_dim_size");
-  CHECK_LE_OR_RETURN(out_dim_vec.at(axis), max_dim_size);
+  CHECK_LE_OR_RETURN(out_shape.at(axis), max_dim_size);
   if (dynamic_dim_size == 0) {
     out_desc->set_is_dynamic(false);
   } else {
     out_desc->set_is_dynamic(true);
-    out_dim_vec.at(axis) = max_dim_size;
+    out_shape.at(axis) = max_dim_size;
   }
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  *out_desc->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 

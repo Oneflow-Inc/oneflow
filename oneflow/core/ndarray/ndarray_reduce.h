@@ -35,11 +35,11 @@ struct NdarrayReduce<
   using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
   static void Reduce(ep::Stream* stream, const XpuVarNdarray<RetT>& origin_y,
                      const XpuVarNdarray<const T>& origin_x, const XpuVarNdarray<T>& tmp_storage) {
-    DimVector simplified_x_dim;
-    DimVector simplified_y_dim;
+    Shape simplified_x_dim;
+    Shape simplified_y_dim;
     TrySimplifyDims(origin_x.shape(), origin_y.shape(), &simplified_x_dim, &simplified_y_dim);
-    XpuVarNdarray<RetT> y(Shape(simplified_y_dim), origin_y.ptr());
-    XpuVarNdarray<const T> x(Shape(simplified_x_dim), origin_x.ptr());
+    XpuVarNdarray<RetT> y(simplified_y_dim, origin_y.ptr());
+    XpuVarNdarray<const T> x(simplified_x_dim, origin_x.ptr());
 
     CHECK_EQ(y.shape().NumAxes(), x.shape().NumAxes());
     if (NdarrayNoReduce<device_type, T, binary_func>::Matched(y, x)) {
@@ -57,8 +57,8 @@ struct NdarrayReduce<
     }
   }
 
-  static void TrySimplifyDims(const XpuShape& x, const XpuShape& y, DimVector* simplified_x,
-                              DimVector* simplified_y) {
+  static void TrySimplifyDims(const XpuShape& x, const XpuShape& y, Shape* simplified_x,
+                              Shape* simplified_y) {
     CHECK_EQ(y.NumAxes(), x.NumAxes());
     CHECK(y.At(0) == 1 || y.At(0) == x.At(0));
     CHECK(simplified_x->empty());

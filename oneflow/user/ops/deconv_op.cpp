@@ -43,7 +43,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, output_padding.size());
 
     user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
-    DimVector out_shape(NDims + 2);
+    Shape out_shape(NDims + 2);
     out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     out_shape.at(c_dim) = filters;
@@ -62,11 +62,11 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
       }
     }
     *out->mut_is_dynamic() = in.is_dynamic();
-    *out->mut_shape() = Shape(out_shape);
+    *out->mut_shape() = out_shape;
   }
 
   {
-    DimVector weight_shape(in.shape().dim_vec());
+    Shape weight_shape(in.shape());
     if (data_format == "channels_first") {
       weight_shape.at(0) = in.shape().At(1);
       weight_shape.at(1) = filters / groups;
@@ -78,7 +78,7 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
     }
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
     const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
-    CHECK_EQ_OR_RETURN(weight.shape(), Shape(weight_shape));
+    CHECK_EQ_OR_RETURN(weight.shape(), weight_shape);
   }
 
   return Maybe<void>::Ok();

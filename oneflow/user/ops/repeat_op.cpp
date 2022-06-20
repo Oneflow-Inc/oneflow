@@ -43,9 +43,9 @@ namespace oneflow {
 }
 /*static*/ Maybe<void> RepeatOp::InferOutputBlobTimeShape(
     user_op::InferOutputBlobTimeShapeFnContext* ctx) {
-  DimVector dim_vec(ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec());
-  dim_vec.emplace_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
-  *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
+  Shape shape(ctx->TimeShape4InputArgNameAndIndex("in", 0));
+  shape.emplace_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
+  *ctx->mut_output_blob_time_shape() = shape;
   return Maybe<void>::Ok();
 }
 

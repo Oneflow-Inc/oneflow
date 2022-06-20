@@ -25,8 +25,8 @@ namespace oneflow {
   const int32_t in_dim = in_shape.NumAxes();
   CHECK_GE_OR_RETURN(in_dim, 2);
 
-  DimVector out_dim_vec = {};
-  FOR_RANGE(int32_t, index, 2, in_dim) { out_dim_vec.push_back(in_shape.At(index)); }
+  Shape out_shape = {};
+  FOR_RANGE(int32_t, index, 2, in_dim) { out_shape.push_back(in_shape.At(index)); }
   int32_t last_dim = 0;
   if (offset >= 0) {
     last_dim = std::min(in_shape.At(0), in_shape.At(1) - offset);
@@ -34,11 +34,11 @@ namespace oneflow {
     last_dim = std::min(in_shape.At(0) + offset, in_shape.At(1));
   }
   if (last_dim < 0) { last_dim = 0; }
-  out_dim_vec.push_back(last_dim);
+  out_shape.push_back(last_dim);
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   out_desc->set_is_dynamic(false);
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  *out_desc->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 

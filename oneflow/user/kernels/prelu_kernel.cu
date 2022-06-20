@@ -23,11 +23,11 @@ namespace oneflow {
 namespace {
 
 Shape CreatePreluLeftExtendedShape(const ShapeView& shape) {
-  DimVector dim_vec(shape.NumAxes());
-  dim_vec.at(0) = 1LL;
-  dim_vec.at(1) = shape.At(1);
-  for (int i = 2; i < shape.NumAxes(); i++) { dim_vec.at(i) = 1LL; }
-  return Shape(std::move(dim_vec));
+  Shape new_shape(shape.NumAxes());
+  new_shape.at(0) = 1LL;
+  new_shape.at(1) = shape.At(1);
+  for (int i = 2; i < shape.NumAxes(); i++) { new_shape.at(i) = 1LL; }
+  return new_shape;
 }
 
 template<typename T>

@@ -41,13 +41,13 @@ namespace oneflow {
   const Shape& weight_shape = ctx->InputShape("weight", 0);
   const Shape& indices_shape = ctx->InputShape("indices", 0);
 
-  DimVector out_dim_vec;
-  out_dim_vec.insert(out_dim_vec.end(), indices_shape.dim_vec().cbegin(),
-                     indices_shape.dim_vec().cend());
-  out_dim_vec.push_back(weight_shape.At(1));
+  Shape out_shape;
+  out_shape.insert(out_shape.end(), indices_shape.dim_vec().cbegin(),
+                   indices_shape.dim_vec().cend());
+  out_shape.push_back(weight_shape.At(1));
 
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-  *out_desc->mut_shape() = Shape(out_dim_vec);
+  *out_desc->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 

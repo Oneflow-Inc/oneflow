@@ -82,15 +82,14 @@ bool XpuShape::operator==(const XpuShape& rhs) const {
   return true;
 }
 
-void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& b, DimVector* simplified_y,
-                             DimVector* simplified_b) {
-  DimVector simplified_a;
+void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& b, Shape* simplified_y,
+                             Shape* simplified_b) {
+  Shape simplified_a;
   SimplifyBroadcastShapes(y, y, b, simplified_y, &simplified_a, simplified_b);
 }
 
 void SimplifyBroadcastShapes(const XpuShape& y, const XpuShape& a, const XpuShape& b,
-                             DimVector* simplified_y, DimVector* simplified_a,
-                             DimVector* simplified_b) {
+                             Shape* simplified_y, Shape* simplified_a, Shape* simplified_b) {
   CHECK_EQ(y.NumAxes(), a.NumAxes());
   CHECK_EQ(b.NumAxes(), a.NumAxes());
   CHECK(simplified_y->empty());

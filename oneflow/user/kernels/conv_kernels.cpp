@@ -335,10 +335,10 @@ std::shared_ptr<ConvOpKernelCache<T>> CreateConvOpKernelCache(user_op::KernelCac
   }
 
   auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
-    DimVector ret_vec(shape.dim_vec());
-    int32_t ndims = ret_vec.size() - 2;
-    ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
-    return Shape(ret_vec);
+    Shape ret_shape(shape);
+    int32_t ndims = ret_shape.size() - 2;
+    ret_shape.insert(ret_shape.begin() + idx_offset, 3 - ndims, 1);
+    return ret_shape;
   };
   const auto* in_tensor = ctx->TensorDesc4ArgNameAndIndex(in_name, 0);
   const auto& in_shape = in_tensor->shape();

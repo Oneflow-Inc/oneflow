@@ -229,9 +229,8 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     const int64_t in_split_axis = kernel_state->src_split_axis();
 
-    DimVector logical_shape_dim_vec;
-    in->shape().ToDimVector(&logical_shape_dim_vec);
-    logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
+    Shape shape(in->shape());
+    shape[in_split_axis] = shape.at(in_split_axis) * num_ranks;
 
     VLOG(3) << "[NcclLogical][AllGatherNoncontinuous] " << kernel_state->stream_name() << " "
             << ctx->op_name() << std::endl;
@@ -244,18 +243,17 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
 
     CHECK_GT(in_split_axis, 0);
     // NOTE(chengcheng): Do unpack.
-    DimVector unpack_from_dim_vec = logical_shape_dim_vec;
-    CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
-    unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
-    unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
+    CHECK_EQ(shape[in_split_axis] % num_ranks, 0);
+    shape[in_split_axis] = shape[in_split_axis] / num_ranks;
+    shape.insert(shape.begin(), num_ranks);
     std::vector<int32_t> perm;
-    FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
+    FOR_RANGE(int64_t, i, 1, shape.size()) { perm.emplace_back(i); }
     perm.insert(perm.begin() + in_split_axis, 0);
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-        ctx->stream()->device_type(), unpack_from_dim_vec.size());
+        ctx->stream()->device_type(), shape.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
-                      unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
+    transpose->Launch(ctx->stream(), in->data_type(), shape.size(), shape.data(), unpack_from_ptr,
+                      perm.data(), out->mut_dptr());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override { return false; }
@@ -300,23 +298,22 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     const int64_t out_split_axis = kernel_state->dst_split_axis();
 
-    DimVector logical_shape_dim_vec;
-    in->shape().ToDimVector(&logical_shape_dim_vec);
-
-    DimVector transpose_in_dim_vec = logical_shape_dim_vec;
-    transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
-    transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
-    const Shape transpose_in_shape(transpose_in_dim_vec);
+    const Shape transpose_in_shape = [&]() {
+      Shape shape(in->shape());
+      shape[out_split_axis] = shape.at(out_split_axis) / num_ranks;
+      shape.insert(shape.begin() + out_split_axis, num_ranks);
+      return shape;
+    }();
     std::vector<int32_t> perm;
     perm.emplace_back(out_split_axis);
-    FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+    FOR_RANGE(int64_t, i, 0, transpose_in_shape.size()) {
       if (i != out_split_axis) { perm.emplace_back(i); }
     }
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-        ctx->stream()->device_type(), transpose_in_dim_vec.size());
+        ctx->stream()->device_type(), transpose_in_shape.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
-                      transpose_in_dim_vec.data(), in->dptr(), perm.data(), tmp_buffer->mut_dptr());
+    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_shape.size(),
+                      transpose_in_shape.data(), in->dptr(), perm.data(), tmp_buffer->mut_dptr());
     VLOG(3) << "[NcclLogical][ReduceScatterNoncontinuous] " << kernel_state->stream_name() << " "
             << ctx->op_name() << std::endl;
     ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
@@ -382,9 +379,8 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
     const int64_t in_split_axis = kernel_state->src_split_axis();
     const int64_t out_split_axis = kernel_state->dst_split_axis();
 
-    DimVector logical_shape_dim_vec;
-    in->shape().ToDimVector(&logical_shape_dim_vec);
-    logical_shape_dim_vec[in_split_axis] = logical_shape_dim_vec.at(in_split_axis) * num_ranks;
+    Shape shape(in->shape());
+    shape[in_split_axis] = shape.at(in_split_axis) * num_ranks;
 
     VLOG(3) << "[NcclLogical][S2S] " << kernel_state->stream_name() << " " << ctx->op_name()
             << std::endl;
@@ -393,23 +389,22 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
       // NOTE(chengcheng): Do pack. Need transpose in -> pack_to
       // pack use temp buffer offset: [0, data_size]
       pack_to_ptr = tmp_buffer->dptr<char>();
-      DimVector transpose_in_dim_vec = logical_shape_dim_vec;
-      CHECK_EQ(transpose_in_dim_vec.at(in_split_axis) % num_ranks, 0);
-      transpose_in_dim_vec[in_split_axis] = transpose_in_dim_vec.at(in_split_axis) / num_ranks;
-      CHECK_EQ(transpose_in_dim_vec.at(out_split_axis) % num_ranks, 0);
-      transpose_in_dim_vec[out_split_axis] = transpose_in_dim_vec.at(out_split_axis) / num_ranks;
-      transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + out_split_axis, num_ranks);
+      Shape transpose_in_shape = shape;
+      CHECK_EQ(transpose_in_shape.at(in_split_axis) % num_ranks, 0);
+      transpose_in_shape[in_split_axis] = transpose_in_shape.at(in_split_axis) / num_ranks;
+      CHECK_EQ(transpose_in_shape.at(out_split_axis) % num_ranks, 0);
+      transpose_in_shape[out_split_axis] = transpose_in_shape.at(out_split_axis) / num_ranks;
+      transpose_in_shape.insert(transpose_in_shape.begin() + out_split_axis, num_ranks);
       std::vector<int32_t> perm;
       perm.emplace_back(out_split_axis);
-      FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
+      FOR_RANGE(int64_t, i, 0, transpose_in_shape.size()) {
         if (i != out_split_axis) { perm.emplace_back(i); }
       }
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream()->device_type(), transpose_in_dim_vec.size());
+          ctx->stream()->device_type(), transpose_in_shape.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
-                        transpose_in_dim_vec.data(), in->dptr(), perm.data(),
-                        tmp_buffer->mut_dptr());
+      transpose->Launch(ctx->stream(), in->data_type(), transpose_in_shape.size(),
+                        transpose_in_shape.data(), in->dptr(), perm.data(), tmp_buffer->mut_dptr());
     }
 
     if (in_split_axis != 0) {
@@ -441,20 +436,20 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
     if (in_split_axis != 0) {
       // Do unpack.
       CHECK(unpack_from_ptr != out->mut_dptr<char>());
-      DimVector unpack_from_dim_vec = logical_shape_dim_vec;
-      CHECK_EQ(unpack_from_dim_vec.at(in_split_axis) % num_ranks, 0);
-      unpack_from_dim_vec[in_split_axis] = unpack_from_dim_vec.at(in_split_axis) / num_ranks;
-      CHECK_EQ(unpack_from_dim_vec.at(out_split_axis) % num_ranks, 0);
-      unpack_from_dim_vec[out_split_axis] = unpack_from_dim_vec.at(out_split_axis) / num_ranks;
-      unpack_from_dim_vec.insert(unpack_from_dim_vec.begin(), num_ranks);
+      Shape unpack_from_shape = shape;
+      CHECK_EQ(unpack_from_shape.at(in_split_axis) % num_ranks, 0);
+      unpack_from_shape[in_split_axis] = unpack_from_shape.at(in_split_axis) / num_ranks;
+      CHECK_EQ(unpack_from_shape.at(out_split_axis) % num_ranks, 0);
+      unpack_from_shape[out_split_axis] = unpack_from_shape.at(out_split_axis) / num_ranks;
+      unpack_from_shape.insert(unpack_from_shape.begin(), num_ranks);
       std::vector<int32_t> perm;
-      FOR_RANGE(int64_t, i, 1, unpack_from_dim_vec.size()) { perm.emplace_back(i); }
+      FOR_RANGE(int64_t, i, 1, unpack_from_shape.size()) { perm.emplace_back(i); }
       perm.insert(perm.begin() + in_split_axis, 0);
       auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-          ctx->stream()->device_type(), unpack_from_dim_vec.size());
+          ctx->stream()->device_type(), unpack_from_shape.size());
       CHECK(transpose);
-      transpose->Launch(ctx->stream(), in->data_type(), unpack_from_dim_vec.size(),
-                        unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
+      transpose->Launch(ctx->stream(), in->data_type(), unpack_from_shape.size(),
+                        unpack_from_shape.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

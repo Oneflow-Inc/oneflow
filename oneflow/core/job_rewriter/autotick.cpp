@@ -412,7 +412,7 @@ Maybe<void> AddGlobalInputOutputCriticalSection(
     *io_cs->mutable_lbi_producer_op_name() = {lbi_producer_op_names.begin(),
                                               lbi_producer_op_names.end()};
   }
-  auto time_shape = std::make_unique<Shape>(DimVector{1, 1});
+  auto time_shape = std::make_unique<Shape>(std::initializer_list<Shape::value_type>{1, 1});
   HashMap<ParallelDesc, HashSet<const OpNode*>> parallel_desc2op_nodes;
   for (const OpNode* op_node : op_nodes) {
     CHECK_OR_RETURN(parallel_desc2op_nodes[op_node->parallel_desc()].insert(op_node).second);

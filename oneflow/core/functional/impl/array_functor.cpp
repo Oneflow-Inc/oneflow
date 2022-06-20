@@ -2008,7 +2008,7 @@ class TensorGetItemFunctor {
     int64_t ndims = expand_input->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(slice_indices.size(), ndims)
         << Error::RuntimeError() << "Failed to prepare slice indices.";
-    Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
+    Shape target_shape(target_dims.begin(), target_dims.end());
 
     std::vector<int64_t> start(ndims), end(ndims), step(ndims);
     for (int i = 0; i < ndims; ++i) {
@@ -2033,7 +2033,7 @@ class TensorGetItemFunctor {
       result = JUST(Slice(expand_input, start, end, step, /*enable_view_slice=*/true));
     }
 
-    Shape shape(DimVector(target_dims.begin(), target_dims.end()));
+    Shape shape(target_dims.begin(), target_dims.end());
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) {
       JUST(UnifyLocalTensorAndIndicesOnDevice(x, tensor_indices));
@@ -2072,7 +2072,7 @@ class TensorSetItemFunctor {
           << "Combining indexing is not support for tensor setitem currently";
     }
 
-    Shape target_shape(DimVector(target_dims.begin(), target_dims.end()));
+    Shape target_shape(target_dims.begin(), target_dims.end());
     if (target_shape.Count(0) == 0) { return Maybe<void>::Ok(); }
 
     const auto& value_shape = value->shape();
@@ -2121,15 +2121,14 @@ class TensorSetItemFunctor {
         value_tensor = JUST(Expand(value_tensor, target_shape));
       }
       std::vector<int64_t> start(ndims), end(ndims), step(ndims);
-      DimVector slice_dims(ndims);
+      Shape slice_shape(ndims);
       for (int i = 0; i < ndims; ++i) {
         const auto& slice = slice_indices.at(i);
         start[i] = slice.start();
         end[i] = slice.end();
         step[i] = slice.step();
-        slice_dims[i] = (end[i] - start[i] + step[i] - 1) / step[i];
+        slice_shape[i] = (end[i] - start[i] + step[i] - 1) / step[i];
       }
-      Shape slice_shape(slice_dims);
       if (slice_shape != *(value_tensor->shape())) {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
@@ -2585,21 +2584,19 @@ class MeshgridFunctor {
     }
 
     TensorTuple grids(size);
-    DimVector grids_vec(size);
+    Shape grids_shape(size);
     for (int i = 0; i < size; ++i) {
       CHECK_LE_OR_RETURN(tensor_consts[i]->shape()->NumAxes(), 1)
           << Error::RuntimeError() << "Expected scalar or 1D tensor in the tensor list but got "
           << tensor_consts[i]->shape()->NumAxes();
       if (tensor_consts[i]->shape()->NumAxes() == 0) {
-        grids_vec[i] = 1;
+        grids_shape[i] = 1;
       } else {
-        grids_vec[i] = tensor_consts[i]->shape()->At(0);
+        grids_shape[i] = tensor_consts[i]->shape()->At(0);
       }
     }
-    Shape grids_shape(grids_vec);
 
-    DimVector view_shape_vec(size, 1);
-    Shape view_shape(view_shape_vec);
+    Shape view_shape(size, 1);
     for (int i = 0; i < size; ++i) {
       view_shape.Set(i, -1);
       std::shared_ptr<one::Tensor> reshaped = JUST(Reshape(tensor_consts.at(i), view_shape));
@@ -2861,9 +2858,9 @@ class RepeatFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const Shape& repeat_shape) const {
     Shape input_shape = *(input->shape());
-    std::vector<int32_t> input_reshape_vec;
-    std::vector<int32_t> expand_shape_vec;
-    std::vector<int32_t> output_reshape_vec;
+    Shape input_reshape;
+    Shape expand_shape;
+    Shape output_reshape;
 
     int32_t numaxes_diff = repeat_shape.NumAxes() - input_shape.NumAxes();
     CHECK_GE_OR_RETURN(numaxes_diff, 0) << Error::RuntimeError()
@@ -2876,30 +2873,26 @@ class RepeatFunctor {
         int32_t repeat_shape_val = repeat_shape.At(i);
         if (repeat_shape_val > 1) {
           if (input_shape_val > 1) {
-            input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
-            input_reshape_vec.insert(input_reshape_vec.begin(), 1);
-            expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
-            expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape_val);
-            output_reshape_vec.insert(output_reshape_vec.begin(),
-                                      repeat_shape_val * input_shape_val);
+            input_reshape.insert(input_reshape.begin(), input_shape_val);
+            input_reshape.insert(input_reshape.begin(), 1);
+            expand_shape.insert(expand_shape.begin(), input_shape_val);
+            expand_shape.insert(expand_shape.begin(), repeat_shape_val);
+            output_reshape.insert(output_reshape.begin(), repeat_shape_val * input_shape_val);
           } else {
-            input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
-            expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape_val);
-            output_reshape_vec.insert(output_reshape_vec.begin(), repeat_shape_val);
+            input_reshape.insert(input_reshape.begin(), input_shape_val);
+            expand_shape.insert(expand_shape.begin(), repeat_shape_val);
+            output_reshape.insert(output_reshape.begin(), repeat_shape_val);
           }
         } else {
-          input_reshape_vec.insert(input_reshape_vec.begin(), input_shape_val);
-          expand_shape_vec.insert(expand_shape_vec.begin(), input_shape_val);
-          output_reshape_vec.insert(output_reshape_vec.begin(), input_shape_val);
+          input_reshape.insert(input_reshape.begin(), input_shape_val);
+          expand_shape.insert(expand_shape.begin(), input_shape_val);
+          output_reshape.insert(output_reshape.begin(), input_shape_val);
         }
       } else {
-        expand_shape_vec.insert(expand_shape_vec.begin(), repeat_shape.At(i));
-        output_reshape_vec.insert(output_reshape_vec.begin(), repeat_shape.At(i));
+        expand_shape.insert(expand_shape.begin(), repeat_shape.At(i));
+        output_reshape.insert(output_reshape.begin(), repeat_shape.At(i));
       }
     }
-    Shape input_reshape(DimVector(input_reshape_vec.begin(), input_reshape_vec.end()));
-    Shape expand_shape(DimVector(expand_shape_vec.begin(), expand_shape_vec.end()));
-    Shape output_reshape(DimVector(output_reshape_vec.begin(), output_reshape_vec.end()));
     std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
     std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
     std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor, output_reshape));
@@ -3016,7 +3009,7 @@ class TileFunctor {
       new_dims_vec.insert(new_dims_vec.begin(), dims.At(i));
     }
     for (int32_t i = 0; i < numaxes_diff; i++) { new_dims_vec.insert(new_dims_vec.begin(), 1); }
-    Shape new_dims(DimVector(new_dims_vec.begin(), new_dims_vec.end()));
+    Shape new_dims(new_dims_vec.begin(), new_dims_vec.end());
     return JUST(Repeat(input, new_dims));
   }
 };

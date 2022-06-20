@@ -52,9 +52,9 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(segment_ids.shape().At(i), data.shape().At(i));
   }
 
-  DimVector dim_vec(data.shape().dim_vec());
-  dim_vec.at(segment_ids.shape().NumAxes() - 1) = num_segments;
-  *out->mut_shape() = Shape(dim_vec);
+  Shape out_shape(data.shape());
+  out_shape.at(segment_ids.shape().NumAxes() - 1) = num_segments;
+  *out->mut_shape() = out_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UnsortedBatchSegmentSumOp::InferPhysicalTensorDesc(

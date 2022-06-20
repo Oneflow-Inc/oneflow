@@ -909,7 +909,7 @@ class Transpose2dimFunctor {
     dim_1 = JUST(maybe_wrap_dim(dim_1, ndim));
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
-    Shape shape(DimVector(permute.begin(), permute.end()));
+    Shape shape(permute.begin(), permute.end());
     if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, permute)); }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
@@ -2428,27 +2428,17 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
 
   // now we can execute the operations above
   left = JUST(functional::Permute(left, lpermutation));
-  DimVector lsv(3);
-  lsv[0] = lro_size;
-  lsv[1] = lo_size;
-  lsv[2] = sum_size;
-  const Shape ls(lsv);
+  const Shape ls{lro_size, lo_size, sum_size};
 
   left = JUST(functional::Reshape(left, ls));
 
   right = JUST(functional::Permute(right, rpermutation));
-  DimVector rsv(3);
-  rsv[0] = lro_size;
-  rsv[1] = sum_size;
-  rsv[2] = ro_size;
-  const Shape rs(rsv);
+  const Shape rs{lro_size, sum_size, ro_size};
   right = JUST(functional::Reshape(right, rs));
 
   std::shared_ptr<one::Tensor> result =
       JUST(functional::BatchMatMul(left, right, false, false, 1.0));
-  DimVector osv(out_size.size());
-  for (int i = 0; i < out_size.size(); ++i) { osv[i] = out_size[i]; }
-  const Shape os(osv);
+  const Shape os(out_size.begin(), out_size.end());
   // TODO(Liang Depeng): change reshape to veiw
   result = JUST(functional::Reshape(result, os));
   result = JUST(functional::Permute(result, opermutation));
@@ -2812,13 +2802,12 @@ class EinSumFunctor {
 
     // Fast path for when an operand has zero sized dim
     if (has_zero_size_dim) {
-      DimVector out_shape(out_size);
+      Shape out_shape(out_size);
       for (auto i = 0; i < out_size; i++) {
         out_shape[i] = permuted_operands[dim_last_op[i]]->dim(i);
       }
 
-      const Shape shape(out_shape);
-      return functional::Constant(shape, Scalar(0), *permuted_operands[0]->dtype(), NullOpt);
+      return functional::Constant(out_shape, Scalar(0), *permuted_operands[0]->dtype(), NullOpt);
     }
 
     // Sum out or squeeze dimensions that are size 1 for all later operands

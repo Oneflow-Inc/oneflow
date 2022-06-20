@@ -251,11 +251,10 @@ struct DeconvOpKernelCache final : public user_op::OpKernelCache {
 
   void Update(const ShapeView& x_shape, const ShapeView& out_shape) {
     auto Gen5DShape = [](const ShapeView& shape, int32_t idx_offset) -> Shape {
-      DimVector ret_vec;
-      shape.ToDimVector(&ret_vec);
-      int32_t ndims = ret_vec.size() - 2;
-      ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
-      return Shape(ret_vec);
+      Shape new_shape(shape);
+      int32_t ndims = new_shape.size() - 2;
+      new_shape.insert(new_shape.begin() + idx_offset, 3 - ndims, 1);
+      return new_shape;
     };
     if (is_dynamic_) {
       Shape in_shape;
@@ -284,10 +283,10 @@ std::shared_ptr<DeconvOpKernelCache<T>> CreateDeconvOpKernelCache(user_op::Kerne
   }
 
   auto Gen5DShape = [](const Shape& shape, int32_t idx_offset) -> Shape {
-    DimVector ret_vec(shape.dim_vec());
-    int32_t ndims = ret_vec.size() - 2;
-    ret_vec.insert(ret_vec.begin() + idx_offset, 3 - ndims, 1);
-    return Shape(ret_vec);
+    Shape new_shape(shape);
+    int32_t ndims = new_shape.size() - 2;
+    new_shape.insert(new_shape.begin() + idx_offset, 3 - ndims, 1);
+    return new_shape;
   };
   cache->in_5d_shape_ =
       Gen5DShape(ctx->TensorDesc4ArgNameAndIndex(in_name, 0)->shape(), cache->idx_offset_);

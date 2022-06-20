@@ -1202,9 +1202,9 @@ void UniqueCurRankEmbeddingGrad(ep::Stream* stream, DataType data_type, int64_t 
   if (embedding_size != padded_embedding_size) {
     std::unique_ptr<ep::primitive::CopyNd> primitive =
         ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, 2);
-    DimVector dst_shape = {cur_rank_num_ids, embedding_size};
+    Shape dst_shape = {cur_rank_num_ids, embedding_size};
     DimVector dst_pos_vec = {0, 0};
-    DimVector src_shape = {cur_rank_num_ids, padded_embedding_size};
+    Shape src_shape = {cur_rank_num_ids, padded_embedding_size};
     DimVector src_pos_vec = {0, 0};
     DimVector extent_vec = {cur_rank_num_ids, embedding_size};
     primitive->Launch(stream, data_type, 2, cur_rank_unique_embedding_grad, dst_shape.data(),

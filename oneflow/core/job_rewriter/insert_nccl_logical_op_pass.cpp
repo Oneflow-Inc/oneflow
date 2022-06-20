@@ -260,10 +260,10 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const NdSbp& src_nd_sb
   const SbpParallel& dst_dim1_sbp = dst_nd_sbp.sbp_parallel(1);
 
   // split when dim0 sbp is split parallel
-  DimVector dim_vec = logical_blob_desc.shape().dim_vec();
+  Shape shape(logical_blob_desc.shape());
   if (src_nd_sbp.sbp_parallel(0).has_split_parallel()) {
     const int64_t axis = src_nd_sbp.sbp_parallel(0).split_parallel().axis();
-    dim_vec.at(axis) /= hierarchy->At(0);
+    shape.at(axis) /= hierarchy->At(0);
   }
   const int64_t num_ranks = hierarchy->At(1);
 
@@ -280,7 +280,7 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const NdSbp& src_nd_sb
             .Build()
             .op_conf();
     return true;
-  } else if ((dim_vec.at(0) % num_ranks == 0)
+  } else if ((shape.at(0) % num_ranks == 0)
              && (src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel())
              && (src_dim1_sbp.split_parallel().axis() == 0)) {
     // (*, S(0)) -> (*, B) : AllGather
@@ -297,7 +297,7 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const NdSbp& src_nd_sb
     return true;
   } else if (src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel()
              && (src_dim1_sbp.split_parallel().axis() > 0)
-             && (dim_vec.at(src_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
+             && (shape.at(src_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
     // (*, S(1)) -> (*, B) : AllGather Noncontinuous
     *ret =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S1)2(*B)-" + NewUniqueId())
@@ -312,8 +312,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const NdSbp& src_nd_sb
     return true;
   } else if ((src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_split_parallel())
              && (src_dim1_sbp.split_parallel().axis() != dst_dim1_sbp.split_parallel().axis())
-             && (dim_vec.at(src_dim1_sbp.split_parallel().axis()) % num_ranks == 0)
-             && (dim_vec.at(dst_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
+             && (shape.at(src_dim1_sbp.split_parallel().axis()) % num_ranks == 0)
+             && (shape.at(dst_dim1_sbp.split_parallel().axis()) % num_ranks == 0)) {
     // (*, S(src_split_axis)) -> (*, S(dst_split_axis)) : All2All
     *ret =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S)2(*S)-" + NewUniqueId())
