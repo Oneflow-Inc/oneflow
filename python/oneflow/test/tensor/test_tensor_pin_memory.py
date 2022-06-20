@@ -69,6 +69,16 @@ class TestTensor(flow.unittest.TestCase):
             device
         )
         return x
+    
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5, auto_backward=True, check_graph=False)
+    def test_tensor_is_pinned(test_case):
+        device = cpu_device()
+        x = random_tensor(ndim=4).to(device)
+        y = x.pin_memory()
+        test_case.assertTrue(x.oneflow.is_pinned() == x.pytorch.is_pinned())
+        test_case.assertTrue(y.oneflow.is_pinned() == y.pytorch.is_pinned())
+        return y
 
 
 if __name__ == "__main__":
