@@ -614,13 +614,4 @@ double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
   }
 }
 
-// Check if two sbp is actually the same
-double IsPhysicalSameNdSbp(const NdSbp& producer_sbp_parallel, const NdSbp& consumer_sbp_parallel,
-                           const ParallelDesc& producer_parallel_desc,
-                           const ParallelDesc& consumer_parallel_desc) {
-  return ComputeSbpInferPriority(producer_sbp_parallel, consumer_sbp_parallel,
-                                 producer_parallel_desc, consumer_parallel_desc, true)
-         == 0.0;
-}
-
 }  // namespace oneflow

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -34,14 +35,23 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
       const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
-      const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
+      ParallelDesc reduced_in_parallel_desc = producer.parallel_desc();
+      NdSbp reduced_in_nd_sbp;
+      NdSbpDimReduce(producer.parallel_desc(), producer_nd_sbp, &reduced_in_parallel_desc,
+                     &reduced_in_nd_sbp);
 
-      if (IsPhysicalSameNdSbp(producer_nd_sbp, consumer_nd_sbp, producer.parallel_desc(),
-                              node->parallel_desc())) {
+      const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
+      ParallelDesc reduced_out_parallel_desc = node->parallel_desc();
+      NdSbp reduced_out_nd_sbp;
+      NdSbpDimReduce(node->parallel_desc(), consumer_nd_sbp, &reduced_out_parallel_desc,
+                     &reduced_out_nd_sbp);
+
+      if (reduced_in_parallel_desc == reduced_out_parallel_desc
+          && reduced_in_nd_sbp == reduced_out_nd_sbp) {
         continue;
       }
-      lbi2consumer_grouped_by_parallel[lbi][{node->parallel_desc(), consumer_nd_sbp}].push_back(
-          {node, ibn});
+      lbi2consumer_grouped_by_parallel[lbi][{reduced_out_parallel_desc, reduced_out_nd_sbp}]
+          .push_back({node, ibn});
       if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
         op_node2op_conf[node] = node->op().op_conf();
       }

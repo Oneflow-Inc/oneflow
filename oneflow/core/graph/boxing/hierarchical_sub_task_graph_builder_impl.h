@@ -41,6 +41,9 @@ class DispatchHierarchicalSubTskGphBuilder final : public HierarchicalSubTskGphB
   std::unique_ptr<Impl> impl_;
 };
 
+void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp);
+
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                             const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,

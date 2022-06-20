@@ -31,31 +31,6 @@ namespace oneflow {
 
 namespace {
 
-void ParallelDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
-                       ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp) {
-  const auto& hierarchy = parallel_desc.hierarchy();
-  DimVector reduced_hierarchy;
-  FOR_RANGE(int64_t, i, 0, hierarchy->NumAxes()) {
-    if (hierarchy->At(i) != 1) {
-      if (reduced_nd_sbp->sbp_parallel().empty()
-          || (nd_sbp.sbp_parallel(i)
-              != reduced_nd_sbp->sbp_parallel(reduced_nd_sbp->sbp_parallel_size() - 1))) {
-        reduced_hierarchy.emplace_back(hierarchy->At(i));
-        *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(i);
-      } else {
-        reduced_hierarchy.back() *= hierarchy->At(i);
-      }
-    }
-  }
-  if (reduced_hierarchy.empty()) {
-    reduced_hierarchy.emplace_back(hierarchy->At(0));
-    *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(0);
-  }
-  ParallelConf reduced_parallel_conf = parallel_desc.parallel_conf();
-  Shape(reduced_hierarchy).ToProto(reduced_parallel_conf.mutable_hierarchy());
-  *reduced_parallel_desc = ParallelDesc(reduced_parallel_conf);
-}
-
 void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
                                     const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                                     const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
@@ -119,6 +94,31 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
 
 }  // namespace
 
+void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                    ParallelDesc* reduced_parallel_desc, NdSbp* reduced_nd_sbp) {
+  const auto& hierarchy = parallel_desc.hierarchy();
+  DimVector reduced_hierarchy;
+  FOR_RANGE(int64_t, i, 0, hierarchy->NumAxes()) {
+    if (hierarchy->At(i) != 1) {
+      if (reduced_nd_sbp->sbp_parallel().empty()
+          || (nd_sbp.sbp_parallel(i)
+              != reduced_nd_sbp->sbp_parallel(reduced_nd_sbp->sbp_parallel_size() - 1))) {
+        reduced_hierarchy.emplace_back(hierarchy->At(i));
+        *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(i);
+      } else {
+        reduced_hierarchy.back() *= hierarchy->At(i);
+      }
+    }
+  }
+  if (reduced_hierarchy.empty()) {
+    reduced_hierarchy.emplace_back(hierarchy->At(0));
+    *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(0);
+  }
+  ParallelConf reduced_parallel_conf = parallel_desc.parallel_conf();
+  Shape(reduced_hierarchy).ToProto(reduced_parallel_conf.mutable_hierarchy());
+  *reduced_parallel_desc = ParallelDesc(reduced_parallel_conf);
+}
+
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc, const NdSbp& in_nd_sbp,
                             const NdSbp& out_nd_sbp, ParallelDesc* reduced_in_parallel_desc,
@@ -132,8 +132,8 @@ void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
     *reduced_in_nd_sbp = in_nd_sbp;
     *reduced_out_nd_sbp = out_nd_sbp;
   } else if (in_hierarchy_axes != out_hierarchy_axes) {
-    ParallelDimReduce(in_parallel_desc, in_nd_sbp, reduced_in_parallel_desc, reduced_in_nd_sbp);
-    ParallelDimReduce(out_parallel_desc, out_nd_sbp, reduced_out_parallel_desc, reduced_out_nd_sbp);
+    NdSbpDimReduce(in_parallel_desc, in_nd_sbp, reduced_in_parallel_desc, reduced_in_nd_sbp);
+    NdSbpDimReduce(out_parallel_desc, out_nd_sbp, reduced_out_parallel_desc, reduced_out_nd_sbp);
   } else {
     CollaborativeParallelDimReduce(in_parallel_desc, out_parallel_desc, in_nd_sbp, out_nd_sbp,
                                    reduced_in_parallel_desc, reduced_out_parallel_desc,
