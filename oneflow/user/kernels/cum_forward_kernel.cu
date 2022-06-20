@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/binary_func.h"
 
 namespace oneflow {
-// #ifdef WITH_CUDA
+#ifdef WITH_CUDA
 namespace {
 
 template<typename T>
@@ -112,74 +112,6 @@ __inline__ __device__ void DownSweep(T* row_buf) {
       row_buf[offset + d] = BinaryFunc<T>()(row_buf[offset], row_buf[offset + d]);
     }
   }
-}
-
-template<typename T, int num_threads_x, int num_threads_y, template<typename> class BinaryFunc>
-__device__ void ScanOutHighDimofMatrixKernelImpl(T* row_buf, T* src_, T* tgt_,
-                                                 const uint32_t num_cols, const uint32_t col_size,
-                                                 T init) {
-  for (uint32_t block_col = blockIdx.x * blockDim.y; block_col < num_cols;
-       block_col += blockDim.y * gridDim.x) {
-    const uint32_t col = block_col + threadIdx.y;
-    T block_total = init;
-    T* col_src = src_ + col;
-    T* col_tgt = tgt_ + col;
-
-    for (uint32_t block_row = 0; block_row < col_size; block_row += 2 * num_threads_x) {
-      uint32_t row1 = block_row + threadIdx.x;
-      uint32_t row2 = row1 + num_threads_x;
-      uint32_t offset1 = row1 * num_cols;
-      uint32_t offset2 = row2 * num_cols;
-      if (col < num_cols) {
-        if (row1 < col_size) {
-          row_buf[threadIdx.x] = col_src[offset1];
-        } else {
-          row_buf[threadIdx.x] = init;
-        }
-
-        if (row2 < col_size) {
-          row_buf[num_threads_x + threadIdx.x] = col_src[offset2];
-        } else {
-          row_buf[num_threads_x + threadIdx.x] = init;
-        }
-        if (threadIdx.x == 0) { row_buf[0] = BinaryFunc<T>()(row_buf[0], block_total); }
-      }
-      __syncthreads();
-
-      if (col < num_cols) { UpSweep<T, num_threads_x, BinaryFunc>(row_buf); }
-      __syncthreads();
-
-      if (col < num_cols) { DownSweep<T, num_threads_x, BinaryFunc>(row_buf); }
-      __syncthreads();
-
-      if (col < num_cols) {
-        if (row1 < col_size) { col_tgt[offset1] = row_buf[threadIdx.x]; };
-        if (row2 < col_size) { col_tgt[offset2] = row_buf[threadIdx.x + num_threads_x]; };
-      }
-      block_total = row_buf[2 * num_threads_x - 1];
-      __syncthreads();
-    }
-  }
-}
-
-template<typename T, int num_threads_x, int num_threads_y, template<typename> class BinaryFunc>
-__global__ void ScanOutHighDimOfMatrixKernel(const T* in_ptr, T* out_ptr, const uint32_t num_cols,
-                                             const uint32_t col_size, T init) {
-  __shared__ T cols_buffer[num_threads_y][num_threads_x * 2];
-  T* col_buf = cols_buffer[threadIdx.y];
-  ScanOutHighDimofMatrixKernelImpl<T, num_threads_x, num_threads_y, BinaryFunc>(
-      col_buf, const_cast<T*>(in_ptr), out_ptr, num_cols, col_size, init);
-}
-
-template<typename T, template<typename> class BinaryFunc>
-void ScanOutDimOfMatrix(const T* in_ptr, T* out_ptr, const uint32_t num_cols,
-                        const uint32_t cols_size, const ep::CudaStream* cuda_stream) {
-  dim3 block(16, 32);
-  const int64_t max_grid_dim = cuda_stream->device()->properties().maxGridSize[0];
-  dim3 grid(std::min((uint32_t)max_grid_dim, CeilDiv(num_cols, (uint32_t)block.y)));
-  ScanOutHighDimOfMatrixKernel<T, /*num_threads_x*/ 16, /*num_threads_y*/ 32, BinaryFunc>
-      <<<grid, block, 0, cuda_stream->cuda_stream()>>>(in_ptr, out_ptr, num_cols, cols_size,
-                                                       /*init*/ 0);
 }
 
 // Refer from
@@ -297,10 +229,6 @@ class GpuCumKernel : public user_op::OpKernel {
       // Treat all outer dimension as a single dimension.
       const int64_t num_rows = elem_cnt / dim_size;
       ScanInnerMostDim<T, BinaryFunc>(in_ptr, out_ptr, num_rows, dim_size, cuda_stream);
-    } else if (in_shape.NumAxes() == 2 && dim == 0) {
-      const uint32_t cols_size = in_shape.At(0);
-      const uint32_t num_cols = in_shape.At(1);
-      ScanOutDimOfMatrix<T, BinaryFunc>(in_ptr, out_ptr, num_cols, cols_size, cuda_stream);
     } else {
       ScanOuterDim<T, BinaryFunc>(ctx->stream(), in_shape, dim, in_ptr, out_ptr);
     }
@@ -347,5 +275,5 @@ REGISTER_CUDA_CUMPROD_KERNEL(int64_t)
 REGISTER_CUDA_CUMPROD_KERNEL(float)
 REGISTER_CUDA_CUMPROD_KERNEL(double)
 #undef REGISTER_CUDA_CUMPROD_KERNEL
-// #endif
+#endif
 }  // namespace oneflow
