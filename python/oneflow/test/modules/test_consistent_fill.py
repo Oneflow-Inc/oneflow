@@ -41,7 +41,7 @@ def _test_fill_tensor_(test_case, ndim, placement, sbp):
     return y
 
 
-class TestAddModule(flow.unittest.TestCase):
+class TestFillModule(flow.unittest.TestCase):
     @globaltest
     def test_fill_(test_case):
         ndim = random(1, 5).to(int).value()
