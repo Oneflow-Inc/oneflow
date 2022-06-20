@@ -123,7 +123,7 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 }
 
 Maybe<bool> EagerMirroredTensorImpl::is_pinned() const {
-  if(!eager_blob_object_) { return false; }
+  if (!eager_blob_object_) { return false; }
   return eager_blob_object_->pin_memory();
 }
 
