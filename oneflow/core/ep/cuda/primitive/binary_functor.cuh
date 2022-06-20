@@ -59,23 +59,13 @@ struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kGeluBackwardWithDyX, Src, Dst
   Src coef = std::sqrt(static_cast<Src>(2.0) / std::acos(static_cast<Src>(-1.0)));
 };
 
-template<>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, float, float> {
+template<typename Src, typename Dst>
+struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, Src, Dst> {
   OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC float operator()(float dy, float x) const {
-    float tanh_val = tanhf(x);
-    return dy * (static_cast<float>(1.0) - tanh_val * tanh_val);
-  }
-};
-
-template<>
-struct BinaryFunctor<DeviceType::kCUDA, BinaryOp::kTanhBackwardWithDyX, double, double> {
-  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) {}
-
-  OF_DEVICE_FUNC double operator()(double dy, double x) const {
-    double tanh_val = tanh(x);
-    return dy * (static_cast<double>(1.0) - tanh_val * tanh_val);
+  OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
+    Src tanh_val = tanh(x);
+    return static_cast<Dst>(dy * (static_cast<Src>(1.0) - tanh_val * tanh_val));
   }
 };
 

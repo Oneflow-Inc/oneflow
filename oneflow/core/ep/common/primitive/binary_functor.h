@@ -149,7 +149,7 @@ struct BinaryFunctor<device, BinaryOp::kLogicalXor, Src, Dst> {
 
 template<DeviceType device, typename Src, typename Dst>
 struct BinaryFunctor<device, BinaryOp::kEluBackwardWithDyX, Src, Dst> {
-  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<float>()) {}
+  OF_DEVICE_FUNC BinaryFunctor(Scalar attr0, Scalar attr1) : alpha(attr0.Value<double>()) {}
 
   OF_DEVICE_FUNC Dst operator()(Src dy, Src x) const {
     return (x > static_cast<Src>(0)) ? static_cast<Dst>(dy)

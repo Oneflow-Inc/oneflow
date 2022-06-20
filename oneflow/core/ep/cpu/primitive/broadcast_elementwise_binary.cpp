@@ -69,33 +69,27 @@ void LaunchElementwise(CpuStream* cpu_stream, size_t simplified_num_dims,
                        Scalar attr1) {
   const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
   auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
-  cpu_stream->ParallelFor(
-      0, elem_cnt,
-      [functor, src0, src1, dst](int64_t begin, int64_t end) {
-        for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
-      });
+  cpu_stream->ParallelFor(0, elem_cnt, [functor, src0, src1, dst](int64_t begin, int64_t end) {
+    for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i], src1[i]); }
+  });
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
 void LaunchBinaryLhsScalar(CpuStream* cpu_stream, Src src0_value, size_t src1_elem_cnt,
                            const Src* src1, Dst* dst, Scalar attr0, Scalar attr1) {
   auto functor = BinaryLhsScalarFunctor<binary_op, Src, Dst>(src0_value, attr0, attr1);
-  cpu_stream->ParallelFor(
-      0, src1_elem_cnt,
-      [functor, src1, dst](int64_t begin, int64_t end) {
-        for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
-      });
+  cpu_stream->ParallelFor(0, src1_elem_cnt, [functor, src1, dst](int64_t begin, int64_t end) {
+    for (int64_t i = begin; i < end; i++) { dst[i] = functor(src1[i]); }
+  });
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
 void LaunchBinaryRhsScalar(CpuStream* cpu_stream, Src src1_value, size_t src0_elem_cnt,
                            const Src* src0, Dst* dst, Scalar attr0, Scalar attr1) {
   auto functor = BinaryRhsScalarFunctor<binary_op, Src, Dst>(src1_value, attr0, attr1);
-  cpu_stream->ParallelFor(
-      0, src0_elem_cnt,
-      [functor, src0, dst](int64_t begin, int64_t end) {
-        for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
-      });
+  cpu_stream->ParallelFor(0, src0_elem_cnt, [functor, src0, dst](int64_t begin, int64_t end) {
+    for (int64_t i = begin; i < end; i++) { dst[i] = functor(src0[i]); }
+  });
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
