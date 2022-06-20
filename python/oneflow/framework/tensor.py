@@ -602,7 +602,7 @@ def _matmul(self, other):
 
 
 def _mv(self, vec):
-    return flow.mv(self, vec)
+    return flow._C.mv(self, vec)
 
 
 def _round(self):

@@ -3353,6 +3353,7 @@ class MvFunctor {
         << Error::RuntimeError() << "size mismatch, got " << std::to_string(input_shape->at(0))
         << ", " << std::to_string(input_shape->at(0)) << "x" << std::to_string(input_shape->at(1))
         << ", " << std::to_string(vec_shape->at(0));
+    // TODO: speedup
     const std::shared_ptr<Tensor> reshape_vec =
         JUST(Reshape(vec, Shape(DimVector{vec_shape->at(0), 1})));
     std::shared_ptr<Tensor> out = JUST(MatMul(input, reshape_vec, false, false, 1.0));
