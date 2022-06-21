@@ -26,19 +26,13 @@ class TestMm(flow.unittest.TestCase):
             mat1 = flow.randn(2, 3, 3)
             mat2 = flow.randn(3, 3)
             out = flow.mm(mat1, mat2)
-        test_case.assertTrue(
-            "self must be a matrix"
-            in str(exp.exception)
-        )
+        test_case.assertTrue("self must be a matrix" in str(exp.exception))
         with test_case.assertRaises(Exception) as exp:
             mat1 = flow.randn(2, 3)
             mat2 = flow.randn(3, 3, 2)
             out = flow.mm(mat1, mat2)
-        test_case.assertTrue(
-            "mat2 must be a matrix"
-            in str(exp.exception)
-        )
-    
+        test_case.assertTrue("mat2 must be a matrix" in str(exp.exception))
+
     def test_mm_dim_not_match(test_case):
         with test_case.assertRaises(Exception) as exp:
             mat1 = flow.randn(2, 3)

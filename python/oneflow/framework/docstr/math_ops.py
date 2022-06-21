@@ -1306,7 +1306,7 @@ add_docstr(
         >>> of_out = flow.mm(mat1, mat2)
         >>> of_out.shape
         oneflow.Size([2, 3])
-    """
+    """,
 )
 
 add_docstr(
@@ -1710,8 +1710,8 @@ add_docstr(
 
         >>> import oneflow as flow
 
-        >>> input = flow.rand(3,4,5,6)
-        >>> output = flow.vsplit(input,(1,3))
+        >>> input = flow.rand(4, 4, 5, 6)
+        >>> output = flow.vsplit(input, (1, 3))
         >>> output[0].size()
         oneflow.Size([1, 4, 5, 6])
         >>> output[1].size()

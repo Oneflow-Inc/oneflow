@@ -58,5 +58,6 @@ class TestModule(flow.unittest.TestCase):
         z = torch.mm(x, y)
         return z
 
+
 if __name__ == "__main__":
     unittest.main()
