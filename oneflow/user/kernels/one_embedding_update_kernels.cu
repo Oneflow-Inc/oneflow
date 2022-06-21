@@ -205,6 +205,26 @@ __global__ void FtrlUpdateKernel(const int32_t line_size, const int32_t embeddin
 
 }  // namespace
 
+constexpr int kSGDBlockSize = 256;
+constexpr int kSGDNumWaves = 8;
+
+void GetSgdNumBlocks(int64_t n, int* num_blocks) {
+  int dev;
+  {
+    cudaError_t err = cudaGetDevice(&dev);
+  }
+  int sm_count;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+  }
+  int tpm;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
+  }
+  *num_blocks = std::max<int>(1, std::min<int64_t>((n + kSGDBlockSize - 1) / kSGDBlockSize,
+                                                   sm_count * tpm / kSGDBlockSize * kSGDNumWaves));
+}
+
 template<typename T, typename G, typename IDX>
 class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
@@ -252,13 +272,35 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     // update kernel
-    SGDUpdateKernel<T, G, IDX>
-        <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-            embedding_size, scale, l1, l2, weight_decay,
-            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
-            updated_unique_embeddings->mut_dptr<T>());
+    const T* unique_embeddings_ptr;
+    T* updated_unique_embeddings_ptr;
+    GetUniqueValueAndUpdatedPtr<T>(ctx, current_iter_, &unique_embeddings_ptr,
+                                   &updated_unique_embeddings_ptr);
+    int64_t grad_elem_cnt = embedding_grad->shape().elem_cnt();
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_SAVE_NUM_UNIQUE_MATRIX", true)) {
+      embedding::NumUniques* num_uniques =
+          Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
+              ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+      uint32_t num_unique = num_uniques->GetNumUnique(current_iter_);
+      grad_elem_cnt = num_unique * embedding_size;
+    }
+    int num_blocks = 0; 
+    GetSgdNumBlocks(grad_elem_cnt, &num_blocks); 
+
+    // SGDUpdateKernel<T, G, IDX><<<BlocksNum4ThreadsNum(grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
+    //                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+    //     embedding_size, scale, l1, l2, weight_decay,
+    //     reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
+    //     down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
+    //     updated_unique_embeddings_ptr);
+
+    SGDUpdateKernel<T, G, IDX><<<num_blocks, kSGDBlockSize, 0,
+                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        embedding_size, scale, l1, l2, weight_decay,
+        reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
+        down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
+        updated_unique_embeddings_ptr);
+    current_iter_++;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
