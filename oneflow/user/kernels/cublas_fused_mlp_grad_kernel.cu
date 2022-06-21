@@ -149,7 +149,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                             matmul_grad_cache->cublas_c_desc, dy_tmp_buf,
                             matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                             cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-            OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+            // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
         } else {
           const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
           printf("weight shape is: %ld, %ld \n", weight->shape().At(0), weight->shape().At(1)); 
@@ -176,7 +176,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                           matmul_grad_cache->cublas_c_desc, d_grad->mut_dptr(),
                           matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                           cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-          OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+          // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
         }
         alpha = 1.0;
         sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
@@ -213,7 +213,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                           kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
           OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
           OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
-          OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+          // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
           
           // compute dy shape
           dy_shape.at(1) = weight_shape.at(1);
@@ -246,7 +246,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                           kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
           OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
           OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
-          OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+          // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
         }
     }
     printf("end kernel \n"); 
