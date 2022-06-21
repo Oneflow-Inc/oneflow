@@ -549,7 +549,7 @@ jobs:
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
             ${{ env.MLIR_DOCKER_ARGS }} \
-            --name ${TEST_CONTAINER_NAME} \
+            --rm \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
             sleep 5400
@@ -570,7 +570,7 @@ jobs:
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links https://github.com/google/iree/releases -e ${{ env.ONEFLOW_IREE_SRC}}
+          docker exec -e HTTP_PROXY=${HTTPS_PROXY} -e HTTPS_PROXY=${HTTPS_PROXY} -e http_proxy=${HTTPS_PROXY} -e https_proxy=${HTTPS_PROXY} ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
       - name: Module API test (distributed)
         timeout-minutes: 90
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
@@ -788,6 +788,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} ls
+          docker exec ${{ env.TEST_CONTAINER_NAME }} env
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m pip list
       - name: Install OneFlow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
@@ -795,13 +796,26 @@ jobs:
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+      - name: Install with proxy (cache the package)
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        working-directory: ${{ env.ONEFLOW_SRC }}
+        run: |
+          docker run -d --rm --privileged --shm-size=8g \
+            -v $HOME/test-container-cache/dot-local:/root/.local \
+            -v $HOME/test-container-cache/dot-cache:/root/.cache \
+            -v $PWD:$PWD \
+            -w $PWD \
+            -e HTTP_PROXY=${HTTPS_PROXY} -e HTTPS_PROXY=${HTTPS_PROXY} -e http_proxy=${HTTPS_PROXY} -e https_proxy=${HTTPS_PROXY} \
+            --network host \
+            ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
+            python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e ${{ env.ONEFLOW_IREE_SRC}} --user
       - name: Install downstream libs
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links https://github.com/google/iree/releases -e ${{ env.ONEFLOW_IREE_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_IREE_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
