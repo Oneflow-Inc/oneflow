@@ -239,6 +239,26 @@ void GetUniqueValueAndUpdatedPtr(user_op::KernelComputeContext* ctx, const int64
 
 }  // namespace
 
+constexpr int kSGDBlockSize = 256;
+constexpr int kSGDNumWaves = 8;
+
+void GetSgdNumBlocks(int64_t n, int* num_blocks) {
+  int dev;
+  {
+    cudaError_t err = cudaGetDevice(&dev);
+  }
+  int sm_count;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+  }
+  int tpm;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
+  }
+  *num_blocks = std::max<int>(1, std::min<int64_t>((n + kSGDBlockSize - 1) / kSGDBlockSize,
+                                                   sm_count * tpm / kSGDBlockSize * kSGDNumWaves));
+}
+
 template<typename T, typename G, typename IDX>
 class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
@@ -297,7 +317,17 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
       uint32_t num_unique = num_uniques->GetNumUnique(current_iter_);
       grad_elem_cnt = num_unique * embedding_size;
     }
-    SGDUpdateKernel<T, G, IDX><<<BlocksNum4ThreadsNum(grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
+    int num_blocks = 0; 
+    GetSgdNumBlocks(grad_elem_cnt, &num_blocks); 
+
+    // SGDUpdateKernel<T, G, IDX><<<BlocksNum4ThreadsNum(grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
+    //                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+    //     embedding_size, scale, l1, l2, weight_decay,
+    //     reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
+    //     down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
+    //     updated_unique_embeddings_ptr);
+
+    SGDUpdateKernel<T, G, IDX><<<num_blocks, kSGDBlockSize, 0,
                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         embedding_size, scale, l1, l2, weight_decay,
         reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
