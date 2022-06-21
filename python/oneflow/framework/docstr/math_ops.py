@@ -1286,7 +1286,7 @@ add_docstr(
     If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`mat2` is a
     :math:`(m \times p)` tensor, :attr:`out` will be a :math:`(n \times p)` tensor.
 
-    .. note:: This function does not :ref:`broadcast <broadcasting-semantics>`.
+    .. note:: This function does not broadcast.
             For broadcasting matrix products, see :func:`oneflow.matmul`.
 
     Args:
