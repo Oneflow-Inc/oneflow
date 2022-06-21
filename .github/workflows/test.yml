@@ -20,6 +20,7 @@ env:
   ONEFLOW_IREE_COMMIT: bec7304ca74b76e550b864e90202d7520a5759e8
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:afaf913e02a4ba02db92260daee22f99121cef62
   MLIR_DOCKER_ARGS: "-e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 -e ONEFLOW_MLIR_PREFER_NHWC=0 -e ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION=1"
+  CI_PROXY: "http://oneflow-ci-proxy:7890"
 
 jobs:
   check-priority-pr:
