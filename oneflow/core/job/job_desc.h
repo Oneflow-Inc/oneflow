@@ -45,6 +45,7 @@ class JobDesc final {
   const std::string& job_name() const { return job_conf_.job_name(); }
   int64_t concurrency_width() const { return job_conf_.concurrency_width(); }
   const JobConfigProto& job_conf() const { return job_conf_; }
+  const JobConfigProto& data() const { return job_conf_; }
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }

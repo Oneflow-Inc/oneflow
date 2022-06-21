@@ -148,7 +148,10 @@ def run_flow(
         print(
             f'OneFlow ({f"CPU, num_threads={num_threads}" if device == "cpu" else "GPU"}):'
         )
-    with flow.profiler.profile(activities=activities) as prof:
+    with flow.profiler.profile(
+        activities=activities,
+        record_bandwidth_for_cuda=flow.profiler.ProfilerActivity.CUDA in activities,
+    ) as prof:
         with flow.profiler.record_function(END_TO_END):
             for _ in range(RUN_NUM):
                 op(*args, **kwargs)
