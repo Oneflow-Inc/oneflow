@@ -48,7 +48,7 @@ Creation Ops
     linspace
     eye
     empty
-    full
+    fulla
 
 .. _indexing-slicing-joining:
 
