@@ -59,6 +59,12 @@ class OfCollectiveActor final: public ActorBase {
     std::unique_ptr<KernelContext> kernel_ctx;
   };
   enum class RegstNameType { kNaive = 0, kCustomized };
+  enum class CollectiveStatus {
+    kInvalid = 0,
+    kLocalReady,
+    kDownstreamReady,
+    kCanAct
+  };
 
   // Msg Handler
   using MsgHandler = int (OfCollectiveActor::*)(const ActorMsg&);
@@ -82,7 +88,7 @@ class OfCollectiveActor final: public ActorBase {
   bool IsDownstreamReady() const;
   bool HasUpstream() const { return nego_tree_info_.upstream_id != -1; }
   bool HasDownstream() const { return nego_tree_info_.downstream_id.size() > 0; }
-  bool CanAct() const { return can_act_; }
+  bool CanAct() const { return collective_status_ == CollectiveStatus::kCanAct; }
 
   // Act
   void Act();
@@ -143,7 +149,7 @@ class OfCollectiveActor final: public ActorBase {
   std::string op_name_;
   boxing::of_collective::RuntimeNegoTreeInfo nego_tree_info_;
   int64_t received_downstream_ready_cnt_;
-  bool can_act_;
+  CollectiveStatus collective_status_;
 
   MsgHandler msg_handler_;
 

@@ -777,7 +777,7 @@ class StarNegoTreeBuilder : public NegoTreeBuilder {
     int64_t root = task_ids[0];
     for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
       int64_t task_id = info.rank2node.at(i)->task_proto()->task_id();
-      auto nego_tree_info = (*(request_desc->mutable_negotiation_tree_topo()))[task_id];
+      auto& nego_tree_info = (*(request_desc->mutable_negotiation_tree_topo()))[task_id];
       if (task_id == root) {
         nego_tree_info.set_upstream_id(-1);
         *(nego_tree_info.mutable_downstream_id()) = StdVec2PbRf(

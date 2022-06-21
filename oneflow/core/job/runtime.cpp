@@ -69,6 +69,7 @@ Runtime::Runtime(
     Global<ThreadMgr>::Get()->AddThreads(thread_ids_);
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
     if (ParseBooleanFromEnv("ONEFLOW_ENABLE_OFCCL", false)){
+      LOG(ERROR) << "ready to Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan)";
       collective_boxing_collective_manager_plan_token_ =
           Global<boxing::of_collective::CollectiveMgr>::Get()->AddPlan(plan);
     }

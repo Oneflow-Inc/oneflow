@@ -52,7 +52,9 @@ OfRequestEntry::OfRequestEntry(const RequestDesc& desc) : desc_(desc) {
 }
 
 void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
+  LOG(ERROR) << "Enter OfRequestStore::InitJob";
   std::vector<std::unique_ptr<OfRequestEntry>>& request_entry_vec = job_id2request_entry_vec_[job_id];
+  LOG(ERROR) << "request_entry_vec = job_id2request_entry_vec_[job_id]; DONE";
   CHECK_EQ(request_entry_vec.size(), 0);
   for (const RequestDesc& desc : request_set.request()) {
     request_entry_vec.emplace_back(std::make_unique<OfRequestEntry>(desc));

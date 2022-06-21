@@ -276,6 +276,7 @@ std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs)
 }
 
 of::Maybe<void> Graph::GraphImpl::Compile(const std::vector<Tensor>& inputs) {
+  LOG(ERROR) << "OFCCL " << "Graph::GraphImpl::Compile";
   JUST(BuildGraph());
   JUST(RegisterTensors(inputs));
   JUST(graph_->CompileAndInitRuntime());

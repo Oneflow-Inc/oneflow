@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/memory/chunk_manager.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/job/of_collective_boxing/collective_manager.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
@@ -125,6 +126,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<ThreadMgr>::New();
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
+      Global<boxing::of_collective::CollectiveMgr>::New();
       Global<boxing::collective::Scheduler>::New();
       Global<VariableTensorMgr>::New();
     }

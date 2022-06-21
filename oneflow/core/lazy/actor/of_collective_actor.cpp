@@ -137,14 +137,20 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   const ExecNodeProto& node = actor_ctx->task_proto().exec_sequence().exec_node()[0];
   op_name_ = node.kernel_conf().op_attribute_ref();
 
-  const OfRequestId& request_id = 
-    Global<CollectiveMgr>::Get()->GetOfRequestIdByName(op_name_);
+  const OfRequestId& request_id = Global<CollectiveMgr>::Get()->GetOfRequestIdByName(op_name_);
   auto* token = Global<CollectiveMgr>::Get()->CreateOfRequestEntryToken(request_id);
   auto* request_entry = Global<CollectiveMgr>::Get()->GetOfRequestEntry(token);
   Global<CollectiveMgr>::Get()->DestroyOfRequestEntryToken(token);
-  nego_tree_info_ = std::move(request_entry->nego_tree_topo()[actor_id_]);
+  nego_tree_info_ = request_entry->nego_tree_topo()[actor_id_];
   received_downstream_ready_cnt_ = 0;
-  can_act_ = false;
+  collective_status_ = CollectiveStatus::kInvalid;
+  LOG(ERROR) << "Actor " << actor_id_ << " nego_tree_upstream: " << nego_tree_info_.upstream_id;
+  if (nego_tree_info_.downstream_id.size() > 0) {
+    for (int i = 0; i < nego_tree_info_.downstream_id.size(); ++i)
+      LOG(ERROR) << "Actor " << actor_id_ << " nego_tree_downstream: " << nego_tree_info_.downstream_id[i];
+  } else {
+    LOG(ERROR) << "Actor " << actor_id_ << " has no nego_tree_downstream";
+  }
 
   ek_.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
   ek_.kernel = ConstructKernel(node.kernel_conf(), ek_.kernel_ctx.get());
@@ -194,7 +200,8 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   OF_SET_MSG_HANDLER(&OfCollectiveActor::HandlerNormal);
 }
 
-void OfCollectiveActor::TakeOverInplaceConsumedAndProduced(const PbMap<std::string, RegstDescProto>& produced_ids) {
+void OfCollectiveActor::TakeOverInplaceConsumedAndProduced(
+    const PbMap<std::string, RegstDescProto>& produced_ids) {
   for (const auto& pair : produced_ids) {
     if (pair.second.has_inplace_consumed_regst_desc_id() == false) { continue; }
 
@@ -221,7 +228,8 @@ void OfCollectiveActor::TakeOverInplaceConsumedAndProduced(const PbMap<std::stri
   }
 }
 
-void OfCollectiveActor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
+void OfCollectiveActor::TakeOverNaiveConsumed(
+    const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   for (const auto& pair : consumed_ids) {
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
       if (inplace_consumed_rs_.HasRegstDescId(regst_desc_id)) { continue; }
@@ -231,7 +239,8 @@ void OfCollectiveActor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDesc
   naive_consumed_rs_.InitedDone();
 }
 
-void OfCollectiveActor::TakeOverNaiveProduced(const PbMap<std::string, RegstDescProto>& produced_ids) {
+void OfCollectiveActor::TakeOverNaiveProduced(
+    const PbMap<std::string, RegstDescProto>& produced_ids) {
   for (const auto& pair : produced_ids) {
     if (inplace_produced_rs_.HasRegstDescId(pair.second.regst_desc_id())) { continue; }
     naive_produced_rs_.InsertRegstDescId(pair.second.regst_desc_id());
@@ -258,8 +267,7 @@ void OfCollectiveActor::InitBnInOp2BlobInfo(const TaskProto& task_proto) {
         && Global<RegstMgr>::Get()->HasRegstDescId(regst_desc_id_it->second)) {
       const int64_t regst_desc_id = regst_desc_id_it->second;
       blob_info.regst_desc_id = regst_desc_id;
-      const RtRegstDesc& regst_desc =
-          Global<RegstMgr>::Get()->RegstDesc4RegstDescId(regst_desc_id);
+      const RtRegstDesc& regst_desc = Global<RegstMgr>::Get()->RegstDesc4RegstDescId(regst_desc_id);
       blob_info.ordinal = regst_desc.GetOrdinalForLbi(blob_info.lbi);
       if (naive_produced_rs_.HasRegstDescId(regst_desc_id)) {
         blob_info.rs = &naive_produced_rs_;
@@ -317,13 +325,13 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
         CHECK_EQ(0, inplace_consumed_rs_.TryPushBackRegst(regst));
         int64_t out_regst_desc_id = inplace_regst_desc_id_in2out_.at(regst->regst_desc_id());
         CHECK(regst->GetSoleBlob()->dptr()
-                == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
+              == inplace_produced_rs_.Front(out_regst_desc_id)->GetSoleBlob()->dptr());
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
         UNIMPLEMENTED();
       }
-    } else  {
+    } else {
       // can only process ctrl msg from other processes
       if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
         // process ctrl msg from other rank
@@ -337,28 +345,78 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
         } else {
           CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
         }
-      }            
+      }
+    }
+    if (IsReadReady() && IsWriteReady()) {
+      // every actor gets here.
+      collective_status_ = CollectiveStatus::kLocalReady;
+      // leaves enter here.
+      if (IsDownstreamReady()) {
+        collective_status_ = CollectiveStatus::kDownstreamReady;
+        if (HasUpstream()) {
+          // send ready msg to upstream.
+          auto ready_msg = 
+            ActorMsg::BuildCollectiveMsg(actor_id_, nego_tree_info_.upstream_id,
+                                          CollectiveNegoCmd::kCollectiveReady);
+          SyncSendMsg(std::move(ready_msg));
+        }
+      }
     }
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCollectiveMsg) {
-    if (msg.collective_status() == CollectiveStatus::kCollectiveReady) {
-      if (IsInDebugMode()) {
-        int64_t src_actor_id = msg.src_actor_id();
-        CHECK(std::find(nego_tree_info_.downstream_id.begin(), nego_tree_info_.downstream_id.end(), src_actor_id) != nego_tree_info_.downstream_id.end());
-      }
-      ++received_downstream_ready_cnt_;
-    } else if (msg.collective_status() == CollectiveStatus::kCollectiveStart) {
-      can_act_ = true;
+    switch (collective_status_) {
+      case CollectiveStatus::kLocalReady:
+        CHECK(IsReadReady() && IsWriteReady());
+        CHECK((msg.collective_nego_cmd() == CollectiveNegoCmd::kCollectiveReady));
+        if (IsInDebugMode()) {
+          int64_t src_actor_id = msg.src_actor_id();
+          CHECK(std::find(nego_tree_info_.downstream_id.begin(), nego_tree_info_.downstream_id.end(),
+                          src_actor_id)
+                != nego_tree_info_.downstream_id.end());
+        }
+        ++received_downstream_ready_cnt_;
+        if (IsDownstreamReady()) {
+          collective_status_ = CollectiveStatus::kDownstreamReady;
+          if (HasUpstream()) {
+            // send ready msg to upstream.
+            auto ready_msg = 
+              ActorMsg::BuildCollectiveMsg(actor_id_, nego_tree_info_.upstream_id,
+                                           CollectiveNegoCmd::kCollectiveReady);
+            SyncSendMsg(std::move(ready_msg));
+          } else {
+            // must be the root.
+            collective_status_ = CollectiveStatus::kCanAct;
+          }
+        }
+        break;
+      case CollectiveStatus::kDownstreamReady:
+        CHECK(msg.collective_nego_cmd() == CollectiveNegoCmd::kCollectiveStart);
+        collective_status_ = CollectiveStatus::kCanAct;
+        break;
+      default: 
+        // CollectiveStatus::kInvalid, CollectiveStatus::kCanAct
+        UNIMPLEMENTED();
+        break;
     }
-    ActUntilFail();
+    if (CanAct()) {
+      if (HasDownstream()) {
+        FOR_EACH(downstream_id, nego_tree_info_.downstream_id) {
+          auto start_msg =
+            ActorMsg::BuildCollectiveMsg(*downstream_id, actor_id_,
+                                         CollectiveNegoCmd::kCollectiveStart);
+          SyncSendMsg(std::move(start_msg));
+        }
+      }
+      ActUntilFail();
+    }
   } else {
     UNIMPLEMENTED();
   }
   // all consumed regsts get eord
-  bool naive_or_inplace_gets_eord_and_both_empty = 
+  bool naive_or_inplace_gets_eord_and_both_empty =
       (is_naive_consumed_eord_ || is_inplace_consumed_eord_)
       && (naive_consumed_rs_.available_regst_desc_cnt() == 0
           && inplace_consumed_rs_.available_regst_desc_cnt() == 0);
@@ -406,31 +464,12 @@ bool OfCollectiveActor::IsDownstreamReady() const {
 }
 
 void OfCollectiveActor::ActUntilFail() {
-  while (IsReadReady() && IsWriteReady()) {
-    if (!IsDownstreamReady()) {
-      return;
-    }
-    if (HasUpstream()) {
-      // send ready msg to upstream.
-      auto ready_msg = ActorMsg::BuildCollectiveMsg(actor_id_, nego_tree_info_.upstream_id, 
-        CollectiveStatus::kCollectiveReady);
-      SyncSendMsg(std::move(ready_msg));
-    } else {
-      // only root comes here
-      can_act_ = true;
-    }
-    if (!CanAct()) {
-      return;
-    }
-    if (HasDownstream()) {
-      FOR_EACH(downstream_id, nego_tree_info_.downstream_id) {
-        auto start_msg = ActorMsg::BuildCollectiveMsg(*downstream_id, actor_id_,
-         CollectiveStatus::kCollectiveStart);
-        SyncSendMsg(std::move(start_msg));
-      }
-    }
+  while (IsReadReady() && IsWriteReady() && CanAct()) {
+    // Act是异步的。
     Act();
-    
+
+    // TODO: (Panlichen)
+    // Act里的逻辑实现之后，要考虑是否应该在Act()一返回就执行下边的归还regst的工作。
     AsyncSendNaiveProducedRegstMsgToConsumer();
     // no inplace ctrl regst
     HandleProducedInplaceDataRegstToConsumer();
@@ -440,14 +479,16 @@ void OfCollectiveActor::ActUntilFail() {
     AsyncRetInplaceConsumedRegstIfNoConsumer();
 
     AsyncSendQueuedMsg();
+
+    // reset collective_status_
+    collective_status_ = CollectiveStatus::kInvalid;
+    received_downstream_ready_cnt_ = 0;
   }
   // NOTE(liujuncheng): return inplace consumed
   AsyncSendQueuedMsg();
 }
 
 void OfCollectiveActor::Act() {
-
-
   // Act means perform the collective communication, reset received_downstream_ready_cnt_
   // after finish.
   received_downstream_ready_cnt_ = 0;
@@ -465,7 +506,7 @@ void OfCollectiveActor::AsyncSendNaiveProducedRegstMsgToConsumer() {
 
 void OfCollectiveActor::HandleProducedNaiveDataRegstToConsumer() {
   tmp_regst_desc_id_vec_.clear();
-  naive_produced_rs_.ForEachFrontRegst([&](Regst* regst){
+  naive_produced_rs_.ForEachFrontRegst([&](Regst* regst) {
     if (regst->regst_desc()->regst_desc_type().has_data_regst_desc()) {
       int64_t real_consumer_cnt = HandleRegstToConsumer(regst);
       if (real_consumer_cnt > 0) { tmp_regst_desc_id_vec_.emplace_back(regst->regst_desc_id()); }
