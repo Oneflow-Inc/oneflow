@@ -310,4 +310,3 @@ class Events(list):
         with console.capture() as capture:
             console.print(t)
         return capture.get()
-
