@@ -194,29 +194,35 @@ def profile_dual_object(op):
 
         result = []
         for hardware_info in _hardware_info_list:
-            result.append(
-                run_flow(
-                    flow_op,
-                    flow_args,
-                    flow_kwargs,
-                    *hardware_info,
-                    op_name,
-                    args_description,
-                    additional_description,
+            if 'oneflow' in _profiled_framework:
+                result.append(
+                    run_flow(
+                        flow_op,
+                        flow_args,
+                        flow_kwargs,
+                        *hardware_info,
+                        op_name,
+                        args_description,
+                        additional_description,
+                    )
                 )
-            )
+            else:
+                result.append(None)
         for hardware_info in _hardware_info_list:
-            result.append(
-                run_torch(
-                    torch_op,
-                    torch_args,
-                    torch_kwargs,
-                    *hardware_info,
-                    op_name,
-                    args_description,
-                    additional_description,
+            if 'pytorch' in _profiled_framework:
+                result.append(
+                    run_torch(
+                        torch_op,
+                        torch_args,
+                        torch_kwargs,
+                        *hardware_info,
+                        op_name,
+                        args_description,
+                        additional_description,
+                    )
                 )
-            )
+            else:
+                result.append(None)
         return _profiler_hook(result)
 
     return profiled_op
@@ -225,6 +231,7 @@ def profile_dual_object(op):
 HardwareInfo = Tuple[str, Optional[int]]  # (device_type, num_threads)
 _hardware_info_list: List[HardwareInfo] = [("cpu", 1), ("cuda", None)]
 _profiler_hook: Callable[[List[ProfResult]], Any] = lambda x: x
+_profiled_framework: List[str] = ['oneflow', 'pytorch']
 
 
 def set_hardware_info_list(hardware_info_list: List[HardwareInfo]) -> None:
@@ -236,6 +243,10 @@ def set_profiler_hook(hook: Callable[[List[ProfResult]], Any]) -> None:
     global _profiler_hook
     _profiler_hook = hook
 
+
+def set_profiled_framework(framework: List[str]) -> None:
+    global _profiled_framework
+    _profiled_framework = framework
 
 def profile(op):
     def deco(f):

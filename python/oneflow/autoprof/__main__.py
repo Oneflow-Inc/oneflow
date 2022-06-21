@@ -22,6 +22,7 @@ from typing import Iterable, Union, TypeVar
 import prettytable
 from prettytable import PrettyTable
 
+import oneflow as flow
 import oneflow.test_utils.automated_test_util.profiler as auto_profiler
 
 
@@ -50,7 +51,7 @@ def get_oneflow_cpu_kernel_time(prof) -> Union[str, float]:
     cpu_kernel_items = list(filter(lambda x: x.count >= prof.num, prof.key_averages()))
     if len(cpu_kernel_items) == 0:
         return "-"
-    kernel_cpu_time = sum(map(lambda x: x.cpu_time_total, cpu_kernel_items)) / prof.num
+    kernel_cpu_time = sum(map(lambda x: x.time_total, cpu_kernel_items)) / prof.num
     return round(kernel_cpu_time, 1)
 
 
@@ -70,7 +71,7 @@ def get_oneflow_gpu_kernel_time(prof) -> Union[str, float]:
     )
     if len(gpu_kernel_items) == 0:
         return "-"
-    kernel_gpu_time = sum(map(lambda x: x.gpu_time_total, gpu_kernel_items)) / prof.num
+    kernel_gpu_time = sum(map(lambda x: x.cuda_time_total, gpu_kernel_items)) / prof.num
     return round(kernel_gpu_time, 1)
 
 
@@ -100,7 +101,7 @@ def get_oneflow_cpu_end_to_end_time(prof) -> float:
         filter(lambda x: x.name == auto_profiler.END_TO_END, prof.key_averages())
     )[0]
     assert total.count == 1
-    return round(total.cpu_time / prof.num, 1)
+    return round(total.time / prof.num, 1)
 
 
 def print_summary_from_csv() -> None:
@@ -158,41 +159,53 @@ writer.writerow(
 
 auto_profiler.set_hardware_info_list([("cuda", None), ("cpu", 1), ("cpu", 32)])
 
+ONLY_ONEFLOW = flow.support.env_var_util.parse_boolean_from_env("ONEFLOW_PROFILE_ONLY_ONEFLOW", False)
+ONLY_PYTORCH = flow.support.env_var_util.parse_boolean_from_env("ONEFLOW_PROFILE_ONLY_PYTORCH", False)
+assert not (ONLY_ONEFLOW and ONLY_PYTORCH)
+
+if ONLY_ONEFLOW:
+    auto_profiler.set_profiled_framework(["oneflow"])
+if ONLY_PYTORCH:
+    auto_profiler.set_profiled_framework(["pytorch"])
+
 
 def add_row(profs):
-    op_name = get_sole_value([prof.op_name for prof in profs])
-    args_description = get_sole_value([prof.args_description for prof in profs])
+    non_none_profs = list(filter(lambda x: x is not None, profs))
+    op_name = get_sole_value([prof.op_name for prof in non_none_profs])
+    args_description = get_sole_value([prof.args_description for prof in non_none_profs])
     additional_description = get_sole_value(
-        [prof.additional_description for prof in profs]
+        [prof.additional_description for prof in non_none_profs]
     )
-    writer.writerow(
-        [
-            op_name,
-            args_description,
-            "OneFlow",
-            get_oneflow_gpu_kernel_time(profs[0]),
-            get_oneflow_gpu_kernel_bandwidth(profs[0]),
-            get_oneflow_cpu_kernel_time(profs[1]),
-            get_oneflow_cpu_end_to_end_time(profs[1]),
-            get_oneflow_cpu_kernel_time(profs[2]),
-            get_oneflow_cpu_end_to_end_time(profs[2]),
-            additional_description,
-        ]
-    )
-    writer.writerow(
-        [
-            op_name,
-            args_description,
-            "PyTorch",
-            get_pytorch_gpu_kernel_time(profs[3]),
-            "-",
-            get_pytorch_cpu_kernel_time(profs[4]),
-            get_pytorch_cpu_end_to_end_time(profs[4]),
-            get_pytorch_cpu_kernel_time(profs[5]),
-            get_pytorch_cpu_end_to_end_time(profs[5]),
-            additional_description,
-        ]
-    )
+    if not ONLY_PYTORCH:
+        writer.writerow(
+            [
+                op_name,
+                args_description,
+                "OneFlow",
+                get_oneflow_gpu_kernel_time(profs[0]),
+                get_oneflow_gpu_kernel_bandwidth(profs[0]),
+                get_oneflow_cpu_kernel_time(profs[1]),
+                get_oneflow_cpu_end_to_end_time(profs[1]),
+                get_oneflow_cpu_kernel_time(profs[2]),
+                get_oneflow_cpu_end_to_end_time(profs[2]),
+                additional_description,
+            ]
+        )
+    if not ONLY_ONEFLOW:
+        writer.writerow(
+            [
+                op_name,
+                args_description,
+                "PyTorch",
+                get_pytorch_gpu_kernel_time(profs[3]),
+                "-",
+                get_pytorch_cpu_kernel_time(profs[4]),
+                get_pytorch_cpu_end_to_end_time(profs[4]),
+                get_pytorch_cpu_kernel_time(profs[5]),
+                get_pytorch_cpu_end_to_end_time(profs[5]),
+                additional_description,
+            ]
+        )
     f.flush()
 
 
