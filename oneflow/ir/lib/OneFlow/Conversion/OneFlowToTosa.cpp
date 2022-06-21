@@ -168,10 +168,16 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
   LogicalResult matchAndRewrite(VariableOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     const auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
-    if (!mgr) op->emitError("global variable tensor manager miss");
+    if (!mgr) {
+      op->emitError("global variable tensor manager miss");
+      return failure();
+    }
 
     const auto tensor = mgr->Get(op.op_name().str());
-    if (!tensor) op->emitError("tensor is null");
+    if (!tensor) {
+      op->emitError("tensor is null");
+      return failure();
+    }
     const auto value = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
     const auto output = op.output().getType();
 
