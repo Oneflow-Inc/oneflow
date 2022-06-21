@@ -9,7 +9,6 @@ add_subdirectory(robin-hood-hashing)
 list(APPEND EXTERNAL_TARGETS robin_hood)
 
 add_subdirectory(fmt)
-get_property(FMT_INCLUDE_DIR GLOBAL PROPERTY FMT_INCLUDE_DIR)
 list(APPEND EXTERNAL_TARGETS fmt)
 
 add_subdirectory(kineto)

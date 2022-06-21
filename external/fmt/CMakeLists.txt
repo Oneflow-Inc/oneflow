@@ -6,5 +6,3 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(fmt)
-
-set_property(GLOBAL PROPERTY FMT_SOURCE_DIR "${fmt_SOURCE_DIR}")
