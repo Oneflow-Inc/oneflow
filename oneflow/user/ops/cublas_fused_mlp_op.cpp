@@ -193,64 +193,33 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                        hidden_layer_idx - 1);  // previous layers bias grad
         }
         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
-          op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_weight", 0), "weights",
-                                       hidden_layer_idx);
+          op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_weight", 0),
+                                       "weights", hidden_layer_idx);
         }
 
-        // user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
-        //     op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
-        // user_op::UserOpConfWrapper matmul_weight_grad_op =
-        //     matmul_weight_grad_builder.Op("matmul")
-        //         .Input("a", cublas_dy)
-        //         .Input("b", op.output("hidden", hidden_layer_idx - 1))
-        //         .Output("out")
-        //         .Attr<bool>("transpose_a", true)
-        //         .Attr<bool>("transpose_b", false)
-        //         .Attr<double>("alpha", 1.0)
-        //         .Build();
-        // AddOp(matmul_weight_grad_op);
-        // if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
-        //   op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights",
-        //                                hidden_layer_idx);
-        // }
-        // update dgrad
         cublas_dy = cublas_bias_add_relu_matmul_grad_op.output("d_grad", 0);
       }
 
       // For the first layer, we need to use 2 matmul to get grads.
       std::string last_dy;
       if (weight_num != 1) { last_dy = cublas_dy; }
-      // dx:
-      user_op::UserOpConfWrapperBuilder matmul_input_grad_builder(op.op_name()
-                                                                  + "_matmul_input_grad");
-      user_op::UserOpConfWrapper matmul_input_grad_op = matmul_input_grad_builder.Op("matmul")
-                                                            .Input("a", last_dy)
-                                                            .Input("b", op.input("weights", 0))
-                                                            .Output("out")
-                                                            .Attr<bool>("transpose_a", false)
-                                                            .Attr<bool>("transpose_b", false)
-                                                            .Attr<double>("alpha", 1.0)
-                                                            .Build();
-      AddOp(matmul_input_grad_op);
+      user_op::UserOpConfWrapperBuilder matmul_async_grad_builder(op.op_name()
+                                                                  + "_matmul_async_grad");
+      user_op::UserOpConfWrapper matmul_async_grad_op =
+          matmul_async_grad_builder.Op("matmul_async_grad")
+              .Input("dy", last_dy)
+              .Input("weight", op.input("weights", 0))
+              .Input("x", op.input("x", 0))
+              .Output("d_grad")
+              .Output("d_weight")
+              .Build();
+      AddOp(matmul_async_grad_op);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        op.BindGradTensorWithOpInput(matmul_input_grad_op.output("out", 0), "x", 0);
+        op.BindGradTensorWithOpInput(matmul_async_grad_op.output("d_grad", 0), "x", 0);
       }
-      // dw:
-      user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()
-                                                                   + "_matmul_input_weight_grad");
-      user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
-                                                             .Input("a", last_dy)
-                                                             .Input("b", op.input("x", 0))
-                                                             .Output("out")
-                                                             .Attr<bool>("transpose_a", true)
-                                                             .Attr<bool>("transpose_b", false)
-                                                             .Attr<double>("alpha", 1.0)
-                                                             .Build();
-      AddOp(matmul_weight_grad_op);
       if (op.NeedGenGradTensor4OpInput("weights", 0)) {
-        op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights", 0);
+        op.BindGradTensorWithOpInput(matmul_async_grad_op.output("d_weight", 0), "weights", 0);
       }
-
       return Maybe<void>::Ok();
     });
 

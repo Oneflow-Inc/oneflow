@@ -71,7 +71,7 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
       .Split(user_op::OpArg("aux", 0), 0)
       .Split(user_op::OpArg("hidden", 0), 0)
       .Split(user_op::OpArg("d_grad", 0), 0)
-      .PartialSum(user_op::OpArg("d_weight", 0)) 
+      .PartialSum(user_op::OpArg("d_weight", 0))
       .PartialSum(user_op::OpArg("d_bias", 0))
       .Build();
   return Maybe<void>::Ok();
