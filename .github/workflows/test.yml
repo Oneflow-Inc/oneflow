@@ -549,7 +549,7 @@ jobs:
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
             -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=${{ env.ONEFLOW_THRAED_LOCAL_CACHED_SIZE }} \
             ${{ env.MLIR_DOCKER_ARGS }} \
-            --rm \
+            --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
             sleep 5400
@@ -811,6 +811,7 @@ jobs:
             -w $PWD \
             -e HTTP_PROXY=${HTTPS_PROXY} -e HTTPS_PROXY=${HTTPS_PROXY} -e http_proxy=${HTTPS_PROXY} -e https_proxy=${HTTPS_PROXY} \
             --network host \
+            --rm \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
             python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e ${{ env.ONEFLOW_IREE_SRC}} --user
       - name: Install downstream libs
