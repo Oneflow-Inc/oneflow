@@ -30,7 +30,7 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
     if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
       const auto& blob_modifier_ = node->op().InputBlobModifier4Ibn(ibn);
-      if (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable()) { return; }
+      if (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable()) { continue; }
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
       const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
