@@ -182,22 +182,16 @@ endforeach()
 
 relative_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${PROJECT_SOURCE_DIR} ${of_all_rel_protos})
 
-oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
+oneflow_add_library(of_protoobj SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 add_dependencies(of_protoobj make_pyproto_dir protobuf)
-
-if(BUILD_SHARED_LIBS)
-  target_link_libraries(of_protoobj protobuf_imported)
-else()
-  # For some unknown reasons, when building static libraries, we have to link of_protoobj with oneflow_third_party_libs
-  target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-endif()
+target_link_libraries(of_protoobj protobuf_imported)
 
 include(functional)
 generate_functional_api_and_pybind11_cpp(FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS
                                          FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_functional_obj STATIC ${FUNCTIONAL_GENERATED_SRCS}
                     ${FUNCTIONAL_GENERATED_HRCS})
-target_link_libraries(of_functional_obj glog::glog)
+target_link_libraries(of_functional_obj LLVMSupportWithHeader glog::glog)
 add_dependencies(of_functional_obj prepare_oneflow_third_party)
 
 if(BUILD_PYTHON)
@@ -214,7 +208,7 @@ if(BUILD_PYTHON)
     of_functional_tensor_obj STATIC ${FUNCTIONAL_TENSOR_GENERATED_SRCS}
     ${FUNCTIONAL_TENSOR_GENERATED_HRCS} ${FUNCTIONAL_OPS_GENERATED_SRCS}
     ${FUNCTIONAL_OPS_GENERATED_HRCS})
-  target_link_libraries(of_functional_tensor_obj glog::glog)
+  target_link_libraries(of_functional_tensor_obj LLVMSupportWithHeader glog::glog)
   add_dependencies(of_functional_tensor_obj prepare_oneflow_third_party)
   target_include_directories(of_functional_tensor_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                               ${Python_NumPy_INCLUDE_DIRS})
@@ -274,26 +268,31 @@ if(WITH_MLIR)
   set(ONEFLOW_MLIR_LIBS -Wl,--no-as-needed MLIROneFlowExtension -Wl,--as-needed)
 endif()
 
+if("${LLVM_PROVIDER}" STREQUAL "install")
+  get_property(LLVM_INSTALL_DIR GLOBAL PROPERTY LLVM_INSTALL_DIR)
+  check_variable_defined(LLVM_INSTALL_DIR)
+  find_library(LLVMSupportLib LLVMSupport PATHS ${LLVM_INSTALL_DIR}/lib REQUIRED)
+  add_library(LLVMSupportWithHeader UNKNOWN IMPORTED)
+  set_property(TARGET LLVMSupportWithHeader PROPERTY IMPORTED_LOCATION ${LLVMSupportLib})
+else()
+  add_library(LLVMSupportWithHeader INTERFACE IMPORTED)
+  target_link_libraries(LLVMSupportWithHeader INTERFACE LLVMSupport)
+endif()
+check_variable_defined(LLVM_INCLUDE_DIRS)
+set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                                                   ${LLVM_INCLUDE_DIRS})
+
+list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
+
 include(op_schema)
 
-get_property(EXTERNAL_INCLUDE_DIRS GLOBAL PROPERTY EXTERNAL_INCLUDE_DIRS)
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
 
-target_include_directories(oneflow PRIVATE ${EXTERNAL_INCLUDE_DIRS})
-
 if(APPLE)
-  set(of_libs -Wl,-force_load oneflow of_protoobj of_functional_obj of_op_schema)
+  set(of_libs -Wl,-force_load oneflow of_op_schema)
   target_link_libraries(oneflow of_protoobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs
-      -Wl,--whole-archive
-      oneflow
-      of_protoobj
-      of_functional_obj
-      of_op_schema
-      -Wl,--no-whole-archive
-      -ldl
-      -lrt)
+  set(of_libs -Wl,--whole-archive oneflow of_op_schema -Wl,--no-whole-archive -ldl -lrt)
   target_link_libraries(
     oneflow
     of_protoobj
@@ -325,7 +324,9 @@ endif()
 if(BUILD_PYTHON)
 
   # py ext lib
-  oneflow_add_library(of_pyext_obj ${of_pyext_obj_cc})
+  # This library should be static to make sure all python symbols are included in the final ext shared lib,
+  # so that it is safe to do wheel audits of multiple pythons version in parallel.
+  oneflow_add_library(of_pyext_obj STATIC ${of_pyext_obj_cc})
   target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS}
                                                   ${Python_NumPy_INCLUDE_DIRS})
   target_link_libraries(of_pyext_obj oneflow pybind11::headers)

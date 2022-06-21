@@ -583,6 +583,30 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
+    def test_add_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_tensor(
+            low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17
+        ).to(device)
+        y = rand_tensor + 1
+        x = random_tensor(low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17).to(
+            device
+        )
+        y.add_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=True)
+    def test_broadcast_add_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_tensor(ndim=3, dim0=5, dim1=9, dim2=23).to(device)
+        y = rand_tensor + 1
+        x = random_tensor(ndim=2, dim0=9, dim1=23).to(device)
+        y.add_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=True)
     def test_sub_inplace_tensor(test_case):
         device = random_device()
         rand_tensor = random_tensor(
@@ -917,23 +941,6 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @flow.unittest.skip_unless_1n1d()
-    def test_tensor_logical_slice_assign(test_case):
-        x = np.random.randn(2, 3, 4, 5).astype(np.float32)
-        input = flow.tensor(x)
-        input[:, 0] = 3.1415926
-        x[:, 0] = 3.1415926
-        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
-        input[:, 1:2] = 1
-        x[:, 1:2] = 1
-        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
-        input[:] = 1.234
-        x[:] = 1.234
-        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
-        input[0] = 0
-        x[0] = 0
-        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
-
-    @flow.unittest.skip_unless_1n1d()
     def test_zeros_(test_case):
         shape = (2, 3)
         x = flow.tensor(np.random.randn(*shape), dtype=flow.float32)
@@ -1000,14 +1007,14 @@ class TestTensor(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_reshape_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
-        y = x.reshape(-1,)
+        y = x.reshape(-1)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_reshape_as_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)

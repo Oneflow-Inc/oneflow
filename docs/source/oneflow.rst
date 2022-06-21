@@ -321,5 +321,3 @@ BLAS and LAPACK Operations
     bmm 
     dot 
     matmul
-
-

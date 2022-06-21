@@ -49,6 +49,7 @@ from .swapaxes import *
 from .amax import *
 from .unbind import *
 from .repeat import *
+from .repeat_interleave import *
 from .tile import *
 from .tensor_t import *
 from .topk import *

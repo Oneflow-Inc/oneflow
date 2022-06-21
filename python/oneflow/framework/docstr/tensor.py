@@ -319,13 +319,13 @@ add_docstr(
 
         >>> # results on rank 0
         oneflow.Size([4])
-        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32) 
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32) 
  
     .. code-block:: python
 
         >>> # results on rank 1
         oneflow.Size([4])
-        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
     """,
 )
 
@@ -365,13 +365,13 @@ add_docstr(
 
         >>> # results on rank 0
         oneflow.Size([2])
-        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
 
     .. code-block:: python
 
         >>> # results on rank 1
         oneflow.Size([2])
-        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
     """,
 )
 
@@ -424,13 +424,13 @@ add_docstr(
 
         >>> # results on rank 0
         oneflow.Size([4])
-        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32) 
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32) 
  
     .. code-block:: python
 
         >>> # results on rank 1
         oneflow.Size([4])
-        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
 
     For global tensor:
 
@@ -447,13 +447,13 @@ add_docstr(
 
         >>> # results on rank 0
         oneflow.Size([2])
-        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
 
     .. code-block:: python
 
         >>> # results on rank 1
         oneflow.Size([2])
-        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(dim=0),), dtype=oneflow.float32)
     """,
 )
 
@@ -579,7 +579,7 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
 
-        >>> x = flow.arange(1., 8)
+        >>> x = flow.arange(1, 8)
         >>> x
         tensor([1, 2, 3, 4, 5, 6, 7], dtype=oneflow.int64)
         >>> x.unfold(0, 2, 1)
@@ -1540,6 +1540,15 @@ add_docstr(
     Tensor.repeat(*size) -> Tensor
 
     See :func:`oneflow.repeat`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.repeat_interleave,
+    """
+    Tensor.repeat_interleave(repeats, dim=None, *, output_size=None) -> Tensor
+
+    See :func:`oneflow.repeat_interleave`
     """,
 )
 

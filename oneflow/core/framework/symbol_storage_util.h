@@ -16,36 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_SYMBOL_STORAGE_H_
 #define ONEFLOW_CORE_FRAMEWORK_SYMBOL_STORAGE_H_
 
-#include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
-
-template<typename SymbolConfT>
-Maybe<bool> HasSymbol(const SymbolConfT& symbol_conf) {
-  const auto& id_cache = *JUST(GlobalMaybe<symbol::IdCache<SymbolConfT>>());
-  return id_cache.Has(symbol_conf);
-}
-
-template<typename SymbolConfT, typename SymbolT>
-Maybe<SymbolT> GetSymbol(const SymbolConfT& symbol_conf) {
-  const auto& id_cache = *JUST(GlobalMaybe<symbol::IdCache<SymbolConfT>>());
-  const auto& symbol_storage = *Global<symbol::Storage<SymbolT>>::Get();
-  int64_t symbol_id = JUST(id_cache.Get(symbol_conf));
-  const auto& ptr = JUST(symbol_storage.MaybeGetPtr(symbol_id));
-  JUST(ptr->symbol_id());
-  return ptr;
-}
-
-// TODO(hanbibin): the second template arg will be moved after symbol_storage is refactored
-template<typename SymbolPbT, typename SymbolT>
-Maybe<void> AddSymbol(int64_t symbol_id, const SymbolPbT& symbol_conf) {
-  JUST(Global<symbol::Storage<SymbolT>>::Get()->Add(symbol_id, symbol_conf));
-  auto* id_cache = JUST(GlobalMaybe<symbol::IdCache<SymbolPbT>>());
-  CHECK_OR_RETURN(!id_cache->Has(symbol_conf));
-  JUST(id_cache->FindOrCreate(symbol_conf, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
-  return Maybe<void>::Ok();
-}
 
 template<typename SymbolT>
 Maybe<SymbolT> GetSymbol(int64_t symbol_id) {

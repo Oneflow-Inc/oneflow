@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/symbol_id_cache.h"
 
 namespace oneflow {
 
@@ -75,16 +74,6 @@ void FilterCurModelLbi2ModelDiffLbiByName(
   }
 }
 
-// TODO(lixinqi): Refactor this function after symbol::IdCache and symbol::Storage merged
-template<typename SymbolPbT, typename SymbolT>
-Maybe<void> TryAddSymbol(int64_t symbol_id, const SymbolPbT& symbol_conf) {
-  auto* id_cache = Global<symbol::IdCache<SymbolPbT>>::Get();
-  if (id_cache->Has(symbol_conf)) { return Maybe<void>::Ok(); }
-  JUST(id_cache->FindOrCreate(symbol_conf, [&symbol_id]() -> Maybe<int64_t> { return symbol_id; }));
-  JUST(Global<symbol::Storage<SymbolT>>::Get()->TryAdd(symbol_id, symbol_conf));
-  return Maybe<void>::Ok();
-}
-
 Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* job,
                                            const std::function<Maybe<void>()>& Handler) {
   HashSet<std::string> exists_op_names;
@@ -107,13 +96,12 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
     std::shared_ptr<ScopeProto> new_scope = std::make_shared<ScopeProto>(old_scope.scope_proto());
     new_scope->set_parent_scope_symbol_id(old_scope_symbol_id);
     new_scope->set_calculation_pass_name(pass_name);
-    int64_t symbol_id = 0;
+    std::shared_ptr<Scope> new_scope_symbol;
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      symbol_id = JUST(builder->FindOrCreateSymbolId(*new_scope));
+      new_scope_symbol = JUST(builder->GetScopeSymbol(*new_scope));
       return Maybe<void>::Ok();
     }));
-    JUST(TryAddSymbol<ScopeProto, Scope>(symbol_id, *new_scope));
-    return symbol_id;
+    return JUST(new_scope_symbol->symbol_id());
   };
   for (const auto& pair : scope_id2op_names) {
     int64_t new_scope_symbol_id = JUST(GetNewScopeSymbolId(pair.first));
