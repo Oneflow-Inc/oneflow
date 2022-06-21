@@ -46,7 +46,7 @@ class EventBase:
 
     def update(self, event) -> None:
         assert self.event_type == event.event_type
-        self.time_total += event.time_total
+        self.cpu_time_total += event.cpu_time_total
         self.count += event.count
 
     @property
@@ -56,15 +56,15 @@ class EventBase:
         return self._name
 
     @property
-    def time_total(self):
+    def cpu_time_total(self):
         return self._time_total
 
-    @time_total.setter
-    def time_total(self, new_time):
+    @cpu_time_total.setter
+    def cpu_time_total(self, new_time):
         self._time_total = new_time
 
     @property
-    def time(self):
+    def cpu_time(self):
         return self._time_total / self.count
 
     @property
@@ -88,7 +88,7 @@ class EventBase:
         return (
             self.name == __o.name
             and self.count == __o.count
-            and self.time_total == __o.time_total
+            and self.cpu_time_total == __o.cpu_time_total
             and self.cuda_time_total == __o.cuda_time_total
         )
 
@@ -111,12 +111,12 @@ class CustomEvent(EventBase):
     @property
     def cuda_time_total(self):
         if self.custom_event_type == CustomEventType.CudaKernel:
-            return self.time_total
+            return self._time_total
         return None
 
     def to_dict(self):
-        device_prefix = "cuda_" if self.has_cuda_time() else ""
-        time_attrs = [f"{device_prefix}{suffix}" for suffix in ["time", "time_total"]]
+        device_prefix = "cuda" if self.has_cuda_time() else "cpu"
+        time_attrs = [f"{device_prefix}_{suffix}" for suffix in ["time", "time_total"]]
         result = {
             "name": self.name,
             "count": self.count,
@@ -190,8 +190,8 @@ class KernelEvent(EventBase):
     def to_dict(self):
         result = {
             "name": self.name,
-            "time_total": format_time(self.time_total),
-            "time": format_time(self.time),
+            "cpu_time_total": format_time(self.cpu_time_total),
+            "cpu_time": format_time(self.cpu_time),
             "count": self.count,
             "input_shapes": self.input_shapes,
             "bandwidth": self.bandwidth,
@@ -299,8 +299,8 @@ class Events(list):
         )
         field_keys = [
             "name",
-            "time_total",
-            "time",
+            "cpu_time_total",
+            "cpu_time",
             "cuda_time_total",
             "cuda_time",
             "count",
