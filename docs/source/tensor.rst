@@ -106,6 +106,41 @@ A tensor can be created with :attr:`requires_grad=True` so that
     tensor([[ 2., -2.],
             [ 2.,  2.]], dtype=oneflow.float32)
 
+.. note::
+   For more information on the :class:`oneflow.dtype`, :class:`oneflow.device`, and
+   :class:`oneflow.layout` attributes of a :class:`oneflow.Tensor`, see
+   :ref:`tensor-attributes-doc`.
+
+.. note::
+   Methods which mutate a tensor are marked with an underscore suffix.
+   For example, :func:`oneflow.FloatTensor.add_` computes the absolute value
+   in-place and returns the modified tensor, while :func:`oneflow.FloatTensor.add`
+   computes the result in a new tensor.
+
+.. note::
+    To change an existing tensor's :class:`oneflow.device` and/or :class:`oneflow.dtype`, consider using
+    :meth:`~oneflow.Tensor.to` method on the tensor.
+
+.. warning::
+   Current implementation of :class:`oneflow.Tensor` introduces memory overhead,
+   thus it might lead to unexpectedly high memory usage in the applications with many tiny tensors.
+   If this is your case, consider using one large structure.
+
+Tensor class reference
+----------------------
+
+.. class:: Tensor()
+
+   There are a few main ways to create a tensor, depending on your use case.
+
+   - To create a tensor with pre-existing data, use :func:`oneflow.tensor`.
+   - To create a tensor with specific size, use ``oneflow.*`` tensor creation
+     ops (see :ref:`tensor-creation-ops`).
+   - To create a tensor with the same size (and similar types) as another tensor,
+     use ``oneflow.*_like`` tensor creation ops
+     (see :ref:`tensor-creation-ops`).
+
+.. autoattribute:: Tensor.T
 
 .. autoclass:: oneflow.Tensor
     :members: abs, 

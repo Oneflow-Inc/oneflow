@@ -14,6 +14,20 @@ Functions and classes for autograd.
     grad
     backward
 
+Tensor autograd functions
+---------------------------------------------------
+.. autosummary::
+    :nosignatures:
+
+   oneflow.Tensor.grad
+   oneflow.Tensor.requires_grad
+   oneflow.Tensor.is_leaf
+   oneflow.Tensor.backward
+   oneflow.Tensor.detach
+   oneflow.Tensor.detach_
+   oneflow.Tensor.register_hook
+   oneflow.Tensor.retain_grad
+
 .. autoclass:: oneflow.autograd.Function
     :members: apply,
     :special-members: __call__,
