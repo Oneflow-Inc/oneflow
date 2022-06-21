@@ -37,15 +37,19 @@ class EagerNcclCommMgr final {
                                            const std::string& stream_name);
 
   void CreateCommFromPlan(const Plan& plan);
+  bool IsNcclLogicalKernelLaunchSynchronized() const { return nccl_logical_kernel_launch_sync_; }
+  void SetNcclLogicalKernelLaunchSynchronized(bool val) { nccl_logical_kernel_launch_sync_ = val; }
 
  private:
   friend class Global<EagerNcclCommMgr>;
-  EagerNcclCommMgr() = default;
+  // NOTE(chengcheng): default nccl logical kernel launch sync is true for better performence.
+  EagerNcclCommMgr() : nccl_logical_kernel_launch_sync_(true) {}
 
   std::map<std::set<std::pair<int64_t, int64_t>>, HashMap<int64_t, ncclComm_t>>
       device_set2device_id2comm_;
   std::map<std::string, HashMap<int64_t, ncclComm_t>> device7stream2device_id2comm_;
   std::mutex mutex_;
+  bool nccl_logical_kernel_launch_sync_;
 };
 
 class UserKernelUnifiedNcclCommInitRegistry final {

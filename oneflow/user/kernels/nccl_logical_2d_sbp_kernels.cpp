@@ -140,7 +140,10 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
+  }
 };
 
 class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
@@ -170,7 +173,10 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
+  }
 };
 
 template<typename T>
@@ -238,7 +244,10 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
                       unpack_from_dim_vec.data(), unpack_from_ptr, perm.data(), out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
+  }
 };
 
 size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -368,7 +377,10 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
+  }
 };
 
 size_t Infer2DSameDim0All2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -461,7 +473,10 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  bool IsKernelLaunchSynchronized() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override {
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
+  }
 };
 
 }  // namespace

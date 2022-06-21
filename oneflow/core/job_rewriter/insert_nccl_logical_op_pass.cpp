@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job.pb.h"
@@ -815,6 +816,7 @@ void InsertNcclLogicalOpsInSubGraph(
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
+    if (nccl_op_confs.empty()) { break; }
     int64_t nccl_compute_stream_id = *stream_offset;
     if (nccl_compute_stream_id >= kMaxNcclComputeStreamCount) {
       break;  // NOTE(chengcheng): ONLY support kMaxNcclComputeStreamCount insert nccl subgraphs.
@@ -1029,10 +1031,23 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
     // NOTE(chengcheng): insert nccl ops for each subgraph
     uint32_t stream_offset = 0;
+    int64_t total_op_num = 0;
     for (int i = 0; i < info.ordered_subgraph.size(); i++) {
       auto& ordered_op_nodes = info.ordered_subgraph.at(i)->ordered_op_nodes;
       InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, IsReachable, i,
                                      &stream_offset);
+      total_op_num += ordered_op_nodes.size();
+    }
+    if (stream_offset >= 2 && total_op_num >= 1000) {
+      LOG(WARNING) << " In Graph: " << job_builder->job().job_conf().job_name()
+                   << " Placement: " << pair.first << " the total_op_num = " << total_op_num
+                   << " and has " << stream_offset
+                   << " different nccl stream which is possible to trigger cuda stream kernel "
+                      "launch upper limit."
+                   << " So the nccl logical kernel will from async to sync exec, which may affect "
+                      "performance.";
+      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+      comm_mgr->SetNcclLogicalKernelLaunchSynchronized(false);
     }
 
     // NOTE(chengcheng): insert acc for all subgraph with same placement group
