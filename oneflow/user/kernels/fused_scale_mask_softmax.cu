@@ -141,6 +141,7 @@ class FusedScaleMaskSoftmaxKernel final : public user_op::OpKernel {
         mask->dptr<MASK>(), elem_cnt, rows, cols, mask_fill_value, scale_value,             \
         simplified_input_dims, simplified_mask_dims);                                       \
   }
+    DEFINE_ONE_ELIF(2)
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
 #undef DEFINE_ONE_ELIF
@@ -197,6 +198,7 @@ class FusedScaleMaskSoftmaxGradKernel final : public user_op::OpKernel {
         dx->mut_dptr<T>(), mask->dptr<MASK>(), elem_cnt, rows, cols, mask_fill_value, scale_value, \
         simplified_input_dims, simplified_mask_dims);                                              \
   }
+    DEFINE_ONE_ELIF(2)
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
 #undef DEFINE_ONE_ELIF

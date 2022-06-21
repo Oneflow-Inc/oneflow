@@ -115,11 +115,11 @@ void ClearAllSymbol() {
   Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
 }
 
-#if defined(__linux__) && defined(WITH_RDMA)
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
 bool CommNetIBEnabled() { return ibv::IsAvailable(); }
 
-#endif
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
 
 }  // namespace
 
@@ -265,7 +265,7 @@ Maybe<void> InitRDMA() {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
-#ifdef WITH_RDMA
+#if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
       if (CommNetIBEnabled()) {
         if (Global<IBVerbsCommNet>::Get() == nullptr) {
           Global<IBVerbsCommNet>::New();
@@ -278,7 +278,7 @@ Maybe<void> InitRDMA() {
       }
 #else
       LOG(WARNING) << "Skip init RDMA because RDMA is not compiled!";
-#endif  // WITH_RDMA
+#endif  // WITH_RDMA && OF_PLATFORM_POSIX
     } else {
       LOG(WARNING) << "Skip init RDMA because only one process in this group!";
     }

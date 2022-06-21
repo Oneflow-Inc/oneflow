@@ -26,12 +26,14 @@ Base class for running neural networks in Static Graph Mode.
             allow_fuse_cast_scale,
             set_gradient_accumulation_steps,
             enable_cudnn_conv_heuristic_search_algo,
+            disable_straighten_algorithm,
     :member-order: bysource
 
 
 
 .. autoclass:: oneflow.nn.graph.block_config.BlockConfig
     :members: stage_id,
+            set_stage,
             activation_checkpointing,
     :member-order: bysource
 
