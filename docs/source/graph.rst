@@ -33,6 +33,7 @@ Base class for running neural networks in Static Graph Mode.
 
 .. autoclass:: oneflow.nn.graph.block_config.BlockConfig
     :members: stage_id,
+            set_stage,
             activation_checkpointing,
     :member-order: bysource
 
