@@ -255,22 +255,37 @@ class Events(list):
     def __str__(self):
         return self.table()
 
-    def key_averages(self):
+    def key_averages(self, group_by_input_shape=False):
         stats: Dict[Tuple[str, ...], EventBase] = OrderedDict()
+
+        def deal_event(e):
+            if group_by_input_shape == False and isinstance(e, KernelEvent):
+                e.input_shapes = "-"
+            key = e.key
+            if key in stats:
+                stats[key].update(e)
+            else:
+                stats[key] = copy.deepcopy(e)
 
         for event in self:
             if isinstance(event, KernelEvent) and len(event.children) != 0:
                 event.make_children_average()
-            key = event.key
-            if key in stats:
-                stats[key].update(event)
-            else:
-                stats[key] = copy.deepcopy(event)
+                for event_child in event.children:
+                    deal_event(event_child)
+                event.children = []
+            deal_event(event)
+
         results = Events()
         results.extend(stats.values())
         return results
 
     def table(self):
+        has_input_shapes = any(
+            [x.input_shapes != "-" for x in self if isinstance(x, KernelEvent)]
+        )
+        has_bandwidth = any(
+            [x.bandwidth != "-" for x in self if isinstance(x, KernelEvent)]
+        )
         t = Table(
             *(
                 "Name",
@@ -279,8 +294,6 @@ class Events(list):
                 "GPU time total",
                 "GPU time",
                 "Number of calls",
-                "Shapes of inputs",
-                "Bandwidth",
             ),
             box=box.SIMPLE,
         )
@@ -291,9 +304,13 @@ class Events(list):
             "cuda_time_total",
             "cuda_time",
             "count",
-            "input_shapes",
-            "bandwidth",
         ]
+        if has_input_shapes:
+            t.add_column("Input shapes")
+            field_keys.append("input_shapes")
+        if has_bandwidth:
+            t.add_column("Bandwidth")
+            field_keys.append("bandwidth")
 
         def build_row(data: dict):
             return tuple(str(data.get(key, "-")) for key in field_keys)

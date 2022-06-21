@@ -43,10 +43,6 @@ class TestEventAndEvents(flow.unittest.TestCase):
             "type": 1,
             "input_shapes": "-",
         }
-        print(
-            kernel_event
-            == classes[kernel_event_json.get("type")].from_dict(kernel_event_json)
-        )
         test_case.assertEqual(
             kernel_event,
             classes[kernel_event_json.get("type")].from_dict(kernel_event_json),
