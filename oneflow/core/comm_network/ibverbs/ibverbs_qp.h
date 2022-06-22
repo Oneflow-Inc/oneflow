@@ -54,7 +54,7 @@ class IBVerbsQP final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsQP);
   IBVerbsQP() = delete;
-  IBVerbsQP(ibv_context*, ibv_pd*, struct ibv_port_attr, uint8_t port_num, ibv_cq* send_cq,
+  IBVerbsQP(ibv_context*, ibv_pd*, const struct ibv_port_attr&, uint8_t port_num, ibv_cq* send_cq,
             ibv_cq* recv_cq);
   ~IBVerbsQP();
 
