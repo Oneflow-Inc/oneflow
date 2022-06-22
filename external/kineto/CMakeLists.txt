@@ -2,9 +2,7 @@ include(FetchContent)
 
 # reference: https://github.com/PaddlePaddle/Paddle/blob/develop/cmake/cupti.cmake
 
-set(CUPTI_ROOT
-    "/usr"
-    CACHE PATH "CUPTI ROOT")
+set(CUPTI_ROOT "/usr" CACHE PATH "CUPTI ROOT")
 
 set(CUDA_SOURCE_DIR ${CUDAToolkit_TARGET_DIR})
 
@@ -51,10 +49,8 @@ FetchContent_Declare(
   kineto
   URL ${KINETO_URL}
   URL_HASH MD5=${KINETO_MD5}
-  SOURCE_SUBDIR libkineto
-)
+  SOURCE_SUBDIR libkineto)
 
 FetchContent_MakeAvailable(kineto)
 
-target_include_directories(kineto PUBLIC
-  $<BUILD_INTERFACE:${kineto_SOURCE_DIR}/libkineto/include>)
+target_include_directories(kineto PUBLIC $<BUILD_INTERFACE:${kineto_SOURCE_DIR}/libkineto/include>)

@@ -1,6 +1,6 @@
 set(EXTERNAL_TARGETS)
 
-if (CPU_THREADING_RUNTIME STREQUAL "TBB")
+if(CPU_THREADING_RUNTIME STREQUAL "TBB")
   add_subdirectory(onetbb)
   list(APPEND EXTERNAL_TARGETS tbb)
 endif()
