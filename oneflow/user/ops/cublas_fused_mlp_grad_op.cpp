@@ -94,16 +94,25 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> CublasFusedMLPGradOp::GetSbp(user_op::SbpContext* ctx) {
-    // todo
-//   ctx->NewBuilder()
-//       .Broadcast(user_op::OpArg("weight", 0))
-//       .Split(user_op::OpArg("dy", 0), 0)
-//       .Split(user_op::OpArg("aux", 0), 0)
-//       .Split(user_op::OpArg("hidden", 0), 0)
-//       .Split(user_op::OpArg("d_grad", 0), 0)
-//       .PartialSum(user_op::OpArg("d_weight", 0))
-//       .PartialSum(user_op::OpArg("d_bias", 0))
-//       .Build();
+  auto builder = ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0);
+  builder.Split(user_op::OpArg("dy", 0), 0);
+  for (int i = 0; i < ctx->user_op_conf().input_size("weight"); ++i) {
+    builder.Broadcast(user_op::OpArg("weight", i));
+  }
+  for (int i = 0; i < ctx->user_op_conf().input_size("aux"); ++i) {
+    builder.Split(user_op::OpArg("aux", i), 0);
+  }
+  for (int i = 0; i < ctx->user_op_conf().input_size("hidden"); ++i) {
+    builder.Split(user_op::OpArg("hidden", i), 0);
+  }
+
+  builder.Split(user_op::OpArg("d_grad", 0), 0);
+  for (int i = 0; i < ctx->user_op_conf().input_size("d_bias"); ++i) {
+    builder.PartialSum(user_op::OpArg("d_bias", i));
+  }
+  for (int i = 0; i < ctx->user_op_conf().input_size("d_weight"); ++i) {
+    builder.PartialSum(user_op::OpArg("d_weight", i));
+  }
   return Maybe<void>::Ok();
 }
 
