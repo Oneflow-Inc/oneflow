@@ -117,7 +117,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/true,
                   /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                   /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, d_bias->dptr(),
-                  aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 1024 * 1024 * 8);
+                  aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 16 * 1024 * 1024);
     /*
     a = dy, b = weight
     cublas_a=weight, cublas_b=dy

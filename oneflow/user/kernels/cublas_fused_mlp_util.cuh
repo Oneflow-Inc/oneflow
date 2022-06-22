@@ -47,7 +47,7 @@ class CublasFusedMLPKernelCache final : public user_op::OpKernelCache {
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, CUDA_R_32F, 1, 1, 1));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
-    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&cublas_preference)); 
+    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&cublas_preference));
   }
   ~CublasFusedMLPKernelCache() override {
     OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operation_desc));
