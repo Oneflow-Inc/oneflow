@@ -51,21 +51,12 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                                                 public user_op::CudaGraphSupport {
  public:
   CublasFusedMLPGradKernel() {
-    // OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
-    // OF_CUDA_CHECK(cudaEventCreate(&async_weight_grad_event));
-    for(int i = 0; i < 10; i++){
-      cudaEvent_t main_stream_event; 
-      OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
-      main_stream_event_vec.push_back(main_stream_event); 
-    }
+    OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
     OF_CUDA_CHECK(cudaEventCreate(&async_weight_grad_event));
   };
   ~CublasFusedMLPGradKernel() override {
-    // OF_CUDA_CHECK(cudaEventDestroy(main_stream_event));
-    // OF_CUDA_CHECK(cudaEventDestroy(async_weight_grad_event));
-    for(int i = 0; i < 10; i++){
-      OF_CUDA_CHECK(cudaEventDestroy(main_stream_event_vec.at(i)));
-    }
+    OF_CUDA_CHECK(cudaEventDestroy(main_stream_event));
+    OF_CUDA_CHECK(cudaEventDestroy(async_weight_grad_event));
   };
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
@@ -79,9 +70,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
   }
 
  private:
-  // cudaEvent_t main_stream_event;
-  // cudaEvent_t async_weight_grad_event;
-  std::vector<cudaEvent_t> main_stream_event_vec;
+  cudaEvent_t main_stream_event;
   cudaEvent_t async_weight_grad_event;
 
   using user_op::OpKernel::Compute;
@@ -93,13 +82,8 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     void* dy_tmp_buf = tmp_buffer->mut_dptr();
     size_t offset = 0;             
-    // const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-    // const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
-    // const user_op::Tensor* hidden = ctx->Tensor4ArgNameAndIndex("hidden", 0);
 
-    // user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", 0);
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
-    // user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", 0);
     
     const int64_t weight_size = ctx->input_size("weight"); 
 
@@ -152,7 +136,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
             a = dy, b = weight
             cublas_a=weight, cublas_b=dy
             */
-            OF_CUDA_CHECK(cudaEventRecord(main_stream_event_vec[idx], cuda_stream->cuda_stream()));
+            OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
             OF_CUBLAS_CHECK(
                 cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                             &sp_alpha, weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
@@ -160,7 +144,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                             matmul_grad_cache->cublas_c_desc, dy_tmp_buf,
                             matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                             cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-            // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
         } else {
           const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
           printf("weight shape is: %ld, %ld \n", weight->shape().At(0), weight->shape().At(1)); 
@@ -179,7 +162,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
           a = dy, b = weight
           cublas_a=weight, cublas_b=dy
           */
-          OF_CUDA_CHECK(cudaEventRecord(main_stream_event_vec[idx], cuda_stream->cuda_stream()));
+          OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
           OF_CUBLAS_CHECK(
               cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                           &sp_alpha, weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
@@ -187,7 +170,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                           matmul_grad_cache->cublas_c_desc, d_grad->mut_dptr(),
                           matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                           cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-          // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
         }
         alpha = 1.0;
         sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
@@ -215,7 +197,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
                         cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
           
-          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event_vec[idx]));
+          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
           
           OF_CUBLAS_CHECK(
             cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
@@ -224,9 +206,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                         matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
                         matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
                         kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
-          // OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
-          // OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
-          // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
           
           // compute dy shape
           dy_shape.at(1) = weight_shape.at(1);
@@ -249,7 +228,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                         /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
                         cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
-          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event_vec[idx]));
+          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
           OF_CUBLAS_CHECK(
               cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                           &sp_alpha, x->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
@@ -259,7 +238,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                           kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
           OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
           OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
-          // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
         }
     }
     printf("end kernel \n"); 
