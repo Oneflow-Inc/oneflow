@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_
+#ifndef ONEFLOW_CORE_COMMON_ARRAY_REF_H_
+#define ONEFLOW_CORE_COMMON_ARRAY_REF_H_
 
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
+#include "llvm/ADT/ArrayRef.h"
 
 namespace oneflow {
 
-std::unique_ptr<mlir::Pass> createMapSCFToGPUPass();
+template<typename T>
+using ArrayRef = llvm::ArrayRef<T>;
+
+template<typename T>
+using MutableArrayRef = llvm::MutableArrayRef<T>;
 
 }  // namespace oneflow
 
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_
+#endif

@@ -33,7 +33,7 @@ inline Maybe<std::string> SbpToString(Symbol<SbpParallel> sbp_sym) {
   } else if (sbp_sym->has_partial_sum_parallel()) {
     sbp_str += "partial_sum";
   } else if (sbp_sym->has_split_parallel()) {
-    sbp_str += "split(axis=" + std::to_string(sbp_sym->split_parallel().axis()) + ")";
+    sbp_str += "split(dim=" + std::to_string(sbp_sym->split_parallel().axis()) + ")";
   } else {
     UNIMPLEMENTED_THEN_RETURN();
   }
