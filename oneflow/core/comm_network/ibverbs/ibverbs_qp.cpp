@@ -67,7 +67,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, const struct ibv_port_attr& p
   max_outstanding_send_wr_ = queue_depth;
   read_block_size_ =
       ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE", kDefaultMemBlockSize);
-  mtu_ = static_cast<int32_t>(port_attr.active_mtu)
+  mtu_ = static_cast<int32_t>(port_attr.active_mtu);
 }
 
 IBVerbsQP::~IBVerbsQP() {
