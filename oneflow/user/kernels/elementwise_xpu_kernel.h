@@ -23,19 +23,6 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
 
 namespace oneflow {
-template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
-struct UnaryElemwiseXpuLauncher final {
-  void operator()(ep::Stream* stream, int64_t elem_cnt, OutputT* out, const InputA* input_a,
-                  FunctorT functor);
-};
-
-template<typename FunctorT, typename OutputT, typename InputA>
-struct UnaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA> final {
-  void operator()(ep::Stream* stream, int64_t elem_cnt, OutputT* out, const InputA* input_a,
-                  FunctorT functor) {
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = functor(input_a[i]); }
-  }
-};
 
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
          typename InputB>
@@ -50,43 +37,6 @@ struct BinaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA, In
                   const InputB* input_b, FunctorT functor) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = functor(input_a[i], input_b[i]); }
   }
-};
-
-template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
-class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(UnaryElemwiseXpuKernel);
-  UnaryElemwiseXpuKernel() = default;
-  ~UnaryElemwiseXpuKernel() = default;
-
-  UnaryElemwiseXpuKernel(
-      std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn,
-      const std::string& output_name, const std::string& input_a_name)
-      : FunctorCreateFn(FunctorCreateFn), output_name(output_name), input_a_name(input_a_name) {}
-
-  std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
-
-    const ShapeView input_a_shape = input_a_tensor->shape();
-    const ShapeView out_shape = out_tensor->shape();
-    CHECK_EQ(input_a_shape, out_shape);
-
-    const InputA* input_a_ptr = input_a_tensor->dptr<InputA>();
-    OutputT* out_ptr = out_tensor->mut_dptr<OutputT>();
-    const int64_t elem_cnt = input_a_shape.elem_cnt();
-
-    UnaryElemwiseXpuLauncher<device_type, FunctorT, OutputT, InputA>()(
-        ctx->stream(), elem_cnt, out_ptr, input_a_ptr, FunctorCreateFn(ctx));
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
-  std::string output_name;
-  std::string input_a_name;
 };
 
 class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -188,19 +138,6 @@ auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_n
   });
 }
 }  // namespace
-
-#define REGISTER_UNARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,       \
-                                            input_a_dtype, create_function, out_name,      \
-                                            input_a_name)                                  \
-  REGISTER_USER_KERNEL(kernel_name)                                                        \
-      .SetCreateFn([]() {                                                                  \
-        return user_op::NewOpKernel<                                                       \
-            UnaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, input_a_dtype>>( \
-            create_function, out_name, input_a_name);                                      \
-      })                                                                                   \
-      .SetIsMatchedHob(                                                                    \
-          (user_op::HobDeviceType() == device)                                             \
-          && (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
 #define REGISTER_BINARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,              \
                                              input_a_dtype, input_b_dtype, create_function,        \
