@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/ep/common//primitive/constant_pad.h"
 #include "oneflow/core/ep/common/primitive/broadcast_elementwise_binary.h"
 #include "oneflow/core/ep/cpu/primitive/binary_functor.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
@@ -176,41 +177,62 @@ void LaunchMatrixWithCol(CpuStream* cpu_stream, const int64_t* simplified_src0_d
       1);
 }
 
-template<BinaryOp binary_op, typename Src, typename Dst>
+template<BinaryOp binary_op, typename Src, typename Dst, typename IndexType>
 void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
                    const int64_t* simplified_src0_dims, const Src* src0,
                    const int64_t* simplified_src1_dims, const Src* src1,
-                   const int64_t* simplified_dst_dims, Dst* dst, Scalar attr0, Scalar attr1) {
-  const int64_t elem_cnt = GetElementCount(simplified_num_dims, simplified_dst_dims);
+                   const int64_t* simplified_dst_dims, Dst* dst, int64_t dst_elem_cnt, Scalar attr0,
+                   Scalar attr1) {
+  const int64_t src0_elem_cnt = GetElementCount(simplified_num_dims, simplified_src0_dims);
+  bool if_broadcast_src0 = (src0_elem_cnt != dst_elem_cnt);
+  const int64_t* simplified_src_dims =
+      if_broadcast_src0 ? simplified_src0_dims : simplified_src1_dims;
   auto functor = BinaryFunctor<DeviceType::kCPU, binary_op, Src, Dst>(attr0, attr1);
   cpu_stream->ParallelFor(
-      0, elem_cnt,
-      [functor, src0, src1, dst, simplified_num_dims, simplified_src0_dims, simplified_src1_dims,
+      0, dst_elem_cnt,
+      [functor, src0, src1, dst, simplified_num_dims, simplified_src_dims, if_broadcast_src0,
        simplified_dst_dims](int64_t begin, int64_t end) {
-        auto src0_index_helper =
-            NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_src0_dims, simplified_num_dims);
-        auto src1_index_helper =
-            NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_src1_dims, simplified_num_dims);
+        auto src_index_helper =
+            NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src_dims, simplified_num_dims);
         auto dst_index_helper =
-            NdIndexOffsetHelper<int64_t, kMaxNumDims>(simplified_dst_dims, simplified_num_dims);
-        int64_t src0_index[kMaxNumDims];
-        int64_t src1_index[kMaxNumDims];
-        int64_t dst_index[kMaxNumDims];
-        for (int64_t offset = begin; offset < end; offset++) {
+            OffsetToIndexCalculator<IndexType, kMaxNumDims>(simplified_dst_dims, simplified_num_dims);
+        IndexType src_index[kMaxNumDims];
+        IndexType dst_index[kMaxNumDims];
+        for (IndexType offset = begin; offset < end; offset++) {
           dst_index_helper.OffsetToNdIndex(offset, dst_index, simplified_num_dims);
           for (int i = 0; i < kMaxNumDims; i++) {
             if (i < simplified_num_dims) {
-              src0_index[i] = (simplified_src0_dims[i] != 1) ? dst_index[i] : 0;
-              src1_index[i] = (simplified_src1_dims[i] != 1) ? dst_index[i] : 0;
+              src_index[i] = (simplified_src_dims[i] != 1) ? dst_index[i] : 0;
             }
           }
-          const int64_t src0_offset =
-              src0_index_helper.NdIndexToOffset(src0_index, simplified_num_dims);
-          const int64_t src1_offset =
-              src1_index_helper.NdIndexToOffset(src1_index, simplified_num_dims);
-          dst[offset] = functor(src0[src0_offset], src1[src1_offset]);
+          const IndexType src_offset =
+              src_index_helper.NdIndexToOffset(src_index, simplified_num_dims);
+          if (if_broadcast_src0) {
+            dst[offset] = functor(src0[src_offset], src1[offset]);
+          } else {
+            dst[offset] = functor(src0[offset], src1[src_offset]);
+          }
         }
-      });
+      },
+      1);
+}
+
+template<BinaryOp binary_op, typename Src, typename Dst>
+void LaunchGeneralDispatchIndexType(CpuStream* cpu_stream, size_t simplified_num_dims,
+                                    const int64_t* simplified_src0_dims, const Src* src0,
+                                    const int64_t* simplified_src1_dims, const Src* src1,
+                                    const int64_t* simplified_dst_dims, Dst* dst, Scalar attr0,
+                                    Scalar attr1) {
+  const int64_t dst_elem_cnt = GetElementCount(simplified_num_dims, simplified_dst_dims);
+  if (dst_elem_cnt < (GetMaxVal<int32_t>() / 2)) {
+    LaunchGeneral<binary_op, Src, Dst, int32_t>(
+        cpu_stream, simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+        simplified_dst_dims, dst, dst_elem_cnt, attr0, attr1);
+  } else {
+    LaunchGeneral<binary_op, Src, Dst, int64_t>(
+        cpu_stream, simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+        simplified_dst_dims, dst, dst_elem_cnt, attr0, attr1);
+  }
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
@@ -251,9 +273,9 @@ void DispatchLaunch(Stream* stream, size_t num_src0_dims, const int64_t* src0_di
       LaunchMatrixWithCol<binary_op, Src, Dst>(cpu_stream, simplified_src0_dims, src0,
                                                simplified_src1_dims, src1, dst, attr0, attr1);
     } else {
-      LaunchGeneral<binary_op, Src, Dst>(cpu_stream, simplified_num_dims, simplified_src0_dims,
-                                         src0, simplified_src1_dims, src1, simplified_dst_dims, dst,
-                                         attr0, attr1);
+      LaunchGeneralDispatchIndexType<binary_op, Src, Dst>(
+          cpu_stream, simplified_num_dims, simplified_src0_dims, src0, simplified_src1_dims, src1,
+          simplified_dst_dims, dst, attr0, attr1);
     }
   }
 }
