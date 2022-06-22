@@ -47,8 +47,7 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
 };
 
 template<typename T>
-class CublasFusedMLPGradKernel final : public user_op::OpKernel,
-                                                public user_op::CudaGraphSupport {
+class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   CublasFusedMLPGradKernel() {
     OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
@@ -76,16 +75,16 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const override {
-    printf("Here enter kernel \n"); 
+    printf("Here enter kernel \n");
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     void* dy_tmp_buf = tmp_buffer->mut_dptr();
-    size_t offset = 0;             
+    size_t offset = 0;
 
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
-    
-    const int64_t weight_size = ctx->input_size("weight"); 
+
+    const int64_t weight_size = ctx->input_size("weight");
 
     const auto* matmul_grad_cache =
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
@@ -104,168 +103,172 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
     double beta = 0.0;
     auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
-    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_DEFAULT; // = CUBLASLT_EPILOGUE_DRELU_BGRAD
+    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_DEFAULT;  // = CUBLASLT_EPILOGUE_DRELU_BGRAD
 
     // currently only support 2D matmul.
     DimVector dy_shape(2);
     DimVector weight_shape(2);
     DimVector hidden_shape(2);
     dy->shape().ToDimVector(&dy_shape);
-    const void* dgrad_buf = dy->dptr(); 
+    const void* dgrad_buf = dy->dptr();
 
-    for(int idx = weight_size - 1; idx > -1; idx--){
-        if(idx != 0){
-            const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", idx);
-            printf("weight shape is: %ld, %ld \n", weight->shape().At(0), weight->shape().At(1)); 
-            const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", idx-1);
-            printf("aux shape is: %ld, %ld \n", aux->shape().At(0), aux->shape().At(1)); 
-            user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", idx-1);
-            printf("dbias shape is: %ld\n", d_bias->shape().At(0)); 
+    for (int idx = weight_size - 1; idx > -1; idx--) {
+      if (idx != 0) {
+        const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", idx);
+        printf("weight shape is: %ld, %ld \n", weight->shape().At(0), weight->shape().At(1));
+        const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", idx - 1);
+        printf("aux shape is: %ld, %ld \n", aux->shape().At(0), aux->shape().At(1));
+        user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", idx - 1);
+        printf("dbias shape is: %ld\n", d_bias->shape().At(0));
 
-            weight->shape().ToDimVector(&weight_shape);
-            epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD; 
-            InferMatmulCublasMNK(dy_shape, weight_shape,
-                                /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                                /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
-                                &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
-            SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/true,
-                        /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                        /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, d_bias->mut_dptr(),
-                        aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 16 * 1024 * 1024);
-            /*
-            a = dy, b = weight
-            cublas_a=weight, cublas_b=dy
-            */
-            OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
-            OF_CUBLAS_CHECK(
-                cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
-                            &sp_alpha, weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-                            matmul_grad_cache->cublas_b_desc, &sp_beta, dy_tmp_buf,
-                            matmul_grad_cache->cublas_c_desc, dy_tmp_buf,
-                            matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
-                            cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-        } else {
-          const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-          printf("weight shape is: %ld, %ld \n", weight->shape().At(0), weight->shape().At(1)); 
+        weight->shape().ToDimVector(&weight_shape);
+        epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
+        InferMatmulCublasMNK(dy_shape, weight_shape,
+                             /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                             /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m,
+                             &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+        SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/true,
+                      /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                      /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue,
+                      d_bias->mut_dptr(), aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda,
+                      cublas_ldb, cublas_ldc, 16 * 1024 * 1024);
+        /*
+        a = dy, b = weight
+        cublas_a=weight, cublas_b=dy
+        */
+        OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
+        OF_CUBLAS_CHECK(cublasLtMatmul(
+            cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
+            matmul_grad_cache->cublas_b_desc, &sp_beta, dy_tmp_buf,
+            matmul_grad_cache->cublas_c_desc, dy_tmp_buf, matmul_grad_cache->cublas_c_desc, nullptr,
+            cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
+            cuda_stream->cuda_stream()));
+      } else {
+        const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
+        printf("weight shape is: %ld, %ld \n", weight->shape().At(0), weight->shape().At(1));
 
-          weight->shape().ToDimVector(&weight_shape);
-          epilogue = CUBLASLT_EPILOGUE_DEFAULT; 
-          InferMatmulCublasMNK(dy_shape, weight_shape,
-                              /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                              /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
-                              &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
-          SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
-                        /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                        /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr,
-                        nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
-          /*
-          a = dy, b = weight
-          cublas_a=weight, cublas_b=dy
-          */
-          OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
-          OF_CUBLAS_CHECK(
-              cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
-                          &sp_alpha, weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-                          matmul_grad_cache->cublas_b_desc, &sp_beta, d_grad->mut_dptr(),
-                          matmul_grad_cache->cublas_c_desc, d_grad->mut_dptr(),
-                          matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
-                          cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-        }
-        alpha = 1.0;
-        sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
-        beta = 0.0;
-        sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
+        weight->shape().ToDimVector(&weight_shape);
+        epilogue = CUBLASLT_EPILOGUE_DEFAULT;
+        InferMatmulCublasMNK(dy_shape, weight_shape,
+                             /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                             /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m,
+                             &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+        SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
+                      /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                      /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr,
+                      nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc,
+                      8 * 1024 * 1024);
+        /*
+        a = dy, b = weight
+        cublas_a=weight, cublas_b=dy
+        */
+        OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
+        OF_CUBLAS_CHECK(cublasLtMatmul(
+            cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
+            matmul_grad_cache->cublas_b_desc, &sp_beta, d_grad->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, d_grad->mut_dptr(), matmul_grad_cache->cublas_c_desc,
+            nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
+            cuda_stream->cuda_stream()));
+      }
+      alpha = 1.0;
+      sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
+      beta = 0.0;
+      sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
-        // currently only support 2D matmul.
-        if(idx != 0){
-          const user_op::Tensor* hidden = ctx->Tensor4ArgNameAndIndex("hidden", idx-1); // here
-          user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", idx);
-          printf("hidden shape is: %ld, %ld \n", hidden->shape().At(0), hidden->shape().At(1)); 
-          printf("d_weight shape is: %ld, %ld \n", d_weight->shape().At(0), d_weight->shape().At(1)); 
+      // currently only support 2D matmul.
+      if (idx != 0) {
+        const user_op::Tensor* hidden = ctx->Tensor4ArgNameAndIndex("hidden", idx - 1);  // here
+        user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", idx);
+        printf("hidden shape is: %ld, %ld \n", hidden->shape().At(0), hidden->shape().At(1));
+        printf("d_weight shape is: %ld, %ld \n", d_weight->shape().At(0), d_weight->shape().At(1));
 
-          hidden->shape().ToDimVector(&hidden_shape);
+        hidden->shape().ToDimVector(&hidden_shape);
 
-          epilogue = CUBLASLT_EPILOGUE_DEFAULT;
+        epilogue = CUBLASLT_EPILOGUE_DEFAULT;
 
-          InferMatmulCublasMNK(dy_shape, hidden_shape,
-                              /*transpose_a=*/ep::primitive::BlasTransposeType::T,
-                              /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
-                              &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+        InferMatmulCublasMNK(dy_shape, hidden_shape,
+                             /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+                             /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m,
+                             &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
 
-          SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
-                        /*transpose_a=*/ep::primitive::BlasTransposeType::T,
-                        /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
-                        cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
-          
-          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
-          
-          OF_CUBLAS_CHECK(
-            cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
-                        &sp_alpha, hidden->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-                        matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
-                        matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
-                        matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
-                        kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
-          
-          // compute dy shape
-          dy_shape.at(1) = weight_shape.at(1);
-          // compute dybuf
-          dgrad_buf = dy_tmp_buf; 
-          // if(idx != 0){
-            offset += GetCudaAlignedSize(dy_shape.at(0) * dy_shape.at(1) * sizeof(T)); 
-            printf("Offset size is: %ld \n", dy_shape.at(0) * dy_shape.at(1)); 
-            dy_tmp_buf = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + offset);
-          // }
-        } else {
-          user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", 0);
-          x->shape().ToDimVector(&hidden_shape);
-          epilogue = CUBLASLT_EPILOGUE_DEFAULT;
-          InferMatmulCublasMNK(dy_shape, hidden_shape,
-                              /*transpose_a=*/ep::primitive::BlasTransposeType::T,
-                              /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
-                              &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
-          SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
-                        /*transpose_a=*/ep::primitive::BlasTransposeType::T,
-                        /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
-                        cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
-          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
-          OF_CUBLAS_CHECK(
-              cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
-                          &sp_alpha, x->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-                          matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
-                          matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
-                          matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
-                          kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
-          OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
-          OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
-        }
+        SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
+                      /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+                      /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr,
+                      nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc,
+                      8 * 1024 * 1024);
+
+        OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
+
+        OF_CUBLAS_CHECK(cublasLtMatmul(
+            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            hidden->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
+            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
+            kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
+
+        // compute dy shape
+        dy_shape.at(1) = weight_shape.at(1);
+        // compute dybuf
+        dgrad_buf = dy_tmp_buf;
+        // if(idx != 0){
+        offset += GetCudaAlignedSize(dy_shape.at(0) * dy_shape.at(1) * sizeof(T));
+        printf("Offset size is: %ld \n", dy_shape.at(0) * dy_shape.at(1));
+        dy_tmp_buf = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + offset);
+        // }
+      } else {
+        user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", 0);
+        x->shape().ToDimVector(&hidden_shape);
+        epilogue = CUBLASLT_EPILOGUE_DEFAULT;
+        InferMatmulCublasMNK(dy_shape, hidden_shape,
+                             /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+                             /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m,
+                             &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+        SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
+                      /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+                      /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr,
+                      nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc,
+                      8 * 1024 * 1024);
+        OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
+        OF_CUBLAS_CHECK(cublasLtMatmul(
+            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            x->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
+            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
+            kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
+        OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
+        OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
+      }
     }
-    printf("end kernel \n"); 
+    printf("end kernel \n");
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(dtype)        \
-  REGISTER_USER_KERNEL("cublas_fused_mlp_grad")             \
-      .SetCreateFn<CublasFusedMLPGradKernel<dtype>>()         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+#define REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("cublas_fused_mlp_grad")                                        \
+      .SetCreateFn<CublasFusedMLPGradKernel<dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
-        .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
-            const int64_t weight_size = ctx->input_size("weight"); \
-            const Shape& dy_shape = ctx->InputShape("dy", 0); \
-            int64_t m = dy_shape.At(0); \
-            int64_t k = dy_shape.At(1); \
-            int64_t tmp_buffer_size = 0; \
-            for(int idx = weight_size-1; idx > 0; idx--){ \
-              const Shape& weight_shape = ctx->InputShape("weight", idx); \
-              k = weight_shape.At(1); \
-              printf("M is: %ld, K is: %ld \n", m, k); \
-              tmp_buffer_size += GetCudaAlignedSize(m * k * sizeof(dtype)); \
-            } \
-            printf("Success infer tmp \n"); \
-            return tmp_buffer_size;                                                         \
-        });
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
+        const int64_t weight_size = ctx->input_size("weight");                         \
+        const Shape& dy_shape = ctx->InputShape("dy", 0);                              \
+        int64_t m = dy_shape.At(0);                                                    \
+        int64_t k = dy_shape.At(1);                                                    \
+        int64_t tmp_buffer_size = 0;                                                   \
+        for (int idx = weight_size - 1; idx > 0; idx--) {                              \
+          const Shape& weight_shape = ctx->InputShape("weight", idx);                  \
+          k = weight_shape.At(1);                                                      \
+          printf("M is: %ld, K is: %ld \n", m, k);                                     \
+          tmp_buffer_size += GetCudaAlignedSize(m * k * sizeof(dtype));                \
+        }                                                                              \
+        printf("Success infer tmp \n");                                                \
+        return tmp_buffer_size;                                                        \
+      });
 
 REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(float)
 REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(double)

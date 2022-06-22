@@ -176,7 +176,6 @@ Maybe<void> FusedMatmulBiasAddReluDropout::Apply(
       JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = matmul_relu_bias_bgrad->at(2);
       ;
     }
-
   }
 
   // For the first layer, we need to use 2 matmul to get grads.

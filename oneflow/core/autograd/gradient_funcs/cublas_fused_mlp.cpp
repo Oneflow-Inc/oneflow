@@ -99,7 +99,8 @@ Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const Tenso
 //   if (!ctx->skip_final_activation) {
 //     // step1: use dy and final output to get last layer's relu grad.
 //     last_bias_dy = JUST(functional::ReluGrad(JUST(VectorAt(out_grads, 0)),
-//                                              JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num))));
+//                                              JUST(VectorAt(ctx->SavedTensors(), 1 +
+//                                              weight_num))));
 //   }
 
 //   // step2: use reduce_sum to get last layer's bias grad.
@@ -221,33 +222,31 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
 
   std::shared_ptr<one::Tensor> cublas_dy = last_bias_dy;
   const auto& fused_mlp_grad = JUST(functional::FusedMLPGrad(
-      cublas_dy, JUST(VectorAt(ctx->SavedTensors(), 0)),
-      weights, cublas_auxs, 
-      hiddens));
+      cublas_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), weights, cublas_auxs, hiddens));
 
   if (ctx->x_requires_grad) {
     // dx:
     JUST(VectorAt(*in_grads, 0)) = fused_mlp_grad->at(0);
   }
-  
+
   for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > -1; hidden_layer_idx--) {
-    if(hidden_layer_idx != 0){
+    if (hidden_layer_idx != 0) {
       if (JUST(VectorAt(ctx->biases_requires_grad, (hidden_layer_idx - 1)))) {
         // dbias
         JUST(VectorAt(*in_grads, weight_num + hidden_layer_idx)) =
-          fused_mlp_grad->at(1 + hidden_layer_idx - 1);  // NOLINT
+            fused_mlp_grad->at(1 + hidden_layer_idx - 1);  // NOLINT
       }
     }
 
     // dw
     if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))) {
-      JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) = fused_mlp_grad->at(1 + weight_num-1 + hidden_layer_idx);
+      JUST(VectorAt(*in_grads, (1 + hidden_layer_idx))) =
+          fused_mlp_grad->at(1 + weight_num - 1 + hidden_layer_idx);
     }
   }
-  printf("Here success3 \n"); 
+  printf("Here success3 \n");
   return Maybe<void>::Ok();
 }
-
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("cublas_fused_mlp", CublasFusedMLP);
 

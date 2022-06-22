@@ -1014,28 +1014,27 @@ class FusedMLPGradFunctor {
                                     .Input("x")
                                     .Input("weight", n)
                                     .Input("aux", n)
-                                    .Input("hidden", n-1)
+                                    .Input("hidden", n - 1)
                                     .Output("d_grad")
-                                    .Output("d_bias", n-1)
+                                    .Output("d_bias", n - 1)
                                     .Output("d_weight", n)
                                     .Build());
     }
 #endif
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy, 
-                           const std::shared_ptr<one::Tensor>& x, 
-                           const TensorTuple& weight,
-                           const TensorTuple& aux, 
-                           const TensorTuple& hidden) const {
-      const int64_t weight_size = weight.size();
-      TensorTuple input(2 + 3 * weight_size - 1);
-      input[0] = dy;
-      input[1] = x;
-      std::copy(weight.begin(), weight.end(), input.begin() + 2);
-      std::copy(aux.begin(), aux.end(), input.begin() + 2 + weight_size);
-      std::copy(hidden.begin(), hidden.end(), input.begin() + 2 + 2 * weight_size);
-      return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input);
-    }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x, const TensorTuple& weight,
+                                const TensorTuple& aux, const TensorTuple& hidden) const {
+    const int64_t weight_size = weight.size();
+    TensorTuple input(2 + 3 * weight_size - 1);
+    input[0] = dy;
+    input[1] = x;
+    std::copy(weight.begin(), weight.end(), input.begin() + 2);
+    std::copy(aux.begin(), aux.end(), input.begin() + 2 + weight_size);
+    std::copy(hidden.begin(), hidden.end(), input.begin() + 2 + 2 * weight_size);
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input);
+  }
+
  private:
 #if CUDA_VERSION >= 11060
   std::vector<std::shared_ptr<OpExpr>> fused_op_;

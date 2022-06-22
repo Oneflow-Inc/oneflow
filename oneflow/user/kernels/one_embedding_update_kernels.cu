@@ -279,6 +279,7 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   MomentumEmbeddingUpdateKernel() = default;
   ~MomentumEmbeddingUpdateKernel() override = default;
+
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -350,6 +351,7 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   AdamEmbeddingUpdateKernel() = default;
   ~AdamEmbeddingUpdateKernel() override = default;
+
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -432,6 +434,7 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   AdagradEmbeddingUpdateKernel() = default;
   ~AdagradEmbeddingUpdateKernel() override = default;
+
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -505,6 +508,7 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   FtrlEmbeddingUpdateKernel() = default;
   ~FtrlEmbeddingUpdateKernel() override = default;
+
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {

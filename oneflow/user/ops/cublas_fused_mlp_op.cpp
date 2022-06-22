@@ -174,7 +174,8 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
       std::string cublas_dy = last_bias_grad;
       // for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
       //   user_op::UserOpConfWrapperBuilder cublas_bias_add_relu_matmul_grad_builder(
-      //       op.op_name() + "_cublas_bias_add_relu_matmul_grad_" + std::to_string(hidden_layer_idx));
+      //       op.op_name() + "_cublas_bias_add_relu_matmul_grad_" +
+      //       std::to_string(hidden_layer_idx));
       //   user_op::UserOpConfWrapper cublas_bias_add_relu_matmul_grad_op =
       //       cublas_bias_add_relu_matmul_grad_builder.Op("cublas_bias_add_relu_matmul_grad")
       //           .Input("dy", cublas_dy)
@@ -221,46 +222,43 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
       //   op.BindGradTensorWithOpInput(matmul_async_grad_op.output("d_weight", 0), "weights", 0);
       // }
 
-      user_op::UserOpConfWrapperBuilder fused_mlp_grad_builder(
-            op.op_name() + "_fused_mlp_grad");
+      user_op::UserOpConfWrapperBuilder fused_mlp_grad_builder(op.op_name() + "_fused_mlp_grad");
       fused_mlp_grad_builder.Op("cublas_fused_mlp_grad")
           .Input("dy", cublas_dy)
           .Input("x", op.input("x", 0))
           .Output("d_grad")
           .Output("d_bias", weight_num - 1)
-          .Output("d_weight", weight_num); 
+          .Output("d_weight", weight_num);
 
-      printf("Weight num is: %ld \n", weight_num); 
+      printf("Weight num is: %ld \n", weight_num);
 
       for (int32_t hidden_layer_idx = 0; hidden_layer_idx < weight_num; hidden_layer_idx++) {
         fused_mlp_grad_builder.Input("weight", op.input("weights", hidden_layer_idx))
-                              .Input("aux", op.output("cublas_aux", hidden_layer_idx));
-        printf("111 \n");  
-        if(hidden_layer_idx != weight_num - 1){
-          fused_mlp_grad_builder.Input("hidden", op.output("hidden", hidden_layer_idx)); 
-          printf("222 \n");  
-
+            .Input("aux", op.output("cublas_aux", hidden_layer_idx));
+        printf("111 \n");
+        if (hidden_layer_idx != weight_num - 1) {
+          fused_mlp_grad_builder.Input("hidden", op.output("hidden", hidden_layer_idx));
+          printf("222 \n");
         }
       }
-      user_op::UserOpConfWrapper fused_mlp_grad_op = fused_mlp_grad_builder.Build(); 
+      user_op::UserOpConfWrapper fused_mlp_grad_op = fused_mlp_grad_builder.Build();
 
       AddOp(fused_mlp_grad_op);
 
       for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > -1; hidden_layer_idx--) {
-        if(hidden_layer_idx != 0){
+        if (hidden_layer_idx != 0) {
           if (op.NeedGenGradTensor4OpInput("biases", hidden_layer_idx - 1)) {
             op.BindGradTensorWithOpInput(fused_mlp_grad_op.output("d_bias", hidden_layer_idx - 1),
                                          "biases",
                                          hidden_layer_idx - 1);  // previous layers bias grad
-            printf("333 \n");  
-
+            printf("333 \n");
           }
         }
-        
+
         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
           op.BindGradTensorWithOpInput(fused_mlp_grad_op.output("d_weight", hidden_layer_idx),
                                        "weights", hidden_layer_idx);
-          printf("444 \n");  
+          printf("444 \n");
         }
       }
 

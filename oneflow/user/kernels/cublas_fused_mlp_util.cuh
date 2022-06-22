@@ -211,7 +211,7 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
                    ep::primitive::BlasTransposeType transpose_a,
                    ep::primitive::BlasTransposeType transpose_b, cublasLtEpilogue_t epilogue,
                    const void* d_bias_ptr, const void* aux_ptr, size_t cublas_m, size_t cublas_n,
-                   size_t cublas_k, int64_t cublas_lda, int64_t cublas_ldb, int64_t cublas_ldc, 
+                   size_t cublas_k, int64_t cublas_lda, int64_t cublas_ldb, int64_t cublas_ldc,
                    size_t cublas_workspace_size) {
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
       matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
@@ -222,19 +222,17 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
   // https://docs.nvidia.com/cuda/cublas/index.html#cublasLtPointerMode_t)
   // cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
   // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-  //     matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
-  
+  //     matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode,
+  //     sizeof(mode)));
 
   OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(
-    matmul_grad_cache->cublas_preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, 
-    &cublas_workspace_size,
-    sizeof(cublas_workspace_size)));
-  
+      matmul_grad_cache->cublas_preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+      &cublas_workspace_size, sizeof(cublas_workspace_size)));
+
   uint32_t pointer_mode = CUBLASLT_POINTER_MODE_MASK_HOST;
   OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(matmul_grad_cache->cublas_preference,
                                                        CUBLASLT_MATMUL_PREF_POINTER_MODE_MASK,
                                                        &pointer_mode, sizeof(pointer_mode)));
-
 
   // transpose_a = False, transpose_b = True. But in cublas is reversed.
   const cublasOperation_t cublas_trans_a =

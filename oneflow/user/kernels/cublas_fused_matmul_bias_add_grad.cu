@@ -84,11 +84,12 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
     if (cublas_k != 1) {
-      SetCublasAttr(
-          matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
-          /*transpose_a=*/ep::primitive::BlasTransposeType::T,
-          /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, b_grad->mut_dptr(),
-          /*aux_ptr=*/nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 16 * 1024 * 1024);
+      SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
+                    /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+                    /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue,
+                    b_grad->mut_dptr(),
+                    /*aux_ptr=*/nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb,
+                    cublas_ldc, 16 * 1024 * 1024);
 
       /*
       a = dy, b = x
