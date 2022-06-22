@@ -43,6 +43,8 @@ class VirtualMachine final {
 
   Maybe<void> CloseVMThreads();
 
+  // Never called in vm work threads.
+  // VM sync must be called to ensure all working instructions are finished.
   Maybe<void> MemShrinkAll();
 
  private:

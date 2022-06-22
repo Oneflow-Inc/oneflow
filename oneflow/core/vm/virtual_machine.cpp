@@ -19,6 +19,8 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/shrinkable_cache.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -158,11 +160,47 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+class SingleThreadScheduleCtx : public vm::ScheduleCtx {
+ public:
+  SingleThreadScheduleCtx() = default;
+  ~SingleThreadScheduleCtx() = default;
+
+  void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
+    while (thread_ctx->TryReceiveAndRun() > 0) {}
+  }
+};
+
+void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
+  do { vm->Schedule(schedule_ctx); } while (!(vm->SchedulerEmpty()));
+}
+
+}  // namespace
+
 Maybe<void> VirtualMachine::MemShrinkAll() {
-  // Call MemShrinkAll to release all cached memory.
-  // Note this can only be called at main thread; and before call this VM sync must be called
-  // to ensure all working instructions are finished.
-  vm_->MemShrinkAll();
+  JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+    auto bc = std::make_shared<BlockingCounter>(1);
+    vm_->InsertProbe([bc](vm::VirtualMachineEngine* engine) {
+      if (engine->mut_active_stream_list()->size()) { return false; }
+      INTRUSIVE_FOR_EACH_PTR(thread_ctx, engine->mut_thread_ctx_list()) {
+        INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
+          auto* allocator = stream->device_ctx()->mut_allocator();
+          auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
+          if (cache != nullptr) { cache->Shrink(); }
+        }
+      }
+      bc->Decrease();
+      return true;
+    });
+    if (vm_threads_closed_) {
+      ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx());
+    } else {
+      pending_notifier_.Notify();
+    }
+    JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 
@@ -233,24 +271,6 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   }
   return Maybe<void>::Ok();
 }
-
-namespace {
-
-class SingleThreadScheduleCtx : public vm::ScheduleCtx {
- public:
-  SingleThreadScheduleCtx() = default;
-  ~SingleThreadScheduleCtx() = default;
-
-  void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
-    while (thread_ctx->TryReceiveAndRun() > 0) {}
-  }
-};
-
-void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
-  do { vm->Schedule(schedule_ctx); } while (!(vm->SchedulerEmpty()));
-}
-
-}  // namespace
 
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
   CHECK_OR_RETURN(vm_->SchedulerEmpty()) << "vm scheduler not empty. May be a fatal error occured";
