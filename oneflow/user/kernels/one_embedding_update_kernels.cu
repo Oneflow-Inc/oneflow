@@ -1,12 +1,9 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -205,26 +202,6 @@ __global__ void FtrlUpdateKernel(const int32_t line_size, const int32_t embeddin
 
 }  // namespace
 
-constexpr int kSGDBlockSize = 256;
-constexpr int kSGDNumWaves = 8;
-
-void GetSgdNumBlocks(int64_t n, int* num_blocks) {
-  int dev;
-  {
-    cudaError_t err = cudaGetDevice(&dev);
-  }
-  int sm_count;
-  {
-    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
-  }
-  int tpm;
-  {
-    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
-  }
-  *num_blocks = std::max<int>(1, std::min<int64_t>((n + kSGDBlockSize - 1) / kSGDBlockSize,
-                                                   sm_count * tpm / kSGDBlockSize * kSGDNumWaves));
-}
-
 template<typename T, typename G, typename IDX>
 class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
@@ -272,43 +249,19 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     // update kernel
-    const T* unique_embeddings_ptr;
-    T* updated_unique_embeddings_ptr;
-    GetUniqueValueAndUpdatedPtr<T>(ctx, current_iter_, &unique_embeddings_ptr,
-                                   &updated_unique_embeddings_ptr);
-    int64_t grad_elem_cnt = embedding_grad->shape().elem_cnt();
-    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_SAVE_NUM_UNIQUE_MATRIX", true)) {
-      embedding::NumUniques* num_uniques =
-          Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
-              ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
-      uint32_t num_unique = num_uniques->GetNumUnique(current_iter_);
-      grad_elem_cnt = num_unique * embedding_size;
-    }
-    int num_blocks = 0; 
-    GetSgdNumBlocks(grad_elem_cnt, &num_blocks); 
-
-    // SGDUpdateKernel<T, G, IDX><<<BlocksNum4ThreadsNum(grad_elem_cnt), kCudaThreadsNumPerBlock, 0,
-    //                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-    //     embedding_size, scale, l1, l2, weight_decay,
-    //     reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-    //     down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
-    //     updated_unique_embeddings_ptr);
-
-    SGDUpdateKernel<T, G, IDX><<<num_blocks, kSGDBlockSize, 0,
-                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        embedding_size, scale, l1, l2, weight_decay,
-        reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
-        down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings_ptr,
-        updated_unique_embeddings_ptr);
-    current_iter_++;
+    SGDUpdateKernel<T, G, IDX>
+        <<<BlocksNum4ThreadsNum(embedding_grad->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+            embedding_size, scale, l1, l2, weight_decay,
+            reinterpret_cast<const IDX*>(num_unique_ids->dptr()), learning_rate_ptr, scale_by_ptr,
+            down_scale_by_ptr, skip_if_ptr, embedding_grad->dptr<G>(), unique_embeddings->dptr<T>(),
+            updated_unique_embeddings->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
 #define IDX_DATA_TYPE_SEQ                           \
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
-
 #define REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)      \
   REGISTER_USER_KERNEL("sgd_embedding_update")                                                    \
       .SetCreateFn<                                                                               \
@@ -319,16 +272,13 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))     \
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))        \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
-
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_SGD_EMBEDDING_UPDATE_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
-
 template<typename T, typename G, typename IDX>
 class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   MomentumEmbeddingUpdateKernel() = default;
   ~MomentumEmbeddingUpdateKernel() override = default;
-
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -382,7 +332,6 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
 #define REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair) \
   REGISTER_USER_KERNEL("momentum_embedding_update")                                               \
       .SetCreateFn<MomentumEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                  \
@@ -393,17 +342,14 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))     \
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))        \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
-
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_MOMENTUM_EMBEDDING_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  IDX_DATA_TYPE_SEQ)
-
 template<typename T, typename G, typename IDX>
 class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   AdamEmbeddingUpdateKernel() = default;
   ~AdamEmbeddingUpdateKernel() override = default;
-
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -418,7 +364,6 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
     const int64_t line_size = unique_embeddings->shape().At(1);
     const int64_t embedding_size = embedding_grad->shape().At(1);
     CHECK_EQ(line_size, embedding_size * 3);
-
     const float l1 = ctx->Attr<float>("l1");
     const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
@@ -470,7 +415,6 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
 #define REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair)      \
   REGISTER_USER_KERNEL("adam_embedding_update")                                                    \
       .SetCreateFn<                                                                                \
@@ -481,16 +425,13 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))      \
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))         \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
-
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ADAM_EMBEDDING_UPDATE_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
-
 template<typename T, typename G, typename IDX>
 class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   AdagradEmbeddingUpdateKernel() = default;
   ~AdagradEmbeddingUpdateKernel() override = default;
-
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -505,7 +446,6 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
     const int64_t line_size = unique_embeddings->shape().At(1);
     const int64_t embedding_size = embedding_grad->shape().At(1);
     CHECK_EQ(line_size, embedding_size * 2);
-
     const float l1 = ctx->Attr<float>("l1");
     const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
@@ -547,7 +487,6 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
 #define REGISTER_CUDA_ADAGRAD_EMBEDDING_UPDATE_KERNEL(t_dtype_pair, g_type_pair, idx_dtype_pair) \
   REGISTER_USER_KERNEL("adagrad_embedding_update")                                               \
       .SetCreateFn<AdagradEmbeddingUpdateKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                  \
@@ -558,17 +497,14 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))    \
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(g_type_pair))       \
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
-
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ADAGRAD_EMBEDDING_UPDATE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ,
                                  IDX_DATA_TYPE_SEQ)
-
 template<typename T, typename G, typename IDX>
 class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   FtrlEmbeddingUpdateKernel() = default;
   ~FtrlEmbeddingUpdateKernel() override = default;
-
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -637,5 +573,4 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("unique_embeddings", 0) == OF_PP_PAIR_SECOND(t_dtype_pair)));
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_FTRL_EMBEDDING_UPDATE_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
-
 }  // namespace oneflow
