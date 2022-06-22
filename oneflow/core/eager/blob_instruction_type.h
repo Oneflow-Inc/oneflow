@@ -20,13 +20,11 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
-#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/vm/ep_event.h"
 #include "oneflow/core/vm/ep_device_context.h"
-#include "oneflow/core/common/env_var/ep_based_cuda.h"
 
 namespace oneflow {
 namespace vm {
@@ -56,32 +54,6 @@ class CpuRecordEventInstructionType final : public vm::InstructionType {
   }
   void Compute(vm::Instruction* instruction) const override {}
 };
-
-#ifdef WITH_CUDA
-
-class CudaRecordEventInstructionType final : public vm::InstructionType {
- public:
-  CudaRecordEventInstructionType() = default;
-  ~CudaRecordEventInstructionType() override = default;
-
-  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAsTailOnly; }
-
-  void InitInstructionStatus(Instruction* instruction) const override {
-    auto* status_buffer = instruction->mut_status_buffer();
-    auto* stream = instruction->mut_stream();
-    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
-    auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream->device_ctx().get());
-    const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
-    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
-    CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
-  }
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
-    return "RecordEvent";
-  }
-  void Compute(vm::Instruction* instruction) const override {}
-};
-
-#endif
 
 class EpRecordEventInstructionType final : public vm::InstructionType {
  public:
@@ -137,16 +109,6 @@ struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventIn
   static Maybe<const vm::InstructionType*> GetInstructionType(DeviceType device_type) {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuRecordEventInstructionType>();
-    } else if (device_type == DeviceType::kCUDA) {
-      if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
-        return SingletonPtr<vm::EpRecordEventInstructionType>();
-      } else {
-#ifdef WITH_CUDA
-        return SingletonPtr<vm::CudaRecordEventInstructionType>();
-#else
-        UNIMPLEMENTED_THEN_RETURN();
-#endif
-      }
     } else {
       return SingletonPtr<vm::EpRecordEventInstructionType>();
     }
