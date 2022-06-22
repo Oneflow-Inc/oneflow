@@ -20,7 +20,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=False, atol=1e-3)
 def _test_global_tensordot_against_pytorch(test_case, ndim, placement, sbp):
     k = random(1, 2) * 8
     tensordot_dim = random(0, ndim + 1).to(int)
