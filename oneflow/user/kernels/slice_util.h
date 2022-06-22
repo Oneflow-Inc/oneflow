@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
+#include <sstream>
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
@@ -59,6 +60,15 @@ struct SliceParams {
     if (start[dim] != 0) { return false; }
     if (size[dim] != dims[dim]) { return false; }
     return true;
+  }
+
+  std::string ToString() {
+    std::stringstream ss("SliceParams:");
+    for (int i = 0; i < ndim; ++i) {
+      ss << "\n\tdim: " << i << ", start: " << start[i] << ", step: " << step[i]
+         << ", size: " << size[i];
+    }
+    return ss.str();
   }
 };
 
