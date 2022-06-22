@@ -131,53 +131,6 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
   PrimitiveFactoryFuncType primitive_factory_func_;
 };
 
-template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
-         typename InputB>
-class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BinaryElemwiseXpuKernel);
-  BinaryElemwiseXpuKernel() = default;
-  ~BinaryElemwiseXpuKernel() = default;
-
-  BinaryElemwiseXpuKernel(
-      std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn,
-      const std::string& output_name, const std::string& input_a_name,
-      const std::string& input_b_name)
-      : FunctorCreateFn(FunctorCreateFn),
-        output_name(output_name),
-        input_a_name(input_a_name),
-        input_b_name(input_b_name) {}
-
-  std::function<FunctorT(user_op::KernelComputeContext* ctx)> FunctorCreateFn;  // The functor
-
- private:
-  using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
-    const user_op::Tensor* input_b_tensor = ctx->Tensor4ArgNameAndIndex(input_b_name, 0);
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
-
-    const ShapeView input_a_shape = input_a_tensor->shape();
-    const ShapeView input_b_shape = input_b_tensor->shape();
-    const ShapeView out_shape = out_tensor->shape();
-    CHECK_EQ(input_a_shape, out_shape);
-    CHECK_EQ(input_b_shape, out_shape);
-
-    const InputA* input_a_ptr = input_a_tensor->dptr<InputA>();
-    const InputB* input_b_ptr = input_b_tensor->dptr<InputB>();
-    OutputT* out_ptr = out_tensor->mut_dptr<OutputT>();
-    const int64_t elem_cnt = input_a_shape.elem_cnt();
-
-    BinaryElemwiseXpuLauncher<device_type, FunctorT, OutputT, InputA, InputB>()(
-        ctx->stream(), elem_cnt, out_ptr, input_a_ptr, input_b_ptr, FunctorCreateFn(ctx));
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
-  std::string output_name;
-  std::string input_a_name;
-  std::string input_b_name;
-};
-
 class BinaryPrimitiveKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BinaryPrimitiveKernel);
@@ -237,19 +190,6 @@ class BinaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cu
       })                                                                                   \
       .SetIsMatchedHob(                                                                    \
           (user_op::HobDeviceType() == device)                                             \
-          && (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
-
-#define REGISTER_BINARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,              \
-                                             input_a_dtype, input_b_dtype, create_function,        \
-                                             out_name, input_a_name, input_b_name)                 \
-  REGISTER_USER_KERNEL(kernel_name)                                                                \
-      .SetCreateFn([]() {                                                                          \
-        return user_op::NewOpKernel<BinaryElemwiseXpuKernel<device, functor<out_dtype>, out_dtype, \
-                                                            input_a_dtype, input_b_dtype>>(        \
-            create_function, out_name, input_a_name, input_b_name);                                \
-      })                                                                                           \
-      .SetIsMatchedHob(                                                                            \
-          (user_op::HobDeviceType() == device)                                                     \
           && (user_op::HobDataType(input_a_name, 0) == GetDataType<out_dtype>::value));
 
 }  // namespace oneflow
