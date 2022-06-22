@@ -149,7 +149,7 @@ class NcclLogicalSendRecv final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-    return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
+    return comm_mgr->IsAsyncLaunchNcclLogicalKernel();
   }
 };
 
