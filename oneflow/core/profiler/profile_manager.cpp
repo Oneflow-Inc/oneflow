@@ -13,15 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
+#include <unordered_map>
 #include "fmt/core.h"
 #include "nlohmann/json.hpp"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/profiler/kineto_shim.h"
 #include "oneflow/core/profiler/profile_manager.h"
 #include "oneflow/core/profiler/event.h"
+#if defined(WITH_CUDA)
 #include <libkineto.h>
-#include <memory>
-#include <unordered_map>
+#endif  // WITH_CUDA
 
 using json = nlohmann::json;
 
@@ -47,6 +49,7 @@ std::string ProfileManager::DumpResultsJson() {
 }
 
 std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
+#if defined(WITH_CUDA)
   auto trace = StopTrace();
   const auto& kineto_events = *(trace.get()->activities());
   std::set<std::shared_ptr<IEvent>> custom_events;
@@ -70,7 +73,7 @@ std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
       }
     }
   }
-
+#endif  // WITH_CUDA
   std::vector<std::shared_ptr<IEvent>> events;
   while (!events_.empty()) {
     auto evt = events_.front();
@@ -92,7 +95,7 @@ std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
             [&custom_events](const std::shared_ptr<IEvent>& child) { custom_events.erase(child); });
       }
     }
-#endif
+#endif // WITH_CUDA
     events.emplace_back(evt);
   }
   return events;

@@ -37,11 +37,13 @@ class ProfileManager {
         use_cuda_(use_cuda),
         record_shapes_(record_shapes),
         record_bandwidth_(record_bandwidth) {
+#if defined(WITH_CUDA)
     std::set<ActivityType> activities{};
     if (use_cpu) { activities.insert(ActivityType::CPU); }
     if (use_cuda) { activities.insert(ActivityType::CUDA); }
     PrepareTrace(/*cpuOnly*/ false, activities);
     StartTrace();
+#endif  // WITH_CUDA
   }
 
   std::string RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,

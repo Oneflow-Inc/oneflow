@@ -29,19 +29,6 @@ nlohmann::json IEvent::ToJson() {
   return json{{"name", name_}, {"time", GetDuration<double>()}, {"input_shapes", "-"}};
 }
 
-std::string CustomEvent::Key() { return name_; }
-
-nlohmann::json CustomEvent::ToJson() {
-  auto j = IEvent::ToJson();
-  j["type"] = EventType::kCustom;
-  j["custom_type"] = type_;
-  return j;
-}
-
-std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, CustomEventType type) {
-  return std::shared_ptr<CustomEvent>(new CustomEvent(name, type));
-}
-
 void IEvent::SetStartedAt(double t) { started_at_ = t; }
 
 void IEvent::SetFinishedAt(double t) { finished_at_ = t; }
@@ -59,14 +46,29 @@ bool IEvent::IsChildOf(const IEvent* e) {
 
 const std::string& IEvent::GetName() const { return name_; }
 
+std::string CustomEvent::Key() { return name_; }
+
+nlohmann::json CustomEvent::ToJson() {
+  auto j = IEvent::ToJson();
+  j["type"] = EventType::kCustom;
+  j["custom_type"] = type_;
+  return j;
+}
+
+std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, CustomEventType type) {
+  return std::shared_ptr<CustomEvent>(new CustomEvent(name, type));
+}
+
 std::string KernelEvent::Key() { return fmt::format("{}.{}", name_, GetFormatedInputShapes()); }
 
 nlohmann::json KernelEvent::ToJson() {
   auto j = IEvent::ToJson();
   j["type"] = EventType::kOneflowKernel;
   j["input_shapes"] = GetFormatedInputShapes();
+#if defined(WITH_CUDA)
   j["memory_size"] = memory_size_;
   if (!children_.empty()) { j["children"] = children_; }
+#endif  // WITH_CUDA
   return j;
 }
 

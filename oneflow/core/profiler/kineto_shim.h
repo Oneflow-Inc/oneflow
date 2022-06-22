@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PROFILER_KINETO_SHIM_H_
 #define ONEFLOW_CORE_PROFILER_KINETO_SHIM_H_
 
+#if defined(WITH_CUDA)
+
 #include <string>
 #include <memory>
 #include <set>
@@ -60,5 +62,7 @@ ActivityTraceWrapper StopTrace();
 
 }  // namespace profiler
 }  // namespace oneflow
+
+#endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_PROFILER_KINETO_SHIM_H_
