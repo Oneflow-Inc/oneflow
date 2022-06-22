@@ -50,15 +50,10 @@ class GrpcCtrlClient final : public CtrlClient {
   void Clear() override;
   int32_t IncreaseCount(const std::string& k, int32_t v) override;
   void EraseCount(const std::string& k) override;
-  void StopHeartbeat();
 
  private:
   const ProcessCtx& process_ctx() const { return process_ctx_; }
   ProcessCtx process_ctx_;
-  bool need_heartbeat_thread_stop_;
-  std::mutex need_heartbeat_thread_stop_mtx_;
-  std::condition_variable need_heartbeat_thread_stop_cv_;
-  std::thread heartbeat_thread_;
   RpcClient rpc_client_;
 };
 
