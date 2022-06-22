@@ -194,4 +194,5 @@ OneFlow Tensor Class
             zero_, 
             nms,
             pin_memory,
+            is_pinned,
 
