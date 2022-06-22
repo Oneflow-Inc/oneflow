@@ -133,7 +133,7 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
   }
 };
@@ -168,7 +168,7 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
   }
 };
@@ -201,7 +201,7 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
   }
 };
@@ -270,7 +270,7 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
   }
 };
@@ -342,7 +342,7 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
   }
 };
@@ -476,7 +476,7 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    const EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
     return comm_mgr->IsNcclLogicalKernelLaunchSynchronized();
   }
 };
