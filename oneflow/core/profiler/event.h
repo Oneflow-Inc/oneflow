@@ -46,8 +46,7 @@ class IEvent {
   OF_DISALLOW_COPY_AND_MOVE(IEvent);
 
   IEvent() = delete;
-  explicit IEvent(const std::string& name, EventTimeUnit time_unit)
-      : name_(name), time_unit_(time_unit) {}
+  IEvent(const std::string& name, EventTimeUnit time_unit) : name_(name), time_unit_(time_unit) {}
 
   virtual std::string Key() = 0;
   virtual nlohmann::json ToJson();
@@ -127,7 +126,7 @@ class CustomEvent final : public IEvent {
 
  private:
   CustomEventType type_;
-  explicit CustomEvent(const std::string& custom_name, CustomEventType type)
+  CustomEvent(const std::string& custom_name, CustomEventType type)
       : IEvent(custom_name,
                type == CustomEventType::kDefault ? EventTimeUnit::kNS : EventTimeUnit::kUS),
         type_(type) {}
@@ -161,8 +160,8 @@ class KernelEvent final : public IEvent {
 #endif  // WITH_CUDA
 
  private:
-  explicit KernelEvent(const std::string& kernel_name,
-                       const std::function<std::vector<Shape>(void)>& shape_getter)
+  KernelEvent(const std::string& kernel_name,
+              const std::function<std::vector<Shape>(void)>& shape_getter)
       : IEvent(kernel_name, EventTimeUnit::kNS) {
     if (shape_getter) { input_shapes_ = shape_getter(); }
   }
