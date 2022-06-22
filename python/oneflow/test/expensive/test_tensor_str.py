@@ -163,7 +163,7 @@ def _test_global_tensor_str_2d(test_case, device):
 def _test_nd_sbp_tensor_str(test_case, device, sbp0, sbp1):
     placement = flow.placement(type=device, ranks=[[0, 1], [2, 3]])
     sbp = [sbp0, sbp1]
-    x = flow.ones((4, 4), placement=placement, sbp=sbp)
+    x = flow.ones((20, 20), placement=placement, sbp=sbp)
     tensor_str = str(x)
     test_case.assertTrue(str(sbp0) in tensor_str)
     test_case.assertTrue(str(sbp1) in tensor_str)
@@ -211,7 +211,7 @@ class TestTensorStrModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_nd_sbp_tensor_str,
         ]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cpu"]
 
         sbp_arg_dict = OrderedDict()
         sbp_list = [
