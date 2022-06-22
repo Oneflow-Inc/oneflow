@@ -43,10 +43,6 @@ class TestEventAndEvents(flow.unittest.TestCase):
             "type": 1,
             "input_shapes": "-",
         }
-        print(
-            kernel_event
-            == classes[kernel_event_json.get("type")].from_dict(kernel_event_json)
-        )
         test_case.assertEqual(
             kernel_event,
             classes[kernel_event_json.get("type")].from_dict(kernel_event_json),
@@ -57,8 +53,8 @@ class TestEventAndEvents(flow.unittest.TestCase):
         event1 = CustomEvent("custom", 3346, CustomEventType.Default)
         event.update(event1)
         test_case.assertEqual(event.count, 2)
-        test_case.assertEqual(event.time, 2290)
-        test_case.assertEqual(event.time_total, 4580)
+        test_case.assertEqual(event.cpu_time, 2290)
+        test_case.assertEqual(event.cpu_time_total, 4580)
 
     def test_events(test_case):
         events_json = json.dumps(
