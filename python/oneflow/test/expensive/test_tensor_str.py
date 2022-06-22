@@ -211,7 +211,7 @@ class TestTensorStrModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_nd_sbp_tensor_str,
         ]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
 
         sbp_arg_dict = OrderedDict()
         sbp_list = [
