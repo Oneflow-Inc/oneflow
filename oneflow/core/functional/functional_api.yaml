@@ -990,7 +990,7 @@
 
 - name: "fused_mlp_grad"
   signature:
-    "TensorTuple (Tensor dy, Tensor x, TensorTuple weight, TensorTuple aux, TensorTuple hidden) => FusedMLPGrad"
+    "TensorTuple (Tensor dy, Tensor x, TensorTuple weights, TensorTuple cublas_aux, TensorTuple hidden) => FusedMLPGrad"
   bind_python: False
 
 - name: "fused_matmul_bias_add_relu_dropout"

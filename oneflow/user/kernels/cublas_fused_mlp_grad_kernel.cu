@@ -75,7 +75,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache* cache) const override {
-    printf("Here enter kernel \n");
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -84,7 +83,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
 
-    const int64_t weight_size = ctx->input_size("weight");
+    const int64_t weight_size = ctx->input_size("weights");
 
     const auto* matmul_grad_cache =
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
@@ -114,12 +113,9 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
     for (int idx = weight_size - 1; idx > -1; idx--) {
       if (idx != 0) {
-        const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", idx);
-        printf("weight shape is: %ld, %ld \n", weight->shape().At(0), weight->shape().At(1));
-        const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", idx - 1);
-        printf("aux shape is: %ld, %ld \n", aux->shape().At(0), aux->shape().At(1));
-        user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", idx - 1);
-        printf("dbias shape is: %ld\n", d_bias->shape().At(0));
+        const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", idx);
+        const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx - 1);
+        user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", idx - 1);
 
         weight->shape().ToDimVector(&weight_shape);
         epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
@@ -145,9 +141,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
             cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
             cuda_stream->cuda_stream()));
       } else {
-        const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
-        printf("weight shape is: %ld, %ld \n", weight->shape().At(0), weight->shape().At(1));
-
+        const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", 0);
         weight->shape().ToDimVector(&weight_shape);
         epilogue = CUBLASLT_EPILOGUE_DEFAULT;
         InferMatmulCublasMNK(dy_shape, weight_shape,
@@ -180,10 +174,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
       // currently only support 2D matmul.
       if (idx != 0) {
         const user_op::Tensor* hidden = ctx->Tensor4ArgNameAndIndex("hidden", idx - 1);  // here
-        user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", idx);
-        printf("hidden shape is: %ld, %ld \n", hidden->shape().At(0), hidden->shape().At(1));
-        printf("d_weight shape is: %ld, %ld \n", d_weight->shape().At(0), d_weight->shape().At(1));
-
+        user_op::Tensor* d_weights = ctx->Tensor4ArgNameAndIndex("d_weights", idx);
         hidden->shape().ToDimVector(&hidden_shape);
 
         epilogue = CUBLASLT_EPILOGUE_DEFAULT;
@@ -204,8 +195,8 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         OF_CUBLAS_CHECK(cublasLtMatmul(
             kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
             hidden->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
-            matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
+            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weights->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, d_weights->mut_dptr(),
             matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
             kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
 
@@ -213,13 +204,10 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         dy_shape.at(1) = weight_shape.at(1);
         // compute dybuf
         dgrad_buf = dy_tmp_buf;
-        // if(idx != 0){
         offset += GetCudaAlignedSize(dy_shape.at(0) * dy_shape.at(1) * sizeof(T));
-        printf("Offset size is: %ld \n", dy_shape.at(0) * dy_shape.at(1));
         dy_tmp_buf = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + offset);
-        // }
       } else {
-        user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", 0);
+        user_op::Tensor* d_weights = ctx->Tensor4ArgNameAndIndex("d_weights", 0);
         x->shape().ToDimVector(&hidden_shape);
         epilogue = CUBLASLT_EPILOGUE_DEFAULT;
         InferMatmulCublasMNK(dy_shape, hidden_shape,
@@ -235,15 +223,14 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         OF_CUBLAS_CHECK(cublasLtMatmul(
             kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
             x->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
-            matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
+            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weights->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, d_weights->mut_dptr(),
             matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
             kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
         OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
         OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
       }
     }
-    printf("end kernel \n");
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -255,18 +242,16 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
-        const int64_t weight_size = ctx->input_size("weight");                         \
+        const int64_t weight_size = ctx->input_size("weights");                         \
         const Shape& dy_shape = ctx->InputShape("dy", 0);                              \
         int64_t m = dy_shape.At(0);                                                    \
         int64_t k = dy_shape.At(1);                                                    \
         int64_t tmp_buffer_size = 0;                                                   \
         for (int idx = weight_size - 1; idx > 0; idx--) {                              \
-          const Shape& weight_shape = ctx->InputShape("weight", idx);                  \
+          const Shape& weight_shape = ctx->InputShape("weights", idx);                  \
           k = weight_shape.At(1);                                                      \
-          printf("M is: %ld, K is: %ld \n", m, k);                                     \
           tmp_buffer_size += GetCudaAlignedSize(m * k * sizeof(dtype));                \
         }                                                                              \
-        printf("Success infer tmp \n");                                                \
         return tmp_buffer_size;                                                        \
       });
 

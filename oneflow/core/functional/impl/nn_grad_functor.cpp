@@ -1012,25 +1012,25 @@ class FusedMLPGradFunctor {
       fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp_grad")
                                     .Input("dy")
                                     .Input("x")
-                                    .Input("weight", n)
-                                    .Input("aux", n)
+                                    .Input("weights", n)
+                                    .Input("cublas_aux", n)
                                     .Input("hidden", n - 1)
                                     .Output("d_grad")
-                                    .Output("d_bias", n - 1)
-                                    .Output("d_weight", n)
+                                    .Output("d_biases", n - 1)
+                                    .Output("d_weights", n)
                                     .Build());
     }
 #endif
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
-                                const std::shared_ptr<one::Tensor>& x, const TensorTuple& weight,
-                                const TensorTuple& aux, const TensorTuple& hidden) const {
-    const int64_t weight_size = weight.size();
+                                const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
+                                const TensorTuple& cublas_aux, const TensorTuple& hidden) const {
+    const int64_t weight_size = weights.size();
     TensorTuple input(2 + 3 * weight_size - 1);
     input[0] = dy;
     input[1] = x;
-    std::copy(weight.begin(), weight.end(), input.begin() + 2);
-    std::copy(aux.begin(), aux.end(), input.begin() + 2 + weight_size);
+    std::copy(weights.begin(), weights.end(), input.begin() + 2);
+    std::copy(cublas_aux.begin(), cublas_aux.end(), input.begin() + 2 + weight_size);
     std::copy(hidden.begin(), hidden.end(), input.begin() + 2 + 2 * weight_size);
     return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input);
   }
