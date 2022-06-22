@@ -176,6 +176,19 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
   std::string input_b_name;
 };
 
+namespace {
+auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_name,
+                          const std::string& input_name) {
+  return hob::make_custom("PrimitiveExists", [=](const user_op::KernelRegContext& ctx) {
+    const user_op::TensorDesc* src = ctx.TensorDesc4ArgNameAndIndex(input_name, 0);
+    const user_op::TensorDesc* dst = ctx.TensorDesc4ArgNameAndIndex(output_name, 0);
+    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+        ctx.device_type(), op, src->data_type(), dst->data_type());
+    return primitive.operator bool();
+  });
+}
+}  // namespace
+
 #define REGISTER_UNARY_ELEMWISE_USER_KERNEL(device, kernel_name, functor, out_dtype,       \
                                             input_a_dtype, create_function, out_name,      \
                                             input_a_name)                                  \

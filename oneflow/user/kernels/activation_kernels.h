@@ -162,19 +162,6 @@ struct SoftShrinkGradFunctor {
   const T alpha;
 };
 
-namespace {
-auto UnaryPrimitiveExists(ep::primitive::UnaryOp op, const std::string& output_name,
-                          const std::string& input_name) {
-  return hob::make_custom("PrimitiveExists", [=](const user_op::KernelRegContext& ctx) {
-    const user_op::TensorDesc* src = ctx.TensorDesc4ArgNameAndIndex(input_name, 0);
-    const user_op::TensorDesc* dst = ctx.TensorDesc4ArgNameAndIndex(output_name, 0);
-    auto primitive = ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-        ctx.device_type(), op, src->data_type(), dst->data_type());
-    return primitive.operator bool();
-  });
-}
-}  // namespace
-
 #define REGISTER_SOFTSHRINK_FORWARD_KERNEL()                                                 \
   REGISTER_USER_KERNEL("softshrink")                                                         \
       .SetCreateFn([]() {                                                                    \

@@ -48,6 +48,15 @@ std::unique_ptr<ElementwiseUnary> NewElementwiseUnary(Scalar attr0, Scalar attr1
       new ElementwiseUnaryImpl<unary_op, Src, Dst>(attr0, attr1));
 }
 
+#define UTIL_OPS_DATA_TYPE_SEQ \
+  CUDA_PRIMITIVE_INT8_TYPE_SEQ   \
+  CUDA_PRIMITIVE_UINT8_TYPE_SEQ  \
+  CUDA_PRIMITIVE_INT32_TYPE_SEQ  \
+  CUDA_PRIMITIVE_INT64_TYPE_SEQ  \
+  CUDA_PRIMITIVE_FLOAT_TYPE_SEQ  \
+  CUDA_PRIMITIVE_DOUBLE_TYPE_SEQ \
+  CUDA_PRIMITIVE_FLOAT16_TYPE_SEQ
+
 class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryFactoryImpl);
@@ -85,6 +94,12 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_FLOATING_MATH_OP_SEQ,
                                              CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
+
+            // For Utils OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_UTILS_OP_SEQ, UTIL_OPS_DATA_TYPE_SEQ,
+                                             CUDA_PRIMITIVE_BOOL_TYPE_SEQ)
+
             // For Logical OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_LOGICAL_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,

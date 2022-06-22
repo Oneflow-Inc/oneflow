@@ -53,6 +53,60 @@ struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kTanh, half, half> {
   OF_DEVICE_FUNC half operator()(half src) const { return __float2half(tanhf(__half2float(src))); }
 };
 
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return std::isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return isinf(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, half> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(half src) const { 
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+    return __hisinf(x);
+#else
+    return isinf(__half2float(x));
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+  }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, float> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(float src) const { return isnan(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, double> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(double src) const { return isnan(src); }
+};
+
+template<>
+struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsNan, bool, half> {
+  UnaryFunctor(Scalar attr0, Scalar attr1) {}
+
+  OF_DEVICE_FUNC bool operator()(half src) const {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+    return __hisnan(x);
+#else
+    return isnan(__half2float(x));
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+  }
+};
+
 #define SPECIALIZATION_PSEUDO_HALF_FUNCTOR(op)                                \
   template<>                                                                  \
   struct UnaryFunctor<DeviceType::kCUDA, op, half, half> {                    \
