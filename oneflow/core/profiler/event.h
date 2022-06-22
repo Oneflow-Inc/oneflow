@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PROFILER_EVENT_H_
 #define ONEFLOW_CORE_PROFILER_EVENT_H_
 
-#include <bits/types/time_t.h>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -29,8 +28,17 @@ class Shape;
 
 namespace profiler {
 
-enum class EventType { kCustom, kOneflowKernel };
-enum class CustomEventType { kDefault, kCudaKernel, kCudaRuntime };
+class ProfileManager;
+
+enum class EventType {
+  kCustom,        // has three kinds
+  kOneflowKernel  // OneFlow cpu/cuda kernel
+};
+enum class CustomEventType {
+  kDefault,     // for record_function
+  kCudaKernel,  // cuda kernel
+  kCudaRuntime  // something like cudaLaunchKernel
+};
 enum class EventTimeUnit { kNS, kUS };
 
 class IEvent {
@@ -44,9 +52,7 @@ class IEvent {
   virtual std::string Key() = 0;
   virtual nlohmann::json ToJson();
   virtual ~IEvent() = default;
-  // Make sure you know what you are doing when using StartedAt and FinishedAt
-  virtual void SetStartedAt(time_t t);
-  virtual void SetFinishedAt(time_t t);
+
   virtual void Start();
   virtual void Finish();
   bool IsChildOf(const IEvent* e);
@@ -60,6 +66,9 @@ class IEvent {
   const T GetFinishedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
 
  protected:
+  virtual void SetStartedAt(time_t t);
+  virtual void SetFinishedAt(time_t t);
+
   std::string name_;
   EventTimeUnit time_unit_;
   time_t started_at_ = 0;
@@ -108,6 +117,7 @@ const inline time_t IEvent::GetDuration<time_t>(EventTimeUnit time_unit) const {
 
 class CustomEvent final : public IEvent {
  public:
+  friend class ProfileManager;
   std::string Key() override;
 
   nlohmann::json ToJson() override;
