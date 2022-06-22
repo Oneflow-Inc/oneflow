@@ -522,7 +522,7 @@ template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
 
 namespace {
 
-Maybe<Symbol<Device>> GetDevice(const std::shared_ptr<one::MirroredTensor> tensor) {
+Maybe<Symbol<Device>> GetDevice(const std::shared_ptr<one::MirroredTensor>& tensor) {
   return tensor->device();  // return Maybe<Symbol<Device>>
 }
 
@@ -588,7 +588,7 @@ Maybe<void> InstructionsBuilder::GlobalSync() {
 
 Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) {
   const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(Callback);
-  auto stream = CHECK_JUST(GetBarrierStream());
+  auto stream = JUST(GetBarrierStream());
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       JUST(Global<VirtualMachine>::Get()->GetVmStream(stream)),
       SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
