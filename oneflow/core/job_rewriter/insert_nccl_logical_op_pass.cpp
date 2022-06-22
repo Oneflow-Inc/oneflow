@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 
 namespace oneflow {
 
