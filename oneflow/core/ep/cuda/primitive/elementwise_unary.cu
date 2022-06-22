@@ -48,7 +48,7 @@ std::unique_ptr<ElementwiseUnary> NewElementwiseUnary(Scalar attr0, Scalar attr1
       new ElementwiseUnaryImpl<unary_op, Src, Dst>(attr0, attr1));
 }
 
-#define UTIL_OPS_DATA_TYPE_SEQ \
+#define UTIL_OPS_DATA_TYPE_SEQ   \
   CUDA_PRIMITIVE_INT8_TYPE_SEQ   \
   CUDA_PRIMITIVE_UINT8_TYPE_SEQ  \
   CUDA_PRIMITIVE_INT32_TYPE_SEQ  \

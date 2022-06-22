@@ -18,31 +18,31 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-REGISTER_USER_KERNEL("isinf")                                                             \
-      .SetCreateFn([]() {                                                                 \
-        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
-            "out", "in", [](user_op::KernelComputeContext* ctx) {                         \
-              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);  \
-              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
-              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
-                  ctx->device_type(), ep::primitive::UnaryOp::kIsInf, src->data_type(),     \
-                  dst->data_type());                          \
-            });                                                                           \
-      })                                                                                  \
-      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kIsInf, "out", "in"));
+REGISTER_USER_KERNEL("isinf")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<UnaryPrimitiveKernel>(
+          "out", "in", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+            const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+            return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+                ctx->device_type(), ep::primitive::UnaryOp::kIsInf, src->data_type(),
+                dst->data_type());
+          });
+    })
+    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kIsInf, "out", "in"));
 
-REGISTER_USER_KERNEL("isnan")                                                             \
-      .SetCreateFn([]() {                                                                 \
-        return user_op::NewOpKernel<UnaryPrimitiveKernel>(                                \
-            "out", "in", [](user_op::KernelComputeContext* ctx) {                         \
-              const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);  \
-              const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0); \
-              return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>( \
-                  ctx->device_type(), ep::primitive::UnaryOp::kIsNan, src->data_type(),     \
-                  dst->data_type());                          \
-            });                                                                           \
-      })                                                                                  \
-      .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kIsNan, "out", "in"));
+REGISTER_USER_KERNEL("isnan")
+    .SetCreateFn([]() {
+      return user_op::NewOpKernel<UnaryPrimitiveKernel>(
+          "out", "in", [](user_op::KernelComputeContext* ctx) {
+            const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+            const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+            return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
+                ctx->device_type(), ep::primitive::UnaryOp::kIsNan, src->data_type(),
+                dst->data_type());
+          });
+    })
+    .SetIsMatchedHob(UnaryPrimitiveExists(ep::primitive::UnaryOp::kIsNan, "out", "in"));
 
 }  // namespace user_op
 }  // namespace oneflow

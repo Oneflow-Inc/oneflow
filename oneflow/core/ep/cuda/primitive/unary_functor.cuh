@@ -71,7 +71,7 @@ template<>
 struct UnaryFunctor<DeviceType::kCUDA, UnaryOp::kIsInf, bool, half> {
   UnaryFunctor(Scalar attr0, Scalar attr1) {}
 
-  OF_DEVICE_FUNC bool operator()(half src) const { 
+  OF_DEVICE_FUNC bool operator()(half src) const {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
     return __hisinf(x);
 #else
