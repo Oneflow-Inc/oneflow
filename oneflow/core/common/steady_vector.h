@@ -51,24 +51,30 @@ class SteadyVector {
     return granularity2data_[gran].get()[index - start];
   }
 
-  void push_back(const T& elem) {
+  void push_back(const T& elem) { *MutableOrAdd(size_) = elem; }
+
+  // `index` shoule be <= size()
+  T* MutableOrAdd(size_t index) {
     std::unique_lock<std::mutex> lock(mutex_);
     size_t size = size_;
-    int granularity = GetGranularity(size);
-    if (size + 1 == (1 << granularity)) {
-      CHECK_LT(granularity, N);
-      granularity2data_[granularity].reset(new T[1 << granularity]);
+    CHECK_LE(index, size) << "index out of range";
+    if (index == size) {
+      int granularity = GetGranularity(size);
+      if (size + 1 == (1 << granularity)) {
+        CHECK_LT(granularity, N);
+        granularity2data_[granularity].reset(new T[1 << granularity]);
+      }
+      ++size_;
     }
-    this->Mut(size) = elem;
-    ++size_;
+    return Mutable(index);
   }
 
  private:
-  T& Mut(size_t index) {
+  T* Mutable(size_t index) {
     int gran = 0;
     size_t start = 0;
     GetGranularityAndStart(index, &gran, &start);
-    return granularity2data_[gran].get()[index - start];
+    return &granularity2data_[gran].get()[index - start];
   }
 
   static void GetGranularityAndStart(size_t index, int* gran, size_t* start) {
