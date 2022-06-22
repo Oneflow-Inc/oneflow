@@ -274,10 +274,14 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   if (Global<JobDesc>::Get() != nullptr) { Global<JobDesc>::Delete(); }
 
   auto scope = std::make_unique<GlobalJobDescScope>(job_.job_conf(), job_id_);
+
+  // NOTE(chengcheng): do job compeleter for each rank.
+  JUST(JobCompleter().Complete(&job_));
+
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
     // TODO(chengcheng): new memory reused by chunk
-    Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
+    Compiler().Compile(&job_, &plan_);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
     VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
@@ -295,9 +299,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       PlanUtil::GenLightPlan(&plan_, name_);
     }
-  } else {
-    // NOTE(chengcheng): do job compeleter for each rank.
-    JUST(JobCompleter().Complete(&job_));
   }
   if (GlobalProcessCtx::WorldSize() > 1) {
     std::string plan_name = "plan:" + job_name();
