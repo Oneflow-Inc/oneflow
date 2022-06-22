@@ -122,7 +122,6 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   void GetInstrTypeIdAndSoleStream(const std::string& instr_type_name, InstrTypeId* instr_type_id,
                                    Stream** stream);
-  void MemShrinkAll();
 
  private:
   using ReadyInstructionList =

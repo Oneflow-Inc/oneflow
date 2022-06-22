@@ -349,10 +349,6 @@ void VirtualMachineEngine::__Init__(const VmDesc& vm_desc) {
   }
 }
 
-void VirtualMachineEngine::MemShrinkAll() {
-  // Trigger all device context's allocator to do DeallocateFreeBlockForGarbageCollection.
-}
-
 void VirtualMachineEngine::GetCachedInstrTypeIdAndPhyInstrStream(const std::string& instr_type_name,
                                                                  int device_id,
                                                                  InstrTypeId* instr_type_id,
