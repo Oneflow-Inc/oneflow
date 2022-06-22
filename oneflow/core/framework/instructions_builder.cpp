@@ -578,7 +578,7 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 
 Maybe<void> InstructionsBuilder::GlobalSync() {
   const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
-  auto stream = CHECK_JUST(GetBarrierStream());
+  auto stream = JUST(GetBarrierStream());
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       JUST(Global<VirtualMachine>::Get()->GetVmStream(stream)),
       SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
