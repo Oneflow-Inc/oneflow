@@ -57,6 +57,8 @@ class VirtualMachine final {
 
   Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
 
+  Maybe<void> Prob(const std::function<bool(vm::VirtualMachineEngine*)>& prob_func);
+
   bool vm_threads_closed_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
   // for asynchronized execution

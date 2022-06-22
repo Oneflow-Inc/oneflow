@@ -22,7 +22,7 @@ namespace vm {
 class ShrinkableCache {
  public:
   ShrinkableCache() = default;
-  ~ShrinkableCache() = default;
+  virtual ~ShrinkableCache() = default;
 
   virtual void Shrink() = 0;
 };
