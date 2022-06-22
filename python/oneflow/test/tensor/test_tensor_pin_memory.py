@@ -70,10 +70,11 @@ class TestTensor(flow.unittest.TestCase):
         )
         return x
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, auto_backward=True, check_graph=False)
     def test_tensor_is_pinned(test_case):
-        device = cpu_device()
+        device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = x.pin_memory()
         test_case.assertTrue(x.oneflow.is_pinned() == x.pytorch.is_pinned())
