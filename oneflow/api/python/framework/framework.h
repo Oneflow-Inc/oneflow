@@ -141,6 +141,8 @@ inline Maybe<std::string> LoadSavedModel(const std::string& saved_model_meta_fil
   return saved_model_proto.SerializeAsString();
 }
 
+inline Maybe<void> LoadLibraryNow(const std::string& lib_path) { return LoadLibrary(lib_path); }
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_FRAMEWORK_FRAMEWORK_H_

@@ -59,6 +59,19 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
     Global<RuntimeBufferManagersScope>::New();
   }
 
+  {
+    // NOTE(chengcheng): Init Global Runtime objects.
+    Global<RuntimeCtx>::New();
+    Global<MemoryAllocator>::New();
+    Global<ChunkMgr>::New();
+    Global<RegstMgr>::New();
+    Global<ActorMsgBus>::New();
+    Global<ThreadMgr>::New();
+    Global<RuntimeJobDescs>::New();
+    Global<summary::EventsWriter>::New();
+    Global<boxing::collective::Scheduler>::New();
+  }
+
   return Maybe<void>::Ok();
 }
 

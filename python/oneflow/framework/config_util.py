@@ -26,6 +26,21 @@ import oneflow.support.enable_if as enable_if
 
 
 def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
+    r"""
+    set the attribute of config_proto.resource to attr_value.
+    the attribute is specified as a string or a list of string.
+
+    for example, if we want to do this:
+        `config_proto.resource.machine_num = 1`
+
+    we can call `_set_resource_attr("machine_num", 1)`
+
+    if we want to do:
+        `config_proto.resource.collective_boxing_conf.nccl_num_streams = 1`
+    
+    we can call `_set_resource_attr(["collective_boxing_conf", "nccl_num_streams"], 1)`
+`
+    """
 
     if isinstance(attrs_chain, str):
         attrs_chain = [attrs_chain]
@@ -33,24 +48,41 @@ def _set_resource_attr(attrs_chain: Union[List[str], str], attr_value):
     session = session_ctx.GetDefaultSession()
 
     def __get_obj(obj, _attrs_chain):
+        r"""
+        Get the object given the attribute chain.
+
+        For example, if we want to get `resource.collective_boxing_conf.nccl_num_streams`
+
+        we can call `__get_obj(resource, ["collective_boxing_conf", "nccl_num_streams"])
+        """
         last_obj = obj
         for att in _attrs_chain:
+            assert hasattr(last_obj, att), "do not have this attribute!"
             last_obj = getattr(last_obj, att)
         return last_obj
 
     if session.status_ == session.Status.INITED:
         resource_config = resource_util.Resource()
         setattr(
-            __get_obj(resource_config, attrs_chain[0:-1]), attrs_chain[-1], attr_value
+            __get_obj(resource_config, attrs_chain[0:-1]), # the owning object of the attribute to be updated
+            attrs_chain[-1], # the attribute needs to be updated
+            attr_value
         )
         session.update_resource_eagerly(resource_config)
     else:
         setattr(
-            __get_obj(session.config_proto.resource, attrs_chain[0:-1]),
-            attrs_chain[-1],
+            __get_obj(session.config_proto.resource, attrs_chain[0:-1]), # the owning object of the attribute to be updated
+            attrs_chain[-1], # the attribute needs to be updated
             attr_value,
         )
 
+def api_load_library(val: str) -> None:
+    """Load necessary library for job now
+    Args:
+        val (str): path to shared object file
+    """
+    assert type(val) is str
+    oneflow._oneflow_internal.LoadLibrary(val)
 
 def api_machine_num(val: int) -> None:
     """Set available number of machine/node for  running job .

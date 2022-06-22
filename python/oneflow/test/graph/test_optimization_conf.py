@@ -47,6 +47,8 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         flow.backends.cudnn.set_reserved_mem_mbytes(1000)
         flow.backends.cudnn.enable_fused_normalization_add_relu(True)
 
+        flow.utils.load_library("")
+
         class CustomGraphSysConf(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
