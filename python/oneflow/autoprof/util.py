@@ -1,7 +1,8 @@
 from typing import Iterable, Union, TypeVar
 
-import prettytable
-from prettytable import PrettyTable
+from rich import box
+from rich.console import Console
+from rich.table import Table
 
 import oneflow.test_utils.automated_test_util.profiler as auto_profiler
 
@@ -57,7 +58,7 @@ def get_oneflow_gpu_kernel_time(prof) -> Union[str, float]:
 
 def get_oneflow_gpu_kernel_bandwidth(prof) -> str:
     gpu_kernel_items = list(
-        filter( lambda x: x.cuda_time_total is not None, prof.key_averages())
+        filter(lambda x: x.cuda_time_total is not None, prof.key_averages())
     )
     if len(gpu_kernel_items) == 0:
         return "-"
@@ -85,7 +86,9 @@ def get_oneflow_cpu_end_to_end_time(prof) -> float:
 def add_row(profs, writer, f):
     non_none_profs = list(filter(lambda x: x is not None, profs))
     op_name = get_sole_value([prof.op_name for prof in non_none_profs])
-    args_description = get_sole_value([prof.args_description for prof in non_none_profs])
+    args_description = get_sole_value(
+        [prof.args_description for prof in non_none_profs]
+    )
     additional_description = get_sole_value(
         [prof.additional_description for prof in non_none_profs]
     )
@@ -128,23 +131,22 @@ def print_summary_from_csv(filename) -> None:
         'Summary ("KT" means "Kernel Time", "ET" means "End-to-end Time", in microseconds; "BW" means "Bandwidth" in GB/s):'
     )
     with open(filename, "r") as f:
-        table: PrettyTable = prettytable.from_csv(f)
-        table.field_names = [
-            "OP",
-            "Args",
-            "Lib",
-            "KT(GPU)",
-            "BW(GPU)",
-            "KT(1 CPU)",
-            "ET(1 CPU)",
-            "KT(32 CPU)",
-            "ET(32 CPU)",
-            "Desc",
-        ]
-        table.del_column("Desc")
-        for row in table.rows:
-            row[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row[2]]
-
-        print(table)
-
-
+        table = Table(
+            *(
+                "OP",
+                "Args",
+                "Lib",
+                "KT(GPU)",
+                "BW(GPU)",
+                "KT(1 CPU)",
+                "ET(1 CPU)",
+                "KT(32 CPU)",
+                "ET(32 CPU)",
+            ),
+            box=box.SIMPLE,
+        )
+        for row in f.readlines()[1:]:
+            row_splited = row.split(",")[:-1]
+            row_splited[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row_splited[2]]
+            table.add_row(*row_splited)
+        Console().print(table)
