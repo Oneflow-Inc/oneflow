@@ -325,6 +325,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     std::cerr << "==> start shrinking mem" << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(20));
     auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+    CHECK_NOTNULL_OR_RETURN(vm) << "VM is NULL.";
     JUST(vm->MemShrinkAll());
     std::cerr << "==> finish shrinking mem" << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(20));
