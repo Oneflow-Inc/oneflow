@@ -373,7 +373,7 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
         src1_dims, reinterpret_cast<const Src*>(src1), reinterpret_cast<Dst*>(dst), attr0, attr1);
   }
 
- protected:
+ private:
   Scalar attr0, attr1;
 };
 

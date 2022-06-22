@@ -194,8 +194,8 @@ void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
        simplified_dst_dims](int64_t begin, int64_t end) {
         auto src_index_helper =
             NdIndexOffsetHelper<IndexType, kMaxNumDims>(simplified_src_dims, simplified_num_dims);
-        auto dst_index_helper =
-            OffsetToIndexCalculator<IndexType, kMaxNumDims>(simplified_dst_dims, simplified_num_dims);
+        auto dst_index_helper = OffsetToIndexCalculator<IndexType, kMaxNumDims>(
+            simplified_dst_dims, simplified_num_dims);
         IndexType src_index[kMaxNumDims];
         IndexType dst_index[kMaxNumDims];
         for (IndexType offset = begin; offset < end; offset++) {
@@ -313,7 +313,7 @@ class BroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
         src1_dims, reinterpret_cast<const Src*>(src1), reinterpret_cast<Dst*>(dst), attr0, attr1);
   }
 
- protected:
+ private:
   Scalar attr0, attr1;
 };
 
@@ -432,7 +432,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     });
   }
 
- protected:
+ private:
   Scalar attr0, attr1;
 };
 
