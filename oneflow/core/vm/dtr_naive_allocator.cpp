@@ -353,14 +353,11 @@ void DtrNaiveCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     // it++;
   }
 
-
   if (EnvBool<ONEFLOW_DTR_RECORD_MEM_FRAG_RATE>()) {
     size_t free_mem = 0;
     for (const auto& pair : ptr2piece_) {
       Piece* piece = pair.second;
-      if (piece->is_free) {
-        free_mem += piece->size;
-      }
+      if (piece->is_free) { free_mem += piece->size; }
     }
     dtr::append_memory_frag_info_and_get(free_mem, dtr::memory_threshold());
   }
