@@ -33,37 +33,43 @@ if csv_filename[-4:] != ".csv":
 
 f = open(csv_filename, "w")
 # all functions registered are called in last in, first out order
-if flow.support.env_var_util.parse_boolean_from_env("ONEFLOW_PROFILE_PRINT_SUMMARY", True):
+if flow.support.env_var_util.parse_boolean_from_env(
+    "ONEFLOW_PROFILE_PRINT_SUMMARY", True
+):
     atexit.register(print_summary_from_csv, csv_filename)
 atexit.register(lambda f: f.close(), f)
 
 writer = csv.writer(f)
 
-ONLY_ONEFLOW = flow.support.env_var_util.parse_boolean_from_env("ONEFLOW_PROFILE_ONLY_ONEFLOW", False)
-ONLY_PYTORCH = flow.support.env_var_util.parse_boolean_from_env("ONEFLOW_PROFILE_ONLY_PYTORCH", False)
+ONLY_ONEFLOW = flow.support.env_var_util.parse_boolean_from_env(
+    "ONEFLOW_PROFILE_ONLY_ONEFLOW", False
+)
+ONLY_PYTORCH = flow.support.env_var_util.parse_boolean_from_env(
+    "ONEFLOW_PROFILE_ONLY_PYTORCH", False
+)
 assert not (ONLY_ONEFLOW and ONLY_PYTORCH)
 
 if not ONLY_ONEFLOW and not ONLY_PYTORCH:
     env = os.environ.copy()
     env.update({"ONEFLOW_PROFILE_ONLY_ONEFLOW": "1"})
-    temp_f = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False)
+    temp_f = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False)
     env.update({"ONEFLOW_PROFILE_CSV": temp_f.name})
     env.update({"ONEFLOW_PROFILE_PRINT_SUMMARY": "0"})
-    subprocess.run([sys.executable, '-m', 'oneflow.autoprof', *sys.argv[1:]], env=env)
+    subprocess.run([sys.executable, "-m", "oneflow.autoprof", *sys.argv[1:]], env=env)
     temp_f.close()
-    temp_f = open(temp_f.name, 'r')
+    temp_f = open(temp_f.name, "r")
     rows = list(csv.reader(temp_f))
     temp_f.close()
     os.remove(temp_f.name)
 
     env = os.environ.copy()
     env.update({"ONEFLOW_PROFILE_ONLY_PYTORCH": "1"})
-    temp_f = tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False)
+    temp_f = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False)
     env.update({"ONEFLOW_PROFILE_CSV": temp_f.name})
     env.update({"ONEFLOW_PROFILE_PRINT_SUMMARY": "0"})
-    subprocess.run([sys.executable, '-m', 'oneflow.autoprof', *sys.argv[1:]], env=env)
+    subprocess.run([sys.executable, "-m", "oneflow.autoprof", *sys.argv[1:]], env=env)
     temp_f.close()
-    temp_f = open(temp_f.name, 'r')
+    temp_f = open(temp_f.name, "r")
     rows.extend(list(csv.reader(temp_f))[1:])
     temp_f.close()
     os.remove(temp_f.name)

@@ -95,7 +95,7 @@ std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
             [&custom_events](const std::shared_ptr<IEvent>& child) { custom_events.erase(child); });
       }
     }
-#endif // WITH_CUDA
+#endif  // WITH_CUDA
     events.emplace_back(evt);
   }
   return events;
