@@ -520,21 +520,40 @@ template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
     const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<BlockingThenBusy>& btb,
     const std::function<void(uint64_t)>& Callback, const std::string& modifier);
 
+namespace {
+
+Maybe<Symbol<Device>> GetDevice(const std::shared_ptr<one::MirroredTensor> tensor) {
+  return tensor->device();  // return Maybe<Symbol<Device>>
+}
+
+Maybe<Symbol<Device>> GetDevice(const one::EagerMirroredTensorImpl* tensor) {
+  return tensor->device();  // return const Symbol<Device>&
+}
+
+}  // namespace
+
 template<typename T>
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
                                                       const std::function<void(uint64_t)>& callback,
                                                       const std::string& modifier) {
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
-  const auto& producer_stream = JUST(eager_blob_object->producer_stream());
-  const auto& last_used_stream = JUST(eager_blob_object->last_used_stream());
-  if (producer_stream != last_used_stream) {
-    JUST(SoftSyncStream({JUST(eager_blob_object->compute_local_dep_object())}, modifier,
-                        last_used_stream));
-  }
   const auto& phy_instr_operand =
       std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(eager_blob_object, callback, modifier);
+  Symbol<Device> device = JUST(GetDevice(tensor));
+  Symbol<Stream> stream = JUST(GetDefaultStreamByDevice(device));
+  // Do not use producer_stream or last_used_stream.
+  // Bug case when using producer_stream or last_used_stream:
+  //
+  // ```python
+  // tensor = oneflow.ones((1024, 1024, 1024), device='cuda').cpu()
+  // ndarray = tensor.numpy() # share memory
+  //
+  // ```
+  // `ndarray` may not be ones because instruction AccessBlobByCallback is prescheduled before
+  // oneflow.ones actually finished.
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      JUST(Global<VirtualMachine>::Get()->GetVmStream(producer_stream)),
+      // Never replace `stream` with producer_stream or last_used_stream.
+      JUST(Global<VirtualMachine>::Get()->GetVmStream(stream)),
       SingletonPtr<vm::AccessBlobByCallbackInstructionType>(), phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
