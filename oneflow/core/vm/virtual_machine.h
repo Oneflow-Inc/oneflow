@@ -43,6 +43,8 @@ class VirtualMachine final {
 
   Maybe<void> CloseVMThreads();
 
+  Maybe<void> MemShrinkAll();
+
  private:
   friend class InstructionsBuilder;
 
