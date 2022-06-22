@@ -287,14 +287,12 @@ class Events(list):
             [x.bandwidth != "-" for x in self if isinstance(x, KernelEvent)]
         )
         t = Table(
-            *(
-                "Name",
-                "CPU time total",
-                "CPU time",
-                "GPU time total",
-                "GPU time",
-                "Number of calls",
-            ),
+            "Name",
+            "CPU time total",
+            "CPU time",
+            "GPU time total",
+            "GPU time",
+            "Number of calls",
             box=box.SIMPLE,
         )
         field_keys = [

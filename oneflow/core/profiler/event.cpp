@@ -42,9 +42,9 @@ std::shared_ptr<CustomEvent> CustomEvent::Create(const std::string& name, Custom
   return std::shared_ptr<CustomEvent>(new CustomEvent(name, type));
 }
 
-void IEvent::SetStartedAt(time_t t) { started_at_ = t; }
+void IEvent::SetStartedAt(double t) { started_at_ = t; }
 
-void IEvent::SetFinishedAt(time_t t) { finished_at_ = t; }
+void IEvent::SetFinishedAt(double t) { finished_at_ = t; }
 
 void IEvent::Start() { SetStartedAt(GetTimeNow()); }
 

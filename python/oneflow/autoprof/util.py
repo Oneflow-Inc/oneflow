@@ -132,17 +132,15 @@ def print_summary_from_csv(filename) -> None:
     )
     with open(filename, "r") as f:
         table = Table(
-            *(
-                "OP",
-                "Args",
-                "Lib",
-                "KT(GPU)",
-                "BW(GPU)",
-                "KT(1 CPU)",
-                "ET(1 CPU)",
-                "KT(32 CPU)",
-                "ET(32 CPU)",
-            ),
+            "OP",
+            "Args",
+            "Lib",
+            "KT(GPU)",
+            "BW(GPU)",
+            "KT(1 CPU)",
+            "ET(1 CPU)",
+            "KT(32 CPU)",
+            "ET(32 CPU)",
             box=box.SIMPLE,
         )
         for row in f.readlines()[1:]:

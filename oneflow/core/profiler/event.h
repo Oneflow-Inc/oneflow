@@ -65,13 +65,13 @@ class IEvent {
   const T GetFinishedAt(EventTimeUnit time_unit = EventTimeUnit::kUS) const;
 
  protected:
-  virtual void SetStartedAt(time_t t);
-  virtual void SetFinishedAt(time_t t);
+  virtual void SetStartedAt(double t);
+  virtual void SetFinishedAt(double t);
 
   std::string name_;
   EventTimeUnit time_unit_;
-  time_t started_at_ = 0;
-  time_t finished_at_ = 0;
+  double started_at_ = 0;
+  double finished_at_ = 0;
 };
 
 inline double ConvertTime(double time_, EventTimeUnit src_time_unit, EventTimeUnit dst_time_unit) {
