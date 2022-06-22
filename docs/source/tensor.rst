@@ -104,6 +104,7 @@ OneFlow Tensor Class
             masked_fill, 
             masked_select, 
             matmul, 
+            mv, 
             max, 
             mean, 
             min, 
