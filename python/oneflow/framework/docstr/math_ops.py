@@ -1286,7 +1286,7 @@ add_docstr(
     If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`vec` is a
     1-D tensor of size `m`, :attr:`out` will be a 1-D tensor of size `n`.
     
-    .. note:: This function does not :ref:`broadcast <broadcasting-semantics>`.
+    .. note:: This function does not broadcast.
 
     Args:
         input (oneflow.Tensor): matrix to be matrix multiplied
