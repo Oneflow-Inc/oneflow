@@ -604,6 +604,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.mv,
+    """
+    See :func:`oneflow.mv`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.narrow,
     """
     See :func:`oneflow.narrow`
@@ -2071,6 +2078,15 @@ add_docstr(
     Tensor.pin_memory() -> Tensor
 
     Copies the tensor to pinned memory, if it’s not already pinned.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_pinned,
+    r"""
+    Tensor.is_pinned() -> bool
+
+    Returns true if this tensor resides in pinned memory.
     """,
 )
 
