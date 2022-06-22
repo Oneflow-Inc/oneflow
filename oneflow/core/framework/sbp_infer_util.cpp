@@ -425,9 +425,10 @@ void NdSbpDimReduce(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
       }
     }
   }
+  // [1, 1, ..., 1]: Any --> [1]: (B)
   if (reduced_hierarchy.empty()) {
     reduced_hierarchy.emplace_back(hierarchy->At(0));
-    *reduced_nd_sbp->add_sbp_parallel() = nd_sbp.sbp_parallel(0);
+    reduced_nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
   }
   ParallelConf reduced_parallel_conf = parallel_desc.parallel_conf();
   Shape(reduced_hierarchy).ToProto(reduced_parallel_conf.mutable_hierarchy());

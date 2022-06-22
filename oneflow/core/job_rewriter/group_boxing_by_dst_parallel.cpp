@@ -30,19 +30,24 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
     if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
       const auto& blob_modifier_ = node->op().InputBlobModifier4Ibn(ibn);
-      if (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable()) { return; }
+      if (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable()) { continue; }
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
       const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
-      ParallelDesc reduced_in_parallel_desc = producer.parallel_desc();
+      const std::string& producer_lbn = *CHECK_JUST(producer.op().obn4lbi(lbi));
+      const ParallelDesc& producer_parallel_desc =
+          *CHECK_JUST(producer.op().GetParallelDesc4BnInOp(producer_lbn)).get();
+      ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
       NdSbp reduced_in_nd_sbp;
-      NdSbpDimReduce(producer.parallel_desc(), producer_nd_sbp, &reduced_in_parallel_desc,
+      NdSbpDimReduce(producer_parallel_desc, producer_nd_sbp, &reduced_in_parallel_desc,
                      &reduced_in_nd_sbp);
 
       const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
-      ParallelDesc reduced_out_parallel_desc = node->parallel_desc();
+      const ParallelDesc& consumer_parallel_desc =
+          *CHECK_JUST(node->op().GetParallelDesc4BnInOp(ibn));
+      ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
       NdSbp reduced_out_nd_sbp;
-      NdSbpDimReduce(node->parallel_desc(), consumer_nd_sbp, &reduced_out_parallel_desc,
+      NdSbpDimReduce(consumer_parallel_desc, consumer_nd_sbp, &reduced_out_parallel_desc,
                      &reduced_out_nd_sbp);
 
       if (reduced_in_parallel_desc == reduced_out_parallel_desc
