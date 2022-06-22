@@ -32,6 +32,10 @@ class BinAllocator final : public Allocator {
   void Deallocate(char* mem_ptr, std::size_t size) override;
 
  private:
+  int get_id() {
+    static int static_id = 0;
+    return static_id++;
+  }
   static constexpr int32_t kInvalidBinNum = -1;
   static constexpr int32_t kBinNumSize = 20;
 
@@ -91,6 +95,7 @@ class BinAllocator final : public Allocator {
   // Try find free Piece which size is larger than aligned_size in Bins.
   // Return nullptr when find failure
   Piece* FindPiece(size_t aligned_size);
+  void Display();
 
   // Insert the free Piece to the appropriate Bin which bin size is smaller than piece
   void InsertPiece2Bin(Piece* piece);
@@ -122,6 +127,9 @@ class BinAllocator final : public Allocator {
   std::vector<std::unique_ptr<Piece>> pieces_;
   HashMap<char*, Piece*> ptr2piece_;
   Piece* recycle_piece_list_;
+  int id_;
+  size_t total_allocate_bytes_ = 0;
+  size_t total_deallocate_bytes_ = 0;
 };
 
 }  // namespace vm

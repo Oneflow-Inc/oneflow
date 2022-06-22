@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -26,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/operator/operator.h"
@@ -51,6 +53,7 @@ Maybe<Tensor> TensorImpl::acc_grad() const { return autograd_meta_->acc_grad(); 
 Maybe<TensorArg> TensorImpl::current_grad() const { return autograd_meta_->current_grad(); }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
+  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   return autograd_meta_->set_acc_grad(grad);
 }
 
@@ -93,6 +96,18 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
           return Maybe<void>::Ok();
         }));
       });
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DTREagerMirroredTensorImpl::UpdateEvictTrigger() {
+  const auto& parallel_desc = JUST(Placement4Device(this->device())).shared_from_symbol();
+  const auto& eager_blob_object = eager_blob_object_;
+  evict_trigger_ = std::make_shared<EvictTrigger>([eager_blob_object, parallel_desc]() {
+    CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      JUST(builder->EvictDTRTensor(eager_blob_object, parallel_desc));
+      return Maybe<void>::Ok();
+    }));
+  });
   return Maybe<void>::Ok();
 }
 
@@ -169,6 +184,99 @@ Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
 Maybe<void> EagerMirroredTensorImpl::RegisterStorageDeleteHook(const std::function<void()>& hook) {
   CHECK_OR_RETURN(eager_blob_object_) << "EagerBlobObject has not initialized";
   eager_blob_object_->RegisterStorageDeleteHook(hook);
+  return Maybe<void>::Ok();
+}
+
+Maybe<MirroredTensorImpl> DTREagerMirroredTensorImpl::detach() const {
+  auto detached_impl = std::make_shared<DTREagerMirroredTensorImpl>(tensor_meta_, tensor_storage_,
+                                                                    evict_trigger_, false, true);
+  detached_impl->eager_blob_object_ = eager_blob_object_;
+  return std::shared_ptr<MirroredTensorImpl>(detached_impl);
+}
+
+class EvictTrigger {
+ public:
+  using ReleaserHookT = std::function<void()>;
+
+  OF_DISALLOW_COPY_AND_MOVE(EvictTrigger);
+
+  explicit EvictTrigger(ReleaserHookT releaser_hook)
+      : releaser_hook_(std::make_shared<ReleaserHookT>(releaser_hook)) {}
+
+  ~EvictTrigger() {
+    CHECK(releaser_hook_);
+    if (!IsShuttingDown()) { (*releaser_hook_)(); }
+  }
+
+  void set_releaser_hook(ReleaserHookT releaser_hook) {
+    releaser_hook_ = std::make_shared<ReleaserHookT>(releaser_hook);
+  }
+
+ private:
+  std::shared_ptr<ReleaserHookT> releaser_hook_;
+};
+
+Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObject(
+    const intrusive::shared_ptr<LocalDepObject>& dep_object, const bool pin_memory) {
+  CHECK_OR_RETURN(static_cast<bool>(device()));
+  const auto& mem_case = device()->mem_case();
+  const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
+  const auto& mut_stride = std::const_pointer_cast<Stride>(tensor_meta()->stride_ptr());
+
+  if (tensor_storage_) {
+    auto tensor_storage = tensor_storage_->storage();
+    eager_blob_object_ = std::make_shared<vm::DTREagerBlobObject>(
+        mem_case, mut_shape, mut_stride, dtype(), tensor_storage, dep_object);
+    eager_blob_object_->set_pin_memory(pin_memory);
+  } else {
+    const auto& eager_blob_object =
+        std::make_shared<vm::DTREagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
+                                                 std::make_shared<vm::TensorStorage>(), dep_object);
+    eager_blob_object->set_pin_memory(pin_memory);
+    JUST(set_eager_blob_object(eager_blob_object));
+  }
+  return Maybe<void>::Ok();
+}
+
+// Maybe<void> DTREagerMirroredTensorImpl::InitEagerBlobObjectAndTensorStorage(
+//     const std::shared_ptr<vm::DTREagerBlobObject>& eager_blob_object,
+//     const std::shared_ptr<TensorStorage>& tensor_storage) {
+//   CHECK_OR_RETURN(eager_blob_object->tensor_buffer() == tensor_storage->buffer());
+//   eager_blob_object_ = eager_blob_object;
+//   tensor_storage_ = tensor_storage;
+//   return Maybe<void>::Ok();
+// }
+
+Maybe<void> DTREagerMirroredTensorImpl::set_eager_blob_object(
+    std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
+  CHECK_OR_RETURN(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(eager_blob_object) != nullptr)
+      << "real type: " << typeid(*eager_blob_object).name();
+  bool has_eager_blob_object_already = eager_blob_object_ != nullptr;
+  eager_blob_object_ = eager_blob_object;
+  CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get() == tensor_meta()->shape_ptr().get());
+  CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype());
+  if (EnvBool<ONEFLOW_DTR_FBIP>() && has_eager_blob_object_already) {
+    const auto& parallel_desc = JUST(Placement4Device(this->device())).shared_from_symbol();
+    tensor_storage_->set_releaser_hook(
+        [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
+          CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+            if (eager_blob_object->producer_stream().has_value()) {
+              JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
+            }
+            return Maybe<void>::Ok();
+          }));
+        });
+    // TODO: move releaser hook into EvictTrigger itself
+    evict_trigger_->set_releaser_hook([eager_blob_object, parallel_desc]() {
+      CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+        JUST(builder->EvictDTRTensor(eager_blob_object, parallel_desc));
+        return Maybe<void>::Ok();
+      }));
+    });
+  } else {
+    JUST(UpdateTensorStorage());
+    JUST(UpdateEvictTrigger());
+  }
   return Maybe<void>::Ok();
 }
 

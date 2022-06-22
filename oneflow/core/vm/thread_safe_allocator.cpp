@@ -20,12 +20,14 @@ namespace oneflow {
 namespace vm {
 
 void ThreadSafeAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
+  // std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
+  std::unique_lock<std::recursive_mutex> lock(mutex4backend_allocator_);
   backend_allocator_->Allocate(mem_ptr, size);
 }
 
 void ThreadSafeAllocator::Deallocate(char* mem_ptr, std::size_t size) {
-  std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
+  // std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
+  std::unique_lock<std::recursive_mutex> lock(mutex4backend_allocator_);
   backend_allocator_->Deallocate(mem_ptr, size);
 }
 

@@ -1,0 +1,73 @@
+I20220403 17:57:33.892311 10694 opkernel_instruction_type.cpp:488] ****START-DTRComputeInstruction-cpu.LocalCallOpKernel
+I20220403 17:57:33.892344 10694 opkernel_instruction_type.cpp:490] ****OP-slice
+I20220403 17:57:33.892540 10694 opkernel_instruction_type.cpp:514] ****END-DTRComputeInstruction-cpu.LocalCallOpKernel
+I20220403 17:57:33.892586 10694 opkernel_instruction_type.cpp:488] ****START-DTRComputeInstruction-cpu.LocalCallOpKernel
+I20220403 17:57:33.892602 10694 opkernel_instruction_type.cpp:490] ****OP-reshape
+I20220403 17:57:33.892752 10694 opkernel_instruction_type.cpp:514] ****END-DTRComputeInstruction-cpu.LocalCallOpKernel
+I20220403 17:57:33.892807 10694 dtr_eager_blob_object.cpp:123] ****EVICT-0x24f361e0-4
+I20220403 17:57:33.893713 10694 dtr_eager_blob_object.cpp:123] ****EVICT-0x24f333c0-4
+I20220403 17:57:33.893793 10694 dtr_eager_blob_object.cpp:123] ****EVICT-0x56b36c0-4
+I20220403 17:57:33.894464 10694 opkernel_instruction_type.cpp:488] ****START-DTRComputeInstruction-cpu.LocalCallOpKernel
+I20220403 17:57:33.894500 10694 opkernel_instruction_type.cpp:490] ****OP-exp
+I20220403 17:57:33.894680 10694 opkernel_instruction_type.cpp:514] ****END-DTRComputeInstruction-cpu.LocalCallOpKernel
+I20220403 17:57:33.894922 10694 dtr_eager_blob_object.cpp:123] ****EVICT-0x5690620-4
+I20220403 17:57:33.895779 10694 opkernel_instruction_type.cpp:488] ****START-DTRComputeInstruction-cpu.LocalCallOpKernel
+I20220403 17:57:33.895826 10694 opkernel_instruction_type.cpp:490] ****OP-uniform_int
+I20220403 17:57:33.896116 10694 opkernel_instruction_type.cpp:514] ****END-DTRComputeInstruction-cpu.LocalCallOpKernel
+I20220403 17:57:43.420747 10698 opkernel_instruction_type.cpp:488] ****START-DTRComputeInstruction-gpu.LocalCallOpKernel
+I20220403 17:57:43.420764 10698 opkernel_instruction_type.cpp:490] ****OP-conv2d
+I20220403 17:57:43.420837 10698 dtr_cuda_allocator.cpp:407] ****ALLOCATE-0x7f31a0fe01f0-256901120
+I20220403 17:57:43.420928 10698 dtr_cuda_allocator.cpp:407] ****ALLOCATE-0x7f31a0fe0300-85504
+I20220403 17:57:43.421173 10698 opkernel_instruction_type.cpp:514] ****END-DTRComputeInstruction-gpu.LocalCallOpKernel
+I20220403 17:57:43.421299 10698 opkernel_instruction_type.cpp:488] ****START-DTRComputeInstruction-gpu.LocalCallOpKernel
+I20220403 17:57:43.421316 10698 opkernel_instruction_type.cpp:490] ****OP-normalization
+I20220403 17:57:43.424173 10698 dtr_cuda_allocator.cpp:287] ****START-EvictAndFindPiece
+I20220403 17:57:43.424261 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424275 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424286 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424294 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424302 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424310 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424376 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424388 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424412 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424422 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424440 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424450 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424466 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424474 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424587 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424597 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424611 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.424618 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.424685 10698 dtr_eager_blob_object.cpp:123] ****EVICT-0x2510ef60-256901120
+I20220403 17:57:43.424700 10698 dtr_cuda_allocator.cpp:380] ****END-EvictAndFindPiece
+I20220403 17:57:43.424710 10698 dtr_cuda_allocator.cpp:407] ****ALLOCATE-0x7f31a0fe01f0-256901120
+I20220403 17:57:43.424744 10698 dtr_cuda_allocator.cpp:407] ****ALLOCATE-0x7f31a0fe01f0-1024
+I20220403 17:57:43.424788 10698 dtr_cuda_allocator.cpp:407] ****ALLOCATE-0x7f31a0fe01f0-1024
+I20220403 17:57:43.424862 10698 dtr_cuda_allocator.cpp:407] ****ALLOCATE-0x7f31a0fe0300-512
+I20220403 17:57:43.424955 10698 opkernel_instruction_type.cpp:172] mutable! op: normalization, input 1
+I20220403 17:57:43.424971 10698 opkernel_instruction_type.cpp:173]  set it as non evictable
+I20220403 17:57:43.424983 10698 opkernel_instruction_type.cpp:172] mutable! op: normalization, input 2
+I20220403 17:57:43.424989 10698 opkernel_instruction_type.cpp:173]  set it as non evictable
+I20220403 17:57:43.425107 10698 opkernel_instruction_type.cpp:514] ****END-DTRComputeInstruction-gpu.LocalCallOpKernel
+I20220403 17:57:43.425256 10698 opkernel_instruction_type.cpp:488] ****START-DTRComputeInstruction-gpu.LocalCallOpKernel
+I20220403 17:57:43.425272 10698 opkernel_instruction_type.cpp:490] ****OP-add_n
+I20220403 17:57:43.425340 10698 dtr_cuda_allocator.cpp:287] ****START-EvictAndFindPiece
+I20220403 17:57:43.425467 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.425480 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.425505 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.425515 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.425550 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.425560 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.425577 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.425586 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.425696 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.425707 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.425720 10698 tensor_pool.cpp:263] pesudo compute father
+I20220403 17:57:43.425730 10698 tensor_pool.cpp:277] new fa current cnt: 1new pesudo node cnt: 1, fa == pesudo_node? 1
+I20220403 17:57:43.425797 10698 dtr_eager_blob_object.cpp:123] ****EVICT-0x26d115e0-256901120
+I20220403 17:57:43.425813 10698 dtr_cuda_allocator.cpp:380] ****END-EvictAndFindPiece
+I20220403 17:57:33.893793 10694 dtr_eager_blob_object.cpp:123] ****EVICT-0x56b36c0-4
+I20220403 17:57:43.425822 10698 dtr_cuda_allocator.cpp:407] ****ALLOCATE-0x7f31a0fe01f0-256901120
+I20220403 17:57:43.425931 10698 opkernel_instruction_type.cpp:514] ****END-DTRComputeInstruction-gpu.LocalCallOpKernel

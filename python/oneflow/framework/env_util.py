@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import re
 import socket
 import traceback
 from contextlib import closing
@@ -46,6 +47,43 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
     """
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)
+
+
+def enable_dtr(val: bool = False, thres: str = "1500MB", debug_level: int = 0, heuristic: str = "full") -> None:
+    """If True, DTR strategy will be launched. Memory threshold in percentage.
+
+    Args:
+        val (bool, optional): Use DTR strategy or not. Defaults to False.
+        thres (int | str, optional): Cuda memory threshold. Defaults to 1500MB.
+        debug_level (int, optional): higher means more debug info. Defaults to 0.
+    """
+    if isinstance(thres, str):
+        out = str2bytes(thres)
+    elif isinstance(thres, int):
+        out = thres
+    else:
+        raise TypeError("CUDA memory value should be a str or an int.")
+
+    return oneflow._oneflow_internal.dtr.enable(val, out, debug_level, heuristic)
+
+
+def is_dtr_enabled() -> bool:
+    """Return whether enabled DTR or not
+
+    Returns:
+        bool: [description]
+    """
+    return oneflow._oneflow_internal.dtr.is_enabled()
+
+
+def str2bytes(input):
+    regex = re.compile(r"(\d+(?:\.\d+)?)\s*([kmg]?b)", re.IGNORECASE)
+    magnitude = ["b", "kb", "mb", "gb"]
+    out = regex.findall(input)
+    if len(out) != 1:
+        raise ValueError("Wrong memory input: should be value + units(b, kb, mb, gb).")
+    else:
+        return int(float(out[0][0]) * 1024 ** magnitude.index(out[0][1].lower()))
 
 
 def check_non_localhost_proxy_and_print_warning():

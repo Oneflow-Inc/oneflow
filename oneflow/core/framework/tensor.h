@@ -21,7 +21,9 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
@@ -37,6 +39,7 @@ class FunctionNode;
 
 class ConsistentTensor;
 class MirroredTensor;
+class DTRMirroredTensor;
 
 class Tensor : public std::enable_shared_from_this<Tensor> {
  public:
@@ -105,6 +108,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<const AutogradMeta> autograd_meta() const = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
+  bool has_autograd_meta() { return mut_autograd_meta() != nullptr; }
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
@@ -425,20 +429,18 @@ class Parameter final : public ProxyTensor<Parameter> {
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
   std::shared_ptr<Tensor> pin_memory() const override;
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override;
 
  private:
-  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
-      : ProxyTensor<Parameter>(tensor) {
-    this->tensor_->set_requires_grad(requires_grad);
-  }
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad);
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor> {
+class MirroredTensor : public TensorIf<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
   explicit MirroredTensor(const std::shared_ptr<MirroredTensorImpl>& impl) { impl_ = impl; }
-  ~MirroredTensor() override = default;
+  virtual ~MirroredTensor() override = default;
 
   // Getters
   std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
@@ -516,7 +518,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
 
   // Operators for tensor
-  Maybe<Tensor> detach() const override;
+  virtual Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
@@ -534,7 +536,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
     bool old_requires_grad = requires_grad();
     impl_ = mirrored_tensor->impl_;
-    set_requires_grad(old_requires_grad);
+    JUST(set_requires_grad(old_requires_grad));
     grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }
@@ -548,8 +550,52 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
   Maybe<ConsistentTensor> AsConsistentTensor() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
- private:
+ protected:
   std::shared_ptr<MirroredTensorImpl> impl_;
+};
+
+struct Holder final {
+  std::vector<std::shared_ptr<Holder>> input_holders;
+  std::shared_ptr<TensorStorage> storage;
+  std::shared_ptr<vm::EagerBlobObject> ebo;
+
+  Holder(const std::vector<std::shared_ptr<Holder>>& input_holders,
+         const std::shared_ptr<TensorStorage>& storage,
+         const std::shared_ptr<vm::EagerBlobObject>& ebo)
+      : input_holders(input_holders), storage(storage), ebo(ebo) {}
+};
+
+class DTRMirroredTensor final : public MirroredTensor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DTRMirroredTensor);
+  DTRMirroredTensor() = default;
+  explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl)
+      : MirroredTensor(impl) {}
+  ~DTRMirroredTensor() = default;
+
+  bool is_in_memory() const;
+
+  Maybe<void> set_holder(const std::vector<std::shared_ptr<Holder>>& input_holders);
+
+  Maybe<Tensor> detach() const override;
+
+  std::shared_ptr<Holder> holder() const { return holder_; }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
+    const auto& dtr_mirrored_tensor =
+        std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(other->detach()));
+    CHECK_NOTNULL_OR_RETURN(dtr_mirrored_tensor);
+    bool old_requires_grad = requires_grad();
+    impl_ = dtr_mirrored_tensor->impl_;
+    JUST(set_requires_grad(old_requires_grad));
+    // grad_fn_node_ = nullptr;
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> set_blob_object_bp_required();
+  Maybe<void> set_eager_blob_object(const std::shared_ptr<vm::DTREagerBlobObject>& debo);
+
+ private:
+  std::shared_ptr<Holder> holder_;
 };
 
 class ConsistentTensor final : public TensorIf<ConsistentTensor> {

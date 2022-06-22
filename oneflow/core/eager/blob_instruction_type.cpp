@@ -27,6 +27,8 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
+#include "oneflow/core/eager/opkernel_instruction_type.h"
 
 namespace oneflow {
 namespace vm {
@@ -47,6 +49,17 @@ void AccessBlobByCallbackInstructionType::ComputeInstrMsg(
       dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
+  if (auto dtr_ebo = std::dynamic_pointer_cast<DTREagerBlobObject>(ptr->eager_blob_object())) {
+    CHECK_JUST(DTRUtil::recompute(dtr_ebo.get(), instr_msg.phy_instr_stream()->device_ctx().get()));
+    if (ptr->modifier() == "mut") {
+      // the content is modified by an external function, no way to recompute it,
+      // so set tensor as unevictable
+      dtr_ebo->set_evictable(false);
+    }
+    // LOG(INFO) << "access blob";
+    // LOG(INFO) << dtr_ebo->is_in_memory();
+    // LOG(INFO) << dtr_ebo->is_evictable();
+  }
   auto* blob = ptr->eager_blob_object()->blob();
   OfBlob ofblob(device_ctx->stream(), blob);
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));

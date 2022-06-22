@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
 #define ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
 
+#include <utility>
+
 #include "oneflow/core/common/global.h"
 
 namespace oneflow {
@@ -24,6 +26,18 @@ class ForSession {};
 class ForEnv {};
 
 class EagerExecution {};
+
+struct DTRConfig {
+  bool is_enabled;
+  float memory_threshold;
+  int debug_level;
+  std::string heuristic;
+  DTRConfig(bool is_enabled, float memory_threshold, int debug_level, const std::string &heuristic)
+      : is_enabled(is_enabled),
+        memory_threshold(memory_threshold),
+        debug_level(debug_level),
+        heuristic(heuristic) {}
+};
 
 class MultiClient {};
 

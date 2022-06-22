@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
+#include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
@@ -141,6 +142,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
+  Global<dtr::TensorPool>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -253,6 +255,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
+  Global<dtr::TensorPool>::Delete();
   ClearAllSymbol();
   if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
     Global<EnvGlobalObjectsScope>::SetAllocated(nullptr);

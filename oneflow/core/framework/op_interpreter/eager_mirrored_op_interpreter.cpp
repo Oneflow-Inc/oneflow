@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -102,16 +104,47 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
+  std::vector<
+      std::tuple<std::shared_ptr<DTRMirroredTensor>, std::shared_ptr<vm::DTREagerBlobObject>,
+                 std::shared_ptr<vm::DTREagerBlobObject>>>
+      fbip_list;
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
-    if (!outputs->at(i)) {
-      const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
-      outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
-      output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+    if (dtr::is_enabled()) {
+      if (!outputs->at(i) || EnvBool<ONEFLOW_DTR_OLD_IMMUTABLE>()) {
+        const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
+        outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
+        output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+      } else if (EnvBool<ONEFLOW_DTR_FBIP>()) {
+        if (!outputs->at(i)) {
+          // output is empty
+          const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
+          outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
+          output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+        } else {
+          // output is existing
+          auto tensor = std::dynamic_pointer_cast<DTRMirroredTensor>((*outputs)[i]);
+          auto old_eager_blob_object =
+              std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(tensor->eager_blob_object()));
+          auto new_eager_blob_object = old_eager_blob_object->Clone();
+          (*output_eager_blob_objects)[i] = new_eager_blob_object;
+          fbip_list.emplace_back(tensor, old_eager_blob_object, new_eager_blob_object);
+        }
+      } else {
+        bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+        CHECK_OR_RETURN(has_eager_blob_object);
+        output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+      }
     } else {
-      bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
-      CHECK_OR_RETURN(has_eager_blob_object);
-      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+      if (!outputs->at(i)) {
+        const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
+        outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
+        output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+      } else {
+        bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+        CHECK_OR_RETURN(has_eager_blob_object);
+        output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+      }
     }
   }
   Symbol<Stream> stream;
@@ -166,6 +199,22 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
+  if (dtr::is_enabled()) {
+    for (int i = 0; i < input_eager_blob_objects->size(); i++) {
+      const auto& x = (*input_eager_blob_objects)[i];
+      if (std::dynamic_pointer_cast<vm::DTREagerBlobObject>(x) == nullptr) {
+        return Error::RuntimeError() << "not debo, " << i << ", op typename "
+                                     << JUST(user_op_expr.MutKernel4Stream(stream))->op_type_name();
+      }
+    }
+    for (int i = 0; i < output_eager_blob_objects->size(); i++) {
+      const auto& x = (*output_eager_blob_objects)[i];
+      if (std::dynamic_pointer_cast<vm::DTREagerBlobObject>(x) == nullptr) {
+        return Error::RuntimeError() << "not debo, " << i << ", op typename "
+                                     << JUST(user_op_expr.MutKernel4Stream(stream))->op_type_name();
+      }
+    }
+  }
 
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(stream));
   kernel->set_need_check_mem_case(need_check_mem_case);
@@ -178,6 +227,47 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, stream);
   }));
+
+  if (dtr::is_enabled()) {
+    std::vector<std::shared_ptr<Holder>> input_holders;
+    for (const auto& x : inputs) {
+      auto dtr_mirrored_tensor =
+          std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(x->AsMirroredTensor()));
+      const auto& input_holder = dtr_mirrored_tensor->holder();
+      CHECK_NOTNULL_OR_RETURN(input_holder);
+      input_holders.push_back(input_holder);
+    }
+    if (EnvBool<ONEFLOW_DTR_FBIP>()) {
+      for (const auto& tuple : fbip_list) {
+        auto& tensor = std::get<0>(tuple);
+        auto& old_ebo = std::get<1>(tuple);
+        auto& new_ebo = std::get<2>(tuple);
+        old_ebo->tensor_storage().reset(new vm::TensorStorage);
+        old_ebo->set_evictable(true);
+        auto one_tensor_storage = std::make_shared<TensorStorage>(old_ebo->tensor_storage());
+        const auto& parallel_desc =
+            JUST(Placement4Device(JUST(tensor->device()))).shared_from_symbol();
+        one_tensor_storage->set_releaser_hook(
+            [old_ebo, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
+              CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+                if (old_ebo->tensor_storage()->producer_stream().has_value()) {
+                  LOG(INFO) << "hook " << old_ebo.get();
+                  JUST(builder->ReleaseTensor(old_ebo, parallel_desc));
+                }
+                return Maybe<void>::Ok();
+              }));
+            });
+        tensor->holder()->storage = one_tensor_storage;
+        JUST(tensor->set_eager_blob_object(new_ebo));
+      }
+    }
+
+    for (const auto& output : *outputs) {
+      auto dtr_output = std::dynamic_pointer_cast<DTRMirroredTensor>(output);
+      JUST(dtr_output->set_holder(input_holders));
+    }
+  }
+
   return Maybe<void>::Ok();
 }
 

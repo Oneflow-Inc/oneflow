@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_THREAD_SAFE_ALLOCATOR_H_
 
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include "oneflow/core/vm/allocator.h"
@@ -27,16 +28,19 @@ namespace vm {
 
 class ThreadSafeAllocator final : public Allocator {
  public:
-  explicit ThreadSafeAllocator(std::unique_ptr<Allocator>&& backend_allocator)
+  explicit ThreadSafeAllocator(Allocator* backend_allocator)
       : Allocator(), backend_allocator_(std::move(backend_allocator)) {}
   ~ThreadSafeAllocator() override = default;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
 
+  Allocator* backend_allocator() const { return backend_allocator_; }
+
  private:
-  std::unique_ptr<Allocator> backend_allocator_;
-  std::mutex mutex4backend_allocator_;
+  Allocator* backend_allocator_;
+  std::recursive_mutex mutex4backend_allocator_;
+  // std::mutex mutex4backend_allocator_;
 };
 
 class SingleThreadOnlyAllocator final : public Allocator {

@@ -28,6 +28,8 @@ class InstructionMsg;
 
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
 
+Maybe<void> Temp();
+
 }  // namespace vm
 }  // namespace oneflow
 

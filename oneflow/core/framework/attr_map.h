@@ -115,6 +115,8 @@ class ComposedAttrMap final {
   void ResetPrior(const AttrMap& prior) { prior_ = prior; }
   void ResetBase(const AttrMap& base) { base_ = base; }
 
+  const AttrMap& base_attr_map() const { return base_; }
+
  private:
   AttrMap prior_;
   AttrMap base_;

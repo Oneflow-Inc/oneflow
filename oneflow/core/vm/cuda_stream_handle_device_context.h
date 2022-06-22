@@ -16,11 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_DEVICE_CONTEXT_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_STREAM_HANDLE_DEVICE_CONTEXT_H_
 
+#include "oneflow/core/common/env_var/dtr.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/vm/bin_allocator.h"
 #include "oneflow/core/vm/cuda_backend_allocator.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/dtr_naive_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/common/single_thread_obj_pool.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
@@ -32,6 +35,14 @@ namespace oneflow {
 namespace vm {
 
 #ifdef WITH_CUDA
+
+inline Allocator* GetAllocator(int64_t device_id) {
+  if (EnvBool<OF_DTR>()) {
+    if (EnvBool<OF_DTR_ALLO>()) { return Global<DtrCudaAllocator>::Get(); }
+    return new DtrNaiveCudaAllocator(device_id);
+  }
+  return new CudaBackendAllocator(device_id);
+}
 
 class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEventProvider {
  public:
@@ -48,8 +59,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
       : DeviceCtx(),
         SingleThreadQueryCudaEventProvider(device_id),
         stream_(nullptr),
-        cuda_allocator_(new ThreadSafeAllocator(std::make_unique<BinAllocator>(
-            kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(device_id)))),
+        cuda_allocator_(new ThreadSafeAllocator(GetAllocator(device_id))),
         device_id_(device_id) {}
 
   cudaStream_t cuda_stream() const override { return GetOrCreateCudaStream()->cuda_stream(); }
@@ -58,7 +68,8 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
 
   ep::Stream* stream() override { return GetOrCreateCudaStream(); }
 
-  vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
+  vm::Allocator* mut_allocator() override {
+    return cuda_allocator_.get(); }
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
 

@@ -18,11 +18,13 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
@@ -32,10 +34,45 @@ namespace oneflow {
 
 namespace one {
 
+Parameter::Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
+    : ProxyTensor<Parameter>(tensor) {
+  // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
+  // (align with PyTorch) instead of sharing it with x
+  CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
+  auto blob_object = CHECK_JUST(tensor_->eager_blob_object());
+  if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
+    dtr_eager_blob_object->set_evictable(false);
+  }
+}
+
+Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
+  JUST(ProxyTensor<Parameter>::set_data(other));
+
+  auto blob_object = JUST(this->tensor_->eager_blob_object());
+  if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
+    dtr_eager_blob_object->set_evictable(false);
+  }
+  return Maybe<void>::Ok();
+}
+
+bool DTRMirroredTensor::is_in_memory() const {
+  return std::dynamic_pointer_cast<vm::DTREagerBlobObject>(CHECK_JUST(eager_blob_object()))
+      ->is_in_memory();
+  ;
+}
+
+Maybe<void> DTRMirroredTensor::set_holder(
+    const std::vector<std::shared_ptr<Holder>>& input_holders) {
+  holder_ =
+      std::make_shared<Holder>(input_holders, JUST(tensor_storage()), JUST(eager_blob_object()));
+  if (dtr::debug_level() >= 3) { LOG(INFO) << "set_holder done"; }
+  return Maybe<void>::Ok();
+}
+
 Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
   return std::dynamic_pointer_cast<MirroredTensor>(
-      JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
+      JUST(functional::Constant(*shape_, Scalar(0), JUST(DType::Get(dtype_)), device_)));
 }
 
 std::shared_ptr<Tensor> Parameter::contiguous() const {
@@ -58,6 +95,11 @@ std::shared_ptr<Tensor> Parameter::pin_memory() const {
     const auto& impl =
         std::make_shared<LazyMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<MirroredTensor>(impl);
+  } else if (dtr::is_enabled()) {
+    const auto& impl =
+        std::make_shared<DTREagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    const auto& tensor = std::make_shared<DTRMirroredTensor>(impl);
+    return static_cast<std::shared_ptr<MirroredTensor>>(tensor);
   } else {
     const auto& impl =
         std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
@@ -70,6 +112,29 @@ bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "c
 Maybe<Tensor> MirroredTensor::detach() const {
   std::shared_ptr<Tensor> tensor = std::make_shared<MirroredTensor>(JUST(impl_->detach()));
   return tensor;
+}
+
+Maybe<Tensor> DTRMirroredTensor::detach() const {
+  auto tensor = std::make_shared<DTRMirroredTensor>(
+      CHECK_NOTNULL(std::dynamic_pointer_cast<DTREagerMirroredTensorImpl>(JUST(impl_->detach()))));
+  tensor->holder_ = this->holder_;
+  return std::dynamic_pointer_cast<Tensor>(tensor);
+}
+
+Maybe<void> DTRMirroredTensor::set_blob_object_bp_required() {
+  auto blob_object = JUST(eager_blob_object());
+  if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
+    // if (auto* dtr_eager_blob_object = dynamic_cast<vm::DTREagerBlobObject*>(blob_object.get())) {
+    dtr_eager_blob_object->set_bp_required(true);
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DTRMirroredTensor::set_eager_blob_object(
+    const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
+  // impl_->set_eager_blob_object will update one::tensor_storage
+  JUST(std::dynamic_pointer_cast<DTREagerMirroredTensorImpl>(impl_)->set_eager_blob_object(debo));
+  return Maybe<void>::Ok();
 }
 
 std::shared_ptr<Tensor> MirroredTensor::contiguous() const {

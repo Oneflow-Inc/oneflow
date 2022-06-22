@@ -371,6 +371,27 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InstructionsBuilder::EvictDTRTensor(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  if (eager_blob_object->last_used_stream().has_value()) {
+    const auto& last_used_device = JUST(eager_blob_object->last_used_stream());
+    const auto& producer_op_device = JUST(eager_blob_object->producer_stream());
+
+    if (last_used_device != producer_op_device) {
+      JUST(SoftSyncStream({JUST(eager_blob_object->compute_local_dep_object())}, "mut",
+                          last_used_device));
+    }
+  }
+  std::string instr_name = parallel_desc->device_tag() + ".EvictDTRTensor";
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), instr_name, parallel_desc,
+      std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object,
+                                                            eager_blob_object->producer_stream()));
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::ReleaseTensor(
     const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
@@ -406,6 +427,16 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
       Global<VirtualMachine>::Get()->mut_vm(), instruction_name, parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::Temp() {
+  // const std::string instr_name = "Temp";
+  // intrusive::shared_ptr<vm::InstructionMsg> instruction =
+  //     intrusive::make_shared<vm::InstructionMsg>(instr_name);
+  // *instruction->mut_phy_instr_operand() = std::make_shared<vm::NoArgCbPhyInstrOperand>([]() {});
+  // instruction_list_->EmplaceBack(std::move(instruction));
+  // return Maybe<void>::Ok();
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
 Maybe<void> InstructionsBuilder::SoftSyncStream(

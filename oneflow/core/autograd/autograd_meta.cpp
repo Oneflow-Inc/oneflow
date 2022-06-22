@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -68,6 +70,12 @@ Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
     acc_grad_ = JUST(static_zeros_tensor->AsMirroredTensor());
   } else {
     acc_grad_ = grad;
+  }
+  if (acc_grad_ != nullptr) {
+    if (auto dtr_grad_ebo = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(
+            JUST(acc_grad_->eager_blob_object()))) {
+      dtr_grad_ebo->set_evictable(false);
+    }
   }
   return Maybe<void>::Ok();
 }

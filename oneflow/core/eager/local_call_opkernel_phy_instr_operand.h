@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/vm/phy_instr_operand.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
-#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
 
@@ -42,7 +41,7 @@ class OpKernel;
 
 namespace vm {
 
-class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
+class LocalCallOpKernelPhyInstrOperand : public vm::PhyInstrOperand {
  public:
   LocalCallOpKernelPhyInstrOperand(const LocalCallOpKernelPhyInstrOperand&) = delete;
   LocalCallOpKernelPhyInstrOperand(LocalCallOpKernelPhyInstrOperand&&) = delete;
@@ -56,6 +55,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
+  const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const { return opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
   const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return op_interp_ctx_.attrs; }
@@ -123,6 +123,40 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
   DependenceVector input_dependences_;
   DependenceVector output_dependences_;
+};
+
+class DTRInstrOperand {
+ public:
+  DTRInstrOperand(const DTRInstrOperand&) = delete;
+  DTRInstrOperand(DTRInstrOperand&&) = delete;
+
+  DTRInstrOperand(
+      const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+      const one::EagerBlobObjectListPtr& input, const one::EagerBlobObjectListPtr& output,
+      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      const one::OpExprInterpContext& op_interp_ctx_,
+      const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode);
+  ~DTRInstrOperand() = default;
+
+  const std::shared_ptr<one::StatefulLocalOpKernel>& shared_opkernel() const { return opkernel_; }
+  const std::vector<std::weak_ptr<vm::EagerBlobObject>>& inputs() const { return inputs_; }
+  const std::vector<std::weak_ptr<vm::EagerBlobObject>>& outputs() const { return outputs_; }
+  const one::OpExprInterpContext& op_interp_ctx() const { return op_interp_ctx_; }
+  const one::DevVmDepObjectConsumeMode& dev_vm_dep_object_consume_mode() const {
+    return dev_vm_dep_object_consume_mode_;
+  }
+  const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
+      const {
+    return consistent_tensor_infer_result_;
+  }
+
+ private:
+  std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
+  std::vector<std::weak_ptr<vm::EagerBlobObject>> inputs_;
+  std::vector<std::weak_ptr<vm::EagerBlobObject>> outputs_;
+  std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result_;
+  const one::OpExprInterpContext op_interp_ctx_;
+  const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
 };
 
 }  // namespace vm

@@ -65,7 +65,7 @@ class TensorStorage {
   }
 
   void Release() {
-    non_pod_allocator_.reset();
+    non_pod_allocator_.reset(new MemoryAllocator());
     blob_dptr_.reset();
   }
 
@@ -82,7 +82,7 @@ class TensorStorage {
   std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
-class EagerBlobObject final {
+class EagerBlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
@@ -96,7 +96,15 @@ class EagerBlobObject final {
                   const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
-  ~EagerBlobObject() { tensor_storage_.reset(); }
+  virtual ~EagerBlobObject() {
+    tensor_storage_.reset();
+    blob_.reset();
+  }
+
+  std::vector<float> backup_data_;
+  float hash_ = -1;
+
+  BlobDesc* mut_blob_desc() { return &blob_desc_; }
 
   void set_storage_offset(const int64_t offset);
 
@@ -104,7 +112,7 @@ class EagerBlobObject final {
                "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
   blob();
 
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
+  virtual Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
   Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
@@ -188,6 +196,7 @@ class EagerBlobObject final {
   std::shared_ptr<Shape> shape_;
   std::shared_ptr<Stride> stride_;
   int64_t storage_offset_;
+ protected:
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
   bool pin_memory_;

@@ -54,6 +54,7 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
   const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object() const {
     return eager_blob_object_;
   }
+  const std::string& modifier() const { return modifier_; }
 
   const DependenceVector& input_dependences() const override { return input_dependences_; }
   const DependenceVector& output_dependences() const override { return output_dependences_; }

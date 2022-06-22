@@ -103,6 +103,13 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   const TensorTuple* inputs_ptr = &inputs;
   HANDLE_NON_CONTIGUOUS_INPUT(inputs_ptr);
 
+  TensorTuple mut_inputs(op_expr.output_size());
+  if (dtr::is_enabled() && requires_grad && EnvBool<ONEFLOW_DTR_OLD_IMMUTABLE>()) {
+    for (int i = 0; i < outputs->size(); ++i) {
+      if (outputs->at(i)) { mut_inputs.at(i) = outputs->at(i); }
+    }
+  }
+
   {
     autograd::AutoGradMode mode(false);
     const bool inplace = ctx.inplace.value_or(false);
@@ -123,6 +130,16 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     backward_fn->status = [=]() { return grad_closure->state()->SavedTensors().size() > 0; };
     JUST(GetThreadLocalAutogradEngine()->AddNode(op_expr.op_type_name() + "_backward", backward_fn,
                                                  *inputs_ptr, outputs));
+
+    // With DTR if inplace, set grad_fn_node for inputs(mut_inputs) the same as the outputs
+    if (dtr::is_enabled() && EnvBool<ONEFLOW_DTR_OLD_IMMUTABLE>()) {
+      for (int i = 0; i < outputs->size(); ++i) {
+        if (mut_inputs.at(i)) {
+          JUST(inputs.at(i)->set_data(outputs->at(i)));
+          mut_inputs.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
+        }
+      }
+    }
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output

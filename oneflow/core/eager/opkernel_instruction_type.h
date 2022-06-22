@@ -41,6 +41,13 @@ class LocalCallOpKernelInstructionType : public vm::InstructionType {
   Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
 };
 
+class DTREagerBlobObject;
+
+class DTRUtil {
+ public:
+  static Maybe<void> recompute(vm::DTREagerBlobObject* object, DeviceCtx* device_ctx);
+};
+
 }  // namespace vm
 }  // namespace oneflow
 

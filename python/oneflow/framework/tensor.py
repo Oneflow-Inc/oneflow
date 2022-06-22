@@ -235,6 +235,10 @@ def _floor_divide(self, other):
     return flow._C.floor_divide(self, other)
 
 
+def _floor_divide_inplace(self, other):
+    return flow.floor_divide(self, other, inplace=True)
+
+
 def _floor(self):
     return flow._C.floor(self)
 

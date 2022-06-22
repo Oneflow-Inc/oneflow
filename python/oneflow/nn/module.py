@@ -195,6 +195,8 @@ class Module(object):
                 )
             )
         else:
+            if flow._oneflow_internal.dtr.is_dtr_tensor(tensor):
+                flow._oneflow_internal.dtr.set_non_evictable(tensor)
             self._buffers[name] = tensor
             if persistent:
                 self._non_persistent_buffers_set.discard(name)
@@ -942,6 +944,10 @@ class Module(object):
                     applied_dict[buf] = buf_applied
                 else:
                     self._buffers[key] = applied_dict[buf]
+                # TODO: choose a better way
+                buf_tensor = self._buffers[key]
+                if flow._oneflow_internal.dtr.is_dtr_tensor(buf_tensor):
+                    flow._oneflow_internal.dtr.set_non_evictable(buf_tensor)
         return self
 
     def apply(self: T, fn: Callable[["Module"], None]) -> T:

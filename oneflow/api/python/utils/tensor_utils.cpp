@@ -51,6 +51,9 @@ Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
         "mut"));
     return Maybe<void>::Ok();
   }));
+  if (auto dtr_tensor = std::dynamic_pointer_cast<DTRMirroredTensor>(local_tensor)) {
+    JUST(dtr_tensor->set_holder({}));
+  }
   return Maybe<void>::Ok();
 }
 

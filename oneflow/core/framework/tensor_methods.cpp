@@ -69,6 +69,50 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       input->dtype()->data_type(), device, storage_offset);
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
+  /**
+   * auto s = std::make_shared<std::string>("abc");
+   * auto s2 = *s + "d";
+   * stringview sv1 = s->substr(1);  // "bc"
+   * s = std::make_shared<std::string>("hhh");
+   * print(sv1)                      // "hh"
+   */
+
+  /**
+   * ProxyEagerBlobObject
+   */
+
+  /**
+   * B: 盒子
+   * A: 不同的 view 指向同一个盒子，同时每个 view 又有自己独立的一些属性（shape、offset、stride）
+   * DTR replay 同时需要盒子和属性, inplace 只能替换盒子 B 里的东西
+   */
+
+  /**
+   * 如果 Tensor 是那个盒子，即 inplace 时替换盒子里的 Tensor。
+   * 可以满足 view 的要求吗？不能，因为 view + inplace 要求大家指向同一个盒子，这样不同 view 的 shape 就无法不同了
+   */
+
+  /**
+   * EagerBlobObjectView 持有 EagerBlobObject 盒子，但有自己的 shape、offset、stride
+   * data 由盒子里的 EagerBlobObject 提供，shape 等由自己提供
+   *
+   * inplace：先 copy，再 mutate，然后替换盒子里的 EagerBlobObject
+   *
+   * dtr 跑的时候，记录下 shape、offset、stride 和盒子里的 EagerBlobObject
+   * replay 时，on-the-fly 构造 EagerBlobObjectView
+   */
+
+  /**
+   * EagerBlobObject 持有 TensorStorage 盒子，但有自己的 shape、offset、stride
+   * data 由盒子里的 TensorStorage 提供，shape 等由自己提供
+   *
+   * inplace：先 copy，再 mutate，然后替换盒子里的 TensorStorage
+   *
+   * dtr 跑的时候，记录下 shape、offset、stride 和盒子里的 TensorStorage
+   * replay 时，on-the-fly 构造 EagerBlobObject
+   */
+
+
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
   bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
