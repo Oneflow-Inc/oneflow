@@ -641,9 +641,9 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
   std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
   std::vector<InsertedNcclInfo> nccl_op_infos;
 
-  std::vector<const OpNode*> after_acc_subgraph;
+  std::vector<const OpNode*> ordered_after_acc_subgraph;
   // NOTE(chengcheng): bfs for op_edge may create duplicated node.
-  HashSet<const OpNode*> acc_graph_nodes;
+  HashSet<const OpNode*> after_acc_subgraph_nodes;
   HashMap<const OpNode*, int64_t> op2subgraph_order;
 
   for (const OpNode* acc : ordered_acc_op_nodes) {
@@ -653,9 +653,20 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
           && IsOpEdgeAllowInsertNccl(op_edge, seed_time_shape)) {
         queued_edges.push(op_edge);
         CHECK(visited.insert(op_edge).second);
-        if (!IsAccOpNode(op_edge->dst_node())) { acc_graph_nodes.insert(op_edge->dst_node()); }
+        if (!IsAccOpNode(op_edge->dst_node())) {
+          after_acc_subgraph_nodes.insert(op_edge->dst_node());
+        }
       }
     }
+
+    auto NextEdgeNode2AfterAccSubGraph = [&](const OpEdge* next_edge, const OpNode* next_node) {
+      if (visited.find(next_edge) == visited.end()
+          && IsOpEdgeAllowInsertNccl(next_edge, seed_time_shape)) {
+        CHECK(visited.insert(next_edge).second);
+        queued_edges.push(next_edge);
+        if (!IsAccOpNode(next_node)) { after_acc_subgraph_nodes.insert(next_node); }
+      }
+    };
 
     // bfs search each edge after acc allow insert nccl. try insert.
     while (!queued_edges.empty()) {
@@ -704,76 +715,45 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         nccl_op_infos.emplace_back(nccl_op_info);
       }
 
-      for (const OpEdge* dst_node_out_edge : op_edge->dst_node()->out_edges()) {
-        if (visited.find(dst_node_out_edge) == visited.end()
-            && IsOpEdgeAllowInsertNccl(dst_node_out_edge, seed_time_shape)) {
-          CHECK(visited.insert(dst_node_out_edge).second);
-          queued_edges.push(dst_node_out_edge);
-          if (!IsAccOpNode(dst_node_out_edge->dst_node())) {
-            acc_graph_nodes.insert(dst_node_out_edge->dst_node());
-          }
-        }
-      }
-
       // NOTE(chengcheng): BFS for all edges and nodes after acc.
+      for (const OpEdge* dst_node_out_edge : op_edge->dst_node()->out_edges()) {
+        NextEdgeNode2AfterAccSubGraph(dst_node_out_edge, dst_node_out_edge->dst_node());
+      }
       for (const OpEdge* dst_node_in_edge : op_edge->dst_node()->in_edges()) {
-        if (visited.find(dst_node_in_edge) == visited.end()
-            && IsOpEdgeAllowInsertNccl(dst_node_in_edge, seed_time_shape)) {
-          CHECK(visited.insert(dst_node_in_edge).second);
-          queued_edges.push(dst_node_in_edge);
-          if (!IsAccOpNode(dst_node_in_edge->src_node())) {
-            acc_graph_nodes.insert(dst_node_in_edge->src_node());
-          }
-        }
+        NextEdgeNode2AfterAccSubGraph(dst_node_in_edge, dst_node_in_edge->src_node());
       }
-
       for (const OpEdge* src_node_out_edge : op_edge->src_node()->out_edges()) {
-        if (visited.find(src_node_out_edge) == visited.end()
-            && IsOpEdgeAllowInsertNccl(src_node_out_edge, seed_time_shape)) {
-          CHECK(visited.insert(src_node_out_edge).second);
-          queued_edges.push(src_node_out_edge);
-          if (!IsAccOpNode(src_node_out_edge->dst_node())) {
-            acc_graph_nodes.insert(src_node_out_edge->dst_node());
-          }
-        }
+        NextEdgeNode2AfterAccSubGraph(src_node_out_edge, src_node_out_edge->dst_node());
       }
-
       for (const OpEdge* src_node_in_edge : op_edge->src_node()->in_edges()) {
-        if (visited.find(src_node_in_edge) == visited.end()
-            && IsOpEdgeAllowInsertNccl(src_node_in_edge, seed_time_shape)) {
-          CHECK(visited.insert(src_node_in_edge).second);
-          queued_edges.push(src_node_in_edge);
-          if (!IsAccOpNode(src_node_in_edge->src_node())) {
-            acc_graph_nodes.insert(src_node_in_edge->src_node());
-          }
-        }
+        NextEdgeNode2AfterAccSubGraph(src_node_in_edge, src_node_in_edge->src_node());
       }
     }
   }
 
-  for (const auto* node : acc_graph_nodes) { after_acc_subgraph.push_back(node); }
+  for (const auto* node : after_acc_subgraph_nodes) { ordered_after_acc_subgraph.push_back(node); }
 
-  CHECK_EQ(acc_graph_nodes.size(), after_acc_subgraph.size());
+  CHECK_EQ(after_acc_subgraph_nodes.size(), ordered_after_acc_subgraph.size());
 
   std::sort(nccl_op_infos.begin(), nccl_op_infos.end(),
             [](const InsertedNcclInfo& lhs, const InsertedNcclInfo& rhs) {
               return lhs.order < rhs.order;
             });
 
-  std::sort(after_acc_subgraph.begin(), after_acc_subgraph.end(),
+  std::sort(ordered_after_acc_subgraph.begin(), ordered_after_acc_subgraph.end(),
             [&](const OpNode* lhs, const OpNode* rhs) {
               return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
             });
 
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
 
-  for (int64_t i = 0; i < after_acc_subgraph.size(); ++i) {
-    op2subgraph_order.emplace(after_acc_subgraph.at(i), i);
+  for (int64_t i = 0; i < ordered_after_acc_subgraph.size(); ++i) {
+    op2subgraph_order.emplace(ordered_after_acc_subgraph.at(i), i);
   }
 
-  for (int64_t i = 1; i < after_acc_subgraph.size(); ++i) {
-    const OpNode* this_node = after_acc_subgraph.at(i);
-    const OpNode* pre_node = after_acc_subgraph.at(i - 1);
+  for (int64_t i = 1; i < ordered_after_acc_subgraph.size(); ++i) {
+    const OpNode* this_node = ordered_after_acc_subgraph.at(i);
+    const OpNode* pre_node = ordered_after_acc_subgraph.at(i - 1);
     const std::string& this_op_name = this_node->op().op_name();
     const std::string& pre_op_name = pre_node->op().op_name();
     // build ctrl edge if need.
@@ -806,8 +786,8 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     if (src_op_it != op2subgraph_order.end()) {
       const int64_t src_sub_order = src_op_it->second;
       const int64_t next_sub_order = src_sub_order + 1;
-      if (next_sub_order < after_acc_subgraph.size()) {
-        const OpNode* next_op = after_acc_subgraph.at(next_sub_order);
+      if (next_sub_order < ordered_after_acc_subgraph.size()) {
+        const OpNode* next_op = ordered_after_acc_subgraph.at(next_sub_order);
         const std::string& next_op_name = next_op->op().op_name();
         const std::string& dst_op_name = info.dst_node->op().op_name();
         if (next_op_name != dst_op_name) {
