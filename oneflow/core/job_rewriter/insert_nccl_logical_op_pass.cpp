@@ -280,9 +280,8 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const NdSbp& src_nd_sb
             .Build()
             .op_conf();
     return true;
-  } else if ((dim_vec.at(0) % num_ranks == 0)
-             && (src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel())
-             && (src_dim1_sbp.split_parallel().axis() == 0)) {
+  } else if ((src_dim1_sbp.has_split_parallel() && dst_dim1_sbp.has_broadcast_parallel())
+             && (src_dim1_sbp.split_parallel().axis() == 0) && (dim_vec.at(0) % num_ranks == 0)) {
     // (*, S(0)) -> (*, B) : AllGather
     *ret =
         user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-(*S0)2(*B)-" + NewUniqueId())
