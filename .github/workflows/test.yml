@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - uses: Oneflow-Inc/get-oneflow/priority-pr@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow/priority-pr@support-iree-ci
         name: Check priority PR closed
         id: save-cache
         timeout-minutes: 5
@@ -161,7 +161,7 @@ jobs:
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
       - name: Wait for GPU slot
-        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@support-cuda-1106
+        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@support-iree-ci
         if: env.is_secrets_accessible == '1'
         timeout-minutes: 90
         continue-on-error: true
@@ -185,7 +185,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@support-iree-ci
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -232,7 +232,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -327,7 +327,7 @@ jobs:
             })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@support-cuda-1106
+        uses: Oneflow-Inc/get-oneflow/digest/upload@support-iree-ci
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -338,7 +338,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm13' && matrix.entry != 'cu102_xla' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@support-cuda-1106
+        uses: Oneflow-Inc/get-oneflow/digest/upload@support-iree-ci
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -363,7 +363,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-iree-ci
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -394,7 +394,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-iree-ci
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -471,7 +471,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -487,7 +487,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@support-cuda-1106
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-iree-ci
         id: download-digest
         timeout-minutes: 10
         with:
@@ -497,7 +497,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Get primary node
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/master-address@support-cuda-1106
+        uses: Oneflow-Inc/get-oneflow/master-address@support-iree-ci
         id: get-primary-node
         with:
           rank: ${{ matrix.rank }}
@@ -673,7 +673,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -689,7 +689,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@support-cuda-1106
+        uses: Oneflow-Inc/get-oneflow/digest/download@support-iree-ci
         id: download-digest
         timeout-minutes: 10
         with:
@@ -934,7 +934,7 @@ jobs:
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
-        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@support-cuda-1106
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@support-iree-ci
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -987,7 +987,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-cuda-1106
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@support-iree-ci
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
