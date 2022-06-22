@@ -712,7 +712,7 @@ template<typename LOAD, typename STORE, typename ComputeType>
 inline typename std::enable_if<!std::is_same<ComputeType, double>::value, cudaError_t>::type
 DispatchSoftmax(cudaStream_t stream, LOAD load, STORE store, const int64_t rows,
                 const int64_t cols) {
-  if (cols <= 1024) {
+  if (cols < 1024) {
     return DispatchSoftmaxWarpImpl<LOAD, STORE, ComputeType, Algorithm::kSoftmax>(
         stream, load, store, rows, cols);
   } else {
