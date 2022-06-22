@@ -51,12 +51,21 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
                                                 public user_op::CudaGraphSupport {
  public:
   CublasFusedMLPGradKernel() {
-    OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
+    // OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
+    // OF_CUDA_CHECK(cudaEventCreate(&async_weight_grad_event));
+    for(int i = 0; i < 10; i++){
+      cudaEvent_t main_stream_event; 
+      OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
+      main_stream_event_vec.push_back(main_stream_event); 
+    }
     OF_CUDA_CHECK(cudaEventCreate(&async_weight_grad_event));
   };
   ~CublasFusedMLPGradKernel() override {
-    OF_CUDA_CHECK(cudaEventDestroy(main_stream_event));
-    OF_CUDA_CHECK(cudaEventDestroy(async_weight_grad_event));
+    // OF_CUDA_CHECK(cudaEventDestroy(main_stream_event));
+    // OF_CUDA_CHECK(cudaEventDestroy(async_weight_grad_event));
+    for(int i = 0; i < 10; i++){
+      OF_CUDA_CHECK(cudaEventDestroy(main_stream_event_vec.at(i)));
+    }
   };
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
@@ -70,7 +79,9 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
   }
 
  private:
-  cudaEvent_t main_stream_event;
+  // cudaEvent_t main_stream_event;
+  // cudaEvent_t async_weight_grad_event;
+  std::vector<cudaEvent_t> main_stream_event_vec;
   cudaEvent_t async_weight_grad_event;
 
   using user_op::OpKernel::Compute;
@@ -136,12 +147,12 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
             SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/true,
                         /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, d_bias->mut_dptr(),
-                        aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+                        aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 16 * 1024 * 1024);
             /*
             a = dy, b = weight
             cublas_a=weight, cublas_b=dy
             */
-            OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
+            OF_CUDA_CHECK(cudaEventRecord(main_stream_event_vec[idx], cuda_stream->cuda_stream()));
             OF_CUBLAS_CHECK(
                 cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                             &sp_alpha, weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
@@ -163,12 +174,12 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
           SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                         /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr,
-                        nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+                        nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
           /*
           a = dy, b = weight
           cublas_a=weight, cublas_b=dy
           */
-          OF_CUDA_CHECK(cudaEventRecord(main_stream_event, cuda_stream->cuda_stream()));
+          OF_CUDA_CHECK(cudaEventRecord(main_stream_event_vec[idx], cuda_stream->cuda_stream()));
           OF_CUBLAS_CHECK(
               cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                           &sp_alpha, weight->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
@@ -202,17 +213,19 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
           SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                         /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
-                        cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
-          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
+                        cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
+          
+          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event_vec[idx]));
+          
           OF_CUBLAS_CHECK(
-              cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
-                          &sp_alpha, hidden->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-                          matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
-                          matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
-                          matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
-                          kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
-          OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
-          OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
+            cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
+                        &sp_alpha, hidden->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
+                        matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
+                        matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
+                        matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
+                        kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
+          // OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
+          // OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
           // OF_CUDA_CHECK(cudaDeviceSynchronize()); 
           
           // compute dy shape
@@ -235,8 +248,8 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel,
           SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                         /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
-                        cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
-          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
+                        cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc, 8 * 1024 * 1024);
+          OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event_vec[idx]));
           OF_CUBLAS_CHECK(
               cublasLtMatmul(kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc,
                           &sp_alpha, x->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
