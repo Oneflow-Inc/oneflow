@@ -55,12 +55,12 @@ class NarrowKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    if (in->shape().elem_cnt() == 0) { return; }
+    if (in->shape_view().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
-    int64_t length = out->shape().At(dim);
-    const ShapeView in_shape = in->shape();
+    int64_t length = out->shape_view().At(dim);
+    const ShapeView in_shape = in->shape_view();
     auto copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
 
@@ -92,9 +92,9 @@ class NarrowGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
-    int64_t length = dy->shape().At(dim);
+    int64_t length = dy->shape_view().At(dim);
 
-    size_t dx_byte_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t dx_byte_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     void* dst = dx->mut_dptr();
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
@@ -103,7 +103,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
 
     auto copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
-    const ShapeView dx_shape = dx->shape();
+    const ShapeView dx_shape = dx->shape_view();
 
     const int64_t outer_dim = dx_shape.Count(0, dim);
     const int64_t inner_dim = dx_shape.Count(dim + 1);

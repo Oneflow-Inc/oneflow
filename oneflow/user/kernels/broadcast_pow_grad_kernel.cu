@@ -48,16 +48,16 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
 
-    const int64_t num_axes = dz_tensor->shape().NumAxes();
-    const int64_t elem_cnt = z_tensor->shape().elem_cnt();
+    const int64_t num_axes = dz_tensor->shape_view().NumAxes();
+    const int64_t elem_cnt = z_tensor->shape_view().elem_cnt();
     Memset<device>(ctx->stream(), tmp_buffer->mut_dptr<T>(), 0,
                    GetCudaAlignedSize(elem_cnt * sizeof(T)));
-    XpuVarNdarray<const T> z(z_tensor->shape(), z_tensor->dptr<T>(), num_axes);
-    XpuVarNdarray<const T> dz(dz_tensor->shape(), dz_tensor->dptr<T>(), num_axes);
+    XpuVarNdarray<const T> z(z_tensor->shape_view(), z_tensor->dptr<T>(), num_axes);
+    XpuVarNdarray<const T> dz(dz_tensor->shape_view(), dz_tensor->dptr<T>(), num_axes);
     XpuVarNdarray<const T> const_tmp(dz.shape(), tmp_buffer->dptr<T>());
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
-    XpuVarNdarray<const T> x(x_tensor->shape(), x_tensor->dptr<T>(), num_axes);
-    XpuVarNdarray<T> dy(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes);
+    XpuVarNdarray<const T> x(x_tensor->shape_view(), x_tensor->dptr<T>(), num_axes);
+    XpuVarNdarray<T> dy(dy_tensor->shape_view(), dy_tensor->mut_dptr<T>(), num_axes);
     NdarrayUtil<device, T>::BroadcastAdd(ctx->stream(), tmp, x, const_tmp);
     ComputeLogGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(

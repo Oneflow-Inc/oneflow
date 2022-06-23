@@ -94,16 +94,18 @@ class UpsampleBilinear2DGPUKernel final : public user_op::OpKernel {
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
-    const int64_t elem_cnt = y_tensor->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 4> in_helper(x_tensor->shape().At(0), x_tensor->shape().At(1),
-                                              x_tensor->shape().At(2), x_tensor->shape().At(3));
-    NdIndexOffsetHelper<int64_t, 4> out_helper(y_tensor->shape().At(0), y_tensor->shape().At(1),
-                                               y_tensor->shape().At(2), y_tensor->shape().At(3));
+    const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
+    NdIndexOffsetHelper<int64_t, 4> in_helper(
+        x_tensor->shape_view().At(0), x_tensor->shape_view().At(1), x_tensor->shape_view().At(2),
+        x_tensor->shape_view().At(3));
+    NdIndexOffsetHelper<int64_t, 4> out_helper(
+        y_tensor->shape_view().At(0), y_tensor->shape_view().At(1), y_tensor->shape_view().At(2),
+        y_tensor->shape_view().At(3));
 
-    const int64_t in_height = x_tensor->shape().At(2);
-    const int64_t in_width = x_tensor->shape().At(3);
-    const int64_t out_height = y_tensor->shape().At(2);
-    const int64_t out_width = y_tensor->shape().At(3);
+    const int64_t in_height = x_tensor->shape_view().At(2);
+    const int64_t in_width = x_tensor->shape_view().At(3);
+    const int64_t out_height = y_tensor->shape_view().At(2);
+    const int64_t out_width = y_tensor->shape_view().At(3);
     if (!output_size.empty()) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
@@ -111,7 +113,7 @@ class UpsampleBilinear2DGPUKernel final : public user_op::OpKernel {
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
-          x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
+          x_tensor->shape_view().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
@@ -134,22 +136,24 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                              dx_tensor->shape().elem_cnt() * sizeof(T));
+                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const bool align_corners = ctx->Attr<bool>("align_corners");
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
-    const int64_t elem_cnt = dy_tensor->shape().elem_cnt();
-    NdIndexOffsetHelper<int64_t, 4> dy_helper(dy_tensor->shape().At(0), dy_tensor->shape().At(1),
-                                              dy_tensor->shape().At(2), dy_tensor->shape().At(3));
-    NdIndexOffsetHelper<int64_t, 4> dx_helper(dx_tensor->shape().At(0), dx_tensor->shape().At(1),
-                                              dx_tensor->shape().At(2), dx_tensor->shape().At(3));
+    const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
+    NdIndexOffsetHelper<int64_t, 4> dy_helper(
+        dy_tensor->shape_view().At(0), dy_tensor->shape_view().At(1), dy_tensor->shape_view().At(2),
+        dy_tensor->shape_view().At(3));
+    NdIndexOffsetHelper<int64_t, 4> dx_helper(
+        dx_tensor->shape_view().At(0), dx_tensor->shape_view().At(1), dx_tensor->shape_view().At(2),
+        dx_tensor->shape_view().At(3));
 
-    const int64_t in_height = dx_tensor->shape().At(2);
-    const int64_t in_width = dx_tensor->shape().At(3);
-    const int64_t out_height = dy_tensor->shape().At(2);
-    const int64_t out_width = dy_tensor->shape().At(3);
+    const int64_t in_height = dx_tensor->shape_view().At(2);
+    const int64_t in_width = dx_tensor->shape_view().At(3);
+    const int64_t out_height = dy_tensor->shape_view().At(2);
+    const int64_t out_width = dy_tensor->shape_view().At(3);
     if (!output_size.empty()) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
@@ -157,7 +161,7 @@ class UpsampleBilinear2DGradGPUKernel final : public user_op::OpKernel {
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
-          dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
+          dy_tensor->shape_view().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
