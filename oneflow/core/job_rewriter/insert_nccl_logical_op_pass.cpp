@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 
 namespace oneflow {
 
@@ -79,6 +79,11 @@ bool IsBreakpointOpNode(const OpNode* node) {
 bool IsAccOpNode(const OpNode* node) {
   return node->op().op_conf().has_user_conf()
          && node->op().op_conf().user_conf().op_type_name() == "acc";
+}
+
+bool IsRepeatOpNode(const OpNode* node) {
+  return node->op().op_conf().has_user_conf()
+         && node->op().op_conf().user_conf().op_type_name() == "repeat";
 }
 
 std::shared_ptr<const Shape> GetOpNodeTimeShape(const OpNode* op_node) {
@@ -474,10 +479,6 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   return false;
 }
 
-bool ReverseOrderInsertNcclLogicalOps() {
-  return Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel();
-}
-
 void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
     HashMap<std::string, OperatorConf>* subgraph_op_name2conf, HashSet<std::string>* mut_op_names,
     std::vector<OperatorConf>* nccl_op_confs, std::vector<ParallelConf>* nccl_op_parallel_confs,
@@ -553,57 +554,71 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
       const OpNode* src_node = op_edge->src_node();
       const std::string& src_op_name = src_node->op().op_name();
       CHECK(src_node != dst_node);
-      if (subgraph_op_name2conf->find(src_op_name) == subgraph_op_name2conf->end()) {
-        // NOTE(chengcheng): parent node is not in this subgraph.
-        continue;
-      }
-      for (const LogicalBlobId& lbi : op_edge->lbis()) {
-        OperatorConf nccl_op;
-        ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
-        ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
-        NdSbp src_reduced_nd_sbp;
-        NdSbp dst_reduced_nd_sbp;
-        if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
-                                       &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
-                                       &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
-          continue;
-        }
-        mut_op_names->insert(dst_op_name);
-        // insert nccl op
-        user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
-        for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
-          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
-              &subgraph_op_name2conf->at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
-          CHECK(old_lbn == GenLogicalBlobName(lbi));
-        }
+      if (src_node->parallel_desc().EqualsIgnoringHierarchy(dst_node->parallel_desc())
+          && SharedPtrShapeEqual(GetOpNodeTimeShape(src_node), GetOpNodeTimeShape(dst_node))) {
+        // NOTE(chengcheng): We don't care src node whether in this subgraph, or whether is repeat
+        //  op, or whether is breaking op. We ONLY care src node is same placement with dst
+        //  and time shape is equal.
+        //  So, we can handle both ZeRO from variable and in GradAcc from repeat and in Pipeline.
+        for (const LogicalBlobId& lbi : op_edge->lbis()) {
+          OperatorConf nccl_op;
+          ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
+          ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
+          NdSbp src_reduced_nd_sbp;
+          NdSbp dst_reduced_nd_sbp;
+          if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
+                                         &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
+                                         &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
+            continue;
+          }
+          mut_op_names->insert(dst_op_name);
+          // insert nccl op
+          user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
+          for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
+            std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
+                &subgraph_op_name2conf->at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
+            CHECK(old_lbn == GenLogicalBlobName(lbi));
+          }
 
-        // add necessary ctrl edge for strict order
-        if (nccl_op_confs->size() >= 1) {
-          // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 dst node insert multi-nccl
-          const std::string& pre_nccl_op_name = nccl_op_confs->at(nccl_op_confs->size() - 1).name();
-          nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
-        }
+          // add necessary ctrl edge for strict order
+          if (nccl_op_confs->size() >= 1) {
+            // NOTE(chengcheng): MUST add ctrl edge between nccl ops for 1 dst node insert
+            //  multi-nccl
+            const std::string& pre_nccl_op_name =
+                nccl_op_confs->at(nccl_op_confs->size() - 1).name();
+            nccl_op.add_ctrl_in_op_name(pre_nccl_op_name);
+          }
 
-        // NOTE(chengcheng): dst_node MUST not the first node in subgraph, find the Immediately
-        //   previous op of dst_node.
-        int64_t dst_order = node2subgraph_order.at(dst_node);
-        CHECK_GT(dst_order, 0);
-        const std::string& pre_op_name = subgraph_order.at(dst_order - 1)->op().op_name();
-        if (src_op_name != pre_op_name) {
-          // NOTE(chengcheng): MUST add ctrl edge for strict exec order
-          nccl_op.add_ctrl_in_op_name(pre_op_name);
-        }
+          // NOTE(chengcheng): dst_node Maybe not the first node in subgraph, try find the
+          //   Immediately previous op of dst_node.
+          std::string pre_op_name = "";
+          int64_t src_order = -1;
+          if (node2subgraph_order.find(src_node) != node2subgraph_order.end()) {
+            src_order = node2subgraph_order.at(src_node);
+          }
+          int64_t dst_order = node2subgraph_order.at(dst_node);
+          int64_t pre_order = dst_order - 1;
+          if (pre_order >= 0) {
+            pre_op_name = subgraph_order.at(pre_order)->op().op_name();
+            if (src_op_name != pre_op_name) {
+              // NOTE(chengcheng): MUST add ctrl edge for strict exec order
+              CHECK(!pre_op_name.empty());
+              nccl_op.add_ctrl_in_op_name(pre_op_name);
+            }
+          } else {
+            pre_op_name = src_op_name;
+          }
 
-        if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          VLOG(2) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
-                  << ", order=" << node2subgraph_order.at(src_node) << "] to [" << dst_op_name
-                  << ", order=" << dst_order << "] and after [" << pre_op_name
-                  << ", order=" << dst_order - 1 << "]\n";
+          nccl_op_confs->emplace_back(nccl_op);
+          // NOTE(chengcheng, guoran): set nccl op as dst_node parallel_conf (hierarchy) may check
+          //   failed in complier, so need use dst_node reduced_parallel_conf.
+          nccl_op_parallel_confs->emplace_back(dst_reduced_parallel_desc.parallel_conf());
+          if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+            VLOG(2) << " insert nccl op: " << nccl_op.name() << " from [" << src_op_name
+                    << ", order=" << src_order << "] to [" << dst_op_name << ", order=" << dst_order
+                    << "] and after [" << pre_op_name << ", order=" << pre_order << "]\n";
+          }
         }
-        nccl_op_confs->emplace_back(nccl_op);
-        // NOTE(chengcheng, guoran): set nccl op as src_node parallel_conf (hierarchy) may check
-        //   failed in complier.
-        nccl_op_parallel_confs->emplace_back(src_reduced_parallel_desc.parallel_conf());
       }
     }
   }
@@ -798,15 +813,10 @@ void InsertNcclLogicalOpsInSubGraph(
 
   std::vector<OperatorConf> nccl_op_confs;
   std::vector<ParallelConf> nccl_op_parallel_confs;
-  if (ReverseOrderInsertNcclLogicalOps()) {
-    InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(&subgraph_op_name2conf, &mut_op_names,
-                                                   &nccl_op_confs, &nccl_op_parallel_confs,
-                                                   subgraph_order, node2subgraph_order);
-  } else {
-    InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(&subgraph_op_name2conf, &mut_op_names,
-                                                   &nccl_op_confs, &nccl_op_parallel_confs,
-                                                   subgraph_order, node2subgraph_order);
-  }
+  // NOTE(chengcheng): ONLY support insert nccl to dst for memory.
+  InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(&subgraph_op_name2conf, &mut_op_names,
+                                                 &nccl_op_confs, &nccl_op_parallel_confs,
+                                                 subgraph_order, node2subgraph_order);
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     VLOG(3) << " Try insert nccl logical ops into job: " << job_builder->job().job_conf().job_name()

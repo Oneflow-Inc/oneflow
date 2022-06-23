@@ -58,12 +58,12 @@ void Gemm4ChannelLast(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b
 
 template<typename T>
 T* GetImgMutDptr(user_op::Tensor* tensor, int64_t idx) {
-  return tensor->mut_dptr<T>() + tensor->shape().Count(1) * idx;
+  return tensor->mut_dptr<T>() + tensor->shape_view().Count(1) * idx;
 }
 
 template<typename T>
 const T* GetImgDptr(const user_op::Tensor* tensor, int64_t idx) {
-  return tensor->dptr<T>() + tensor->shape().Count(1) * idx;
+  return tensor->dptr<T>() + tensor->shape_view().Count(1) * idx;
 }
 
 size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_shape,
@@ -412,18 +412,18 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
     int32_t idx_offset = conv_cache->idx_offset_;
-    const int32_t input_group_interval = in->shape().At(1) / conv_cache->groups;
-    const int32_t weight_group_interval = weight->shape().At(0) / conv_cache->groups;
-    const int32_t output_group_interval = out->shape().At(1) / conv_cache->groups;
-    const int32_t input_step = input_group_interval * in->shape().Count(2);
-    const int32_t weight_step = weight_group_interval * weight->shape().Count(1);
-    const int32_t output_step = output_group_interval * out->shape().Count(2);
+    const int32_t input_group_interval = in->shape_view().At(1) / conv_cache->groups;
+    const int32_t weight_group_interval = weight->shape_view().At(0) / conv_cache->groups;
+    const int32_t output_group_interval = out->shape_view().At(1) / conv_cache->groups;
+    const int32_t input_step = input_group_interval * in->shape_view().Count(2);
+    const int32_t weight_step = weight_group_interval * weight->shape_view().Count(1);
+    const int32_t output_step = output_group_interval * out->shape_view().Count(2);
     const int32_t m = conv_cache->weight_5d_shape_.At(0) / conv_cache->groups;
     const int32_t n = conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3);
     const int32_t k = conv_cache->weight_5d_shape_.Count(1);
     bool is_bias_mul_inited = false;
 
-    for (int64_t i = 0; i < in->shape().At(0); ++i) {
+    for (int64_t i = 0; i < in->shape_view().At(0); ++i) {
       const T* input_ptr = GetImgDptr<T>(in, i);
       const T* weight_ptr = weight->dptr<T>();
       T* output_ptr = GetImgMutDptr<T>(out, i);
@@ -449,9 +449,10 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
       if (bias != nullptr) {
-        int64_t num_of_col_buf = CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset);
+        int64_t num_of_col_buf =
+            CalcElemNumOfColBuf(out->shape_view(), weight->shape_view(), idx_offset);
         int64_t num_of_bias_mul =
-            (tmp_buffer->shape().elem_cnt() - num_of_col_buf * sizeof(T)) / sizeof(T);
+            (tmp_buffer->shape_view().elem_cnt() - num_of_col_buf * sizeof(T)) / sizeof(T);
         CHECK_GT(num_of_bias_mul, 0);
         T* bias_mul_dptr = col_buf_dptr + num_of_col_buf;
         if (!is_bias_mul_inited) {
@@ -529,20 +530,20 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     int32_t idx_offset = conv_cache->idx_offset_;
-    const int32_t dy_group_interval = dy->shape().At(1) / conv_cache->groups;
-    const int32_t filter_group_interval = filter->shape().At(0) / conv_cache->groups;
-    const int32_t dx_group_interval = dx->shape().At(1) / conv_cache->groups;
-    const int32_t dx_step = dx_group_interval * dx->shape().Count(2);
-    const int32_t filter_step = filter_group_interval * filter->shape().Count(1);
-    const int32_t dy_step = dy_group_interval * dy->shape().Count(2);
+    const int32_t dy_group_interval = dy->shape_view().At(1) / conv_cache->groups;
+    const int32_t filter_group_interval = filter->shape_view().At(0) / conv_cache->groups;
+    const int32_t dx_group_interval = dx->shape_view().At(1) / conv_cache->groups;
+    const int32_t dx_step = dx_group_interval * dx->shape_view().Count(2);
+    const int32_t filter_step = filter_group_interval * filter->shape_view().Count(1);
+    const int32_t dy_step = dy_group_interval * dy->shape_view().Count(2);
     const int32_t m = conv_cache->weight_5d_shape_.Count(1);
     const int32_t n = conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3);
     const int32_t k = conv_cache->weight_5d_shape_.At(0) / conv_cache->groups;
 
     Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
-                             dx->shape().elem_cnt() * sizeof(T));
+                             dx->shape_view().elem_cnt() * sizeof(T));
 
-    FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+    FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       const T* filter_ptr = filter->dptr<T>();
       const T* dy_ptr = GetImgDptr<T>(dy, i);
       T* dx_ptr = GetImgMutDptr<T>(dx, i);
@@ -570,13 +571,13 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
-      CHECK_EQ(add_to_output->shape(), dx->shape());
+      CHECK_EQ(add_to_output->shape_view(), dx->shape_view());
       std::unique_ptr<ep::primitive::Add> primitive =
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
       primitive->Launch(ctx->stream(), dx->dptr<T>(), add_to_output->dptr<T>(), dx->mut_dptr<T>(),
-                        add_to_output->shape().elem_cnt());
+                        add_to_output->shape_view().elem_cnt());
     }
   }
 };
@@ -626,19 +627,20 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     int32_t idx_offset = conv_cache->idx_offset_;
-    const int32_t dy_group_interval = dy->shape().At(1) / conv_cache->groups;
-    const int32_t filter_diff_group_interval = filter_diff->shape().At(0) / conv_cache->groups;
-    const int32_t x_group_interval = x->shape().At(1) / conv_cache->groups;
-    const int32_t x_step = x_group_interval * x->shape().Count(2);
-    const int32_t dy_step = dy_group_interval * dy->shape().Count(2);
-    const int32_t filter_diff_step = filter_diff_group_interval * filter_diff->shape().Count(1);
+    const int32_t dy_group_interval = dy->shape_view().At(1) / conv_cache->groups;
+    const int32_t filter_diff_group_interval = filter_diff->shape_view().At(0) / conv_cache->groups;
+    const int32_t x_group_interval = x->shape_view().At(1) / conv_cache->groups;
+    const int32_t x_step = x_group_interval * x->shape_view().Count(2);
+    const int32_t dy_step = dy_group_interval * dy->shape_view().Count(2);
+    const int32_t filter_diff_step =
+        filter_diff_group_interval * filter_diff->shape_view().Count(1);
     const int32_t m = conv_cache->weight_5d_shape_.At(0) / conv_cache->groups;
     const int32_t n = conv_cache->weight_5d_shape_.Count(1);
     const int32_t k = conv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3);
 
     Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
-                             filter_diff->shape().elem_cnt() * sizeof(T));
-    FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+                             filter_diff->shape_view().elem_cnt() * sizeof(T));
+    FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       const T* x_ptr = GetImgDptr<T>(x, i);
       const T* dy_ptr = GetImgDptr<T>(dy, i);
       T* filter_diff_ptr = filter_diff->mut_dptr<T>();
