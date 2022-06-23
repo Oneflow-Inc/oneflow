@@ -15,8 +15,10 @@ limitations under the License.
 """
 import unittest
 
+import numpy as np
 import oneflow as flow
 import oneflow.unittest
+import torch as torch_original
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -39,16 +41,36 @@ class TestRepeatInterLeave(flow.unittest.TestCase):
     @autotest(n=5)
     def test_flow_tensor_repeat_interleave_dim(test_case):
         x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
-        y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
+        y = random_tensor(ndim=1, dim0=2, dtype=int, low=0, high=4)
         z = torch.repeat_interleave(x, y, 1)
         return z
 
     @autotest(n=5)
     def test_flow_tensor_repeat_interleave_dim_with_output_size(test_case):
         x = random_tensor(ndim=3, dim0=2, dim1=2, dim2=3)
-        y = random_tensor(ndim=1, dim0=2, dtype=int, low=1, high=4)
+        y = random_tensor(ndim=1, dim0=2, dtype=int, low=0, high=4)
         z = torch.repeat_interleave(x, y, 1, output_size=2)
         return z
+
+    def test_flow_tensor_repeat_interleave_0size_tensor(test_case):
+        np_arr = np.array(
+            [
+                [[0.8548, 0.0436, 0.7977], [0.1919, 0.4191, 0.2186]],
+                [[0.4741, 0.8896, 0.6859], [0.5223, 0.7803, 0.1134]],
+            ]
+        )
+        x_torch = torch_original.tensor(np_arr)
+        x_torch.requires_grad = True
+        y_torch = torch_original.tensor([0, 0])
+        z_torch = torch_original.repeat_interleave(x_torch, y_torch, 1)
+        z_torch.sum().backward()
+
+        x_flow = flow.tensor(np_arr)
+        x_flow.requires_grad = True
+        y_flow = flow.tensor([0, 0])
+        z_flow = flow.repeat_interleave(x_flow, y_flow, 1)
+        z_flow.sum().backward()
+        test_case.assertTrue(np.array_equal(x_torch.grad.numpy(), x_flow.grad.numpy()))
 
 
 if __name__ == "__main__":

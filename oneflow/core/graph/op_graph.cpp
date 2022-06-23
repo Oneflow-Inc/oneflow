@@ -472,8 +472,7 @@ void OpGraph::TopoForEachNodeWithCtrlEdge(const std::function<void(OpNode*)>& No
                                               const std::function<void(OpNode*)>& Handler) {
     ForEachDataAndCtrlOutNode(node, Handler);
   };
-  TopoForEachNode(DataOrCtrlSourceNodes(), OpGraphForEachInDataAndCtrlNode,
-                  OpGraphForEachOutDataAndCtrlNode, NodeHandler);
+  TopoForEachNode(OpGraphForEachInDataAndCtrlNode, OpGraphForEachOutDataAndCtrlNode, NodeHandler);
 }
 
 std::function<bool(const std::string&, const std::string&)>

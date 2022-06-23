@@ -70,7 +70,7 @@ class ReflectionPad2dKernel final : public OpKernel {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const int64_t ndims = x->shape().NumAxes();
+    const int64_t ndims = x->shape_view().NumAxes();
     CHECK_EQ(padding.size(), ndims);
     const int64_t n_idx = 0;
     const int64_t c_idx = 1;
@@ -80,17 +80,17 @@ class ReflectionPad2dKernel final : public OpKernel {
     const int64_t pad_left = padding[0];
     const int64_t pad_top = padding[2];
 
-    const int64_t n_batch = y->shape().At(n_idx);
-    const int64_t n_channel = y->shape().At(c_idx);
-    const int64_t y_height = y->shape().At(h_idx);
-    const int64_t y_width = y->shape().At(w_idx);
-    const int64_t x_height = x->shape().At(h_idx);
-    const int64_t x_width = x->shape().At(w_idx);
+    const int64_t n_batch = y->shape_view().At(n_idx);
+    const int64_t n_channel = y->shape_view().At(c_idx);
+    const int64_t y_height = y->shape_view().At(h_idx);
+    const int64_t y_width = y->shape_view().At(w_idx);
+    const int64_t x_height = x->shape_view().At(h_idx);
+    const int64_t x_width = x->shape_view().At(w_idx);
 
     IN_T* dest = y->mut_dptr<IN_T>();
     const IN_T* src = x->dptr<IN_T>();
     DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
+    y->shape_view().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
     ReflectionPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
@@ -111,7 +111,7 @@ class ReflectionPad2dGradKernel final : public OpKernel {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const int64_t ndims = dy->shape().NumAxes();
+    const int64_t ndims = dy->shape_view().NumAxes();
     CHECK_EQ(padding.size(), ndims);
 
     const int64_t n_idx = 0;
@@ -121,20 +121,20 @@ class ReflectionPad2dGradKernel final : public OpKernel {
 
     int64_t pad_left = padding[0];
     int64_t pad_top = padding[2];
-    int64_t n_batch = dy->shape().At(n_idx);
-    int64_t n_channel = dy->shape().At(c_idx);
-    int64_t dy_height = dy->shape().At(h_idx);
-    int64_t dy_width = dy->shape().At(w_idx);
-    int64_t dx_height = dx->shape().At(h_idx);
-    int64_t dx_width = dx->shape().At(w_idx);
+    int64_t n_batch = dy->shape_view().At(n_idx);
+    int64_t n_channel = dy->shape_view().At(c_idx);
+    int64_t dy_height = dy->shape_view().At(h_idx);
+    int64_t dy_width = dy->shape_view().At(w_idx);
+    int64_t dx_height = dx->shape_view().At(h_idx);
+    int64_t dx_width = dx->shape_view().At(w_idx);
 
     const IN_T* src = dy->dptr<IN_T>();
     IN_T* dest = dx->mut_dptr<IN_T>();
     DimVector dy_vector;
-    dy->shape().ToDimVector(&dy_vector);
+    dy->shape_view().ToDimVector(&dy_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     ReflectionPad2dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
@@ -176,7 +176,7 @@ class ReplicationPad2dKernel final : public OpKernel {
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const int64_t ndims = x->shape().NumAxes();
+    const int64_t ndims = x->shape_view().NumAxes();
     CHECK_EQ(padding.size(), ndims);
     const int64_t n_idx = 0;
     const int64_t c_idx = 1;
@@ -186,17 +186,17 @@ class ReplicationPad2dKernel final : public OpKernel {
     const int64_t pad_left = padding[0];
     const int64_t pad_top = padding[2];
 
-    const int64_t n_batch = y->shape().At(n_idx);
-    const int64_t n_channel = y->shape().At(c_idx);
-    const int64_t y_height = y->shape().At(h_idx);
-    const int64_t y_width = y->shape().At(w_idx);
-    const int64_t x_height = x->shape().At(h_idx);
-    const int64_t x_width = x->shape().At(w_idx);
+    const int64_t n_batch = y->shape_view().At(n_idx);
+    const int64_t n_channel = y->shape_view().At(c_idx);
+    const int64_t y_height = y->shape_view().At(h_idx);
+    const int64_t y_width = y->shape_view().At(w_idx);
+    const int64_t x_height = x->shape_view().At(h_idx);
+    const int64_t x_width = x->shape_view().At(w_idx);
 
     IN_T* dest = y->mut_dptr<IN_T>();
     const IN_T* src = x->dptr<IN_T>();
     DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
+    y->shape_view().ToDimVector(&y_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
 
     ReplicationPad2dFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper, n_batch,
@@ -217,7 +217,7 @@ class ReplicationPad2dGradKernel final : public OpKernel {
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");
-    const int64_t ndims = dy->shape().NumAxes();
+    const int64_t ndims = dy->shape_view().NumAxes();
     CHECK_EQ(padding.size(), ndims);
 
     const int64_t n_idx = 0;
@@ -227,20 +227,20 @@ class ReplicationPad2dGradKernel final : public OpKernel {
 
     int64_t pad_left = padding[0];
     int64_t pad_top = padding[2];
-    int64_t n_batch = dy->shape().At(n_idx);
-    int64_t n_channel = dy->shape().At(c_idx);
-    int64_t dy_height = dy->shape().At(h_idx);
-    int64_t dy_width = dy->shape().At(w_idx);
-    int64_t dx_height = dx->shape().At(h_idx);
-    int64_t dx_width = dx->shape().At(w_idx);
+    int64_t n_batch = dy->shape_view().At(n_idx);
+    int64_t n_channel = dy->shape_view().At(c_idx);
+    int64_t dy_height = dy->shape_view().At(h_idx);
+    int64_t dy_width = dy->shape_view().At(w_idx);
+    int64_t dx_height = dx->shape_view().At(h_idx);
+    int64_t dx_width = dx->shape_view().At(w_idx);
 
     const IN_T* src = dy->dptr<IN_T>();
     IN_T* dest = dx->mut_dptr<IN_T>();
     DimVector dy_vector;
-    dy->shape().ToDimVector(&dy_vector);
+    dy->shape_view().ToDimVector(&dy_vector);
     NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
-    size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+    size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
     ReplicationPad2dGradFunctor<device_type, IN_T>()(ctx->stream(), src, dest, index_helper,
