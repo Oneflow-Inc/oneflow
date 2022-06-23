@@ -465,18 +465,24 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
 
   inline void LaunchKernel() {
 #ifdef WITH_CUDA_GRAPHS
+    bool is_capturing = false;
     if (cuda_graph_exec_[0]) {
       auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
       if (cuda_graph_exec_[0]->IsInstantiated()) {
         cuda_stream->LaunchGraph(cuda_graph_exec_[0].get());
         return;
       }
-      cuda_stream->BeginGraphCapture();
+      auto* user_kernel =
+          CHECK_NOTNULL(dynamic_cast<const UserKernel*>(kernel_info_[0]->kernel.get()));
+      if (user_kernel->IsReadyForCudaGraphCapture(this)) {
+        is_capturing = true;
+        cuda_stream->BeginGraphCapture();
+      }
     }
 #endif
     kernel_info_[0]->kernel->Launch(this);
 #ifdef WITH_CUDA_GRAPHS
-    if (cuda_graph_exec_[0]) {
+    if (cuda_graph_exec_[0] && is_capturing) {
       auto* cuda_stream = stream_ctx_->stream()->As<ep::CudaStream>();
       cuda_stream->EndGraphCapture(cuda_graph_exec_[0].get());
       cuda_stream->LaunchGraph(cuda_graph_exec_[0].get());
