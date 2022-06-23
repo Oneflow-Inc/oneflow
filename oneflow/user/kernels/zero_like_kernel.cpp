@@ -28,7 +28,7 @@ class ZeroLikeKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
-                        out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
+                        out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

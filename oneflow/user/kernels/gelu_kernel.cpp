@@ -19,48 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename Context>
-std::unique_ptr<ep::primitive::ElementwiseUnary> NewGeluPrimitive(Context* ctx) {
-  const user_op::TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  const user_op::TensorDesc* dst = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  return ep::primitive::NewPrimitive<ep::primitive::ElementwiseUnaryFactory>(
-      ctx->device_type(), ep::primitive::UnaryOp::kGelu, src->data_type(), dst->data_type());
-}
-
-class GeluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(GeluKernel);
-  GeluKernel() = default;
-  ~GeluKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto primitive = NewGeluPrimitive(ctx);
-    CHECK(primitive);
-
-    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t elem_cnt = x->shape().elem_cnt();
-
-    if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
-    } else {
-      // For 0-d Tensor
-      return;
-    }
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-auto GeluPrimitiveExists() {
-  return hob::make_custom("GeluPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
-    return NewGeluPrimitive(&ctx).operator bool();
-  });
-}
-
-REGISTER_USER_KERNEL("gelu").SetCreateFn<GeluKernel>().SetIsMatchedHob(GeluPrimitiveExists()
-                                                                       == true);
-
 template<typename T>
 class CpuGeluGradKernel final : public user_op::OpKernel {
  public:
@@ -72,7 +30,7 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
     const T* x_ptr = x->dptr<T>();
     const T* dy_ptr = dy->dptr<T>();
     T* dx_ptr = dx->mut_dptr<T>();

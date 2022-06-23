@@ -24,9 +24,6 @@ limitations under the License.
 
 namespace py = pybind11;
 
-PYBIND11_MAKE_OPAQUE(
-    std::unordered_map<std::string, std::shared_ptr<::oneflow::compatible_py::BlobObject>>);
-
 namespace oneflow {
 
 namespace {
@@ -42,17 +39,49 @@ Maybe<void> DeprecatedPhysicalRun(const std::function<void(InstructionsBuilder*)
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
-      .def("BuildInitialScope", &InstructionsBuilder::BuildInitialScope,
-           py::arg("session_id").none(false), py::arg("job_conf").none(false),
-           py::arg("device_tag").none(false), py::arg("machine_device_ids").none(false),
-           py::arg("hierarchy").none(true), py::arg("is_mirrored").none(false))
+      .def(
+          "BuildInitialScope",
+          [](const std::shared_ptr<InstructionsBuilder>& builder, int64_t session_id,
+             const std::string& job_conf_str, const std::string& device_tag,
+             const std::vector<std::string>& machine_device_ids,
+             const std::shared_ptr<Shape>& hierarchy, bool is_mirrored) -> Maybe<Scope> {
+            JobConfigProto job_conf;
+            CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf))
+                << Error::RuntimeError() << "job conf parse failed";
+            return builder->BuildInitialScope(session_id, job_conf, device_tag, machine_device_ids,
+                                              hierarchy, is_mirrored);
+          },
+          py::arg("session_id").none(false), py::arg("job_conf_str").none(false),
+          py::arg("device_tag").none(false), py::arg("machine_device_ids").none(false),
+          py::arg("hierarchy").none(true), py::arg("is_mirrored").none(false))
+      .def(
+          "BuildInitialScopeWithPlacement",
+          [](const std::shared_ptr<InstructionsBuilder>& builder, int64_t session_id,
+             const std::string& job_conf_str, Symbol<ParallelDesc> placement,
+             bool is_mirrored) -> Maybe<Scope> {
+            JobConfigProto job_conf;
+            CHECK_OR_RETURN(TxtString2PbMessage(job_conf_str, &job_conf))
+                << Error::RuntimeError() << "job conf parse failed";
+            return builder->BuildInitialScopeWithPlacement(session_id, job_conf, placement,
+                                                           is_mirrored);
+          },
+          py::arg("session_id").none(false), py::arg("job_conf_str").none(false),
+          py::arg("placement").none(false), py::arg("is_mirrored").none(false))
       .def("BuildScopeWithNewParallelDesc", &InstructionsBuilder::BuildScopeWithNewParallelDesc,
            py::arg("scope").none(false), py::arg("device_tag").none(false),
            py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true))
-      .def("BuildScopeWithNewParallelConf", &InstructionsBuilder::BuildScopeWithNewParallelConf)
+      .def("BuildScopeWithNewParallelConf",
+           [](const std::shared_ptr<InstructionsBuilder>& builder,
+              const std::shared_ptr<Scope>& scope,
+              const std::string& parallel_conf_str) -> Maybe<Scope> {
+             ParallelConf parallel_conf;
+             CHECK_OR_RETURN(TxtString2PbMessage(parallel_conf_str, &parallel_conf))
+                 << Error::RuntimeError() << "parallel conf parse failed";
+             return builder->BuildScopeWithNewParallelConf(scope, parallel_conf);
+           })
       .def("BuildScopeWithNewIsMirrored", &InstructionsBuilder::BuildScopeWithNewIsMirrored)
       .def("BuildScopeWithNewScopeName", &InstructionsBuilder::BuildScopeWithNewScopeName)
-      .def("BuildScopeByProtoSetter", &InstructionsBuilder::BuildScopeByProtoSetter);
+      .def("BuildScopeByProtoStrSetter", &InstructionsBuilder::BuildScopeByProtoStrSetter);
 
   m.def("PhysicalRun", &DeprecatedPhysicalRun, py::call_guard<py::gil_scoped_release>());
 }

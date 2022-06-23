@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -95,7 +94,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
 // NOTE: if this op not support stride, then need to tensor->contiguous()
 #define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
   TensorTuple tmp_inputs;                                                                   \
-  if (!JUST(op_expr.SupportNonContiguous())) {                                              \
+  if (!LazyMode::is_enabled() && !JUST(op_expr.SupportNonContiguous())) {                   \
     tmp_inputs.resize(inputs.size());                                                       \
     for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
     tensor_tuple_ptr = &tmp_inputs;                                                         \
@@ -106,6 +105,8 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
 
   {
     autograd::AutoGradMode mode(false);
+    const bool inplace = ctx.inplace.value_or(false);
+    if (inplace) { *outputs = *inputs_ptr; }
     JUST(internal_->Apply(op_expr, *inputs_ptr, outputs, ctx));
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
@@ -154,6 +155,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
           requires_grad && IsSupportRequireGradDataType(output->dtype()->data_type())));
     }
   }
+
   if (requires_grad && !LazyMode::is_enabled()) {
     // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
     // node has been attached to them.

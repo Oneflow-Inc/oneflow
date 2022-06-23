@@ -39,11 +39,23 @@ add_docstr(
 
 add_docstr(
     oneflow.add,
-    r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
-    The formula is:
+    r"""
+    oneflow.add(input, other, *, alpha=1) -> Tensor
+    
+    Adds `other`, scaled by `alpha`, to `input`. Scalar and broadcast promotation are supported.
 
     .. math::
-        out = input + other
+        out = input + alpha \times other
+        
+    Args:
+        input (Union[int, float, oneflow.Tensor]): the input tensor.
+        other (Union[int, float, oneflow.Tensor]): the tensor or number to add to input.
+    
+    Keyword args:
+        alpha (Number, optional): the multiplier for `other`.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
 
     For example:
 
@@ -72,6 +84,14 @@ add_docstr(
         >>> out = flow.add(x, y).numpy()
         >>> out.shape
         (2, 3)
+        
+        # use alpha
+        >>> x = flow.zeros(2, 3)
+        >>> y = flow.ones(2, 3)
+        >>> out = flow.add(x, y, alpha=10)
+        >>> out
+        tensor([[10., 10., 10.],
+                [10., 10., 10.]], dtype=oneflow.float32)
 
     """,
 )
@@ -1255,6 +1275,39 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.mv,
+    r"""
+    mv(input, vec) -> Tensor
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.mv.html.
+
+    Performs a matrix-vector product of the matrix :attr:`input` and the vector :attr:`vec`.
+
+    If :attr:`input` is a :math:`(n \times m)` tensor, :attr:`vec` is a
+    1-D tensor of size `m`, :attr:`out` will be a 1-D tensor of size `n`.
+    
+    .. note:: This function does not broadcast.
+
+    Args:
+        input (oneflow.Tensor): matrix to be matrix multiplied
+        vec (oneflow.Tensor): vector to be matrix multiplied
+    Returns:
+        oneflow.Tensor: the output Tensor
+    
+    For example:
+
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> mat = flow.randn(2, 3)
+        >>> vec = flow.randn(3)
+        >>> out = flow.mv(mat, vec)
+        >>> out.shape
+        oneflow.Size([2])
+    """,
+)
+
+add_docstr(
     oneflow.round,
     r"""This operator rounds the value of Blob to the nearest integer.
     Args:
@@ -1295,7 +1348,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
+        dim (int or tuple of ints): the dimension or dimensions to reduce.
         unbiased (bool): whether to use the unbiased estimation or not
         keepdim (bool): whether the output tensor has `dim` retained or not.
 
@@ -1325,7 +1378,7 @@ add_docstr(
 
     Args:
         input (Tensor): the input tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        dim (int or tuple of ints): the dimension or dimensions to reduce. Defaults to None.
         unbiased (bool, optional): whether to use Bessel’s correction (:math:`\delta N = 1`). Defaults to True.
         keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
 
@@ -1345,31 +1398,6 @@ add_docstr(
     """,
 )
 
-add_docstr(
-    oneflow.logical_not,
-    r"""
-    Computes the element-wise logical NOT of the given input tensors.
-    Zeros are treated as False and nonzeros are treated as True.
-    Args:
-        input (oneflow.Tensor): The input Tensor
-        other (oneflow.Tensor): The Tensor to compute NOT with
-
-    Returns:
-        oneflow.Tensor: The output Tensor
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-
-        >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
-        >>> out = flow.logical_not(input)
-        >>> out
-        tensor([False,  True, False], dtype=oneflow.bool)
-
-    """,
-)
 
 add_docstr(
     oneflow.dot,
@@ -1680,8 +1708,8 @@ add_docstr(
 
         >>> import oneflow as flow
 
-        >>> input = flow.rand(3,4,5,6)
-        >>> output = flow.vsplit(input,(1,3))
+        >>> input = flow.rand(4, 4, 5, 6)
+        >>> output = flow.vsplit(input, (1, 3))
         >>> output[0].size()
         oneflow.Size([1, 4, 5, 6])
         >>> output[1].size()

@@ -46,7 +46,7 @@ class Cast : public OpExprGradFunction<CastCaptureState> {
   Maybe<void> Apply(const CastCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::Cast(out_grads.at(0), ctx->dtype));
+    (*in_grads)[0] = JUST(functional::Cast(out_grads[0], ctx->dtype, /*pin_memory=*/false));
     return Maybe<void>::Ok();
   }
 };

@@ -20,16 +20,13 @@ from google.protobuf import text_format
 import oneflow
 
 import oneflow._oneflow_internal
-from oneflow._oneflow_internal.oneflow.core.framework import (
-    user_op_attr as user_op_attr_cfg,
-)
 import oneflow.core.job.scope_pb2 as scope_pb2_util
+import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.framework.attr_util as attr_util
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
-
 import oneflow._oneflow_internal._C as _C
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
@@ -38,17 +35,17 @@ lazy_mode = oneflow._oneflow_internal.lazy_mode
 @contextmanager
 def graph_build_context(config_proto, session):
     prev_scope = oneflow._oneflow_internal.GetCurrentScope()
-    new_scope = scope_util.MakeInitialScope(
-        config_proto,
-        "cpu",  # NOTE(chengcheng): graph init scope is useless, just set cpu 0:0 for test.
-        ["0:0"],
-        None,  # TODO(): set hierarchy from user graph config
-        False,  # is_mirrored
+    assert type(config_proto) is job_conf_pb.JobConfigProto, type(config_proto)
+    config_proto_str = text_format.MessageToString(config_proto)
+    new_scope = oneflow._oneflow_internal.MakeInitialScope(
+        config_proto_str, oneflow.placement("cpu", [0]), False,  # is_mirrored
     )
+
+    graph_scope = _make_new_graph_scope(new_scope, config_proto.job_name)
 
     with lazy_mode.guard(True):
         with JobBuildAndInferCtx(config_proto):
-            with BlockScopeContext(prev_scope, new_scope):
+            with BlockScopeContext(prev_scope, graph_scope):
                 yield
 
 
@@ -57,7 +54,7 @@ class JobBuildAndInferCtx(object):
         self._job_conf = config_proto
 
     def __enter__(self):
-        c_api_util.JobBuildAndInferCtx_Open(self._job_conf.job_name())
+        c_api_util.JobBuildAndInferCtx_Open(self._job_conf.job_name)
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(self._job_conf)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -122,10 +119,39 @@ class DebugScopeContext(object):
         )
 
 
+def _make_new_scope(prev_scope, scope_proto_str_setter):
+    new_scope = None
+
+    def build_scope(builder):
+        nonlocal new_scope
+        new_scope = builder.BuildScopeByProtoStrSetter(
+            prev_scope, scope_proto_str_setter
+        )
+        assert new_scope is not None
+
+    oneflow._oneflow_internal.deprecated.PhysicalRun(build_scope)
+    oneflow._oneflow_internal.eager.Sync()
+    return new_scope
+
+
+def _make_new_graph_scope(prev_scope, graph_name):
+    assert prev_scope is not None
+    attr_dict = dict()
+    name2default = session_context.GetDefaultSession().scope_attr_name2default_val
+
+    def scope_proto_str_setter(serialized_scope_proto: str):
+        scope_proto = text_format.Parse(
+            serialized_scope_proto, scope_pb2_util.ScopeProto()
+        )
+        scope_proto.module_name = graph_name
+        return str(text_format.MessageToString(scope_proto))
+
+    return _make_new_scope(prev_scope, scope_proto_str_setter)
+
+
 def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
     assert block is not None
-
     attr_dict = dict()
     if block.config.stage_id is not None:
         attr_dict["pipeline_stage_id_hint"] = block.config.stage_id
@@ -134,29 +160,27 @@ def make_new_block_scope(prev_scope, block):
 
     name2default = session_context.GetDefaultSession().scope_attr_name2default_val
 
-    def scope_proto_setter(scope_proto):
+    def scope_proto_str_setter(serialized_scope_proto: str):
+        scope_proto = text_format.Parse(
+            serialized_scope_proto, scope_pb2_util.ScopeProto()
+        )
         # set attr
         for attr_name, py_value in attr_dict.items():
             assert attr_name in name2default
-            attr_util.SetAttrValue(
-                scope_proto.mutable_attr_name2attr_value()[attr_name],
+            attr_util.SetProtoAttrValue(
+                scope_proto.attr_name2attr_value[attr_name],
                 py_value,
                 name2default[attr_name],
             )
         # append name prefix
-        scope_proto.clear_scope_op_name_prefixes()
-        scope_proto.add_scope_op_name_prefixes(block.name_prefix + block.name)
+        scope_proto.ClearField("scope_op_name_prefixes")
+        scope_proto.scope_op_name_prefixes.append(block.name_prefix + block.name)
+        # set module name
+        if isinstance(block, oneflow.nn.graph.block.ModuleBlock):
+            scope_proto.module_name = block.name_prefix + block.name
+        return str(text_format.MessageToString(scope_proto))
 
-    new_scope = None
-
-    def build_scope(builder):
-        nonlocal new_scope
-        new_scope = builder.BuildScopeByProtoSetter(prev_scope, scope_proto_setter)
-        assert new_scope is not None
-
-    oneflow._oneflow_internal.deprecated.PhysicalRun(build_scope)
-    oneflow._oneflow_internal.eager.Sync()
-    return new_scope
+    return _make_new_scope(prev_scope, scope_proto_str_setter)
 
 
 def scope_to_proto(scope):
@@ -165,24 +189,26 @@ def scope_to_proto(scope):
 
 def build_graph_input_arg(op_name, arg):
     assert isinstance(arg, Tensor)
-    input_conf = (
-        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedInputOpConf()
-    )
+    input_conf = oneflow.core.operator.op_conf_pb2.FeedInputOpConf()
+    input_conf.in_0 = "in_0"  # Set the default value, otherwise the parsing fails
+    input_conf.out_0 = "out_0"
+    input_conf_str = text_format.MessageToString(input_conf)
 
     input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
-        op_name, input_conf, ["in_0"], ["out_0"]
+        op_name, input_conf_str, ["in_0"], ["out_0"]
     )
     lazy_arg = _C.dispatch_feed_input(input_op, arg)
     return lazy_arg
 
 
 def build_graph_state(op_name, state_tensor, state_config):
-    var_conf = (
-        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FeedVariableOpConf()
-    )
+    var_conf = oneflow.core.operator.op_conf_pb2.FeedVariableOpConf()
+    var_conf.in_0 = "in_0"  # Set the default value, otherwise the parsing fails
+    var_conf.out_0 = "out_0"
+    var_conf_str = text_format.MessageToString(var_conf)
 
     var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
-        op_name, var_conf, ["in_0"], ["out_0"]
+        op_name, var_conf_str, ["in_0"], ["out_0"]
     )
     l2 = 0.0
     if state_config is not None:
@@ -198,12 +224,13 @@ def build_graph_state(op_name, state_tensor, state_config):
 def build_graph_output(op_name, out):
     assert isinstance(out, Tensor)
 
-    output_conf = (
-        oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
-    )
+    output_conf = oneflow.core.operator.op_conf_pb2.FetchOutputOpConf()
+    output_conf.in_0 = "in_0"  # Set the default value, otherwise the parsing fails
+    output_conf.out_0 = "out_0"
+    output_conf_str = text_format.MessageToString(output_conf)
 
     output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
-        op_name, output_conf, ["in_0"], ["out_0"]
+        op_name, output_conf_str, ["in_0"], ["out_0"]
     )
     fake_eager_out = _C.dispatch_fetch_output(output_op, out)
 

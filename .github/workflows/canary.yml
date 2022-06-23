@@ -55,7 +55,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         if: ${{ github.event.inputs.oneflow-ref == '' }}
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@update-open-vino-img
+      - uses: Oneflow-Inc/get-oneflow@support-iree-ci
         name: Build manylinux
         id: build-cuda
         with:
