@@ -417,6 +417,16 @@ class TestTensor(flow.unittest.TestCase):
         return a @ b
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest()
+    def test_mm_with_random_data(test_case):
+        device = random_device()
+        dim0 = random(low=2, high=10).to(int)
+        dim1 = random(low=3, high=20).to(int)
+        a = random_tensor(ndim=2, dim0=dim0, dim1=dim1).to(device)
+        b = random_tensor(ndim=1, dim0=dim1).to(device)
+        return a.mv(b)
+
+    @flow.unittest.skip_unless_1n1d()
     def test_tensor_to_list(test_case):
         list_data = [[1.0, 3.0], [5.0, 6.0]]
         input = flow.Tensor(list_data)
@@ -579,6 +589,30 @@ class TestTensor(flow.unittest.TestCase):
         y = rand_tensor + 1
         x = random_tensor(ndim=2, dim0=8, dim1=13).to(device)
         y.div_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=True)
+    def test_add_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_tensor(
+            low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17
+        ).to(device)
+        y = rand_tensor + 1
+        x = random_tensor(low=-2, high=2, ndim=4, dim0=6, dim1=9, dim2=14, dim3=17).to(
+            device
+        )
+        y.add_(x)
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=True)
+    def test_broadcast_add_inplace_tensor(test_case):
+        device = random_device()
+        rand_tensor = random_tensor(ndim=3, dim0=5, dim1=9, dim2=23).to(device)
+        y = rand_tensor + 1
+        x = random_tensor(ndim=2, dim0=9, dim1=23).to(device)
+        y.add_(x)
         return y
 
     @flow.unittest.skip_unless_1n1d()
@@ -915,23 +949,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(input[0, :, 0:2].numpy(), x[0, :, 0:2], 1e-05, 1e-05)
         )
-
-    @flow.unittest.skip_unless_1n1d()
-    def test_tensor_logical_slice_assign(test_case):
-        x = np.random.randn(2, 3, 4, 5).astype(np.float32)
-        input = flow.tensor(x)
-        input[:, 0] = 3.1415926
-        x[:, 0] = 3.1415926
-        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
-        input[:, 1:2] = 1
-        x[:, 1:2] = 1
-        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
-        input[:] = 1.234
-        x[:] = 1.234
-        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
-        input[0] = 0
-        x[0] = 0
-        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-05, 1e-05))
 
     @flow.unittest.skip_unless_1n1d()
     def test_zeros_(test_case):
