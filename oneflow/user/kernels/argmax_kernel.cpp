@@ -32,8 +32,8 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     int64_t* out_ptr = out->mut_dptr<int64_t>();
 
-    const int64_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    const int64_t instance_num = in->shape().elem_cnt() / instance_size;
+    const int64_t instance_size = in->shape_view().At(in->shape_view().NumAxes() - 1);
+    const int64_t instance_num = in->shape_view().elem_cnt() / instance_size;
     const int64_t num_thread =
         std::min(instance_num, (int64_t)Global<ThreadPool>::Get()->thread_num());
     const BalancedSplitter bs(instance_num, num_thread);
