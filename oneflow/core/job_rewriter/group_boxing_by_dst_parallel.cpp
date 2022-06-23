@@ -15,12 +15,45 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
+const Scope& Scope4ScopeSymbolId(int64_t scope_symbol_id) {
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+}
+
+const Scope& Scope4OpNode(const OpNode* op_node) {
+  const OperatorConf& op_conf = op_node->op().op_conf();
+  CHECK(op_conf.has_scope_symbol_id());
+  return Scope4ScopeSymbolId(op_conf.scope_symbol_id());
+}
+
+bool OpNodeHasScope(const OpNode* node) { return node->op().op_conf().has_scope_symbol_id(); }
+
+int64_t GetStageIdHint(const OpNode* node) {
+  return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
+}
+
 Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
+  {
+    // NOTE(chengcheng): Disable group boxing for pipeline parallel, because there will be bad case
+    //  make forward backward exec sequential in ZeRO + 3-D Parallel by insert additional boxing
+    //  identity.
+    int64_t max_stage_id = 0;
+    op_graph.ForEachNode([&](const OpNode* this_node) {
+      if (!OpNodeHasScope(this_node)) {
+        LOG(WARNING) << " op : " << this_node->op().op_conf().DebugString() << " has NOT scope!";
+        return;
+      }
+      max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
+    });
+    if (max_stage_id > 0) { return Maybe<void>::Ok(); }
+  }
   HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, NdSbp>,
                                  std::vector<std::pair<const OpNode*, std::string>>>>
       lbi2consumer_grouped_by_parallel;
