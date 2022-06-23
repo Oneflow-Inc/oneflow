@@ -19,6 +19,7 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
+import csv
 import oneflow.test_utils.automated_test_util.profiler as auto_profiler
 
 
@@ -158,8 +159,7 @@ def print_summary_from_csv(filename) -> None:
             "ET(32 CPU)",
             box=box.SIMPLE,
         )
-        for row in f.readlines()[1:]:
-            row_splited = row.split(",")[:-1]
-            row_splited[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row_splited[2]]
-            table.add_row(*row_splited)
+        for row in list(csv.reader(f))[1:]:
+            row[2] = {"PyTorch": "PT", "OneFlow": "OF"}[row[2]]
+            table.add_row(*row[:-1])
         Console().print(table)

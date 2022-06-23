@@ -146,10 +146,10 @@ struct OpCallInstructionUtil final {
             return cal_memory_size(compute_ctx->inputs()) + cal_memory_size(compute_ctx->outputs());
           },
 #endif
-          [compute_ctx]() -> std::vector<Shape> {
-            std::vector<Shape> shapes;
+          [compute_ctx]() -> std::vector<ShapeView> {
+            std::vector<ShapeView> shapes;
             for (const auto& pair : compute_ctx->inputs()) {
-              shapes.push_back(
+              shapes.emplace_back(
                   compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
             }
             return shapes;

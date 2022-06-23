@@ -17,7 +17,6 @@ limitations under the License.
 #include <unordered_map>
 #include "fmt/core.h"
 #include "nlohmann/json.hpp"
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/profiler/kineto_shim.h"
 #include "oneflow/core/profiler/profile_manager.h"
 #include "oneflow/core/profiler/event.h"

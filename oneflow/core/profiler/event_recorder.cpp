@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/profiler/event_recorder.h"
 #include "oneflow/core/profiler/profile_manager.h"
-#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 namespace profiler {
