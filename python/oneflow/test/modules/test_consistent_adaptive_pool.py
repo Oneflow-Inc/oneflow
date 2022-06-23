@@ -65,12 +65,12 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
     def test_adaptive_avgpool(test_case):
         for placement in all_placement():
             ndim = 3
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_adaptive_avgpoolnd(test_case, ndim, 1, placement, sbp)
                 _test_adaptive_avgpoolnd_functional(test_case, ndim, 1, placement, sbp)
 
             ndim = 4
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_adaptive_avgpoolnd(test_case, ndim, 2, placement, sbp)
                 _test_adaptive_avgpoolnd_functional(test_case, ndim, 2, placement, sbp)
 
@@ -81,7 +81,7 @@ class TestAdaptiveAvgPool(flow.unittest.TestCase):
             ):
                 continue
             ndim = 5
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_adaptive_avgpoolnd(test_case, ndim, 3, placement, sbp)
                 _test_adaptive_avgpoolnd_functional(test_case, ndim, 3, placement, sbp)
 
