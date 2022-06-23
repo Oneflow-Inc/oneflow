@@ -36,10 +36,7 @@ class EpOptionalEventRecordStatusQuerier {
 
   void SetLaunched(EpDeviceCtx* device_ctx);
 
-  void reset_ep_event(const std::shared_ptr<EpEvent>& ep_event) {
-    CHECK(ep_event_ == nullptr);
-    ep_event_ = ep_event;
-  }
+  void reset_ep_event(const std::shared_ptr<EpEvent>& ep_event) { ep_event_ = ep_event; }
 
   static const EpOptionalEventRecordStatusQuerier* Cast(const char* mem_ptr) {
     return reinterpret_cast<const EpOptionalEventRecordStatusQuerier*>(mem_ptr);
