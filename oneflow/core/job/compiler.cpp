@@ -61,9 +61,11 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 
   // Step3: build task_gph.
   // TODO(levi): we can rewrite this part of code in visitor pattern.
+
   LOG(ERROR) << "OFCCL " << "Enter Construct TaskGraph";
   VLOG(1) << "OFCCL " << "Enter Construct TaskGraph";
-  auto task_gph = std::make_unique<TaskGraph>();
+  auto task_gph =
+      std::make_unique<TaskGraph>(job->job_conf().disable_straighten_algorithm_in_task_graph());
   LOG(ERROR) << "OFCCL " << "Done Construct TaskGraph";
   VLOG(1) << "OFCCL " << "Done Construct TaskGraph";
   using std::placeholders::_1;

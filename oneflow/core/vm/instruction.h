@@ -18,48 +18,33 @@ limitations under the License.
 
 #include <cstring>
 #include <mutex>
-#include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/intrusive/object_pool.h"
-#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/instr_type_id.h"
-#include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/instruction.pb.h"
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
-namespace vm {
 
-class VirtualMachineEngine;
+class Stream;
+
+namespace vm {
 
 class InstructionMsg final : public intrusive::Base {
  public:
-  // Getters
-  const std::string& instr_type_name() const { return instr_type_name_; }
-  const InstrTypeId& instr_type_id() const { return instr_type_id_; }
-  const std::shared_ptr<const ParallelDesc>& phy_instr_parallel_desc() const {
-    return phy_instr_parallel_desc_;
-  }
-  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
-  Stream* phy_instr_stream() const { return phy_instr_stream_; }
-  // Setters
-  std::string* mut_instr_type_name() { return &instr_type_name_; }
-  InstrTypeId* mut_instr_type_id() { return &instr_type_id_; }
-
   // methods
-  void __Init__();
-  void __Init__(const std::string& instr_type_name);
-  void __Init__(VirtualMachineEngine* vm, const std::string& instr_type_name,
-                const std::shared_ptr<const ParallelDesc>& phy_instr_parallel_desc,
+  void __Init__(Stream* stream, const InstructionType* instruction_type,
                 const std::shared_ptr<PhyInstrOperand>& phy_instr_operand);
-  void __Init__(const InstructionMsg& instr_msg);
+
+  // Getters
+  const Stream& stream() const { return *stream_; }
+  Stream* mut_stream() { return stream_; }
+  const InstructionType& instruction_type() const { return *instruction_type_; }
+  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
 
   std::string DebugName() const;
-
-  intrusive::shared_ptr<InstructionMsg> Clone() const;
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
@@ -68,21 +53,12 @@ class InstructionMsg final : public intrusive::Base {
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   InstructionMsg()
-      : intrusive_ref_(),
-        instr_type_id_(),
-        instr_type_name_(),
-        phy_instr_parallel_desc_(),
-        phy_instr_operand_(),
-        phy_instr_stream_(),
-        instr_msg_hook_() {}
+      : intrusive_ref_(), stream_(), instruction_type_(), phy_instr_operand_(), instr_msg_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
-  InstrTypeId instr_type_id_;
-  // instr_type_name is a necessary reduandant field for method ToProto
-  std::string instr_type_name_;
-  std::shared_ptr<const ParallelDesc> phy_instr_parallel_desc_;
+  Stream* stream_;
+  const InstructionType* instruction_type_;
   std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
-  Stream* phy_instr_stream_;
 
  public:
   // list hooks
@@ -158,15 +134,8 @@ class Instruction final : public intrusive::Base {
       intrusive::List<INTRUSIVE_FIELD(DependenceAccess, instruction_access_hook_)>;
 
   // Getters
-  void __Init__() { clear_stream(); }
-  bool has_stream() const { return stream_ != nullptr; }
-  const Stream& stream() const { return *stream_; }
-  const InstructionMsg& instr_msg() const {
-    if (instr_msg_) { return instr_msg_.Get(); }
-    static const auto default_val = intrusive::make_shared<InstructionMsg>();
-    return default_val.Get();
-  }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
+  const Stream& stream() const { return instr_msg_->stream(); }
+  const InstructionMsg& instr_msg() const { return instr_msg_.Get(); }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
   const intrusive::ListHook& dispatched_instruction_hook() const {
@@ -180,21 +149,17 @@ class Instruction final : public intrusive::Base {
   const DependenceAccessList& access_list() const { return access_list_; }
 
   // Setters
-  void set_stream(Stream* val) { stream_ = val; }
-  void clear_stream() { stream_ = nullptr; }
-  Stream* mut_stream() { return stream_; }
+  Stream* mut_stream() { return instr_msg_->mut_stream(); }
   InstructionMsg* mut_instr_msg() { return CHECK_NOTNULL(instr_msg_.Mutable()); }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
   void clear_instr_msg() { instr_msg_.Reset(); }
-  std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
   InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }
   DependenceAccessList* mut_access_list() { return &access_list_; }
 
   // methods
-  void Init(InstructionMsg* instr_msg, Stream* stream,
-            const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void Init(InstructionMsg* instr_msg);
   void Delete();
   bool Done() const;
   const StreamType& stream_type() const;
@@ -209,8 +174,6 @@ class Instruction final : public intrusive::Base {
       : intrusive_ref_(),
         status_buffer_(),
         instr_msg_(),
-        parallel_desc_(),
-        stream_(),
         access_list_(),
         in_edges_(),
         out_edges_(),
@@ -223,8 +186,6 @@ class Instruction final : public intrusive::Base {
   // fields
   FlatMsg<InstructionStatusBuffer> status_buffer_;
   intrusive::shared_ptr<InstructionMsg> instr_msg_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
-  Stream* stream_;
   // lists
   DependenceAccessList access_list_;
   InEdgeList in_edges_;

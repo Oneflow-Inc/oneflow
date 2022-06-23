@@ -1227,59 +1227,6 @@ class InplaceToContiguousFunctor {
   std::shared_ptr<OpExpr> assign_op_;
 };
 
-class SliceBaseFunctor {
- public:
-  SliceBaseFunctor() = default;
-  virtual ~SliceBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
-                           const std::vector<int64_t>& stop, const std::vector<int64_t>& step,
-                           const Optional<bool>& enable_view_slice) const {
-    if (view::IsViewApplicable(x) && enable_view_slice.value_or(true)) {
-      return view::Slice(x, start, stop, step);
-    }
-
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
-  }
-
- protected:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class SliceGradBaseFunctor {
- public:
-  SliceGradBaseFunctor() = default;
-  virtual ~SliceGradBaseFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const Shape& like,
-                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
-                           const std::vector<int64_t>& step) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<Shape>("like_shape", like));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
-  }
-
- protected:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class SliceFunctor : public SliceBaseFunctor {
- public:
-  SliceFunctor() { op_ = CHECK_JUST(one::OpBuilder("slice").Input("x").Output("y").Build()); }
-};
-
-class SliceGradFunctor : public SliceGradBaseFunctor {
- public:
-  SliceGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Output("dx").Build());
-  }
-};
-
 class NarrowFunctor {
  public:
   NarrowFunctor() { op_ = CHECK_JUST(one::OpBuilder("narrow").Input("in").Output("out").Build()); }
@@ -1333,45 +1280,35 @@ class NarrowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class LogicalSliceFunctor : public SliceBaseFunctor {
+class SliceFunctor {
  public:
-  LogicalSliceFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("logical_slice").Input("x").Output("y").Build());
-  }
-};
+  SliceFunctor() { op_ = CHECK_JUST(one::OpBuilder("slice").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
+                           const std::vector<int64_t>& stop, const std::vector<int64_t>& step,
+                           const Optional<bool>& enable_view_slice) const {
+    if (view::IsViewApplicable(x) && enable_view_slice.value_or(false)) {
+      return view::Slice(x, start, stop, step);
+    }
 
-class LogicalSliceAssignFunctor {
- public:
-  LogicalSliceAssignFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("logical_slice_assign").Input("ref").Input("value").Output("y").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ref,
-                           const std::shared_ptr<one::Tensor>& value,
-                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
-                           const std::vector<int64_t>& step) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    auto outputs = std::make_shared<TensorTuple>(1);
-    JUST(CheckInplaceValid(ref));
-    JUST(VectorAt(*outputs, 0)) = ref;
-    JUST(OpInterpUtil::Dispatch(*op_, {ref, value}, outputs.get(), attrs));
-    return JUST(VectorAt(*outputs, 0));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
- private:
+ protected:
   std::shared_ptr<OpExpr> op_;
 };
 
 class SliceUpdateFunctor {
  public:
   SliceUpdateFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("slice_update").Input("x").Input("update").Output("y").Build());
+    op_ =
+        CHECK_JUST(one::OpBuilder("slice_update").Input("ref").Input("value").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& update,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& ref,
+                           const std::shared_ptr<one::Tensor>& value,
                            const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step, bool inplace) const {
     MutableAttrMap attrs;
@@ -1380,17 +1317,37 @@ class SliceUpdateFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
 
     if (inplace) {
-      JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
-      (*outputs)[0] = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
-      return outputs->at(0);
+      JUST(CheckInplaceValid(ref));
+      JUST(VectorAt(*outputs, 0)) = ref;
+      JUST(OpInterpUtil::Dispatch(*op_, {ref, value}, outputs.get(), attrs));
+      return JUST(VectorAt(*outputs, 0));
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {ref, value}, attrs);
     }
   }
 
  private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SliceGradFunctor {
+ public:
+  SliceGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("slice_grad").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy, const Shape& like_shape,
+                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("like_shape", like_shape));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy}, attrs);
+  }
+
+ protected:
   std::shared_ptr<OpExpr> op_;
 };
 
@@ -2133,17 +2090,7 @@ class TensorSetItemFunctor {
       if (slice_shape != *(value_tensor->shape())) {
         value_tensor = JUST(Reshape(value_tensor, slice_shape));
       }
-      bool requires_grad =
-          (x->requires_grad() || value_tensor->requires_grad()) && autograd::GradMode::is_enabled();
-      if (x->is_local()) {
-        if (requires_grad) {
-          JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
-        } else {
-          JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
-        }
-      } else {
-        JUST(LogicalSliceAssign(x, value_tensor, start, end, step));
-      }
+      JUST(SliceUpdate(x, value_tensor, start, end, step, /*inplace=*/true));
     }
     return Maybe<void>::Ok();
   }
@@ -3065,14 +3012,15 @@ class ReshapeLikeFunctor {
 class PinMemoryFunctor {
  public:
   PinMemoryFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("slice_update").Input("x").Input("update").Output("y").Build());
+    op_ =
+        CHECK_JUST(one::OpBuilder("slice_update").Input("ref").Input("value").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     // TODO:(zhaoluyang) support consistent tensor.pin_memory()
     CHECK_OR_RETURN(input->is_local() && !(LazyMode::is_enabled()))
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     // if tensor already pinned, then just return
-    if (JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory()) { return input; }
+    if (JUST(JUST(input->AsMirroredTensor())->is_pinned())) { return input; }
     auto shape = input->shape();
     auto device = JUST(input->device());
     const bool requires_grad = input->requires_grad();
@@ -3150,13 +3098,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ViewFunctor>("View");
   m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
   m.add_functor<impl::InplaceToContiguousFunctor>("InplaceToContiguous");
-  m.add_functor<impl::SliceFunctor>("Slice");
-  m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::NarrowFunctor>("Narrow");
   m.add_functor<impl::NarrowGradFunctor>("NarrowGrad");
-  m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
-  m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
+  m.add_functor<impl::SliceFunctor>("Slice");
+  m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::FlipFunctor>("Flip");

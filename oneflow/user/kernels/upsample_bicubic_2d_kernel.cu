@@ -139,12 +139,12 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
     T* out_ptr = y_tensor->mut_dptr<T>();
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
-    const int nbatch = x_tensor->shape().At(0);
-    const int channels = x_tensor->shape().At(1);
-    const int64_t in_height = x_tensor->shape().At(2);
-    const int64_t in_width = x_tensor->shape().At(3);
-    const int64_t out_height = y_tensor->shape().At(2);
-    const int64_t out_width = y_tensor->shape().At(3);
+    const int nbatch = x_tensor->shape_view().At(0);
+    const int channels = x_tensor->shape_view().At(1);
+    const int64_t in_height = x_tensor->shape_view().At(2);
+    const int64_t in_width = x_tensor->shape_view().At(3);
+    const int64_t out_height = y_tensor->shape_view().At(2);
+    const int64_t out_width = y_tensor->shape_view().At(3);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
@@ -157,7 +157,7 @@ class UpsampleBicubic2dGPUKernel final : public user_op::OpKernel {
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), y_tensor->mut_dptr<void>(), x_tensor->dptr<void>(),
-          x_tensor->shape().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
+          x_tensor->shape_view().elem_cnt() * GetSizeOfDataType(x_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
@@ -181,16 +181,16 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
     Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
-                              dx_tensor->shape().elem_cnt() * sizeof(T));
+                              dx_tensor->shape_view().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const bool align_corners = ctx->Attr<bool>("align_corners");
 
-    const int nbatch = dx_tensor->shape().At(0);
-    const int channels = dx_tensor->shape().At(1);
-    const int64_t in_height = dx_tensor->shape().At(2);
-    const int64_t in_width = dx_tensor->shape().At(3);
-    const int64_t out_height = dy_tensor->shape().At(2);
-    const int64_t out_width = dy_tensor->shape().At(3);
+    const int nbatch = dx_tensor->shape_view().At(0);
+    const int channels = dx_tensor->shape_view().At(1);
+    const int64_t in_height = dx_tensor->shape_view().At(2);
+    const int64_t in_width = dx_tensor->shape_view().At(3);
+    const int64_t out_height = dy_tensor->shape_view().At(2);
+    const int64_t out_width = dy_tensor->shape_view().At(3);
     const std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
     double height_scale = ctx->Attr<double>("height_scale");
     double width_scale = ctx->Attr<double>("width_scale");
@@ -203,7 +203,7 @@ class UpsampleBicubic2dGradGPUKernel final : public user_op::OpKernel {
     if (in_height == out_height && in_width == out_width) {
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx_tensor->mut_dptr<void>(), dy_tensor->dptr<void>(),
-          dy_tensor->shape().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
+          dy_tensor->shape_view().elem_cnt() * GetSizeOfDataType(dy_tensor->data_type()));
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);

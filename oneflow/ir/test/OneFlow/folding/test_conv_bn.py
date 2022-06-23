@@ -47,7 +47,7 @@ def _test_fuse_conv_bn(test_case):
     lazy_res = graph(data)
 
     test_case.assertTrue(
-        np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-4, atol=1e-4)
+        np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-2, atol=1e-2)
     )
 
 
