@@ -42,27 +42,6 @@ struct CallContext {
   const one::OpExprInterpContext op_interp_ctx;
 };
 
-class ThreadLocalCallContextScope final {
- public:
-  ThreadLocalCallContextScope(CallContext* call_ctx) {
-    CHECK_ISNULL(*MutCurrent());
-    *MutCurrent() = call_ctx;
-  }
-  ~ThreadLocalCallContextScope() {
-    CHECK_NOTNULL(*MutCurrent());
-    *MutCurrent() = nullptr;
-  }
-
-  static CallContext* Current() { return CHECK_NOTNULL(*MutCurrent()); }
-  static bool CurrentIsValid() { return *MutCurrent() != nullptr; }
-
- private:
-  static CallContext** MutCurrent() {
-    static thread_local CallContext* call_ctx = nullptr;
-    return &call_ctx;
-  }
-};
-
 }  // namespace eager
 
 }  // namespace oneflow

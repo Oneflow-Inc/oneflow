@@ -32,22 +32,13 @@ namespace vm {
 
 class Stream;
 
+struct OpCallInstructionUtil;
+
 class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
  public:
   OpCallPhyInstrOperand(const OpCallPhyInstrOperand&) = delete;
   OpCallPhyInstrOperand(OpCallPhyInstrOperand&&) = delete;
   ~OpCallPhyInstrOperand() override = default;
-
-  // recursive scope.
-  template<typename CallbackT>
-  auto WithThisCallContext(const CallbackT& Callback) -> decltype(Callback()) {
-    if (eager::ThreadLocalCallContextScope::CurrentIsValid()) {
-      CHECK_EQ(eager::ThreadLocalCallContextScope::Current(), &call_ctx_);
-      return decltype(Callback())();
-    }
-    eager::ThreadLocalCallContextScope scope(&call_ctx_);
-    return Callback();
-  }
 
   template<typename... Args>
   static Maybe<OpCallPhyInstrOperand> New(Args&&... args) {
@@ -91,6 +82,7 @@ class OpCallPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
  private:
+  friend struct OpCallInstructionUtil;
   OpCallPhyInstrOperand(
       vm::Stream* vm_stream, const std::shared_ptr<one::StatefulOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,

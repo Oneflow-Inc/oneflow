@@ -31,7 +31,7 @@ class AttrMap;
 
 namespace vm {
 struct OpCallInstructionUtil;
-}  // namespace vm
+}
 
 namespace eager {
 struct CallContext;
@@ -73,7 +73,7 @@ class StatefulOpKernel final {
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
-  void WithOpInferContext(const std::function<void(user_op::InferContext*)>& Callback) const;
+  size_t InferTmpSize(eager::CallContext* call_ctx, const user_op::OpKernel* user_opkernel) const;
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
@@ -86,13 +86,15 @@ class StatefulOpKernel final {
   friend struct vm::OpCallInstructionUtil;
   StatefulOpKernel() = default;
 
-  void WithComputeContext(DeviceCtx* device_ctx,
-                          const std::function<void(user_op::KernelComputeContext*)>& Callback);
+  void Compute(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+               const user_op::OpKernel* user_opkernel, user_op::OpKernelState* state,
+               const user_op::OpKernelCache* cache) const;
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelStateAndCache(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
+  void TryInitOpKernelStateAndCache(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+                                    const user_op::OpKernel* op_kernel,
                                     user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
   vm::EagerBlobObject* mut_temp_blob_object();

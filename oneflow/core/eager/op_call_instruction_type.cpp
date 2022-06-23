@@ -75,12 +75,10 @@ struct OpCallInstructionUtil final {
 
  private:
   static inline void InferTempStorageBlobDesc(OpCallPhyInstrOperand* operand) {
-    const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
     auto* temp_eager_blob_object = operand->mut_opkernel()->mut_temp_blob_object();
     CHECK(temp_eager_blob_object->data_type() == DataType::kChar);
-    size_t temp_size = 0;
-    operand->opkernel().WithOpInferContext(
-        [&](user_op::InferContext* op_infer_ctx) { temp_size = InferTmpSizeFn(op_infer_ctx); });
+    size_t temp_size =
+        operand->opkernel().InferTmpSize(&operand->call_ctx_, operand->user_opkernel());
     *temp_eager_blob_object->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     *temp_eager_blob_object->mut_stride() = Stride(*temp_eager_blob_object->mut_shape());
     temp_eager_blob_object->set_pin_memory(false);
@@ -97,8 +95,8 @@ struct OpCallInstructionUtil final {
       // skipped.
       state = nullptr;
     }
-    operand->mut_opkernel()->TryInitOpKernelStateAndCache(operand->user_opkernel(), device_ctx,
-                                                          state, cache);
+    operand->mut_opkernel()->TryInitOpKernelStateAndCache(&operand->call_ctx_, device_ctx,
+                                                          operand->user_opkernel(), state, cache);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(OpCallPhyInstrOperand* operand,
@@ -117,40 +115,9 @@ struct OpCallInstructionUtil final {
   static inline void OpKernelCompute(OpCallPhyInstrOperand* operand, DeviceCtx* device_ctx,
                                      user_op::OpKernelState* state,
                                      const user_op::OpKernelCache* cache) {
-    auto* opkernel = operand->mut_opkernel();
-    opkernel->WithComputeContext(device_ctx, [&](user_op::KernelComputeContext* compute_ctx) {
-      OF_PROFILER_RANGE_PUSH("Compute");
-      auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
-          opkernel->op_type_name(),
-#if defined(WITH_CUDA)
-          compute_ctx->device_type() == DeviceType::kCUDA
-              ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
-              : nullptr,
-          [compute_ctx]() -> int64_t {
-            const auto cal_memory_size = [compute_ctx](const one::ArgVec& args) -> int64_t {
-              return std::accumulate(args.begin(), args.end(), static_cast<int64_t>(0),
-                                     [compute_ctx](int64_t memory_size, const auto& pair) {
-                                       const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(
-                                           pair.first, pair.second);
-                                       return memory_size
-                                              + tensor->shape_view().elem_cnt()
-                                                    * GetSizeOfDataType(tensor->data_type());
-                                     });
-            };
-            return cal_memory_size(compute_ctx->inputs()) + cal_memory_size(compute_ctx->outputs());
-          },
-#endif
-          [compute_ctx]() -> std::vector<Shape> {
-            std::vector<Shape> shapes;
-            for (const auto& pair : compute_ctx->inputs()) {
-              shapes.push_back(
-                  compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
-            }
-            return shapes;
-          }));
-      operand->user_opkernel()->Compute(compute_ctx, state, cache);
-      OF_PROFILER_RANGE_POP();
-    });
+    auto* call_ctx = &operand->call_ctx_;
+    auto* user_kernel = operand->user_opkernel();
+    operand->mut_opkernel()->Compute(call_ctx, device_ctx, user_kernel, state, cache);
   }
 
   static inline Maybe<void> DeallocateTempStorageBlobMemory(OpCallPhyInstrOperand* operand,
@@ -160,16 +127,11 @@ struct OpCallInstructionUtil final {
 };
 
 void OpCallInstructionType::Compute(vm::Instruction* instruction) const {
-  auto* ptr = instruction->instr_msg().phy_instr_operand().get();
-  auto* operand = CHECK_NOTNULL(dynamic_cast<OpCallPhyInstrOperand*>(ptr));
-  operand->WithThisCallContext(
-      [&] { CHECK_JUST(OpCallInstructionUtil::Compute(instruction->instr_msg())); });
+  CHECK_JUST(OpCallInstructionUtil::Compute(instruction->instr_msg()));
 }
 
 void OpCallInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
-  auto* ptr = instr_msg->phy_instr_operand().get();
-  auto* operand = CHECK_NOTNULL(dynamic_cast<OpCallPhyInstrOperand*>(ptr));
-  operand->WithThisCallContext([&] { CHECK_JUST(OpCallInstructionUtil::Compute(*instr_msg)); });
+  CHECK_JUST(OpCallInstructionUtil::Compute(*instr_msg));
 }
 
 std::string OpCallInstructionType::DebugName(const vm::InstructionMsg& instr_msg) const {

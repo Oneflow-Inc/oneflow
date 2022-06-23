@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/eager/call_context.h"
 
 namespace oneflow {
@@ -802,11 +803,11 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
 StatefulOpKernel::~StatefulOpKernel() = default;
 
-void StatefulOpKernel::WithOpInferContext(
-    const std::function<void(user_op::InferContext*)>& Callback) const {
-  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
-  UserOpInferContext op_infer_ctx(op_infer_ctx_helper_.get(), op_call_ctx);
-  return Callback(&op_infer_ctx);
+size_t StatefulOpKernel::InferTmpSize(eager::CallContext* call_ctx,
+                                      const user_op::OpKernel* user_opkernel) const {
+  UserOpInferContext op_infer_ctx(op_infer_ctx_helper_.get(), call_ctx);
+  const auto& InferTmpSizeFn = GetInferTmpSizeFn(user_opkernel);
+  return InferTmpSizeFn(&op_infer_ctx);
 }
 
 Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
@@ -849,12 +850,12 @@ Maybe<void> StatefulOpKernel::ChooseOpKernel(eager::CallContext* call_ctx,
   return Maybe<void>::Ok();
 }
 
-void StatefulOpKernel::TryInitOpKernelStateAndCache(const user_op::OpKernel* op_kernel,
+void StatefulOpKernel::TryInitOpKernelStateAndCache(eager::CallContext* call_ctx,
                                                     DeviceCtx* device_ctx,
+                                                    const user_op::OpKernel* op_kernel,
                                                     user_op::OpKernelState** state,
                                                     user_op::OpKernelCache** cache) {
-  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
-  UserKernelInitAndCacheContext init_and_cache_ctx(init_and_cache_ctx_helper_.get(), op_call_ctx,
+  UserKernelInitAndCacheContext init_and_cache_ctx(init_and_cache_ctx_helper_.get(), call_ctx,
                                                    device_ctx);
   if (state != nullptr) {
     auto it = op_kernel_state_map_.find(op_kernel);
@@ -888,11 +889,43 @@ user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
 
 user_op::DataTypeInferFn StatefulOpKernel::DataTypeInferFn() const { return data_type_infer_fn_; }
 
-void StatefulOpKernel::WithComputeContext(
-    DeviceCtx* device_ctx, const std::function<void(user_op::KernelComputeContext*)>& Callback) {
-  auto* op_call_ctx = CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current());
-  UserKernelComputeContext compute_ctx(compute_ctx_helper_.get(), op_call_ctx, device_ctx);
-  Callback(&compute_ctx);
+void StatefulOpKernel::Compute(eager::CallContext* call_ctx, DeviceCtx* device_ctx,
+                               const user_op::OpKernel* user_opkernel,
+                               user_op::OpKernelState* state,
+                               const user_op::OpKernelCache* cache) const {
+  UserKernelComputeContext compute_context(compute_ctx_helper_.get(), call_ctx, device_ctx);
+  auto* compute_ctx = &compute_context;
+  OF_PROFILER_RANGE_GUARD("Compute");
+  if (Global<profiler::ProfileMgr>::Get()) {
+    const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
+      const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
+        const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
+        return mem_size + tensor->shape_view().elem_cnt() * GetSizeOfDataType(tensor->data_type());
+      };
+      return std::accumulate(args.begin(), args.end(), static_cast<int64_t>(0), Func);
+    };
+    auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
+        op_type_name(),
+#if defined(WITH_CUDA)
+        compute_ctx->device_type() == DeviceType::kCUDA
+            ? dynamic_cast<ep::CudaStream*>(compute_ctx->stream())->cuda_stream()
+            : nullptr,
+        [compute_ctx, CalMemorySize]() -> int64_t {
+          return CalMemorySize(compute_ctx->inputs()) + CalMemorySize(compute_ctx->outputs());
+        },
+#endif
+        [compute_ctx]() -> std::vector<Shape> {
+          std::vector<Shape> shapes;
+          for (const auto& pair : compute_ctx->inputs()) {
+            shapes.push_back(
+                compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape());
+          }
+          return shapes;
+        }));
+    user_opkernel->Compute(compute_ctx, state, cache);
+  } else {
+    user_opkernel->Compute(compute_ctx, state, cache);
+  }
 }
 
 }  // namespace one
