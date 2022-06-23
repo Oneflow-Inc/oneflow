@@ -39,21 +39,6 @@ struct UnaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA> fin
   }
 };
 
-template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA,
-         typename InputB>
-struct BinaryElemwiseXpuLauncher final {
-  void operator()(ep::Stream* stream, int64_t elem_cnt, OutputT* out, const InputA* input_a,
-                  const InputB* input_b, FunctorT functor);
-};
-
-template<typename FunctorT, typename OutputT, typename InputA, typename InputB>
-struct BinaryElemwiseXpuLauncher<DeviceType::kCPU, FunctorT, OutputT, InputA, InputB> final {
-  void operator()(ep::Stream* stream, int64_t elem_cnt, OutputT* out, const InputA* input_a,
-                  const InputB* input_b, FunctorT functor) {
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { out[i] = functor(input_a[i], input_b[i]); }
-  }
-};
-
 template<DeviceType device_type, typename FunctorT, typename OutputT, typename InputA>
 class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
