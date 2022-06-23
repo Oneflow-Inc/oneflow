@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/wrap_dim_utils.h"
 
 namespace oneflow {
 namespace one {
@@ -39,14 +40,7 @@ Maybe<std::vector<int32_t>> CheckAxis(const std::vector<int32_t>& axis, const in
     std::vector<int32_t> reduce_axis(naxis);
     std::vector<int32_t> axis_num(ndim);
     for (int32_t i = 0; i < naxis; i++) {
-      CHECK_OR_RETURN(axis[i] >= -ndim && axis[i] < ndim)
-          << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
-          << ", " << ndim - 1 << "], but got " << axis[i] << ")";
-      if (axis[i] < 0) {
-        reduce_axis[i] = axis[i] + ndim;
-      } else {
-        reduce_axis[i] = axis[i];
-      }
+      reduce_axis[i] = JUST(maybe_wrap_dim(axis[i], ndim));
       axis_num[reduce_axis[i]]++;
       CHECK_OR_RETURN(axis_num[reduce_axis[i]] < 2)
           << Error::RuntimeError() << "dim " << reduce_axis[i]

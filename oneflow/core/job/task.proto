@@ -38,6 +38,7 @@ enum TaskType {
   kSspVariableProxy = 63;
   kBoxingZeros = 64;
   kCriticalSectionWaitTick = 65;
+  kNcclSendRecvBoxing = 66;
 };
 
 message RegstDescIdSet {

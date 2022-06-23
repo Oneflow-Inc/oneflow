@@ -22,7 +22,7 @@ limitations under the License.
 // ************************
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/fixed_vector.h"
+#include "oneflow/core/common/small_vector.h"
 #include "oneflow/core/common/shape_vec.h"
 
 // PyArrayObject cannot be forward declared, or a compile error will occur
