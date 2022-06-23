@@ -18,22 +18,33 @@ limitations under the License.
 
 #include <cstdint>
 #include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/ep/include/allocation_options.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+namespace ep {
+
+class Device;
+
+}
+
 namespace vm {
 
-class CudaBackendAllocator final : public Allocator {
+class EpBackendAllocator final : public Allocator {
  public:
-  explicit CudaBackendAllocator(int64_t device_id) : device_id_(device_id) {}
-  ~CudaBackendAllocator() override = default;
+  explicit EpBackendAllocator(const std::shared_ptr<ep::Device>& ep_device,
+                              const ep::AllocationOptions& allocation_options)
+      : ep_device_(ep_device), allocation_options_(allocation_options) {}
+  ~EpBackendAllocator() override = default;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void DeviceReset() override;
 
  private:
-  int64_t device_id_;
+  std::shared_ptr<ep::Device> ep_device_;
+  ep::AllocationOptions allocation_options_;
 };
 
 }  // namespace vm
