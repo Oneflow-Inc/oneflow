@@ -208,11 +208,7 @@ Maybe<void> VirtualMachine::MemShrinkAll() {
           if (allocator) {
             auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
             if (cache != nullptr) { cache->Shrink(); }
-          } else {
-            std::cerr << "stream has null allocator " << stream->stream_type().stream_tag() << std::endl;
           }
-        } else {
-          std::cerr << "stream has null device ctx" << stream->stream_type().stream_tag() << std::endl;
         }
       }
     }

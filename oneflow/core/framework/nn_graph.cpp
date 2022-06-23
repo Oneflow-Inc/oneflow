@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
-#include <chrono>
-#include <iostream>
-#include <thread>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
@@ -318,18 +315,12 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
+
   // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
-  // MEM_GC is just for test, will be rmed at PR merge.
-  if (ParseBooleanFromEnv("MEM_GC", false)) {
-    JUST(vm::CurrentRankSync());
-    std::cerr << "==> start shrinking mem" << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(20));
-    auto* vm = JUST(GlobalMaybe<VirtualMachine>());
-    CHECK_NOTNULL_OR_RETURN(vm) << "VM is NULL.";
-    JUST(vm->MemShrinkAll());
-    std::cerr << "==> finish shrinking mem" << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(20));
-  }
+  JUST(vm::CurrentRankSync());
+  auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+  JUST(vm->MemShrinkAll());
+
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
