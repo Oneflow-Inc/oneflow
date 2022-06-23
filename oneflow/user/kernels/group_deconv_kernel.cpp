@@ -47,12 +47,12 @@ void Gemm4ChannelLast(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b
 
 template<typename T>
 T* GetImgMutDptr(user_op::Tensor* tensor, int64_t idx) {
-  return tensor->mut_dptr<T>() + tensor->shape().Count(1) * idx;
+  return tensor->mut_dptr<T>() + tensor->shape_view().Count(1) * idx;
 }
 
 template<typename T>
 const T* GetImgDptr(const user_op::Tensor* tensor, int64_t idx) {
-  return tensor->dptr<T>() + tensor->shape().Count(1) * idx;
+  return tensor->dptr<T>() + tensor->shape_view().Count(1) * idx;
 }
 
 size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_shape,
@@ -361,19 +361,19 @@ class DeconvCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     int32_t idx_offset = deconv_cache->idx_offset_;
-    const int32_t input_group_interval = in->shape().At(1) / deconv_cache->groups;
-    const int32_t weight_group_interval = weight->shape().At(0) / deconv_cache->groups;
-    const int32_t output_group_interval = out->shape().At(1) / deconv_cache->groups;
-    const int32_t input_step = input_group_interval * in->shape().Count(2);
-    const int32_t weight_step = weight_group_interval * weight->shape().Count(1);
-    const int32_t output_step = output_group_interval * out->shape().Count(2);
+    const int32_t input_group_interval = in->shape_view().At(1) / deconv_cache->groups;
+    const int32_t weight_group_interval = weight->shape_view().At(0) / deconv_cache->groups;
+    const int32_t output_group_interval = out->shape_view().At(1) / deconv_cache->groups;
+    const int32_t input_step = input_group_interval * in->shape_view().Count(2);
+    const int32_t weight_step = weight_group_interval * weight->shape_view().Count(1);
+    const int32_t output_step = output_group_interval * out->shape_view().Count(2);
     const int32_t m = deconv_cache->weight_5d_shape_.Count(1);
     const int32_t n = deconv_cache->out_5d_shape_.Count(idx_offset, idx_offset + 3);
     const int32_t k = deconv_cache->weight_5d_shape_.At(0) / deconv_cache->groups;
 
     Memset<DeviceType::kCPU>(ctx->stream(), out->mut_dptr<T>(), 0,
-                             out->shape().elem_cnt() * sizeof(T));
-    FOR_RANGE(int64_t, i, 0, in->shape().At(0)) {
+                             out->shape_view().elem_cnt() * sizeof(T));
+    FOR_RANGE(int64_t, i, 0, in->shape_view().At(0)) {
       const T* input_ptr = GetImgDptr<T>(in, i);
       const T* weight_ptr = weight->dptr<T>();
       T* output_ptr = GetImgMutDptr<T>(out, i);

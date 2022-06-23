@@ -43,20 +43,20 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
 
-    if (input_tensor->shape().elem_cnt() == 0) {
-      if (output_tensor->shape().elem_cnt() != 0) {
+    if (input_tensor->shape_view().elem_cnt() == 0) {
+      if (output_tensor->shape_view().elem_cnt() != 0) {
         Memset<device_type>(
             ctx->stream(), output_tensor->mut_dptr<K>(), 0,
-            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
+            output_tensor->shape_view().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
       }
       return;
     }
     const Shape& reduced_shape =
-        CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
+        CreateReducedShape(input_tensor->shape_view(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
         ctx->stream(), XpuVarNdarray<K>(reduced_shape, output_tensor->mut_dptr<K>()),
-        XpuVarNdarray<const T>(input_tensor->shape(), input_tensor->dptr<T>()),
-        XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));
+        XpuVarNdarray<const T>(input_tensor->shape_view(), input_tensor->dptr<T>()),
+        XpuVarNdarray<T>(tmp_buffer->shape_view(), tmp_buffer->mut_dptr<T>()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -170,7 +170,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ShapeView& in_shape = input_tensor->shape();
+    const ShapeView& in_shape = input_tensor->shape_view();
     bool is_axis_contiguous = false;
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
     GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
@@ -211,7 +211,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       const size_t reduce_tmp_buffer_bytes =
           GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
-               tmp_buffer->shape().elem_cnt());
+               tmp_buffer->shape_view().elem_cnt());
       auto h2f = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
           ctx->device_type(), DataType::kFloat16, DataType::kFloat);
       CHECK(h2f);
@@ -226,7 +226,7 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
           XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
       f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
-                  output_tensor->shape().elem_cnt());
+                  output_tensor->shape_view().elem_cnt());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -265,12 +265,12 @@ class ReduceSumFloatCudaKernel final : public user_op::OpKernel, public user_op:
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    const ShapeView& in_shape = input_tensor->shape();
-    if (input_tensor->shape().elem_cnt() == 0) {
-      if (output_tensor->shape().elem_cnt() != 0) {
+    const ShapeView& in_shape = input_tensor->shape_view();
+    if (input_tensor->shape_view().elem_cnt() == 0) {
+      if (output_tensor->shape_view().elem_cnt() != 0) {
         Memset<DeviceType::kCUDA>(
             ctx->stream(), output_tensor->mut_dptr<float>(), 0,
-            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
+            output_tensor->shape_view().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
       }
       return;
     }
@@ -306,8 +306,8 @@ class ReduceSumFloatCudaKernel final : public user_op::OpKernel, public user_op:
       const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
       NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
           ctx->stream(), XpuVarNdarray<float>(reduced_shape, output_tensor->mut_dptr<float>()),
-          XpuVarNdarray<const float>(input_tensor->shape(), input_tensor->dptr<float>()),
-          XpuVarNdarray<float>(tmp_buffer->shape(), tmp_buffer->mut_dptr<float>()));
+          XpuVarNdarray<const float>(input_tensor->shape_view(), input_tensor->dptr<float>()),
+          XpuVarNdarray<float>(tmp_buffer->shape_view(), tmp_buffer->mut_dptr<float>()));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
