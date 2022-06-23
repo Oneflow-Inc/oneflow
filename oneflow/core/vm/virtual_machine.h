@@ -45,7 +45,7 @@ class VirtualMachine final {
 
   // Never called in vm work threads.
   // VM sync must be called to ensure all working instructions are finished.
-  Maybe<void> MemShrinkAll();
+  Maybe<void> ShrinkAllMem();
 
  private:
   friend class InstructionsBuilder;
@@ -56,6 +56,8 @@ class VirtualMachine final {
   void ControlSync();
 
   Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
+
+  Maybe<void> BlockingRunProbeFunc(const std::function<bool(vm::VirtualMachineEngine*)>& prob_func);
 
   bool vm_threads_closed_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;

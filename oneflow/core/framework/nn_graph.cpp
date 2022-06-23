@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
@@ -314,6 +315,12 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
+
+  // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
+  JUST(vm::CurrentRankSync());
+  auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+  JUST(vm->ShrinkAllMem());
+
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();

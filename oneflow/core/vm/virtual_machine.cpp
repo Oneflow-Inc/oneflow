@@ -178,18 +178,11 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 
 }  // namespace
 
-Maybe<void> VirtualMachine::MemShrinkAll() {
+Maybe<void> VirtualMachine::BlockingRunProbeFunc(const std::function<bool(vm::VirtualMachineEngine*)>& prob_func) {
   JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
     auto bc = std::make_shared<BlockingCounter>(1);
-    vm_->InsertProbe([bc](vm::VirtualMachineEngine* engine) {
-      if (engine->mut_active_stream_list()->size()) { return false; }
-      INTRUSIVE_FOR_EACH_PTR(thread_ctx, engine->mut_thread_ctx_list()) {
-        INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
-          auto* allocator = stream->device_ctx()->mut_allocator();
-          auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
-          if (cache != nullptr) { cache->Shrink(); }
-        }
-      }
+    vm_->InsertProbe([bc, prob_func](vm::VirtualMachineEngine* engine) {
+      if(!prob_func(engine)) { return false; }
       bc->Decrease();
       return true;
     });
@@ -202,6 +195,24 @@ Maybe<void> VirtualMachine::MemShrinkAll() {
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
+}
+
+Maybe<void> VirtualMachine::ShrinkAllMem() {
+  auto try_shrink_men = [](vm::VirtualMachineEngine* engine) -> bool {
+    if (engine->mut_active_stream_list()->size()) { return false; }
+    INTRUSIVE_FOR_EACH_PTR(thread_ctx, engine->mut_thread_ctx_list()) {
+      INTRUSIVE_FOR_EACH_PTR(stream, thread_ctx->mut_stream_list()) {
+        const auto& device_ctx = stream->device_ctx();
+        if (device_ctx.get() && device_ctx->mut_allocator()) {
+          auto* allocator = device_ctx->mut_allocator();
+          auto* cache = dynamic_cast<vm::ShrinkableCache*>(allocator);
+          if (cache != nullptr) { cache->Shrink(); }
+        }
+      }
+    }
+    return true;
+  };
+  return BlockingRunProbeFunc(try_shrink_men);
 }
 
 VirtualMachine::~VirtualMachine() {
