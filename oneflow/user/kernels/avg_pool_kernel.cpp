@@ -142,8 +142,10 @@ class AvgPool1dKernel final : public user_op::OpKernel {
 
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      const dm::dims src_dims = {1, 1, x->shape_view().At(0) * x->shape_view().At(1), x->shape_view().At(2)};
-      const dm::dims dst_dims = {1, 1, y->shape_view().At(0) * y->shape_view().At(1), y->shape_view().At(2)};
+      const dm::dims src_dims = {1, 1, x->shape_view().At(0) * x->shape_view().At(1),
+                                 x->shape_view().At(2)};
+      const dm::dims dst_dims = {1, 1, y->shape_view().At(0) * y->shape_view().At(1),
+                                 y->shape_view().At(2)};
       const dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
       const dm::dims strides_dims = {1, params_3d.stride_3d()[2]};
       const dm::dims padding_dims_l = {0, params_3d.padding()[2]};
@@ -205,8 +207,10 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims diff_dst_dims = {1, 1, dy->shape_view().At(0) * dy->shape_view().At(1), dy->shape_view().At(2)};
-      dm::dims diff_src_dims = {1, 1, dx->shape_view().At(0) * dx->shape_view().At(1), dx->shape_view().At(2)};
+      dm::dims diff_dst_dims = {1, 1, dy->shape_view().At(0) * dy->shape_view().At(1),
+                                dy->shape_view().At(2)};
+      dm::dims diff_src_dims = {1, 1, dx->shape_view().At(0) * dx->shape_view().At(1),
+                                dx->shape_view().At(2)};
       dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {1, params_3d.stride_3d()[2]};
       dm::dims padding_dims_l = {0, params_3d.padding()[2]};
@@ -267,8 +271,10 @@ class AvgPool2dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims src_dims = {x->shape_view().At(0), x->shape_view().At(1), x->shape_view().At(2), x->shape_view().At(3)};
-      dm::dims dst_dims = {y->shape_view().At(0), y->shape_view().At(1), y->shape_view().At(2), y->shape_view().At(3)};
+      dm::dims src_dims = {x->shape_view().At(0), x->shape_view().At(1), x->shape_view().At(2),
+                           x->shape_view().At(3)};
+      dm::dims dst_dims = {y->shape_view().At(0), y->shape_view().At(1), y->shape_view().At(2),
+                           y->shape_view().At(3)};
       dm::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
       dm::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
@@ -332,10 +338,10 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
 
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims diff_dst_dims = {dy->shape_view().At(0), dy->shape_view().At(1), dy->shape_view().At(2),
-                                dy->shape_view().At(3)};
-      dm::dims diff_src_dims = {dx->shape_view().At(0), dx->shape_view().At(1), dx->shape_view().At(2),
-                                dx->shape_view().At(3)};
+      dm::dims diff_dst_dims = {dy->shape_view().At(0), dy->shape_view().At(1),
+                                dy->shape_view().At(2), dy->shape_view().At(3)};
+      dm::dims diff_src_dims = {dx->shape_view().At(0), dx->shape_view().At(1),
+                                dx->shape_view().At(2), dx->shape_view().At(3)};
       dm::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
       dm::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
@@ -396,10 +402,10 @@ class AvgPool3dKernel final : public user_op::OpKernel {
     T* dest = y->mut_dptr<T>();
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims src_dims = {x->shape_view().At(0), x->shape_view().At(1), x->shape_view().At(2), x->shape_view().At(3),
-                           x->shape_view().At(4)};
-      dm::dims dst_dims = {y->shape_view().At(0), y->shape_view().At(1), y->shape_view().At(2), y->shape_view().At(3),
-                           y->shape_view().At(4)};
+      dm::dims src_dims = {x->shape_view().At(0), x->shape_view().At(1), x->shape_view().At(2),
+                           x->shape_view().At(3), x->shape_view().At(4)};
+      dm::dims dst_dims = {y->shape_view().At(0), y->shape_view().At(1), y->shape_view().At(2),
+                           y->shape_view().At(3), y->shape_view().At(4)};
       dm::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
                               params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
@@ -468,10 +474,12 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims diff_dst_dims = {dy->shape_view().At(0), dy->shape_view().At(1), dy->shape_view().At(2),
-                                dy->shape_view().At(3), dy->shape_view().At(4)};
-      dm::dims diff_src_dims = {dx->shape_view().At(0), dx->shape_view().At(1), dx->shape_view().At(2),
-                                dx->shape_view().At(3), dx->shape_view().At(4)};
+      dm::dims diff_dst_dims = {dy->shape_view().At(0), dy->shape_view().At(1),
+                                dy->shape_view().At(2), dy->shape_view().At(3),
+                                dy->shape_view().At(4)};
+      dm::dims diff_src_dims = {dx->shape_view().At(0), dx->shape_view().At(1),
+                                dx->shape_view().At(2), dx->shape_view().At(3),
+                                dx->shape_view().At(4)};
       dm::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
                               params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
