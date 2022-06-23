@@ -1077,7 +1077,7 @@ Maybe<void> BoxingCollector::AskCloseAllSplitSbp(const NdSbp& nd_sbp,
       int32_t min_split_num = 4096;
       // We need to pick a suitable axis
       for (int32_t i = 0; i < remain_shape.NumAxes(); i++) {
-        if (remain_shape.At(i) % split_num > 0) {
+        if (remain_shape.At(i) % split_num == 0) {
           if (rest_split_shape.At(i) < min_split_num) {
             // Pick the axis with smallest splitting number among the rest of the sbp
             min_split_num = rest_split_shape.At(i);
