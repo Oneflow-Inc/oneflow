@@ -3092,7 +3092,6 @@ class FillTensorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
                            const std::shared_ptr<one::Tensor>& value) const {
     JUST(CheckInplaceValid(in));
-    MutableAttrMap attrs;
     const int64_t ndim = value->ndim();
     CHECK_EQ_OR_RETURN(ndim, 0)
         << Error::RuntimeError()
@@ -3103,7 +3102,7 @@ class FillTensorFunctor {
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     auto outputs = std::make_shared<TensorTuple>(1);
     (*outputs)[0] = in;
-    JUST(OpInterpUtil::Dispatch(*op_, {input_tuple[0], input_tuple[1]}, outputs.get(), attrs));
+    JUST(OpInterpUtil::Dispatch(*op_, {input_tuple[0], input_tuple[1]}, outputs.get()));
     return (*outputs)[0];
   }
 
