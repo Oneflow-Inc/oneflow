@@ -104,6 +104,7 @@ bool IsTransferNode(TaskType task_type) {
   switch (task_type) {
     // We mark the number of occurrences in bert
     case TaskType::kCollectiveBoxingGeneric:        // 76
+    case TaskType::kNcclSendRecvBoxing:             // ?
     case TaskType::kCopyHd:                         // 27
     case TaskType::kSliceBoxing:                    // 16
     case TaskType::kCopyCommNet:                    // 12
