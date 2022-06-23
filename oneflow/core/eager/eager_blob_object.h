@@ -52,15 +52,15 @@ class TensorStorage {
     blob_bytes_ = bytes;
   }
 
-  const Optional<Symbol<Stream>>& producer_stream() const { return producer_stream_; }
-  Maybe<void> init_producer_stream(Symbol<Stream> producer_stream) {
+  const Optional<Symbol<::oneflow::Stream>>& producer_stream() const { return producer_stream_; }
+  Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
     CHECK_OR_RETURN(!producer_stream_.has_value());
     producer_stream_ = producer_stream;
     return Maybe<void>::Ok();
   }
 
-  const Optional<Symbol<Stream>>& last_used_stream() const { return last_used_stream_; }
-  void set_last_used_stream(Symbol<Stream> last_used_stream) {
+  const Optional<Symbol<::oneflow::Stream>>& last_used_stream() const { return last_used_stream_; }
+  void set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
     last_used_stream_ = last_used_stream;
   }
 
@@ -77,8 +77,8 @@ class TensorStorage {
   size_t blob_bytes_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
-  Optional<Symbol<Stream>> producer_stream_;
-  Optional<Symbol<Stream>> last_used_stream_;
+  Optional<Symbol<::oneflow::Stream>> producer_stream_;
+  Optional<Symbol<::oneflow::Stream>> last_used_stream_;
   std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
@@ -125,17 +125,17 @@ class EagerBlobObject final {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
-  const Optional<Symbol<Stream>>& producer_stream() const {
+  const Optional<Symbol<::oneflow::Stream>>& producer_stream() const {
     return tensor_storage_->producer_stream();
   }
-  Maybe<void> init_producer_stream(Symbol<Stream> producer_stream) {
+  Maybe<void> init_producer_stream(Symbol<::oneflow::Stream> producer_stream) {
     return tensor_storage_->init_producer_stream(producer_stream);
   }
 
-  const Optional<Symbol<Stream>>& last_used_stream() const {
+  const Optional<Symbol<::oneflow::Stream>>& last_used_stream() const {
     return tensor_storage_->last_used_stream();
   }
-  void set_last_used_stream(Symbol<Stream> last_used_stream) {
+  void set_last_used_stream(Symbol<::oneflow::Stream> last_used_stream) {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
