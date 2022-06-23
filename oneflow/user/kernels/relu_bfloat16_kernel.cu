@@ -46,7 +46,7 @@ class ReluGradNvBFloat16Kernel final : public OpKernel {
     const Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t n = y->shape().elem_cnt();
+    const int64_t n = y->shape_view().elem_cnt();
     ReluBackwardGpu<nv_bfloat16><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         n, reinterpret_cast<const nv_bfloat16*>(y->dptr()),

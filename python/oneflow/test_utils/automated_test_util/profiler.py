@@ -20,7 +20,9 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple
 import torch
 import oneflow as flow
 import oneflow.support.env_var_util
-import oneflow.test_utils.automated_test_util.torch_flow_dual_object as dual_object_module
+from oneflow.test_utils.automated_test_util import (
+    torch_flow_dual_object as dual_object_module,
+)
 
 __all__ = ["profile", "set_profiler_hook", "profile_dual_object"]
 
