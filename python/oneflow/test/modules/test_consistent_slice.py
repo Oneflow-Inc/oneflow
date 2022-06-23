@@ -102,7 +102,6 @@ def _test_slice_with_bool(test_case, placement, sbp):
 @autotest(n=2, auto_backward=False, check_graph=False, )
 def _test_slice_with_grad(test_case, placement):
     sbp = random_sbp(placement, max_dim=2).value()
-    print(sbp)
     x = random_tensor(2, 8, 16, requires_grad=True).oneflow
     x_numpy = x.detach().cpu().numpy()
 
