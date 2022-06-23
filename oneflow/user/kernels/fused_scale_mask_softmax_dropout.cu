@@ -203,6 +203,7 @@ class FusedScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel {
         cols, mask_fill_value, scale_value, dropout_scale_value, simplified_input_dims,           \
         simplified_mask_dims);                                                                    \
   }
+    DEFINE_ONE_ELIF(2)
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
 #undef DEFINE_ONE_ELIF
@@ -264,6 +265,7 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
         static_cast<float>(0.0), ctx->Attr<float>("scale_value"),                                \
         ctx->Attr<float>("dropout_scale_value"), simplified_input_dims, simplified_mask_dims);   \
   }
+    DEFINE_ONE_ELIF(2)
     DEFINE_ONE_ELIF(3)
     DEFINE_ONE_ELIF(4)
 #undef DEFINE_ONE_ELIF

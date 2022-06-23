@@ -13,19 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/multiply_kernel.h"
-#include "oneflow/user/kernels/elementwise_xpu_kernel.cuh"
+#ifndef ONEFLOW_CORE_COMMON_ARRAY_REF_H_
+#define ONEFLOW_CORE_COMMON_ARRAY_REF_H_
+
+#include "llvm/ADT/ArrayRef.h"
 
 namespace oneflow {
 
-#define REGISTER_MULTIPLY_CUDA_KERNEL(cpp_type, proto_type) \
-  REGISTER_MULTIPLY_KERNEL(DeviceType::kCUDA, cpp_type);
+template<typename T>
+using ArrayRef = llvm::ArrayRef<T>;
 
-namespace {
-
-OF_PP_FOR_EACH_TUPLE(REGISTER_MULTIPLY_CUDA_KERNEL,
-                     ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ);
-
-}
+template<typename T>
+using MutableArrayRef = llvm::MutableArrayRef<T>;
 
 }  // namespace oneflow
+
+#endif

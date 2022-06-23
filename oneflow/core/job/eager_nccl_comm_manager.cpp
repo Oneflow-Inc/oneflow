@@ -73,9 +73,12 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
           << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
           << ", key = {" << key << "}\n";
   OF_NCCL_CHECK(ncclCommInitRank(comm, device_vec.size(), nccl_unique_id, rank));
+  VLOG(2) << " EagerNcclCommMgr::ncclCommInitRank succeed device_vec.size() = " << device_vec.size()
+          << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
+          << ", key = {" << key << "}\n";
 }
 
-bool IsUnifiedNcclCommInitUseKernel(const std::string& op_type_name) {
+bool NeedUnifiedNcclCommInit(const std::string& op_type_name) {
   return UserKernelUnifiedNcclCommInitRegistry::Instance().IsRegistered(op_type_name);
 }
 
@@ -167,7 +170,7 @@ void EagerNcclCommMgr::CreateCommFromPlan(const Plan& plan) {
     }
     const auto& op_conf = op_attr->op_conf();
     if (!op_conf.has_user_conf()) { continue; }
-    if (!IsUnifiedNcclCommInitUseKernel(op_conf.user_conf().op_type_name())) { continue; }
+    if (!NeedUnifiedNcclCommInit(op_conf.user_conf().op_type_name())) { continue; }
 
     if (!op_attr->has_parallel_conf_signature()) { continue; }
     if (!op_attr->parallel_conf_signature().has_op_parallel_conf()) { continue; }

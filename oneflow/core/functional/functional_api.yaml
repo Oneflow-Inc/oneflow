@@ -292,8 +292,10 @@
   bind_python: True
 
 - name: "reduce_mean"
-  signature: ["Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceMean",
-  "Tensor (Tensor x) => ReduceMeanWhole"]
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdim=False) => ReduceMean",
+    "Tensor (Tensor x) => ReduceMeanWhole"
+  ]
   bind_python: True
 
 - name: "reduce_all"
@@ -928,6 +930,18 @@
   signature: " Tensor (Tensor input, Int64 dim, Tensor index, Bool sparse_grad=False) => DimGather"
   bind_python: True
 
+- name: "embedding_renorm_"
+  signature: " Tensor (Tensor in, Tensor indices, Double max_norm, Double norm_type) => EmbeddingReNorm"
+  bind_python: True
+
+- name: "embedding"
+  signature: " Tensor (Tensor weight, Tensor indices, Int64 padding_idx=None, Bool scale_grad_by_freq=False) => Embedding"
+  bind_python: True
+
+- name: "embedding_grad"
+  signature: " Tensor (Tensor dy, Tensor weight, Tensor indices, Int64 padding_idx, Bool scale_grad_by_freq=False) => EmbeddingGrad"
+  bind_python: False
+
 - name: "arg_sort"
   signature: "Tensor (Tensor in, String direction) => ArgSort"
   bind_python: True
@@ -954,6 +968,11 @@
     Double alpha=1.0) => MatMul"
   bind_python: True
 
+- name: "mv"
+  signature:
+    "Tensor (Tensor input, Tensor vec) => Mv"
+  bind_python: True
+
 - name: "fused_mlp"
   signature:
     "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
@@ -961,12 +980,22 @@
 
 - name: "cublas_bias_add_relu_matmul_grad"
   signature:
-    "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => CublasBiasAddReluMatmulGrad"
+    "TensorTuple (Tensor dy, Tensor weight, Tensor aux, Double alpha=1.0) => CublasBiasAddReluMatmulGrad"
   bind_python: False
 
 - name: "cublas_matmul_bias_add_grad"
   signature:
     "TensorTuple (Tensor dy, Tensor x) => CublasMatmulBiasAddGrad"
+  bind_python: False
+
+- name: "fused_matmul_bias_add_relu_dropout"
+  signature:
+    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation, FloatList dropout_rate_list, Generator generator=None) => FusedMatmulBiasAddReluDropout"
+  bind_python: True
+
+- name: "fused_relu_dropout_grad"
+  signature:
+    "Tensor (Tensor dy, Tensor mask, Float scale) => FusedReluDropoutGrad"
   bind_python: False
 
 - name: "broadcast_matmul_grad_b"
@@ -1003,11 +1032,11 @@
   bind_python: False
 
 - name: "nll_loss"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NllLoss"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => NLLLoss"
   bind_python: True
 
-- name: "nll_loss_grad"
-  signature: "Tensor(Tensor dy, Tensor input, Tensor target, Tensor weight=None, Tensor total_target, Int64 ignore_index) => NllLossGrad"
+- name: "nll_grad"
+  signature: "Tensor(Tensor out_grad, Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index) => NLLGrad"
   bind_python: False
 
 - name: "binary_cross_entropy_loss"
@@ -1273,14 +1302,6 @@
   signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
   bind_python: True
 
-- name: "slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => Slice"
-  bind_python: True
-
-- name: "slice_grad"
-  signature: "Tensor (Tensor dy, Shape like, Int64List start, Int64List stop, Int64List step) => SliceGrad"
-  bind_python: False
-
 - name: "narrow"
   signature: "Tensor (Tensor input, Int64 dim, Int64 start, Int64 length) => Narrow"
   bind_python: True
@@ -1289,17 +1310,17 @@
   signature: "Tensor (Tensor dy, Tensor like, Int64 dim, Int64 start, Int64 length) => NarrowGrad"
   bind_python: False
 
+- name: "slice"
+  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => Slice"
+  bind_python: True
+
 - name: "slice_update"
-  signature: "Tensor (Tensor x, Tensor update, Int64List start, Int64List stop, Int64List step, *, Bool inplace=False) => SliceUpdate"
+  signature: "Tensor (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step, Bool inplace=False) => SliceUpdate"
   bind_python: True
 
-- name: "logical_slice"
-  signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => LogicalSlice"
-  bind_python: True
-
-- name: "logical_slice_assign"
-  signature: "Tensor (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
-  bind_python: True
+- name: "slice_grad"
+  signature: "Tensor (Tensor dy, Shape like_shape, Int64List start, Int64List stop, Int64List step) => SliceGrad"
+  bind_python: False
 
 - name: "copy"
   signature: "Tensor (Tensor x, String device_type, Int64 device_id, Bool pin_memory=False) => Copy"
@@ -2112,6 +2133,18 @@
 
 - name: "fused_dot_feature_interaction_grad"
   signature: "TensorTuple (Tensor dy, TensorTuple features, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0, String pooling=\"none\") => FusedDotFeatureInteractionGrad"
+  bind_python: False
+
+- name: "fused_cross_feature_interaction"
+  signature: "Tensor (Tensor x, Tensor weight, Tensor x_0, Tensor bias, String interaction_mode) => FusedCrossFeatureInteraction"
+  bind_python: True
+
+- name: "fused_cross_feature_interaction_v1_grad"
+  signature: "TensorTuple (Tensor dy, Tensor weight, Tensor x, Tensor x_0, Tensor matmul_result) => FusedCrossFeatureInteractionV1Grad"
+  bind_python: False
+
+- name: "fused_cross_feature_interaction_v2_grad"
+  signature: "TensorTuple (Tensor dy, Tensor weight, Tensor bias, Tensor x, Tensor x_0, Tensor matmul_result) => FusedCrossFeatureInteractionV2Grad"
   bind_python: False
 
 - name: "tensor_buffer_to_tensor"

@@ -169,6 +169,20 @@ class TestTensorOps(flow.unittest.TestCase):
         return y
 
     @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_half(test_case):
+        device = random_device()
+        x = random_tensor(dtype=int).to(device)
+        y = x.half()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+    def test_half_0dim(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0, dtype=int).to(device)
+        y = x.half()
+        return y
+
+    @autotest(n=20, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
     def test_float(test_case):
         device = random_device()
         x = random_tensor(dtype=int).to(device)

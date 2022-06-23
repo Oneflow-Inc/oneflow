@@ -13,19 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_
+#ifndef ONEFLOW_CORE_GRAPH_STRAIGHTEN_NODES_H_
+#define ONEFLOW_CORE_GRAPH_STRAIGHTEN_NODES_H_
 
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
+#include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
 
-std::unique_ptr<mlir::Pass> createMapSCFToGPUPass();
+void StraightenNodes(TaskGraph* task_graph, std::vector<TaskNode*>* ordered_task_nodes);
 
 }  // namespace oneflow
 
-}  // namespace mlir
-
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_CONVERSION_SCFTOGPU_H_
+#endif  // ONEFLOW_CORE_GRAPH_STRAIGHTEN_NODES_H_

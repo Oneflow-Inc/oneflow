@@ -75,8 +75,8 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 
   for (int i = 0; i < index->ndim(); ++i) {
-    auto item = JUST(
-        functional::Slice((*res)[0], {0, i}, {size, i + 1}, {1, 1}, /*enable_view_slice=*/false));
+    auto item = JUST(functional::Slice((*res)[0], {0, i}, {size, i + 1}, {1, 1},
+                                       /*enable_view_slice=*/false));
     item = JUST(functional::Reshape(item, {size}));
     indices->emplace_back(item);
   }
@@ -377,7 +377,7 @@ Maybe<Tensor> ApplySelectIndexing(const std::shared_ptr<one::Tensor>& input,
   int32_t pos_index = index >= 0 ? index : index + size;
   std::vector<int32_t> sizes(input->shape()->dim_vec().begin() + 1,
                              input->shape()->dim_vec().end());
-  const auto& stride = JUST(input->stride())->StrideVec();
+  const auto& stride = *JUST(input->stride());
   const int32_t storage_offset = JUST(input->storage_offset()) + pos_index * stride[pos_dim];
   std::vector<int32_t> strides(stride.begin() + 1, stride.end());
 
