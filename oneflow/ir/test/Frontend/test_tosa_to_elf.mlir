@@ -4,7 +4,7 @@
 // RUN: -tensor-bufferize -func-bufferize -buffer-results-to-out-params \
 // RUN: -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm \
 // RUN: -convert-func-to-llvm -convert-memref-to-llvm -reconcile-unrealized-casts --print-after-all \
-// RUN: | oneflow-translate -mlir-to-llvmir | clang -x ir - -c -o test.o
+// RUN: | oneflow-translate -mlir-to-llvmir
 
 builtin.module {
   func.func @Graph_0(%arg0: tensor<2xf32>) -> tensor<2xf32> {

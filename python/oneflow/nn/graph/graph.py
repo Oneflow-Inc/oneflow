@@ -530,7 +530,7 @@ class Graph(object):
         return shallow_repr
 
     def _ops_repr(self):
-        r"""Generate operators' string representation of this graph 
+        r"""Generate operators' string representation of this graph
         """
         if self._is_compiled and self._compiled_graph_proto is not None:
             module_conf = self._compiled_graph_proto.module_name2module_conf[self.name]

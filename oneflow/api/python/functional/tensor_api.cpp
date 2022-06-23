@@ -120,11 +120,9 @@ class TensorWithOtherCtorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
-    bool pin_memory = false;
-    if (other->is_local()) {
-      pin_memory = JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory();
-    }
-    return MakeTensorFromOtherTensor(other, pin_memory);
+    bool is_pinned = false;
+    if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsMirroredTensor())->is_pinned()); }
+    return MakeTensorFromOtherTensor(other, is_pinned);
   }
 };
 
@@ -145,9 +143,7 @@ class TensorWithDataCtorFunctor {
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
-          other->is_local()
-              ? JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory()
-              : false;
+          other->is_local() ? JUST(JUST(other->AsMirroredTensor())->is_pinned()) : false;
       return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
@@ -291,8 +287,10 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Init blob
     JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject(), /*pin_memory=*/false));
-    const auto& stream = GetDefaultStreamByDevice(device);
-    JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
+    const auto& stream = JUST(GetDefaultStreamByDevice(device));
+    const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
+    JUST(eager_blob_object->init_producer_stream(stream));
+    eager_blob_object->set_last_used_stream(stream);
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
     return out;
   }
