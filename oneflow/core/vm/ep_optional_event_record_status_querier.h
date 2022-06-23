@@ -29,6 +29,7 @@ class EpDeviceCtx;
 
 class EpOptionalEventRecordStatusQuerier {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(EpOptionalEventRecordStatusQuerier);
   ~EpOptionalEventRecordStatusQuerier();
 
   bool done() const { return launched_ && (ep_event_ == nullptr || ep_event_->Query()); }
