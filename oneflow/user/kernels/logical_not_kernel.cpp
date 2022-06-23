@@ -39,7 +39,7 @@ class CpuLogicalNotKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* x = tensor_x->dptr<T>();
     K* y = tensor_y->mut_dptr<K>();
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     if (n != 0) { LogicalNotFunctor<device_type, UNARY_OP, T>()(ctx->stream(), n, x, y); }
   }
 

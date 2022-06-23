@@ -93,7 +93,7 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
+    const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
 
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
@@ -108,13 +108,13 @@ class BinaryCrossEntropyWithLogitsKernel final : public user_op::OpKernel {
       pos_weight_processed = tmp_buffer_blob->mut_dptr<T>();
       const T* pos_weight = ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>();
 
-      Shape pos_weight_shape = Shape::Ones(target_blob->shape().NumAxes());
+      Shape pos_weight_shape = Shape::Ones(target_blob->shape_view().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
-                           ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
+                           ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape_view().elem_cnt());
       NdarrayUtil<DeviceType::kCPU, T>::BroadcastMul(
-          ctx->stream(), XpuVarNdarray<T>(target_blob->shape(), pos_weight_processed),
+          ctx->stream(), XpuVarNdarray<T>(target_blob->shape_view(), pos_weight_processed),
           XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
-          XpuVarNdarray<const T>(target_blob->shape(), target));
+          XpuVarNdarray<const T>(target_blob->shape_view(), target));
     }
     ComputeBinaryCrossEntropyWithLogitsOut(elem_cnt, input, target, out, weight,
                                            pos_weight_processed);
@@ -137,7 +137,7 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
     auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     auto* tmp_buffer_blob = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
+    const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
 
     const T* dy = dy_blob->dptr<T>();
     const T* input = input_blob->dptr<T>();
@@ -152,13 +152,13 @@ class BinaryCrossEntropyWithLogitsGradKernel final : public user_op::OpKernel {
       pos_weight_processed = tmp_buffer_blob->mut_dptr<T>();
       const T* pos_weight = ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->dptr<T>();
 
-      Shape pos_weight_shape = Shape::Ones(target_blob->shape().NumAxes());
+      Shape pos_weight_shape = Shape::Ones(target_blob->shape_view().NumAxes());
       pos_weight_shape.Set(pos_weight_shape.NumAxes() - 1,
-                           ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape().elem_cnt());
+                           ctx->Tensor4ArgNameAndIndex("pos_weight", 0)->shape_view().elem_cnt());
       NdarrayUtil<DeviceType::kCPU, T>::BroadcastMul(
-          ctx->stream(), XpuVarNdarray<T>(target_blob->shape(), pos_weight_processed),
+          ctx->stream(), XpuVarNdarray<T>(target_blob->shape_view(), pos_weight_processed),
           XpuVarNdarray<const T>(pos_weight_shape, pos_weight),
-          XpuVarNdarray<const T>(target_blob->shape(), target));
+          XpuVarNdarray<const T>(target_blob->shape_view(), target));
     }
     ComputeBinaryCrossEntropyWithLogitsGradOut(elem_cnt, input, target, dy, dx, weight,
                                                pos_weight_processed);

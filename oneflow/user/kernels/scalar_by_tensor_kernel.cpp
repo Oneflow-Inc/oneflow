@@ -50,13 +50,13 @@ class ScalarByTensorKernel final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* scalar = ctx->Tensor4ArgNameAndIndex("scalar", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    int64_t elem_cnt = y->shape().elem_cnt();
+    int64_t elem_cnt = y->shape_view().elem_cnt();
     if (elem_cnt != 0) {
       std::unique_ptr<ep::primitive::BroadcastElementwiseBinary> primitive =
           NewBroadcastElementwiseBinaryPrimitive(ctx, op);
       CHECK(primitive);
-      primitive->Launch(ctx->stream(), x->shape().NumAxes(), x->shape().ptr(), x->dptr(),
-                        scalar->shape().NumAxes(), scalar->shape().ptr(), scalar->dptr(),
+      primitive->Launch(ctx->stream(), x->shape_view().NumAxes(), x->shape_view().ptr(), x->dptr(),
+                        scalar->shape_view().NumAxes(), scalar->shape_view().ptr(), scalar->dptr(),
                         y->mut_dptr());
     } else {
       // For 0-size Tensor

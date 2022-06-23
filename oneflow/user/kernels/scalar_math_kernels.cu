@@ -163,7 +163,7 @@ class GpuScalarPowGradKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    const int32_t elem_cnt = x_tensor->shape_view().elem_cnt();
     OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(
         ScalarPowGradFunctor<T>(scalar_operand), elem_cnt, dx_ptr, x_ptr, dy_ptr,
         ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
@@ -203,7 +203,7 @@ class GpuScalarReversePowGradKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
-    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    const int32_t elem_cnt = x_tensor->shape_view().elem_cnt();
     OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(
         ScalarReversePowGradFunctor<T>(scalar_operand), elem_cnt, dx_ptr, x_ptr, dy_ptr,
         ctx->stream()->As<ep::CudaStream>()->cuda_stream())));

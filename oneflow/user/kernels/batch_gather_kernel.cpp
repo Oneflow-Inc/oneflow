@@ -32,12 +32,13 @@ class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGr
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t axis = indices->shape().NumAxes() - 1;
+    const int64_t axis = indices->shape_view().NumAxes() - 1;
     const Shape flat_out_shape =
-        Shape({out->shape().Count(0, axis), out->shape().At(axis), out->shape().Count(axis + 1)});
-    BatchGatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), in->dptr<T>(),
-                                                          indices->dptr<K>(), flat_out_shape,
-                                                          in->shape().At(axis), out->mut_dptr<T>());
+        Shape({out->shape_view().Count(0, axis), out->shape_view().At(axis),
+               out->shape_view().Count(axis + 1)});
+    BatchGatherKernelUtilImpl<device_type, T, K>::Forward(
+        ctx->stream(), in->dptr<T>(), indices->dptr<K>(), flat_out_shape, in->shape_view().At(axis),
+        out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

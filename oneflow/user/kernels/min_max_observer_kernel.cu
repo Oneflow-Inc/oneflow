@@ -194,8 +194,8 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
     const bool per_layer_quantization = ctx->Attr<bool>("per_layer_quantization");
     const std::string quantization_formula = ctx->Attr<std::string>("quantization_formula");
 
-    const int64_t elements = in->shape().elem_cnt();
-    const int64_t channel = scale->shape().At(0);
+    const int64_t elements = in->shape_view().elem_cnt();
+    const int64_t channel = scale->shape_view().At(0);
     const int64_t panel_size = elements / channel;
     T* max_ptr = tmp_buffer->mut_dptr<T>();
     T* min_ptr = max_ptr + channel;

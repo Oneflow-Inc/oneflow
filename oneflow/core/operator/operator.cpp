@@ -727,7 +727,6 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
           double priority_ratio = ComputeSbpInferPriority(
               producer_infer_hint4ibn->nd_sbp(),
               JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
-              producer_infer_hint4ibn->logical_blob_desc(),
               producer_infer_hint4ibn->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
               requires_same_sbp[ibn_id]);
           sum_priority_ratio += priority_ratio;
@@ -847,11 +846,6 @@ Maybe<void> Operator::InferNdSbpSignature(
     HashMap<std::string, SbpInferHint> ibn2sbp_infer_hint;
     for (const auto& ibn : input_bns()) {
       const NdSbpInferHint* hint = JUST(NdSbpInferHint4Ibn(ibn));
-      if (hint->nd_sbp().sbp_parallel_size() != 1) {
-        CHECK_OR_RETURN(Is1dSbp(hint->nd_sbp()) || hint->parallel_desc().parallel_num() == 1)
-            << op_name() << ", " << *JUST(PlacementToString(hint->parallel_desc())) << ", "
-            << NdSbpToString(hint->nd_sbp());
-      }
       ibn2sbp_infer_hint.emplace(ibn,
                                  SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
                                               &hint->nd_sbp().sbp_parallel(0)));
