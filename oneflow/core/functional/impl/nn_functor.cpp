@@ -1063,6 +1063,11 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
                                     .Input("pos_weight")
                                     .Output("out")
                                     .Build());
+    op_reduce_mean_ = CHECK_JUST(one::OpBuilder("binary_cross_entropy_with_logits_reduce_mean")
+                                     .Input("input")
+                                     .Input("target")
+                                     .Output("out")
+                                     .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
@@ -1086,6 +1091,9 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
         out = JUST(
             OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, JUST(pos_weight)}, attrs));
       } else {
+        if (reduction == "mean") {
+          return OpInterpUtil::Dispatch<Tensor>(*op_reduce_mean_, {input, target});
+        }
         out = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs));
       }
     }
@@ -1097,6 +1105,7 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
   std::shared_ptr<OpExpr> op_weight_;
   std::shared_ptr<OpExpr> op_pos_;
   std::shared_ptr<OpExpr> op_weight_pos_;
+  std::shared_ptr<OpExpr> op_reduce_mean_;
 };
 
 class BinaryCrossEntropyWithLogitsReduceMeanLossFunctor {
@@ -3473,8 +3482,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
-  m.add_functor<impl::BinaryCrossEntropyWithLogitsReduceMeanLossFunctor>(
-      "BinaryCrossEntropyWithLogitsReduceMeanLoss");
 }
 
 }  // namespace functional
