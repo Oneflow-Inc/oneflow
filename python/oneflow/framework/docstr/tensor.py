@@ -2082,6 +2082,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.is_pinned,
+    r"""
+    Tensor.is_pinned() -> bool
+
+    Returns true if this tensor resides in pinned memory.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.type,
     r"""Returns the type if dtype is not provided, else casts this object to the specified type.
         If this is already of the correct type, no copy is performed and the original object is returned.
