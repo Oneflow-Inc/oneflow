@@ -144,7 +144,7 @@ struct InputOpLowering final : public OpConversionPattern<InputOp> {
     // TODO: more choices to passing data between tosa and oneflow
     const auto newValues = op.input();
     const auto is_block_arg = newValues.dyn_cast<BlockArgument>() != nullptr;
-    if (!is_block_arg) op->emitError("input is not block arg");
+    if (!is_block_arg) { return op->emitError("input is not block arg"); }
     rewriter.replaceOp(op, newValues);
     return success();
   }
@@ -168,10 +168,10 @@ struct VariableOpLowering final : public OpConversionPattern<VariableOp> {
   LogicalResult matchAndRewrite(VariableOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
     const auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
-    if (!mgr) op->emitError("global variable tensor manager miss");
+    if (!mgr) { return op->emitError("global variable tensor manager miss"); }
 
     const auto tensor = mgr->Get(op.op_name().str());
-    if (!tensor) op->emitError("tensor is null");
+    if (!tensor) { return op->emitError("tensor is null"); }
     const auto value = support::TensorToDenseElementsAttr(tensor, rewriter.getContext());
     const auto output = op.output().getType();
 
@@ -204,7 +204,7 @@ struct VariableOpToConstLowering final : public OpConversionPattern<VariableOp> 
 
       rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, output, value);
     } else {
-      op->emitError(
+      return op->emitError(
           "OneFlow variable op lower to TOSA const op only support integer and float value now");
     }
 
@@ -327,7 +327,7 @@ struct MaxPool2DOpLowering final : public OpConversionPattern<MaxPool2DOp> {
       return RankedTensorType::get(ranked_type, shape_type.getElementType());
     };
     // TODO: support return indice
-    if (op.return_indices()) op->emitError("not support return indices now");
+    if (op.return_indices()) { return op->emitError("not support return indices now"); }
     auto stride_pairs = get_pair_int64_from_array(op.stride());
     auto kernel_pairs = get_pair_int64_from_array(op.kernel_size());
     auto pad_pairs = get_pair_int64_from_array(op.padding());
