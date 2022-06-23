@@ -15,11 +15,11 @@ limitations under the License.
 """
 import warnings
 from collections import OrderedDict
+import pickle
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.util import ArgsTree
-from oneflow.framework.check_point_v2 import _broadcast_py_object
 
 
 def _check_sbp(sbp):
@@ -95,7 +95,7 @@ def _to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
         return local_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
 
 
-def to_global_op(input, placement=None, sbp=None, **kwargs):
+def to_global_op(input, placement=None, sbp=None, src_rank=-1, **kwargs):
     r"""Converts the input tensor or input tensor(s) in list/tuple/dict to global tensor(s).
     
     Note:
@@ -105,6 +105,7 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         input (flow.Tensor/None/list/tuple/dict): the input that needs to be converted.
         placement (flow.placement, optional):  the desired placement of the input. Default: None
         sbp (flow.sbp.sbp or list/tuple of flow.sbp.sbp, optional): the desired sbp of the input. Default: None
+        src_rank (int, optional): the source rank, needed to be assigned when inputs of ranks are different
     
     Returns:
         The converted input.
@@ -141,13 +142,12 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         True
         True
     """
-    # TODO:
-    # rank = flow.env.get_rank()
-    # if rank == 0 and type(input) == OrderedDict:
-    #     input = _broadcast_py_object(input, src=0)
-    # if rank != 0 and input is None:
-    #     input = _broadcast_py_object(input, src=0)
-
+    if src_rank > -1:
+        if flow.env.get_rank() == src_rank:
+            obj_input = pickle.dumps(input)
+            input = pickle.loads(flow._oneflow_internal.cpu_broadcast(obj_input, src_rank))
+        else:
+            input = pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src_rank))
 
     if isinstance(input, Tensor) or input is None:
         return _to_global_tensor(input, placement, sbp, **kwargs)

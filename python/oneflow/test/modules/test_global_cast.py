@@ -74,7 +74,6 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         random_combination = [None, 1, "test_str", tensor, tensor_list, tensor_tuple, tensor_dict]
 
         inputs = [None, 100, 'test_str', tensor, tensor_list, tensor_tuple, tensor_dict, random_combination]
-        # inputs = [tensor_list, tensor_tuple, tensor_dict]
         global_inputs = []
         for i in inputs:
             ret = flow.to_global(i, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
