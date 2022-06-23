@@ -152,6 +152,7 @@ from oneflow._C import rsqrt
 from oneflow._C import sqrt
 from oneflow._C import square
 from oneflow._C import matmul
+from oneflow._C import mv
 from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus
@@ -358,8 +359,7 @@ from oneflow.nn.modules.random_ops import randperm_op as randperm
 from oneflow.nn.modules.reshape import reshape_op as reshape
 from oneflow.nn.modules.reshape import view_op as view
 from oneflow.nn.modules.slice import slice_op as slice
-from oneflow.nn.modules.slice import logical_slice_assign_op as logical_slice_assign
-from oneflow.nn.modules.slice import logical_slice_op as logical_slice
+from oneflow.nn.modules.slice import slice_update_op as slice_update
 from oneflow.nn.modules.sort import sort_op as sort
 from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
