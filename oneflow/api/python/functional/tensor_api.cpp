@@ -120,11 +120,9 @@ class TensorWithOtherCtorFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& other) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
-    bool pin_memory = false;
-    if (other->is_local()) {
-      pin_memory = JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory();
-    }
-    return MakeTensorFromOtherTensor(other, pin_memory);
+    bool is_pinned = false;
+    if (other->is_local()) { is_pinned = JUST(CHECK_JUST(other->AsMirroredTensor())->is_pinned()); }
+    return MakeTensorFromOtherTensor(other, is_pinned);
   }
 };
 
@@ -145,9 +143,7 @@ class TensorWithDataCtorFunctor {
     if (PyTensor_Check(data)) {
       const auto& other = PyTensor_Unpack(data);
       const bool pin_memory =
-          other->is_local()
-              ? JUST(JUST(other->AsMirroredTensor())->eager_blob_object())->pin_memory()
-              : false;
+          other->is_local() ? JUST(JUST(other->AsMirroredTensor())->is_pinned()) : false;
       return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false, /*pin_memory=*/pin_memory);
     }
@@ -255,17 +251,16 @@ class LocalTensorSharedNumpyDataFunctor {
     Symbol<Device> device = JUST(Device::New("cpu"));
     const npy_intp* stride_ptr = PyArray_STRIDES(array);
     // stride
-    auto strides_vec = DimVector(stride_ptr, stride_ptr + dim);
+    auto strides = std::make_shared<Stride>(stride_ptr, stride_ptr + dim);
     auto element_size_in_bytes = PyArray_ITEMSIZE(array);
     // NumPy strides use bytes. OneFlow strides use element counts.
-    for (auto& stride : strides_vec) {
-      if (stride % element_size_in_bytes != 0) {
+    for (auto& stride_val : *strides) {
+      if (stride_val % element_size_in_bytes != 0) {
         return Error::RuntimeError() << "given numpy array strides not a multiple of the element "
                                         "byte size. Copy the numpy array to reallocate the memory.";
       }
-      stride /= element_size_in_bytes;
+      stride_val /= element_size_in_bytes;
     }
-    const auto strides = std::make_shared<Stride>(strides_vec);
     auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, strides, data_type, device, 0);
 
     // Build TensorBuffer
@@ -292,8 +287,10 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Init blob
     JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject(), /*pin_memory=*/false));
-    const auto& stream = GetDefaultStreamByDevice(device);
-    JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
+    const auto& stream = JUST(GetDefaultStreamByDevice(device));
+    const auto& eager_blob_object = JUST(tensor_impl->eager_blob_object());
+    JUST(eager_blob_object->init_producer_stream(stream));
+    eager_blob_object->set_last_used_stream(stream);
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));
     return out;
   }

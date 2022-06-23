@@ -23,7 +23,7 @@ namespace oneflow {
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
-  const Shape& in_shape = ZeroDimCompatiableShape(in_tensor_desc.shape());
+  const Shape& in_shape = ExpandDimIf0D(in_tensor_desc.shape());
   CHECK_GE_OR_RETURN(start_dim, 0);
   CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
   const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;

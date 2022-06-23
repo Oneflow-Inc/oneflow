@@ -247,10 +247,10 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* matmul_result = ctx->Tensor4ArgNameAndIndex("matmul_result", 0);
 
-    const int64_t batch_size = dy->shape().At(0);
-    const int64_t hidden_size = dy->shape().At(1);
-    const int64_t out_size = weight->shape().At(0);
-    const int64_t dy_elem_cnt = dy->shape().elem_cnt();
+    const int64_t batch_size = dy->shape_view().At(0);
+    const int64_t hidden_size = dy->shape_view().At(1);
+    const int64_t out_size = weight->shape_view().At(0);
+    const int64_t dy_elem_cnt = dy->shape_view().elem_cnt();
 
     Tensor* dx0 = ctx->Tensor4ArgNameAndIndex("dx0", 0);
     Tensor* dw = ctx->Tensor4ArgNameAndIndex("dw", 0);
@@ -266,7 +266,7 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
     }
     size_t m = 0, n = 0, k = 0;
     DimVector dy_shape(2);
-    dy->shape().ToDimVector(&dy_shape);
+    dy->shape_view().ToDimVector(&dy_shape);
     DimVector ones_buf_shape(2);
     ones_buf_shape.at(0) = 1;
     ones_buf_shape.at(1) = batch_size;
@@ -285,7 +285,7 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
 
     ones = static_cast<const T*>(cuda_device->GetConstOnes(dy->data_type(), hidden_size));
     DimVector dy_mul_x0_shape(2);
-    dy->shape().ToDimVector(&dy_mul_x0_shape);
+    dy->shape_view().ToDimVector(&dy_mul_x0_shape);
     ones_buf_shape.at(0) = hidden_size;
     ones_buf_shape.at(1) = 1;
     InferMatmulMNK(dy_mul_x0_shape, ones_buf_shape, /*trans_a=*/false, /*trans_b=*/false, &m, &n,
@@ -300,7 +300,7 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
     dmatmul_result_shape.at(0) = batch_size;
     dmatmul_result_shape.at(1) = 1;  // todo change to hidden size
     DimVector weight_shape(2);
-    weight->shape().ToDimVector(&weight_shape);
+    weight->shape_view().ToDimVector(&weight_shape);
     InferMatmulMNK(dmatmul_result_shape, weight_shape, /*trans_a=*/false, /*trans_b=*/false, &m, &n,
                    &k);
     reduce_matmul->Launch(ctx->stream(), m, n, k, 1.0, dmatmul_result0, weight->dptr(), 0.0,
@@ -311,7 +311,7 @@ class FusedCrossFeatureInteractionGradKernel final : public OpKernel, public Cud
 
     // step4: Get dw.
     DimVector x_shape(2);
-    x->shape().ToDimVector(&x_shape);
+    x->shape_view().ToDimVector(&x_shape);
 
     InferMatmulMNK(dmatmul_result_shape, x_shape, /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
     auto weight_grad_matmul = NewWeightGradMatmulPrimitive(ctx);
@@ -363,10 +363,10 @@ class FusedCrossFeatureInteractionV2GradKernel final : public OpKernel, public C
     const Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* matmul_result = ctx->Tensor4ArgNameAndIndex("matmul_result", 0);
 
-    const int64_t batch_size = dy->shape().At(0);
-    const int64_t in_size = weight->shape().At(1);
-    const int64_t hidden_size = weight->shape().At(0);
-    const int64_t dy_elem_cnt = dy->shape().elem_cnt();
+    const int64_t batch_size = dy->shape_view().At(0);
+    const int64_t in_size = weight->shape_view().At(1);
+    const int64_t hidden_size = weight->shape_view().At(0);
+    const int64_t dy_elem_cnt = dy->shape_view().elem_cnt();
 
     Tensor* dx0 = ctx->Tensor4ArgNameAndIndex("dx0", 0);
     Tensor* dw = ctx->Tensor4ArgNameAndIndex("dw", 0);
@@ -391,7 +391,7 @@ class FusedCrossFeatureInteractionV2GradKernel final : public OpKernel, public C
     dmatmul_result_shape.at(0) = batch_size;
     dmatmul_result_shape.at(1) = hidden_size;
     DimVector weight_shape(2);
-    weight->shape().ToDimVector(&weight_shape);
+    weight->shape_view().ToDimVector(&weight_shape);
     size_t m = 0, n = 0, k = 0;
     InferMatmulMNK(dmatmul_result_shape, weight_shape, /*trans_a=*/false, /*trans_b=*/false, &m, &n,
                    &k);
@@ -405,7 +405,7 @@ class FusedCrossFeatureInteractionV2GradKernel final : public OpKernel, public C
 
     // step4: Get dw.
     DimVector x_shape(2);
-    x->shape().ToDimVector(&x_shape);
+    x->shape_view().ToDimVector(&x_shape);
 
     InferMatmulMNK(dmatmul_result_shape, x_shape, /*trans_a=*/true, /*trans_b=*/false, &m, &n, &k);
     auto weight_grad_matmul = NewWeightGradMatmulPrimitive(ctx);
@@ -420,7 +420,7 @@ class FusedCrossFeatureInteractionV2GradKernel final : public OpKernel, public C
       ones = static_cast<const T*>(cuda_device->GetConstOnes(dy->data_type(), batch_size));
     }
     DimVector dy_shape(2);
-    dy->shape().ToDimVector(&dy_shape);
+    dy->shape_view().ToDimVector(&dy_shape);
     DimVector ones_buf_shape(2);
     ones_buf_shape.at(0) = 1;
     ones_buf_shape.at(1) = batch_size;
