@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/config_def.h"
@@ -1150,7 +1151,7 @@ Maybe<void> JobBuildAndInferCtx::InferBlobBackwardSignature(
   };
   const auto& maybe_ok =
       TRY(GenerateBackwardOpConfIf(op, &bw_op_confs, DiffLbi4BnInOp, LogicalBlobDesc4BnInOp));
-  CHECK(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error())
+  CHECK_OR_RETURN(maybe_ok.IsOk() || maybe_ok.error()->has_gradient_function_not_found_error())
       << GetFormatedSerializedError(::oneflow::private_details::JustGetError(maybe_ok));
   // find backward used logical blob ids
   auto backward_used_lbis = std::make_shared<HashSet<LogicalBlobId>>();

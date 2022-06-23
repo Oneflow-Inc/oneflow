@@ -770,8 +770,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " building graph got error: "
-                + sys_exc_error_msg(),
+                + " building graph got error."
             )
             raise
 
@@ -822,8 +821,7 @@ class Graph(object):
                 0,
                 "[ERROR]"
                 + self._shallow_repr()
-                + " building plan got error: "
-                + sys_exc_error_msg(),
+                + " building plan got error."
             )
             raise
 
