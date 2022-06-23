@@ -47,7 +47,7 @@ class CpuCumKernel : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const auto* in = ctx->Tensor4ArgNameAndIndex("x", 0);
-    auto elem_cnt = in->shape().elem_cnt();
+    auto elem_cnt = in->shape_view().elem_cnt();
     // judge whether tensor has 0 size dimension first
     if (!elem_cnt) { return; }
 
@@ -57,9 +57,9 @@ class CpuCumKernel : public user_op::OpKernel {
     auto* out_ptr = out->mut_dptr<T>();
 
     // data partition: up_space|space|down_space
-    auto up_space = elem_cnt / in->shape().Count(dim);
-    auto space = in->shape().At(dim);
-    auto down_space = in->shape().Count(dim + 1);
+    auto up_space = elem_cnt / in->shape_view().Count(dim);
+    auto space = in->shape_view().At(dim);
+    auto down_space = in->shape_view().Count(dim + 1);
 
     CumForward<T, BinaryFunc>(in_ptr, out_ptr, up_space, space, down_space, elem_cnt);
   }

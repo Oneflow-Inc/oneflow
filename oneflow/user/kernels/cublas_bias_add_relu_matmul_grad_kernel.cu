@@ -60,9 +60,9 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
 
     // currently only support 2D matmul.
     DimVector dy_shape(2);
-    dy->shape().ToDimVector(&dy_shape);
+    dy->shape_view().ToDimVector(&dy_shape);
     DimVector weight_shape(2);
-    weight->shape().ToDimVector(&weight_shape);
+    weight->shape_view().ToDimVector(&weight_shape);
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
 
     InferMatmulCublasMNK(dy_shape, weight_shape,

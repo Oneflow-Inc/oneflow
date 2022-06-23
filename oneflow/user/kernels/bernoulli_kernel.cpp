@@ -43,7 +43,7 @@ class BernoulliKerenl final : public user_op::OpKernel {
     K* out_dptr = out_blob->mut_dptr<K>();
     CHECK_EQ(GetDataType<T>(), in_blob->data_type());
     CHECK_EQ(GetDataType<K>(), out_blob->data_type());
-    CHECK_EQ(in_blob->shape().elem_cnt(), out_blob->shape().elem_cnt());
+    CHECK_EQ(in_blob->shape_view().elem_cnt(), out_blob->shape_view().elem_cnt());
 
     auto* kernel_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
@@ -51,7 +51,7 @@ class BernoulliKerenl final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
 
-    for (int32_t i = 0; i < out_blob->shape().elem_cnt(); ++i) {
+    for (int32_t i = 0; i < out_blob->shape_view().elem_cnt(); ++i) {
       double prob = static_cast<double>(*(in_dptr + i));
       CHECK(prob >= 0.0 && prob <= 1.0);
       std::bernoulli_distribution dis(prob);

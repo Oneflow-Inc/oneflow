@@ -52,7 +52,7 @@ class MathBinaryElementwiseGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* tensor_z = ctx->Tensor4ArgNameAndIndex("z", 0);
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathBinaryElementwiseForwardGpu<BinaryFunctor, T>
@@ -76,7 +76,7 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     user_op::Tensor* tensor_dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathBinaryElementwiseBackwardXGradGpu<BinaryFunctor, T>
@@ -101,7 +101,7 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const user_op::Tensor* tensor_dz = ctx->Tensor4ArgNameAndIndex("dz", 0);
     user_op::Tensor* tensor_dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathBinaryElementwiseBackwardYGradGpu<BinaryFunctor, T>
@@ -155,7 +155,7 @@ class MathBinaryElementwiseGpuHalfKernel final : public user_op::OpKernel {
     const half* x = reinterpret_cast<const half*>(tensor_x->dptr<float16>());
     const half* y = reinterpret_cast<const half*>(tensor_y->dptr<float16>());
     half* z = reinterpret_cast<half*>(tensor_z->mut_dptr<float16>());
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathBinaryElementwiseForwardGpu<BinaryFunctor, half>
@@ -183,7 +183,7 @@ class MathBinaryElementwiseXGradGpuHalfKernel final : public user_op::OpKernel {
     const half* y = reinterpret_cast<const half*>(tensor_y->dptr<float16>());
     const half* dz = reinterpret_cast<const half*>(tensor_dz->dptr<float16>());
     half* dx = reinterpret_cast<half*>(tensor_dx->mut_dptr<float16>());
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathBinaryElementwiseBackwardXGradGpu<BinaryFunctor, half>
@@ -211,7 +211,7 @@ class MathBinaryElementwiseYGradGpuHalfKernel final : public user_op::OpKernel {
     const half* y = reinterpret_cast<const half*>(tensor_y->dptr<float16>());
     const half* dz = reinterpret_cast<const half*>(tensor_dz->dptr<float16>());
     half* dy = reinterpret_cast<half*>(tensor_dy->mut_dptr<float16>());
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathBinaryElementwiseBackwardYGradGpu<BinaryFunctor, half>

@@ -27,7 +27,7 @@ class CpuTriuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-    const auto shape = x->shape();
+    const auto shape = x->shape_view();
     const auto diagonal = ctx->Attr<int64_t>("diagonal");
     const int64_t num_rows = shape.At(shape.NumAxes() - 2);
     const int64_t num_cols = shape.At(shape.NumAxes() - 1);
