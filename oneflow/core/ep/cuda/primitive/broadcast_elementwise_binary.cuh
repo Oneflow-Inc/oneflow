@@ -88,6 +88,9 @@ __global__ void BroadcastElementwiseBinaryGpu(
       if (i < num_dims) {
         src0_index[i] = params.src0_index_mask[i] * dst_index[i];
         src1_index[i] = params.src1_index_mask[i] * dst_index[i];
+      } else {
+        src0_index[i] = 0;
+        src1_index[i] = 0;
       }
     }
     const IndexType src0_offset = params.src0_index_helper.NdIndexToOffset(src0_index, num_dims);
