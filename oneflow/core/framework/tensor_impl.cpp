@@ -83,12 +83,11 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
 Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_storage());
-  const auto& parallel_desc = JUST(Placement4Device(this->device())).shared_from_symbol();
   tensor_storage_->set_releaser_hook(
-      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
+      [eager_blob_object](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
           if (eager_blob_object->producer_stream().has_value()) {
-            JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
+            JUST(builder->ReleaseTensor(eager_blob_object));
           }
           return Maybe<void>::Ok();
         }));
@@ -120,6 +119,11 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<bool> EagerMirroredTensorImpl::is_pinned() const {
+  if (!eager_blob_object_) { return false; }
+  return eager_blob_object_->pin_memory();
 }
 
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(

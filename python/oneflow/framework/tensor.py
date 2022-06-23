@@ -601,6 +601,10 @@ def _matmul(self, other):
     return flow.matmul(self, other)
 
 
+def _mv(self, vec):
+    return flow._C.mv(self, vec)
+
+
 def _round(self):
     return flow.round(self)
 
@@ -1019,9 +1023,14 @@ def _numpy(self):
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
     if self.is_global:
-        self = self.to_global(
-            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
-        ).to_local()
+        self_cpu_placement = flow.placement("cpu", self.placement.ranks)
+        self = (
+            self.to_global(placement=self_cpu_placement)
+            .to_global(
+                placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
+            )
+            .to_local()
+        )
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
@@ -1152,6 +1161,7 @@ def RegisterMethods():
     Tensor.new_tensor = _new_tensor
     Tensor.cumsum = _cumsum
     Tensor.cumprod = _cumprod
+    Tensor.mv = _mv
 
 
 def register_tensor_op(op_name):
