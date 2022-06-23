@@ -40,10 +40,10 @@ __global__ void FusedBinaryCrossEntropyWithLogitsReduceMeanKernel(const T* input
     const T max_val = -input_val < zero ? zero : -input_val;
     const T result =
         (one - target_val) * input_val + max_val + (log(exp(-max_val) + exp(-input_val - max_val)));
-    const T block_reduce_sum = BlockReduce(temp_storage).Sum(result);
-    if (threadIdx.x == 0) { reduce_sum += block_reduce_sum; }
+    reduce_sum += result;
   }
-  if (threadIdx.x == 0) { out[0] = reduce_sum / elem_cnt; }
+  const T block_reduce_sum = BlockReduce(temp_storage).Sum(reduce_sum);
+  if (threadIdx.x == 0) { out[0] = block_reduce_sum / elem_cnt; }
 }
 
 template<>
@@ -182,11 +182,11 @@ class BinaryCrossEntropyWithLogitsReduceMeanGradKernel final : public user_op::O
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value)     \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-// REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_KERNEL(half)
+REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_KERNEL(half)
 REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_KERNEL(float)
 REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_KERNEL(double)
 
-// REGISTER_BINARY_CROSS_ENTROPY_GRAD_KERNEL(half)
+REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_GRAD_KERNEL(half)
 REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_GRAD_KERNEL(float)
 REGISTER_BINARY_CROSS_ENTROPY_REDUCE_MEAN_GRAD_KERNEL(double)
 
