@@ -59,7 +59,7 @@ bool EpStreamType::QueryInstructionStatusDone(const Stream& stream,
 void EpStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_GUARD("S:" + instruction->instr_msg().DebugName());
   auto* stream = instruction->mut_stream();
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
+  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
   instruction->instr_msg().instruction_type().Compute(instruction);

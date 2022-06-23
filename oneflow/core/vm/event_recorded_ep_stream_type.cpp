@@ -42,7 +42,7 @@ void EventRecordedEpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device
 void EventRecordedEpStreamType::InitInstructionStatus(
     const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream.device_ctx().get());
+  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream.device_ctx().get());  // NOLINT
   auto* ep_event_provider = ep_device_ctx->ep_event_provider();
   auto* data_ptr = status_buffer->mut_buffer()->mut_data();
   const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
@@ -63,7 +63,7 @@ bool EventRecordedEpStreamType::QueryInstructionStatusDone(
 void EventRecordedEpStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_PUSH("S:" + instruction->instr_msg().DebugName());
   auto* stream = instruction->mut_stream();
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
+  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
   instruction->instr_msg().instruction_type().Compute(instruction);
