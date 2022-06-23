@@ -48,7 +48,7 @@ Creation Ops
     linspace
     eye
     empty
-    fulla
+    full
 
 .. _indexing-slicing-joining:
 
@@ -321,3 +321,5 @@ BLAS and LAPACK Operations
     bmm 
     dot 
     matmul
+
+
