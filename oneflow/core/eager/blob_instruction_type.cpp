@@ -46,7 +46,7 @@ void AccessBlobByCallbackInstructionType::ComputeInstrMsg(
   const auto* ptr =
       dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
+  DeviceCtx* device_ctx = instr_msg.stream().device_ctx().get();
   auto* blob = ptr->eager_blob_object()->blob();
   OfBlob ofblob(device_ctx->stream(), blob);
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));

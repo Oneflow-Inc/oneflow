@@ -32,8 +32,8 @@ constexpr uint64_t kDefaultMemBlockSize = 8388608;  // 8M
 
 }  // namespace
 
-IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* send_cq,
-                     ibv_cq* recv_cq) {
+IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, const struct ibv_port_attr& port_attr,
+                     uint8_t port_num, ibv_cq* send_cq, ibv_cq* recv_cq) {
   // ctx_, pd_
   ctx_ = ctx;
   pd_ = pd;
@@ -67,6 +67,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, uint8_t port_num, ibv_cq* sen
   max_outstanding_send_wr_ = queue_depth;
   read_block_size_ =
       ParseIntegerFromEnv("ONEFLOW_COMM_NET_IB_MEM_BLOCK_SIZE", kDefaultMemBlockSize);
+  mtu_ = static_cast<int32_t>(port_attr.active_mtu);
 }
 
 IBVerbsQP::~IBVerbsQP() {
@@ -114,7 +115,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
     qp_attr.ah_attr.dlid = peer_info.lid();
   }
   qp_attr.ah_attr.port_num = peer_info.port_num();
-  qp_attr.path_mtu = static_cast<ibv_mtu>(peer_info.mtu());
+  qp_attr.path_mtu = static_cast<ibv_mtu>(std::min(peer_info.mtu(), mtu_));
   qp_attr.dest_qp_num = peer_info.qp_num();
   qp_attr.rq_psn = 0;
   qp_attr.max_dest_rd_atomic = 1;

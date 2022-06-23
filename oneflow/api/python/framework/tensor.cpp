@@ -180,6 +180,12 @@ static PyObject* PyTensorObject_pin_memory(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
+static PyObject* PyTensorObject_is_pinned(PyObject* self, PyObject* unused) {
+  HANDLE_ERRORS
+  return functional::CastToPyObject(CHECK_JUST(PyTensor_Unpack(self)->is_pinned()));
+  END_HANDLE_ERRORS
+}
+
 static PyObject* PyTensorObject_requires_grad_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   int requires_grad = 1;
@@ -381,6 +387,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"contiguous", PyTensorObject_contiguous, METH_NOARGS, NULL},
     {"contiguous_", PyTensorObject_contiguous_, METH_NOARGS, NULL},
     {"pin_memory", PyTensorObject_pin_memory, METH_NOARGS, NULL},
+    {"is_pinned", PyTensorObject_is_pinned, METH_NOARGS, NULL},
     {"requires_grad_", (PyCFunction)PyTensorObject_requires_grad_, METH_VARARGS | METH_KEYWORDS,
      NULL},
     {"retain_grad", PyTensorObject_retain_grad, METH_NOARGS, NULL},

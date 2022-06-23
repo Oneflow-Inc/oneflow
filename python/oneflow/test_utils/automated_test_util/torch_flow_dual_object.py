@@ -23,7 +23,7 @@ import gc
 
 import numpy as np
 import oneflow as flow
-import oneflow.test_utils.automated_test_util.profiler as auto_profiler
+from oneflow.test_utils.automated_test_util import profiler as auto_profiler
 
 flow.backends.cudnn.deterministic = True
 
