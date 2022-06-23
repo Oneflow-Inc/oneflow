@@ -16,12 +16,43 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "gtest/gtest.h"
 #include "oneflow/core/vm/bin_allocator.h"
-#include "oneflow/core/vm/cuda_backend_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 namespace vm {
+
+class CudaBackendAllocator final : public Allocator {
+ public:
+  explicit CudaBackendAllocator(int64_t device_id) : device_id_(device_id) {}
+  ~CudaBackendAllocator() override = default;
+
+  void Allocate(char** mem_ptr, std::size_t size) override;
+  void Deallocate(char* mem_ptr, std::size_t size) override;
+  void DeviceReset() override;
+
+ private:
+  int64_t device_id_;
+};
+
+void CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  cudaSetDevice(device_id_);
+  if (cudaMalloc(mem_ptr, size) != cudaSuccess) { *mem_ptr = nullptr; }
+}
+
+void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+  cudaSetDevice(device_id_);
+  OF_CUDA_CHECK(cudaFree(mem_ptr));
+}
+
+void CudaBackendAllocator::DeviceReset() {
+  cudaSetDevice(device_id_);
+  // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
+  //   So there need release all cuda memory allocated by this process before core dump.
+  LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset CUDA "
+               << "device for releasing device memory.";
+  OF_CUDA_CHECK(cudaDeviceReset());
+}
 
 TEST(CudaBinAllocator, cuda_allocator) {
   int gpu_num = -1;
