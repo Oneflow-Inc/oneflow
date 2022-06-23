@@ -13,10 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifdef WITH_CUDA
-
-#ifndef ONEFLOW_CORE_VM_EVENT_RECORDED_CUDA_STREAM_TYPE_H_
-#define ONEFLOW_CORE_VM_EVENT_RECORDED_CUDA_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_EP_D2H_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_EP_D2H_STREAM_TYPE_H_
 
 #include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -27,10 +25,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class EventRecordedCudaStreamType final : public StreamType {
+class EpD2HStreamType final : public StreamType {
  public:
-  EventRecordedCudaStreamType() = default;
-  ~EventRecordedCudaStreamType() override = default;
+  EpD2HStreamType() = default;
+  ~EpD2HStreamType() override = default;
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -48,5 +46,4 @@ class EventRecordedCudaStreamType final : public StreamType {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_EVENT_RECORDED_CUDA_STREAM_TYPE_H_
-#endif  // WITH_CUDA
+#endif  // ONEFLOW_CORE_VM_EP_D2H_STREAM_TYPE_H_
