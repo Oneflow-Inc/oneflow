@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -28,18 +29,35 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
     OperatorConf::OpTypeCase op_type_case = node->op().op_conf().op_type_case();
     if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
+      const auto& blob_modifier_ = node->op().InputBlobModifier4Ibn(ibn);
+      if (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable()) { continue; }
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
       const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
-      const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
+      const std::string& producer_lbn = *CHECK_JUST(producer.op().obn4lbi(lbi));
+      const ParallelDesc& producer_parallel_desc =
+          *CHECK_JUST(producer.op().GetParallelDesc4BnInOp(producer_lbn)).get();
+      ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
+      NdSbp reduced_in_nd_sbp;
+      NdSbpDimReduce(producer_parallel_desc, producer_nd_sbp, &reduced_in_parallel_desc,
+                     &reduced_in_nd_sbp);
 
-      if (producer.parallel_desc() != node->parallel_desc()
-          || (node->parallel_desc().parallel_num() != 1 && producer_nd_sbp != consumer_nd_sbp)) {
-        lbi2consumer_grouped_by_parallel[lbi][{node->parallel_desc(), consumer_nd_sbp}].push_back(
-            {node, ibn});
-        if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
-          op_node2op_conf[node] = node->op().op_conf();
-        }
+      const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
+      const ParallelDesc& consumer_parallel_desc =
+          *CHECK_JUST(node->op().GetParallelDesc4BnInOp(ibn));
+      ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
+      NdSbp reduced_out_nd_sbp;
+      NdSbpDimReduce(consumer_parallel_desc, consumer_nd_sbp, &reduced_out_parallel_desc,
+                     &reduced_out_nd_sbp);
+
+      if (reduced_in_parallel_desc == reduced_out_parallel_desc
+          && reduced_in_nd_sbp == reduced_out_nd_sbp) {
+        continue;
+      }
+      lbi2consumer_grouped_by_parallel[lbi][{reduced_out_parallel_desc, reduced_out_nd_sbp}]
+          .push_back({node, ibn});
+      if (op_node2op_conf.find(node) == op_node2op_conf.end()) {
+        op_node2op_conf[node] = node->op().op_conf();
       }
     }
   });
