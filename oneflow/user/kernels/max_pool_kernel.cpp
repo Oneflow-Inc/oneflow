@@ -219,7 +219,7 @@ class MaxPool1dKernel final : public user_op::OpKernel {
 
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims src_dims = {1, 1, x->shape_view().At(0) * x->shape_view().At(1), x->shape().At(2)};
+      dm::dims src_dims = {1, 1, x->shape_view().At(0) * x->shape_view().At(1), x->shape_view().At(2)};
       dm::dims dst_dims = {1, 1, y->shape_view().At(0) * y->shape_view().At(1), y->shape_view().At(2)};
       dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {1, params_3d.stride_3d()[2]};
@@ -234,8 +234,8 @@ class MaxPool1dKernel final : public user_op::OpKernel {
     } else {
 #endif
       DimVector y_vector(2);
-      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-      y_vector.at(1) = y->shape().At(2);
+      y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
+      y_vector.at(1) = y->shape_view().At(2);
       if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
         PoolKernelUtil<device_type, T, int32_t>::Maxpool1dForward(
@@ -279,8 +279,8 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
     T* dest = dx->mut_dptr<T>();
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims diff_dst_dims = {1, 1, dy->shape_view().At(0) * dy->shape().At(1), dy->shape().At(2)};
-      dm::dims diff_src_dims = {1, 1, dx->shape_view().At(0) * dx->shape().At(1), dx->shape().At(2)};
+      dm::dims diff_dst_dims = {1, 1, dy->shape_view().At(0) * dy->shape_view().At(1), dy->shape_view().At(2)};
+      dm::dims diff_src_dims = {1, 1, dx->shape_view().At(0) * dx->shape_view().At(1), dx->shape_view().At(2)};
       dm::dims kernel_dims = {1, params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {1, params_3d.stride_3d()[2]};
       dm::dims padding_dims_l = {0, params_3d.padding()[2]};
@@ -294,9 +294,9 @@ class MaxPool1dGradKernel final : public user_op::OpKernel {
     } else {
 #endif
       DimVector dy_vector(2);
-      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-      dy_vector.at(1) = dy->shape().At(2);
-      size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
+      dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
+      dy_vector.at(1) = dy->shape_view().At(2);
+      size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
       Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
 
       if (elem_num < GetMaxVal<int32_t>()) {
@@ -385,7 +385,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
 #endif
       if (data_format == "channels_first") {
         DimVector y_vector(3);
-        y_vector.at(0) = y->shape_view().At(0) * y->shape().At(1);
+        y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
         y_vector.at(1) = y->shape_view().At(2);
         y_vector.at(2) = y->shape_view().At(3);
         if (elem_num < GetMaxVal<int32_t>()) {
@@ -399,7 +399,7 @@ class MaxPool2dKernel final : public user_op::OpKernel {
         }
       } else if (data_format == "channels_last") {
         DimVector y_vector;
-        y->shape().ToDimVector(&y_vector);
+        y->shape_view().ToDimVector(&y_vector);
         if (elem_num < GetMaxVal<int32_t>()) {
           NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
           PoolKernelUtil<device_type, T, int32_t>::Maxpool2dForwardCLast(
@@ -453,7 +453,7 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
       auto dnn_format_tag = OneDnnMaxPool2dFormatTag(data_format);
       dm::dims diff_dst_dims = GetOneDnnDims(dy->shape_view(), dnn_format_tag);
-      dm::dims diff_src_dims = GetOneDnnDims(dx->shape(), dnn_format_tag);
+      dm::dims diff_src_dims = GetOneDnnDims(dx->shape_view(), dnn_format_tag);
       dm::dims kernel_dims = {params_3d.pool_size_3d()[1], params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {params_3d.stride_3d()[1], params_3d.stride_3d()[2]};
       dm::dims padding_dims_l = {params_3d.padding()[1], params_3d.padding()[2]};
@@ -551,10 +551,10 @@ class MaxPool3dKernel final : public user_op::OpKernel {
     } else {
 #endif
       DimVector y_vector(4);
-      y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
-      y_vector.at(1) = y->shape().At(2);
-      y_vector.at(2) = y->shape().At(3);
-      y_vector.at(3) = y->shape().At(4);
+      y_vector.at(0) = y->shape_view().At(0) * y->shape_view().At(1);
+      y_vector.at(1) = y->shape_view().At(2);
+      y_vector.at(2) = y->shape_view().At(3);
+      y_vector.at(3) = y->shape_view().At(4);
 
       if (elem_num < GetMaxVal<int32_t>()) {
         NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
@@ -599,10 +599,10 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
     T* dest = dx->mut_dptr<T>();
 #ifdef WITH_ONEDNN
     if (IsOneDnnApplicable<device_type, T>(params_3d)) {
-      dm::dims diff_dst_dims = {dy->shape().At(0), dy->shape().At(1), dy->shape().At(2),
-                                dy->shape().At(3), dy->shape().At(4)};
-      dm::dims diff_src_dims = {dx->shape().At(0), dx->shape().At(1), dx->shape().At(2),
-                                dx->shape().At(3), dx->shape().At(4)};
+      dm::dims diff_dst_dims = {dy->shape_view().At(0), dy->shape_view().At(1), dy->shape_view().At(2),
+                                dy->shape_view().At(3), dy->shape_view().At(4)};
+      dm::dims diff_src_dims = {dx->shape_view().At(0), dx->shape_view().At(1), dx->shape_view().At(2),
+                                dx->shape_view().At(3), dx->shape_view().At(4)};
       dm::dims kernel_dims = {params_3d.pool_size_3d()[0], params_3d.pool_size_3d()[1],
                               params_3d.pool_size_3d()[2]};
       dm::dims strides_dims = {params_3d.stride_3d()[0], params_3d.stride_3d()[1],
@@ -621,10 +621,10 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
     } else {
 #endif
       DimVector dy_vector(4);
-      dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
-      dy_vector.at(1) = dy->shape().At(2);
-      dy_vector.at(2) = dy->shape().At(3);
-      dy_vector.at(3) = dy->shape().At(4);
+      dy_vector.at(0) = dy->shape_view().At(0) * dy->shape_view().At(1);
+      dy_vector.at(1) = dy->shape_view().At(2);
+      dy_vector.at(2) = dy->shape_view().At(3);
+      dy_vector.at(3) = dy->shape_view().At(4);
 
       size_t out_bytes_size = dx->shape_view().elem_cnt() * GetSizeOfDataType(dx->data_type());
       Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
