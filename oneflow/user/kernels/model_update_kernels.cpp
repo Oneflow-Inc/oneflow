@@ -141,13 +141,13 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     SGDUpdateKernelUtil<device_type, T, G, float16>::Update(
@@ -207,8 +207,8 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* model_diff_values = ctx->Tensor4ArgNameAndIndex("model_diff_values", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     const auto weight_decay = ctx->Attr<float>("weight_decay");
-    const int64_t num_indices = model_diff_indices->shape().elem_cnt();
-    const int64_t num_values = model_diff_values->shape().elem_cnt();
+    const int64_t num_indices = model_diff_indices->shape_view().elem_cnt();
+    const int64_t num_values = model_diff_values->shape_view().elem_cnt();
     if (num_indices == 0) {
       CHECK_EQ(num_values, 0);
       return;
@@ -218,11 +218,11 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
     const int64_t feature_size = num_values / num_indices;
     auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
     CHECK_NOTNULL(kernel_cache);
-    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
+    CHECK_EQ(model->shape_view().At(0), kernel_cache->upper() - kernel_cache->lower());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
-    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+    CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.GetTotalBufferSize());
     ReduceSumUtilT::ReduceSum(
         ctx->stream(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
@@ -281,19 +281,19 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, beta, weight_decay,
-        learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), momentum->mut_dptr<T>());
+        ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, beta,
+        weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -337,8 +337,8 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
     const auto beta = ctx->Attr<float>("beta");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
-    const int64_t num_indices = model_diff_indices->shape().elem_cnt();
-    const int64_t num_values = model_diff_values->shape().elem_cnt();
+    const int64_t num_indices = model_diff_indices->shape_view().elem_cnt();
+    const int64_t num_values = model_diff_values->shape_view().elem_cnt();
     if (num_indices == 0) {
       CHECK_EQ(num_values, 0);
       return;
@@ -346,14 +346,15 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
     CHECK_NE(num_values, 0);
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
-    CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
+    CHECK_EQ(feature_size,
+             model_diff_values->shape_view().Count(model_diff_indices->shape_view().NumAxes()));
     auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
     CHECK_NOTNULL(kernel_cache);
-    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
+    CHECK_EQ(model->shape_view().At(0), kernel_cache->upper() - kernel_cache->lower());
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
-    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+    CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.GetTotalBufferSize());
     ReduceSumUtilT::ReduceSum(
         ctx->stream(), num_indices, feature_size, model_diff_indices->dptr<K>(),
         model_diff_values->dptr<T>(), buffer_manager.NumUniqueDiffIndicesPtr(),
@@ -426,7 +427,8 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
-      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      CHECK_EQ(bias_correction1->shape_view().elem_cnt(),
+               1);  // Just for Lazy Optional Input Check.
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
@@ -434,7 +436,8 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
-      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);  // Just for Lazy Optional Input Check.
+      CHECK_EQ(bias_correction2->shape_view().elem_cnt(),
+               1);  // Just for Lazy Optional Input Check.
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
@@ -442,14 +445,14 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
 
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
@@ -521,18 +524,18 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     AdagradUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, lr_decay, epsilon,
-        weight_decay, learning_rate_val, train_step_val, learning_rate_ptr, train_step_ptr,
+        ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, lr_decay,
+        epsilon, weight_decay, learning_rate_val, train_step_val, learning_rate_ptr, train_step_ptr,
         scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), sum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
@@ -577,14 +580,14 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const float* bias_correction1_ptr = nullptr;
     if (ctx->has_input("bias_correction1", 0)) {
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
-      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
+      CHECK_EQ(bias_correction1->shape_view().elem_cnt(), 1);
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
 
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
-      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
+      CHECK_EQ(bias_correction2->shape_view().elem_cnt(), 1);
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
@@ -610,9 +613,9 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
 
     auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
     CHECK_NOTNULL(kernel_cache);
-    CHECK_EQ(model->shape().At(0), kernel_cache->upper() - kernel_cache->lower());
-    const int64_t num_indices = model_diff_indices->shape().elem_cnt();
-    const int64_t num_values = model_diff_values->shape().elem_cnt();
+    CHECK_EQ(model->shape_view().At(0), kernel_cache->upper() - kernel_cache->lower());
+    const int64_t num_indices = model_diff_indices->shape_view().elem_cnt();
+    const int64_t num_values = model_diff_values->shape_view().elem_cnt();
     if (num_indices == 0) {
       CHECK_EQ(num_values, 0);
       return;
@@ -620,11 +623,12 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     CHECK_NE(num_values, 0);
     CHECK_EQ(num_values % num_indices, 0);
     const int64_t feature_size = num_values / num_indices;
-    CHECK_EQ(feature_size, model_diff_values->shape().Count(model_diff_indices->shape().NumAxes()));
+    CHECK_EQ(feature_size,
+             model_diff_values->shape_view().Count(model_diff_indices->shape_view().NumAxes()));
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     TmpBufferManager<device_type, T, K> buffer_manager(tmp_buffer->mut_dptr(), num_indices,
                                                        num_values);
-    CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.GetTotalBufferSize());
+    CHECK_GE(tmp_buffer->shape_view().elem_cnt(), buffer_manager.GetTotalBufferSize());
 
     ReduceSumUtilT::ReduceSum(
         ctx->stream(), num_indices, feature_size, model_diff_indices->dptr<K>(),
@@ -707,7 +711,8 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
     user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    LambTmpBufferManager<device_type, T> tbm(tmp_buffer->mut_dptr(), model->shape().elem_cnt());
+    LambTmpBufferManager<device_type, T> tbm(tmp_buffer->mut_dptr(),
+                                             model->shape_view().elem_cnt());
 
     const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
@@ -723,14 +728,14 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("bias_correction1", 0)) {
       const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
       // Just for Lazy optional input check.
-      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
+      CHECK_EQ(bias_correction1->shape_view().elem_cnt(), 1);
       bias_correction1_ptr = bias_correction1->dptr<float>();
     }
     const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
     const float* bias_correction2_ptr = nullptr;
     if (ctx->has_input("bias_correction2", 0)) {
       const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
-      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
+      CHECK_EQ(bias_correction2->shape_view().elem_cnt(), 1);
       bias_correction2_ptr = bias_correction2->dptr<float>();
     }
 
@@ -745,23 +750,23 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
 
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
 
     LambUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon, weight_decay,
-        learning_rate_val, do_bias_correction, bias_correction1_val, bias_correction2_val,
-        learning_rate_ptr, bias_correction1_ptr, bias_correction2_ptr, scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
-        v->mut_dptr<T>(), tbm.NormBufferPtr());
+        ctx->stream(), m->shape_view().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon,
+        weight_decay, learning_rate_val, do_bias_correction, bias_correction1_val,
+        bias_correction2_val, learning_rate_ptr, bias_correction1_ptr, bias_correction2_ptr,
+        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(),
+        m->mut_dptr<T>(), v->mut_dptr<T>(), tbm.NormBufferPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -846,13 +851,13 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     T* mean_gradient_ptr = nullptr;
@@ -861,9 +866,10 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
       mean_gradient_ptr = mean_gradient->mut_dptr<T>();
     }
     RmsPropUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, centered, epsilon,
-        weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(), mean_gradient_ptr);
+        ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, centered,
+        epsilon, weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr,
+        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(),
+        mean_gradient_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -931,7 +937,8 @@ class LarsUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    LarsTmpBufferManager<device_type, T> tlm(tmp_buffer->mut_dptr(), model->shape().elem_cnt());
+    LarsTmpBufferManager<device_type, T> tlm(tmp_buffer->mut_dptr(),
+                                             model->shape_view().elem_cnt());
     const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
@@ -943,17 +950,17 @@ class LarsUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     LarsUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
+        ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, momentum_beta,
         epsilon, lars_coefficient, weight_decay, learning_rate->dptr<float>(), scale_by_ptr,
         skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>(),
         tlm.DataTmpPtr(), tlm.ModelDiffPtr());
@@ -1022,18 +1029,18 @@ class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
-      CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
+      CHECK_EQ(scale_by_tensor->shape_view().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
-      CHECK_EQ(skip_if->shape().elem_cnt(), 1);
+      CHECK_EQ(skip_if->shape_view().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     FtrlUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, lr_power, lambda1,
-        lambda2, beta, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr,
+        ctx->stream(), model->shape_view().elem_cnt(), static_cast<T>(scale), l1, l2, lr_power,
+        lambda1, lambda2, beta, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr,
         skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), accumulate->mut_dptr<T>(),
         z->mut_dptr<T>());
   }

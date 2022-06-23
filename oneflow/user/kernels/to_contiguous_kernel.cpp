@@ -85,14 +85,12 @@ class ToContiguousKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const ShapeView& in_shape = in->shape();
-    CHECK_EQ(out->shape(), in_shape);
+    const ShapeView& in_shape = in->shape_view();
+    CHECK_EQ(out->shape_view(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
 
-    const DimVector& stride_vec = in->stride().StrideVec();
-    std::vector<int64_t> in_stride(in->stride().NumAxes());
-    std::copy(stride_vec.begin(), stride_vec.end(), in_stride.begin());
+    std::vector<int64_t> in_stride(in->stride().begin(), in->stride().end());
 
     const char* in_dptr = static_cast<const char*>(in->raw_dptr());
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());

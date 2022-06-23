@@ -72,8 +72,8 @@ class UnaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::C
     const user_op::Tensor* input_a_tensor = ctx->Tensor4ArgNameAndIndex(input_a_name, 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
 
-    const ShapeView input_a_shape = input_a_tensor->shape();
-    const ShapeView out_shape = out_tensor->shape();
+    const ShapeView input_a_shape = input_a_tensor->shape_view();
+    const ShapeView out_shape = out_tensor->shape_view();
     CHECK_EQ(input_a_shape, out_shape);
 
     const InputA* input_a_ptr = input_a_tensor->dptr<InputA>();
@@ -113,8 +113,8 @@ class UnaryPrimitiveKernel final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex(input_name_, 0);
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex(output_name_, 0);
 
-    const ShapeView& input_shape = input_tensor->shape();
-    const ShapeView& output_shape = output_tensor->shape();
+    const ShapeView& input_shape = input_tensor->shape_view();
+    const ShapeView& output_shape = output_tensor->shape_view();
     CHECK_EQ(input_shape, output_shape) << "Input shape should be equal to Output shape.";
     const int64_t elem_cnt = input_shape.elem_cnt();
 
@@ -155,9 +155,9 @@ class BinaryElemwiseXpuKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* input_b_tensor = ctx->Tensor4ArgNameAndIndex(input_b_name, 0);
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex(output_name, 0);
 
-    const ShapeView input_a_shape = input_a_tensor->shape();
-    const ShapeView input_b_shape = input_b_tensor->shape();
-    const ShapeView out_shape = out_tensor->shape();
+    const ShapeView input_a_shape = input_a_tensor->shape_view();
+    const ShapeView input_b_shape = input_b_tensor->shape_view();
+    const ShapeView out_shape = out_tensor->shape_view();
     CHECK_EQ(input_a_shape, out_shape);
     CHECK_EQ(input_b_shape, out_shape);
 
