@@ -160,6 +160,15 @@ def _test_global_tensor_str_2d(test_case, device):
     test_case.assertTrue("1." in tensor_str)
 
 
+def _test_nd_sbp_tensor_str(test_case, device, sbp0, sbp1):
+    placement = flow.placement(type=device, ranks=[[0, 1], [2, 3]])
+    sbp = [sbp0, sbp1]
+    x = flow.ones((20, 20), placement=placement, sbp=sbp)
+    tensor_str = str(x)
+    test_case.assertTrue(str(sbp0) in tensor_str)
+    test_case.assertTrue(str(sbp1) in tensor_str)
+
+
 class TestTensorStrModule(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     @unittest.skip("TODO: fengwei, this often fails")
@@ -194,6 +203,27 @@ class TestTensorStrModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @flow.unittest.skip_unless_1n4d()
+    def test_nd_sbp_tensor_str(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_nd_sbp_tensor_str,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+
+        sbp_arg_dict = OrderedDict()
+        sbp_list = [
+            flow.sbp.broadcast,
+            flow.sbp.split(0),
+            flow.sbp.partial_sum,
+        ]
+        sbp_arg_dict["sbp0"] = sbp_list
+        sbp_arg_dict["sbp1"] = sbp_list
+        for arg in GenArgList(arg_dict):
+            for sbp in GenArgList(sbp_arg_dict):
+                arg[0](test_case, *(arg[1:] + sbp[:]))
 
 
 if __name__ == "__main__":

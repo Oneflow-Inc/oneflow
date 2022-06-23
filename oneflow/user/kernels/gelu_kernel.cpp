@@ -30,7 +30,7 @@ class CpuGeluGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int32_t elem_cnt = x->shape().elem_cnt();
+    const int32_t elem_cnt = x->shape_view().elem_cnt();
     const T* x_ptr = x->dptr<T>();
     const T* dy_ptr = dy->dptr<T>();
     T* dx_ptr = dx->mut_dptr<T>();

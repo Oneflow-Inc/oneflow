@@ -91,17 +91,18 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
     const user_op::Tensor* segment_ids = ctx->Tensor4ArgNameAndIndex("segment_ids", 0);
     int64_t axis = ctx->Attr<int64_t>("axis");
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t outer_dim_size = out->shape().Count(0, axis);
-    int64_t num_segments = out->shape().At(axis);
-    int64_t inner_dim_size = out->shape().Count(axis + 1);
-    int64_t num_segment_ids = segment_ids->shape().elem_cnt();
-    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0, out->shape().elem_cnt() * sizeof(T));
+    int64_t outer_dim_size = out->shape_view().Count(0, axis);
+    int64_t num_segments = out->shape_view().At(axis);
+    int64_t inner_dim_size = out->shape_view().Count(axis + 1);
+    int64_t num_segment_ids = segment_ids->shape_view().elem_cnt();
+    Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
+                        out->shape_view().elem_cnt() * sizeof(T));
 
     int64_t offset = 0;
     if (cache != nullptr) {
       auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
       CHECK_NOTNULL(sum_cache);
-      CHECK_EQ(out->shape().At(axis), sum_cache->upper() - sum_cache->lower());
+      CHECK_EQ(out->shape_view().At(axis), sum_cache->upper() - sum_cache->lower());
       offset = sum_cache->lower();
     }
 
@@ -157,17 +158,17 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
     int64_t axis = ctx->Attr<int64_t>("axis");
     user_op::Tensor* tmp_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    int64_t outer_dim_size = out->shape().Count(0, axis);
-    int64_t num_segments = out->shape().At(axis);
-    int64_t inner_dim_size = out->shape().Count(axis + 1);
-    int64_t num_segment_ids = segment_ids->shape().elem_cnt();
+    int64_t outer_dim_size = out->shape_view().Count(0, axis);
+    int64_t num_segments = out->shape_view().At(axis);
+    int64_t inner_dim_size = out->shape_view().Count(axis + 1);
+    int64_t num_segment_ids = segment_ids->shape_view().elem_cnt();
     Memset<DeviceType::kCUDA>(ctx->stream(), tmp_buf->mut_dptr(), 0,
-                              out->shape().elem_cnt() * sizeof(float));
+                              out->shape_view().elem_cnt() * sizeof(float));
     int64_t offset = 0;
     if (cache != nullptr) {
       auto* sum_cache = dynamic_cast<const UnsortedSegmentSumOpKernelCache*>(cache);
       CHECK_NOTNULL(sum_cache);
-      CHECK_EQ(out->shape().At(axis), sum_cache->upper() - sum_cache->lower());
+      CHECK_EQ(out->shape_view().At(axis), sum_cache->upper() - sum_cache->lower());
       offset = sum_cache->lower();
     }
 
@@ -179,7 +180,7 @@ class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
         ctx->device_type(), DataType::kFloat, DataType::kFloat16);
     CHECK(f2h);
     f2h->Launch(ctx->stream(), tmp_buf->dptr<float>(), out->mut_dptr<float16>(),
-                out->shape().elem_cnt());
+                out->shape_view().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
