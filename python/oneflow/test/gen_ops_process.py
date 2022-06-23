@@ -152,8 +152,6 @@ api_list = [
     "logical_and",
     "logical_not",
     "logical_or",
-    "logical_slice",
-    "logical_slice_assign",
     "logical_xor",
     "long",
     "lt",

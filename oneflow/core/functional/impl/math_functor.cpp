@@ -2137,7 +2137,7 @@ class TensorSplitVecFunctor {
       output[i] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
       start[pos_dim] = end_idx;
     }
-    stop[pos_dim] = input->shape()->At(ndim - 1);
+    stop[pos_dim] = input->shape()->At(pos_dim);
     output[num_indices] = JUST(Slice(input, start, stop, step, /*enable_view_slice=*/false));
 
     return output;
