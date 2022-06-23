@@ -55,14 +55,6 @@ std::unique_ptr<ElementwiseUnary> NewElementwiseUnary(Scalar attr0, Scalar attr1
       new ElementwiseUnaryImpl<unary_op, Src, Dst>(attr0, attr1));
 }
 
-#define UTIL_OPS_DATA_TYPE_SEQ \
-  CPU_PRIMITIVE_INT8_TYPE_SEQ  \
-  CPU_PRIMITIVE_UINT8_TYPE_SEQ \
-  CPU_PRIMITIVE_INT32_TYPE_SEQ \
-  CPU_PRIMITIVE_INT64_TYPE_SEQ \
-  CPU_PRIMITIVE_FLOAT_TYPE_SEQ \
-  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ
-
 class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnaryFactoryImpl);

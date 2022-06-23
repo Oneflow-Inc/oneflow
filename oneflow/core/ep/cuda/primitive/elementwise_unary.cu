@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/common/primitive/elementwise_unary.h"
+#include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
 
 namespace oneflow {
@@ -47,15 +48,6 @@ std::unique_ptr<ElementwiseUnary> NewElementwiseUnary(Scalar attr0, Scalar attr1
   return std::unique_ptr<ElementwiseUnary>(
       new ElementwiseUnaryImpl<unary_op, Src, Dst>(attr0, attr1));
 }
-
-#define UTIL_OPS_DATA_TYPE_SEQ   \
-  CUDA_PRIMITIVE_INT8_TYPE_SEQ   \
-  CUDA_PRIMITIVE_UINT8_TYPE_SEQ  \
-  CUDA_PRIMITIVE_INT32_TYPE_SEQ  \
-  CUDA_PRIMITIVE_INT64_TYPE_SEQ  \
-  CUDA_PRIMITIVE_FLOAT_TYPE_SEQ  \
-  CUDA_PRIMITIVE_DOUBLE_TYPE_SEQ \
-  CUDA_PRIMITIVE_FLOAT16_TYPE_SEQ
 
 class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
  public:
