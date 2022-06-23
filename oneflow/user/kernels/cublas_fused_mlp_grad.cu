@@ -113,10 +113,13 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
     // step1: Get last layer's dbias.
     const int64_t batch_size = dy->shape().At(0);
-    const T* ones = nullptr;
+    const void* ones = nullptr;
     auto* cuda_device = dynamic_cast<ep::CudaDevice*>(ctx->stream()->device());
     if (cuda_device != nullptr) {
-      ones = static_cast<const T*>(cuda_device->GetConstOnes(dy->data_type(), batch_size));
+      ones = cuda_device->GetConstOnes(dy->data_type(), batch_size);
+    } else {
+      ones = dy_tmp_buf;
+      offset += batch_size;
     }
     DimVector ones_buf_shape(2);
     ones_buf_shape.at(0) = 1;
@@ -260,23 +263,26 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(dtype)                                   \
-  REGISTER_USER_KERNEL("cublas_fused_mlp_grad")                                        \
-      .SetCreateFn<CublasFusedMLPGradKernel<dtype>>()                                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
-                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
-        const int64_t weight_num = ctx->input_size("weights");                         \
-        const Shape& dy_shape = ctx->InputShape("dy", 0);                              \
-        int64_t m = dy_shape.At(0);                                                    \
-        int64_t k = dy_shape.At(1);                                                    \
-        int64_t tmp_buffer_size = 0;                                                   \
-        for (int idx = weight_num - 1; idx > 0; idx--) {                               \
-          const Shape& weight_shape = ctx->InputShape("weights", idx);                 \
-          k = weight_shape.At(1);                                                      \
-          tmp_buffer_size += GetCudaAlignedSize(m * k * sizeof(dtype));                \
-        }                                                                              \
-        return tmp_buffer_size;                                                        \
+#define REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(dtype)                                               \
+  REGISTER_USER_KERNEL("cublas_fused_mlp_grad")                                                    \
+      .SetCreateFn<CublasFusedMLPGradKernel<dtype>>()                                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value))             \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
+        const int64_t weight_num = ctx->input_size("weights");                                     \
+        const Shape& dy_shape = ctx->InputShape("dy", 0);                                          \
+        int64_t m = dy_shape.At(0);                                                                \
+        int64_t k = dy_shape.At(1);                                                                \
+        int64_t tmp_buffer_size = 0;                                                               \
+        if (m > 1024 * 1024) {                                                                     \
+          tmp_buffer_size += GetCudaAlignedSize(m * sizeof(dtype)); /*For last layer's bias grad*/ \
+        }                                                                                          \
+        for (int idx = weight_num - 1; idx > 0; idx--) {                                           \
+          const Shape& weight_shape = ctx->InputShape("weights", idx);                             \
+          k = weight_shape.At(1);                                                                  \
+          tmp_buffer_size += GetCudaAlignedSize(m * k * sizeof(dtype));                            \
+        }                                                                                          \
+        return tmp_buffer_size;                                                                    \
       });
 
 REGISTER_CUBLAS_FUSED_MLP_GRAD_KERNEL(float)
