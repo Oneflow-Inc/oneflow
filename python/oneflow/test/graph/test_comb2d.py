@@ -24,7 +24,7 @@ import numpy as np
 import oneflow.unittest
 
 
-class TestModule(nn.Module):
+class _TestModule(nn.Module):
     def forward(self, x):
         sbp_1ds = [
             flow.sbp.broadcast,
@@ -62,7 +62,7 @@ class _TestGraph(nn.Graph):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination(test_case):
-        model = TestModule()
+        model = _TestModule()
         graph = _TestGraph(model)
 
         x = flow.ones(

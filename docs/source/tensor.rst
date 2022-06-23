@@ -104,6 +104,7 @@ OneFlow Tensor Class
             masked_fill, 
             masked_select, 
             matmul, 
+            mv, 
             max, 
             mean, 
             min, 
@@ -193,4 +194,5 @@ OneFlow Tensor Class
             zero_, 
             nms,
             pin_memory,
+            is_pinned,
 

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/device/ep_based_event_record.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/vm/stream.h"
 
 namespace oneflow {
 namespace vm {
@@ -38,21 +39,9 @@ void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
   DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
 }
 
-namespace {
-
-Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
-  const auto& device = JUST(Device::New("cpu"));
-  return Stream::New(device, StreamRole::kCriticalSection)->mut_schedule_local_dep_object();
-}
-
-constexpr auto* CriticalSectionLocalDepObject =
-    DECORATE(&RawCriticalSectionLocalDepObject, ThreadLocal);
-
-}  // namespace
-
 void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject()));
+  DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
 void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
@@ -121,7 +110,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
 
 void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject()));
+  DoEach(vm_stream_->schedule_local_dep_object().get());
 }
 
 }  // namespace vm

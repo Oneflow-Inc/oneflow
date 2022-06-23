@@ -37,8 +37,6 @@ class CudaCopyD2HStreamType final : public StreamType {
   CudaCopyD2HStreamType() = default;
   ~CudaCopyD2HStreamType() = default;
 
-  const char* stream_tag() const override { return "cuda_d2h"; }
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
   void InitInstructionStatus(const Stream& stream,
@@ -48,8 +46,6 @@ class CudaCopyD2HStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const override;
   bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
 };
