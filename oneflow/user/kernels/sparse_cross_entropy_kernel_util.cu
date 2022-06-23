@@ -27,7 +27,7 @@ template<typename T, typename K>
 __global__ void ComputeEntropyGpu(const int64_t num_instances, const int64_t num_classes,
                                   const int64_t depth, const int64_t lower_bound, const T* x,
                                   const K* labels, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
@@ -40,7 +40,7 @@ __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t
                                       const int64_t depth, const int64_t lower_bound, const half* x,
                                       const K* labels, half* y) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
@@ -58,7 +58,7 @@ template<typename T, typename K>
 __global__ void ComputeDiffGpu(const int64_t num_instances, const int64_t num_classes,
                                const int64_t depth, const int64_t lower_bound, const T* x,
                                const K* labels, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
@@ -73,7 +73,7 @@ __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t nu
                                    const int64_t depth, const int64_t lower_bound, const half* x,
                                    const K* labels, const half* dy, half* dx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, num_instances) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
     K label = labels[i] - lower_bound;
@@ -92,16 +92,32 @@ template<typename T, typename K>
 __global__ void ComputeDiffWithSoftmaxGpu(const int64_t elem_cnt, const int64_t num_classes,
                                           const int64_t depth, const int64_t lower_bound,
                                           const T* prob, const K* labels, const T* dy, T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const int32_t row_id = i / num_classes;
-    const int32_t col_id = i - row_id * num_classes;
-    assert(labels[row_id] >= 0);
-    assert(labels[row_id] < depth);
-    K label = labels[row_id] - lower_bound;
-    if (label == col_id) {
-      dx[i] = dy[row_id] * (prob[i] - 1);
-    } else {
-      dx[i] = dy[row_id] * prob[i];
+  if (elem_cnt >= 2147483647) {
+    // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
+    CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
+      const int64_t row_id = i / num_classes;
+      const int64_t col_id = i - row_id * num_classes;
+      assert(labels[row_id] >= 0);
+      assert(labels[row_id] < depth);
+      K label = labels[row_id] - lower_bound;
+      if (label == col_id) {
+        dx[i] = dy[row_id] * (prob[i] - 1);
+      } else {
+        dx[i] = dy[row_id] * prob[i];
+      }
+    }
+  } else {
+    CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+      const int32_t row_id = i / num_classes;
+      const int32_t col_id = i - row_id * num_classes;
+      assert(labels[row_id] >= 0);
+      assert(labels[row_id] < depth);
+      K label = labels[row_id] - lower_bound;
+      if (label == col_id) {
+        dx[i] = dy[row_id] * (prob[i] - 1);
+      } else {
+        dx[i] = dy[row_id] * prob[i];
+      }
     }
   }
 }
@@ -112,16 +128,32 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int6
                                               const half* prob, const K* labels, const half* dy,
                                               half* dx) {
 #if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const int32_t row_id = i / num_classes;
-    const int32_t col_id = i - row_id * num_classes;
-    assert(labels[row_id] >= 0);
-    assert(labels[row_id] < depth);
-    K label = labels[row_id] - lower_bound;
-    if (label == col_id) {
-      dx[i] = __hmul(dy[row_id], __hsub(prob[i], __float2half(1.0)));
-    } else {
-      dx[i] = __hmul(dy[row_id], prob[i]);
+  if (elem_cnt >= 2147483647) {
+    CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
+      // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
+      const int64_t row_id = i / num_classes;
+      const int64_t col_id = i - row_id * num_classes;
+      assert(labels[row_id] >= 0);
+      assert(labels[row_id] < depth);
+      K label = labels[row_id] - lower_bound;
+      if (label == col_id) {
+        dx[i] = __hmul(dy[row_id], __hsub(prob[i], __float2half(1.0)));
+      } else {
+        dx[i] = __hmul(dy[row_id], prob[i]);
+      }
+    }
+  } else {
+    CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+      const int32_t row_id = i / num_classes;
+      const int32_t col_id = i - row_id * num_classes;
+      assert(labels[row_id] >= 0);
+      assert(labels[row_id] < depth);
+      K label = labels[row_id] - lower_bound;
+      if (label == col_id) {
+        dx[i] = __hmul(dy[row_id], __hsub(prob[i], __float2half(1.0)));
+      } else {
+        dx[i] = __hmul(dy[row_id], prob[i]);
+      }
     }
   }
 #else
@@ -140,18 +172,37 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf2(const int64_t elem_cnt, const int
   const int64_t h2_elem_cnt = elem_cnt / 2;
   const auto* prob_h2 = reinterpret_cast<const half2*>(prob);
   auto* dx_h2 = reinterpret_cast<half2*>(dx);
-  CUDA_1D_KERNEL_LOOP(i, h2_elem_cnt) {
-    const int32_t row_id = i / h2_num_classes;
-    const int32_t h2_col_id = i - row_id * h2_num_classes;
-    assert(labels[row_id] >= 0);
-    assert(labels[row_id] < depth);
-    K label = labels[row_id] - lower_bound;
-    const half2 prob_h2_i = prob_h2[i];
-    const half dy_row = dy[row_id];
-    half2 dx_h2_i;
-    dx_h2_i.x = __hmul(dy_row, __hsub(prob_h2_i.x, static_cast<half>(label == 2 * h2_col_id)));
-    dx_h2_i.y = __hmul(dy_row, __hsub(prob_h2_i.y, static_cast<half>(label == 2 * h2_col_id + 1)));
-    dx_h2[i] = dx_h2_i;
+  if (elem_cnt >= 2147483647) {
+    // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
+    CUDA_1D_KERNEL_LOOP_T(int64_t, i, h2_elem_cnt) {
+      const int64_t row_id = i / h2_num_classes;
+      const int64_t h2_col_id = i - row_id * h2_num_classes;
+      assert(labels[row_id] >= 0);
+      assert(labels[row_id] < depth);
+      K label = labels[row_id] - lower_bound;
+      const half2 prob_h2_i = prob_h2[i];
+      const half dy_row = dy[row_id];
+      half2 dx_h2_i;
+      dx_h2_i.x = __hmul(dy_row, __hsub(prob_h2_i.x, static_cast<half>(label == 2 * h2_col_id)));
+      dx_h2_i.y =
+          __hmul(dy_row, __hsub(prob_h2_i.y, static_cast<half>(label == 2 * h2_col_id + 1)));
+      dx_h2[i] = dx_h2_i;
+    }
+  } else {
+    CUDA_1D_KERNEL_LOOP(i, h2_elem_cnt) {
+      const int32_t row_id = i / h2_num_classes;
+      const int32_t h2_col_id = i - row_id * h2_num_classes;
+      assert(labels[row_id] >= 0);
+      assert(labels[row_id] < depth);
+      K label = labels[row_id] - lower_bound;
+      const half2 prob_h2_i = prob_h2[i];
+      const half dy_row = dy[row_id];
+      half2 dx_h2_i;
+      dx_h2_i.x = __hmul(dy_row, __hsub(prob_h2_i.x, static_cast<half>(label == 2 * h2_col_id)));
+      dx_h2_i.y =
+          __hmul(dy_row, __hsub(prob_h2_i.y, static_cast<half>(label == 2 * h2_col_id + 1)));
+      dx_h2[i] = dx_h2_i;
+    }
   }
 #else
   printf("use half need nvcc arch >= 530");
