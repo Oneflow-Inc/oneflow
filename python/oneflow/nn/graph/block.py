@@ -20,7 +20,7 @@ import weakref
 
 import oneflow._C
 import oneflow._oneflow_internal
-import oneflow.framework.graph_build_util as graph_build_util
+from oneflow.framework import graph_build_util
 from oneflow.env import get_rank
 from oneflow.framework.tensor import Tensor, TensorTuple
 from oneflow.nn.module import Module
@@ -264,10 +264,6 @@ class ModuleBlock(Block):
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
         with self.scope_context():
             result = self._origin.__class__.forward(self, *args, **kwargs)
-            # Always pack outputs to remain type of outputs
-            outputs = (result,)
-        result = self.__post_forward_map(*outputs)
-        result = seq_to_func_return(result, True)
         self._is_executing_forward = False
         return result
 
@@ -276,6 +272,16 @@ class ModuleBlock(Block):
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
         # otherwise the backward op may depends the op in former stage which will make graph creates unnessary buffers.
+        if self.config._stage_placement is not None:
+
+            def insert_to_global(t):
+                assert isinstance(t, Tensor)
+                return t.to_global(placement=self.config._stage_placement)
+
+            args, kwargs = self.__map_io(
+                "input", insert_to_global, "insert_to_global", *args, **kwargs
+            )
+
         if self.config.activation_checkpointing or (
             self.config.stage_id is not None and self.config.stage_id >= 0
         ):
@@ -289,21 +295,6 @@ class ModuleBlock(Block):
             )
 
         return args, kwargs
-
-    def __post_forward_map(self, *args):
-        # Insert identity op when doing activation checkpointing or pipeline execution.
-        if self.config.activation_checkpointing or (
-            self.config.stage_id is not None and self.config.stage_id >= 0
-        ):
-
-            def insert_identity(t):
-                assert isinstance(t, Tensor)
-                return oneflow._C.identity(t)
-
-            args, _ = self.__map_io(
-                "output", insert_identity, "insert_identity", *args,
-            )
-        return args
 
     def add_module(self, name: str, module: Optional[Module]) -> None:
         self.__setattr__(

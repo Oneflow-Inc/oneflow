@@ -5,7 +5,7 @@
 include "mlir/IR/PatternBase.td"
 include "OneFlow/OneFlowOps.td"
 include "mlir/Dialect/MemRef/IR/MemRefOps.td"
-include "mlir/Dialect/GPU/GPUOps.td"
+include "mlir/Dialect/GPU/IR/GPUOps.td"
 
 def IsNotNestedInJit: Constraint<CPred<"($0.getDefiningOp()->getParentOfType<::mlir::oneflow::Job>())">, "">;
 def IsScalarTensor: Constraint<CPred<"::mlir::oneflow::IsScalarTensor($0)">, "">;

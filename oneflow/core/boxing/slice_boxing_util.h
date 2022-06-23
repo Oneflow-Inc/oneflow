@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
