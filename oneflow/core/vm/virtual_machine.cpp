@@ -158,7 +158,7 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 Maybe<void> VirtualMachine::BlockingRunProbeFunc(const std::function<bool(vm::VirtualMachineEngine*)>& prob_func) {
   JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
     auto bc = std::make_shared<BlockingCounter>(1);
-    vm_->InsertProbe([bc, prob_func](vm::VirtualMachineEngine* engine) {
+    engine_->InsertProbe([bc, prob_func](vm::VirtualMachineEngine* engine) {
       if(!prob_func(engine)) { return false; }
       bc->Decrease();
       return true;
