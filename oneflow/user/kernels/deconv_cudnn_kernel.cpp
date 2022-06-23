@@ -37,8 +37,8 @@ struct CudnnDeConvArgsAndAlgo final {
                          const user_op::Tensor* y, user_op::Tensor* buf,
                          const user_op::KernelComputeContext* ctx, ep::Stream* stream,
                          bool has_forced_algo, int32_t forced_algo)
-      : args(*ctx, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
-             y->shape(), ctx->Attr<std::string>("data_format"), buf->shape().elem_cnt(),
+      : args(*ctx, x->data_type(), x->shape_view(), w->data_type(), w->shape_view(), y->data_type(),
+             y->shape_view(), ctx->Attr<std::string>("data_format"), buf->shape_view().elem_cnt(),
              Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
@@ -51,7 +51,7 @@ struct CudnnDeConvArgsAndAlgo final {
                  ->resource()
                  .cudnn_conf()
                  .cudnn_conv_enable_pseudo_half()) {
-    size_t byte_size_of_buf = buf->shape().elem_cnt();
+    size_t byte_size_of_buf = buf->shape_view().elem_cnt();
     AllocatedCudnnConvResource res(stream->As<ep::CudaStream>()->cudnn_handle(),
                                    const_cast<void*>(x->dptr()), const_cast<void*>(w->dptr()),
                                    const_cast<void*>(y->dptr()), buf->mut_dptr());
@@ -120,7 +120,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    if (in->shape().elem_cnt() == 0) return;
+    if (in->shape_view().elem_cnt() == 0) return;
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
     CudnnDeConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(

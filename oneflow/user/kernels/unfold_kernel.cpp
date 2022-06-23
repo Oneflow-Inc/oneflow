@@ -69,7 +69,7 @@ class UnfoldKernel final : public OpKernel {
     const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
 
     const auto& state_ptr = CreateUnfoldOpKernelState<INDEX_T, NDIM, SDIM>(
-        input->shape(), kernel_size, padding, stride, dilation);
+        input->shape_view(), kernel_size, padding, stride, dilation);
 
     const UnfoldParams<INDEX_T, NDIM, SDIM> params = state_ptr->params();
     UnfoldKernelUtil<device_type, T, INDEX_T, NDIM, SDIM>::Forward(
