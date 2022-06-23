@@ -422,9 +422,6 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
                reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0),
                logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
   }
-  // Not supporting different hierarchy
-  // TODO: Support it in the future
-  if (in_hierarchy->elem_cnt() != out_hierarchy->elem_cnt()) { return kUnsupportedBoxing; }
 
   double logical_blob_size =
       logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
@@ -438,6 +435,9 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
            * GetSizeOfDataType(logical_blob_desc.data_type());
   }
 #endif  // WITH_CUDA
+
+  // Not supporting different hierarchy without general basic communication
+  if (in_hierarchy->elem_cnt() != out_hierarchy->elem_cnt()) { return kUnsupportedBoxing; }
 
   bool on_same_devices =
       reduced_in_parallel_desc.EqualsIgnoringHierarchy(reduced_out_parallel_desc);
