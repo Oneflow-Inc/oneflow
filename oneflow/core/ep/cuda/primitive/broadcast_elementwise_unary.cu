@@ -36,8 +36,8 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
   ~BroadcastElementwiseUnaryImpl() override = default;
 
   void Launch(Stream* stream, size_t num_src_dims, const int64_t* src_dims,
-                      const int64_t* src_strides, const void* src, size_t num_dst_dims,
-                      const int64_t* dst_dims, const int64_t* dst_strides, void* dst) override {
+              const int64_t* src_strides, const void* src, size_t num_dst_dims,
+              const int64_t* dst_dims, const int64_t* dst_strides, void* dst) override {
     // TODO(yaozihang): impl
   }
 
@@ -47,7 +47,7 @@ class BroadcastElementwiseUnaryImpl : public BroadcastElementwiseUnary {
 
 template<UnaryOp unary_op, typename Src, typename Dst>
 std::unique_ptr<BroadcastElementwiseUnary> NewBroadcastElementwiseUnary(Scalar attr0,
-                                                                          Scalar attr1) {
+                                                                        Scalar attr1) {
   return std::unique_ptr<BroadcastElementwiseUnary>(
       new BroadcastElementwiseUnaryImpl<unary_op, Src, Dst>(attr0, attr1));
 }
@@ -58,23 +58,25 @@ class BroadcastElementwiseUnaryFactoryImpl : public BroadcastElementwiseUnaryFac
   BroadcastElementwiseUnaryFactoryImpl() = default;
   ~BroadcastElementwiseUnaryFactoryImpl() override = default;
 
-  std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp unary_op, DataType src_type, DataType dst_type,
-                                                 size_t max_num_dims, Scalar attr0, Scalar attr1) override {
+  std::unique_ptr<BroadcastElementwiseUnary> New(UnaryOp unary_op, DataType src_type,
+                                                 DataType dst_type, size_t max_num_dims,
+                                                 Scalar attr0, Scalar attr1) override {
     if (max_num_dims > kMaxNumDims) { return nullptr; }
-#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)                   \
+#define MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY(unary_op, dtype_pair)         \
   {std::make_tuple(unary_op, OF_PP_PAIR_SECOND(dtype_pair), OF_PP_PAIR_SECOND(dtype_pair)), \
-   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(dtype_pair)>},
+   NewBroadcastElementwiseUnary<unary_op, OF_PP_PAIR_FIRST(dtype_pair),                     \
+                                OF_PP_PAIR_FIRST(dtype_pair)>},
 
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
-        std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
-        new_broadcast_elementwise_unary_handle {
-        // TODO(yaozihang): add registry for ops which use BroadcastElementwiseUnary primitive
+                          std::function<std::unique_ptr<BroadcastElementwiseUnary>(Scalar, Scalar)>>
+        new_broadcast_elementwise_unary_handle{
+            // TODO(yaozihang): add registry for ops which use BroadcastElementwiseUnary primitive
         };
 
 #undef MAKE_NEW_SAME_DTYPE_BROADCAST_ELEMENTWISE_UNARY_ENTRY
 
-    const auto iter = new_broadcast_elementwise_unary_handle.find(
-        std::make_tuple(unary_op, src_type, dst_type));
+    const auto iter =
+        new_broadcast_elementwise_unary_handle.find(std::make_tuple(unary_op, src_type, dst_type));
     if (iter != new_broadcast_elementwise_unary_handle.end()) {
       return iter->second(attr0, attr1);
     } else {

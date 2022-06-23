@@ -37,6 +37,54 @@ bool IsPackSizeSupported(const size_t pack_size, size_t num_dims, const int64_t*
          && (reinterpret_cast<std::uintptr_t>(ptr) % (pack_size * sizeof(T)) == 0);
 }
 
+template<size_t max_num_dims>
+inline void SimplifyBroadcastDims(size_t num_src_dims, const int64_t* src_dims, const int64_t* src_strides,
+                                  size_t num_dst_dims, const int64_t* dst_dims, const int64_t* dst_strides,
+                                  size_t* simplified_num_dims, int64_t* simplified_src_dims, int64_t* simplified_src_strides, 
+                                  int64_t* simplified_dst_dims, int64_t* simplified_dst_strides) {
+  *simplified_num_dims = 0;
+  std::vector<std::pair<int64_t, size_t>> sorted_dst_strides(num_dst_dims);
+  std::vector<int64_t> new_dst_dims(num_dst_dims), new_src_dims(num_dst_dims);
+  std::vector<int64_t> new_dst_strides(num_dst_dims), new_src_strides(num_dst_dims);
+  for(size_t i = 0; i < num_dst_dims; i++) {
+    sorted_dst_strides[i] = {dst_strides[i], i};
+  }
+  std::sort(std::begin(sorted_dst_strides), std::end(sorted_dst_strides), [](auto pair1, auto pair2){
+    return pair1.first > pair2.first;
+  });
+  const int64_t num_src_padding_dims = num_dst_dims - num_src_dims;
+  // 维度补齐 & 维度重排
+  for (int64_t i = num_dst_dims-1; i >= 0; i--) {
+    size_t idx = sorted_dst_strides[i].second;
+    new_dst_dims[i] = dst_dims[idx];
+    new_dst_strides[i] = dst_strides[idx];
+    new_src_dims[i] = idx < num_src_padding_dims ? 1 : src_dims[idx - num_src_padding_dims];
+    new_src_strides[i] = idx < num_src_padding_dims ? new_src_strides[i+1] : src_strides[idx - num_src_padding_dims];
+  }
+  // 维度合并
+  bool prev_broadcast_src = false;
+  for (int64_t i = 0; i < num_dst_dims; ++i) {
+    const bool broadcast_src = (new_src_dims[i] == 1);
+    if (new_dst_dims[i] == 1) {
+      continue;
+    } else if (*simplified_num_dims != 0
+               && prev_broadcast_src == broadcast_src
+               && (new_src_strides[i-1] == new_src_strides[i]*new_src_dims[i])) {
+      simplified_src_dims[*simplified_num_dims - 1] *= new_src_dims[i];
+      simplified_dst_dims[*simplified_num_dims - 1] *= new_dst_dims[i];
+      simplified_src_strides[*simplified_num_dims - 1] = new_src_strides[i];
+      simplified_dst_strides[*simplified_num_dims - 1] = new_dst_strides[i];
+    } else {
+      simplified_src_dims[*simplified_num_dims] = new_src_dims[i];
+      simplified_dst_dims[*simplified_num_dims] = new_dst_dims[i];
+      simplified_src_strides[*simplified_num_dims] = new_src_strides[i];
+      simplified_dst_strides[*simplified_num_dims] = new_dst_strides[i];
+      *simplified_num_dims += 1;
+      prev_broadcast_src = broadcast_src;
+    }
+  }
+}
+
 inline void SimplifyBroadcastDims(size_t num_a_dims, const int64_t* a_dims, size_t num_b_dims,
                                   const int64_t* b_dims, size_t num_c_dims, const int64_t* c_dims,
                                   size_t* simplified_num_dims, int64_t* simplified_broadcast_dims,
