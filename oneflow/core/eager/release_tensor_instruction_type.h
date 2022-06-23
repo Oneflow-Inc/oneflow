@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
 
@@ -48,43 +48,32 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   }
   void Compute(vm::Instruction* instruction) const override { Release(instruction->instr_msg()); }
   void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override { Release(*instr_msg); }
-};
-
-#ifdef WITH_CUDA
-
-class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType {
- public:
-  CudaReleaseTensorInstructionType() = default;
-  ~CudaReleaseTensorInstructionType() override = default;
-
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
     auto* data_ptr = status_buffer->mut_buffer()->mut_data();
-    CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(nullptr);
+    EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(nullptr);
   }
 };
-
-#endif
 
 }  // namespace vm
 
 struct GetReleaseInstructionType : public StreamRoleVisitor<GetReleaseInstructionType> {
   static Maybe<const vm::InstructionType*> VisitCompute(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::ReleaseTensorInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitHost2Device(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::ReleaseTensorInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitDevice2Host(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::ReleaseTensorInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitSyncedLaunchedCommNet(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::ReleaseTensorInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitAsyncedLaunchedCommNet(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::ReleaseTensorInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitBarrier(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
@@ -94,21 +83,6 @@ struct GetReleaseInstructionType : public StreamRoleVisitor<GetReleaseInstructio
   }
   static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
-  }
-
- private:
-  static Maybe<const vm::InstructionType*> GetInstructionType(DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::ReleaseTensorInstructionType>();
-    } else if (device_type == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-      return SingletonPtr<vm::CudaReleaseTensorInstructionType>();
-#else
-      UNIMPLEMENTED_THEN_RETURN();
-#endif
-    } else {
-      UNIMPLEMENTED_THEN_RETURN();
-    }
   }
 };
 
