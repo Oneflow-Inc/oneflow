@@ -26,10 +26,9 @@ namespace oneflow {
 
 namespace vm {
 
-struct Stream;
-struct InstructionStatusBuffer;
-struct Instruction;
-struct Instruction;
+class Stream;
+class InstructionStatusBuffer;
+class Instruction;
 class InstructionType;
 
 class StreamType {

@@ -23,17 +23,26 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace vm {
+class EagerBlobObject;
+}
+
 class Runtime final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Runtime);
   Runtime() = delete;
   ~Runtime();
 
-  // TODO(chengcheng): refactor Runtime interface about variable_op_name2eager_blob
-  Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob);
+  // TODO(chengcheng): refactor Runtime interface about variable_op_name2eager_blob_object
+  Runtime(const Plan& plan,
+          const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object);
 
  private:
+  void DumpThreadIdsFromPlan(const Plan& plan);
+
   HashMap<int64_t, int64_t> job_id2actor_size_;
+  HashSet<int64_t> thread_ids_;
+  HashSet<int64_t> independent_thread_ids_;
 
   boxing::collective::SchedulerPlanToken* collective_boxing_scheduler_plan_token_;
 };

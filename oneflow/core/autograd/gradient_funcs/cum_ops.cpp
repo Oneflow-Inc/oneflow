@@ -21,7 +21,7 @@ namespace one {
 
 struct CumCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
-  int64_t dim = 0;
+  int32_t dim = 0;
 };
 
 template<typename StateT>
@@ -55,7 +55,11 @@ class CumsumGrad : public CumGrad<CumCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) = JUST(functional::CumsumGrad(out_grads.at(0), ctx->dim));
+      std::vector<int32_t> flip_dim(1, ctx->dim);
+      (*in_grads)[0] = JUST(
+          functional::Flip(JUST(functional::Cumsum(JUST(functional::Flip(out_grads[0], flip_dim)),
+                                                   ctx->dim, out_grads[0]->dtype())),
+                           flip_dim));
     }
     return Maybe<void>::Ok();
   }

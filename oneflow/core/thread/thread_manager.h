@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 #define ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 
+#include <mutex>
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
@@ -36,13 +37,15 @@ class ThreadMgr final {
   ThreadMgr() = default;
   ~ThreadMgr();
 
-  void AddPlan(const Plan& plan);
+  void AddThreads(const HashSet<int64_t>& thread_ids);
+  void DeleteThreads(const HashSet<int64_t>& thread_ids);
   Thread* GetThrd(int64_t thrd_id);
 
  private:
   friend class Global<ThreadMgr>;
 
   HashMap<int64_t, std::unique_ptr<Thread>> threads_;
+  std::mutex mutex4del_threads_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
@@ -50,7 +53,7 @@ void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 template<typename DoEachT>
 void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
   if (num == 0) { return; }
-  if (unlikely(pthread_fork::IsForkedSubProcess())) {
+  if (unlikely(pthread_fork::IsForkedSubProcess()) || Global<ThreadPool>::Get() == nullptr) {
     SingleThreadLoop(num, DoEach);
     return;
   }

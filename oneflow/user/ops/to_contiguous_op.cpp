@@ -23,7 +23,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ToContiguousOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  *ctx->OutputStride("out", 0) = Stride(in_desc.shape());
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ToContiguousOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {

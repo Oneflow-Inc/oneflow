@@ -52,7 +52,7 @@ namespace oneflow {
   CHECK_NOTNULL_OR_RETURN(out);
   for (const auto& pair : ctx->inputs()) {
     const auto& cur_in = ctx->InputTensorDesc(pair.first, pair.second);
-    CHECK_EQ_OR_RETURN(in_0.data_type(), cur_in.data_type());
+    CHECK_EQ_OR_RETURN(in_0.data_type(), cur_in.data_type()) << ctx->op_name();
   }
   *out->mut_data_type() = in_0.data_type();
   return Maybe<void>::Ok();

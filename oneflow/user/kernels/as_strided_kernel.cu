@@ -134,10 +134,14 @@ class GpuAsStridedKernel final : public user_op::OpKernel {
     const auto stride = ctx->Attr<std::vector<int32_t>>("stride");
     const int32_t storage_offset = ctx->Attr<int32_t>("storage_offset");
 
-    size_t dest_num_dims = output->shape().NumAxes();
-    const int64_t* dest_dims = output->shape().ptr();
-    const size_t input_num = input->shape().Count(0);
-    const size_t output_num = output->shape().Count(0);
+    size_t dest_num_dims = output->shape_view().NumAxes();
+    const int64_t* dest_dims = output->shape_view().ptr();
+    const size_t input_num = input->shape_view().Count(0);
+    const size_t output_num = output->shape_view().Count(0);
+    if (input_num == 0) {
+      // 0-size tensor
+      return;
+    }
 
     AsStridedFunctor<T>()(ctx->stream(), input->dptr<T>(), output->mut_dptr<T>(), dest_dims,
                           stride.data(), dest_num_dims, storage_offset, input_num, output_num);
@@ -160,12 +164,13 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
     const auto stride = ctx->Attr<std::vector<int32_t>>("stride");
     const int32_t storage_offset = ctx->Attr<int32_t>("storage_offset");
 
-    size_t dy_num_dims = dy->shape().NumAxes();
-    const int64_t* dy_dims = dy->shape().ptr();
-    const size_t dx_num = dx->shape().Count(0);
-    const size_t dy_num = dy->shape().Count(0);
+    size_t dy_num_dims = dy->shape_view().NumAxes();
+    const int64_t* dy_dims = dy->shape_view().ptr();
+    const size_t dx_num = dx->shape_view().Count(0);
+    const size_t dy_num = dy->shape_view().Count(0);
 
-    Memset<DeviceType::kCUDA>(ctx->stream(), dx->mut_dptr(), 0, dx->shape().Count(0) * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx->mut_dptr(), 0,
+                              dx->shape_view().Count(0) * sizeof(T));
 
     AsStridedGradFunctor<T>()(ctx->stream(), dy->dptr<T>(), dx->mut_dptr<T>(), dy_dims,
                               stride.data(), dy_num_dims, storage_offset, dx_num, dy_num);
@@ -186,6 +191,7 @@ class GpuAsStridedGradKernel final : public user_op::OpKernel {
 REGISTER_GPUASSTRIDED_KERNEL(half);
 REGISTER_GPUASSTRIDED_KERNEL(float);
 REGISTER_GPUASSTRIDED_KERNEL(double);
+REGISTER_GPUASSTRIDED_KERNEL(int64_t);
 
 #undef REGISTER_GPUASSTRIDED_KERNEL
 

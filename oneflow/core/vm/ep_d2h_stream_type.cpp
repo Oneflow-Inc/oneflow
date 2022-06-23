@@ -42,7 +42,7 @@ void EpD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stre
 void EpD2HStreamType::InitInstructionStatus(const Stream& stream,
                                             InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream.device_ctx().get());
+  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream.device_ctx().get());  // NOLINT
   auto* ep_event_provider = ep_device_ctx->ep_event_provider();
   auto* data_ptr = status_buffer->mut_buffer();
   const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
@@ -63,7 +63,7 @@ bool EpD2HStreamType::QueryInstructionStatusDone(
 void EpD2HStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_PUSH("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
-  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
+  auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
   instruction->instruction_type().Compute(instruction);

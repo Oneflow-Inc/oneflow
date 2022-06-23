@@ -30,7 +30,7 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const T* x = tensor_x->dptr<T>();
     T* y = tensor_y->mut_dptr<T>();
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
   }
@@ -52,7 +52,7 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
     const T* x = tensor_x->dptr<T>();
     const T* dy = tensor_dy->dptr<T>();
     T* dx = tensor_dx->mut_dptr<T>();
-    int64_t n = tensor_x->shape().elem_cnt();
+    int64_t n = tensor_x->shape_view().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     for (int32_t i = 0; i < n; ++i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
   }

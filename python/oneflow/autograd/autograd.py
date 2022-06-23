@@ -31,7 +31,7 @@ def grad(
 ) -> Tuple[Tensor]:
     r"""
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.autograd.grad.html#torch.autograd.grad
+    https://pytorch.org/docs/1.10/generated/torch.autograd.grad.html.
 
     Computes and returns the sum of gradients of outputs with respect to the inputs.
 
@@ -74,7 +74,7 @@ def backward(
 ) -> None:
     r"""
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.autograd.backward.html#torch.autograd.backward
+    https://pytorch.org/docs/1.10/generated/torch.autograd.backward.html.
 
     Computes the sum of gradients of given tensors with respect to graph leaves.
 

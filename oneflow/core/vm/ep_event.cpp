@@ -17,10 +17,9 @@ limitations under the License.
 
 namespace oneflow {
 
-EpEvent::EpEvent(ep::Device* device) {
-  device_ = device;
+EpEvent::EpEvent(ep::Device* device) : device_(device), event_(nullptr) {
   device_->SetAsActiveDevice();
-  event_ = device_->CreateEvent();
+  event_ = device_->CreateEvent();  // NOLINT
 }
 
 EpEvent::~EpEvent() {

@@ -46,7 +46,8 @@ class Copy : public OpExprGradFunction<CopyCaptureState> {
   Maybe<void> Apply(const CopyCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->resize(1);
-    in_grads->at(0) = JUST(functional::Copy(out_grads.at(0), ctx->device_type, ctx->device_id));
+    (*in_grads)[0] = JUST(
+        functional::Copy(out_grads[0], ctx->device_type, ctx->device_id, /*pin_memory=*/false));
     return Maybe<void>::Ok();
   }
 };

@@ -45,7 +45,7 @@ class InstructionStatusBuffer final {
   char buffer_[kInstructionStatusBufferBytes];
 };
 
-struct Instruction;
+class Instruction;
 class InstructionEdge final
     : public intrusive::Base,
       public intrusive::EnableObjectPool<InstructionEdge,
@@ -94,7 +94,7 @@ class InstructionEdge final
   intrusive::ListHook out_edge_hook_;
 };
 
-struct Stream;
+class Stream;
 class Instruction final : public intrusive::Base {
  public:
   // types
@@ -108,13 +108,12 @@ class Instruction final : public intrusive::Base {
 
   // Getters
   const Stream& stream() const { return *stream_; }
-  Stream* mut_stream() { return stream_; }
+  const InstructionStatusBuffer& status_buffer() const { return status_buffer_; }
+  const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
   const InstructionType& instruction_type() const { return *instruction_type_; }
   const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
   std::string DebugName() const;
 
-  const InstructionStatusBuffer& status_buffer() const { return status_buffer_; }
-  const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
   const intrusive::ListHook& dispatched_instruction_hook() const {
     return dispatched_instruction_hook_;
   }
@@ -128,6 +127,7 @@ class Instruction final : public intrusive::Base {
   const DependenceAccessList& access_list() const { return access_list_; }
 
   // Setters
+  Stream* mut_stream() { return stream_; }
   InstructionStatusBuffer* mut_status_buffer() { return &status_buffer_; }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }

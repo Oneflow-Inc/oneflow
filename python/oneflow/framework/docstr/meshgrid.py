@@ -20,7 +20,7 @@ add_docstr(
     oneflow.meshgrid,
     """The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/_modules/torch/functional.html#meshgrid
+    https://pytorch.org/docs/1.10/_modules/torch/functional.html#meshgrid.
     
     Take :math:`N` tensors, each of which can be either scalar or 1-dimensional
     vector, and create :math:`N` N-dimensional grids, where the :math:`i` :sup:`th` grid is defined by

@@ -157,6 +157,18 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         new_state = flow.get_rng_state()
         test_case.assertTrue(np.allclose(new_state.numpy(), state.numpy()))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_tensor_init(test_case):
+        flow.manual_seed(0)
+        x = flow.ones(2)
+        x.uniform_()
+
+        flow.manual_seed(0)
+        y = flow.ones(2).to("cuda")
+        y.uniform_()
+
+        test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()

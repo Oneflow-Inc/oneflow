@@ -38,9 +38,9 @@ class AffineGridKernel final : public user_op::OpKernel {
     bool is_2d_grid = true;
     if (size.NumAxes() == 5) { is_2d_grid = false; }
 
-    int64_t N = theta->shape().At(0);
-    int64_t theta_h = theta->shape().At(1);
-    int64_t theta_w = theta->shape().At(2);
+    int64_t N = theta->shape_view().At(0);
+    int64_t theta_h = theta->shape_view().At(1);
+    int64_t theta_w = theta->shape_view().At(2);
 
     if (is_2d_grid) {
       int64_t H = size.At(2);
@@ -108,9 +108,9 @@ class AffineGridGradKernel final : public user_op::OpKernel {
     bool is_2d_grid = true;
     if (size.NumAxes() == 5) { is_2d_grid = false; }
 
-    int64_t N = dtheta->shape().At(0);
-    int64_t dtheta_h = dtheta->shape().At(1);
-    int64_t dtheta_w = dtheta->shape().At(2);
+    int64_t N = dtheta->shape_view().At(0);
+    int64_t dtheta_h = dtheta->shape_view().At(1);
+    int64_t dtheta_w = dtheta->shape_view().At(2);
 
     if (is_2d_grid) {
       int64_t H = size.At(2);

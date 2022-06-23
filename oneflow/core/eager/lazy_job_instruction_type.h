@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/of_unused.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/job/job_instance.h"
@@ -90,7 +91,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
       OF_PROFILER_RANGE_POP();  // BufferMgr
     }
-    (void)run_id;  // disable compiler warning.
+    OF_UNUSED(run_id);  // disable compiler warning.
     OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");
     device_ctx->EnqueueNNGraph(cur_nn_graph);
     OF_PROFILER_RANGE_POP();  // EnqueueNNGraph

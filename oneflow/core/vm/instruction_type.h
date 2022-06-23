@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-struct Instruction;
+class Instruction;
 
 enum InstructionFuseType {
   kInvalidInstructionFuseType = 0,
