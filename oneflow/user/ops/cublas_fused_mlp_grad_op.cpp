@@ -75,13 +75,25 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
   }
 
   builder.Split(user_op::OpArg("d_grad", 0), 0);
-  for (int i = 0; i < ctx->user_op_conf().output_size("d_biases"); ++i) {
-    builder.PartialSum(user_op::OpArg("d_biases", i));
+  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+    // FusedMLPGradKernel do allreduce for dbias and dweight, so here convert from PartialSum to
+    // Broadcast.
+    for (int i = 0; i < ctx->user_op_conf().output_size("d_biases"); ++i) {
+      builder.Broadcast(user_op::OpArg("d_biases", i));
+    }
+    for (int i = 0; i < ctx->user_op_conf().output_size("d_weights"); ++i) {
+      builder.Broadcast(user_op::OpArg("d_weights", i));
+    }
+  } else {
+    for (int i = 0; i < ctx->user_op_conf().output_size("d_biases"); ++i) {
+      builder.PartialSum(user_op::OpArg("d_biases", i));
+    }
+    for (int i = 0; i < ctx->user_op_conf().output_size("d_weights"); ++i) {
+      builder.PartialSum(user_op::OpArg("d_weights", i));
+    }
   }
-  for (int i = 0; i < ctx->user_op_conf().output_size("d_weights"); ++i) {
-    builder.PartialSum(user_op::OpArg("d_weights", i));
-  }
-  builder.Build(); 
+
+  builder.Build();
   return Maybe<void>::Ok();
 }
 

@@ -13,6 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/device/nccl_util.h"
+#include "oneflow/core/job/eager_nccl_comm_manager.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
@@ -24,8 +27,10 @@ namespace {
 
 class MatmulGradKernelState final : public user_op::OpKernelState {
  public:
-  MatmulGradKernelState() {
+  MatmulGradKernelState(user_op::KernelInitContext* ctx)
+      : parallel_desc_(ctx->parallel_desc()), stream_name_(EagerNcclCommMgr::kDefaultStreamName) {
     OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
+    OF_CUDA_CHECK(cudaStreamCreate(&allreduce_stream_));
     OF_CUBLAS_CHECK(cublasLtCreate(&cublas_lt_handle_));
     OF_CUDA_CHECK(cudaMalloc(&workspace_, 8 * 1024 * 1024));
   }
@@ -33,17 +38,48 @@ class MatmulGradKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
     OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
     OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
+    OF_CUDA_CHECK(cudaStreamSynchronize(allreduce_stream_));
+    OF_CUDA_CHECK(cudaStreamDestroy(allreduce_stream_));
     OF_CUDA_CHECK(cudaFree(workspace_));
   }
   cudaStream_t cuda_stream() const { return cuda_stream_; }
+  cudaStream_t allreduce_stream() const { return allreduce_stream_; }
   cublasLtHandle_t cublas_lt_handle() const { return cublas_lt_handle_; }
   size_t cublas_workspace_size() const { return 8 * 1024 * 1024; }
   void* cublas_workspace() const { return workspace_; }
+  ncclComm_t comm() { return GetOrCreate().comm; }
 
  private:
+  struct Comm {
+    Comm(ncclComm_t comm) : comm(comm) {}
+    ncclComm_t comm;
+  };
+
+  const Comm& GetOrCreate() {
+    if (!comm_) { Init(); }
+    return *comm_;
+  }
+
+  void Init() {
+    std::set<std::pair<int64_t, int64_t>> device_set;
+    for (int64_t parallel_id = 0; parallel_id < parallel_desc_.parallel_num(); ++parallel_id) {
+      int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
+      device_set.emplace(std::make_pair(machine_id, device_id));
+    }
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    ncclComm_t comm;
+    comm = comm_mgr->GetCommForDeviceAndStreamName(device_set, stream_name_);
+    comm_.reset(new Comm(comm));
+  }
+
   cudaStream_t cuda_stream_{};
+  cudaStream_t allreduce_stream_{};
   cublasLtHandle_t cublas_lt_handle_{};
   void* workspace_{};
+  std::unique_ptr<Comm> comm_;
+  ParallelDesc parallel_desc_;
+  std::string stream_name_;
 };
 
 template<typename T>
@@ -52,10 +88,16 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
   CublasFusedMLPGradKernel() {
     OF_CUDA_CHECK(cudaEventCreate(&main_stream_event));
     OF_CUDA_CHECK(cudaEventCreate(&async_weight_grad_event));
+    OF_CUDA_CHECK(cudaEventCreate(&dweight_event));
+    OF_CUDA_CHECK(cudaEventCreate(&dbias_event));
+    OF_CUDA_CHECK(cudaEventCreate(&allreduce_event));
   };
   ~CublasFusedMLPGradKernel() override {
     OF_CUDA_CHECK(cudaEventDestroy(main_stream_event));
     OF_CUDA_CHECK(cudaEventDestroy(async_weight_grad_event));
+    OF_CUDA_CHECK(cudaEventDestroy(dweight_event));
+    OF_CUDA_CHECK(cudaEventDestroy(dbias_event));
+    OF_CUDA_CHECK(cudaEventDestroy(allreduce_event));
   };
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
@@ -65,12 +107,15 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<MatmulGradKernelState>();
+    return std::make_shared<MatmulGradKernelState>(ctx);
   }
 
  private:
   cudaEvent_t main_stream_event;
   cudaEvent_t async_weight_grad_event;
+  cudaEvent_t dweight_event;
+  cudaEvent_t dbias_event;
+  cudaEvent_t allreduce_event;
 
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
@@ -78,6 +123,8 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    auto* kernel_state = dynamic_cast<MatmulGradKernelState*>(state);
+    ncclComm_t comm = kernel_state->comm();
     void* dy_tmp_buf = tmp_buffer->mut_dptr();
     size_t offset = 0;
 
@@ -88,8 +135,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     const auto* matmul_grad_cache =
         CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
-
-    auto* kernel_state = dynamic_cast<MatmulGradKernelState*>(state);
 
     const DataType data_type = dy->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
@@ -124,7 +169,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     DimVector ones_buf_shape(2);
     ones_buf_shape.at(0) = 1;
     ones_buf_shape.at(1) = batch_size;
-    user_op::Tensor* last_d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
+    user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
 
     InferMatmulCublasMNK(ones_buf_shape, dy_shape,
                          /*transpose_a=*/ep::primitive::BlasTransposeType::N,
@@ -137,15 +182,24 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     OF_CUBLAS_CHECK(cublasLtMatmul(
         kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha, dgrad_buf,
         matmul_grad_cache->cublas_a_desc, ones, matmul_grad_cache->cublas_b_desc, &sp_beta,
-        last_d_bias->mut_dptr(), matmul_grad_cache->cublas_c_desc, last_d_bias->mut_dptr(),
+        d_bias->mut_dptr(), matmul_grad_cache->cublas_c_desc, d_bias->mut_dptr(),
         matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
         kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
+
+    // allreduce first Dbias.
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+      OF_CUDA_CHECK(cudaEventRecord(dbias_event, kernel_state->cuda_stream()));
+      OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->allreduce_stream(), dbias_event));
+      OF_NCCL_CHECK(ncclAllReduce(d_bias->mut_dptr(), d_bias->mut_dptr(),
+                                  d_bias->shape().elem_cnt(), GetNcclDataType(d_bias->data_type()),
+                                  ncclRedOp_t::ncclSum, comm, kernel_state->allreduce_stream()));
+    }
 
     for (int idx = weight_num - 1; idx > -1; idx--) {
       if (idx != 0) {
         const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", idx);
         const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx - 1);
-        user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", idx - 1);
+        d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", idx - 1);
 
         weight->shape().ToDimVector(&weight_shape);
         epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
@@ -170,6 +224,9 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
             matmul_grad_cache->cublas_c_desc, dy_tmp_buf, matmul_grad_cache->cublas_c_desc, nullptr,
             cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
             cuda_stream->cuda_stream()));
+        if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+          OF_CUDA_CHECK(cudaEventRecord(dbias_event, kernel_state->cuda_stream()));
+        }
       } else {
         const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", 0);
         weight->shape().ToDimVector(&weight_shape);
@@ -201,9 +258,9 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
       sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
       // currently only support 2D matmul.
+      user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weights", idx);
       if (idx != 0) {
         const user_op::Tensor* hidden = ctx->Tensor4ArgNameAndIndex("hidden", idx - 1);  // here
-        user_op::Tensor* d_weights = ctx->Tensor4ArgNameAndIndex("d_weights", idx);
         hidden->shape().ToDimVector(&hidden_shape);
 
         epilogue = CUBLASLT_EPILOGUE_DEFAULT;
@@ -223,11 +280,14 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         OF_CUBLAS_CHECK(cublasLtMatmul(
             kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
             hidden->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weights->mut_dptr(),
-            matmul_grad_cache->cublas_c_desc, d_weights->mut_dptr(),
+            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
             matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
             kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
 
+        if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+          OF_CUDA_CHECK(cudaEventRecord(dweight_event, kernel_state->cuda_stream()));
+        }
         // compute dy shape
         dy_shape.at(1) = weight_shape.at(1);
         // compute dybuf
@@ -235,7 +295,6 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         offset += GetCudaAlignedSize(dy_shape.at(0) * dy_shape.at(1) * sizeof(T));
         dy_tmp_buf = reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + offset);
       } else {
-        user_op::Tensor* d_weights = ctx->Tensor4ArgNameAndIndex("d_weights", 0);
         x->shape().ToDimVector(&hidden_shape);
         epilogue = CUBLASLT_EPILOGUE_DEFAULT;
         InferMatmulCublasMNK(dy_shape, hidden_shape,
@@ -250,13 +309,40 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
         OF_CUBLAS_CHECK(cublasLtMatmul(
             kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
             x->dptr(), matmul_grad_cache->cublas_a_desc, dgrad_buf,
-            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weights->mut_dptr(),
-            matmul_grad_cache->cublas_c_desc, d_weights->mut_dptr(),
+            matmul_grad_cache->cublas_b_desc, &sp_beta, d_weight->mut_dptr(),
+            matmul_grad_cache->cublas_c_desc, d_weight->mut_dptr(),
             matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
             kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
         OF_CUDA_CHECK(cudaEventRecord(async_weight_grad_event, kernel_state->cuda_stream()));
-        OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
+        if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+          OF_CUDA_CHECK(
+              cudaStreamWaitEvent(kernel_state->allreduce_stream(), async_weight_grad_event));
+          OF_NCCL_CHECK(ncclAllReduce(d_weight->mut_dptr(), d_weight->mut_dptr(),
+                                      d_weight->shape().elem_cnt(),
+                                      GetNcclDataType(d_weight->data_type()), ncclRedOp_t::ncclSum,
+                                      comm, kernel_state->allreduce_stream()));
+        }
       }
+
+      // Do Allreduce for d_bias and d_weight.
+      if (idx > 0) {
+        // Here we wait wgrad and dgrad event, and set a ncclGroup to Allreduce d_bias and d_weight.
+        OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->allreduce_stream(), dbias_event));
+        OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->allreduce_stream(), dweight_event));
+        OF_NCCL_CHECK(ncclGroupStart());
+        OF_NCCL_CHECK(ncclAllReduce(d_bias->mut_dptr(), d_bias->mut_dptr(),
+                                    d_bias->shape().elem_cnt(),
+                                    GetNcclDataType(d_bias->data_type()), ncclRedOp_t::ncclSum,
+                                    comm, kernel_state->allreduce_stream()));
+        OF_NCCL_CHECK(ncclAllReduce(d_weight->mut_dptr(), d_weight->mut_dptr(),
+                                    d_weight->shape().elem_cnt(),
+                                    GetNcclDataType(d_weight->data_type()), ncclRedOp_t::ncclSum,
+                                    comm, kernel_state->allreduce_stream()));
+        OF_NCCL_CHECK(ncclGroupEnd());
+      }
+    }
+    if (!ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_FUSED_MLP_GRAD_OVERLAP_ALLREDUCE", false)) {
+      OF_CUDA_CHECK(cudaStreamWaitEvent(cuda_stream->cuda_stream(), async_weight_grad_event));
     }
   };
 
