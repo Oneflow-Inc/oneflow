@@ -30,7 +30,7 @@ namespace oneflow {
 
 struct GetStreamType final : public StreamRoleVisitor<GetStreamType> {
   static Maybe<const vm::StreamType*> VisitCompute(DeviceType device_type) {
-    return SingletonPtr<vm::EventRecordedEpStreamType>();
+    return SingletonPtr<vm::EpStreamType>();
   }
   static Maybe<const vm::StreamType*> VisitHost2Device(DeviceType device_type) {
     return SingletonPtr<vm::EventRecordedEpStreamType>();

@@ -44,17 +44,6 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
   void ComputeInstrMsg(const vm::InstructionMsg& instruction_msg) const;
 };
 
-class CpuRecordEventInstructionType final : public vm::InstructionType {
- public:
-  CpuRecordEventInstructionType() = default;
-  ~CpuRecordEventInstructionType() override = default;
-
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
-    return "RecordEvent";
-  }
-  void Compute(vm::Instruction* instruction) const override {}
-};
-
 class EpRecordEventInstructionType final : public vm::InstructionType {
  public:
   EpRecordEventInstructionType() = default;
@@ -81,19 +70,19 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
 
 struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventInstructionType> {
   static Maybe<const vm::InstructionType*> VisitCompute(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitHost2Device(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitDevice2Host(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitSyncedLaunchedCommNet(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitAsyncedLaunchedCommNet(DeviceType device_type) {
-    return GetInstructionType(device_type);
+    return SingletonPtr<vm::EpRecordEventInstructionType>();
   }
   static Maybe<const vm::InstructionType*> VisitBarrier(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
@@ -103,15 +92,6 @@ struct GetRecordEventInstructionType : public StreamRoleVisitor<GetRecordEventIn
   }
   static Maybe<const vm::InstructionType*> VisitLazyJobLauncher(DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
-  }
-
- private:
-  static Maybe<const vm::InstructionType*> GetInstructionType(DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuRecordEventInstructionType>();
-    } else {
-      return SingletonPtr<vm::EpRecordEventInstructionType>();
-    }
   }
 };
 
