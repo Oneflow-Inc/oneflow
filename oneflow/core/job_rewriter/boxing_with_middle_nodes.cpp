@@ -61,13 +61,14 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
   if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
     return Maybe<void>::Ok();
   }
-  if (!NeedBoxingCollector(op_graph)) { return Maybe<void>::Ok(); }
   // Initialize boxing collector
   BoxingCollector boxing_collector;
-  // We assemble the boxing table from S(0) to S(5).
-  // Those splitting in higher axes are considered in the customized boxing.
-  constexpr int32_t kRegularMaxSplitAxes = 6;
-  JUST(boxing_collector.Init(kRegularMaxSplitAxes));
+  if (NeedBoxingCollector(op_graph)) {
+    // We assemble the boxing table from S(0) to S(5).
+    // Those splitting in higher axes are considered in the customized boxing.
+    constexpr int32_t kRegularMaxSplitAxes = 6;
+    JUST(boxing_collector.Init(kRegularMaxSplitAxes));
+  }
   std::vector<NdSbp> middle_sbps;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations

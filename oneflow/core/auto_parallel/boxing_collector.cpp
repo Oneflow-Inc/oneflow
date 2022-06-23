@@ -548,19 +548,10 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     }
   }
 
-  // Middle nodes algorithm supports transfer for different machines or devices or hierarchies
-  if (producer_parallel_desc != consumer_parallel_desc) {
-    JUST(AskSbpCombination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
-                                         producer_parallel_desc, consumer_parallel_desc,
-                                         is_customized, middle_sbps, diag_node_pos, compute_cost));
-
+#ifdef WITH_CUDA
+  if (producer_parallel_desc == consumer_parallel_desc && sbp_producer == sbp_consumer) {
     return Maybe<void>::Ok();
   }
-  // Transfer for the same machines, devices and hierarchy.
-  if (sbp_producer == sbp_consumer) { return Maybe<void>::Ok(); }
-  const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
-
-#ifdef WITH_CUDA
   // Use a general basic communication if no P in the consumer
   if ((!NdSbpHasPartialParallel(sbp_consumer))) {
     if (NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) {
@@ -573,6 +564,18 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     return Maybe<void>::Ok();
   }
 #endif  // WITH_CUDA
+
+  // Middle nodes algorithm supports transfer for different machines or devices or hierarchies
+  if (producer_parallel_desc != consumer_parallel_desc) {
+    JUST(AskSbpCombination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
+                                         producer_parallel_desc, consumer_parallel_desc,
+                                         is_customized, middle_sbps, diag_node_pos, compute_cost));
+
+    return Maybe<void>::Ok();
+  }
+  // Transfer for the same machines, devices and hierarchy.
+  if (sbp_producer == sbp_consumer) { return Maybe<void>::Ok(); }
+  const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
 
   *diag_node_pos = 0;
   // Dealing with nD sbp, n>2
