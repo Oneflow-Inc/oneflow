@@ -38,6 +38,7 @@ Thread::Thread(const StreamId& stream_id) : thrd_id_(EncodeStreamIdToInt64(strea
     PollMsgChannel();
     CHECK_JUST(stream_ctx_->stream()->OnExecutionContextTeardown());
   });
+  // LOG(ERROR) << "Thread_" << thrd_id_ << " Created" ;
 }
 
 Thread::~Thread() {
@@ -52,6 +53,7 @@ void Thread::AddTask(const TaskProto& task) {
 }
 
 void Thread::PollMsgChannel() {
+  // LOG(ERROR) << "Thread_" << thrd_id_ << " enter Thread::PollMsgChannel()";
   while (true) {
     if (local_msg_queue_.empty()) {
       CHECK_EQ(msg_channel_.ReceiveMany(&local_msg_queue_), kChannelStatusSuccess);
@@ -100,6 +102,7 @@ void Thread::ConstructActor(int64_t actor_id) {
     actor_ptr = NewActor(actor_ctx.get());
     VLOG(3) << "Thread " << thrd_id_ << " construct Actor " << TaskType_Name(task.task_type())
             << " " << actor_id;
+    // LOG(ERROR) << "Thread " << thrd_id_ << " construct Actor " << TaskType_Name(task.task_type()) << " " << actor_id;
   } else {
     VLOG(3) << "Thread " << thrd_id_ << " construct LightActor " << TaskType_Name(task.task_type())
             << " " << actor_id;
@@ -107,9 +110,13 @@ void Thread::ConstructActor(int64_t actor_id) {
   
   CHECK(id2actor_ptr_.emplace(actor_id, std::make_pair(std::move(actor_ctx), std::move(actor_ptr)))
             .second);
+  // LOG(ERROR) << "CHECK(id2actor_ptr_.emplace";
   CHECK(id2job_id_.emplace(actor_id, task.job_id()).second);
+  // LOG(ERROR) << "CHECK(id2job_id_.emplace";
   id2task_.erase(task_it);
+  // LOG(ERROR) << "id2task_.erase(task_it";
   Global<RuntimeCtx>::Get()->DecreaseCounter("constructing_actor_cnt");
+  // LOG(ERROR) << "Thread::ConstructActor Done";
 }
 
 }  // namespace oneflow

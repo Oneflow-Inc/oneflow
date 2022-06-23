@@ -27,6 +27,8 @@ limitations under the License.
 
 namespace oneflow {
 
+#define MYLOG VLOG(100)
+
 class OfCollectiveActor final: public ActorBase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfCollectiveActor);
@@ -142,14 +144,24 @@ class OfCollectiveActor final: public ActorBase {
   }
   void InitBnInOp2BlobInfo(const TaskProto& task_proto);
 
+  // Collective Negotiation
+  void ResetCollectiveStatus();
+  void ReactToNegoCmd(const ActorMsg& msg);
+  HashMap<CollectiveNegoCmd, std::string> print_nego_cmd_;
+  HashMap<CollectiveStatus, std::string> print_status_;
+  boxing::of_collective::RuntimeNegoTreeInfo nego_tree_info_;
+  int64_t received_downstream_ready_cnt_;
+  CollectiveStatus collective_status_;
+  // In case get kCollectiveReady when local not ready.
+  HashMap<int64_t, ActorMsg> cached_nego_ready_msg_;
+  // initially for debug
+  bool is_nego_root_;
+
   ActorContext* actor_ctx_;  
   int64_t actor_id_;
   int64_t thrd_id_;
   int64_t job_id_;
   std::string op_name_;
-  boxing::of_collective::RuntimeNegoTreeInfo nego_tree_info_;
-  int64_t received_downstream_ready_cnt_;
-  CollectiveStatus collective_status_;
 
   MsgHandler msg_handler_;
 

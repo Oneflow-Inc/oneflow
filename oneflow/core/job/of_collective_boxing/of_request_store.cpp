@@ -52,17 +52,20 @@ OfRequestEntry::OfRequestEntry(const RequestDesc& desc) : desc_(desc) {
 }
 
 void OfRequestStore::InitJob(int64_t job_id, const RequestSet& request_set) {
-  LOG(ERROR) << "Enter OfRequestStore::InitJob";
+  // LOG(ERROR) << "Enter OfRequestStore::InitJob";
   std::vector<std::unique_ptr<OfRequestEntry>>& request_entry_vec = job_id2request_entry_vec_[job_id];
-  LOG(ERROR) << "request_entry_vec = job_id2request_entry_vec_[job_id]; DONE";
+  // LOG(ERROR) << "request_entry_vec = job_id2request_entry_vec_[job_id]; DONE";
   CHECK_EQ(request_entry_vec.size(), 0);
+  // LOG(ERROR) << "request_entry_vec.size() is " << request_entry_vec.size();
   for (const RequestDesc& desc : request_set.request()) {
     request_entry_vec.emplace_back(std::make_unique<OfRequestEntry>(desc));
   }
+  // LOG(ERROR) << "after inserting request_set.request(), request_entry_vec.size() is " << request_entry_vec.size();
   for (int32_t i = 0; i < request_entry_vec.size(); ++i) {
     const std::unique_ptr<OfRequestEntry>& entry = request_entry_vec.at(i);
     CHECK(name2request_id_.emplace(entry->desc().op_desc().name(), OfRequestId(job_id, i)).second);
   }
+  // LOG(ERROR) << "name2request_id_.size() is " << name2request_id_.size();
 }
 
 void OfRequestStore::DeinitJob(int64_t job_id) {

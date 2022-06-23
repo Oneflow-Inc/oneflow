@@ -772,9 +772,19 @@ class StarNegoTreeBuilder : public NegoTreeBuilder {
   void CalcNegoTree(boxing::of_collective::RequestDesc* request_desc, const OfCollectiveBoxingRequestInfo& info) override {
     auto task_ids = std::vector<int64_t>(info.op_desc.num_ranks());
     for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
-      task_ids.push_back(info.rank2node.at(i)->task_proto()->task_id());
+      task_ids[i] = info.rank2node.at(i)->task_proto()->task_id();
+
+      // LOG(ERROR) << "i is " << i << ", info.rank2node.at(i)->task_proto()->task_id() is " << info.rank2node.at(i)->task_proto()->task_id() << ", task_ids[i] is " << task_ids[i];
     }
     int64_t root = task_ids[0];
+
+    std::string task_ids_str = "";
+    for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
+      task_ids_str += std::to_string(task_ids[i]);
+      task_ids_str += ", ";
+    }
+    // LOG(ERROR) << "Nego Tree Has ids: " << task_ids_str << " root is " << root;
+
     for (int64_t i = 0; i < info.op_desc.num_ranks(); ++i) {
       int64_t task_id = info.rank2node.at(i)->task_proto()->task_id();
       auto& nego_tree_info = (*(request_desc->mutable_negotiation_tree_topo()))[task_id];
@@ -975,6 +985,7 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
       OfGetDeviceDesc(task_proto, &device_desc);
       auto it = name2request_info.find(name);
       if (it == name2request_info.end()) {
+        // LOG(ERROR) << "task id is " << task_proto->task_id();
         OfCollectiveBoxingRequestInfo request_info{
             .op_desc = rank_desc.op_desc(),
             .rank2node = {std::make_pair(rank_desc.rank(), node)},
@@ -982,6 +993,9 @@ void PlanUtil::GenOfCollectiveBoxingPlan(Job* job, Plan* plan) {
             .dependency_depth = dependency_depth,
         };
         name2request_info.emplace(std::make_pair(name, std::move(request_info)));
+        // LOG(ERROR) << "rank_desc.rank() is " << rank_desc.rank();
+        // LOG(ERROR) << "task id in the name2request_info is " << name2request_info[name].rank2node[rank_desc.rank()]->task_proto()->task_id();
+        // LOG(ERROR) << "task id in the name2request_info from PlanTaskNode is " << name2request_info[name].rank2node[rank_desc.rank()]->task_id();
         order += 1;
       } else {
         CHECK(it->second.op_desc == rank_desc.op_desc());

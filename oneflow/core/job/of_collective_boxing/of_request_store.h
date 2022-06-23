@@ -125,7 +125,10 @@ class OfRequestStore {
     return it->second.size();
   }
 
-  OfRequestId GetOfRequestIdByName(const std::string& name) const { return name2request_id_.at(name); }
+  OfRequestId GetOfRequestIdByName(const std::string& name) const {
+    // LOG(ERROR) << (name2request_id_.find(name) == name2request_id_.end());
+    return name2request_id_.at(name);
+  }
 
   void* CreateOfRequestEntryToken(const OfRequestId& request_id);
 

@@ -79,7 +79,7 @@ struct CollectiveMgr::Impl {
 };
 
 CollectiveMgr::Impl::Impl() {
-  LOG(ERROR) << "Enter CollectiveMgr::Impl::Impl()";
+  // LOG(ERROR) << "Enter CollectiveMgr::Impl::Impl()";
   request_store.reset(new OfRequestStore());
   // collective_builder.reset(new CollectiveBuilderImpl());
   // collective_builder->Init(request_store);
@@ -117,6 +117,7 @@ CollectiveMgrPlanToken* CollectiveMgr::AddPlan(const Plan& plan) {
     const int64_t job_id = job_id7request_set.first;
     job_ids.emplace_back(job_id);
     impl_->request_store->InitJob(job_id, job_id7request_set.second);
+    // LOG(ERROR) << "impl_->request_store->InitJob Done";
     // impl_->collective_builder->InitJob(job_id);
   }
   return new CollectiveMgrPlanToken(job_ids);
@@ -125,7 +126,7 @@ CollectiveMgrPlanToken* CollectiveMgr::AddPlan(const Plan& plan) {
 void CollectiveMgr::DeletePlan(CollectiveMgrPlanToken* plan_token) {
   const std::vector<int64_t>& job_ids = plan_token->job_ids();
   for (const auto& job_id : job_ids) {
-    impl_->collective_builder->DeinitJob(job_id);
+    // impl_->collective_builder->DeinitJob(job_id);
     impl_->request_store->DeinitJob(job_id);
   }
   delete plan_token;

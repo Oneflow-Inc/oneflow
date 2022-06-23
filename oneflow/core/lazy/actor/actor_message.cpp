@@ -92,6 +92,13 @@ ActorMsg ActorMsg::BuildCollectiveMsg(int64_t srd_actor_id, int64_t dst_actor_id
   return msg;
 }
 
+ActorMsg ActorMsg::BuildNullMsg() {
+  ActorMsg msg{};
+  msg.src_actor_id_ = -1;
+  msg.dst_actor_id_ = -1;
+  return msg;
+}
+
 int64_t ActorMsg::SrcMachineId() const { return MachineId4ActorId(src_actor_id_); }
 
 ActorCmd ActorMsg::actor_cmd() const {

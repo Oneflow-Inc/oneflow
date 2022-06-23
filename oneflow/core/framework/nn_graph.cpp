@@ -261,7 +261,7 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  LOG(ERROR) << "OFCCL " << "enter CompileAndInitRuntime.";
+  // LOG(ERROR) << "OFCCL " << "enter CompileAndInitRuntime.";
   CHECK_OR_RETURN(!runtime_inited_);
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
