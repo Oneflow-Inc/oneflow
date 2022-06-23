@@ -99,7 +99,10 @@ def _test_slice_with_bool(test_case, placement, sbp):
     test_case.assertTrue(np.array_equal(y.numpy(), x_numpy[0:1:1]))
 
 
-def _test_slice_with_grad(test_case, placement, sbp):
+@autotest(n=2, auto_backward=False, check_graph=False, )
+def _test_slice_with_grad(test_case, placement):
+    sbp = random_sbp(placement, max_dim=2).value()
+    print(sbp)
     x = random_tensor(2, 8, 16, requires_grad=True).oneflow
     x_numpy = x.detach().cpu().numpy()
 
@@ -157,7 +160,11 @@ class TestSlice(flow.unittest.TestCase):
                 _test_negative_index(test_case, placement, sbp)
                 _test_slice_ellipsis_type(test_case, placement, sbp)
                 _test_slice_with_bool(test_case, placement, sbp)
-                _test_slice_with_grad(test_case, placement, sbp)
+
+    @globaltest
+    def test_graph_slice(test_case):
+        for placement in all_placement():
+            _test_slice_with_grad(test_case, placement)
 
 
 if __name__ == "__main__":
