@@ -213,8 +213,7 @@ void LaunchGeneral(CpuStream* cpu_stream, size_t simplified_num_dims,
             dst[offset] = functor(src0[offset], src1[src_offset]);
           }
         }
-      },
-      1);
+      });
 }
 
 template<BinaryOp binary_op, typename Src, typename Dst>
