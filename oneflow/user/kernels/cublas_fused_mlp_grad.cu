@@ -122,9 +122,9 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t weight_num = ctx->input_size("weights");
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
-    // just a placeholder. 
+    // just a placeholder.
     user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
-    user_op::Tensor* d_last_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1); 
+    user_op::Tensor* d_last_bias = ctx->Tensor4ArgNameAndIndex("d_biases", weight_num - 1);
 
     auto* kernel_state = dynamic_cast<MatmulGradKernelState*>(state);
     ncclComm_t comm = kernel_state->comm();
@@ -153,7 +153,7 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
     DimVector dy_shape(2);
     dy->shape().ToDimVector(&dy_shape);
     const void* dgrad_buf = dy->dptr();
-    
+
     const int64_t batch_size = dy->shape().At(0);
     const void* ones = nullptr;
     auto* cuda_device = dynamic_cast<ep::CudaDevice*>(ctx->stream()->device());
@@ -226,28 +226,29 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
 
       // currently only support 2D matmul.
       // step1: Get last layer's dbias.
-      if(idx == weight_num - 1){
+      if (idx == weight_num - 1) {
         DimVector ones_buf_shape(2);
         ones_buf_shape.at(0) = 1;
         ones_buf_shape.at(1) = batch_size;
-        
+
         epilogue = CUBLASLT_EPILOGUE_DEFAULT;
         InferMatmulCublasMNK(ones_buf_shape, dy_shape,
-                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                            /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
-                            &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+                             /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+                             /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m,
+                             &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
         SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                       /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                      /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr, nullptr,
-                      cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+                      /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr,
+                      nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
         OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
         OF_CUBLAS_CHECK(cublasLtMatmul(
-          kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha, dgrad_buf,
-          matmul_grad_cache->cublas_a_desc, ones, matmul_grad_cache->cublas_b_desc, &sp_beta,
-          d_last_bias->mut_dptr(), matmul_grad_cache->cublas_c_desc, d_last_bias->mut_dptr(),
-          matmul_grad_cache->cublas_c_desc, nullptr, kernel_state->cublas_workspace(),
-          kernel_state->cublas_workspace_size(), kernel_state->cuda_stream()));
-      } 
+            kernel_state->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha,
+            dgrad_buf, matmul_grad_cache->cublas_a_desc, ones, matmul_grad_cache->cublas_b_desc,
+            &sp_beta, d_last_bias->mut_dptr(), matmul_grad_cache->cublas_c_desc,
+            d_last_bias->mut_dptr(), matmul_grad_cache->cublas_c_desc, nullptr,
+            kernel_state->cublas_workspace(), kernel_state->cublas_workspace_size(),
+            kernel_state->cuda_stream()));
+      }
 
       user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weights", idx);
       if (idx != 0) {
@@ -265,9 +266,9 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
                       /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                       /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, nullptr,
                       nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
-        
-        if(idx != weight_num - 1){
-          // if idx == weight_num - 1, async_stream has wait main_stream_event in d_bias. 
+
+        if (idx != weight_num - 1) {
+          // if idx == weight_num - 1, async_stream has wait main_stream_event in d_bias.
           OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->cuda_stream(), main_stream_event));
         }
 
@@ -315,16 +316,15 @@ class CublasFusedMLPGradKernel final : public user_op::OpKernel, public user_op:
       OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->allreduce_stream(), dweight_event));
       OF_NCCL_CHECK(ncclGroupStart());
       OF_NCCL_CHECK(ncclAllReduce(d_bias->mut_dptr(), d_bias->mut_dptr(),
-                                  d_bias->shape().elem_cnt(),
-                                  GetNcclDataType(d_bias->data_type()), ncclRedOp_t::ncclSum,
-                                  comm, kernel_state->allreduce_stream()));
+                                  d_bias->shape().elem_cnt(), GetNcclDataType(d_bias->data_type()),
+                                  ncclRedOp_t::ncclSum, comm, kernel_state->allreduce_stream()));
       OF_NCCL_CHECK(ncclAllReduce(d_weight->mut_dptr(), d_weight->mut_dptr(),
                                   d_weight->shape().elem_cnt(),
                                   GetNcclDataType(d_weight->data_type()), ncclRedOp_t::ncclSum,
                                   comm, kernel_state->allreduce_stream()));
       OF_NCCL_CHECK(ncclGroupEnd());
-      if(idx == 0){
-        // We should sync allreduce before the kernel finish. 
+      if (idx == 0) {
+        // We should sync allreduce before the kernel finish.
         OF_CUDA_CHECK(cudaEventRecord(allreduce_event, kernel_state->allreduce_stream()));
       }
     }
