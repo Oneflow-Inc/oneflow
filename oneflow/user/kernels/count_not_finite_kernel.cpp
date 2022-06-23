@@ -31,7 +31,7 @@ class MultiCountNotFiniteCpuKernel final : public user_op::OpKernel {
     FOR_RANGE(int32_t, i, 0, ctx->inputs().size()) {
       user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", i);
       const T* x_ptr = x->dptr<T>();
-      FOR_RANGE(int32_t, j, 0, x->shape().elem_cnt()) {
+      FOR_RANGE(int32_t, j, 0, x->shape_view().elem_cnt()) {
         if (!std::isfinite(x_ptr[j])) { count++; }
       }
     }

@@ -56,7 +56,7 @@ class GpuGeluGradKernel final : public user_op::OpKernel, public user_op::CudaGr
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const int64_t elem_cnt = x->shape().elem_cnt();
+    const int64_t elem_cnt = x->shape_view().elem_cnt();
     OF_CUDA_CHECK((cuda::elementwise::Binary(GeluGradFunctor<T>(), elem_cnt, dx->mut_dptr<T>(),
                                              x->dptr<T>(), dy->dptr<T>(),
                                              ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
