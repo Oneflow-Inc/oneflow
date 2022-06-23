@@ -44,7 +44,6 @@ class ActorMsg final {
   static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
   static ActorMsg BuildCollectiveMsg(int64_t srd_actor_id, int64_t dst_actor_id, CollectiveNegoCmd collective_nego_cmd);
-  static ActorMsg BuildNullMsg();
 
   // Getters
   int64_t SrcMachineId() const;

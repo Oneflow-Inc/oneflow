@@ -61,12 +61,6 @@ class OfCollectiveActor final: public ActorBase {
     std::unique_ptr<KernelContext> kernel_ctx;
   };
   enum class RegstNameType { kNaive = 0, kCustomized };
-  enum class CollectiveStatus {
-    kInvalid = 0,
-    kLocalReady,
-    kDownstreamReady,
-    kCanAct
-  };
 
   // Msg Handler
   using MsgHandler = int (OfCollectiveActor::*)(const ActorMsg&);
@@ -87,10 +81,6 @@ class OfCollectiveActor final: public ActorBase {
   // ready
   bool IsReadReady() const;
   bool IsWriteReady() const;
-  bool IsDownstreamReady() const;
-  bool HasUpstream() const { return nego_tree_info_.upstream_id != -1; }
-  bool HasDownstream() const { return nego_tree_info_.downstream_id.size() > 0; }
-  bool CanAct() const { return collective_status_ == CollectiveStatus::kCanAct; }
 
   // Act
   void Act();
@@ -99,7 +89,6 @@ class OfCollectiveActor final: public ActorBase {
 
   // Send Msg
   void EnqueueAsyncMsg(const ActorMsg&);
-  void SyncSendMsg(const ActorMsg&);
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
   void AsyncSendQueuedMsg();
@@ -145,10 +134,22 @@ class OfCollectiveActor final: public ActorBase {
   void InitBnInOp2BlobInfo(const TaskProto& task_proto);
 
   // Collective Negotiation
+  enum class CollectiveStatus {
+    kInvalid = 0,
+    kLocalReady,
+    kDownstreamReady,
+    kCanAct
+  };
+  bool IsDownstreamReady() const;
+  bool HasUpstream() const { return nego_tree_info_.upstream_id != -1; }
+  bool HasDownstream() const { return nego_tree_info_.downstream_id.size() > 0; }
+  bool CanAct() const { return collective_status_ == CollectiveStatus::kCanAct; }
   void ResetCollectiveStatus();
   void ReactToNegoCmd(const ActorMsg& msg);
+  void SyncSendMsg(const ActorMsg&);
   HashMap<CollectiveNegoCmd, std::string> print_nego_cmd_;
   HashMap<CollectiveStatus, std::string> print_status_;
+  HashMap<ActorMsgType, std::string> print_actor_msg_type_;
   boxing::of_collective::RuntimeNegoTreeInfo nego_tree_info_;
   int64_t received_downstream_ready_cnt_;
   CollectiveStatus collective_status_;

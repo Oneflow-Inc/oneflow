@@ -63,12 +63,12 @@ class OfCollectiveBoxingGenericKernel final : public Kernel {
 // }
 
 void OfCollectiveBoxingGenericKernel::ForwardDataContent(KernelContext* ctx) const {
-  if (!ParseBooleanFromEnv("ONEFLOW_SKIP_NEGO", false)) LOG(ERROR)  << "Enter OfCollectiveBoxingGenericKernel::ForwardDataContent";
+  if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR)  << "Enter OfCollectiveBoxingGenericKernel::ForwardDataContent";
   Blob* in = ctx->BnInOp2Blob("in");
   Blob* out = ctx->BnInOp2Blob("out");
   AutoMemcpy(ctx->stream(), out, in);
   
-  if (!ParseBooleanFromEnv("ONEFLOW_SKIP_NEGO", false)) LOG(ERROR)  << "OfCollectiveBoxingGenericKernel::ForwardDataContent Done";
+  if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR)  << "OfCollectiveBoxingGenericKernel::ForwardDataContent Done";
 }
 
 REGISTER_KERNEL(OperatorConf::kOfCollectiveBoxingGenericConf, OfCollectiveBoxingGenericKernel);
