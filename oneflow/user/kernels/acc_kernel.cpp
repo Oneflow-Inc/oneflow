@@ -31,13 +31,13 @@ class AccKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
+    CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt());
     CHECK_EQ(in->data_type(), out->data_type());
     std::unique_ptr<ep::primitive::Add> primitive =
         ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->device_type(), in->data_type());
     CHECK(primitive);
     primitive->Launch(ctx->stream(), out->dptr(), in->dptr(), out->mut_dptr(),
-                      in->shape().elem_cnt());
+                      in->shape_view().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
