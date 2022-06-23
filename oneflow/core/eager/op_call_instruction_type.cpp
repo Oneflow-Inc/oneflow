@@ -136,14 +136,14 @@ struct OpCallInstructionUtil final {
               : nullptr,
           [compute_ctx]() -> int64_t {
             const auto cal_memory_size = [compute_ctx](const one::ArgVec& args) -> int64_t {
-              return std::accumulate(
-                  args.begin(), args.end(), static_cast<int64_t>(0),
-                  [compute_ctx](int64_t memory_size, const auto& pair) {
-                    const auto tensor =
-                        compute_ctx->Tensor4ArgNameAndIndex(pair.first, pair.second);
-                    return memory_size
-                           + tensor->shape().elem_cnt() * GetSizeOfDataType(tensor->data_type());
-                  });
+              return std::accumulate(args.begin(), args.end(), static_cast<int64_t>(0),
+                                     [compute_ctx](int64_t memory_size, const auto& pair) {
+                                       const auto tensor = compute_ctx->Tensor4ArgNameAndIndex(
+                                           pair.first, pair.second);
+                                       return memory_size
+                                              + tensor->shape_view().elem_cnt()
+                                                    * GetSizeOfDataType(tensor->data_type());
+                                     });
             };
             return cal_memory_size(compute_ctx->inputs()) + cal_memory_size(compute_ctx->outputs());
           },

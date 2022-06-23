@@ -60,7 +60,7 @@ class SoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const ShapeView& in_shape = in->shape();
+    const ShapeView& in_shape = in->shape_view();
     const int64_t cols = in_shape.At(in_shape.NumAxes() - 1);
     const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
     std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
@@ -85,8 +85,8 @@ class SoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGr
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const int64_t num_classes = y->shape().At(y->shape().NumAxes() - 1);
-    const int64_t num_instances = y->shape().elem_cnt() / num_classes;
+    const int64_t num_classes = y->shape_view().At(y->shape_view().NumAxes() - 1);
+    const int64_t num_instances = y->shape_view().elem_cnt() / num_classes;
 
     std::unique_ptr<ep::primitive::SoftmaxBackward> primitive = NewSoftmaxBackwardPrimitive(ctx);
     CHECK(primitive);

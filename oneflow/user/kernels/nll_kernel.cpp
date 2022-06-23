@@ -87,8 +87,8 @@ class NLLKernel final : public user_op::OpKernel {
     auto* output = ctx->Tensor4ArgNameAndIndex("output", 0);
     auto* out_weight = ctx->Tensor4ArgNameAndIndex("out_weight", 0);
 
-    const int64_t N = target->shape().elem_cnt();
-    const int64_t C = input->shape().At(input->shape().NumAxes() - 1);
+    const int64_t N = target->shape_view().elem_cnt();
+    const int64_t C = input->shape_view().At(input->shape_view().NumAxes() - 1);
     CHECK_LE(N, std::numeric_limits<int32_t>::max())
         << "Expected batch size not exceed int32 numeric limits";
 
@@ -135,8 +135,8 @@ class NLLGradKernel final : public user_op::OpKernel {
     const auto* out_grad = ctx->Tensor4ArgNameAndIndex("out_grad", 0);
     auto* in_grad = ctx->Tensor4ArgNameAndIndex("in_grad", 0);
 
-    const int64_t N = target->shape().elem_cnt();
-    const int64_t C = in_grad->shape().At(in_grad->shape().NumAxes() - 1);
+    const int64_t N = target->shape_view().elem_cnt();
+    const int64_t C = in_grad->shape_view().At(in_grad->shape_view().NumAxes() - 1);
     CHECK_LE(N, std::numeric_limits<int32_t>::max())
         << "Expected batch size not exceed int32 numeric limits";
 

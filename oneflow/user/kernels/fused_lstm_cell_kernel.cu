@@ -314,9 +314,9 @@ class GpuFusedLstmCellKernel final : public user_op::OpKernel {
     T* hy_ptr = hy->mut_dptr<T>();
     T* cy_ptr = cy->mut_dptr<T>();
     T* workspace_ptr = workspace->mut_dptr<T>();
-    const int64_t cx_numel = cx->shape().elem_cnt();
-    const int64_t workspace_numel = workspace->shape().elem_cnt();
-    const int64_t hidden_size = cx->shape().At(cx->shape().NumAxes() - 1);
+    const int64_t cx_numel = cx->shape_view().elem_cnt();
+    const int64_t workspace_numel = workspace->shape_view().elem_cnt();
+    const int64_t hidden_size = cx->shape_view().At(cx->shape_view().NumAxes() - 1);
     FusedLstmCellFunctor<T>()(ctx->stream(), cx_numel, workspace_numel, hidden_size,
                               input_gates_ptr, hidden_gates_ptr, cx_ptr, input_bias_ptr,
                               hidden_bias_ptr, hy_ptr, cy_ptr, workspace_ptr);
@@ -363,9 +363,9 @@ class GpuFusedLstmCellGradFloatKernel final : public user_op::OpKernel {
 
     if (ctx->has_output("grad_cx", 0)) { grad_cx_ptr = grad_cx->mut_dptr<float>(); }
 
-    const int64_t cx_numel = cx->shape().elem_cnt();
-    const int64_t workspace_numel = workspace->shape().elem_cnt();
-    const int64_t hidden_size = cx->shape().At(cx->shape().NumAxes() - 1);
+    const int64_t cx_numel = cx->shape_view().elem_cnt();
+    const int64_t workspace_numel = workspace->shape_view().elem_cnt();
+    const int64_t hidden_size = cx->shape_view().At(cx->shape_view().NumAxes() - 1);
     FusedLstmCellGradFunctor<float>()(ctx->stream(), cx_numel, workspace_numel, hidden_size,
                                       grad_hy_ptr, grad_cy_ptr, cx_ptr, cy_ptr, workspace_ptr,
                                       grad_gates_ptr, grad_cx_ptr);
@@ -375,12 +375,12 @@ class GpuFusedLstmCellGradFloatKernel final : public user_op::OpKernel {
       std::vector<int32_t> axis;
       axis.push_back(0);
       const Shape& reduced_shape =
-          CreateReducedShape(workspace->shape(), {axis.begin(), axis.end()});
+          CreateReducedShape(workspace->shape_view(), {axis.begin(), axis.end()});
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
           ctx->stream(), XpuVarNdarray<float>(reduced_shape, grad_bias_ptr),
-          XpuVarNdarray<const float>(grad_gates->shape(), grad_gates->dptr<float>()),
-          XpuVarNdarray<float>(tmp_buffer->shape(), tmp_buffer->mut_dptr<float>()));
+          XpuVarNdarray<const float>(grad_gates->shape_view(), grad_gates->dptr<float>()),
+          XpuVarNdarray<float>(tmp_buffer->shape_view(), tmp_buffer->mut_dptr<float>()));
     }
   }
 
@@ -433,9 +433,9 @@ class GpuFusedLstmCellGradHalfKernel final : public user_op::OpKernel {
 
     if (ctx->has_output("grad_cx", 0)) { grad_cx_ptr = grad_cx->mut_dptr<float16>(); }
 
-    const int64_t cx_numel = cx->shape().elem_cnt();
-    const int64_t workspace_numel = workspace->shape().elem_cnt();
-    const int64_t hidden_size = cx->shape().At(cx->shape().NumAxes() - 1);
+    const int64_t cx_numel = cx->shape_view().elem_cnt();
+    const int64_t workspace_numel = workspace->shape_view().elem_cnt();
+    const int64_t hidden_size = cx->shape_view().At(cx->shape_view().NumAxes() - 1);
     FusedLstmCellGradFunctor<float16>()(ctx->stream(), cx_numel, workspace_numel, hidden_size,
                                         grad_hy_ptr, grad_cy_ptr, cx_ptr, cy_ptr, workspace_ptr,
                                         grad_gates_ptr, grad_cx_ptr);
@@ -444,7 +444,7 @@ class GpuFusedLstmCellGradHalfKernel final : public user_op::OpKernel {
       std::vector<int32_t> axis;
       axis.push_back(0);
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-      const ShapeView& in_shape = grad_gates->shape();
+      const ShapeView& in_shape = grad_gates->shape_view();
       const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
       float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
       const size_t in_tmp_buffer_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
@@ -457,7 +457,7 @@ class GpuFusedLstmCellGradHalfKernel final : public user_op::OpKernel {
       const size_t reduce_tmp_buffer_bytes =
           GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
-               tmp_buffer->shape().elem_cnt());
+               tmp_buffer->shape_view().elem_cnt());
       auto h2f = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
           ctx->device_type(), DataType::kFloat16, DataType::kFloat);
       CHECK(h2f);
@@ -473,7 +473,7 @@ class GpuFusedLstmCellGradHalfKernel final : public user_op::OpKernel {
 
       user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("grad_bias", 0);
       f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
-                  output_tensor->shape().elem_cnt());
+                  output_tensor->shape_view().elem_cnt());
     }
   }
 
