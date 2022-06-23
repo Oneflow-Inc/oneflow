@@ -319,7 +319,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   // NOTE(strint): Do memory shrink to free cached memory in eager VM before graph runtime init.
   JUST(vm::CurrentRankSync());
   auto* vm = JUST(GlobalMaybe<VirtualMachine>());
-  JUST(vm->MemShrinkAll());
+  JUST(vm->ShrinkAllMem());
 
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
