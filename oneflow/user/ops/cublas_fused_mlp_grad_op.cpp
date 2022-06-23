@@ -75,10 +75,10 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx) {
   }
 
   builder.Split(user_op::OpArg("d_grad", 0), 0);
-  for (int i = 0; i < ctx->user_op_conf().input_size("d_biases"); ++i) {
+  for (int i = 0; i < ctx->user_op_conf().output_size("d_biases"); ++i) {
     builder.PartialSum(user_op::OpArg("d_biases", i));
   }
-  for (int i = 0; i < ctx->user_op_conf().input_size("d_weights"); ++i) {
+  for (int i = 0; i < ctx->user_op_conf().output_size("d_weights"); ++i) {
     builder.PartialSum(user_op::OpArg("d_weights", i));
   }
   return Maybe<void>::Ok();
