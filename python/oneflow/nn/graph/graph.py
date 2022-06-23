@@ -123,7 +123,7 @@ class Graph(object):
         # Default is local view
         self._is_global_view = False
         # forward graph job proto
-        self._forward_job_proto = None
+        self._original_job_proto = None
         # forward, backward and optimized graph job proto
         self._full_job_proto = None
         # completed graph job proto
@@ -142,7 +142,6 @@ class Graph(object):
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
         self._c_nn_graph = None
-        self.env_enable_mlir_inference_opt = None
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -568,21 +567,21 @@ class Graph(object):
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's graph proto is None."
                 " You can call the graph to trigger it's compilation.",
             )
-        return self._forward_job_proto
+        return self._original_job_proto
 
     @property
-    def _full_graph_proto(self):
+    def _optimized_graph_proto(self):
         if self._full_job_proto is None:
             self.__print(
                 2,
                 0,
-                f"[ERROR]{self._shallow_repr()} has not been compiled, so it's full graph proto is None."
+                f"[ERROR]{self._shallow_repr()} has not been compiled, so it's optimized graph proto is None."
                 " You can call the graph to trigger it's compilation.",
             )
         return self._full_job_proto
 
-    @_full_graph_proto.setter
-    def _full_graph_proto(self, full_job_proto):
+    @_optimized_graph_proto.setter
+    def _optimized_graph_proto(self, full_job_proto):
         assert (
             not self._is_compiled
         ), "nn.Graph's full graph proto can only be set before the first compilation."
@@ -883,45 +882,13 @@ class Graph(object):
             self.__print(0, 1, self._shallow_repr() + " end building graph outputs.")
 
             # Save forward graph job proto
-            self._forward_job_proto = c_api_util.GetCurrentJob()
+            self._original_job_proto = c_api_util.GetCurrentJob()
 
             self.__print(
                 0,
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
-            self.env_enable_mlir_inference_opt = os.getenv(
-                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
-            )
-            enable_mlir_inference_opt = (
-                False
-                if self.env_enable_mlir_inference_opt is None
-                else bool(self.env_enable_mlir_inference_opt)
-            )
-            modules_has_training = False
-            for item in self._blocks.values():
-                if item._origin.training:
-                    modules_has_training = True
-                    break
-            if (
-                modules_has_training or self.training or self._is_global_view
-            ) and enable_mlir_inference_opt:
-                if self.training:
-                    logging.warning(
-                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode."
-                    )
-
-                if modules_has_training and not self.training:
-                    logging.warning(
-                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored when not all modules in graph are in eval mode. "
-                    )
-
-                if self._is_global_view:
-                    logging.warning(
-                        "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in global mode. "
-                    )
-                enable_mlir_inference_opt = False
-                del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
             oneflow._oneflow_internal.FillVariableTensorMgr(
                 state_op_names, self._state_tensor_tuple
             )
@@ -1360,15 +1327,6 @@ class Graph(object):
         )
 
     def __del__(self):
-        current_env_enable_mlir_inference_opt = os.getenv(
-            "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
-        )
-        if (self.env_enable_mlir_inference_opt is not None) and (
-            current_env_enable_mlir_inference_opt is None
-        ):
-            os.environ[
-                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
-            ] = self.env_enable_mlir_inference_opt
         # Ensure vm has finished running this graph.
         if self._session._env.is_shutting_down():
             # After python shutting down, it's not safe to call oneflow._oneflow_internal.eager.

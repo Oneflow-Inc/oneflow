@@ -255,7 +255,9 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
 
   auto mgr = Global<VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {
-    if (variable_names.find(name) == variable_names.end()) { mgr->Delete(name); }
+    if (variable_names.find(name) == variable_names.end()) {
+      if (name.size() > 9 && name.substr(0, 9) == "variable_") { mgr->Delete(name); }
+    }
   }
   return Maybe<void>::Ok();
 }
