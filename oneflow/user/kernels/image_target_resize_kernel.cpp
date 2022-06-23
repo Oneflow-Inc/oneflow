@@ -26,9 +26,9 @@ namespace {
 template<typename T>
 std::pair<T, T> GetTargetResizedSize4ImageBuffer(const TensorBuffer& image_buffer,
                                                  const T target_size, const T max_size) {
-  CHECK_EQ(image_buffer.shape().NumAxes(), 3);
-  const T origin_height = image_buffer.shape().At(0);
-  const T origin_width = image_buffer.shape().At(1);
+  CHECK_EQ(image_buffer.shape_view().NumAxes(), 3);
+  const T origin_height = image_buffer.shape_view().At(0);
+  const T origin_width = image_buffer.shape_view().At(1);
 
   // set round to banker's rounding
   int origin_round_way = std::fegetround();
@@ -57,7 +57,7 @@ std::pair<T, T> GetTargetResizedSize4ImageBuffer(const TensorBuffer& image_buffe
 
 void ImageTargetResize(const TensorBuffer& image_buffer, TensorBuffer* resized_image_buffer,
                        const int32_t target_size, const int32_t max_size) {
-  CHECK_EQ(image_buffer.shape().NumAxes(), 3);
+  CHECK_EQ(image_buffer.shape_view().NumAxes(), 3);
   CHECK_GT(target_size, 0);
   CHECK_GE(max_size, target_size);
 
@@ -90,10 +90,10 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* size_tensor = ctx->Tensor4ArgNameAndIndex("size", 0);
     user_op::Tensor* scale_tensor = ctx->Tensor4ArgNameAndIndex("scale", 0);
-    CHECK_GT(in_tensor->shape().elem_cnt(), 0);
-    CHECK_EQ(in_tensor->shape().elem_cnt(), out_tensor->shape().elem_cnt());
-    CHECK_EQ(in_tensor->shape().elem_cnt(), size_tensor->shape().At(0));
-    CHECK_EQ(in_tensor->shape().elem_cnt(), scale_tensor->shape().At(0));
+    CHECK_GT(in_tensor->shape_view().elem_cnt(), 0);
+    CHECK_EQ(in_tensor->shape_view().elem_cnt(), out_tensor->shape_view().elem_cnt());
+    CHECK_EQ(in_tensor->shape_view().elem_cnt(), size_tensor->shape_view().At(0));
+    CHECK_EQ(in_tensor->shape_view().elem_cnt(), scale_tensor->shape_view().At(0));
 
     const TensorBuffer* in_img_buf = in_tensor->dptr<TensorBuffer>();
     TensorBuffer* out_img_buf = out_tensor->mut_dptr<TensorBuffer>();
@@ -102,17 +102,17 @@ class ImageTargetResizeKernel final : public user_op::OpKernel {
     const int32_t target_size = ctx->Attr<int32_t>("target_size");
     const int32_t max_size = ctx->Attr<int32_t>("max_size");
 
-    MultiThreadLoop(in_tensor->shape().elem_cnt(), [&](size_t i) {
+    MultiThreadLoop(in_tensor->shape_view().elem_cnt(), [&](size_t i) {
       ImageTargetResize(in_img_buf[i], out_img_buf + i, target_size, max_size);
       if (size_ptr != nullptr) {
-        size_ptr[i * 2 + 0] = out_img_buf[i].shape().At(0);
-        size_ptr[i * 2 + 1] = out_img_buf[i].shape().At(1);
+        size_ptr[i * 2 + 0] = out_img_buf[i].shape_view().At(0);
+        size_ptr[i * 2 + 1] = out_img_buf[i].shape_view().At(1);
       }
       if (scale_ptr != nullptr) {
-        scale_ptr[i * 2 + 0] = static_cast<float>(out_img_buf[i].shape().At(0))
-                               / static_cast<float>(in_img_buf[i].shape().At(0));
-        scale_ptr[i * 2 + 1] = static_cast<float>(out_img_buf[i].shape().At(1))
-                               / static_cast<float>(in_img_buf[i].shape().At(1));
+        scale_ptr[i * 2 + 0] = static_cast<float>(out_img_buf[i].shape_view().At(0))
+                               / static_cast<float>(in_img_buf[i].shape_view().At(0));
+        scale_ptr[i * 2 + 1] = static_cast<float>(out_img_buf[i].shape_view().At(1))
+                               / static_cast<float>(in_img_buf[i].shape_view().At(1));
       }
     });
   }

@@ -58,12 +58,12 @@ void Gemm4ChannelLast(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
 
 template<typename T>
 T* GetImgMutDptr(user_op::Tensor* tensor, int64_t idx) {
-  return tensor->mut_dptr<T>() + tensor->shape().Count(1) * idx;
+  return tensor->mut_dptr<T>() + tensor->shape_view().Count(1) * idx;
 }
 
 template<typename T>
 const T* GetImgDptr(const user_op::Tensor* tensor, int64_t idx) {
-  return tensor->dptr<T>() + tensor->shape().Count(1) * idx;
+  return tensor->dptr<T>() + tensor->shape_view().Count(1) * idx;
 }
 
 size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_shape,
@@ -401,7 +401,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
 
     bool is_bias_mul_inited = false;
-    for (int64_t i = 0; i < in->shape().At(0); ++i) {
+    for (int64_t i = 0; i < in->shape_view().At(0); ++i) {
       conv_cache->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_cache->in_5d_shape_),
                                ShapeView(conv_cache->weight_5d_shape_),
                                ShapeView(conv_cache->out_5d_shape_), conv_cache->strides_3d_.data(),
@@ -421,9 +421,10 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
       if (bias != nullptr) {
-        int64_t num_of_col_buf = CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset);
+        int64_t num_of_col_buf =
+            CalcElemNumOfColBuf(out->shape_view(), weight->shape_view(), idx_offset);
         int64_t num_of_bias_mul =
-            (tmp_buffer->shape().elem_cnt() - num_of_col_buf * sizeof(T)) / sizeof(T);
+            (tmp_buffer->shape_view().elem_cnt() - num_of_col_buf * sizeof(T)) / sizeof(T);
         CHECK_GT(num_of_bias_mul, 0);
         T* bias_mul_dptr = col_buf_dptr + num_of_col_buf;
         if (!is_bias_mul_inited) {
@@ -501,10 +502,10 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr<T>(), 0,
-                             dx->shape().elem_cnt() * sizeof(T));
+                             dx->shape_view().elem_cnt() * sizeof(T));
 
     int32_t idx_offset = conv_cache->idx_offset_;
-    FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+    FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       // channels first:  col_buf' = weight(T) * out[i]'
       // channels last :  col_buf' = weight(T) * out[i]'(T)
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
@@ -525,13 +526,13 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
-      CHECK_EQ(add_to_output->shape(), dx->shape());
+      CHECK_EQ(add_to_output->shape_view(), dx->shape_view());
       std::unique_ptr<ep::primitive::Add> primitive =
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
       primitive->Launch(ctx->stream(), dx->dptr<T>(), add_to_output->dptr<T>(), dx->mut_dptr<T>(),
-                        add_to_output->shape().elem_cnt());
+                        add_to_output->shape_view().elem_cnt());
     }
   }
 };
@@ -582,9 +583,9 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
     Memset<DeviceType::kCPU>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
-                             filter_diff->shape().elem_cnt() * sizeof(T));
+                             filter_diff->shape_view().elem_cnt() * sizeof(T));
     int32_t idx_offset = conv_cache->idx_offset_;
-    FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+    FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       conv_cache->im2col_func_(GetImgDptr<T>(x, i), ShapeView(conv_cache->in_5d_shape_),
                                ShapeView(conv_cache->weight_5d_shape_),
                                ShapeView(conv_cache->out_5d_shape_), conv_cache->strides_3d_.data(),
@@ -639,9 +640,9 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);
     user_op::Tensor* bias_mul_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
 
-    InitBiasMulBuf(bias_mul_buf->mut_dptr<T>(), bias_mul_buf->shape().elem_cnt() / sizeof(T));
+    InitBiasMulBuf(bias_mul_buf->mut_dptr<T>(), bias_mul_buf->shape_view().elem_cnt() / sizeof(T));
     Memset<DeviceType::kCPU>(ctx->stream(), bias_diff->mut_dptr<T>(), 0,
-                             bias_diff->shape().elem_cnt() * sizeof(T));
+                             bias_diff->shape_view().elem_cnt() * sizeof(T));
 
     const auto& data_format = ctx->Attr<std::string>("data_format");
     int32_t idx_offset;
@@ -650,21 +651,21 @@ class ConvBiasGradCpuKernel final : public user_op::OpKernel {
     if (data_format == "channels_first") {
       idx_offset = 2;
       is_out_diff_need_trans = CblasNoTrans;
-      filter = dy->shape().At(1);
+      filter = dy->shape_view().At(1);
     } else {
       idx_offset = 1;
       is_out_diff_need_trans = CblasTrans;
-      filter = dy->shape().At(dy->shape().NumAxes() - 1);
+      filter = dy->shape_view().At(dy->shape_view().NumAxes() - 1);
     }
-    int ndims = dy->shape().NumAxes() - 2;
-    FOR_RANGE(int64_t, i, 0, dy->shape().At(0)) {
+    int ndims = dy->shape_view().NumAxes() - 2;
+    FOR_RANGE(int64_t, i, 0, dy->shape_view().At(0)) {
       // channels first:  bias' += out' * bias_mul
       // channels last:   bias' += out'(T) * bias_mul
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
           ctx->stream(), is_out_diff_need_trans, CblasNoTrans,
-          filter,                                             //  filter
-          1,                                                  //  1
-          dy->shape().Count(idx_offset, idx_offset + ndims),  //  od * oh * ow
+          filter,                                                  //  filter
+          1,                                                       //  1
+          dy->shape_view().Count(idx_offset, idx_offset + ndims),  //  od * oh * ow
           static_cast<T>(1), GetImgDptr<T>(dy, i), bias_mul_buf->dptr<T>(), static_cast<T>(1),
           bias_diff->mut_dptr<T>());
     }

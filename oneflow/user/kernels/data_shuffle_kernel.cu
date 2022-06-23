@@ -279,6 +279,10 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaMallocHost(
         &host_num_unique_matrix_,
         parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
+    const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    num_uniques_ =
+        Global<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name, parallel_id);
   }
   ~DataShuffleKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -288,6 +292,8 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
   ncclComm_t comm() { return GetOrCreate().comm; }
 
   IDX* HostNumUniqueMatrix() { return host_num_unique_matrix_; }
+
+  embedding::NumUniques* NumUniques() { return num_uniques_; }
 
  private:
   struct Comm {
@@ -319,6 +325,7 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
   ParallelDesc parallel_desc_;
   std::unique_ptr<Comm> comm_;
   IDX* host_num_unique_matrix_;
+  embedding::NumUniques* num_uniques_;
 };
 
 template<typename IDX>
@@ -422,8 +429,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
                                   parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
                                   cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
-    embedding::NumUniques* num_uniques = Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    embedding::NumUniques* num_uniques = kernel_state->NumUniques();
     std::vector<uint32_t> num_unique_matrix_vec(parallel_num * parallel_num);
     std::memcpy(num_unique_matrix_vec.data(), host_num_unique_matrix,
                 parallel_num * parallel_num * sizeof(IDX));
@@ -462,8 +468,6 @@ class IdShuffleKernel final : public user_op::OpKernel {
                                   cudaMemcpyDefault, cuda_stream));
     CHECK_JUST(ctx->stream()->Sync());
     uint32_t num_unique = *host_num_unique;
-    embedding::NumUniques* num_uniques = Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     num_uniques->SetNumUnique(num_unique, current_iter_);
     current_iter_++;
   }
@@ -959,9 +963,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
                       "embedding_size less equal than 1024 can use quantized communication. ";
     }
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
-
-    embedding::NumUniques* num_uniques = Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    embedding::NumUniques* num_uniques = kernel_state->NumUniques();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         num_uniques->GetNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
@@ -1183,8 +1185,7 @@ class EmbeddingShuffleKernelDynamicMemoryAlloc final : public user_op::OpKernel 
                       "embedding_size less equal than 1024 can use quantized communication. ";
     }
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
-    embedding::NumUniques* num_uniques = Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    embedding::NumUniques* num_uniques = kernel_state->NumUniques();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         num_uniques->GetNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
@@ -1584,9 +1585,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                       "embedding_size less equal than 1024 can use quantized communication. ";
     }
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
-
-    embedding::NumUniques* num_uniques = Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    embedding::NumUniques* num_uniques = kernel_state->NumUniques();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         num_uniques->GetNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t));
@@ -1809,9 +1808,7 @@ class EmbeddingGradientShuffleDynamicMemoryAllocKernel final : public user_op::O
                       "embedding_size less equal than 1024 can use quantized communication. ";
     }
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
-
-    embedding::NumUniques* num_uniques = Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    embedding::NumUniques* num_uniques = kernel_state->NumUniques();
     const std::vector<uint32_t>& num_unique_matrix_vec =
         num_uniques->GetNumUniqueMatrix(current_iter_);
     CHECK_EQ(sizeof(IDX), sizeof(uint32_t));

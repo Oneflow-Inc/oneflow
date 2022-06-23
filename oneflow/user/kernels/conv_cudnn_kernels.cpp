@@ -38,8 +38,8 @@ struct CudnnConvArgsAndAlgo final {
   CudnnConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y,
                        user_op::Tensor* buf, const user_op::KernelComputeContext* ctx,
                        ep::Stream* stream, bool has_forced_algo, int32_t forced_algo)
-      : args(*ctx, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
-             y->shape(), ctx->Attr<std::string>("data_format"), buf->shape().elem_cnt(),
+      : args(*ctx, x->data_type(), x->shape_view(), w->data_type(), w->shape_view(), y->data_type(),
+             y->shape_view(), ctx->Attr<std::string>("data_format"), buf->shape_view().elem_cnt(),
              Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
@@ -54,7 +54,7 @@ struct CudnnConvArgsAndAlgo final {
                      .cudnn_conv_enable_pseudo_half()
                  || (ctx->Attr<std::string>("data_format") == "channels_last"
                      && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value)) {
-    size_t byte_size_of_buf = buf->shape().elem_cnt();
+    size_t byte_size_of_buf = buf->shape_view().elem_cnt();
     AllocatedCudnnConvResource res(stream->As<ep::CudaStream>()->cudnn_handle(),
                                    const_cast<void*>(x->dptr()), const_cast<void*>(w->dptr()),
                                    const_cast<void*>(y->dptr()), buf->mut_dptr());
@@ -175,7 +175,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    if (in->shape().elem_cnt() == 0) return;
+    if (in->shape_view().elem_cnt() == 0) return;
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -252,7 +252,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if (dx->shape().elem_cnt() == 0) return;
+    if (dx->shape_view().elem_cnt() == 0) return;
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
@@ -267,10 +267,10 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
-      CHECK_EQ(add_to_output->shape(), dx->shape());
+      CHECK_EQ(add_to_output->shape_view(), dx->shape_view());
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), dx->mut_dptr<void>(), add_to_output->dptr<void>(),
-          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
       beta = CudnnSPOnePtr<T>();
     } else {
       beta = CudnnSPZeroPtr<T>();
@@ -332,9 +332,9 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
-    if (x->shape().elem_cnt() == 0) {
+    if (x->shape_view().elem_cnt() == 0) {
       Memset<DeviceType::kCUDA>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
-                                filter_diff->shape().elem_cnt() * sizeof(T));
+                                filter_diff->shape_view().elem_cnt() * sizeof(T));
       return;
     }
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -420,14 +420,14 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* bias_diff = ctx->Tensor4ArgNameAndIndex("bias_diff", 0);
-    CHECK_EQ(bias_diff->shape().NumAxes(), 1);
-    CHECK_GE(dy->shape().NumAxes(), 3);
-    CHECK_LE(dy->shape().NumAxes(), 5);
+    CHECK_EQ(bias_diff->shape_view().NumAxes(), 1);
+    CHECK_GE(dy->shape_view().NumAxes(), 3);
+    CHECK_LE(dy->shape_view().NumAxes(), 5);
 
     const std::string& data_format = ctx->Attr<std::string>("data_format");
 
     std::unique_ptr<CudnnTensorDesc> dy_desc;
-    dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape(), data_format));
+    dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape_view(), data_format));
     const auto& bias_grad_state = CreateConvBiasGradState(ctx);
     CHECK_NOTNULL(bias_grad_state.get());
     OF_CUDNN_CHECK(cudnnConvolutionBackwardBias(

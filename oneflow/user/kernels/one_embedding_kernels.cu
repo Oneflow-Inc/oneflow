@@ -199,6 +199,14 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
 
+    num_uniques_ =
+        Global<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name_, parallel_id_);
+    if (embedding::UseDynamicMemoryAllocation()) {
+      values_ptr_ =
+          Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name_, parallel_id_);
+    } else {
+      values_ptr_ = nullptr;
+    }
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     const std::string& state_initializer = ctx->Attr<std::string>("state_initializer");
@@ -237,6 +245,8 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   void* HostNumKeys() { return host_num_keys_; }
 
   embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
+  embedding::NumUniques* NumUniques() { return num_uniques_; }
+  embedding::ValuesPtr* ValuesPtr() { return values_ptr_; }
 
   one::Generator* generator() { return generator_.get(); }
 
@@ -251,6 +261,8 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
   embedding::KeyValueStore* key_value_store_;
+  embedding::NumUniques* num_uniques_;
+  embedding::ValuesPtr* values_ptr_;
 
   EmbeddingInitializer* host_initializer_param_;
   EmbeddingInitializer* device_initializer_param_;
@@ -261,25 +273,33 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 template<typename IDX>
 class EmbeddingPutKernelState final : public user_op::OpKernelState {
  public:
-  explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) : device_index_(-1) {
-    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
-    OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+  explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) {
+    const std::string& embedding_name = ctx->Attr<std::string>("embedding_name");
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    key_value_store_ =
+        Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(embedding_name, parallel_id);
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
+    num_uniques_ =
+        Global<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name, parallel_id);
+    if (embedding::UseDynamicMemoryAllocation()) {
+      values_ptr_ =
+          Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(embedding_name, parallel_id);
+    } else {
+      values_ptr_ = nullptr;
+    }
   }
-  ~EmbeddingPutKernelState() override {
-    CudaCurrentDeviceGuard guard(device_index_);
-    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
-  }
+  ~EmbeddingPutKernelState() override = default;
 
   embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
+  embedding::NumUniques* NumUniques() { return num_uniques_; }
+  embedding::ValuesPtr* ValuesPtr() { return values_ptr_; }
 
  private:
-  int device_index_;
   embedding::KeyValueStore* key_value_store_;
+  embedding::NumUniques* num_uniques_;
+  embedding::ValuesPtr* values_ptr_;
 };
 
 enum class EmbeddingBufferType { kNumMissing = 0, kMissingIndices, kValues, kMaxType };
@@ -386,8 +406,7 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
   EmbeddingTmpBufferManager buffer_manager(tmp_buffer_ptr, num_ids, line_size * sizeof(T),
                                            need_value_buffer);
   cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-  embedding::NumUniques* num_uniques =
-      Global<embedding::EmbeddingManager>::Get()->GetNumUniques(embedding_name, parallel_id);
+  embedding::NumUniques* num_uniques = embedding_state->NumUniques();
   uint32_t num_unique = num_uniques->GetNumUnique(current_iter);
   uint32_t* num_missing_ptr =
       buffer_manager.template Ptr<uint32_t>(EmbeddingBufferType::kNumMissing);
@@ -522,7 +541,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     T* values_ptr = nullptr;
     LookupAndInitMissing<T, U, IDX>(
         ctx->stream(), embedding_state, ctx->Attr<std::string>("embedding_name"),
-        ctx->parallel_ctx().parallel_id(), unique_ids->shape().elem_cnt(), embedding_size,
+        ctx->parallel_ctx().parallel_id(), unique_ids->shape_view().elem_cnt(), embedding_size,
         line_size, true, current_iter_, num_unique_ids->dptr(), unique_ids->dptr(),
         table_ids->dptr(), values_ptr, tmp_buffer->mut_dptr(), &num_unique, nullptr);
     current_iter_++;
@@ -593,11 +612,10 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     uint32_t num_unique;
     if (embedding::UseDynamicMemoryAllocation()) {
-      embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
-          ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+      embedding::ValuesPtr* ptrs = embedding_state->ValuesPtr();
       LookupAndInitMissing<T, U, IDX>(
           ctx->stream(), embedding_state, ctx->Attr<std::string>("embedding_name"),
-          ctx->parallel_ctx().parallel_id(), unique_ids->shape().elem_cnt(), embedding_size,
+          ctx->parallel_ctx().parallel_id(), unique_ids->shape_view().elem_cnt(), embedding_size,
           line_size, false, current_iter_, num_unique_ids->dptr(), unique_ids->dptr(),
           table_ids->dptr(), nullptr, tmp_buffer->mut_dptr(), &num_unique, ptrs);
       if (ctx->has_output("embeddings", 0)) {
@@ -615,7 +633,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     } else {
       LookupAndInitMissing<T, U, IDX>(
           ctx->stream(), embedding_state, ctx->Attr<std::string>("embedding_name"),
-          ctx->parallel_ctx().parallel_id(), unique_ids->shape().elem_cnt(), embedding_size,
+          ctx->parallel_ctx().parallel_id(), unique_ids->shape_view().elem_cnt(), embedding_size,
           line_size, false, current_iter_, num_unique_ids->dptr(), unique_ids->dptr(),
           table_ids->dptr(), unique_values->mut_dptr<T>(), tmp_buffer->mut_dptr(), &num_unique,
           nullptr);
@@ -673,12 +691,10 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
     embedding::KeyValueStore* store = embedding_state->KeyValueStore();
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
-    embedding::NumUniques* num_uniques = Global<embedding::EmbeddingManager>::Get()->GetNumUniques(
-        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    embedding::NumUniques* num_uniques = embedding_state->NumUniques();
     uint32_t num_unique = num_uniques->GetNumUnique(current_iter_);
     if (embedding::UseDynamicMemoryAllocation()) {
-      embedding::ValuesPtr* ptrs = Global<embedding::EmbeddingManager>::Get()->GetValuesPtr(
-          ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+      embedding::ValuesPtr* ptrs = embedding_state->ValuesPtr();
       void* updated_values_ptr = ptrs->GetUpdatedValuesPtr(current_iter_);
       store->Put(ctx->stream(), num_unique, unique_ids->dptr(), updated_values_ptr);
       ptrs->FreeUpdatedValuesPtr(current_iter_, ctx->stream()->As<ep::CudaStream>()->cuda_stream());

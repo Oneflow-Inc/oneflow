@@ -30,8 +30,6 @@ class CpuStreamType final : public StreamType {
   CpuStreamType() = default;
   ~CpuStreamType() override = default;
 
-  const char* stream_tag() const override { return "cpu"; }
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
   void InitInstructionStatus(const Stream& stream,
@@ -41,8 +39,6 @@ class CpuStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const override;
   bool OnSchedulerThread() const override { return false; }
   bool SupportingTransportInstructions() const override { return true; }
 };

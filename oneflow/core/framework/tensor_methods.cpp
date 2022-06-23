@@ -75,7 +75,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
       tensor_meta, JUST(input->tensor_storage()), requires_grad,
       /*is_leaf=*/!requires_grad);
-  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory();
+  const bool pin_memory = JUST(JUST(input->AsMirroredTensor())->is_pinned());
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object()),
                                         /*pin_memory=*/pin_memory));
 
@@ -153,14 +153,14 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 
   auto output = JUST(BasicView(input, Shape(target_dims), target_strides, storage_offset));
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    const Shape in_shape = *input->shape();
     auto backward_fn = std::make_shared<BackwardFunction>();
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                             bool create_graph) -> Maybe<void> {
       autograd::AutoGradMode mode(create_graph);
       CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
-      (*in_grads)[0] = JUST(functional::SliceGrad(
-          JUST(VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec()), starts, ends, steps));
+      (*in_grads)[0] = JUST(functional::SliceGrad(out_grads[0], in_shape, starts, ends, steps));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };

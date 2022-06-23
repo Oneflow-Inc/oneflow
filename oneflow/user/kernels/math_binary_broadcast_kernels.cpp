@@ -50,14 +50,14 @@ class MathBinaryBroadcastEpKernel final : public user_op::OpKernel,
         NewBroadcastElementwiseBinaryPrimitive<user_op::KernelComputeContext, binary_op>(ctx);
     CHECK(primitive.get() != nullptr) << "Exceeds maximum supported dimensions";
 
-    const int64_t x_elem_cnt = x->shape().elem_cnt();
-    const int64_t y_elem_cnt = y->shape().elem_cnt();
-    size_t num_src0_dims = x->shape().NumAxes();
-    size_t num_src1_dims = y->shape().NumAxes();
+    const int64_t x_elem_cnt = x->shape_view().elem_cnt();
+    const int64_t y_elem_cnt = y->shape_view().elem_cnt();
+    size_t num_src0_dims = x->shape_view().NumAxes();
+    size_t num_src1_dims = y->shape_view().NumAxes();
 
     int64_t zero_dim = 1;
-    int64_t* src0_dims = const_cast<int64_t*>(x->shape().ptr());
-    int64_t* src1_dims = const_cast<int64_t*>(y->shape().ptr());
+    int64_t* src0_dims = const_cast<int64_t*>(x->shape_view().ptr());
+    int64_t* src1_dims = const_cast<int64_t*>(y->shape_view().ptr());
 
     if (x_elem_cnt != 0 && y_elem_cnt != 0) {
       if (num_src0_dims == 0) {
@@ -127,10 +127,10 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
     const T* dptr_x = tensor_x->dptr<T>();
     const T* dptr_y = tensor_y->dptr<T>();
     K* dptr_z = tensor_z->mut_dptr<K>();
-    size_t num_axes = tensor_z->shape().NumAxes();
-    binary_func(ctx->stream(), XpuVarNdarray<K>(tensor_z->shape(), dptr_z, num_axes),
-                XpuVarNdarray<const T>(tensor_x->shape(), dptr_x, num_axes),
-                XpuVarNdarray<const T>(tensor_y->shape(), dptr_y, num_axes));
+    size_t num_axes = tensor_z->shape_view().NumAxes();
+    binary_func(ctx->stream(), XpuVarNdarray<K>(tensor_z->shape_view(), dptr_z, num_axes),
+                XpuVarNdarray<const T>(tensor_x->shape_view(), dptr_x, num_axes),
+                XpuVarNdarray<const T>(tensor_y->shape_view(), dptr_y, num_axes));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
