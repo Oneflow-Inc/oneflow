@@ -97,9 +97,9 @@ class GpuL2NormalizeKernel final : public user_op::OpKernel {
     user_op::Tensor* square_x_sum = ctx->Tensor4ArgNameAndIndex("square_x_sum", 0);
     const float epsilon = ctx->Attr<float>("epsilon");
     int32_t axis = ctx->Attr<int32_t>("axis");
-    int32_t c = x->shape().At(axis);
-    int32_t n = x->shape().elem_cnt() / c;
-    int32_t d = x->shape().Count(axis + 1);
+    int32_t c = x->shape_view().At(axis);
+    int32_t n = x->shape_view().elem_cnt() / c;
+    int32_t d = x->shape_view().Count(axis + 1);
     RUN_CUDA_KERNEL((L2NormalizeForward<T>), ctx->stream(), n, n, c, d, static_cast<T>(epsilon),
                     x->dptr<T>(), square_x_sum->mut_dptr<T>(), y->mut_dptr<T>());
   }
@@ -129,9 +129,9 @@ class GpuL2NormalizeGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float epsilon = ctx->Attr<float>("epsilon");
     int32_t axis = ctx->Attr<int32_t>("axis");
-    int32_t c = dy->shape().At(axis);
-    int32_t n = dy->shape().elem_cnt() / c;
-    int32_t d = dy->shape().Count(axis + 1);
+    int32_t c = dy->shape_view().At(axis);
+    int32_t n = dy->shape_view().elem_cnt() / c;
+    int32_t d = dy->shape_view().Count(axis + 1);
     RUN_CUDA_KERNEL((L2NormalizeBackward<T>), ctx->stream(), n, n, c, d, static_cast<T>(epsilon),
                     y->dptr<T>(), dy->dptr<T>(), square_x_sum->dptr<T>(), dx->mut_dptr<T>());
   }

@@ -32,12 +32,12 @@ class CategoricalOrdinalEncodeKernel final : public user_op::OpKernel {
     user_op::Tensor* table = ctx->Tensor4ArgNameAndIndex("table", 0);
     user_op::Tensor* size = ctx->Tensor4ArgNameAndIndex("size", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t table_elem_cnt = table->shape().elem_cnt();
+    const int64_t table_elem_cnt = table->shape_view().elem_cnt();
     CHECK_EQ(table_elem_cnt % 2, 0);
     const int64_t capacity = table_elem_cnt / 2;
     CategoricalOrdinalEncodeKernelUtil<device_type, T>::Encode(
-        ctx->stream(), capacity, table->mut_dptr<T>(), size->mut_dptr<T>(), in->shape().elem_cnt(),
-        in->dptr<T>(), out->mut_dptr<T>());
+        ctx->stream(), capacity, table->mut_dptr<T>(), size->mut_dptr<T>(),
+        in->shape_view().elem_cnt(), in->dptr<T>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

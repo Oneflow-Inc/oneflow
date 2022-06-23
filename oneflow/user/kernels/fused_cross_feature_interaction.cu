@@ -219,17 +219,18 @@ class FusedCrossFeatureInteractionKernel final : public user_op::OpKernel,
     user_op::Tensor* matmul_result = ctx->Tensor4ArgNameAndIndex("matmul_result", 0);
     const std::string interaction_mode = ctx->Attr<std::string>("interaction_mode");
 
-    CHECK_EQ(out->shape().NumAxes(), 2);
+    CHECK_EQ(out->shape_view().NumAxes(), 2);
     size_t m = 0, n = 0, k = 0;
-    InferMatmulMNK(x->shape(), weight->shape(), /*trans_a=*/false, /*trans_b=*/true, &m, &n, &k);
+    InferMatmulMNK(x->shape_view(), weight->shape_view(), /*trans_a=*/false, /*trans_b=*/true, &m,
+                   &n, &k);
     const double alpha = 1.0;
     double beta = 0.0;
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
     matmul->Launch(ctx->stream(), m, n, k, alpha, x->dptr(), weight->dptr(), beta,
                    matmul_result->mut_dptr());
-    const int64_t elem_cnt = out->shape().elem_cnt();
-    const int64_t cols = out->shape().At(1);
+    const int64_t elem_cnt = out->shape_view().elem_cnt();
+    const int64_t cols = out->shape_view().At(1);
     if (interaction_mode == "vector") {
       DispatchFusedBiasAddMulAddResidualIndexType<T, InteractionMode::kVector>(
           ctx->stream(), matmul_result->mut_dptr<T>(), x->dptr<T>(), x0->dptr<T>(), bias->dptr<T>(),

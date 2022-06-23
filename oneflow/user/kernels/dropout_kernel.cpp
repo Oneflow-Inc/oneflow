@@ -74,19 +74,19 @@ class DropoutKernelCPU final : public user_op::OpKernel {
     std::shared_ptr<one::CPUGeneratorImpl> cpu_generator =
         CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
 
-    FusedDropoutKernel<T>(ctx->stream(), in->shape().elem_cnt(), cpu_generator, rate, scale,
+    FusedDropoutKernel<T>(ctx->stream(), in->shape_view().elem_cnt(), cpu_generator, rate, scale,
                           in->dptr<T>(), mask->mut_dptr<bool>(), out->mut_dptr<T>());
 
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
-      CHECK_EQ(add_to_output->shape(), out->shape());
+      CHECK_EQ(add_to_output->shape_view(), out->shape_view());
       std::unique_ptr<ep::primitive::Add> primitive =
           ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
                                                                  add_to_output->data_type());
       CHECK(primitive);
       primitive->Launch(ctx->stream(), out->dptr<T>(), add_to_output->dptr<T>(), out->mut_dptr<T>(),
-                        add_to_output->shape().elem_cnt());
+                        add_to_output->shape_view().elem_cnt());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -119,8 +119,8 @@ class DropoutGradKernelCPU final : public user_op::OpKernel {
     const user_op::Tensor* mask = ctx->Tensor4ArgNameAndIndex("mask", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     const float scale = ctx->Attr<float>("scale");
-    MaskAndScale<T>(ctx->stream(), dy->shape().elem_cnt(), scale, dy->dptr<T>(), mask->dptr<bool>(),
-                    dx->mut_dptr<T>());
+    MaskAndScale<T>(ctx->stream(), dy->shape_view().elem_cnt(), scale, dy->dptr<T>(),
+                    mask->dptr<bool>(), dx->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
