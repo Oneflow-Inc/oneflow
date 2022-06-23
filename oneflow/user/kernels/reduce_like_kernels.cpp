@@ -44,28 +44,29 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
     user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-    if (tensor_x->shape().elem_cnt() == 0) {
-      if (tensor_y->shape().elem_cnt() != 0) {
+    if (tensor_x->shape_view().elem_cnt() == 0) {
+      if (tensor_y->shape_view().elem_cnt() != 0) {
         Memset<device_type>(
             ctx->stream(), tensor_y->mut_dptr<T>(), 0,
-            tensor_y->shape().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()));
+            tensor_y->shape_view().elem_cnt() * GetSizeOfDataType(tensor_y->data_type()));
       }
       return;
     }
     if (axis.empty()) {
-      CHECK_EQ(tensor_x->shape(), tensor_y->shape());
-      Memcpy<device_type>(ctx->stream(), tensor_y->mut_dptr(), tensor_x->dptr(),
-                          tensor_x->shape().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
+      CHECK_EQ(tensor_x->shape_view(), tensor_y->shape_view());
+      Memcpy<device_type>(
+          ctx->stream(), tensor_y->mut_dptr(), tensor_x->dptr(),
+          tensor_x->shape_view().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
     } else {
       user_op::Tensor* tensor_tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       T* temp_storage = static_cast<T*>(tensor_tmp->mut_dptr());
       NdarrayUtil<device_type, T>::ReduceSum(
           ctx->stream(),
-          XpuVarNdarray<T>(CreateReducedShape(tensor_x->shape(), {axis.begin(), axis.end()}),
+          XpuVarNdarray<T>(CreateReducedShape(tensor_x->shape_view(), {axis.begin(), axis.end()}),
                            tensor_y->mut_dptr<T>()),
-          XpuVarNdarray<const T>(tensor_x->shape(), tensor_x->dptr<T>(),
-                                 tensor_x->shape().NumAxes()),
-          XpuVarNdarray<T>(tensor_x->shape(), temp_storage, tensor_x->shape().NumAxes()));
+          XpuVarNdarray<const T>(tensor_x->shape_view(), tensor_x->dptr<T>(),
+                                 tensor_x->shape_view().NumAxes()),
+          XpuVarNdarray<T>(tensor_x->shape_view(), temp_storage, tensor_x->shape_view().NumAxes()));
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -113,13 +114,13 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* tensor_x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* tensor_y = ctx->Tensor4ArgNameAndIndex("y", 0);
     if (axis.empty()) {
-      CHECK_EQ(tensor_x->shape(), tensor_y->shape());
+      CHECK_EQ(tensor_x->shape_view(), tensor_y->shape_view());
       Memcpy<DeviceType::kCUDA>(
           ctx->stream(), tensor_y->mut_dptr(), tensor_x->dptr(),
-          tensor_x->shape().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
+          tensor_x->shape_view().elem_cnt() * GetSizeOfDataType(tensor_x->data_type()));
     } else {
       user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-      const ShapeView& in_shape = tensor_x->shape();
+      const ShapeView& in_shape = tensor_x->shape_view();
       bool is_axis_contiguous = false;
       int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
       GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size,
@@ -152,7 +153,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
         const size_t reduce_tmp_buffer_bytes =
             GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
         CHECK_LE(in_tmp_buffer_bytes + out_tmp_buffer_bytes + reduce_tmp_buffer_bytes,
-                 tmp_buffer->shape().elem_cnt());
+                 tmp_buffer->shape_view().elem_cnt());
         auto h2f = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
             ctx->device_type(), DataType::kFloat16, DataType::kFloat);
         CHECK(h2f);
@@ -167,7 +168,7 @@ class ReduceSumLikeHalfKernel final : public user_op::OpKernel, public user_op::
             XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
         f2h->Launch(ctx->stream(), out_tmp_buffer, tensor_y->mut_dptr<float16>(),
-                    tensor_y->shape().elem_cnt());
+                    tensor_y->shape_view().elem_cnt());
       }
     }
   }

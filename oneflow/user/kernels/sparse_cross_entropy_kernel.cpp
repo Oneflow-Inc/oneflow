@@ -49,9 +49,9 @@ class SparseCrossEntropyKernel final : public user_op::OpKernel {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = label->shape_view().elem_cnt();
+    CHECK_EQ(prediction->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape_view().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
@@ -90,9 +90,9 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
     const user_op::Tensor* prediction = ctx->Tensor4ArgNameAndIndex("prediction", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = label->shape_view().elem_cnt();
+    CHECK_EQ(prediction->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape_view().elem_cnt() / num_instances;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (cache != nullptr) {
@@ -102,7 +102,7 @@ class SparseCrossEntropyMsKernel final : public user_op::OpKernel {
       lower_bound = kernel_cache->lower();
     }
     Memset<device_type>(ctx->stream(), out->mut_dptr(), 0,
-                        out->shape().elem_cnt() * GetSizeOfDataType(out->data_type()));
+                        out->shape_view().elem_cnt() * GetSizeOfDataType(out->data_type()));
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeEntropy(
         ctx->stream(), num_instances, num_classes, depth, lower_bound, prediction->dptr<T>(),
         label->dptr<K>(), out->mut_dptr<T>());
@@ -150,13 +150,13 @@ class SparseCrossEntropyGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = label->shape_view().elem_cnt();
+    CHECK_EQ(prediction->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape_view().elem_cnt() / num_instances;
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     size_t prediction_diff_bytes_size =
-        prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
+        prediction_diff->shape_view().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
     Memset<device_type>(ctx->stream(), prediction_diff->mut_dptr<T>(), 0,
                         prediction_diff_bytes_size);
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
@@ -196,9 +196,9 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* prediction_diff = ctx->Tensor4ArgNameAndIndex("prediction_diff", 0);
-    const int64_t num_instances = label->shape().elem_cnt();
-    CHECK_EQ(prediction->shape().elem_cnt() % num_instances, 0);
-    const int64_t num_classes = prediction->shape().elem_cnt() / num_instances;
+    const int64_t num_instances = label->shape_view().elem_cnt();
+    CHECK_EQ(prediction->shape_view().elem_cnt() % num_instances, 0);
+    const int64_t num_classes = prediction->shape_view().elem_cnt() / num_instances;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
     if (cache != nullptr) {
@@ -208,7 +208,7 @@ class SparseCrossEntropyMsGradKernel final : public user_op::OpKernel {
       lower_bound = kernel_cache->lower();
     }
     size_t prediction_diff_bytes_size =
-        prediction_diff->shape().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
+        prediction_diff->shape_view().elem_cnt() * GetSizeOfDataType(prediction_diff->data_type());
     Memset<device_type>(ctx->stream(), prediction_diff->mut_dptr<T>(), 0,
                         prediction_diff_bytes_size);
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
