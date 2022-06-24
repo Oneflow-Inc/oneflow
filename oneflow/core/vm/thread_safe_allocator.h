@@ -20,12 +20,13 @@ limitations under the License.
 #include <mutex>
 #include <thread>
 #include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/vm/shrinkable_cache.h"
 
 namespace oneflow {
 
 namespace vm {
 
-class ThreadSafeAllocator final : public Allocator {
+class ThreadSafeAllocator final : public Allocator, public ShrinkableCache {
  public:
   explicit ThreadSafeAllocator(std::unique_ptr<Allocator>&& backend_allocator)
       : Allocator(), backend_allocator_(std::move(backend_allocator)) {}
@@ -34,12 +35,17 @@ class ThreadSafeAllocator final : public Allocator {
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
 
+  void Shrink() override {
+    auto* cache = dynamic_cast<ShrinkableCache*>(backend_allocator_.get());
+    if (cache != nullptr) { cache->Shrink(); }
+  }
+
  private:
   std::unique_ptr<Allocator> backend_allocator_;
   std::mutex mutex4backend_allocator_;
 };
 
-class SingleThreadOnlyAllocator final : public Allocator {
+class SingleThreadOnlyAllocator final : public Allocator, public ShrinkableCache {
  public:
   explicit SingleThreadOnlyAllocator(std::unique_ptr<Allocator>&& backend_allocator)
       : Allocator(),
@@ -49,6 +55,11 @@ class SingleThreadOnlyAllocator final : public Allocator {
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
+
+  void Shrink() override {
+    auto* cache = dynamic_cast<ShrinkableCache*>(backend_allocator_.get());
+    if (cache != nullptr) { cache->Shrink(); }
+  }
 
  private:
   void CheckUniqueThreadAccess();
