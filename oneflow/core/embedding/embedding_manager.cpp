@@ -39,8 +39,10 @@ NumUniques* EmbeddingManager::GetNumUniques(const std::string& embedding_name, i
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = num_uniques_map_.find(map_key);
-  CHECK(it != num_uniques_map_.end())
-      << "Can not find embedding: " << embedding_name << "-" << rank_id;
+  // for id shuffle test, not need to create table
+  if (it == num_uniques_map_.end()) {
+    it = num_uniques_map_.emplace(map_key, std::make_unique<NumUniques>()).first;
+  }
   return it->second.get();
 }
 

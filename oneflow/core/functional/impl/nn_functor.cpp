@@ -2979,10 +2979,11 @@ class OneEmbeddingIdShuffleFunctor {
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& ids,
-                                const Optional<one::Tensor>& table_ids,
-                                const int32_t& num_tables) const {
+                                const Optional<one::Tensor>& table_ids, const int32_t& num_tables,
+                                const std::string& embedding_name) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
+    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     if (table_ids) {
       return OpInterpUtil::Dispatch<TensorTuple>(*op_table_ids_has_in_out_, {ids, JUST(table_ids)},
                                                  attrs);
@@ -3008,14 +3009,15 @@ class OneEmbeddingEmbeddingShuffleFunctor {
                          .Build());
   }
 
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
-      const std::shared_ptr<one::Tensor>& num_unique_matrix,
-      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
-      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
+                           const std::shared_ptr<one::Tensor>& num_unique_matrix,
+                           const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+                           const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices,
+                           const std::string& embedding_name) const {
     MutableAttrMap attrs;
     const int64_t num_axes = cur_rank_embeddings->shape()->NumAxes();
     JUST(attrs.SetAttr<int64_t>("embedding_size", cur_rank_embeddings->shape()->At(num_axes - 1)));
+    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_,
         {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
@@ -3039,14 +3041,15 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
                          .Build());
   }
 
-  Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& embedding_grad,
-      const std::shared_ptr<one::Tensor>& num_unique_matrix,
-      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
-      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& embedding_grad,
+                           const std::shared_ptr<one::Tensor>& num_unique_matrix,
+                           const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+                           const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices,
+                           const std::string& embedding_name) const {
     MutableAttrMap attrs;
     const int64_t num_axes = embedding_grad->shape()->NumAxes();
     JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_grad->shape()->At(num_axes - 1)));
+    JUST(attrs.SetAttr<std::string>("embedding_name", embedding_name));
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
                inverse_unique_partition_indices});
