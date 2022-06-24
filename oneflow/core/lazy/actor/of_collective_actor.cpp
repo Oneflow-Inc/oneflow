@@ -177,6 +177,7 @@ void OfCollectiveActor::Init(const JobDesc* job_desc, ActorContext* actor_ctx) {
   print_actor_msg_type_.emplace(ActorMsgType::kEordMsg, "kEordMsg");
   print_actor_msg_type_.emplace(ActorMsgType::kRegstMsg, "kRegstMsg");
 
+  cached_nego_ready_msg_ = HashMap<int64_t, ActorMsg>();
   ResetCollectiveStatus();
 
   ek_.kernel_ctx.reset(new KernelContextImpl(actor_ctx));
@@ -233,7 +234,7 @@ void OfCollectiveActor::ResetCollectiveStatus() {
   received_downstream_ready_cnt_ = 0;
   collective_status_ = CollectiveStatus::kInvalid;
   if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " UpdateCollectiveStatus to " << print_status_[collective_status_];
-  cached_nego_ready_msg_ = HashMap<int64_t, ActorMsg>();
+  // should not clear cached_nego_ready_msg_ here.
 }
 
 void OfCollectiveActor::TakeOverInplaceConsumedAndProduced(
@@ -424,10 +425,9 @@ int OfCollectiveActor::HandlerNormal(const ActorMsg& msg) {
         if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_  << " ready to process cached_nego_ready_msg_, then show_cached_nego_ready_msg:";
         if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) show_cached_nego_ready_msg(cached_nego_ready_msg_, actor_id_, print_actor_msg_type_, print_nego_cmd_);
         
-        int64_t cached_nego_ready_msg_size = cached_nego_ready_msg_.size();
         int64_t cached_nego_ready_msg_id = 0;
         FOR_EACH(src_actor_id7msg, cached_nego_ready_msg_) {
-          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " invoke ReactToNegoCmd for cached_nego_ready_msg_ " << cached_nego_ready_msg_id << " out of " << cached_nego_ready_msg_size << " msg.src: " << src_actor_id7msg->second.src_actor_id() << " msg.dst: " << src_actor_id7msg->second.dst_actor_id() << " msg.type: " << print_actor_msg_type_[src_actor_id7msg->second.msg_type()];
+          if (!ParseBooleanFromEnv("ONEFLOW_OFCCL_HIDE_LOG", false)) LOG(ERROR) << "Actor " << actor_id_ << " invoke ReactToNegoCmd for cached_nego_ready_msg_ " << cached_nego_ready_msg_id << " out of " << cached_nego_ready_msg_.size() << " msg.src: " << src_actor_id7msg->second.src_actor_id() << " msg.dst: " << src_actor_id7msg->second.dst_actor_id() << " msg.type: " << print_actor_msg_type_[src_actor_id7msg->second.msg_type()];
           ++cached_nego_ready_msg_id;
           ReactToNegoCmd(src_actor_id7msg->second);
         }
