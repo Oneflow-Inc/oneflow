@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/shape_vec.h"
-#include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 namespace vm {
