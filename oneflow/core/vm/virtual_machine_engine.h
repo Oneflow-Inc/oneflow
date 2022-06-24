@@ -69,8 +69,12 @@ class VirtualMachineEngine final : public intrusive::Base {
   const BarrierInstructionList& barrier_instruction_list() const {
     return barrier_instruction_list_;
   }
-  const InstructionMutexedList& pending_instruction_list() const { return pending_instruction_list_; }
-  const InstructionList& local_pending_instruction_list() const { return local_pending_instruction_list_; }
+  const InstructionMutexedList& pending_instruction_list() const {
+    return pending_instruction_list_;
+  }
+  const InstructionList& local_pending_instruction_list() const {
+    return local_pending_instruction_list_;
+  }
   // Setters
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }

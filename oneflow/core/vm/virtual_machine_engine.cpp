@@ -411,8 +411,8 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   // VirtualMachineEngine::Schedule is always in a buzy loop. All instructions will get handled
   // eventually.
   //  VirtualMachineEngine::Receive may be less effiencient if the thread safe version
-  //  `pending_instruction_list().size()` used here, because VirtualMachineEngine::Schedule is more likely
-  //  to get the mutex lock.
+  //  `pending_instruction_list().size()` used here, because VirtualMachineEngine::Schedule is more
+  //  likely to get the mutex lock.
   if (unlikely(local_pending_instruction_list().size())) {
     HandleLocalPending();
   } else if (unlikely(pending_instruction_list().thread_unsafe_size())) {
@@ -434,9 +434,10 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
 }
 
 bool VirtualMachineEngine::SchedulerThreadUnsafeEmpty() const {
-  return pending_instruction_list().thread_unsafe_size() == 0 && local_pending_instruction_list().empty()
-         && lively_instruction_list_.empty() && active_stream_list().empty()
-         && probe_list_.thread_unsafe_size() == 0 && local_probe_list_.empty();
+  return pending_instruction_list().thread_unsafe_size() == 0
+         && local_pending_instruction_list().empty() && lively_instruction_list_.empty()
+         && active_stream_list().empty() && probe_list_.thread_unsafe_size() == 0
+         && local_probe_list_.empty();
 }
 
 bool VirtualMachineEngine::SchedulerEmpty() const {
