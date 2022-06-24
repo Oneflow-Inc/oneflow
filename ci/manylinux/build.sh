@@ -37,4 +37,3 @@ fi
 cd ${ONEFLOW_CI_SRC_DIR}
 cd python
 ${ONEFLOW_CI_PYTHON_EXE} setup.py bdist_wheel
-clean_artifacts
