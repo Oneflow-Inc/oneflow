@@ -24,10 +24,10 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Stream>> MakeStream(const Symbol<Device>& out_device,
-                                 const bool pin_memory) {
-  if(pin_memory){
-    CHECK_OR_RETURN(out_device->type()=="cpu") << "empty op only support pin_memory in cpu device but got " << out_device->type();
+Maybe<Symbol<Stream>> MakeStream(const Symbol<Device>& out_device, const bool pin_memory) {
+  if (pin_memory) {
+    CHECK_OR_RETURN(out_device->type() == "cpu")
+        << "empty op only support pin_memory in cpu device but got " << out_device->type();
   }
   if (pin_memory && out_device->type() == "cpu") {
     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));

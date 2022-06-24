@@ -23,14 +23,13 @@ namespace oneflow {
 namespace {
 
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
-                                     const Symbol<Device>& out_device,
-                                     const bool pin_memory) {
+                                     const Symbol<Device>& out_device, const bool pin_memory) {
   if (in_device->type() != "cpu" && out_device->type() == "cpu") {
     return Stream::New(in_device, StreamRole::kDevice2Host);
   } else if (in_device->type() == "cpu" && out_device->type() != "cpu") {
     const auto device = JUST(Device::New(out_device->type(), out_device->device_id()));
     return Stream::New(device, StreamRole::kHost2Device);
-  } else if(in_device->type() == "cpu" && out_device->type() == "cpu" && pin_memory) {
+  } else if (in_device->type() == "cpu" && out_device->type() == "cpu" && pin_memory) {
     return Stream::New(out_device, StreamRole::kPinMemory);
   } else {
     CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());

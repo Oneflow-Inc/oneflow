@@ -22,10 +22,10 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
-                                 const bool pin_memory) {
-  if(pin_memory){
-    CHECK_OR_RETURN(in_device->type()=="cpu") << "cast op only support pin_memory in cpu device but got " << in_device->type();
+Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device, const bool pin_memory) {
+  if (pin_memory) {
+    CHECK_OR_RETURN(in_device->type() == "cpu")
+        << "cast op only support pin_memory in cpu device but got " << in_device->type();
   }
   if (pin_memory && in_device->type() == "cpu") {
     return Stream::New(in_device, StreamRole::kPinMemory);
@@ -68,8 +68,7 @@ Maybe<Symbol<Stream>> MakeCastStream(const Symbol<Device>& in_device,
 /* static */ Maybe<Symbol<Stream>> CastOp::InferDeviceAndStream(
     user_op::DeviceAndStreamInferContext* ctx) {
   const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  Symbol<Device> out_device =
-      JUST(Device::New(in_device->type(), in_device->device_id()));
+  Symbol<Device> out_device = JUST(Device::New(in_device->type(), in_device->device_id()));
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
   const bool pin_memory = ctx->Attr<bool>("pin_memory");
   return MakeCastStream(in_device, pin_memory);
