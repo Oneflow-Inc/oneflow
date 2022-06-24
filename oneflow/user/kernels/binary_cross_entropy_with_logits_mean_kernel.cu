@@ -122,7 +122,7 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel {
     const auto* target_blob = ctx->Tensor4ArgNameAndIndex("target", 0);
     auto* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
 
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
+    const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
 
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
@@ -131,7 +131,7 @@ class BinaryCrossEntropyWithLogitsMeanKernel final : public user_op::OpKernel {
     FusedBinaryCrossEntropyWithLogitsReduceMeanKernel<<<
         1, kBlockSize, 0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         input_blob->dptr<T>(), target_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-        input_blob->shape().elem_cnt());
+        input_blob->shape_view().elem_cnt());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -150,7 +150,7 @@ class BinaryCrossEntropyWithLogitsReduceMeanGradKernel final : public user_op::O
     const auto* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     auto* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    const int64_t elem_cnt = input_blob->shape().elem_cnt();
+    const int64_t elem_cnt = input_blob->shape_view().elem_cnt();
     const T* dy = dy_blob->dptr<T>();
     const T* input = input_blob->dptr<T>();
     const T* target = target_blob->dptr<T>();
