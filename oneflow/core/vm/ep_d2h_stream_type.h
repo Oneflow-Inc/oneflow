@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_EP_D2H_STREAM_TYPE_H_
 #define ONEFLOW_CORE_VM_EP_D2H_STREAM_TYPE_H_
 
-#include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/device/device_context.h"

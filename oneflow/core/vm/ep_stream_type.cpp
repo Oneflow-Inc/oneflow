@@ -50,29 +50,29 @@ void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream*
 void EpStreamType::InitInstructionStatus(const Stream& stream,
                                          InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(EpOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  auto* data_ptr = status_buffer->mut_buffer();
   EpOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, nullptr);
 }
 
 void EpStreamType::DeleteInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = EpOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr = EpOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~EpOptionalEventRecordStatusQuerier();
 }
 
 bool EpStreamType::QueryInstructionStatusDone(const Stream& stream,
                                               const InstructionStatusBuffer& status_buffer) const {
-  return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
 void EpStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_GUARD("S:" + instruction->instr_msg().DebugName());
+  OF_PROFILER_RANGE_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());  // NOLINT
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
-  instruction->instr_msg().instruction_type().Compute(instruction);
-  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+  instruction->instruction_type().Compute(instruction);
+  char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
 }
 
