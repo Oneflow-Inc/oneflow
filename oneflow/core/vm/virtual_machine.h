@@ -45,6 +45,9 @@ class VirtualMachine final {
 
   Maybe<void> CloseVMThreads();
 
+  // Never called in vm work threads.
+  // VM sync must be called to ensure all working instructions are finished.
+  Maybe<void> ShrinkAllMem();
   Maybe<vm::Stream*> GetVmStream(Symbol<Stream> stream);
 
  private:
@@ -68,6 +71,8 @@ class VirtualMachine final {
                                   StreamRole stream_role);
 
   Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
+
+  Maybe<void> BlockingRunProbeFunc(const std::function<bool(vm::VirtualMachineEngine*)>& prob_func);
 
   Maybe<void> NotifyOrRunScheduler();
 
