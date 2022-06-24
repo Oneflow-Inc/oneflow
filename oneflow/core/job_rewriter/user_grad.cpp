@@ -30,7 +30,9 @@ Maybe<void> GenerateBackwardOpConf(
   const UserOpConf& user_conf = fw_op.op_conf().user_conf();
   const user_op::OpGradRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(user_conf.op_type_name());
-  CHECK_NOTNULL_OR_RETURN(val) << Error::GradientFunctionNotFoundError() << " op cannot find backward op in autograd, forward op: " <<  PbMessage2TxtString(fw_op.op_conf());
+  CHECK_NOTNULL_OR_RETURN(val) << Error::GradientFunctionNotFoundError()
+                               << " op cannot find backward op in autograd, forward op: "
+                               << PbMessage2TxtString(fw_op.op_conf());
 
   user_op::UserOpWrapper fw_user_op(fw_op.op_conf(), LogicalBlobDesc4BnInOp, DiffLbi4BnInOp);
   if (nullptr != val->bw_gen_fn) {
